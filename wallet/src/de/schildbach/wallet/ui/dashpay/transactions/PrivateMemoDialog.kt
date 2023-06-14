@@ -18,9 +18,7 @@
 package de.schildbach.wallet.ui.dashpay.transactions
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -35,7 +33,7 @@ import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 
 @AndroidEntryPoint
-class PrivateMemoDialog: OffsetDialogFragment() {
+class PrivateMemoDialog: OffsetDialogFragment(R.layout.dialog_private_memo) {
     companion object {
         const val TX_ID_ARG = "tx_id"
     }
@@ -46,22 +44,14 @@ class PrivateMemoDialog: OffsetDialogFragment() {
     private val binding by viewBinding(DialogPrivateMemoBinding::bind)
     private val viewModel: PrivateMemoViewModel by viewModels()
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
         lifecycleScope.launchWhenCreated {
             delay(250) // Wait for the dialog animation to finish before raising keyboard
             keyboardUtil.enableAdjustLayout(requireActivity().window, binding.root)
             KeyboardUtil.showSoftKeyboard(requireContext(), binding.memoInput)
         }
-
-        return inflater.inflate(R.layout.dialog_private_memo, container, false)
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
 
         requireArguments().apply {
             val txId = get(TX_ID_ARG) as Sha256Hash

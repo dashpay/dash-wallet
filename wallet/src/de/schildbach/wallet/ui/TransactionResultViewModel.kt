@@ -18,9 +18,10 @@ package de.schildbach.wallet.ui
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.DashPayProfileDao
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.WalletApplication
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Sha256Hash
@@ -29,18 +30,25 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
-import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 @HiltViewModel
 class TransactionResultViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
-    private val walletData: WalletDataProvider,
-    configuration: Configuration,
+    private val giftCardDao: GiftCardDao,
+    val walletData: WalletDataProvider,
+    val configuration: Configuration,
     private val dashPayProfileDao: DashPayProfileDao,
-    private val platformRepo: PlatformRepo
+    private val platformRepo: PlatformRepo,
+    private val analytics: AnalyticsService,
+    private val walletApplication: WalletApplication
 ) : ViewModel() {
 
     val dashFormat: MonetaryFormat = configuration.format.noCode()
@@ -53,7 +61,22 @@ class TransactionResultViewModel @Inject constructor(
 
     private val _transactionMetadata: MutableStateFlow<TransactionMetadata?> = MutableStateFlow(null)
     val transactionMetadata
-        get() = _transactionMetadata.asLiveData()
+        get() = _transactionMetadata.filterNotNull().asLiveData()
+
+    val transactionIcon = _transactionMetadata
+        .filterNotNull()
+        .map { it.customIconId }
+        .filterNotNull()
+        .map { transactionMetadataProvider.getIcon(it) }
+        .filterNotNull()
+        .asLiveData()
+
+    val merchantName = _transactionMetadata
+        .filterNotNull()
+        .filter { it.service == ServiceName.DashDirect }
+        .map { giftCardDao.getGiftCard(it.txId)?.merchantName }
+        .filterNotNull()
+        .asLiveData()
 
     private val _contact = MutableLiveData<DashPayProfile?>()
     val contact: LiveData<DashPayProfile?>
@@ -80,7 +103,7 @@ class TransactionResultViewModel @Inject constructor(
 
     fun toggleTaxCategory() {
         transaction?.let { tx ->
-            val metadata = _transactionMetadata.value  // can be null if there is no metadata in the table
+            val metadata = _transactionMetadata.value // can be null if there is no metadata in the table
 
             var currentTaxCategory = metadata?.taxCategory // can be null if user never specified a value
 
@@ -119,5 +142,15 @@ class TransactionResultViewModel @Inject constructor(
             .distinctUntilChanged()
             .onEach(_contact::postValue)
             .launchIn(viewModelScope)
+    }
+    
+    fun rescanBlockchain() {
+        analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, mapOf())
+        walletApplication.resetBlockchain()
+        configuration.updateLastBlockchainResetTime()
+    }
+
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, mapOf())
     }
 }

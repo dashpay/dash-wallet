@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">Σύνδεση Uphold λογαριασμού</string>
+    <string name="uphold_transfer_details">Από την Uphold στο Dash Wallet σας</string>
     <string name="uphold_buy_dash_activity_title">Αγορά / Πώληση Dash μέσω Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Αγοράστε Dash μέσω Uphold λογαριασμού</string>
     <string name="uphold_buy_dash_button">Αγορά Dash</string>

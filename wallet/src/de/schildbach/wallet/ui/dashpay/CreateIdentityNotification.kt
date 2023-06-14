@@ -10,8 +10,8 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.data.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_primary"
+    tools:context="org.dash.wallet.features.exploredash.ui.dashdirect.PurchaseGiftCardFragment">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/title_bar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:layout_constraintTop_toTopOf="parent"
+        app:navigationIcon="@drawable/ic_arrow_back_primary" />
+
+    <org.dash.wallet.common.ui.PaymentHeaderView
+        android:id="@+id/payment_header_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title_bar" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/enter_amount_guideline"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.30" />
+
+    <LinearLayout
+        android:id="@+id/enter_amount_fragment_placeholder"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/enter_amount_guideline"
+        tools:layout="@layout/fragment_enter_amount" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/messages_guideline"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.37" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/min_value"
+        style="@style/Caption.Secondary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginVertical="20dp"
+        android:layout_marginHorizontal="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/messages_guideline"
+        tools:text="@string/balance" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/max_value"
+        style="@style/Caption.Secondary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginVertical="20dp"
+        android:layout_marginHorizontal="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/messages_guideline"
+        tools:text="@string/balance" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/discount_value"
+        style="@style/Caption.Secondary"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginVertical="20dp"
+        android:layout_marginHorizontal="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/messages_guideline"
+        android:textAlignment="center"
+        tools:text="@string/purchase_gift_card_discount" />
+</androidx.constraintlayout.widget.ConstraintLayout>

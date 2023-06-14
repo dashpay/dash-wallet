@@ -17,8 +17,8 @@
 
 package de.schildbach.wallet.service.platform
 
-import de.schildbach.wallet.data.DashPayContactRequest
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.database.entity.DashPayContactRequest
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Context
@@ -91,7 +91,7 @@ class PlatformDocumentBroadcastService @Inject constructor(
 
         log.info("contact request: $cr")
         val dashPayContactRequest = DashPayContactRequest.fromDocument(cr)
-        platformRepo.updateDashPayContactRequest(dashPayContactRequest) //update the database since the cr was accepted
+        platformRepo.updateDashPayContactRequest(dashPayContactRequest) // update the database since the cr was accepted
         platformRepo.updateDashPayProfile(toUserId) // update the profile
         platformSyncService.fireContactsUpdatedListeners() // trigger listeners
         return dashPayContactRequest

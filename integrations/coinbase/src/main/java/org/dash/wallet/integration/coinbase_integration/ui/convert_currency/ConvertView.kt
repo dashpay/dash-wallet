@@ -28,8 +28,9 @@ import androidx.core.view.isVisible
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.ConvertViewBinding
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.ServiceWallet
@@ -192,7 +193,7 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
         exchangeRate?.let { currentExchangeRate ->
             dashInput?.let { dash ->
                 val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
-                val fiatAmount = GenericUtils.fiatToString(currencyRate.coinToFiat(dash))
+                val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
                 binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
                     .optionalDecimals(0,8).format(dash)} DASH"
 

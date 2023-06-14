@@ -56,7 +56,7 @@
             android:inputType="text"
             android:paddingStart="12dp"
             android:paddingEnd="40dp"
-            android:textColor="@android:color/black"
+            android:textColor="@color/content_primary"
             android:theme="@style/SearchInputBackground" />
 
         <ImageButton
@@ -65,9 +65,8 @@
             android:layout_height="40dp"
             android:layout_gravity="end|center_vertical"
             android:background="@android:color/transparent"
-            android:src="@drawable/ic_close"
+            android:src="@drawable/ic_clear"
             android:visibility="gone"
-            app:tint="@color/gray_600"
             tools:visibility="visible" />
     </FrameLayout>
 
@@ -118,7 +117,7 @@
             android:drawableEnd="@drawable/ic_filter"
             android:drawablePadding="4dp"
             android:text="@string/explore_filter"
-            android:textSize="13sp"
+            android:drawableTint="@color/content_primary"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />

@@ -1,23 +1,29 @@
 /*
- * Copyright 2020 Dash Core Group
+ * Copyright 2020 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package de.schildbach.wallet.ui.send
 
 import android.net.Uri
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Looper
+import android.os.Process
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -27,38 +33,57 @@ import de.schildbach.wallet.offline.DirectPaymentTask
 import de.schildbach.wallet.offline.DirectPaymentTask.HttpPaymentTask
 import de.schildbach.wallet.payments.RequestPaymentRequestTask
 import de.schildbach.wallet.payments.RequestPaymentRequestTask.HttpRequestTask
-import de.schildbach.wallet.rates.ExchangeRatesRepository
+import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.wallet.KeyChain.KeyPurpose
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
 class PaymentProtocolViewModel @Inject constructor(
+    walletData: WalletDataProvider,
+    configuration: Configuration,
+    exchangeRates: ExchangeRatesProvider,
     private val walletApplication: WalletApplication,
-    configuration: Configuration
-) : SendCoinsBaseViewModel(walletApplication, configuration) {
+    private val packageInfoProvider: PackageInfoProvider,
+    private val sendCoinsTaskRunner: SendCoinsTaskRunner
+) : SendCoinsBaseViewModel(walletData, configuration) {
 
     companion object {
         val FAKE_FEE_FOR_EXCEPTIONS: Coin =
-            org.dash.wallet.common.Constants.ECONOMIC_FEE.multiply(261).divide(1000)
+            org.dash.wallet.common.util.Constants.ECONOMIC_FEE.multiply(261).divide(1000)
     }
 
     private val log = LoggerFactory.getLogger(PaymentProtocolFragment::class.java)
 
-    var finalPaymentIntent: PaymentIntent? = null
+    private val backgroundHandler: Handler
+    private var callbackHandler: Handler? = null
+
     var baseSendRequest: SendRequest? = null
+    var finalPaymentIntent: PaymentIntent? = null
 
-    val sendRequestLiveData = MutableLiveData<Resource<SendRequest>>()
+    private val _sendRequestLiveData = MutableLiveData<Resource<SendRequest?>>()
+    val sendRequestLiveData: LiveData<Resource<SendRequest?>>
+        get() = _sendRequestLiveData
 
-    val exchangeRateData: LiveData<ExchangeRate>
+    private val _exchangeRateData = MutableLiveData<ExchangeRate?>()
+    val exchangeRateData: LiveData<ExchangeRate?>
+        get() = _exchangeRateData
+
     val directPaymentAckLiveData = MutableLiveData<Resource<Pair<SendRequest, Boolean>>>()
 
     val exchangeRate: org.bitcoinj.utils.ExchangeRate?
@@ -67,13 +92,48 @@ class PaymentProtocolViewModel @Inject constructor(
         }
 
     init {
-        val currencyCode = configuration.exchangeCurrencyCode
-        exchangeRateData = ExchangeRatesRepository.instance.getRate(currencyCode)
+        exchangeRates.observeExchangeRate(configuration.exchangeCurrencyCode!!)
+            .distinctUntilChanged()
+            .onEach(_exchangeRateData::postValue)
+            .launchIn(viewModelScope)
+
+        val backgroundThread = HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND)
+        backgroundThread.start()
+        backgroundHandler = Handler(backgroundThread.looper)
+        Looper.myLooper()?.let { callbackHandler = Handler(it) }
+    }
+
+    override suspend fun initPaymentIntent(paymentIntent: PaymentIntent) {
+        super.initPaymentIntent(paymentIntent)
+
+        if (!paymentIntent.hasPaymentRequestUrl()) {
+            throw UnsupportedOperationException(
+                PaymentProtocolFragment::class.java.simpleName +
+                    "class should be used to handle Payment requests (BIP70 and BIP270)"
+            )
+        }
+
+        when {
+            paymentIntent.isHttpPaymentRequestUrl -> requestPaymentRequest(paymentIntent)
+            paymentIntent.isBluetoothPaymentRequestUrl -> {
+                log.warn("PaymentRequest via Bluetooth is not supported anymore")
+                throw UnsupportedOperationException(
+                    SendCoinsFragment::class.java.simpleName +
+                        "class should be used to handle this type of payment $paymentIntent"
+                )
+            }
+            else -> {
+                log.warn("Incorrect payment type $paymentIntent")
+                throw UnsupportedOperationException(
+                    SendCoinsFragment::class.java.simpleName +
+                        "class should be used to handle this type of payment $paymentIntent"
+                )
+            }
+        }
     }
 
     fun requestPaymentRequest(basePaymentIntent: PaymentIntent) {
-
-        sendRequestLiveData.value = Resource.loading(null)
+        _sendRequestLiveData.value = Resource.loading(null)
 
         val requestCallback: RequestPaymentRequestTask.ResultCallback = object : RequestPaymentRequestTask.ResultCallback {
 
@@ -83,7 +143,7 @@ class PaymentProtocolViewModel @Inject constructor(
                     createBaseSendRequest(paymentIntent)
                 } else {
                     finalPaymentIntent = null
-                    sendRequestLiveData.value = Resource.error("isn't extension of basePaymentIntent")
+                    _sendRequestLiveData.value = Resource.error("isn't extension of basePaymentIntent")
                     log.info("BIP72 trust check failed")
                 }
             }
@@ -92,65 +152,78 @@ class PaymentProtocolViewModel @Inject constructor(
                 finalPaymentIntent = null
                 if (ex != null) {
                     val errorMessage =
-                            if (messageResId > 0) walletApplication.getString(messageResId, *messageArgs)
-                            else ex.message!!
-                    sendRequestLiveData.value = Resource.error(ex, errorMessage)
+                        if (messageResId > 0) {
+                            walletApplication.getString(messageResId, *messageArgs)
+                        } else {
+                            ex.message!!
+                        }
+                    _sendRequestLiveData.value = Resource.error(ex, errorMessage)
                 } else {
                     val errorMessage = walletApplication.getString(messageResId, *messageArgs)
-                    sendRequestLiveData.value = Resource.error(errorMessage)
+                    _sendRequestLiveData.value = Resource.error(errorMessage)
                 }
             }
         }
 
-        HttpRequestTask(backgroundHandler, requestCallback, walletApplication.httpUserAgent())
-                .requestPaymentRequest(basePaymentIntent.paymentRequestUrl)
+        HttpRequestTask(backgroundHandler, requestCallback, packageInfoProvider.httpUserAgent())
+            .requestPaymentRequest(basePaymentIntent.paymentRequestUrl)
     }
 
     fun createBaseSendRequest(paymentIntent: PaymentIntent) {
-
         backgroundHandler.post {
             Context.propagate(Constants.CONTEXT)
             try {
-                var sendRequest = createSendRequest(wallet, false, paymentIntent, signInputs = false, forceEnsureMinRequiredFee = false)
+                var sendRequest = sendCoinsTaskRunner.createSendRequest(
+                    false,
+                    paymentIntent,
+                    signInputs = false,
+                    forceEnsureMinRequiredFee = false
+                )
 
                 wallet.completeTx(sendRequest)
                 if (checkDust(sendRequest)) {
-                    sendRequest = createSendRequest(wallet, false, paymentIntent, signInputs = false, forceEnsureMinRequiredFee = true)
+                    sendRequest = sendCoinsTaskRunner.createSendRequest(
+                        false,
+                        paymentIntent,
+                        signInputs = false,
+                        forceEnsureMinRequiredFee = true
+                    )
                     wallet.completeTx(sendRequest)
                 }
                 callbackHandler?.post {
                     baseSendRequest = sendRequest
-                    sendRequestLiveData.value = Resource.success(sendRequest)
+                    _sendRequestLiveData.value = Resource.success(sendRequest)
                 }
             } catch (x: Exception) {
                 callbackHandler?.post {
                     baseSendRequest = null
-                    sendRequestLiveData.value = Resource.error(x)
+                    _sendRequestLiveData.value = Resource.error(x)
                 }
             }
         }
     }
 
-    fun signAndSendPayment() {
-        signAndSendPayment(finalPaymentIntent!!, baseSendRequest!!.ensureMinRequiredFee)
-    }
-
-    override fun signAndSendPayment(
-        sendRequest: SendRequest,
-        txAlreadyCompleted: Boolean,
-        checkBalanceConditions: Boolean
-    ) {
-        if (finalPaymentIntent!!.hasPaymentUrl()) {
-            wallet.completeTx(sendRequest)
-            directPay(sendRequest)
-        } else {
-            super.signAndSendPayment(sendRequest, txAlreadyCompleted, checkBalanceConditions)
-        }
+    fun sendPayment() {
+        val finalSendRequest = sendCoinsTaskRunner.createSendRequest(
+            basePaymentIntent.mayEditAmount(),
+            finalPaymentIntent!!,
+            true,
+            baseSendRequest!!.ensureMinRequiredFee
+        )
+        sendCoinsTaskRunner.signSendRequest(finalSendRequest)
+        directPay(finalSendRequest)
     }
 
     fun directPay(sendRequest: SendRequest) {
+        wallet.completeTx(sendRequest)
         val refundAddress = wallet.freshAddress(KeyPurpose.REFUND)
-        val payment = PaymentProtocol.createPaymentMessage(listOf(sendRequest.tx), finalPaymentIntent!!.amount, refundAddress, null, finalPaymentIntent!!.payeeData)
+        val payment = PaymentProtocol.createPaymentMessage(
+            listOf(sendRequest.tx),
+            finalPaymentIntent!!.amount,
+            refundAddress,
+            null,
+            finalPaymentIntent!!.payeeData
+        )
 
         val callback: DirectPaymentTask.ResultCallback = object : DirectPaymentTask.ResultCallback {
             override fun onResult(ack: Boolean) {
@@ -173,14 +246,26 @@ class PaymentProtocolViewModel @Inject constructor(
             }
         }
 
-        HttpPaymentTask(backgroundHandler, callback, finalPaymentIntent!!.paymentUrl, walletApplication.httpUserAgent())
-                .send(payment)
+        HttpPaymentTask(
+            backgroundHandler,
+            callback,
+            finalPaymentIntent!!.paymentUrl,
+            packageInfoProvider.httpUserAgent()
+        )
+            .send(payment)
     }
 
-    fun commitAndBroadcast(sendRequest: SendRequest) {
-        super.signAndSendPayment(sendRequest,
-            txAlreadyCompleted = true,
+    suspend fun commitAndBroadcast(sendRequest: SendRequest): Transaction {
+        return sendCoinsTaskRunner.sendCoins(
+            sendRequest,
+            txCompleted = true,
             checkBalanceConditions = true
         )
+    }
+
+    override fun onCleared() {
+        backgroundHandler.looper.quit()
+        callbackHandler?.removeCallbacksAndMessages(null)
+        super.onCleared()
     }
 }

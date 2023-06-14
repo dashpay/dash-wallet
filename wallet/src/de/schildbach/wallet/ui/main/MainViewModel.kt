@@ -21,23 +21,28 @@ import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
-import org.dash.wallet.common.data.BlockchainState
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.platform.PlatformSyncService
-import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -46,10 +51,14 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -57,8 +66,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.slf4j.LoggerFactory
-import org.dash.wallet.common.transactions.TransactionUtils
-import org.dash.wallet.common.transactions.filters.TransactionFilter
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import java.util.HashMap
@@ -70,7 +79,7 @@ class MainViewModel @Inject constructor(
     val analytics: AnalyticsService,
     private val clipboardManager: ClipboardManager,
     private val config: Configuration,
-    blockchainStateDao: BlockchainStateDao,
+    private val walletUIConfig: WalletUIConfig,
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
@@ -98,16 +107,17 @@ class MainViewModel @Inject constructor(
     private val listener: SharedPreferences.OnSharedPreferenceChangeListener
     private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
 
-    val balanceDashFormat: MonetaryFormat = config.format.noCode()
     val isPassphraseVerified: Boolean
         get() = !config.remindBackupSeed
+    val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
+    val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
     private val _transactions = MutableLiveData<List<TransactionRowView>>()
     val transactions: LiveData<List<TransactionRowView>>
         get() = _transactions
 
-    private val _transactionsDirection = MutableStateFlow(TxDirection.ALL)
-    var transactionsDirection: TxDirection
+    private val _transactionsDirection = MutableStateFlow(TxFilterType.ALL)
+    var transactionsDirection: TxFilterType
         get() = _transactionsDirection.value
         set(value) {
             _transactionsDirection.value = value
@@ -138,9 +148,14 @@ class MainViewModel @Inject constructor(
     val mostRecentTransaction: LiveData<Transaction>
         get() = _mostRecentTransaction
 
-    private val _hideBalance = MutableLiveData<Boolean>()
-    val hideBalance: LiveData<Boolean>
-        get() = _hideBalance
+    private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
+    val hideBalance = walletUIConfig.observePreference(WalletUIConfig.AUTO_HIDE_BALANCE)
+        .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
+            temporaryHide ?: autoHide ?: false
+        }
+        .asLiveData()
+
+    val showTapToHideHint = walletUIConfig.observePreference(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT).asLiveData()
 
     private val _isNetworkUnavailable = MutableLiveData<Boolean>()
     val isNetworkUnavailable: LiveData<Boolean>
@@ -165,8 +180,6 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    val canAffordIdentityCreationLiveData = CanAffordIdentityCreationLiveData(walletApplication)
-
     val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
         addSource(isPlatformAvailableData) {
             value = combineLatestData()
@@ -177,7 +190,7 @@ class MainViewModel @Inject constructor(
         addSource(blockchainIdentity) {
             value = combineLatestData()
         }
-        addSource(canAffordIdentityCreationLiveData) {
+        addSource(_balance) {
             value = combineLatestData()
         }
     }
@@ -200,24 +213,23 @@ class MainViewModel @Inject constructor(
     // end DashPay
 
     init {
-        _hideBalance.value = config.hideBalance
-        transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxDirection.ALL
+        transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
 
         _transactionsDirection
             .flatMapLatest { direction ->
-                metadataProvider.observeAllMemos()
-                    .flatMapLatest { memos ->
+                metadataProvider.observePresentableMetadata()
+                    .flatMapLatest { metadata ->
                         val filter = TxDirectionFilter(direction, walletData.wallet!!)
-                        refreshTransactions(filter, memos)
+                        refreshTransactions(filter, metadata)
                         walletData.observeWalletChanged()
                             .debounce(THROTTLE_DURATION)
-                            .onEach { refreshTransactions(filter, memos) }
+                            .onEach { refreshTransactions(filter, metadata) }
                     }
             }
             .catch { analytics.logError(it, "is wallet null: ${walletData.wallet == null}") }
             .launchIn(viewModelWorkerScope)
 
-        blockchainStateDao.observeState()
+        blockchainStateProvider.observeState()
             .filterNotNull()
             .onEach { state ->
                 updateSyncStatus(state)
@@ -271,7 +283,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     fun logError(ex: Exception, details: String) {
@@ -287,8 +299,8 @@ class MainViewModel @Inject constructor(
 
             if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
                 input = clip.getItemAt(0).uri?.toString()
-            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)
-                || clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
+            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
+                clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
             ) {
                 input = clip.getItemAt(0).text?.toString()
             }
@@ -298,25 +310,35 @@ class MainViewModel @Inject constructor(
     }
 
     fun triggerHideBalance() {
-        val pastValue = _hideBalance.value ?: config.hideBalance
-        _hideBalance.value = !pastValue
+        val isHiding = hideBalance.value ?: false
+        _temporaryHideBalance.value = !isHiding
 
-        if (_hideBalance.value == true) {
+        if (_temporaryHideBalance.value == true) {
             logEvent(AnalyticsConstants.Home.HIDE_BALANCE)
         } else {
             logEvent(AnalyticsConstants.Home.SHOW_BALANCE)
         }
+
+        viewModelScope.launch { walletUIConfig.setPreference(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT, false) }
     }
 
-    fun logDirectionChangedEvent(direction: TxDirection) {
+    fun logDirectionChangedEvent(direction: TxFilterType) {
         val directionParameter = when (direction) {
-            TxDirection.ALL -> "all_transactions"
-            TxDirection.SENT -> "sent_transactions"
-            TxDirection.RECEIVED -> "received_transactions"
+            TxFilterType.ALL -> "all_transactions"
+            TxFilterType.SENT -> "sent_transactions"
+            TxFilterType.RECEIVED -> "received_transactions"
+            TxFilterType.GIFT_CARD -> "gift_cards"
         }
-        analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
-            "filter_value" to directionParameter
-        ))
+        analytics.logEvent(
+            AnalyticsConstants.Home.TRANSACTION_FILTER,
+            mapOf(
+                AnalyticsConstants.Parameter.VALUE to directionParameter
+            )
+        )
+
+        if (direction == TxFilterType.GIFT_CARD) {
+            analytics.logEvent(AnalyticsConstants.DashDirect.FILTER_GIFT_CARD, mapOf())
+        }
     }
 
     fun processDirectTransaction(tx: Transaction) {
@@ -334,7 +356,7 @@ class MainViewModel @Inject constructor(
         config.unregisterOnSharedPreferenceChangeListener(listener)
     }
 
-    private suspend fun refreshTransactions(filter: TransactionFilter, memos: Map<Sha256Hash, String>) {
+    private suspend fun refreshTransactions(filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
         walletData.wallet?.let { wallet ->
             val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
 
@@ -348,17 +370,14 @@ class MainViewModel @Inject constructor(
 
             val transactionViews = walletData.wrapAllTransactions(
                 FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
-            ).filter { it.transactions.any { tx -> filter.matches(tx) } }
+            ).filter { it.passesFilter(filter, metadata) }
              .sortedWith(TransactionWrapperComparator())
              .map {
                  var contact: DashPayProfile? = null
-                 var memo = ""
                  val tx = it.transactions.first()
-                 val isInternal = TransactionUtils.isEntirelySelf(tx, wallet)
+                 val isInternal = tx.isEntirelySelf(wallet)
 
                  if (it.transactions.size == 1) {
-                     memo = memos.getOrDefault(tx.txId, "")
-
                      if (!isInternal && platformRepo.hasIdentity) {
                          val contactId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
 
@@ -369,18 +388,20 @@ class MainViewModel @Inject constructor(
                  }
 
                  TransactionRowView.fromTransactionWrapper(
-                     it, memo,
+                     it,
                      walletData.transactionBag,
                      Constants.CONTEXT,
-                     contact
+                     contact,
+                     metadata[it.transactions.first().txId]
                  )
              }
+
             _transactions.postValue(transactionViews)
         }
     }
 
     private fun updateSyncStatus(state: BlockchainState) {
-        if (_isBlockchainSyncFailed.value != state.isSynced()) {
+        if (_isBlockchainSynced.value != state.isSynced()) {
             _isBlockchainSynced.postValue(state.isSynced())
 
             if (state.isSynced()) {
@@ -402,12 +423,24 @@ class MainViewModel @Inject constructor(
         var percentage = state.percentageSync
 
         if (state.replaying && state.percentageSync == 100) {
-            //This is to prevent showing 100% when using the Rescan blockchain function.
-            //The first few broadcasted blockchainStates are with percentage sync at 100%
+            // This is to prevent showing 100% when using the Rescan blockchain function.
+            // The first few broadcasted blockchainStates are with percentage sync at 100%
             percentage = 0
         }
         _blockchainSyncPercentage.postValue(percentage)
     }
+
+    private fun TransactionWrapper.passesFilter(
+        filter: TxDirectionFilter,
+        metadata: Map<Sha256Hash, PresentableTxMetadata>
+    ): Boolean {
+        return (filter.direction == TxFilterType.GIFT_CARD && isGiftCard(metadata)) ||
+            transactions.any { tx -> filter.matches(tx) }
+    }
+    private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
+        return metadata[transactions.first().txId]?.service == ServiceName.DashDirect
+    }
+
 
     // DashPay
 
@@ -458,7 +491,7 @@ class MainViewModel @Inject constructor(
         val isPlatformAvailable = isPlatformAvailableData.value ?: false
         val isSynced = _isBlockchainSynced.value ?: false
         val noIdentityCreatedOrInProgress = (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
-        val canAffordIdentityCreation = canAffordIdentityCreationLiveData.value ?: false
+        val canAffordIdentityCreation = walletData.canAffordIdentityCreation()
         return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress && canAffordIdentityCreation
     }
 

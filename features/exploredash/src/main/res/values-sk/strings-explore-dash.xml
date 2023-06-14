@@ -16,8 +16,8 @@
   -->
 <resources>
     <!-- Explore screen -->
-    <string name="explore_dash">Preskúmajte Dash</string>
-    <string name="explore_title">Preskúmať</string>
+    <string name="explore_dash">Objavte Dash</string>
+    <string name="explore_title">Objaviť</string>
     <string name="explore_subtitle">Jednoducho nakupujte s vašim DASH-om na viac ako 155 000 miestach a online obchodoch</string>
     <string name="explore_merchants_title">Kde minúť?</string>
     <string name="explore_merchants_subtitle">Nájsť obchodníkov, ktorí akceptujú Dash ako platbu.</string>
@@ -154,7 +154,6 @@
     <string name="buy_gift_card_text">Kúpte si darčekové poukážky s Dashom</string>
     <string name="buy_gift_card_desc_text">Kúpte si darčekové karty s Dashom za presnú sumu vášho nákupu.</string>
     <string name="learn_more_text">Ďalšie informácie</string>
-    <string name="continue_text">Pokračovať</string>
     <string name="buy_card_header_text">Ako používať darčekovú poukážku</string>
     <string name="buy_card_desc_text">Nie všetky obchody akceptujú priamo DASH, ale môžete si kúpiť darčekovú kartu s Dashom.</string>
     <string name="find_merchant_text">Nájsť obchodníka.</string>

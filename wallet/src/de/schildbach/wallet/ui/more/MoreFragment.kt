@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,9 +31,9 @@ import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.display
@@ -44,6 +44,8 @@ import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
@@ -64,13 +66,16 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     private val binding by viewBinding(FragmentMoreBinding::bind)
-    @Inject lateinit var analytics: AnalyticsService
-    @Inject lateinit var walletApplication: WalletApplication
     private var showInviteSection = false
 
     private val mainActivityViewModel: MainViewModel by activityViewModels()
     private val editProfileViewModel: EditProfileViewModel by viewModels()
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
+
+    @Inject lateinit var packageInfoProvider: PackageInfoProvider
+    @Inject lateinit var configuration: Configuration
+    @Inject lateinit var walletData: WalletDataProvider
+    @Inject lateinit var analytics: AnalyticsService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -95,17 +100,27 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             )
         }
         binding.security.setOnClickListener {
-            startActivity(Intent(requireContext(), SecurityActivity::class.java))
+            safeNavigate(MoreFragmentDirections.moreToSecurity())
         }
         binding.settings.setOnClickListener {
             startActivity(Intent(requireContext(), SettingsActivity::class.java))
         }
         binding.tools.setOnClickListener {
-            startActivity(Intent(requireContext(), ToolsActivity::class.java))
+            //startActivity(Intent(requireContext(), ToolsActivity::class.java))
+            findNavController().navigate(
+                R.id.toolsFragment,
+                bundleOf(),
+                NavOptions.Builder()
+                    .setEnterAnim(R.anim.slide_in_bottom)
+                    .build()
+            )
         }
         binding.contactSupport.setOnClickListener {
             val alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
-                requireActivity(), walletApplication
+                requireActivity(),
+                packageInfoProvider,
+                configuration,
+                walletData.wallet
             ).buildAlertDialog()
             (requireActivity() as LockScreenActivity).alertDialog = alertDialog
             alertDialog.show()
@@ -142,7 +157,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     private fun startBuyAndSellActivity() {
-        analytics.logEvent(AnalyticsConstants.MoreMenu.BUY_SELL_MORE, bundleOf())
+        analytics.logEvent(AnalyticsConstants.MoreMenu.BUY_SELL_MORE, mapOf())
         safeNavigate(MoreFragmentDirections.moreToBuySell())
     }
 

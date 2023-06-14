@@ -37,7 +37,9 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity;
+import de.schildbach.wallet.ui.send.SendCoinsActivity;
+import de.schildbach.wallet.ui.util.InputParser;
+import de.schildbach.wallet.ui.util.WalletUri;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
@@ -112,7 +114,7 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
                 new InputParser.WalletUriParser(intentUri) {
                     @Override
                     protected void handlePaymentIntent(final PaymentIntent paymentIntent, boolean forceInstantSend) {
-                        SendCoinsInternalActivity.sendFromWalletUri(
+                        SendCoinsActivity.Companion.sendFromWalletUri(
                                 WalletUriHandlerActivity.this, REQUEST_CODE_SEND_FROM_WALLET_URI, paymentIntent);
                     }
 

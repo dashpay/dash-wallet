@@ -152,7 +152,7 @@ open class FancyAlertDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val titleObj = requireArguments().get("title") // TODO: check if needed
+        val titleObj = requireArguments().get("title")
         if (titleObj is String) {
             binding.title.text = titleObj
         } else {

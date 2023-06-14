@@ -20,36 +20,38 @@ package de.schildbach.wallet.ui.transactions
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.graphics.drawable.Animatable
 import android.os.Bundle
-import android.view.View
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.main.MainActivity
 
-import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.ui.AbstractWalletActivity
 import de.schildbach.wallet.ui.DashPayUserActivity
+import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
+import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
-import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity.ACTION_SEND_FROM_WALLET_URI
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
  */
-class TransactionResultActivity : AbstractWalletActivity() {
+@AndroidEntryPoint
+class TransactionResultActivity : LockScreenActivity() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
 
@@ -106,6 +108,8 @@ class TransactionResultActivity : AbstractWalletActivity() {
     }
 
     private val viewModel: TransactionResultViewModel by viewModels()
+    @Inject
+    lateinit var dashPayProfileDao: DashPayProfileDao
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -163,6 +167,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
         report_issue_card.setOnClickListener { showReportIssue() }
         tax_category_layout.setOnClickListener { viewOnTaxCategory()}
+        open_explorer_card.setOnClickListener { viewOnExplorer(tx) }
         add_private_memo_btn.setOnClickListener {
             viewModel.transaction?.txId?.let { hash ->
                 PrivateMemoDialog().apply {
@@ -171,12 +176,8 @@ class TransactionResultActivity : AbstractWalletActivity() {
             }
         }
 
-        check_icon.setImageDrawable(ContextCompat.getDrawable(this,
-            R.drawable.check_animated))
-        check_icon.postDelayed({
-            check_icon.visibility = View.VISIBLE
-            (check_icon.drawable as Animatable).start()
-        }, 400)
+        transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
+        transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
     }
 
     private fun viewOnTaxCategory() {
@@ -185,14 +186,17 @@ class TransactionResultActivity : AbstractWalletActivity() {
     }
 
     private fun showReportIssue() {
-        ReportIssueDialogBuilder.createReportIssueDialog(this, WalletApplication.getInstance())
-            .buildAlertDialog().show()
+        ReportIssueDialogBuilder.createReportIssueDialog(
+            this,
+            packageInfoProvider,
+            configuration,
+            viewModel.walletData.wallet
+        ).buildAlertDialog().show()
     }
 
     private fun onTransactionDetailsDismiss() {
         when {
-            intent.action == Intent.ACTION_VIEW ||
-                    intent.action == ACTION_SEND_FROM_WALLET_URI -> {
+            intent.action == Intent.ACTION_VIEW || intent.action == SendCoinsActivity.ACTION_SEND_FROM_WALLET_URI -> {
                 finish()
             }
             userData != null -> {
@@ -213,5 +217,23 @@ class TransactionResultActivity : AbstractWalletActivity() {
     override fun onDestroy() {
         super.onDestroy()
         viewModel.transaction?.confidence?.removeEventListener(transactionResultViewBinder)
+    }
+
+    private fun rescanBlockchain() {
+        AdaptiveDialog.create(
+            null,
+            getString(R.string.preferences_initiate_reset_title),
+            getString(R.string.preferences_initiate_reset_dialog_message),
+            getString(R.string.button_cancel),
+            getString(R.string.preferences_initiate_reset_dialog_positive)
+        ).show(this) {
+            if (it == true) {
+                log.info("manually initiated blockchain reset")
+                viewModel.rescanBlockchain()
+                finish()
+            } else {
+                viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS)
+            }
+        }
     }
 }

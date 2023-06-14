@@ -17,26 +17,24 @@
 package de.schildbach.wallet.ui.transactions
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.main.TransactionAdapter
-import de.schildbach.wallet.util.currencySymbol
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionGroupDetailsBinding
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.currencySymbol
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 
 @AndroidEntryPoint
-class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
+class TransactionGroupDetailsFragment() : OffsetDialogFragment(R.layout.transaction_group_details) {
     private val viewModel: TransactionGroupViewModel by viewModels()
     private val binding by viewBinding(TransactionGroupDetailsBinding::bind)
 
@@ -47,14 +45,6 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
 
     constructor(transactionWrapper: TransactionWrapper) : this() {
         this.transactionWrapper = transactionWrapper
-    }
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return inflater.inflate(R.layout.transaction_group_details, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -79,11 +69,13 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
 
         binding.transactions.adapter = adapter
         val divider = ResourcesCompat.getDrawable(resources, R.drawable.list_divider, null)
-        binding.transactions.addItemDecoration(ListDividerDecorator(
-            divider!!,
-            showAfterLast = false,
-            marginStart = resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start)
-        ))
+        binding.transactions.addItemDecoration(
+            ListDividerDecorator(
+                divider!!,
+                showAfterLast = false,
+                marginStart = resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start)
+            )
+        )
 
         viewModel.transactions.observe(viewLifecycleOwner) { transactions ->
             adapter.submitList(transactions)
@@ -114,7 +106,9 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
         if (dashValue != null && exchangeRate != null) {
             binding.fiatValue.isVisible = true
             binding.fiatValue.setFiatAmount(
-                dashValue, exchangeRate, Constants.LOCAL_FORMAT,
+                dashValue,
+                exchangeRate,
+                Constants.LOCAL_FORMAT,
                 exchangeRate.fiat?.currencySymbol
             )
         } else {

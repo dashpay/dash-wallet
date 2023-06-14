@@ -20,28 +20,24 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Environment
 import android.view.View
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityDataDao
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.DashPayProfileDao
-import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
-import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
-import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.AuthenticationKeyChain
-import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -54,12 +50,15 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val analytics: AnalyticsService,
     private val platformRepo: PlatformRepo,
+    private val invitationDao: InvitationsDao,
     blockchainIdentityDataDao: BlockchainIdentityDataDao,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     private val log = LoggerFactory.getLogger(InvitationFragmentViewModel::class.java)
 
-    private val pubkeyHash = walletApplication.wallet!!.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
+    private val pubkeyHash = platformRepo.authenticationGroupExtension!!.currentKey(
+        AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING
+    ).pubKeyHash
 
     private val inviteId = Address.fromPubKeyHash(walletApplication.wallet!!.params, pubkeyHash).toBase58()
 
@@ -77,8 +76,6 @@ open class InvitationFragmentViewModel @Inject constructor(
                 .enqueue()
         return inviteId
     }
-
-    val invitationDao = AppDatabase.getAppDatabase().invitationsDao()
 
     val invitationPreviewImageFile by lazy {
         try {
@@ -118,7 +115,7 @@ open class InvitationFragmentViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     val identityIdLiveData = MutableLiveData<String>()
@@ -143,24 +140,6 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     val invitation: Invitation
         get() = invitationLiveData.value!!
-
-    val invitationLinkData = liveData(Dispatchers.IO) {
-        val tx = walletApplication.wallet!!.getTransaction(invitation.txid)
-        val cftx = walletApplication.wallet!!.getCreditFundingTransaction(tx)
-
-        val wallet = WalletApplication.getInstance().wallet!!
-        val password = SecurityGuard().retrievePassword()
-        var encryptionKey: KeyParameter? = null
-        try {
-            encryptionKey = wallet.keyCrypter!!.deriveKey(password)
-        } catch (ex: KeyCrypterException) {
-            analytics.logError(ex, "create invitation link: failed to derive encryption key")
-            emit("")
-        }
-
-        val invite = platformRepo.blockchainIdentity.getInvitationString(cftx, encryptionKey)
-        emit(invite)
-    }
 
     suspend fun getInvitedUserProfile(): DashPayProfile? =
         dashPayProfileDao.loadByUserId(identityIdLiveData.value!!)

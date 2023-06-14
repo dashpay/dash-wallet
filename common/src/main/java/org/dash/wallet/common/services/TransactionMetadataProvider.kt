@@ -16,12 +16,16 @@
 
 package org.dash.wallet.common.services
 
+import android.graphics.Bitmap
+import com.google.zxing.BarcodeFormat
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.TaxCategory
-import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.data.entity.TransactionMetadata
 
 interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
@@ -33,8 +37,12 @@ interface TransactionMetadataProvider {
     suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionSentTime(txId: Sha256Hash, timestamp: Long, isSyncingPlatform: Boolean = false)
-
-    suspend fun syncPlatformMetadata(txId: Sha256Hash, metadata: TransactionMetadata)
+    suspend fun syncPlatformMetadata(
+        txId: Sha256Hash,
+        metadata: TransactionMetadata,
+        giftCard: GiftCard?,
+        iconUrl: String?
+    )
 
     /**
      * Checks for missing data in the metadata cache vs the Transaction and ensures that both
@@ -48,9 +56,17 @@ interface TransactionMetadataProvider {
     suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata?
     fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?>
 
+    /**
+     * Mark a transaction as DashDirect gift card expense with an icon
+     */
+    suspend fun markGiftCardTransaction(txId: Sha256Hash, iconUrl: String?)
+    suspend fun updateGiftCardMetadata(giftCard: GiftCard)
+    suspend fun updateGiftCardBarcode(txId: Sha256Hash, barcodeValue: String, barcodeFormat: BarcodeFormat)
+
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 
-    fun observeAllMemos(): Flow<Map<Sha256Hash, String>>
+    fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>
+    suspend fun getIcon(iconId: Sha256Hash): Bitmap?
 
     // Address methods
     /**

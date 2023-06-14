@@ -30,8 +30,9 @@ import androidx.core.view.updateLayoutParams
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.ConvertViewBinding
@@ -145,12 +146,12 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
     }
 
     @SuppressLint("SetTextI18n")
-    private fun updateAmount(){
-        if (walletToCoinbase){
+    private fun updateAmount() {
+        if (walletToCoinbase) {
             exchangeRate?.let { rate ->
-                val fiatAmount = GenericUtils.fiatToString(rate.coinToFiat(inputInDash))
+                val fiatAmount = rate.coinToFiat(inputInDash).toFormattedString()
                 binding.convertFromDashBalance.text = "${dashFormat
-                    .format(inputInDash)} ${CoinbaseConstants.DASH_CURRENCY}"
+                    .format(inputInDash)} ${Constants.DASH_CURRENCY}"
                 binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
                 if (inputInDash.isGreaterThan(Coin.ZERO)){
                     binding.convertFromDashBalance.isVisible = true
@@ -171,7 +172,7 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
 
                     val formatDash = dashFormat.minDecimals(2)
                         .format(coin).toString()
-                    binding.convertFromDashBalance.text = "$formatDash ${CoinbaseConstants.DASH_CURRENCY}"
+                    binding.convertFromDashBalance.text = "$formatDash ${Constants.DASH_CURRENCY}"
                     binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} ${it.faitAmount}"
 
                     binding.convertFromDashBalance.isVisible = true

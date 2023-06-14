@@ -44,11 +44,10 @@
             android:layout_width="wrap_content"
             android:layout_height="0dp"
             android:layout_marginEnd="4dp"
-            android:layout_marginRight="4dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/transaction_amount_signal"
             app:layout_constraintTop_toTopOf="parent"
-            tools:text="-3.14" />
+            tools:text="3.14" />
 
         <ImageView
             android:id="@+id/dash_amount_symbol"
@@ -77,8 +76,8 @@
 
     <ImageView
         android:id="@+id/check_icon"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:layout_width="@dimen/transaction_details_icon_size"
+        android:layout_height="@dimen/transaction_details_icon_size"
         app:layout_constraintBottom_toBottomOf="@id/fiat_value"
         app:layout_constraintEnd_toStartOf="@id/right_guideline"
         app:layout_constraintTop_toTopOf="@id/transaction_title"
@@ -87,8 +86,8 @@
 
     <ImageView
         android:id="@+id/secondary_icon"
-        android:layout_width="19dp"
-        android:layout_height="19dp"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
         android:padding="2dp"
         android:layout_marginBottom="-2dp"
         android:layout_marginEnd="-2dp"
@@ -118,7 +117,7 @@
             android:id="@+id/error_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingVertical="12dp"
+            android:paddingVertical="6dp"
             android:visibility="gone"
             tools:visibility="visible">
 
@@ -127,11 +126,7 @@
                 style="@style/Caption.Medium.Tertiary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="4dp"
-                android:ellipsize="end"
-                android:lines="1"
                 android:text="@string/reason"
-                android:textSize="13sp"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
@@ -141,7 +136,6 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:textSize="13sp"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/error_label"
                 tools:text="Nonstandard" />
@@ -410,9 +404,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="15dp"
-        android:background="@drawable/rounded_ripple_background"
         android:paddingHorizontal="15dp"
         android:paddingVertical="17dp"
+        android:background="@drawable/rounded_ripple_background"
         android:theme="@style/ListViewButtonBackground"
         app:layout_constraintTop_toBottomOf="@id/private_memo">
 

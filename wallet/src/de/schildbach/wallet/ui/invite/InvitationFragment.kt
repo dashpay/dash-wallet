@@ -29,7 +29,7 @@ import androidx.core.text.HtmlCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.BuildConfig

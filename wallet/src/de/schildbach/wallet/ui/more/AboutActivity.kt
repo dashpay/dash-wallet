@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.more
 
+import android.annotation.SuppressLint
 import android.content.*
 import android.content.Intent.ACTION_VIEW
 import android.hardware.Sensor
@@ -26,20 +27,23 @@ import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateUtils
-import android.widget.TextView
 import android.widget.Toast
 import android.widget.Toast.LENGTH_LONG
 import androidx.activity.viewModels
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityAboutBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.VersionMessage
+import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.features.exploredash.ExploreSyncWorker
 import org.slf4j.LoggerFactory
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -60,6 +64,7 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
     private val viewModel by viewModels<AboutViewModel>()
     private lateinit var binding: ActivityAboutBinding
 
+    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAboutBinding.inflate(layoutInflater)
@@ -67,8 +72,10 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
 
         binding.title.text = "${getString(R.string.about_title)} ${getString(R.string.app_name_short)}"
         binding.appVersionName.text = getString(R.string.about_version_name, BuildConfig.VERSION_NAME)
-        binding.libraryVersionName.text = getString(R.string.about_credits_bitcoinj_title,
-                VersionMessage.BITCOINJ_VERSION)
+        binding.libraryVersionName.text = getString(
+            R.string.about_credits_bitcoinj_title,
+            VersionMessage.BITCOINJ_VERSION
+        )
 
         binding.githubLink.setOnClickListener {
             val i = Intent(ACTION_VIEW)
@@ -79,6 +86,16 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
         binding.contactSupport.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT)
             handleReportIssue()
+        }
+
+        val isMainNet = Constants.NETWORK_PARAMETERS == MainNetParams.get()
+        binding.forceSyncBtn.isVisible = !isMainNet
+        binding.forceSyncBtn.setOnClickListener {
+            try {
+                ExploreSyncWorker.run(applicationContext, isMainNet)
+            } catch (ex: Exception) {
+                log.error(ex.message, ex)
+            }
         }
 
         showExploreDashSyncStatus()
@@ -119,20 +136,24 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
         }
 
         viewModel.exploreIsSyncing.observe(this) { isSyncing ->
-            binding.exploreDashLastDeviceSync.text = if (isSyncing) {
-                "${getString(R.string.syncing)}…"
-            } else if (viewModel.exploreIsSyncFailed) {
-                getString(
-                    R.string.about_explore_failed_sync,
-                    DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSyncAttempt, formatFlags)
-                )
-            } else if (viewModel.explorePreloadedTimestamp > viewModel.exploreLastSyncAttempt) {
-                getString(
-                    R.string.about_explore_preloaded_on,
-                    DateUtils.formatDateTime(applicationContext, viewModel.explorePreloadedTimestamp, formatFlags)
-                )
-            } else {
-                DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSyncAttempt, formatFlags)
+            lifecycleScope.launch {
+                val dbPrefs = viewModel.databasePrefs
+                binding.exploreDashLastDeviceSync.text = if (isSyncing) {
+                    "${getString(R.string.syncing)}…"
+                } else if (dbPrefs.failedSyncAttempts > 0) {
+                    getString(
+                        R.string.about_explore_failed_sync,
+                        DateUtils.formatDateTime(applicationContext, dbPrefs.lastSyncTimestamp, formatFlags)
+                    )
+                } else if (dbPrefs.preloadedOnTimestamp >= dbPrefs.lastSyncTimestamp) {
+                    val prefix = if (dbPrefs.preloadedTestDb) "Testnet DB " else ""
+                    prefix + getString(
+                        R.string.about_explore_preloaded_on,
+                        DateUtils.formatDateTime(applicationContext, dbPrefs.preloadedOnTimestamp, formatFlags)
+                    )
+                } else {
+                    DateUtils.formatDateTime(applicationContext, dbPrefs.lastSyncTimestamp, formatFlags)
+                }
             }
         }
     }
@@ -163,7 +184,9 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
     private fun handleReportIssue() {
         alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
             this,
-            viewModel.walletApplication,
+            packageInfoProvider,
+            configuration,
+            walletData.wallet
         ).buildAlertDialog()
         alertDialog.show()
     }

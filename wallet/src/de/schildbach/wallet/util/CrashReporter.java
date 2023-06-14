@@ -48,6 +48,7 @@ import com.google.common.base.Strings;
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet_test.BuildConfig;
 
 import android.app.ActivityManager;
@@ -175,15 +176,18 @@ public class CrashReporter {
                     p.versionCode, p.firstInstallTime, p.lastUpdateTime));
     }
 
-    public static void appendApplicationInfo(final Appendable report, final WalletApplication application)
-            throws IOException {
-        final PackageInfo pi = application.packageInfo();
-        final Configuration configuration = application.getConfiguration();
+    public static void appendApplicationInfo(
+        final Appendable report,
+        final PackageInfoProvider packageInfoProvider,
+        final Configuration configuration,
+        final Wallet wallet
+    ) throws IOException {
+        final PackageInfo pi = packageInfoProvider.getPackageInfo();
         final Calendar calendar = new GregorianCalendar(UTC);
 
         report.append("Version: " + pi.versionName + " (" + pi.versionCode + ")\n");
         report.append("Package: " + pi.packageName + "\n");
-        String installer = application.getPackageManager().getInstallerPackageName(pi.packageName);
+        String installer = packageInfoProvider.getInstallerPackageName();
         report.append("Installer: " + (installer != null ? installer : "manual") + "\n");
         report.append("Test/Prod: " + (Constants.IS_PROD_BUILD ? "prod" : "test") + "\n");
         report.append("Flavor: " + BuildConfig.FLAVOR + "\n");
@@ -223,7 +227,6 @@ public class CrashReporter {
         report.append("Time of last blockchain reset: ").append(lastBlockchainResetTime > 0
                 ? String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) : "none").append("\n");
         report.append("Network: " + Constants.NETWORK_PARAMETERS.getId() + "\n");
-        final Wallet wallet = application.getWallet();
         report.append("Encrypted: " + wallet.isEncrypted() + "\n");
         report.append("Keychain size: " + wallet.getKeyChainGroupSize() + "\n");
 
@@ -247,11 +250,11 @@ public class CrashReporter {
                 "Last block seen: " + wallet.getLastBlockSeenHeight() + " (" + wallet.getLastBlockSeenHash() + ")\n");
 
         report.append("Databases:");
-        for (final String db : application.databaseList())
+        for (final String db : packageInfoProvider.getDatabases())
             report.append(" " + db);
         report.append("\n");
 
-        final File filesDir = application.getFilesDir();
+        final File filesDir = packageInfoProvider.getFilesDir();
         report.append("\nContents of FilesDir " + filesDir + ":\n");
         appendDir(report, filesDir, 0);
     }

@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Pagpapatunay ng PIN</string>
     <string name="set_pin_message">Ang PIN na ito ay kailangan upang i-unlock ang iyong app kapag nais gamitin.</string>
     <string name="set_pin_confirm_pin_incorrect">Maling PIN</string>
-
-    <string name="home_available_balance">Magagamit na balanse</string>
-    <string name="home_balance_hidden">Nakatagong balanse</string>
-    <string name="home_balance_show_hint">Pindutin upang ipakita ang balanse</string>
+    
     <string name="home_balance_hide_hint">Pindutin upang itago ang balanse</string>
 
     <string name="dialog_confirm_confirm">Kumpirmahin</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">Kabuuan</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Protektahan ang iyong wallet ngayon</string>
+    <string name="shortcut_secure_now">back-up</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">I-scan upang magbayad</string>
+    <string name="shortcut_scan_to_pay">Scan</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Ipadala sa address</string>
+    <string name="shortcut_pay_to_address">Ipadala</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Bumili/ Magbenta ng Dash</string>
+    <string name="shortcut_buy_sell">Bumili ng &amp; Ibenta</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Tumanggap</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -207,17 +204,12 @@
     <string name="verify_continue">Ipagpatuloy</string>
     <string name="verify_backup_wallet">Backup na Pitaka</string>
     <string name="verify_show_recovery_phrase">Ipakita ang recovery phrase</string>
-    <string name="verify_secure_now">Protektahan ang iyong wallet ngayon</string>
-    <string name="verify_it_is_important">Ito ay importante</string>
-    <string name="verify_it_is_important_subtitle">Ngayon ay ipapakita namin sa iyo ang sekretong susi ng iyong wallet.</string>
-    <string name="verify_info_text_1">Ang recovery phrase na ito ay kinakailangan upang ma-access ang pondo sa wallet.</string>
-    <string name="verify_info_text_2">HINDI namim itatabi ang iyong recovery phrase.</string>
-    <string name="verify_info_text_3">Kakailanganin mo ang recovery phrase para mabuksan ang iyong pondo kung sakaling mawala ang device, masira o kaya hindi sinasadyang ma-uninstall mo sa deviceang Dash Wallet.</string>
-    <string name="verify_skip">Laktawan</string>
-    <string name="verify_secure_now_btn">Protektahan ngayon</string>
-    <string name="verify_secure_now_message">Kapag nawala mo itong device, mawawala mo rin ang iyong pondo. Kumuha ng recovery phrase upang ma-restore ang pitaka sa ibang device.</string>
-    <string name="verify_seed_title">Paki-sulat sa ibaba</string>
-    <string name="verify_seed_write_down_confirmation">Naisulat ko na ito</string>
+    <string name="verify_info_title">I-backup ang iyong recovery phrase</string>
+    <string name="verify_info_subtitle">Kakailanganin mo ang recovery phrase na ito upang ma-access ang iyong mga pondo kung ang device na ito ay nawala, nasira o kung na-uninstall ang Dash Wallet mula sa device na ito.</string>
+    <string name="verify_info_title_1">HINDI iniimbak ng Dash Core Group ang recovery phrase</string>
+    <string name="verify_info_subtitle_1">Maaaring ma-access ng sinumang may iyong recovery phrase ang iyong mga pondo.</string>
+    <string name="verify_info_title_2">HINDI mo maibabalik ang wallet nang walang recovery phrase</string>
+    <string name="verify_info_subtitle_2">Isulat ito sa isang ligtas na lugar at huwag ipakita ito sa sinuman.</string>
     <string name="verify_seed_buttons_tip">Paki-pindot ang mga salita mula sa iyong recovery phrase sa tamang pagkakasunod-sunod.</string>
     <string name="verify_seed_success_title">Matagumpay na na-beripika</string>
     <string name="verify_seed_success_message">Ang iyong pitaka ay ligtas na. Maari mong magamit ang recovery phrase kahit kailan upanh marekober ang account sa ibang device.</string>
@@ -251,6 +243,9 @@
     <string name="transaction_details_moved_from">Ilipat mula</string>
     <string name="transaction_details_moved_internally_to">Internally ilipat sa</string>
     <string name="transaction_failed_details">Nabigo ang Paglipat</string>
+    <string name="transaction_failed_resolve">Ito ay maaaring malutas sa pamamagitan ng</string>
+    <string name="transaction_failed_rescan">muling pag-scan sa blockchain</string>
+    <string name="transaction_failed_in_conflict">Posible ito kung naka-install ang wallet sa dalawang device.</string>
 
     <string name="authenticate_fingerprint_title">Patunayan</string>
     <string name="authenticate_fingerprint_message">Kumpirmahin ang fingerprint para magpatuloy</string>
@@ -281,13 +276,21 @@
     <string name="tools_show_xpub">Pinalawak na Public Key</string>
 
     <string name="about_help_us_improve">Tulungan kaming mapabuti ang iyong karanasan</string>
+    <string name="about_review_and_rate">Suriin at i-rate ang app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">Ito ay open source app forked mula sa Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2022 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_device_sync">Pag-sync ng device sa huling Explore</string>
+    <string name="about_last_explore_server_update">Huling pag-update ng server ng Explore</string>
+    <string name="about_firebase_installation_id">Firebase installation ID</string>
+    <string name="about_fcm_token">Firebase cloud messaging token</string>
     <string name="about_last_explore_dash_update_error">hindi makuha</string>
     <string name="about_last_explore_dash_sync_never">hindi kailanman</string>
+    <string name="about_explore_failed_sync">Nabigong mag-sync sa %s</string>
+    <string name="about_explore_preloaded_on">Pre-loaded sa %s</string>
+
     <string name="block">Block</string>
     <string name="time">Oras</string>
     <string name="hash">Hash</string>
@@ -392,4 +395,24 @@
     <string name="reclassify_transactions_linked_accounts_title">Mga naka-link na account</string>
     <string name="reclassify_transactions_linked_accounts_message">bilang default lahat ng mga transaksyon papunta o mula sa iyong mga naka-link na account (palitan, staking, atbp) ay mamarkahan bilang mga paglilipat.</string>
     <string name="reclassify_transactions_change_explanation">Pumili ng anumang transaksyon mula sa homepage at baguhin ang kategorya sa pahina ng mga detalye ng transaksyon.</string>
+
+    <string name="masternode_keys_title">Mga Masternode Key</string>
+    <string name="masternode_key_type_owner">Susi ng may-ari</string>
+    <string name="masternode_key_type_voting">Mga susi ng pagboto</string>
+    <string name="masternode_key_type_operator">Operator na mga Susi</string>
+    <string name="masternode_key_type_platform">Mga Susi ng Operator ng HPMN</string>
+    <string name="masternode_key_type_total">%d mga susi</string>
+    <string name="masternode_key_type_used">%d ginamit</string>
+    <string name="masternode_key_pair_index">Keypair %d</string>
+    <string name="masternode_key_address">Address</string>
+    <string name="masternode_key_id">Key Id</string>
+    <string name="masternode_key_public">Pampublikong susi</string>
+    <string name="masternode_key_public_legacy">Pampublikong Susi (pamana)</string>
+    <string name="masternode_key_private_hex">Pribadong susi</string>
+    <string name="masternode_key_private_wif">Pribadong Susi WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
+    <string name="masternode_key_ip_address_unknown">Hindi kilala</string>
+    <string name="masternode_key_not_used">hindi ginagamit</string>
+    <string name="masternode_key_revoked">Binawi</string>
+    <string name="masternode_key_private_public_base64">Pribado / Pampublikong Susi (base64)</string>
 </resources>

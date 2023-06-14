@@ -16,6 +16,12 @@
     <string name="error">خطا</string>
     <string name="select_a_coin">یک رمزارز را انتخاب کنید</string>
     <string name="request_coins_share_dialog_title">درخواست دش را به اشتراک‌ بگذارید</string>
+    <string name="buy_with_fiat">خرید دش با پول رسمی</string>
+    <string name="buy_and_convert">خرید و مبادله دش با سایر رمزارزها</string>
+    <string name="transfer_dash">انتقال دش</string>
+    <string name="login_error_title">ورود به حساب %s شما ناموفق بود</string>
+    <string name="login_error_message">در هنگام تلاش برای ورود به حساب %s شما، خطایی روی داد. </string>
+    <string name="balance">موجودی: </string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">گرنزی پاوند</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">متوجه شدم</string>
     <string name="button_okay">باشه</string>
     <string name="button_share">به اشتراک گذاری</string>
+    <string name="share_address">به اشتراک‌گذاری نشانی</string>
     <string name="verify">تائید</string>
     <string name="receive_enter_amount_button">مبلغ را مشخص کنید</string>
 

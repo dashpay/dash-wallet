@@ -1,21 +1,25 @@
 buildscript {
     ext {
-        kotlin_version = '1.6.10'
-        coroutines_version = '1.6.4'
+        kotlin_version = '1.7.10'
+        coroutinesVersion = '1.6.4'
         ok_http_version = '4.9.1'
-        dashjVersion = '0.18.4-SNAPSHOT'
+        dashjVersion = '19.1-CJ-SNAPSHOT'
         hiltVersion = '2.40.1'
         hiltWorkVersion = '1.0.0'
         workRuntimeVersion='2.7.1'
         firebaseVersion = '28.4.2'
         roomVersion = '2.4.3'
-        lifecycleVersion = '2.3.1'
-        navigationVersion = '2.5.2'
         jetpackVersion = '1.6.0'
         appCompatVersion = '1.4.2'
 
         // Architecture
+        lifecycleVersion = '2.5.1'
+        navigationVersion = '2.5.3'
         datastoreVersion = "1.0.0"
+        hiltVersion = '2.45'
+        hiltWorkVersion = '1.0.0'
+        serializationVersion = '1.0.1'
+        preferenceVersion = '1.2.0'
 
         // Utils
         slf4jVersion = '1.7.32'
@@ -27,9 +31,11 @@ buildscript {
         constrainLayoutVersion = '2.1.4'
         recyclerViewVersion = "1.2.1"
         glideVersion = '4.12.0'
+        zxingVersion = '3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
 
         // Tests
         junitVersion = '4.13.2'
+        testCoreVersion = '1.5.0'
         mockitoVersion = '4.0.0'
         espressoVersion = '3.4.0'
         coilVersion = '1.4.0'
@@ -40,6 +46,7 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        maven { url "https://plugins.gradle.org/m2/" }
     }
 
     dependencies {
@@ -50,6 +57,7 @@ buildscript {
         classpath "com.google.dagger:hilt-android-gradle-plugin:$hiltVersion"
         classpath "androidx.navigation:navigation-safe-args-gradle-plugin:$navigationVersion"
         classpath "com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin:2.0.1"
+        classpath "org.jlleitschuh.gradle:ktlint-gradle:11.3.1"
     }
 }
 

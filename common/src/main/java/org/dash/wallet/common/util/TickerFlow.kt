@@ -11,7 +11,10 @@ import kotlin.time.Duration
  * https://stackoverflow.com/a/54828055/2279177
  */
 @OptIn(FlowPreview::class)
-class TickerFlow(private val period: Duration, private val initialDelay: Duration = Duration.ZERO): AbstractFlow<Unit>() {
+class TickerFlow(
+    private val period: Duration,
+    private val initialDelay: Duration = Duration.ZERO
+): AbstractFlow<Unit>() {
     override suspend fun collectSafely(collector: FlowCollector<Unit>) {
         delay(initialDelay)
         while (true) {

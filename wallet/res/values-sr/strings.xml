@@ -266,7 +266,7 @@
     <string name="about_category_credits">Ova aplikacija koristi...</string>
     <string name="about_credits_bitcoinj_title">dashj %s, implementacija Dash protokola</string>
     <string name="about_credits_zxing_title">ZXing, biblioteka za obradu QR-kodova</string>
-    <string name="about_credits_icon_title">Ova aplikacija koristi ikonu koju je napravio "bitboy"</string>
+    <string name="about_credits_icon_title">Ova aplikacija koristi ikonu koju je napravio \"bitboy\"</string>
     <string name="about_credits_scrypt_title">Scrypt, implementaciju odradili Will Glozer i Colin Percival</string>
     <string name="about_market_app_title">Google Play stranica</string>
     <string name="about_market_app_summary">Napisite recenziju ili ocenite aplikaciju</string>

@@ -30,3 +30,8 @@ fun String.copy(activity: FragmentActivity, label: String) {
     }
     Toast.makeText(activity, activity.getString(R.string.copied), Toast.LENGTH_SHORT).show()
 }
+
+fun String.maskEmail(): String {
+    val regex = "(?<=.)[^@\\n](?=[^@\\n]*?@)".toRegex()
+    return this.replace(regex, "*")
+}

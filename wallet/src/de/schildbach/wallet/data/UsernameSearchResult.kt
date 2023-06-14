@@ -16,6 +16,8 @@
 package de.schildbach.wallet.data
 
 import android.os.Parcelable
+import de.schildbach.wallet.database.entity.DashPayContactRequest
+import de.schildbach.wallet.database.entity.DashPayProfile
 import kotlinx.android.parcel.Parcelize
 
 @Parcelize

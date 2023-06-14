@@ -75,11 +75,17 @@ class AllowLockTimeRiskAnalysis(
         if (result == RiskAnalysis.Result.NON_FINAL) {
             // check to if this is a V2 TX with a lock time, but not a relative lock time
             if (!tx.hasRelativeLockTime() && tx.isTimeLocked) {
-                // we need to check the height vs peers in case the blockchain
+                // We need to check the height vs peers in case the blockchain
                 // has not finished syncing.  Instead of using the wallet height and time like
                 // DefaultRiskAnalysis, we will use the supplied common height and time
+                // if commonHeight are not initialized by the network, which can be the case if
+                // the app is restarted, then we will use the number of nodes that have announced.
+                // We cannot use the IS locks because if the blockchain is not synced, then IS locks
+                // are not processed or verified
 
                 if (isTransactionFinal(commonHeight, commonTime)) {
+                    return RiskAnalysis.Result.OK
+                } else if (tx.confidence.numBroadcastPeers() > 1) {
                     return RiskAnalysis.Result.OK
                 }
             }
@@ -87,6 +93,28 @@ class AllowLockTimeRiskAnalysis(
         return result
     }
 
+    // This is intended for use before the app connects to the network
+    class OfflineAnalyzer(
+        private val maxChainHeight: Int,
+        private val maxCurrentTime: Long
+    ) : RiskAnalysis.Analyzer {
+
+        override fun create(
+            wallet: Wallet,
+            tx: Transaction,
+            dependencies: List<Transaction>
+        ): AllowLockTimeRiskAnalysis {
+            return AllowLockTimeRiskAnalysis(
+                wallet,
+                tx,
+                dependencies,
+                maxChainHeight,
+                maxCurrentTime
+            )
+        }
+    }
+
+    // This is intended for use after the app connects to the network
     class Analyzer(private val peerGroup: PeerGroup) : RiskAnalysis.Analyzer {
         companion object {
             private val log = LoggerFactory.getLogger(Analyzer::class.java)

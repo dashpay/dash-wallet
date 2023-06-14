@@ -16,6 +16,12 @@
     <string name="error">Fout</string>
     <string name="select_a_coin">Selecteer een munt</string>
     <string name="request_coins_share_dialog_title">Deel Dashverzoek...</string>
+    <string name="buy_with_fiat">Koop Dash met fiat geld</string>
+    <string name="buy_and_convert">Koop en converteer Dash met een andere cryptovaluta</string>
+    <string name="transfer_dash">Dash overzetten</string>
+    <string name="login_error_title">Kan niet inloggen op je %s account</string>
+    <string name="login_error_message">Er is een fout opgetreden tijdens het inloggen op je %s account.</string>
+    <string name="balance">Saldo:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>

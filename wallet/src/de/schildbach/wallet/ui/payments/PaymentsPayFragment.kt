@@ -26,7 +26,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.view.ViewTreeObserver
-import androidx.core.os.bundleOf
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.ui.dashpay.OnContactItemClickListener
@@ -39,10 +38,11 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.ui.InputParser
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.scan.ScanActivity
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsPayBinding
 import org.bitcoinj.core.PrefixedChecksummedBytes
@@ -67,6 +67,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     private var frequentContactsAdapter: FrequentContactsAdapter = FrequentContactsAdapter()
     private val dashPayViewModel by viewModels<DashPayViewModel>()
     @Inject lateinit var analytics: AnalyticsService
+    @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityDataDao
     private val binding by viewBinding(FragmentPaymentsPayBinding::bind)
 
     private val onWindowFocusChangeListener = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
@@ -88,11 +89,11 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
         }
         binding.payByQrButton.setOnClickListener {
             handleScan(it)
-            analytics.logEvent(AnalyticsConstants.SendReceive.SCAN_TO_SEND, bundleOf())
+            analytics.logEvent(AnalyticsConstants.SendReceive.SCAN_TO_SEND, mapOf())
         }
         binding.payToAddress.setOnClickListener {
             handlePaste(true)
-            analytics.logEvent(AnalyticsConstants.SendReceive.SEND_TO_ADDRESS, bundleOf())
+            analytics.logEvent(AnalyticsConstants.SendReceive.SEND_TO_ADDRESS, mapOf())
         }
         handlePaste(false)
 
@@ -200,7 +201,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 if (this@PaymentsPayFragment.isAdded) {
                     if (fireAction) {
-                        SendCoinsInternalActivity.start(context, paymentIntent, true)
+                        SendCoinsActivity.start(requireContext(), paymentIntent)
                     } else {
                         manageStateOfPayToAddressButton(paymentIntent)
                     }
@@ -234,25 +235,30 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     }
 
     private fun manageStateOfPayToAddressButton(paymentIntent: PaymentIntent?) {
-        if (paymentIntent != null) {
-            when {
-                paymentIntent.hasAddress() -> {
-                    binding.payToAddress.setActive(true)
-                    binding.payToAddress.setSubTitle(paymentIntent.address.toBase58())
-                    return
-                }
-                paymentIntent.hasPaymentRequestUrl() -> {
-                    val host = Uri.parse(paymentIntent.paymentRequestUrl).host
-                    if (host != null) {
+        try {
+            if (paymentIntent != null) {
+                when {
+                    paymentIntent.hasAddress() -> {
                         binding.payToAddress.setActive(true)
-                        binding.payToAddress.setSubTitle(host)
+                        binding.payToAddress.setSubTitle(paymentIntent.address.toBase58())
                         return
+                    }
+                    paymentIntent.hasPaymentRequestUrl() -> {
+                        val host = Uri.parse(paymentIntent.paymentRequestUrl).host
+                        if (host != null) {
+                            binding.payToAddress.setActive(true)
+                            binding.payToAddress.setSubTitle(host)
+                            return
+                        }
                     }
                 }
             }
+            binding.payToAddress.setActive(false)
+            binding.payToAddress.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
+        } catch (ex: IllegalStateException) {
+            // TODO: StringInputParser is triggering callbacks after the view is destroyed,
+            // this should be fixed with some refactoring of the StringInputParser
         }
-        binding.payToAddress.setActive(false)
-        binding.payToAddress.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {

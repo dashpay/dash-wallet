@@ -16,43 +16,56 @@
 
 package de.schildbach.wallet.service
 
-import de.schildbach.wallet.data.AddressMetadataDao
-import de.schildbach.wallet.data.TransactionMetadataChangeCacheDao
-import de.schildbach.wallet.data.TransactionMetadataCacheItem
-import de.schildbach.wallet.data.TransactionMetadataDao
-import de.schildbach.wallet.data.TransactionMetadataDocumentDao
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import com.google.zxing.*
+import de.schildbach.wallet.database.dao.AddressMetadataDao
+import de.schildbach.wallet.database.dao.IconBitmapDao
+import de.schildbach.wallet.database.dao.TransactionMetadataDao
+import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
+import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
+import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import okhttp3.*
+import org.bitcoinj.core.*
 import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Context
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
 import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.*
+import org.dash.wallet.common.data.entity.AddressMetadata
+import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.data.entity.IconBitmap
+import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.transactions.TransactionCategory
-import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.decodeBitmap
+import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.util.concurrent.Executors
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class WalletTransactionMetadataProvider @Inject constructor(
     private val transactionMetadataDao: TransactionMetadataDao,
     private val addressMetadataDao: AddressMetadataDao,
+    private val iconBitmapDao: IconBitmapDao,
     private val walletData: WalletDataProvider,
+    private val giftCardDao: GiftCardDao,
     private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
     private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
 ) : TransactionMetadataProvider {
 
     companion object {
-        val log = LoggerFactory.getLogger(WalletTransactionMetadataProvider::class.java)
+        private val log = LoggerFactory.getLogger(WalletTransactionMetadataProvider::class.java)
     }
 
     private val syncScope = CoroutineScope(
@@ -66,8 +79,10 @@ class WalletTransactionMetadataProvider @Inject constructor(
             val txValue = getValue(walletData.wallet!!) ?: Coin.ZERO
             val sentTime = confidence.sentAt?.time
             var updateTime = updateTime.time
-
-            val isInternal = isEntirelySelf(this, walletData.wallet!!)
+            if (sentTime != null && sentTime < updateTime) {
+                updateTime = sentTime
+            }
+            val isInternal = isEntirelySelf(walletData.wallet!!)
 
             // Search for items from platform
             var hasChanges = false
@@ -122,6 +137,36 @@ class WalletTransactionMetadataProvider @Inject constructor(
             }
             log.info("txmetadata: inserting $metadata")
 
+            val platformIconUrl = transactionMetadataDocumentDao.getTransactionIconUrl(txId)
+
+            if (!platformIconUrl.isNullOrEmpty()) {
+                try {
+                    updateIcon(txId, platformIconUrl)
+                } catch (ex: Exception) {
+                    log.error("Failed to make an http call for icon: $platformIconUrl")
+                }
+            }
+
+            val giftCardNumber = transactionMetadataDocumentDao.getGiftCardNumber(txId)
+            val giftCardPin = transactionMetadataDocumentDao.getGiftCardPin(txId)
+            val merchantName = transactionMetadataDocumentDao.getMerchantName(txId)
+            val giftCardPrice = transactionMetadataDocumentDao.getOriginalPrice(txId)
+            val barcodeValue = transactionMetadataDocumentDao.getBarcodeValue(txId)
+            val barcodeFormat = transactionMetadataDocumentDao.getBarcodeFormat(txId)
+            val merchantUrl = transactionMetadataDocumentDao.getMerchantUrl(txId)
+
+            val giftCard = GiftCard(
+                txId,
+                merchantName ?: "",
+                giftCardPrice ?: 0.0,
+                giftCardNumber,
+                giftCardPin,
+                barcodeValue,
+                barcodeFormat?.let { BarcodeFormat.valueOf(it) },
+                merchantUrl
+            )
+            insertOrUpdateGiftCard(giftCard)
+
             return metadata
         }
 
@@ -174,7 +219,12 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun syncPlatformMetadata(txId: Sha256Hash, metadata: TransactionMetadata) {
+    override suspend fun syncPlatformMetadata(
+        txId: Sha256Hash,
+        metadata: TransactionMetadata,
+        giftCard: GiftCard?,
+        iconUrl: String?
+    ) {
         updateAndInsertIfNotExist(txId, true) { existing ->
             val updated = existing.copy(
                 // txId and value are kept the same
@@ -191,6 +241,18 @@ class WalletTransactionMetadataProvider @Inject constructor(
             )
 
             transactionMetadataDao.update(updated)
+        }
+
+        if (giftCard != null) {
+            insertOrUpdateGiftCard(giftCard)
+        }
+
+        if (!iconUrl.isNullOrEmpty()) {
+            try {
+                updateIcon(txId, iconUrl)
+            } catch (ex: Exception) {
+                log.error("Failed to make an http call for icon: $iconUrl")
+            }
         }
     }
 
@@ -233,6 +295,48 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 transactionMetadataChangeCacheDao.insertService(txId, service)
             }
         }
+    }
+
+    override suspend fun markGiftCardTransaction(txId: Sha256Hash, iconUrl: String?) {
+        var transactionMetadata: TransactionMetadata
+        updateAndInsertIfNotExist(txId, false) {
+            transactionMetadata = it.copy(
+                service = ServiceName.DashDirect,
+                taxCategory = TaxCategory.Expense
+            )
+            transactionMetadataDao.update(transactionMetadata)
+            transactionMetadataChangeCacheDao.markGiftCardTx(
+                txId,
+                ServiceName.DashDirect,
+                TaxCategory.Expense,
+                iconUrl
+            )
+        }
+
+        if (!iconUrl.isNullOrEmpty()) {
+            try {
+                updateIcon(txId, iconUrl)
+            } catch (ex: Exception) {
+                log.error("Failed to make an http call for icon: $iconUrl")
+            }
+        }
+    }
+
+    override suspend fun updateGiftCardMetadata(giftCard: GiftCard) {
+        giftCardDao.updateGiftCard(giftCard)
+        transactionMetadataChangeCacheDao.insertGiftCardData(
+            giftCard.txId,
+            giftCard.number,
+            giftCard.pin,
+            giftCard.merchantName,
+            giftCard.price,
+            giftCard.merchantUrl
+        )
+    }
+
+    override suspend fun updateGiftCardBarcode(txId: Sha256Hash, barcodeValue: String, barcodeFormat: BarcodeFormat) {
+        giftCardDao.updateBarcode(txId, barcodeValue, barcodeFormat)
+        transactionMetadataChangeCacheDao.insertBarcode(txId, barcodeValue, barcodeFormat.toString())
     }
 
     override fun syncTransactionBlocking(tx: Transaction) {
@@ -379,11 +483,42 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
         return metadataList
     }
+    
+    override fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>> {
+        return iconBitmapDao.observeBitmaps()
+            .distinctUntilChanged()
+            .map { rows ->
+                rows.mapValues {
+                    // Only keep a single bitmap instance per unique data row
+                    BitmapFactory.decodeByteArray(it.value.imageData, 0, it.value.imageData.size)
+                }
+            }
+            .flatMapLatest { bitmaps ->
+                giftCardDao.observeGiftCards().distinctUntilChanged().flatMapLatest { giftCards ->
+                    transactionMetadataDao.observePresentableMetadata()
+                        .distinctUntilChanged()
+                        .map { metadataList ->
+                            metadataList.values.forEach { metadata ->
+                                metadata.customIconId?.let { iconId ->
+                                    metadata.icon = bitmaps[iconId]
+                                }
 
-    override fun observeAllMemos(): Flow<Map<Sha256Hash, String>> {
-        return transactionMetadataDao.observeMemos().map { list ->
-            list.associateBy( {it.txId}, {it.memo} )
+                                if (metadata.service == ServiceName.DashDirect) {
+                                    metadata.title = giftCards[metadata.txId]?.merchantName
+                                }
+                            }
+                            metadataList
+                        }
+                }
+            }
+    }
+
+    override suspend fun getIcon(iconId: Sha256Hash): Bitmap? {
+        iconBitmapDao.getBitmap(iconId)?.let {
+            return BitmapFactory.decodeByteArray(it.imageData, 0, it.imageData.size)
         }
+
+        return null
     }
 
     override suspend fun markAddressWithTaxCategory(
@@ -428,20 +563,101 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-
-    @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?> {
-        return transactionMetadataDao.observe(txId).map { transactionMetadata ->
-            // if there is no user specified tax category, then look at address_metadata
-            if (transactionMetadata != null && transactionMetadata.taxCategory == null) {
-                transactionMetadata.taxCategory = getDefaultTaxCategory(txId)
+        return transactionMetadataDao.observe(txId)
+            .distinctUntilChanged()
+            .map { transactionMetadata ->
+                // if there is no user specified tax category, then look at address_metadata
+                if (transactionMetadata != null && transactionMetadata.taxCategory == null) {
+                    transactionMetadata.taxCategory = getDefaultTaxCategory(txId)
+                }
+                transactionMetadata
             }
-            transactionMetadata
+    }
+
+    private fun updateIcon(txId: Sha256Hash, iconUrl: String) {
+        val request = Request.Builder().url(iconUrl).get().build()
+        Constants.HTTP_CLIENT.newCall(request).enqueue(object: Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                log.error("Failed to fetch the icon for url: $iconUrl", e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.body?.let {
+                    syncScope.launch {
+                        try {
+                            val bitmap = it.decodeBitmap()
+                            val icon = resizeIcon(bitmap)
+                            val imageData = getBitmapData(icon)
+                            val imageHash = Sha256Hash.of(imageData)
+
+                            iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, iconUrl, icon.height, icon.width))
+                            transactionMetadataDao.updateIconId(txId, imageHash)
+                        } catch (ex: Exception) {
+                            log.error("Failed to resize and save the icon for url: $iconUrl", ex)
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    private fun resizeIcon(bitmap: Bitmap): Bitmap {
+        var width = bitmap.width
+        var height = bitmap.height
+        val destSize = 150.0
+
+        if (width > destSize || height > destSize) {
+            if (width < height) {
+                val scale = destSize / height
+                height = destSize.toInt()
+                width = (width * scale).toInt()
+            } else if (width > height) {
+                val scale = destSize / width
+                width = destSize.toInt()
+                height = (height * scale).toInt()
+            }
+        }
+
+        return Bitmap.createScaledBitmap(bitmap, width, height, false)
+    }
+
+    private fun getBitmapData(bitmap: Bitmap): ByteArray {
+        val outputStream = ByteArrayOutputStream()
+        outputStream.use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+
+        return outputStream.toByteArray()
+    }
+
+    private suspend fun insertOrUpdateGiftCard(giftCard: GiftCard) {
+        if (giftCard.merchantName.isEmpty() && giftCard.number == null && giftCard.pin == null &&
+            (giftCard.barcodeValue == null || giftCard.barcodeFormat == null)
+        ) {
+            // Empty gift card. Nothing to insert/update
+            return
+        }
+
+        val existingGiftCard = giftCardDao.getGiftCard(giftCard.txId)
+
+        if (existingGiftCard == null) {
+            giftCardDao.insertGiftCard(giftCard)
+        } else {
+            val updatedGiftCard = existingGiftCard.copy(
+                merchantName = giftCard.merchantName.ifEmpty { existingGiftCard.merchantName },
+                price = giftCard.price.takeIf { it != 0.0 } ?: existingGiftCard.price,
+                number = giftCard.number ?: existingGiftCard.number,
+                pin = giftCard.pin ?: existingGiftCard.pin,
+                barcodeValue = giftCard.barcodeValue ?: existingGiftCard.barcodeValue,
+                barcodeFormat = giftCard.barcodeFormat ?: existingGiftCard.barcodeFormat,
+                merchantUrl = giftCard.merchantUrl ?: existingGiftCard.merchantUrl
+            )
+            giftCardDao.updateGiftCard(updatedGiftCard)
         }
     }
 
     override suspend fun clear() {
         transactionMetadataDao.clear()
         addressMetadataDao.clear()
+        iconBitmapDao.clear()
     }
 }

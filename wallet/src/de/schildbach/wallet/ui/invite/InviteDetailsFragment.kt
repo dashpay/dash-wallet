@@ -25,12 +25,13 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.data.Invitation
+
+import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_payments.toolbar
+import kotlinx.android.synthetic.main.activity_forgot_pin.toolbar
 import kotlinx.android.synthetic.main.fragment_invite_details.*
 import kotlinx.android.synthetic.main.fragment_invite_details.copy_invitation_link
 import kotlinx.android.synthetic.main.fragment_invite_details.preview_button
@@ -38,7 +39,6 @@ import kotlinx.android.synthetic.main.fragment_invite_details.send_button
 import kotlinx.android.synthetic.main.fragment_invite_details.tag_edit
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.KeyboardUtil

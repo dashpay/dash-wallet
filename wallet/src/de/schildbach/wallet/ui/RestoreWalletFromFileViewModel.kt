@@ -25,6 +25,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.MnemonicException

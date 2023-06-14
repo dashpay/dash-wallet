@@ -17,117 +17,139 @@
 
 package de.schildbach.wallet.ui.transactions
 
+import android.graphics.Bitmap
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.annotation.StyleRes
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.main.HistoryRowView
-import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
-import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 
 data class TransactionRowView(
+    override val title: ResourceString?,
     val txId: Sha256Hash,
     val value: Coin,
     val exchangeRate: ExchangeRate?,
     val contact: DashPayProfile?,
     @DrawableRes val icon: Int,
-    @StyleRes val iconBackground: Int,
-    @StringRes val titleRes: Int,
+    val iconBitmap: Bitmap?,
+    @StyleRes val iconBackground: Int?,
     @StringRes val statusRes: Int,
     val comment: String,
     val transactionAmount: Int,
     val time: Long,
     val timeFormat: Int,
     val hasErrors: Boolean,
+    val service: String?,
     val txWrapper: TransactionWrapper?
 ): HistoryRowView() {
     companion object {
         fun fromTransactionWrapper(
             txWrapper: TransactionWrapper,
-            memo: String,
             bag: TransactionBag,
             context: Context,
-            contact: DashPayProfile?
+            contact: DashPayProfile?,
+            metadata: PresentableTxMetadata? = null
         ): TransactionRowView {
             val lastTx = txWrapper.transactions.last()
 
             return if (txWrapper is FullCrowdNodeSignUpTxSet) {
                 TransactionRowView(
+                    ResourceString(R.string.crowdnode_account),
                     lastTx.txId,
                     txWrapper.getValue(bag),
                     lastTx.exchangeRate,
                     null,
                     R.drawable.ic_crowdnode_logo,
+                    null,
                     R.style.TxNoBackground,
-                    R.string.crowdnode_account,
                     -1,
-                    memo,
+                    metadata?.memo ?: "",
                     txWrapper.transactions.size,
                     lastTx.updateTime.time,
                     TxResourceMapper().dateTimeFormat,
                     false,
+                    ServiceName.CrowdNode,
                     txWrapper
                 )
             } else {
-                fromTransaction(lastTx, memo, bag, context, contact)
+                fromTransaction(lastTx, bag, context, metadata, contact)
             }
         }
 
         fun fromTransaction(
             tx: Transaction,
-            comment: String,
             bag: TransactionBag,
             context: Context,
-            contact: DashPayProfile?,
+            metadata: PresentableTxMetadata? = null,
+            contact: DashPayProfile? = null,
             resourceMapper: TxResourceMapper = TxResourceMapper()
         ): TransactionRowView {
             val value = tx.getValue(bag)
-            val isInternal = TransactionUtils.isEntirelySelf(tx, bag)
+            val isInternal = tx.isEntirelySelf(bag)
             val isSent = value.signum() < 0
             val removeFee = isSent && tx.fee != null && !tx.fee.isZero
+            @DrawableRes val icon: Int
+            @StyleRes val iconBackground: Int
+            var title = ResourceString(resourceMapper.getTransactionTypeName(tx, bag))
+            val hasErrors = tx.confidence.hasErrors()
 
-            val icon = if (isInternal) {
-                R.drawable.ic_shuffle
+            if (hasErrors) {
+                icon = R.drawable.ic_transaction_failed
+                iconBackground = R.style.TxErrorBackground
+                title = ResourceString(resourceMapper.getErrorName(tx))
+            } else if (metadata?.service == ServiceName.DashDirect) {
+                icon = R.drawable.ic_gift_card_tx
+                iconBackground = R.style.TxOrangeBackground
+                title = ResourceString(
+                    if (metadata.title.isNullOrEmpty()) {
+                        R.string.explore_payment_gift_card
+                    } else {
+                        R.string.gift_card_tx_title
+                    },
+                    listOf(metadata.title ?: "")
+                )
+            } else if (isInternal) {
+                icon = R.drawable.ic_internal
+                iconBackground = R.style.TxSentBackground
             } else if (isSent) {
-                R.drawable.ic_transaction_sent
+                icon = R.drawable.ic_transaction_sent
+                iconBackground = R.style.TxSentBackground
             } else {
-                R.drawable.ic_transaction_received
+                icon = R.drawable.ic_transaction_received
+                iconBackground = R.style.TxReceivedBackground
             }
 
-            val iconBackground = if (isInternal) {
-                R.style.TxSentBackground
-            } else if (isSent) {
-                R.style.TxSentBackground
-            } else {
-                R.style.TxReceivedBackground
-            }
-
-            val status = if (tx.confidence.hasErrors()) {
-                resourceMapper.getErrorName(tx)
-            } else if (!isSent) {
+            val status = if (!hasErrors && !isSent) {
                 resourceMapper.getReceivedStatusString(tx, context)
             } else {
                 -1
             }
 
             return TransactionRowView(
+                title,
                 tx.txId,
                 if (removeFee) value.add(tx.fee) else value,
                 tx.exchangeRate,
                 contact,
                 icon,
+                metadata?.icon,
                 iconBackground,
-                resourceMapper.getTransactionTypeName(tx, bag),
                 status,
-                comment,
+                metadata?.memo ?: "",
                 1,
                 tx.updateTime.time,
                 resourceMapper.dateTimeFormat,
-                tx.confidence.hasErrors(),
+                hasErrors,
+                metadata?.service,
                 null
             )
         }

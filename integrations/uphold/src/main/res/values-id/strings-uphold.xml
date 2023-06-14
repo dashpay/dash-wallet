@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">Tautkan akun Uphold anda</string>
+    <string name="uphold_transfer_details">Dari Uphold ke Dompet Dash anda</string>
     <string name="uphold_buy_dash_activity_title">Beli/Jual Dash dengan Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Beli Dash dengan akun Uphold</string>
     <string name="uphold_buy_dash_button">Beli Dash</string>

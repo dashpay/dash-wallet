@@ -17,13 +17,12 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.text.HtmlCompat
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet_test.R
@@ -33,7 +32,8 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.util.GenericUtils
 
-class PlatformPaymentConfirmDialog : OffsetDialogFragment() {
+@AndroidEntryPoint
+class PlatformPaymentConfirmDialog : OffsetDialogFragment(R.layout.dialog_platform_payment_confirm) {
 
     companion object {
 
@@ -71,10 +71,6 @@ class PlatformPaymentConfirmDialog : OffsetDialogFragment() {
 
     private lateinit var viewModel: NewAccountConfirmDialogViewModel
     private lateinit var sharedViewModel: SharedViewModel
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_platform_payment_confirm, container, false)
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

@@ -32,7 +32,7 @@
         android:layout_marginStart="4dp"
         android:layout_marginTop="20dp"
         app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@drawable/ic_back_arrow_primary" />
+        app:navigationIcon="@drawable/ic_arrow_back_primary" />
 
     <ImageView
         android:id="@+id/logo"

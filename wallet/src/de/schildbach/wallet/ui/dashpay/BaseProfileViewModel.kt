@@ -17,10 +17,10 @@
 package de.schildbach.wallet.ui.dashpay
 
 import androidx.lifecycle.*
-import de.schildbach.wallet.data.BlockchainIdentityBaseData
-import de.schildbach.wallet.data.BlockchainIdentityDataDao
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.DashPayProfileDao
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+import de.schildbach.wallet.database.entity.DashPayProfile
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 

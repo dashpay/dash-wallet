@@ -22,14 +22,18 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.livedata.RecoverPinLiveData
+import de.schildbach.wallet.security.SecurityFunctions
+import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet.util.MnemonicCodeExt
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.MnemonicException
-import org.bitcoinj.crypto.MnemonicException.MnemonicLengthException
+import org.dash.wallet.common.Configuration
 import org.slf4j.LoggerFactory
 import java.util.*
 import javax.inject.Inject
@@ -37,6 +41,8 @@ import javax.inject.Inject
 @HiltViewModel
 class RestoreWalletFromSeedViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
+    private val configuration: Configuration,
+    private val securityFunctions: SecurityFunctions,
     private val dashPayConfig: DashPayConfig
 ) : ViewModel() {
 
@@ -44,8 +50,21 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
 
     internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
+    private val securityGuard = SecurityGuard()
 
-    val recoverPinLiveData = RecoverPinLiveData(walletApplication)
+    private suspend fun recover(words: List<String>): String? = withContext(Dispatchers.Default) {
+        try {
+            val password = securityGuard.retrievePassword()
+            val decryptedSeed = securityFunctions.decryptSeed(password)
+            val seed = decryptedSeed.mnemonicCode!!.toTypedArray()
+
+            if (seed contentEquals words.toTypedArray()) {
+                return@withContext securityGuard.retrievePin()
+            }
+        } catch (_: Exception) { }
+
+        return@withContext null
+    }
 
     /**
      * Normalize - converts all letter to lowercase and to words matching those of a BIP39 word list.
@@ -60,27 +79,23 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
 
     fun restoreWalletFromSeed(words: List<String>) {
         if (isSeedValid(words)) {
-            val wallet = WalletUtils.restoreWalletFromSeed(normalize(words), Constants.NETWORK_PARAMETERS)
+            val wallet = WalletUtils.restoreWalletFromSeed(normalize(words), Constants.NETWORK_PARAMETERS, walletApplication.getWalletExtensions())
             walletApplication.setWallet(wallet)
             log.info("successfully restored wallet from seed")
-            walletApplication.configuration.disarmBackupSeedReminder()
-            walletApplication.configuration.isRestoringBackup = true
+            configuration.disarmBackupSeedReminder()
+            configuration.isRestoringBackup = true
             viewModelScope.launch { dashPayConfig.disableNotifications() }
             walletApplication.resetBlockchainState()
             startActivityAction.call(SetPinActivity.createIntent(walletApplication, R.string.set_pin_restore_wallet, onboarding = true))
         }
     }
 
-    fun recoverPin(words: List<String>) {
-        if (isSeedValid(words)) {
-            recoverPinLiveData.recover(normalize(words))
+    suspend fun recoverPin(words: List<String>): String? {
+        return if (isSeedValid(words)) {
+            recover(normalize(words))
+        } else {
+            null
         }
-    }
-
-    private fun handleException(x: MnemonicException): Boolean {
-        log.info("problem restoring wallet from seed: ", x)
-        showRestoreWalletFailureAction.call(x)
-        return false
     }
 
     /**
@@ -94,10 +109,9 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         return try {
             MnemonicCodeExt.getInstance().check(walletApplication, words)
             true
-        } catch (x: MnemonicLengthException) {
-            handleException(x)
         } catch (x: MnemonicException) {
-            handleException(x)
+            log.info("problem restoring wallet from seed: ", x)
+            throw x
         }
     }
 }

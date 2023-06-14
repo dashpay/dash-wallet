@@ -1,0 +1,214 @@
+/*
+ * Copyright 2023 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.payments.parsers
+
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.ui.util.InputParser
+import de.schildbach.wallet.util.AddressUtil
+import de.schildbach.wallet.util.Io
+import de.schildbach.wallet_test.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.AddressFormatException
+import org.bitcoinj.core.Base58
+import org.bitcoinj.protocols.payments.PaymentProtocol
+import org.bitcoinj.protocols.payments.PaymentProtocolException
+import org.bitcoinj.protocols.payments.PaymentProtocolException.PkiVerificationException
+import org.bitcoinj.uri.BitcoinURI
+import org.bitcoinj.uri.BitcoinURIParseException
+import org.dash.wallet.common.util.Base43
+import org.dash.wallet.common.util.ResourceString
+import org.slf4j.LoggerFactory
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.io.InputStream
+import java.util.*
+import java.util.regex.Pattern
+
+class PaymentIntentParserException(
+    innerException: Exception,
+    val localizedMessage: ResourceString
+) : Exception(innerException)
+
+object PaymentIntentParser {
+    private val log = LoggerFactory.getLogger(PaymentIntentParser::class.java)
+    private val PATTERN_BITCOIN_ADDRESS = Pattern.compile("[" + String(Base58.ALPHABET) + "]{20,40}")
+
+    suspend fun parse(input: String, supportAnypayUrls: Boolean): PaymentIntent = withContext(Dispatchers.Default) {
+        var inputStr = input
+
+        if (supportAnypayUrls) {
+            // replaces Anypay scheme with the Dash one
+            // ie "pay:?r=https://(...)" become "dash:?r=https://(...)"
+            if (input.startsWith(Constants.ANYPAY_SCHEME + ":")) {
+                inputStr = input.replaceFirst(Constants.ANYPAY_SCHEME.toRegex(), Constants.DASH_SCHEME)
+            }
+        }
+
+        if (inputStr.startsWith(Constants.DASH_SCHEME.uppercase(Locale.getDefault()) + ":-")) {
+            val serializedPaymentRequest = try {
+                Base43.decode(inputStr.substring(9))
+            } catch (ex: IllegalArgumentException) {
+                log.info("error while decoding request", ex)
+                throw PaymentIntentParserException(
+                    ex,
+                    ResourceString(
+                        R.string.input_parser_io_error,
+                        listOf(ex.message ?: "")
+                    )
+                )
+            }
+
+            return@withContext parseRequest(serializedPaymentRequest)
+        } else if (inputStr.startsWith(Constants.DASH_SCHEME + ":")) {
+            try {
+                val bitcoinUri = BitcoinURI(null, inputStr)
+                val address = AddressUtil.getCorrectAddress(bitcoinUri)
+
+                if (address != null && Constants.NETWORK_PARAMETERS != address.parameters) {
+                    throw BitcoinURIParseException("mismatched network")
+                }
+
+                return@withContext PaymentIntent.fromBitcoinUri(bitcoinUri)
+            } catch (ex: BitcoinURIParseException) {
+                val paymentIntent = tryFindAnyMatch(inputStr)
+
+                if (paymentIntent == null) {
+                    log.info("got invalid bitcoin uri: '$inputStr'", ex)
+                    throw PaymentIntentParserException(
+                        ex,
+                        ResourceString(
+                            R.string.input_parser_invalid_bitcoin_uri,
+                            listOf(inputStr)
+                        )
+                    )
+                }
+
+                return@withContext paymentIntent
+            }
+        } else if (PATTERN_BITCOIN_ADDRESS.matcher(inputStr).matches()) {
+            try {
+                val address = Address.fromString(Constants.NETWORK_PARAMETERS, inputStr)
+                return@withContext PaymentIntent.fromAddress(address, null)
+            } catch (ex: AddressFormatException) {
+                log.info("got invalid address", ex)
+                throw PaymentIntentParserException(
+                    ex,
+                    ResourceString(
+                        R.string.input_parser_invalid_address,
+                        listOf()
+                    )
+                )
+            }
+        }
+
+        log.info("cannot classify: '{}'", input)
+        throw PaymentIntentParserException(
+            IllegalArgumentException(input),
+            ResourceString(
+                R.string.input_parser_cannot_classify,
+                listOf(input)
+            )
+        )
+    }
+
+    suspend fun parse(inputStream: InputStream, inputType: String): PaymentIntent = withContext(Dispatchers.IO) {
+        if (PaymentProtocol.MIMETYPE_PAYMENTREQUEST == inputType) {
+            val byteArray = inputStream.use {
+                ByteArrayOutputStream().use { outputStream ->
+                    try {
+                        Io.copy(inputStream, outputStream)
+                        outputStream.toByteArray()
+                    } catch (ex: IOException) {
+                        log.info("i/o error while fetching payment request", ex)
+                        throw PaymentIntentParserException(
+                            ex,
+                            ResourceString(
+                                R.string.input_parser_io_error,
+                                listOf(ex.message ?: "")
+                            )
+                        )
+                    }
+                }
+            }
+
+            return@withContext parseRequest(byteArray)
+        }
+
+        log.info("cannot classify: '{}'", inputType)
+        throw PaymentIntentParserException(
+            IllegalArgumentException(inputType),
+            ResourceString(
+                R.string.input_parser_io_error,
+                listOf(inputType)
+            )
+        )
+    }
+
+    private fun tryFindAnyMatch(input: String): PaymentIntent? {
+        val matcher = PATTERN_BITCOIN_ADDRESS.matcher(input)
+
+        if (matcher.find() && matcher.group(0) != null) {
+            try {
+                val addressStr = matcher.group(0)!!
+                val address = Address.fromString(Constants.NETWORK_PARAMETERS, addressStr)
+                val intent = PaymentIntent.fromAddress(address, null)
+                intent.setShouldConfirmAddress(true)
+
+                return intent
+            } catch (ex: AddressFormatException) {
+                log.info("got invalid address", ex)
+                throw PaymentIntentParserException(
+                    ex,
+                    ResourceString(
+                        R.string.input_parser_invalid_address,
+                        listOf()
+                    )
+                )
+            }
+        }
+
+        return null
+    }
+
+    private fun parseRequest(byteArray: ByteArray): PaymentIntent {
+        return try {
+            InputParser.parsePaymentRequest(byteArray)
+        } catch (ex: PkiVerificationException) {
+            log.info("got unverifiable payment request", ex)
+            throw PaymentIntentParserException(
+                ex,
+                ResourceString(
+                    R.string.input_parser_unverifyable_paymentrequest,
+                    listOf(ex.message ?: "")
+                )
+            )
+        } catch (ex: PaymentProtocolException) {
+            log.info("got invalid payment request", ex)
+            throw PaymentIntentParserException(
+                ex,
+                ResourceString(
+                    R.string.input_parser_invalid_paymentrequest,
+                    listOf(ex.message ?: "")
+                )
+            )
+        }
+    }
+}

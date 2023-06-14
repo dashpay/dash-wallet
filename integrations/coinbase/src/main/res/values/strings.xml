@@ -29,7 +29,6 @@
     <string name="disconnect_coinbase_account">Disconnect Coinbase Account</string>
     <string name="receive_directly_into_dash_wallet">Receive directly into Dash Wallet.</string>
     <string name="buy_dash">Buy Dash</string>
-    <string name="balance">Balance:</string>
     <string name="balance_on_coinbase">Balance on Coinbase</string>
     <string name="sending_to">Sending to</string>
     <string name="dash_wallet_device">Dash Wallet on this device</string>
@@ -44,8 +43,11 @@
     <string name="cancel">Cancel</string>
     <string name="confirm_sec">Confirm (%ss)</string>
     <string name="confirm">Confirm</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">We didn’t find any payment methods.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message"> Please update your Coinbase account to proceed.</string>
+    <string name="coinbase_no_payment_methods_error_title">We didn’t find any payment methods.</string>
+    <string name="coinbase_no_payment_methods_error_message">Please update your Coinbase account to proceed.</string>
+    <string name="coinbase_unusable_payment_method_error_title">This payment method cannot be used.</string>
+    <string name="coinbase_unusable_payment_method_error_message">Please allow buying from this payment method in your Coinbase account.</string>
+    <string name="coinbase_open_account">Open Coinbase account</string>
     <string name="add_payment_method">Add Payment Method</string>
     <string name="error">Error</string>
     <string name="cancel_transaction">Cancel transaction?</string>
@@ -58,7 +60,7 @@
     <string name="conversion_failed">Conversion Failed</string>
     <string name="transfer_failed_msg"> The Dash was successfully deposited to your Coinbase account. But there was a problem transferring it to Dash Wallet on this device.</string>
     <string name="purchase_failed_msg"> Something went wrong</string>
-    <string name="it_could_take_up_to_2_3_minutes">It could take up to 2-3 minutes for the Dash to be transferred to your Dash Wallet on this device.</string>
+    <string name="it_could_take_up_to_2_3_minutes">It could take up to 2–3 minutes for the Dash to be transferred to your Dash Wallet on this device.</string>
     <string name="it_could_take_up_to_5_minutes">It could take up to 5 minutes to convert %s from Coinbase account to Dash in your Dash Wallet on this device..</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">“It could take up to 5 minutes to convert Dash from Dash Wallet on this device to %s in your Coinbase account.</string>
     <string name="contact_coinbase_support">Contact Coinbase Support</string>

@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Último saldo conocido</string>
+    <string name="coinbase_link_title">Vincula tu cuenta de Coinbase</string>
+    <string name="coinbase_link">Vincular cuenta de Coinbase</string>
+    <string name="coinbase_transfer_details">Entre la billetera de Dash y tu cuenta de Coinbase.</string>
     <string name="coinbase_dash_wallet_error_title">No encontramos una billetera de Dash en tu cuenta de Coinbase.</string>
     <string name="coinbase_dash_wallet_error_message">Crea una billetera de Dash en Coinbase para continuar.</string>
     <string name="create_dash_account">Crear cuenta de Dash</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">Desconectar la cuenta de Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Recibe directamente en la billetera Dash.</string>
     <string name="buy_dash">Comprar Dash</string>
-    <string name="balance">Balance:</string>
     <string name="balance_on_coinbase">Balance en Coinbase</string>
     <string name="sending_to">Enviando a</string>
     <string name="dash_wallet_device">Billetera de Dash en este dispositivo</string>
@@ -41,8 +43,11 @@
     <string name="cancel">Cancelar</string>
     <string name="confirm_sec">Confirmar (%ss)</string>
     <string name="confirm">Confirmar</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">No encontramos ningún método de pago.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Por favor actualiza tu cuenta de Coinbase para continuar.</string>
+    <string name="coinbase_no_payment_methods_error_title">No encontramos ningún método de pago.</string>
+    <string name="coinbase_no_payment_methods_error_message">Por favor actualiza tu cuenta de Coinbase para continuar.</string>
+    <string name="coinbase_unusable_payment_method_error_title">No se puede utilizar este método de pago.</string>
+    <string name="coinbase_unusable_payment_method_error_message">Por favor habilita la opción para comprar con este método de pago en tu cuenta de Coinbase.</string>
+    <string name="coinbase_open_account">Abre una cuenta en Coinbase</string>
     <string name="add_payment_method">Añadir método de pago</string>
     <string name="error">Error</string>
     <string name="cancel_transaction">¿Cancelar transacción?</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">Ese código no era válido. Inténtalo de nuevo</string>
     <string name="verify_code">Verificar</string>
     <string name="you_dont_have_enough_balance">No tienes saldo suficiente</string>
-    <string name="transfer_dash">Transferir Dash</string>
     <string name="transfer_amount">Transferir</string>
     <string name="dash_wallet_limit_description">La cantidad es superior a tu saldo</string>
     <string name="address_creation_failed">No pudimos crear una dirección para tu cuenta para completar tu transacción. Por favor intente mas tarde.</string>

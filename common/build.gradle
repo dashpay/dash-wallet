@@ -37,6 +37,11 @@ android {
     buildFeatures {
         viewBinding true
     }
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
+        }
+    }
     namespace 'org.dash.wallet.common'
 }
 
@@ -47,9 +52,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
-    implementation 'com.google.guava:guava:29.0-android'
-    implementation 'org.slf4j:slf4j-api:1.7.30'
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
 
     // Firebase
     implementation platform("com.google.firebase:firebase-bom:$firebaseVersion")
@@ -75,6 +78,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
     implementation "androidx.datastore:datastore-preferences:1.0.0"
     implementation "androidx.room:room-ktx:$roomVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion"
 
     // UI
     implementation "com.github.bumptech.glide:glide:$glideVersion"
@@ -84,7 +88,7 @@ dependencies {
     implementation "androidx.browser:browser:$browserVersion"
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     //noinspection GradleDependency
-    implementation 'com.google.zxing:core:3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
+    implementation "com.google.zxing:core:$zxingVersion"
     implementation 'com.github.amulyakhare:textdrawable:558677ea31'
 
     // DI

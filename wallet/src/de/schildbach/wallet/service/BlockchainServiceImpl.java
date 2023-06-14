@@ -81,7 +81,9 @@ import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
+import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dashj.platform.dapiclient.DapiClient;
@@ -126,9 +128,9 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletApplicationExt;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
-import org.dash.wallet.common.data.BlockchainState;
-import de.schildbach.wallet.data.BlockchainStateDao;
-import de.schildbach.wallet.rates.ExchangeRatesDao;
+import org.dash.wallet.common.data.entity.BlockchainState;
+import de.schildbach.wallet.database.dao.BlockchainStateDao;
+import de.schildbach.wallet.database.dao.ExchangeRatesDao;
 import de.schildbach.wallet.service.platform.PlatformSyncService;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
@@ -142,7 +144,7 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
 
-import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
+import static org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach
@@ -160,6 +162,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject TransactionMetadataProvider transactionMetadataProvider;
     @Inject PlatformSyncService platformSyncService;
     @Inject PlatformRepo platformRepo;
+    @Inject PackageInfoProvider packageInfoProvider;
+    @Inject ConnectivityManager connectivityManager;
 
     private BlockStore blockStore;
     private BlockStore headerStore;
@@ -179,7 +183,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private PeerConnectivityListener peerConnectivityListener;
     private NotificationManager nm;
-    private ConnectivityManager connectivityManager;
     private final Set<BlockchainState.Impediment> impediments = EnumSet.noneOf(BlockchainState.Impediment.class);
     private BlockchainState blockchainState = new BlockchainState(null, 0, false, impediments, 0, 0, 0);
     private int notificationCount = 0;
@@ -262,7 +265,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     || insideTxExchangeRateTimeThreshold
                     || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
                 try {
-                    final org.dash.wallet.common.data.ExchangeRate exchangeRate =
+                    final org.dash.wallet.common.data.entity.ExchangeRate exchangeRate =
                             exchangeRatesDao.getRateSync(config.getExchangeCurrencyCode());
                     if (exchangeRate != null) {
                         log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate + " tx: " + tx.getTxId().toString());
@@ -314,7 +317,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
             if(CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
                 // Handle credit function transactions (username creation, topup, invites)
-                CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
+                AuthenticationGroupExtension authExtension =
+                        (AuthenticationGroupExtension) wallet.addOrGetExistingExtension(
+                                new AuthenticationGroupExtension(wallet.getParams())
+                        );
+                CreditFundingTransaction cftx = authExtension.getCreditFundingTransaction(tx);
 
                 long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
                 platformRepo.handleSentCreditFundingTransaction(cftx, blockChainHeadTime);
@@ -367,7 +374,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         final MonetaryFormat btcFormat = config.getFormat();
 
-        final String packageFlavor = application.applicationPackageFlavor();
+        final String packageFlavor = packageInfoProvider.applicationPackageFlavor();
         String msgSuffix = packageFlavor != null ? " [" + packageFlavor + "]" : "";
 
         if (exchangeRate != null) {
@@ -495,6 +502,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 log.debug("Runnable % = " + syncPercentage);
 
                 config.maybeIncrementBestChainHeightEver(blockChain.getChainHead().getHeight());
+                config.maybeIncrementBestHeaderHeightEver(headerChain.getChainHead().getHeight());
                 if(config.isRestoringBackup()) {
                     long timeAgo = System.currentTimeMillis() - blockChain.getChainHead().getHeader().getTimeSeconds() * 1000;
                     //if the app was restoring a backup from a file or seed and block chain is nearly synced
@@ -652,7 +660,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     final String message = "wallet/blockchain out of sync: " + walletLastBlockSeenHeight + "/"
                             + bestChainHeight;
                     log.error(message);
-                    CrashReporter.saveBackgroundTrace(new RuntimeException(message), application.packageInfo());
+                    CrashReporter.saveBackgroundTrace(new RuntimeException(message), packageInfoProvider.getPackageInfo());
                 }
 
                 wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
@@ -667,7 +675,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
                 peerGroup.setDownloadTxDependencies(0); // recursive implementation causes StackOverflowError
                 peerGroup.addWallet(wallet);
-                peerGroup.setUserAgent(Constants.USER_AGENT, application.packageInfo().versionName);
+                peerGroup.setUserAgent(Constants.USER_AGENT, packageInfoProvider.getVersionName());
                 peerGroup.addConnectedEventListener(peerConnectivityListener);
                 peerGroup.addDisconnectedEventListener(peerConnectivityListener);
 
@@ -787,7 +795,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.removeWallet(wallet);
                 platformSyncService.removePreBlockProgressListener(blockchainDownloadListener);
                 peerGroup.stopAsync();
-                wallet.setRiskAnalyzer(defaultRiskAnalyzer);
+                // use the offline risk analyzer
+                wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
                 riskAnalyzer.shutdown();
                 peerGroup = null;
 
@@ -899,7 +908,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         super.onCreate();
 
         nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
         final String lockName = getPackageName() + " blockchain sync";
 

@@ -244,7 +244,8 @@ public class RestoreWalletDialogFragment extends DialogFragment {
                 if (WalletUtils.isUnencryptedStream(contentResolver.openInputStream(backupUri))) {
                     RestoreFromFileHelper.restoreWalletFromProtobuf(activity,
                             this.getActivity(), this.getActivity(),
-                            backupUri, contentResolver.openInputStream(backupUri), listener);
+                            backupUri, contentResolver.openInputStream(backupUri),
+                            application.getWalletExtensions(), listener);
                 } else if (WalletUtils.isKeysStream(contentResolver.openInputStream(backupUri))) {
                     RestoreFromFileHelper.restorePrivateKeysFromBase58(activity,
                             this.getActivity(), this.getActivity(),

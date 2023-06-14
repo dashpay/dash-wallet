@@ -28,6 +28,7 @@ import android.security.keystore.KeyProperties;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import org.dash.wallet.common.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,7 +169,7 @@ public class FingerprintStorage {
 
     private boolean initKeyStore() {
         try {
-            keyStore = KeyStore.getInstance("AndroidKeyStore");
+            keyStore = KeyStore.getInstance(Constants.ANDROID_KEY_STORE);
             KeyGenerator keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
             keyStore.load(null);
             if (getLastIv() == null) {

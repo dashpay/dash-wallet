@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >ยอดคงเหลือล่าสุด</string>
+    <string name="coinbase_link_title">เชื่อมบัญชี Coinbase ของคุณ </string>
+    <string name="coinbase_link">เชื่อมต่อบัญชี Coinbase ของคุณ </string>
+    <string name="coinbase_transfer_details">ระหว่างกระเป๋าเงิน Dash และบัญชี Coinbase ของคุณ</string>
     <string name="coinbase_dash_wallet_error_title">เราไม่พบกระเป๋าเงิน Dash ในบัญชี Coinbase ของคุณ</string>
     <string name="coinbase_dash_wallet_error_message">โปรดสร้างกระเป๋าเงิน Dash บน Coinbase เพื่อดำเนินการต่อ</string>
     <string name="create_dash_account">สร้างบัญชี Dash</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">ตัดการเชื่อมต่อบัญชี Coinbase</string>
     <string name="receive_directly_into_dash_wallet">รับโดยตรงไปยังกระเป๋า Dash </string>
     <string name="buy_dash">ซื้อ Dash </string>
-    <string name="balance">ยอดคงเหลือ:</string>
     <string name="balance_on_coinbase">ยอดคงเหลือบน Coinbase</string>
     <string name="sending_to">ส่งไปยัง</string>
     <string name="dash_wallet_device">กระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
@@ -36,13 +38,16 @@
     <string name="coinbase_fee">ค่าธรรมเนียม Coinbase </string>
     <string name="total">ทั้งหมด</string>
     <string name="order_preview">คำสั่งซื้อตัวอย่าง</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">คุณจะได้รับ %s Dash บนกระเป๋า Dash ของคุณบนอุปกรณ์นี้ โปรดทราบว่าอาจใช้เวลาสูงสุด 2-3 นาทีในการโอน</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">คุณจะได้รับ %s Dash ในกระเป๋าหน้าเงินของคุณบนอุปกรณ์นี้ โปรดทราบว่าอาจใช้เวลานานถึง 2-3 นาทีในการโอน</string>
     <string name="amount_in_dash">จำนวนเงินใน Dash</string>
     <string name="cancel">ยกเลิก</string>
     <string name="confirm_sec">ยืนยัน (%ss)</string>
     <string name="confirm">ยืนยัน</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">เราไม่พบการชำระเงินใด ๆ</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">โปรดอัพเดตบัญชี Coinbase ของคุณเพื่อดำเนินการต่อ</string>
+    <string name="coinbase_no_payment_methods_error_title">เราไม่พบการชำระเงินใด ๆ</string>
+    <string name="coinbase_no_payment_methods_error_message">โปรดอัปเดตบัญชี Coinbase ของคุณเพื่อดำเนินการต่อ</string>
+    <string name="coinbase_unusable_payment_method_error_title">วิธีการชำระเงินนี้ไม่สามารถใช้งานได้</string>
+    <string name="coinbase_unusable_payment_method_error_message">โปรดอนุมัติการซื้อจากวิธีการชำระเงินนี้ในบัญชี Coinbase ของคุณ</string>
+    <string name="coinbase_open_account">เปิดบัญชี Coinbase</string>
     <string name="add_payment_method">เพิ่มวิธีการชำระเงิน</string>
     <string name="error">ผิดพลาด</string>
     <string name="cancel_transaction">ยกเลิกธุรกรรม?</string>
@@ -55,7 +60,7 @@
     <string name="conversion_failed">การแปลงไม่สำเร็จ</string>
     <string name="transfer_failed_msg">Dash ถูกฝากเข้าบัญชี Coinbase ของคุณเรียบร้อยแล้ว แต่มีปัญหาในการโอนไปยังกระเป๋าเงินสำหรับอุปกรณ์นี้</string>
     <string name="purchase_failed_msg">บางอย่างผิดพลาด</string>
-    <string name="it_could_take_up_to_2_3_minutes">อาจใช้เวลานานถึง 2-3 นาทีเพื่อให้ Dash ถูกโอนไปยังกระเป๋าเงิน Dash ของคุณบนอุปกรณ์นี้</string>
+    <string name="it_could_take_up_to_2_3_minutes">อาจใช้เวลานานถึง 2-3 นาทีในการโอนไปยังกระเป๋าเงิน Dash ของคุณบนอุปกรณ์นี้</string>
     <string name="it_could_take_up_to_5_minutes">อาจใช้เวลานานถึง 5 นาทีในการแปลง %s จากบัญชี Coinbase เป็น Dash ในกระเป๋าเงิน Dash ของคุณบนอุปกรณ์นี้..</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">อาจใช้เวลานานถึง 5 นาทีในการแปลง Dash จาก Dash Wallet บนอุปกรณ์นี้เป็น %s ในบัญชี Coinbase ของคุณ</string>
     <string name="contact_coinbase_support">ติดต่อฝ่ายสนับสนุน Coinbase</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">รหัสนั้นไม่ถูกต้อง กรุณาลองอีกครั้ง</string>
     <string name="verify_code">ตรวจสอบ</string>
     <string name="you_dont_have_enough_balance">คุณมียอดคงเหลือไม่เพียงพอ</string>
-    <string name="transfer_dash">โอน Dash</string>
     <string name="transfer_amount">โอน</string>
     <string name="dash_wallet_limit_description">จำนวนเงินมากกว่ายอดคงเหลือของคุณ</string>
     <string name="address_creation_failed">เราไม่สามารถสร้างที่อยู่สำหรับบัญชีของคุณเพื่อทำธุรกรรมให้เสร็จสมบูรณ์ได้ โปรดลองอีกครั้งในภายหลัง</string>

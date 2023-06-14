@@ -19,26 +19,31 @@ package de.schildbach.wallet.di
 
 import android.content.ClipboardManager
 import android.content.Context
+import android.net.ConnectivityManager
+import androidx.preference.PreferenceManager
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.service.AppRestartService
-import de.schildbach.wallet.service.RestartService
-import de.schildbach.wallet.payments.SendCoinsTaskRunner
-import de.schildbach.wallet.service.AndroidActionsService
-import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
-import org.dash.wallet.common.services.*
 import de.schildbach.wallet.payments.ConfirmTransactionLauncher
+import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import de.schildbach.wallet.security.SecurityFunctions
+import de.schildbach.wallet.service.*
+import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
+import de.schildbach.wallet_test.BuildConfig
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.ConfirmTransactionService
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
-import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
-import dagger.Provides
+import org.dash.wallet.features.exploredash.network.service.stubs.FakeDashDirectSendService
 import org.dash.wallet.integration.uphold.api.UpholdClient
 import javax.inject.Singleton
 
@@ -46,6 +51,11 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 abstract class AppModule {
     companion object {
+        @Provides
+        fun provideContext(@ApplicationContext context: Context): Context {
+            return context
+        }
+
         @Provides
         fun provideApplication(
             @ApplicationContext context: Context
@@ -62,17 +72,41 @@ abstract class AppModule {
 
         @Provides
         fun provideUphold(): UpholdClient = UpholdClient.getInstance()
+
+        @Provides
+        @Singleton
+        fun providePackageInfoProvider(@ApplicationContext context: Context) = PackageInfoProvider(context)
+
+        @Provides
+        fun provideConnectivityManager(@ApplicationContext context: Context): ConnectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        @Singleton
+        @Provides
+        fun provideConfiguration(@ApplicationContext context: Context): Configuration =
+            Configuration(PreferenceManager.getDefaultSharedPreferences(context), context.resources)
+
+        @Provides
+        fun provideSendPaymentService(
+            walletData: WalletDataProvider,
+            walletApplication: WalletApplication,
+            securityFunctions: SecurityFunctions,
+            packageInfoProvider: PackageInfoProvider
+        ): SendPaymentService {
+            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider)
+
+            return if (BuildConfig.FLAVOR.lowercase() == "prod") {
+                realService
+            } else {
+                FakeDashDirectSendService(realService, walletData)
+            }
+        }
     }
 
     @Binds
     abstract fun bindAnalyticsService(
         analyticsService: FirebaseAnalyticsServiceImpl
     ): AnalyticsService
-
-    @Binds
-    abstract fun bindSendPaymentService(
-        sendCoinsTaskRunner: SendCoinsTaskRunner
-    ): SendPaymentService
 
     @Binds
     abstract fun bindConfirmTransactionService(
@@ -93,4 +127,8 @@ abstract class AppModule {
     abstract fun bindClipboardService(
         clipboardService: AndroidActionsService
     ): SystemActionsService
+
+    @Binds
+    @Singleton
+    abstract fun bindNetworkState(networkState: NetworkState) : NetworkStateInt
 }

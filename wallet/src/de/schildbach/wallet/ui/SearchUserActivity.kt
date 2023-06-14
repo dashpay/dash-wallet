@@ -41,7 +41,7 @@ import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
-import org.dash.wallet.common.data.BlockchainState
+import org.dash.wallet.common.data.entity.BlockchainState
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel

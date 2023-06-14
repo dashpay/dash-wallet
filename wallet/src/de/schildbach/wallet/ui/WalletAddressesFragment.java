@@ -23,10 +23,12 @@ import java.util.List;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
+import org.dash.wallet.common.util.Qr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +37,6 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.util.BitmapFragment;
-import org.dash.wallet.common.util.Qr;
 import de.schildbach.wallet.util.Toast;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet.util.WholeStringBuilder;
@@ -207,7 +208,7 @@ public final class WalletAddressesFragment extends FancyListFragment {
 
             private void handleShowQr(final Address address) {
                 final String uri = BitcoinURI.convertToBitcoinURI(address, null, null, null);
-                BitmapFragment.show(getParentFragmentManager(), Qr.bitmap(uri));
+                BitmapFragment.show(getParentFragmentManager(), Qr.INSTANCE.qrBitmap(uri));
             }
 
             private void handleCopyToClipboard(final Address address) {
@@ -235,7 +236,7 @@ public final class WalletAddressesFragment extends FancyListFragment {
 
     private final KeyChainEventListener walletListener = new KeyChainEventListener() {
         @Override
-        public void onKeysAdded(final List<ECKey> keysAdded) {
+        public void onKeysAdded(final List<IKey> keysAdded) {
             final List<ECKey> derivedKeys = wallet.getIssuedReceiveKeys();
             final List<ECKey> randomKeys = wallet.getImportedKeys();
 

@@ -23,4 +23,5 @@
     <string name="uphold_error_not_available">Jelenleg az Uphold szolgáltatása nem elérhető. Próbálkozz később.</string>
     <string name="uphold_error_report_issue">Kérlek jelezd ezt a hibát a Dash Tárca csapatának a \"Hibabejelentés\" menüpont alatt.</string>
 
-</resources>
+    <string name="uphold_general_error_title">Hiba</string>
+    </resources>

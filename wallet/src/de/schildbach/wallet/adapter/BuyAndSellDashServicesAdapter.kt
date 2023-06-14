@@ -28,11 +28,12 @@ import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import de.schildbach.wallet.data.ServiceStatus
 import de.schildbach.wallet_test.databinding.ItemServiceListBinding
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import androidx.recyclerview.widget.ListAdapter
 import de.schildbach.wallet_test.R
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.util.toFormattedString
 
 
 class BuyAndSellDashServicesAdapter(
@@ -103,7 +104,7 @@ class BuyAndSellDashServicesAdapter(
                 }
 
                 if(data.localBalance != null) {
-                    binding.serviceFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} ${GenericUtils.fiatToString(data.localBalance)}"
+                    binding.serviceFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} ${data.localBalance.toFormattedString()}"
                 }
             }
         }

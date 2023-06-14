@@ -20,11 +20,8 @@ package de.schildbach.wallet.payments;
 import android.os.Handler;
 import android.os.Looper;
 
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.crypto.BIP38PrivateKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.wallet.DeterministicSeed;
-import org.bitcoinj.wallet.Wallet;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 /**

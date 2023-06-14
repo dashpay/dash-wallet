@@ -27,9 +27,9 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentExploreTestnetBinding
 import javax.inject.Inject
@@ -37,6 +37,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class ExploreTestNetFragment : Fragment(R.layout.fragment_explore_testnet) {
     private val binding by viewBinding(FragmentExploreTestnetBinding::bind)
+
     @Inject
     lateinit var walletDataProvider: WalletDataProvider
 

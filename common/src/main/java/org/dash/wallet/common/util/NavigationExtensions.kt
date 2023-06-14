@@ -24,7 +24,6 @@ import androidx.navigation.NavDirections
 import androidx.navigation.fragment.DialogFragmentNavigator
 import androidx.navigation.fragment.FragmentNavigator
 import androidx.navigation.fragment.findNavController
-import org.dash.wallet.common.Constants
 
 // Avoids "Navigation action/destination xyz cannot be found from the current destination" errors
 fun Fragment.safeNavigate(directions: NavDirections) {
@@ -51,11 +50,17 @@ fun DialogFragment.dialogSafeNavigate(directions: NavDirections) {
     }
 }
 
-enum class DeepLinkDestination(val deepLink: Uri) {
-    ReceiveDash(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/0")),
-    SendDash(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/1"))
+sealed class DeepLinkDestination(val deepLink: Uri) {
+    object ReceiveDash : DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/0"))
+    object SendDash : DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/1"))
+    data class Transaction(val txId: String) :
+        DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/$txId"))
 }
 
 fun Fragment.deepLinkNavigate(destination: DeepLinkDestination) {
     findNavController().navigate(destination.deepLink)
+}
+
+fun Fragment.goBack() {
+    findNavController().popBackStack()
 }

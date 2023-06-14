@@ -387,6 +387,5 @@
     <string name="select_a_service">选择服务</string>
     <string name="activity_buy_and_sell_dash_filter">过滤</string>
     <string name="clear_filter">清除过滤</string>
-    <string name="select_currency">选择货币</string>
     <string name="reason">理由</string>
 </resources>

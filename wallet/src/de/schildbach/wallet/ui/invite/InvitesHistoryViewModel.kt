@@ -20,8 +20,8 @@ package de.schildbach.wallet.ui.invite
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.data.InvitationsDao
-import de.schildbach.wallet.ui.SingleLiveEvent
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.ui.util.SingleLiveEvent
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 

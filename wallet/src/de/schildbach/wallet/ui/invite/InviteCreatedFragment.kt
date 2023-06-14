@@ -24,7 +24,6 @@ import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invite_created.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.util.KeyboardUtil

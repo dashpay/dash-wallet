@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Bilinen son bakiye</string>
+    <string name="coinbase_link_title">Coinbase hesabınızı bağlayın</string>
+    <string name="coinbase_link">Coinbase Hesabını Bağla</string>
+    <string name="coinbase_transfer_details">Dash Cüzdanı ile Coinbase hesabınız arasında</string>
     <string name="coinbase_dash_wallet_error_title">Coinbase hesabınızda bir Dash Cüzdanı bulamadık.</string>
     <string name="coinbase_dash_wallet_error_message">Devam etmek için lütfen Coinbase\'de bir Dash Cüzdanı oluşturun.</string>
     <string name="create_dash_account">Dash Hesabı Oluştur</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">Coinbase Hesabının Bağlantısını Kes</string>
     <string name="receive_directly_into_dash_wallet">Doğrudan Dash Cüzdanına alın.</string>
     <string name="buy_dash">Dash Al</string>
-    <string name="balance">Bakiye:</string>
     <string name="balance_on_coinbase">Coinbase\'dek\' Bakiye</string>
     <string name="sending_to">Gönderiliyor</string>
     <string name="dash_wallet_device">Bu cihazdaki Dash Cüzdanı</string>
@@ -36,13 +38,16 @@
     <string name="coinbase_fee">Coinbase Ücreti</string>
     <string name="total">Toplam</string>
     <string name="order_preview">Sipariş Önizleme</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Bu cihazdaki Dash Cüzdanınıza %s Dash alacaksınız. Bir aktarımın tamamlanmasının 2-3 dakika kadar sürebileceğini lütfen unutmayın.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Bu cihazdaki Dash Cüzdanınızda %s Dash alacaksınız. Bir transferin tamamlanması 2-3 dakikayı bulabileceğini lütfen unutmayın.</string>
     <string name="amount_in_dash">Dash\'teki Tutar</string>
     <string name="cancel">İptal et</string>
     <string name="confirm_sec">Onaylayın (%ss)</string>
     <string name="confirm">Onayla</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Herhangi bir ödeme yöntemi bulamadık.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Devam etmek için lütfen Coinbase hesabınızı güncelleyin.</string>
+    <string name="coinbase_no_payment_methods_error_title">Herhangi bir ödeme yöntemi bulamadık.</string>
+    <string name="coinbase_no_payment_methods_error_message">Devam etmek için lütfen Coinbase hesabınızı güncelleyin.</string>
+    <string name="coinbase_unusable_payment_method_error_title">Bu ödeme yöntemi kullanılamaz.</string>
+    <string name="coinbase_unusable_payment_method_error_message">Lütfen Coinbase hesabınızda bu ödeme yöntemiyle satın almaya izin verin.</string>
+    <string name="coinbase_open_account">Coinbase hesabı aç</string>
     <string name="add_payment_method">Ödeme yöntemi ekle</string>
     <string name="error">Hata</string>
     <string name="cancel_transaction">İşlemi iptal et?</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">Girilen kod geçersiz. Lütfen tekrar deneyin</string>
     <string name="verify_code">Onayla</string>
     <string name="you_dont_have_enough_balance">Yeterli bakiyeniz yok</string>
-    <string name="transfer_dash">Transfer Dash</string>
     <string name="transfer_amount">Transfer</string>
     <string name="dash_wallet_limit_description">Tutar, bakiyenizden daha yüksek</string>
     <string name="address_creation_failed">İşleminizi tamamlamak için hesabınız için bir adres oluşturamadık. Lütfen daha sonra tekrar deneyin.</string>

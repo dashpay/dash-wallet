@@ -20,12 +20,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import de.schildbach.wallet.data.*
-import de.schildbach.wallet.ui.SingleLiveEvent
+import de.schildbach.wallet.ui.util.SingleLiveEvent
 import java.util.ArrayList
 
 class InvitesAdapter(private val itemClickListener: OnItemClickListener,
-                     private val filterClick: SingleLiveEvent<InvitesHistoryViewModel.Filter>)
+                     private val filterClick: SingleLiveEvent<InvitesHistoryViewModel.Filter>
+)
     : RecyclerView.Adapter<InvitesHistoryViewHolder>(),
         InvitesHeaderViewHolder.OnFilterListener {
 

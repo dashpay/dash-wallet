@@ -15,11 +15,17 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.BlockchainStateDao
+import de.schildbach.wallet.database.dao.DashPayContactRequestDao
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
@@ -30,12 +36,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Address
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
-import org.dashj.platform.dashpay.ContactRequest
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -52,6 +56,7 @@ open class DashPayViewModel @Inject constructor(
     val platformSyncService: PlatformSyncService,
     private val platformBroadcastService: PlatformBroadcastService,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
+    private val userAlertDao: UserAlertDao,
     private val dashPayConfig: DashPayConfig
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
@@ -64,7 +69,7 @@ open class DashPayViewModel @Inject constructor(
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String?>()
 
-    val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
+    val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope, userAlertDao)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformSyncService)
     val frequentContactsLiveData = FrequentContactsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
     val blockchainStateData = blockchainState.load()
@@ -89,8 +94,8 @@ open class DashPayViewModel @Inject constructor(
     fun reportUsernameSearchTime(resultSize: Int, searchTextSize: Int) {
         timerUsernameSearch?.logTiming(
             mapOf(
-                "resultCount" to resultSize,
-                "searchCount" to searchTextSize
+                AnalyticsConstants.Parameter.ARG1 to resultSize,
+                AnalyticsConstants.Parameter.ARG2 to searchTextSize
             )
         )
     }
@@ -139,8 +144,8 @@ open class DashPayViewModel @Inject constructor(
                 if (search.text.length >= 3) {
                     timerIsLock.logTiming(
                         mapOf(
-                            "resultCount" to result.size,
-                            "searchCount" to search.text.length
+                            AnalyticsConstants.Parameter.ARG1 to result.size,
+                            AnalyticsConstants.Parameter.ARG2 to search.text.length
                         )
                     )
                 }
@@ -189,10 +194,6 @@ open class DashPayViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             platformSyncService.updateContactRequests()
         }
-    }
-
-    fun getNextContactAddress(userId: String, accountReference: Int): Address {
-        return platformRepo.getNextContactAddress(userId, accountReference)
     }
 
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
@@ -264,7 +265,7 @@ open class DashPayViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     protected fun formatExceptionMessage(description: String, e: Exception): String {

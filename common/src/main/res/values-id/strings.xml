@@ -16,6 +16,12 @@
     <string name="error">Kesalahan</string>
     <string name="select_a_coin">Pilih koin</string>
     <string name="request_coins_share_dialog_title">Berbagi permintaan Dash…</string>
+    <string name="buy_with_fiat">Beli Dash dengan fiat</string>
+    <string name="buy_and_convert">Beli dan konversikan Dash dengan crypto lain</string>
+    <string name="transfer_dash">Transfer Dash</string>
+    <string name="login_error_title">Tidak dapat masuk ke akun  %s Anda</string>
+    <string name="login_error_message">Terjadi kesalahan saat masuk ke akun %s Anda.</string>
+    <string name="balance">Saldo:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Pound Guernsey</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">Saya Mengerti</string>
     <string name="button_okay">Oke</string>
     <string name="button_share">Berbagi</string>
+    <string name="share_address">Bagikan Alamat</string>
     <string name="verify">Memeriksa</string>
     <string name="receive_enter_amount_button">Tentukan Jumlah</string>
 

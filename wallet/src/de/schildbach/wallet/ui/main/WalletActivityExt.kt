@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.main
 
 import android.view.MenuItem
 import androidx.core.view.isVisible
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI.onNavDestinationSelected
 import androidx.navigation.ui.NavigationUI.setupWithNavController
@@ -28,13 +29,26 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 
 object WalletActivityExt {
     fun MainActivity.setupBottomNavigation(viewModel: MainViewModel) {
-        val navController = (supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment).navController
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navController = navHostFragment.navController
         val navView: BottomNavigationView = findViewById(R.id.bottom_navigation)
         setupWithNavController(navView, navController)
         navView.itemIconTintList = null
         navView.setOnItemSelectedListener { item: MenuItem ->
-            if (item.itemId == R.id.paymentsFragment) {
-                viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
+            when (item.itemId) {
+                R.id.walletFragment -> {
+                    viewModel.logEvent(AnalyticsConstants.Home.NAV_HOME)
+                    navController.navigate(
+                        R.id.walletFragment,
+                        null,
+                        NavOptions.Builder()
+                            .setPopUpTo(navController.graph.startDestinationId, true)
+                            .build()
+                    )
+                }
+                R.id.paymentsFragment -> viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
+                R.id.moreFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_MORE)
+                else -> { }
             }
             onNavDestinationSelected(item, navController)
             true
@@ -42,6 +56,10 @@ object WalletActivityExt {
         navView.setOnItemReselectedListener { item: MenuItem ->
             if (item.itemId == R.id.paymentsFragment) {
                 navController.navigateUp()
+            } else if (item.itemId == R.id.walletFragment) {
+                navHostFragment.childFragmentManager.fragments.firstOrNull { it is WalletFragment }?.let {
+                    (it as WalletFragment).scrollToTop()
+                }
             }
         }
         navController.addOnDestinationChangedListener { _, _, arguments ->

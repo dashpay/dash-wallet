@@ -28,7 +28,7 @@ import com.google.api.services.drive.Drive
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
