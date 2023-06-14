@@ -21,12 +21,13 @@ import android.net.*
 import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
 import android.os.Build
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.services.NetworkStateInt
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class NetworkState @Inject constructor(connectivityManager: ConnectivityManager): NetworkStateInt {
+class NetworkState @Inject constructor(val connectivityManager: ConnectivityManager): NetworkStateInt {
     override var isConnected: MutableStateFlow<Boolean> = MutableStateFlow(false)
         private set
 
@@ -65,5 +66,9 @@ class NetworkState @Inject constructor(connectivityManager: ConnectivityManager)
                 connectivityManagerCallback
             )
         }
+    }
+
+    override fun isWifiConnected(): Boolean {
+        return connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)?.state == NetworkInfo.State.CONNECTED
     }
 }

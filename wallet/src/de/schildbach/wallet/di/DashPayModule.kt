@@ -22,9 +22,6 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.data.TransactionMetadataChangeCacheDao
-import de.schildbach.wallet.data.TransactionMetadataDocumentDao
 import de.schildbach.wallet.service.CoinJoinMixingService
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.PlatformBroadcastService

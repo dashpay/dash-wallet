@@ -322,14 +322,15 @@ class CreateIdentityService : LifecycleService() {
         if (blockchainIdentityData.creationState <= CreationState.UPGRADING_WALLET) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.UPGRADING_WALLET)
             val seed = platformRepo.getWalletSeed() ?: throw IllegalStateException("cannot obtain wallet seed")
-            platformRepo.addWalletKeyChainsAsync(seed, encryptionKey)
+            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
         }
 
+        val authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
         // look for the credit funding tx in case there was an error in the next step previously
-        for (tx in wallet.creditFundingTransactions) {
+        for (tx in authenticationGroupExtension.creditFundingTransactions) {
             tx as CreditFundingTransaction
-            if (walletApplication.wallet!!.blockchainIdentityFundingKeyChain.findKeyFromPubHash(tx.creditBurnPublicKeyId.bytes) != null) {
+            if (authenticationGroupExtension.identityFundingKeyChain.findKeyFromPubHash(tx.creditBurnPublicKeyId.bytes) != null) {
                 blockchainIdentity.initializeCreditFundingTransaction(tx)
             }
         }
@@ -476,7 +477,7 @@ class CreateIdentityService : LifecycleService() {
         if (blockchainIdentityData.creationState <= CreationState.UPGRADING_WALLET) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.UPGRADING_WALLET)
             val seed = platformRepo.getWalletSeed() ?: throw IllegalStateException("cannot obtain wallet seed")
-            platformRepo.addWalletKeyChainsAsync(seed, encryptionKey)
+            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
         }
 
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
@@ -693,7 +694,7 @@ class CreateIdentityService : LifecycleService() {
         val blockchainIdentity = BlockchainIdentity(platformRepo.platform, 0, wallet, authExtension)
         // this process should have been done already, otherwise the credit funding transaction
         // will not have the credit burn keys associated with it
-        platformRepo.addWalletKeyChainsAsync(seed, encryptionKey)
+        platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
         platformSyncService.updateSyncStatus(PreBlockStage.InitWallet)
 
         //

@@ -16,10 +16,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.CoinJoinMode
@@ -38,6 +37,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.safeNavigate
+import javax.inject.Inject
 
 enum class CreateUsernameActions {
     CREATE_NEW,
@@ -122,6 +122,9 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
             CreateUsernameActions.FROM_INVITE -> {
                 // don't show the keyboard if launched from invite
                 useInvite = true
+            }
+            else -> {
+                // not sure what we need to do here
             }
         }
     }
@@ -215,8 +218,8 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
             requireActivity().startService(CreateIdentityService.createIntentForNewUsername(requireContext(), username))
             requireActivity().finish()
         } else {
-            AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(viewLifecycleOwner) {
-                if (it?.creationStateErrorMessage != null && !reuseTransaction) {
+            dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+                if (it?.creationStateErrorMessage != null) {
                     requireActivity().finish()
                 } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
                     completeUsername = it.username ?: ""
@@ -242,7 +245,7 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
                 requireActivity().finish()
                 return
             } else {
-                AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(viewLifecycleOwner) {
+                dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
                     if (it?.creationStateErrorMessage != null && !reuseTransaction) {
                         requireActivity().finish()
                     } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {

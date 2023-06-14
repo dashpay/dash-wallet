@@ -71,6 +71,7 @@ import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
@@ -361,6 +362,9 @@ public class WalletApplication extends MultiDexApplication
         blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
     }
 
+    /**
+     * called before the wallet is encrypted during onboarding
+     */
     public void setWallet(Wallet newWallet) {
         this.wallet = newWallet;
         // TODO: move to a wallet creation class
@@ -392,6 +396,11 @@ public class WalletApplication extends MultiDexApplication
             authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
             authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
             authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
+        }
+        WalletEx walletEx = (WalletEx) wallet;
+        if (walletEx.getCoinJoin() != null) {
+            // this wallet is not encrypted yet
+            walletEx.initializeCoinJoin(null);
         }
     }
 

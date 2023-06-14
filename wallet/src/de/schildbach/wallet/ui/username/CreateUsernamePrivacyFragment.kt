@@ -53,8 +53,8 @@ class CreateUsernamePrivacyFragment : Fragment(R.layout.fragment_user_name_priva
         binding.continueBtn.setOnClickListener {
             viewModel.logEvent(
                 AnalyticsConstants.CoinJoinPrivacy.USERNAME_PRIVACY_BTN_CONTINUE,
-                bundleOf(
-                    AnalyticsConstants.Parameters.VALUE to selectedCoinJoinMode.name,
+                mapOf(
+                    AnalyticsConstants.Parameter.VALUE to selectedCoinJoinMode.name,
                 ),
             )
 

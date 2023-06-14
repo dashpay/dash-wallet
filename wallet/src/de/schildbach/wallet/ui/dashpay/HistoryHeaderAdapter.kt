@@ -132,6 +132,7 @@ class HistoryHeaderAdapter(
         when (blockchainIdentityData.creationState) {
             BlockchainIdentityData.CreationState.NONE,
             BlockchainIdentityData.CreationState.UPGRADING_WALLET,
+            BlockchainIdentityData.CreationState.MIXING_FUNDS,
             BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_CREATING,
             BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_SENDING,
             BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_SENT,
