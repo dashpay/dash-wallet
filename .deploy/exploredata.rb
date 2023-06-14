@@ -3,7 +3,7 @@ project_id = "dash-wallet-firebase"
 key_file   = ".deploy/gc-storage-service-account.json"
 bucket_name = "dash-wallet-firebase.appspot.com"
 flavor = ARGV[0]
-file_name = "explore/explore-devnet.db"
+file_name = "explore/explore-testnet.db"
 if flavor == "prod"
   puts "Downloading the production database"
 else
