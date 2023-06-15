@@ -43,10 +43,6 @@ public interface BlockchainService {
             + ".wipe_wallet";
     public static final String ACTION_BROADCAST_TRANSACTION = BlockchainService.class.getPackage().getName()
             + ".broadcast_transaction";
-    public static final String ACTION_START_MIXING = BlockchainService.class.getPackage().getName()
-            + ".start_mixing";
-    public static final String ACTION_STOP_MIXING = BlockchainService.class.getPackage().getName()
-            + ".stop_mixing";
     public static final String ACTION_BROADCAST_TRANSACTION_HASH = "hash";
 
     String ACTION_RESET_BLOOMFILTERS =  BlockchainService.class.getPackage().getName()
