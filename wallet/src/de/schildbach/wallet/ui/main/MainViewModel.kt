@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui.main
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
@@ -32,7 +31,6 @@ import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.ui.transactions.TransactionRowView
-import de.schildbach.wallet.util.TimeKeeper
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
@@ -48,9 +46,10 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.common.transactions.filters.TransactionFilter
+import org.dash.wallet.common.util.head
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
-import java.util.UUID
 import javax.inject.Inject
+import kotlin.math.abs
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
@@ -70,8 +69,6 @@ class MainViewModel @Inject constructor(
         private const val THROTTLE_DURATION = 500L
         private const val DIRECTION_KEY = "tx_direction"
     }
-
-    private val uuid = UUID.randomUUID().toString()
 
     private val workerJob = SupervisorJob()
     @VisibleForTesting
@@ -179,11 +176,6 @@ class MainViewModel @Inject constructor(
             }
         }
         config.registerOnSharedPreferenceChangeListener(listener)
-
-        viewModelScope.launch {
-            val isCorrect = TimeKeeper().isDeviceTimeCorrect(System.currentTimeMillis())
-            Log.i("TIMESKEW", "uuid: $uuid, is device time correct: $isCorrect")
-        }
     }
 
     fun logEvent(event: String) {
@@ -247,6 +239,19 @@ class MainViewModel @Inject constructor(
     fun getLastStakingAPY() {
         viewModelScope.launch(Dispatchers.IO) {
             _stakingAPY.postValue(0.85 * blockchainStateProvider.getLastMasternodeAPY())
+        }
+    }
+
+    suspend fun getDeviceTimeSkew(): Long {
+        return try {
+            val systemTimeMillis = System.currentTimeMillis()
+            val result = Constants.HTTP_CLIENT.head("https://www.dash.org/")
+            val networkTime = result.headers.getDate("date")?.time
+            requireNotNull(networkTime)
+            abs(systemTimeMillis - networkTime)
+        } catch (ex: Exception) {
+            // Ignore errors
+            0L
         }
     }
 

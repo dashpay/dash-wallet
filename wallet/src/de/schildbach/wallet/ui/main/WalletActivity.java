@@ -22,8 +22,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.os.Build;
@@ -79,7 +77,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
 
-    private static final int DIALOG_TIMESKEW_ALERT = 3;
     private static final int DIALOG_LOW_STORAGE_ALERT = 5;
 
     private static final Logger log = LoggerFactory.getLogger(WalletActivity.class);
@@ -140,6 +137,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         super.onResume();
 
         checkLowStorageAlert();
+        WalletActivityExt.INSTANCE.checkTimeSkew(this, viewModel);
         checkWalletEncryptionDialog();
         detectUserCountry();
     }
@@ -196,9 +194,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     protected Dialog onCreateDialog(final int id, final Bundle args) {
-        if (id == DIALOG_TIMESKEW_ALERT)
-            return createTimeskewAlertDialog(args.getLong("diff_minutes"));
-        else if (id == DIALOG_LOW_STORAGE_ALERT)
+        if (id == DIALOG_LOW_STORAGE_ALERT)
             return createLowStorageAlertDialog();
         else
             throw new IllegalArgumentException();
@@ -287,27 +283,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             alertDialog = dialog.buildAlertDialog();
             alertDialog.show();
         }
-    }
-
-    private Dialog createTimeskewAlertDialog(final long diffMinutes) {
-        final PackageManager pm = getPackageManager();
-        final Intent settingsIntent = new Intent(android.provider.Settings.ACTION_DATE_SETTINGS);
-
-        baseAlertDialogBuilder.setTitle(getString(R.string.wallet_timeskew_dialog_title));
-        baseAlertDialogBuilder.setMessage(getString(R.string.wallet_timeskew_dialog_msg, diffMinutes));
-        if (pm.resolveActivity(settingsIntent, 0) != null){
-            baseAlertDialogBuilder.setPositiveText(getString(R.string.button_settings));
-            baseAlertDialogBuilder.setPositiveAction(
-                    () -> {
-                        startActivity(settingsIntent);
-                        finish();
-                        return Unit.INSTANCE;
-                    }
-            );
-        }
-        baseAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
-        baseAlertDialogBuilder.setShowIcon(true);
-        return baseAlertDialogBuilder.buildAlertDialog();
     }
 
     public void restoreWallet(final Wallet wallet) {

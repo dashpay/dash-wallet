@@ -17,17 +17,24 @@
 
 package de.schildbach.wallet.ui.main
 
-import android.util.Log
+import android.content.Intent
+import android.provider.Settings
 import android.view.MenuItem
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI.onNavDestinationSelected
 import androidx.navigation.ui.NavigationUI.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
 object WalletActivityExt {
+    private const val TIME_SKEW_TOLERANCE = 60 // minutes
+    private var timeSkewDialogShown = false
+
     fun WalletActivity.setupBottomNavigation(viewModel: MainViewModel) {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
@@ -52,6 +59,35 @@ object WalletActivityExt {
         }
         navController.addOnDestinationChangedListener { _, _, arguments ->
             navView.isVisible = arguments?.getBoolean("ShowNavBar", false) == true
+        }
+    }
+
+    fun WalletActivity.checkTimeSkew(viewModel: MainViewModel) {
+        lifecycleScope.launch {
+            val timeSkew = viewModel.getDeviceTimeSkew()
+            val inMinutes = timeSkew / 1000 / 60
+
+            if (inMinutes > TIME_SKEW_TOLERANCE && !timeSkewDialogShown) {
+                timeSkewDialogShown = true
+                showTimeskewAlertDialog(inMinutes)
+            }
+        }
+    }
+
+    private fun WalletActivity.showTimeskewAlertDialog(diffMinutes: Long) {
+        val settingsIntent = Intent(Settings.ACTION_DATE_SETTINGS)
+        val hasSettings = packageManager.resolveActivity(settingsIntent, 0) != null
+
+        AdaptiveDialog.create(
+            R.drawable.ic_warning,
+            getString(R.string.wallet_timeskew_dialog_title),
+            getString(R.string.wallet_timeskew_dialog_msg, diffMinutes),
+            getString(R.string.button_dismiss),
+            if (hasSettings) getString(R.string.button_settings) else null
+        ).show(this) { openSettings ->
+            if (openSettings == true && hasSettings) {
+                startActivity(settingsIntent)
+            }
         }
     }
 }
