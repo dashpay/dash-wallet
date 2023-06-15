@@ -1191,8 +1191,25 @@ public class WalletApplication extends MultiDexApplication
         authenticationGroupExtension = new AuthenticationGroupExtension(Constants.NETWORK_PARAMETERS);
     }
 
+    // TODO: move thes ewallet
     public WalletExtension[] getWalletExtensions() {
         return new WalletExtension[] {authenticationGroupExtension};
+    }
+
+    @NonNull
+    @Override
+    public AuthenticationGroupExtension addOrGetAuthenticationGroupExtension() {
+        if (wallet.hasExtension(AuthenticationGroupExtension.EXTENSION_ID)) {
+            return (AuthenticationGroupExtension) wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
+        } else {
+            wallet.addOrUpdateExtension(authenticationGroupExtension);
+            authenticationGroupExtension.setWallet(wallet);
+            return authenticationGroupExtension;
+        }
+    }
+
+    public void add(AuthenticationGroupExtension authenticationGroupExtension) {
+        this.authenticationGroupExtension = authenticationGroupExtension;
     }
 
     @Override

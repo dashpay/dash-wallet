@@ -60,9 +60,7 @@ class MasternodeKeysViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(MasternodeKeysViewModel::class.java)
     }
 
-    private val authenticationGroup: AuthenticationGroupExtension = walletData.wallet!!.addOrGetExistingExtension(
-        AuthenticationGroupExtension(walletData.wallet)
-    ) as AuthenticationGroupExtension
+    private val authenticationGroup: AuthenticationGroupExtension = walletData.addOrGetAuthenticationGroupExtension()
     private val masternodeKeyChainTypes = EnumSet.of(
         AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
         AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,

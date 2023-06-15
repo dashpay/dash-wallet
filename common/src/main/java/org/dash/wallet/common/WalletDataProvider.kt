@@ -22,6 +22,7 @@ import org.bitcoinj.core.*
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletExtension
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.transactions.TransactionWrapper
@@ -72,4 +73,6 @@ interface WalletDataProvider {
     fun observeMostRecentTransaction(): Flow<Transaction>
 
     fun getWalletExtensions(): Array<WalletExtension>
+
+    fun addOrGetAuthenticationGroupExtension(): AuthenticationGroupExtension
 }

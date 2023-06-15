@@ -4,19 +4,16 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.PowerManager
-import android.os.Process
 import androidx.lifecycle.LifecycleService
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
-import de.schildbach.wallet.database.entity.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.database.entity.DashPayProfile
-import de.schildbach.wallet.payments.DecryptSeedTask
-import de.schildbach.wallet.payments.DeriveKeyTask
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
@@ -658,9 +655,7 @@ class CreateIdentityService : LifecycleService() {
         // use an "empty" state for each
         blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, null, true)
 
-        val authExtension = walletApplication.wallet!!.addOrGetExistingExtension(
-            AuthenticationGroupExtension(walletApplication.wallet!!.params)
-        ) as AuthenticationGroupExtension
+        val authExtension = walletApplication.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
         val cftxs = authExtension.creditFundingTransactions
 
         val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { it.creditBurnIdentityIdentifier.bytes!!.contentEquals(identity) }

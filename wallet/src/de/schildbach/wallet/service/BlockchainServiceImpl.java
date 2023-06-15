@@ -317,9 +317,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             if(CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
                 // Handle credit function transactions (username creation, topup, invites)
                 AuthenticationGroupExtension authExtension =
-                        (AuthenticationGroupExtension) wallet.addOrGetExistingExtension(
-                                new AuthenticationGroupExtension(wallet.getParams())
-                        );
+                        (AuthenticationGroupExtension) wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
                 CreditFundingTransaction cftx = authExtension.getCreditFundingTransaction(tx);
 
                 long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();

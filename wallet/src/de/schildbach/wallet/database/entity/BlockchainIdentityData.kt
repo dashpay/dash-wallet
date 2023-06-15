@@ -65,9 +65,7 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
         }
         if (wallet != null) {
             creditFundingTransactionCache = wallet.getTransaction(creditFundingTxId)?.run {
-                val authExtension = wallet.addOrGetExistingExtension(
-                    AuthenticationGroupExtension(wallet.params)
-                ) as AuthenticationGroupExtension
+                val authExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
                 authExtension.getCreditFundingTransaction(this)
             }
         }
