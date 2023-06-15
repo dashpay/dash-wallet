@@ -17,10 +17,8 @@
 
 package de.schildbach.wallet.ui.main;
 
-import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
@@ -57,10 +55,9 @@ import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.EncryptKeysDialogFragment;
 import de.schildbach.wallet.ui.EncryptNewKeyChainDialogFragment;
-import de.schildbach.wallet.ui.util.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
 import de.schildbach.wallet.ui.RestoreWalletFromSeedDialogFragment;
-import de.schildbach.wallet.ui.SetPinActivity;
+import de.schildbach.wallet.ui.util.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Nfc;
@@ -76,8 +73,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
-
-    private static final int DIALOG_LOW_STORAGE_ALERT = 5;
 
     private static final Logger log = LoggerFactory.getLogger(WalletActivity.class);
 
@@ -136,8 +131,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     protected void onResume() {
         super.onResume();
 
-        checkLowStorageAlert();
         WalletActivityExt.INSTANCE.checkTimeSkew(this, viewModel);
+        WalletActivityExt.INSTANCE.checkLowStorageAlert(this);
         checkWalletEncryptionDialog();
         detectUserCountry();
     }
@@ -184,46 +179,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
         showRestoreWalletFromSeedDialog();
     }
 
-    public void handleEncryptKeys() {
-        startActivity(SetPinActivity.createIntent(this, R.string.wallet_options_encrypt_keys_change, true));
-    }
-
     public void handleEncryptKeysRestoredWallet() {
         EncryptKeysDialogFragment.show(false, getSupportFragmentManager(), dialog -> resetBlockchain());
     }
 
-    @Override
-    protected Dialog onCreateDialog(final int id, final Bundle args) {
-        if (id == DIALOG_LOW_STORAGE_ALERT)
-            return createLowStorageAlertDialog();
-        else
-            throw new IllegalArgumentException();
-    }
-
     private void showRestoreWalletFromSeedDialog() {
         RestoreWalletFromSeedDialogFragment.show(getSupportFragmentManager());
-    }
-
-    private void checkLowStorageAlert() {
-        final Intent stickyIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW));
-        if (stickyIntent != null)
-            showDialog(DIALOG_LOW_STORAGE_ALERT);
-    }
-
-    private Dialog createLowStorageAlertDialog() {
-        baseAlertDialogBuilder.setTitle(getString(R.string.wallet_low_storage_dialog_title));
-        baseAlertDialogBuilder.setMessage(getString(R.string.wallet_low_storage_dialog_msg));
-        baseAlertDialogBuilder.setPositiveText(getString(R.string.wallet_low_storage_dialog_button_apps));
-        baseAlertDialogBuilder.setPositiveAction(
-                () -> {
-                    startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
-                    finish();
-                    return Unit.INSTANCE;
-                }
-        );
-        baseAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
-        baseAlertDialogBuilder.setShowIcon(true);
-        return baseAlertDialogBuilder.buildAlertDialog();
     }
 
     private void checkAlerts() {

@@ -18,8 +18,12 @@
 package de.schildbach.wallet.ui.main
 
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.os.storage.StorageManager
 import android.provider.Settings
 import android.view.MenuItem
+import androidx.core.content.getSystemService
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
@@ -33,7 +37,9 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
 object WalletActivityExt {
     private const val TIME_SKEW_TOLERANCE = 60 // minutes
+    private const val STORAGE_TOLERANCE = 500 // MB
     private var timeSkewDialogShown = false
+    private var lowStorageDialogShown = false
 
     fun WalletActivity.setupBottomNavigation(viewModel: MainViewModel) {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
@@ -69,12 +75,33 @@ object WalletActivityExt {
 
             if (inMinutes > TIME_SKEW_TOLERANCE && !timeSkewDialogShown) {
                 timeSkewDialogShown = true
-                showTimeskewAlertDialog(inMinutes)
+                showTimeSkewAlertDialog(inMinutes)
             }
         }
     }
 
-    private fun WalletActivity.showTimeskewAlertDialog(diffMinutes: Long) {
+    fun WalletActivity.checkLowStorageAlert() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val storageManager = applicationContext.getSystemService<StorageManager>()!!
+            val storageUUID = storageManager.getUuidForPath(filesDir)
+            val availableBytes = storageManager.getAllocatableBytes(storageUUID)
+            val toleranceInBytes = 1024L * 1024 * STORAGE_TOLERANCE
+
+            if (availableBytes <= toleranceInBytes && !lowStorageDialogShown) {
+                lowStorageDialogShown = true
+                showLowStorageAlertDialog()
+            }
+        } else {
+            val stickyIntent = registerReceiver(null, IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW))
+
+            if (stickyIntent != null && !lowStorageDialogShown) {
+                lowStorageDialogShown = true
+                showLowStorageAlertDialog()
+            }
+        }
+    }
+
+    private fun WalletActivity.showTimeSkewAlertDialog(diffMinutes: Long) {
         val settingsIntent = Intent(Settings.ACTION_DATE_SETTINGS)
         val hasSettings = packageManager.resolveActivity(settingsIntent, 0) != null
 
@@ -87,6 +114,29 @@ object WalletActivityExt {
         ).show(this) { openSettings ->
             if (openSettings == true && hasSettings) {
                 startActivity(settingsIntent)
+            }
+        }
+    }
+
+    private fun WalletActivity.showLowStorageAlertDialog() {
+        val storageManagerIntent = Intent(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                StorageManager.ACTION_MANAGE_STORAGE
+            } else {
+                Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS
+            }
+        )
+        val hasStorageManager = packageManager.resolveActivity(storageManagerIntent, 0) != null
+
+        AdaptiveDialog.create(
+            R.drawable.ic_warning,
+            getString(R.string.wallet_low_storage_dialog_title),
+            getString(R.string.wallet_low_storage_dialog_msg),
+            getString(R.string.button_dismiss),
+            if (hasStorageManager) getString(R.string.wallet_low_storage_dialog_button_apps) else null
+        ).show(this) { openSettings ->
+            if (openSettings == true && hasStorageManager) {
+                startActivity(storageManagerIntent)
             }
         }
     }
