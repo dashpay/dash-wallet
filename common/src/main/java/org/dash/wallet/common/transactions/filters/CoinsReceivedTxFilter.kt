@@ -30,6 +30,7 @@ open class CoinsReceivedTxFilter(
         private set
 
     override fun matches(tx: Transaction): Boolean {
+        // this check prevents a CoinJoin TX from being marked as a Crowdnode TX
         if (tx.isEntirelySelf(bag) || tx.getValue(bag).signum() < 0) {
             // Not an incoming transaction
             return false

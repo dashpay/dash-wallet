@@ -177,7 +177,7 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
         binding.usernameExistsReqImg.visibility = View.INVISIBLE
         binding.usernameExistsReqLabel.visibility = View.VISIBLE
         binding.usernameExistsReqLabel.typeface = regularTypeFace
-        binding.usernameExistsReqLabel.setTextColor(ResourcesCompat.getColor(resources, R.color.dark_text, null))
+        binding.usernameExistsReqLabel.setTextColor(ResourcesCompat.getColor(resources, R.color.content_primary, null))
         binding.usernameExistsReqLabel.setText(R.string.identity_username_validating)
         binding.registerBtn.isEnabled = false
     }
@@ -207,7 +207,7 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
         binding.usernameExistsReqImg.visibility = View.VISIBLE
         binding.usernameExistsReqImg.setImageResource(R.drawable.ic_username_requirement_checkmark)
         binding.usernameExistsReqLabel.typeface = mediumTypeFace
-        binding.usernameExistsReqLabel.setTextColor(ResourcesCompat.getColor(resources, R.color.dark_text, null))
+        binding.usernameExistsReqLabel.setTextColor(ResourcesCompat.getColor(resources, R.color.content_primary, null))
         binding.usernameExistsReqLabel.setText(R.string.identity_username_available)
         binding.registerBtn.isEnabled = true
     }
