@@ -25,8 +25,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.SavedStateHandle
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletUIConfig
-import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
