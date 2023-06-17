@@ -20,12 +20,9 @@ package org.dash.wallet.features.exploredash.ui.explore
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
@@ -67,7 +64,6 @@ import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
 import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.DashDirectLoginInfoDialog
 import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.DashDirectTermsDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 @AndroidEntryPoint
@@ -366,7 +362,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun showLoginDialog() {
-        DashDirectLoginInfoDialog().show(requireActivity(),
+        DashDirectLoginInfoDialog().show(
+            requireActivity(),
             onResult = {
                 if (it == true) {
                     DashDirectTermsDialog().show(requireActivity()) {

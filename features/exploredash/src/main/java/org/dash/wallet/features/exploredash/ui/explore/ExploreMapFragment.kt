@@ -352,11 +352,11 @@ class ExploreMapFragment : SupportMapFragment() {
 
         if (lastFocusedUserLocation == null ||
             userLocationState.distanceBetween(
-                userLat,
-                userLng,
-                lastLat ?: 0.0,
-                lastLng ?: 0.0
-            ) > radius / 2
+                    userLat,
+                    userLng,
+                    lastLat ?: 0.0,
+                    lastLng ?: 0.0
+                ) > radius / 2
         ) {
             setMapDefaultViewLevel(radius)
         }
