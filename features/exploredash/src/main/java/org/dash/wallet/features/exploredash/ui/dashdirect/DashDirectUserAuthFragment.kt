@@ -55,7 +55,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
     ) {
         CREATE_ACCOUNT(R.string.create_dash_direct_account, R.string.log_in_to_dashdirect_account_desc, R.string.email),
         SIGN_IN(R.string.log_in_to_dashdirect_account, R.string.log_in_to_dashdirect_account_desc, R.string.email),
-        OTP(R.string.enter_verification_code, R.string.check_your_email_and_verification_code, R.string.password)
+        OTP(R.string.enter_verification_code, R.string.verification_check_email, R.string.password)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

@@ -157,11 +157,11 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
-    protected open fun turnOffAutoLogout() {
+    open fun turnOffAutoLogout() {
         autoLogout.stopTimer()
     }
 
-    protected open fun turnOnAutoLogout() {
+    open fun turnOnAutoLogout() {
         if (!autoLogout.isTimerActive) {
             autoLogout.startTimer()
         }

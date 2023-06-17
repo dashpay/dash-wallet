@@ -28,13 +28,14 @@ import org.dash.wallet.common.R
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 
 fun Activity.openCustomTab(url: String) {
+    val fixedUrl = if (!url.startsWith("http")) "https://$url" else url
     val builder = CustomTabsIntent.Builder()
     val toolbarColor = ContextCompat.getColor(this, R.color.colorPrimary)
     val customTabsIntent = builder.setShowTitle(true).setToolbarColor(toolbarColor).build()
 
-    CustomTabActivityHelper.openCustomTab(this, customTabsIntent, Uri.parse(url)) { _, _ ->
+    CustomTabActivityHelper.openCustomTab(this, customTabsIntent, Uri.parse(fixedUrl)) { _, _ ->
         val intent = Intent(Intent.ACTION_VIEW)
-        intent.data = Uri.parse(url)
+        intent.data = Uri.parse(fixedUrl)
         startActivity(intent)
     }
 }

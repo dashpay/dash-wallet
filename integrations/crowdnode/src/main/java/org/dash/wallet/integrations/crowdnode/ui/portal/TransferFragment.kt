@@ -43,6 +43,7 @@ import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.ui.wiggle
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.common.util.toFormattedString
@@ -319,22 +320,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
     private fun showErrorBanner() {
         binding.messageBanner.setBackgroundColor(resources.getColor(R.color.content_warning, null))
-        runWiggleAnimation(binding.messageBanner)
-    }
-
-    private fun runWiggleAnimation(view: View) {
-        val frequency = 3f
-        val decay = 2f
-        val decayingSineWave = TimeInterpolator { input ->
-            val raw = sin(frequency * input * 2 * Math.PI)
-            (raw * exp((-input * decay).toDouble())).toFloat()
-        }
-
-        view.animate()
-            .xBy(-100f)
-            .setInterpolator(decayingSineWave)
-            .setDuration(300)
-            .start()
+        binding.messageBanner.wiggle()
     }
 
     private suspend fun showWithdrawalLimitsInfo() {

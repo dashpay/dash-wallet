@@ -199,9 +199,9 @@
     <string name="log_in_to_dashdirect_account">Log in to DashDirect account</string>
     <string name="log_in_to_dashdirect_account_desc">Your email is only used to send a one-time password.</string>
     <string name="enter_verification_code">Enter verification code</string>
-    <string name="check_your_email_and_verification_code">Check your email and enter the verification code</string>
-    <string name="buy_a_gift_card_with_your_dash_direct_account">Buy a gift card with your DashDirect account</string>
-    <string name="create_an_account_at_dash_direct_or_log_in_to_the_existing_one">Create an account at DashDirect or log in to the existing one</string>
+    <string name="verification_check_email">Check your email and enter the verification code</string>
+    <string name="buy_gift_card">Buy a gift card with your DashDirect account</string>
+    <string name="dashdirect_create_account">Create an account at DashDirect or log in to the existing one</string>
     <string name="create_new_account">Create New Account</string>
     <string name="login">Login</string>
     <string name="password">Password</string>
@@ -214,6 +214,12 @@
     <string name="try_again">Try Again</string>
     <string name="cancel">Cancel</string>
     <string name="gift_card_error">For some reason we were not able to buy a gift card. Please, try again.</string>
+    <string name="dashdirect_terms_conditions">Accept DashDirect terms and conditions</string>
+    <string name="accept_terms_conditions">I accept DashDirect terms and conditions</string>
+    <string name="tap_link_to_proceed">To create an account at DashDirect you must tap on the link bellow to proceed</string>
+    <string name="accept_to_proceed">To create an account at DashDirect you have to accept DashDirect terms and conditions</string>
+    <string name="view_terms_conditions">View Terms &amp; Conditions</string>
 
     <string name="dash_direct_url" translatable="false">dashdirect.org</string>
+    <string name="dash_direct_terms" translatable="false">https://ionia.docsend.com/view/ixu6g9x5eiz2jgnu</string>
 </resources>
