@@ -178,8 +178,11 @@ class ExploreMapFragment : SupportMapFragment() {
                 }
 
                 val itemLatLng = LatLng(item.latitude!!, item.longitude!!)
-                val zoom =
-                    if (map.cameraPosition.zoom > DETAILS_ZOOM_LEVEL) map.cameraPosition.zoom else DETAILS_ZOOM_LEVEL
+                val zoom = if (map.cameraPosition.zoom > DETAILS_ZOOM_LEVEL) {
+                    map.cameraPosition.zoom
+                } else {
+                    DETAILS_ZOOM_LEVEL
+                }
                 val position = CameraPosition(itemLatLng, zoom, 0f, 0f)
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(position))
             }
@@ -194,8 +197,8 @@ class ExploreMapFragment : SupportMapFragment() {
                 if (prevScreenState == ScreenState.Details && prevBounds != null) {
                     savedMerchantLocationsBounds = null
                     map.animateCamera(CameraUpdateFactory.newLatLngBounds(prevBounds, 0))
-                } else if (
-                    prevScreenState == ScreenState.DetailsGrouped || prevScreenState == ScreenState.SearchResults
+                } else if (prevScreenState == ScreenState.DetailsGrouped ||
+                    prevScreenState == ScreenState.SearchResults
                 ) {
                     val mapCenter = map.projection.visibleRegion.latLngBounds.center
                     val radiusBounds = getRadiusBounds(mapCenter, viewModel.radius)
@@ -245,8 +248,11 @@ class ExploreMapFragment : SupportMapFragment() {
             return true
         } else {
             if (googleApiAvailability.isUserResolvableError(status)) {
-                Toast.makeText(requireActivity(), R.string.common_google_play_services_install_title, Toast.LENGTH_LONG)
-                    .show()
+                Toast.makeText(
+                    requireActivity(),
+                    R.string.common_google_play_services_install_title,
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
         return false
@@ -260,17 +266,14 @@ class ExploreMapFragment : SupportMapFragment() {
                 currentMapItems = listOf()
             } else {
                 val bounds = inBounds ?: map.projection.visibleRegion.latLngBounds
-                val sortedMax =
-                    results
-                        .sortedBy {
-                            userLocationState.distanceBetween(
-                                bounds.center.latitude,
-                                bounds.center.longitude,
-                                it.latitude ?: 0.0,
-                                it.longitude ?: 0.0
-                            )
-                        }
-                        .take(ExploreViewModel.MAX_MARKERS)
+                val sortedMax = results.sortedBy {
+                    userLocationState.distanceBetween(
+                        bounds.center.latitude,
+                        bounds.center.longitude,
+                        it.latitude ?: 0.0,
+                        it.longitude ?: 0.0
+                    )
+                }.take(ExploreViewModel.MAX_MARKERS)
                 setMarkers(sortedMax)
                 checkCameraFocus(sortedMax)
             }
@@ -293,7 +296,9 @@ class ExploreMapFragment : SupportMapFragment() {
                     .filterNot { it.latitude == null || it.longitude == null }
                     .map { LatLng(it.latitude!!, it.longitude!!) }
 
-            if (map.cameraPosition.zoom < ExploreViewModel.MIN_ZOOM_LEVEL || markers.all { !mapBounds.contains(it) }) {
+            if (map.cameraPosition.zoom < ExploreViewModel.MIN_ZOOM_LEVEL ||
+                markers.all { !mapBounds.contains(it) }
+            ) {
                 // Focus on results if camera is too far or nothing on the screen
                 focusCamera(markers)
             }
@@ -301,31 +306,29 @@ class ExploreMapFragment : SupportMapFragment() {
     }
 
     private fun addCircleAroundCurrentPosition() {
-        currentLocationCircle =
-            googleMap?.addCircle(
-                CircleOptions().apply {
-                    center(mCurrentUserLocation)
-                    radius(currentAccuracy)
-                    fillColor(resources.getColor(R.color.background_accuracy_circle, null))
-                    strokeColor(Color.TRANSPARENT)
-                }
-            )
+        currentLocationCircle = googleMap?.addCircle(
+            CircleOptions().apply {
+                center(mCurrentUserLocation)
+                radius(currentAccuracy)
+                fillColor(resources.getColor(R.color.background_accuracy_circle, null))
+                strokeColor(Color.TRANSPARENT)
+            }
+        )
     }
 
     private fun addMarkerOnCurrentPosition() {
         val bitmap = getBitmapFromDrawable(R.drawable.user_location_map_marker)
-        currentLocationMarker =
-            googleMap?.addMarker(
-                MarkerOptions().apply {
-                    position(mCurrentUserLocation)
-                    anchor(0.5f, 0.5f)
-                    if (bitmap != null) {
-                        icon(BitmapDescriptorFactory.fromBitmap(bitmap))
-                    }
-                    draggable(true)
-                    zIndex(5f)
+        currentLocationMarker = googleMap?.addMarker(
+            MarkerOptions().apply {
+                position(mCurrentUserLocation)
+                anchor(0.5f, 0.5f)
+                if (bitmap != null) {
+                    icon(BitmapDescriptorFactory.fromBitmap(bitmap))
                 }
-            )
+                draggable(true)
+                zIndex(5f)
+            }
+        )
     }
 
     private fun showLocationOnMap() {
@@ -347,9 +350,13 @@ class ExploreMapFragment : SupportMapFragment() {
         val lastLng = lastFocusedUserLocation?.longitude
         val radius = viewModel.radius
 
-        if (
-            lastFocusedUserLocation == null ||
-            userLocationState.distanceBetween(userLat, userLng, lastLat ?: 0.0, lastLng ?: 0.0) > radius / 2
+        if (lastFocusedUserLocation == null ||
+            userLocationState.distanceBetween(
+                userLat,
+                userLng,
+                lastLat ?: 0.0,
+                lastLng ?: 0.0
+            ) > radius / 2
         ) {
             setMapDefaultViewLevel(radius)
         }
@@ -380,8 +387,8 @@ class ExploreMapFragment : SupportMapFragment() {
     private fun buildMarkerRequest(item: SearchResult, isSelected: Boolean): Disposable {
         val request =
             ImageRequest.Builder(requireContext())
-                .data(item.logoLocation)
-                .error(R.drawable.ic_merchant)
+                .data(if (item is Merchant) item.logoLocation else R.drawable.ic_atm_marker)
+                .error(if (item is Merchant) R.drawable.ic_merchant else R.drawable.ic_atm_marker)
                 .size(resources.getDimensionPixelSize(R.dimen.explore_marker_size))
                 .transformations(CircleCropTransformation())
                 .target(
@@ -449,9 +456,8 @@ class ExploreMapFragment : SupportMapFragment() {
     private fun focusCamera(markers: List<LatLng>) {
         val padding = resources.getDimensionPixelOffset(R.dimen.markers_offset)
         val width = resources.displayMetrics.widthPixels
-        val height =
-            resources.displayMetrics.heightPixels *
-                (1 - ResourcesCompat.getFloat(resources, R.dimen.merchant_half_expanded_ratio))
+        val height = resources.displayMetrics.heightPixels *
+            (1 - ResourcesCompat.getFloat(resources, R.dimen.merchant_half_expanded_ratio))
 
         val cameraUpdate =
             if (markers.size == 1) {
@@ -468,7 +474,8 @@ class ExploreMapFragment : SupportMapFragment() {
     }
 
     private fun canFocusOnItem(item: SearchResult): Boolean =
-        item.type != MerchantType.ONLINE && item.latitude != null && item.longitude != null
+        item.type != MerchantType.ONLINE &&
+            item.latitude != null && item.longitude != null
 
     private fun getBitmapFromDrawable(drawableId: Int): Bitmap? {
         val drawable = AppCompatResources.getDrawable(requireActivity(), drawableId)

@@ -17,17 +17,30 @@
 
 package de.schildbach.wallet.ui.main
 
-import android.util.Log
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.os.storage.StorageManager
+import android.provider.Settings
 import android.view.MenuItem
+import androidx.core.content.getSystemService
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI.onNavDestinationSelected
 import androidx.navigation.ui.NavigationUI.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
 object WalletActivityExt {
+    private const val TIME_SKEW_TOLERANCE = 60 // minutes
+    private const val STORAGE_TOLERANCE = 500 // MB
+    private var timeSkewDialogShown = false
+    private var lowStorageDialogShown = false
+
     fun WalletActivity.setupBottomNavigation(viewModel: MainViewModel) {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
@@ -55,6 +68,79 @@ object WalletActivityExt {
         }
         navController.addOnDestinationChangedListener { _, _, arguments ->
             navView.isVisible = arguments?.getBoolean("ShowNavBar", false) == true
+        }
+    }
+
+    fun WalletActivity.checkTimeSkew(viewModel: MainViewModel) {
+        lifecycleScope.launch {
+            val timeSkew = viewModel.getDeviceTimeSkew()
+            val inMinutes = timeSkew / 1000 / 60
+
+            if (inMinutes > TIME_SKEW_TOLERANCE && !timeSkewDialogShown) {
+                timeSkewDialogShown = true
+                showTimeSkewAlertDialog(inMinutes)
+            }
+        }
+    }
+
+    fun WalletActivity.checkLowStorageAlert() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val storageManager = applicationContext.getSystemService<StorageManager>()!!
+            val storageUUID = storageManager.getUuidForPath(filesDir)
+            val availableBytes = storageManager.getAllocatableBytes(storageUUID)
+            val toleranceInBytes = 1024L * 1024 * STORAGE_TOLERANCE
+
+            if (availableBytes <= toleranceInBytes && !lowStorageDialogShown) {
+                lowStorageDialogShown = true
+                showLowStorageAlertDialog()
+            }
+        } else {
+            val stickyIntent = registerReceiver(null, IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW))
+
+            if (stickyIntent != null && !lowStorageDialogShown) {
+                lowStorageDialogShown = true
+                showLowStorageAlertDialog()
+            }
+        }
+    }
+
+    private fun WalletActivity.showTimeSkewAlertDialog(diffMinutes: Long) {
+        val settingsIntent = Intent(Settings.ACTION_DATE_SETTINGS)
+        val hasSettings = packageManager.resolveActivity(settingsIntent, 0) != null
+
+        AdaptiveDialog.create(
+            R.drawable.ic_warning,
+            getString(R.string.wallet_timeskew_dialog_title),
+            getString(R.string.wallet_timeskew_dialog_msg, diffMinutes),
+            getString(R.string.button_dismiss),
+            if (hasSettings) getString(R.string.button_settings) else null
+        ).show(this) { openSettings ->
+            if (openSettings == true && hasSettings) {
+                startActivity(settingsIntent)
+            }
+        }
+    }
+
+    private fun WalletActivity.showLowStorageAlertDialog() {
+        val storageManagerIntent = Intent(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                StorageManager.ACTION_MANAGE_STORAGE
+            } else {
+                Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS
+            }
+        )
+        val hasStorageManager = packageManager.resolveActivity(storageManagerIntent, 0) != null
+
+        AdaptiveDialog.create(
+            R.drawable.ic_warning,
+            getString(R.string.wallet_low_storage_dialog_title),
+            getString(R.string.wallet_low_storage_dialog_msg),
+            getString(R.string.button_dismiss),
+            if (hasStorageManager) getString(R.string.wallet_low_storage_dialog_button_apps) else null
+        ).show(this) { openSettings ->
+            if (openSettings == true && hasStorageManager) {
+                startActivity(storageManagerIntent)
+            }
         }
     }
 }
