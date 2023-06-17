@@ -9,7 +9,7 @@ buildscript {
         workRuntimeVersion='2.7.1'
         firebaseVersion = '28.4.2'
         roomVersion = '2.4.3'
-        jetpackVersion = '1.6.0'
+        jetpackVersion = '1.8.0'
         appCompatVersion = '1.4.2'
 
         // Architecture

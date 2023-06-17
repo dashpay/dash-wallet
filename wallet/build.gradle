@@ -36,7 +36,7 @@ dependencies {
 
     // Android arch
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.annotation:annotation:1.2.0'
+    implementation 'androidx.annotation:annotation:1.5.0'
     implementation "androidx.core:core-ktx:$jetpackVersion"
     implementation "androidx.fragment:fragment-ktx:1.5.5"
     implementation('androidx.legacy:legacy-support-v13:1.0.0') {

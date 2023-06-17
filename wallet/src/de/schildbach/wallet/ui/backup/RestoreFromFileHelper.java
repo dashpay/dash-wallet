@@ -53,18 +53,8 @@ public class RestoreFromFileHelper {
 
     protected static final Logger log = LoggerFactory.getLogger(RestoreFromFileHelper.class);
 
-
-    public static Dialog createRestoreWalletPermissionDialog(Activity context, ViewModelStoreOwner viewModelStoreOwner, LifecycleOwner lifecycleOwner) {
-        final BaseAlertDialogBuilder restoreWalletPermAlertDialogBuilder = new BaseAlertDialogBuilder(context);
-        restoreWalletPermAlertDialogBuilder.setTitle(context.getString(R.string.restore_wallet_permission_dialog_title));
-        restoreWalletPermAlertDialogBuilder.setMessage(context.getString(R.string.restore_wallet_permission_dialog_message));
-        restoreWalletPermAlertDialogBuilder.setNeutralText(context.getString(R.string.button_dismiss));
-        return restoreWalletPermAlertDialogBuilder.buildAlertDialog();
-    }
-
     @SuppressLint("StringFormatInvalid")
     public static void restoreWalletFromProtobuf(final Activity activity,
-                                                 ViewModelStoreOwner viewModelStoreOwner, LifecycleOwner lifecycleOwner,
                                                  final Uri walletUri, final InputStream is, @Nullable final WalletExtension[] walletExtensions, final OnRestoreWalletListener listener) {
         try {
             listener.onRestoreWallet(WalletUtils.restoreWalletFromProtobuf(is, Constants.NETWORK_PARAMETERS, walletExtensions));

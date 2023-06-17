@@ -264,14 +264,19 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     }
 
     private fun loadImage(image: String?, into: ImageView) {
-        into.load(image) {
-            crossfade(200)
-            scale(Scale.FILL)
-            placeholder(R.drawable.ic_image_placeholder)
-            error(R.drawable.ic_image_placeholder)
-            transformations(
-                RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
-            )
+        if (image.isNullOrEmpty()) {
+            into.isVisible = false
+        } else {
+            into.isVisible = true
+            into.load(image) {
+                crossfade(200)
+                scale(Scale.FILL)
+                placeholder(R.drawable.ic_image_placeholder)
+                error(R.drawable.ic_image_placeholder)
+                transformations(
+                    RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
+                )
+            }
         }
     }
 

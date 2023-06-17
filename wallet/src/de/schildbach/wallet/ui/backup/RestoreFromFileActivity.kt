@@ -18,11 +18,9 @@ package de.schildbach.wallet.ui.backup
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.Dialog
 import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -35,22 +33,18 @@ import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
 
 @SuppressLint("Registered")
 open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment.WalletProvider {
 
     companion object {
-        const val DIALOG_RESTORE_WALLET_PERMISSION = 1
-
-        const val DIALOG_RESTORE_WALLET = 2
 
         const val REQUEST_CODE_RESTORE_WALLET = 1
     }
 
     private lateinit var viewModel: RestoreWalletFromFileViewModel
-    //private lateinit var sharedViewModel: RestoreWalletViewModel
 
     private lateinit var walletApplication: WalletApplication
     private lateinit var walletBuffer: Wallet
@@ -58,63 +52,52 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewModel = ViewModelProvider(this)[RestoreWalletFromFileViewModel::class.java]
-        //sharedViewModel = ViewModelProvider(this)[RestoreWalletViewModel::class.java]
         walletApplication = (application as WalletApplication)
         initViewModel()
     }
 
     @SuppressLint("StringFormatInvalid")
     private fun initViewModel() {
-        viewModel.showRestoreWalletFailureAction.observe(this, Observer {
+        viewModel.showRestoreWalletFailureAction.observe(this) {
             val message = when {
                 TextUtils.isEmpty(it.message) -> it.javaClass.simpleName
                 else -> it.message!!
             }
 
-            BaseAlertDialogBuilder(this).apply {
-                title = getString(R.string.import_export_keys_dialog_failure_title)
-                this.message = getString(R.string.import_keys_dialog_failure, message)
-                positiveText = getString(R.string.button_dismiss)
-                negativeText = getString(R.string.button_retry)
-                negativeAction = { RestoreWalletFromSeedDialogFragment.show(supportFragmentManager) }
-                showIcon = true
-            }.buildAlertDialog().show()
-
-        })
-        viewModel.showUpgradeWalletAction.observe(this, {
+            AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.import_export_keys_dialog_failure_title),
+                getString(R.string.import_keys_dialog_failure, message),
+                getString(R.string.button_dismiss),
+                getString(R.string.button_retry)
+            ).show(this) { shouldRetry ->
+                if (shouldRetry == true) {
+                    RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
+                }
+            }
+        }
+        viewModel.showUpgradeWalletAction.observe(this) {
             walletBuffer = it
             EncryptNewKeyChainDialogFragment.show(supportFragmentManager, Constants.BIP44_PATH)
-        })
-        viewModel.showUpgradeDisclaimerAction.observe(this, Observer {
+        }
+        viewModel.showUpgradeDisclaimerAction.observe(this) {
             UpgradeWalletDisclaimerDialog.show(supportFragmentManager, false)
-        })
-        viewModel.startActivityAction.observe(this, Observer {
+        }
+        viewModel.startActivityAction.observe(this) {
             startActivityForResult(it, SET_PIN_REQUEST_CODE)
-        })
-        viewModel.restoreWallet.observe(this, Observer {
+        }
+        viewModel.restoreWallet.observe(this) {
             walletBuffer = it
             viewModel.restoreWalletFromFile(wallet, null)
-        })
-        viewModel.retryRequest.observe(this, Observer {
+        }
+        viewModel.retryRequest.observe(this) {
             RestoreWalletDialogFragment.showPick(supportFragmentManager)
-        })
+        }
     }
 
     internal fun restoreWalletFromFile() {
         walletApplication.initEnvironmentIfNeeded()
         RestoreWalletDialogFragment.showPick(supportFragmentManager)
-    }
-
-    override fun onCreateDialog(id: Int): Dialog {
-        return when (id) {
-            DIALOG_RESTORE_WALLET_PERMISSION -> createRestoreWalletPermissionDialog()
-            else -> super.onCreateDialog(id)
-        }
-    }
-
-    private fun createRestoreWalletPermissionDialog(): Dialog {
-        return RestoreFromFileHelper.createRestoreWalletPermissionDialog(
-            this, this, this)
     }
 
     override fun getWallet(): Wallet {

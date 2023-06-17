@@ -36,6 +36,7 @@ fun ResponseBody.decodeBitmap(): Bitmap {
 }
 
 suspend fun OkHttpClient.get(url: String): Response = call(Request.Builder().url(url).get().build())
+suspend fun OkHttpClient.head(url: String): Response = call(Request.Builder().url(url).head().build())
 
 suspend fun OkHttpClient.call(request: Request): Response {
     return suspendCancellableCoroutine { coroutine ->
