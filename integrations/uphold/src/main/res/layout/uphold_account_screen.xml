@@ -41,12 +41,13 @@
 
         <ImageView
             android:id="@+id/uphold_logo"
-            android:layout_width="wrap_content"
+            android:layout_width="141dp"
             android:layout_height="141dp"
             android:layout_centerHorizontal="true"
             android:layout_marginTop="60dp"
             android:layout_marginBottom="36dp"
-            android:src="@drawable/uphold_logo" />
+            android:padding="16dp"
+            android:src="@drawable/ic_uphold" />
 
         <LinearLayout
             android:id="@+id/uphold_account_title"
