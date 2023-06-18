@@ -20,8 +20,6 @@ package org.dash.wallet.features.exploredash.ui.explore
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -64,8 +62,8 @@ import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment
 import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
 import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.DashDirectLoginInfoDialog
+import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.DashDirectTermsDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 @AndroidEntryPoint
@@ -364,23 +362,18 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun showLoginDialog() {
-        DashDirectLoginInfoDialog.custom(
-            R.drawable.ic_dashdirect_logo,
-            getString(R.string.buy_a_gift_card_with_your_dash_direct_account),
-            getString(R.string.create_an_account_at_dash_direct_or_log_in_to_the_existing_one),
-            getString(R.string.login),
-            getString(R.string.create_new_account),
-            getString(R.string.dash_direct_url)
-        ).show(
+        DashDirectLoginInfoDialog().show(
             requireActivity(),
             onResult = {
                 if (it == true) {
-                    viewModel.logEvent(AnalyticsConstants.DashDirect.CREATE_ACCOUNT)
-                    safeNavigate(
-                        SearchFragmentDirections.searchToDashDirectUserAuthFragment(
-                            DashDirectUserAuthFragment.DashDirectUserAuthType.CREATE_ACCOUNT
+                    DashDirectTermsDialog().show(requireActivity()) {
+                        viewModel.logEvent(AnalyticsConstants.DashDirect.CREATE_ACCOUNT)
+                        safeNavigate(
+                            SearchFragmentDirections.searchToDashDirectUserAuthFragment(
+                                DashDirectUserAuthFragment.DashDirectUserAuthType.CREATE_ACCOUNT
+                            )
                         )
-                    )
+                    }
                 } else {
                     viewModel.logEvent(AnalyticsConstants.DashDirect.LOGIN)
                     safeNavigate(
@@ -391,8 +384,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             },
             onExtraMessageAction = {
-                requireContext()
-                    .startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(DashDirectConstants.DASH_DIRECT_URL)))
+                requireActivity().openCustomTab(getString(R.string.dash_direct_url))
             }
         )
     }

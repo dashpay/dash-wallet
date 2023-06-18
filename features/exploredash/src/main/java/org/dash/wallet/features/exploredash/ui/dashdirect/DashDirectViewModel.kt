@@ -90,6 +90,8 @@ class DashDirectViewModel @Inject constructor(
     var maxCardPurchaseCoin: Coin = Coin.ZERO
     var maxCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
 
+    var openedIoniaTermsAndConditions = false
+
     init {
         exchangeRates
             .observeExchangeRate(Constants.USD_CURRENCY)

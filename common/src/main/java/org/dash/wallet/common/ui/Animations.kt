@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,13 +14,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.utils
 
-object DashDirectConstants {
-    const val BASE_URL = "https://apistaging.dashdirect.org/DashDirect/"
-    const val requestedUUID = "requestedUUID"
-    const val CLIENT_ID_PARAM_NAME = "clientId"
-    @JvmField var CLIENT_ID = ""
-    const val EMAIL = "email"
-    const val DEFAULT_DISCOUNT = 0.0
+package org.dash.wallet.common.ui
+
+import android.animation.TimeInterpolator
+import android.view.View
+import kotlin.math.exp
+import kotlin.math.sin
+
+fun View.wiggle() {
+    val frequency = 3f
+    val decay = 2f
+    val decayingSineWave = TimeInterpolator { input ->
+        val raw = sin(frequency * input * 2 * Math.PI)
+        (raw * exp((-input * decay).toDouble())).toFloat()
+    }
+
+    animate()
+        .xBy(-100f)
+        .setInterpolator(decayingSineWave)
+        .setDuration(300)
+        .start()
 }
