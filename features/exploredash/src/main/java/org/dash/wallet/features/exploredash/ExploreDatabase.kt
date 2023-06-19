@@ -19,6 +19,7 @@ package org.dash.wallet.features.exploredash
 
 import android.content.Context
 import android.database.sqlite.SQLiteException
+import android.preference.PreferenceManager
 import androidx.annotation.VisibleForTesting
 import androidx.room.Database
 import androidx.room.Room
@@ -75,6 +76,8 @@ abstract class ExploreDatabase : RoomDatabase() {
         }
 
         private fun open(context: Context): ExploreDatabase {
+            fixObsoleteName(context)
+
             val dbBuilder = Room.databaseBuilder(
                 context,
                 ExploreDatabase::class.java,
@@ -177,6 +180,14 @@ abstract class ExploreDatabase : RoomDatabase() {
             cursor.close()
 
             return merchantCount > 0 && atmCount > 0
+        }
+
+        private fun fixObsoleteName(context: Context) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+            prefs.getString("explore_database_name", null)?.let { previousName ->
+                val file = context.getDatabasePath(previousName)
+                file.renameTo(context.getDatabasePath(EXPLORE_DB_NAME))
+            }
         }
 
         private fun cleanupPreviousDatabases(context: Context) {
