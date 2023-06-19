@@ -5,6 +5,7 @@
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
+    android:background="@color/background_primary"
     tools:context="de.schildbach.wallet.ui.payments.ReceiveFragment">
 
     <include

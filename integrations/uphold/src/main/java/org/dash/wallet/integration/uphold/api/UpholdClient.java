@@ -198,7 +198,7 @@ public class UpholdClient {
         return prefs.getString(UPHOLD_ACCESS_TOKEN, null);
     }
 
-    public void createDashCard(final Callback<String> callback, final Callback<UpholdCard> getDashCardCb) {
+    public void createDashCard(final Callback<String> callback, final Callback<List<UpholdCard>> getDashCardCb) {
         Map<String, String> body = new HashMap<>();
         body.put("label", "Dash Card");
         body.put("currency", "DASH");
@@ -212,7 +212,7 @@ public class UpholdClient {
                     callback.onSuccess(dashCardId);
                     createDashAddress(dashCardId);
                     if (getDashCardCb != null) {
-                        getDashCardCb.onSuccess(response.body());
+                        getDashCardCb.onSuccess(Collections.singletonList(response.body()));
                     }
                 } else {
                     log.error("Error creating Dash Card: " + response.message() + " code: " + response.code());
@@ -320,12 +320,6 @@ public class UpholdClient {
 
     public interface Callback<T> {
         void onSuccess(T data);
-
-        void onError(Exception e, boolean otpRequired);
-    }
-
-    public interface CallbackFilter<T> {
-        void onSuccess(T data, String length);
 
         void onError(Exception e, boolean otpRequired);
     }

@@ -61,10 +61,10 @@ fun UpholdClient.getDashBalance(callback: UpholdClient.Callback<BigDecimal>) {
                 callback.onError(e, otpRequired)
             }
         },
-        object : UpholdClient.Callback<UpholdCard> {
-            override fun onSuccess(card: UpholdCard) {
+        object : UpholdClient.Callback<List<UpholdCard>> {
+            override fun onSuccess(cards: List<UpholdCard>) {
                 UpholdClient.log.info("Dash balance loaded")
-                callback.onSuccess(BigDecimal(card.available))
+                callback.onSuccess(cards.sumOf { BigDecimal(it.available) })
             }
 
             override fun onError(e: java.lang.Exception, otpRequired: Boolean) {
@@ -92,14 +92,18 @@ suspend fun UpholdClient.getAccessToken(code: String): String? {
     }
 }
 
-fun UpholdClient.getCards(callback: UpholdClient.Callback<String>, getDashCardCb: UpholdClient.Callback<UpholdCard>?) {
+fun UpholdClient.getCards(
+    callback: UpholdClient.Callback<String>,
+    getDashCardCb: UpholdClient.Callback<List<UpholdCard>>?
+) {
     service.cards.enqueue(object : Callback<List<UpholdCard>> {
         override fun onResponse(call: Call<List<UpholdCard>>, response: Response<List<UpholdCard>>) {
             val body = response.body()
 
             if (response.isSuccessful && body != null) {
                 UpholdClient.log.info("get cards success")
-                dashCard = getDashCards(body).first { (it.balance.toDoubleOrNull() ?: 0.0) != 0.0 }
+                val dashCards = body.filter { it.currency.equals("dash", ignoreCase = true) }
+                dashCard = dashCards.first { (it.available.toDoubleOrNull() ?: 0.0) != 0.0 }
 
                 if (dashCard == null) {
                     UpholdClient.log.info("Dash Card not available")
@@ -110,7 +114,7 @@ fun UpholdClient.getCards(callback: UpholdClient.Callback<String>, getDashCardCb
                         createDashAddress(dashCard.id)
                     }
                     callback.onSuccess(dashCard.id)
-                    getDashCardCb?.onSuccess(dashCard)
+                    getDashCardCb?.onSuccess(listOf(dashCard))
                 }
             } else {
                 UpholdClient.log.error("Error obtaining cards " + response.message() + " code: " + response.code())
@@ -123,8 +127,4 @@ fun UpholdClient.getCards(callback: UpholdClient.Callback<String>, getDashCardCb
             callback.onError(java.lang.Exception(t), false)
         }
     })
-}
-
-fun UpholdClient.getDashCards(cards: List<UpholdCard>): List<UpholdCard> {
-    return cards.filter { it.currency.equals("dash", ignoreCase = true) }
 }
