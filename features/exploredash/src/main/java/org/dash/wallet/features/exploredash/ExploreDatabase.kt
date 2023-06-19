@@ -100,7 +100,7 @@ abstract class ExploreDatabase : RoomDatabase() {
                 )
                 val oldDbFile = context.getDatabasePath(exploreDatabaseName)
                 repository.markDbForDeletion(oldDbFile)
-                exploreDatabaseName = "${ExploreConfig.EXPLORE_DATABASE_NAME}-$dbTimestamp"
+                exploreDatabaseName = "${ExploreConfig.EXPLORE_DB_PREFIX}-$dbTimestamp"
                 config.set(ExploreConfig.EXPLORE_DATABASE_NAME, exploreDatabaseName)
             }
 
