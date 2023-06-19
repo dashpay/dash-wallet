@@ -23,7 +23,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.features.exploredash.ExploreDatabase
 import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
@@ -34,11 +33,8 @@ import javax.inject.Singleton
 object ExploreDatabaseModule {
     @Singleton
     @Provides
-    fun provideDatabase(
-        @ApplicationContext context: Context,
-        config: Configuration
-    ): ExploreDatabase {
-        return ExploreDatabase.getAppDatabase(context, config)
+    fun provideDatabase(@ApplicationContext context: Context): ExploreDatabase {
+        return ExploreDatabase.getAppDatabase(context)
     }
 
     @Provides

@@ -107,7 +107,6 @@ public class Configuration {
     // Explore Dash
     public static final String PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY = "has_info_screen_been_shown";
     public static final String PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN = "has_location_dialog_been_shown";
-    public static final String PREFS_KEY_EXPLORE_DATABASE_NAME = "explore_database_name";
 
     // CrowdNode
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
@@ -521,17 +520,6 @@ public class Configuration {
 
     public void setHasExploreDashLocationDialogBeenShown(boolean isShown) {
         prefs.edit().putBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, isShown).apply();
-    }
-
-    public String setExploreDatabaseName(Long timestamp) {
-        String dbName = "explore-database-" + timestamp;
-        prefs.edit().putString(PREFS_KEY_EXPLORE_DATABASE_NAME, dbName).apply();
-        return dbName;
-    }
-
-    @NonNull
-    public String getExploreDatabaseName() {
-        return prefs.getString(PREFS_KEY_EXPLORE_DATABASE_NAME, "explore-database");
     }
 
     // Coinbase

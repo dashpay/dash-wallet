@@ -26,7 +26,6 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.RoomConverters
 import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
@@ -40,77 +39,63 @@ import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-@Database(entities = [
-    Merchant::class,
-    MerchantFTS::class,
-    Atm::class,
-    AtmFTS::class
-], version = 1)
+@Database(
+    entities = [
+        Merchant::class,
+        MerchantFTS::class,
+        Atm::class,
+        AtmFTS::class
+    ],
+    version = 1
+)
 @TypeConverters(RoomConverters::class)
 abstract class ExploreDatabase : RoomDatabase() {
+
     abstract fun merchantDao(): MerchantDao
     abstract fun atmDao(): AtmDao
 
     companion object {
+        private const val EXPLORE_DB_NAME = "explore-database"
         private val log = LoggerFactory.getLogger(ExploreDatabase::class.java)
         private var instance: ExploreDatabase? = null
 
-        fun getAppDatabase(context: Context, config: Configuration): ExploreDatabase {
+        fun getAppDatabase(context: Context): ExploreDatabase {
             if (instance == null) {
-                instance = open(context, config)
+                instance = open(context)
             }
             return instance!!
         }
 
-        suspend fun updateDatabase(
-            context: Context,
-            config: Configuration,
-            repository: ExploreRepository
-        ) {
+        suspend fun updateDatabase(context: Context, repository: ExploreRepository) {
             log.info("force update explore db")
             if (instance != null) {
                 instance!!.close()
             }
-            instance = update(context, config, repository)
+            instance = update(context, repository)
         }
 
-        private fun open(context: Context, config: Configuration): ExploreDatabase {
+        private fun open(context: Context): ExploreDatabase {
             val dbBuilder = Room.databaseBuilder(
                 context,
                 ExploreDatabase::class.java,
-                config.exploreDatabaseName
+                EXPLORE_DB_NAME
             )
 
-            log.info("Open database {}", config.exploreDatabaseName)
+            log.info("Open database {}", EXPLORE_DB_NAME)
             return dbBuilder
+                .setJournalMode(JournalMode.TRUNCATE)
                 .fallbackToDestructiveMigration()
                 .build()
         }
 
-        private suspend fun update(
-            context: Context,
-            config: Configuration,
-            repository: ExploreRepository
-        ): ExploreDatabase {
+        private suspend fun update(context: Context, repository: ExploreRepository): ExploreDatabase {
+            cleanupPreviousDatabases(context)
+
             val dbUpdateFile = repository.getUpdateFile()
-            var exploreDatabaseName = config.exploreDatabaseName
-
-            if (dbUpdateFile.exists()) {
-                val dbTimestamp = repository.getTimestamp(dbUpdateFile)
-                log.info(
-                    "found explore db update package {}, with a timestamp: {}",
-                    dbUpdateFile.absolutePath,
-                    dbTimestamp
-                )
-                val oldDbFile = context.getDatabasePath(exploreDatabaseName)
-                repository.markDbForDeletion(oldDbFile)
-                exploreDatabaseName = config.setExploreDatabaseName(dbTimestamp)
-            }
-
             val dbBuilder = Room.databaseBuilder(
                 context,
                 ExploreDatabase::class.java,
-                exploreDatabaseName
+                EXPLORE_DB_NAME
             )
 
             return preloadAndOpen(dbBuilder, repository, dbUpdateFile)
@@ -122,18 +107,18 @@ abstract class ExploreDatabase : RoomDatabase() {
             repository: ExploreRepository,
             dbUpdateFile: File
         ): ExploreDatabase {
-            require(dbUpdateFile.exists()) { "dbUpdateFile doesn't exist"}
+            require(dbUpdateFile.exists()) { "dbUpdateFile doesn't exist" }
 
             return suspendCancellableCoroutine { coroutine ->
                 var database: ExploreDatabase? = null
 
                 log.info("create explore db from InputStream")
-                dbBuilder.createFromInputStream({
-                    repository.getDatabaseInputStream(dbUpdateFile)
-                }, object : PrepackagedDatabaseCallback() {
-                    override fun onOpenPrepackagedDatabase(db: SupportSQLiteDatabase) {
-                        log.info("onOpenPrepackagedDatabase")
-                    } }
+                dbBuilder.createFromInputStream(
+                    { repository.getDatabaseInputStream(dbUpdateFile) },
+                    object : PrepackagedDatabaseCallback() {
+                        override fun onOpenPrepackagedDatabase(db: SupportSQLiteDatabase) {
+                            log.info("onOpenPrepackagedDatabase")
+                        } }
                 )
 
                 val onOpenCallback = object : Callback() {
@@ -169,6 +154,7 @@ abstract class ExploreDatabase : RoomDatabase() {
                 }
 
                 database = dbBuilder
+                    .setJournalMode(JournalMode.TRUNCATE)
                     .fallbackToDestructiveMigration()
                     .addCallback(onOpenCallback)
                     .build()
@@ -192,6 +178,19 @@ abstract class ExploreDatabase : RoomDatabase() {
 
             return merchantCount > 0 && atmCount > 0
         }
+
+        private fun cleanupPreviousDatabases(context: Context) {
+            var list = context.databaseList()
+            log.info("cleanup, before: ${list.joinToString("; ")}")
+
+            for (database in list) {
+                if (database.startsWith(EXPLORE_DB_NAME)) {
+                    context.deleteDatabase(database)
+                }
+            }
+
+            list = context.databaseList()
+            log.info("cleanup, after: ${list.joinToString("; ")}")
+        }
     }
 }
-
