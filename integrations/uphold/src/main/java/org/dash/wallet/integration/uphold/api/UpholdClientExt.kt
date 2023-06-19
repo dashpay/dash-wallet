@@ -17,8 +17,12 @@
 
 package org.dash.wallet.integration.uphold.api
 
+import org.dash.wallet.integration.uphold.data.UpholdCard
 import org.dash.wallet.integration.uphold.data.UpholdConstants
-import java.lang.Exception
+import org.dash.wallet.integration.uphold.data.UpholdException
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.math.BigDecimal
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -41,16 +45,86 @@ suspend fun UpholdClient.getDashBalance(): BigDecimal {
     }
 }
 
-suspend fun UpholdClient.getAccessToken(code: String): String? {
-    return suspendCoroutine { continuation ->
-        this.getAccessToken(code, object : UpholdClient.Callback<String?> {
-            override fun onSuccess(dashCardId: String?) {
-                continuation.resume(dashCardId)
+fun UpholdClient.getDashBalance(callback: UpholdClient.Callback<BigDecimal>) {
+    getCards(
+        object : UpholdClient.Callback<String> {
+            override fun onSuccess(data: String?) {}
+            override fun onError(e: java.lang.Exception, otpRequired: Boolean) {
+                UpholdClient.log.error("Error loading Dash balance: " + e.message)
+                if (e is UpholdException) {
+                    if (e.code == 401) {
+                        // we don't have the correct access token, let's logout
+                        accessToken = null
+                        storeAccessToken()
+                    }
+                }
+                callback.onError(e, otpRequired)
+            }
+        },
+        object : UpholdClient.Callback<UpholdCard> {
+            override fun onSuccess(card: UpholdCard) {
+                UpholdClient.log.info("Dash balance loaded")
+                callback.onSuccess(BigDecimal(card.available))
             }
 
-            override fun onError(e: Exception, otpRequired: Boolean) {
-                continuation.resumeWithException(e)
+            override fun onError(e: java.lang.Exception, otpRequired: Boolean) {
+                UpholdClient.log.error("Error loading Dash balance: " + e.message)
+                callback.onError(e, otpRequired)
             }
-        })
+        }
+    )
+}
+
+suspend fun UpholdClient.getAccessToken(code: String): String? {
+    return suspendCoroutine { continuation ->
+        this.getAccessToken(
+            code,
+            object : UpholdClient.Callback<String?> {
+                override fun onSuccess(dashCardId: String?) {
+                    continuation.resume(dashCardId)
+                }
+
+                override fun onError(e: Exception, otpRequired: Boolean) {
+                    continuation.resumeWithException(e)
+                }
+            }
+        )
     }
+}
+
+fun UpholdClient.getCards(callback: UpholdClient.Callback<String>, getDashCardCb: UpholdClient.Callback<UpholdCard>?) {
+    service.cards.enqueue(object : Callback<List<UpholdCard>> {
+        override fun onResponse(call: Call<List<UpholdCard>>, response: Response<List<UpholdCard>>) {
+            val body = response.body()
+
+            if (response.isSuccessful && body != null) {
+                UpholdClient.log.info("get cards success")
+                dashCard = getDashCards(body).first { (it.balance.toDoubleOrNull() ?: 0.0) != 0.0 }
+
+                if (dashCard == null) {
+                    UpholdClient.log.info("Dash Card not available")
+                    createDashCard(callback, getDashCardCb)
+                } else {
+                    if (dashCard.address.cryptoAddress == null) {
+                        UpholdClient.log.info("Dash Card has no addresses")
+                        createDashAddress(dashCard.id)
+                    }
+                    callback.onSuccess(dashCard.id)
+                    getDashCardCb?.onSuccess(dashCard)
+                }
+            } else {
+                UpholdClient.log.error("Error obtaining cards " + response.message() + " code: " + response.code())
+                callback.onError(UpholdException("Error obtaining cards", response.message(), response.code()), false)
+            }
+        }
+
+        override fun onFailure(call: Call<List<UpholdCard>>, t: Throwable) {
+            UpholdClient.log.error("Error obtaining cards: " + t.message)
+            callback.onError(java.lang.Exception(t), false)
+        }
+    })
+}
+
+fun UpholdClient.getDashCards(cards: List<UpholdCard>): List<UpholdCard> {
+    return cards.filter { it.currency.equals("dash", ignoreCase = true) }
 }
