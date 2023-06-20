@@ -103,12 +103,16 @@ fun UpholdClient.getCards(
             if (response.isSuccessful && body != null) {
                 UpholdClient.log.info("get cards success")
                 val dashCards = body.filter { it.currency.equals("dash", ignoreCase = true) }
-                dashCard = dashCards.first { (it.available.toDoubleOrNull() ?: 0.0) != 0.0 }
 
-                if (dashCard == null) {
+                if (dashCards.isEmpty()) {
                     UpholdClient.log.info("Dash Card not available")
                     createDashCard(callback, getDashCardCb)
                 } else {
+                    // There could be several cards.
+                    // Take a non-empty card if available, otherwise, take the first one
+                    val nonEmptyCard = dashCards.firstOrNull { (it.available.toDoubleOrNull() ?: 0.0) != 0.0 }
+                    dashCard = nonEmptyCard ?: dashCards.first()
+
                     if (dashCard.address.cryptoAddress == null) {
                         UpholdClient.log.info("Dash Card has no addresses")
                         createDashAddress(dashCard.id)
