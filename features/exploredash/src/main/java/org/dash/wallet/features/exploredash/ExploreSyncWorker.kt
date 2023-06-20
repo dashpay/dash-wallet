@@ -26,7 +26,6 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
@@ -41,8 +40,7 @@ class ExploreSyncWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val analytics: AnalyticsService,
     private val exploreRepository: ExploreRepository,
-    private val syncStatus: ExploreDataSyncStatus,
-    private val config: Configuration
+    private val syncStatus: ExploreDataSyncStatus
 ): CoroutineWorker(appContext, workerParams) {
     companion object {
         const val USE_TEST_DB_KEY = "use_test_database"
@@ -96,7 +94,6 @@ class ExploreSyncWorker @AssistedInject constructor(
                         // and a newer preloaded DB
                         ExploreDatabase.updateDatabase(
                             appContext,
-                            config,
                             exploreRepository
                         )
                         exploreRepository.preloadedOnTimestamp = preloadedDbTimestamp
@@ -134,7 +131,6 @@ class ExploreSyncWorker @AssistedInject constructor(
 
                 ExploreDatabase.updateDatabase(
                     appContext,
-                    config,
                     exploreRepository
                 )
             }
