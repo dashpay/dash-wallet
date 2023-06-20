@@ -195,6 +195,8 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 it.coinBaseUserAccountData.balance?.amount ?: CoinbaseConstants.VALUE_ZERO,
                 fiatVal
             )
+            // After initial load when coinbase exchange rate loaded
+            enterAmountToTransferViewModel.setBalanceForWallet()
         }
 
         enterAmountToTransferViewModel.dashWalletEmptyCallback.observe(viewLifecycleOwner) {
@@ -219,8 +221,21 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             } else {
                 "$amountFiat $fiatSymbol"
             }
-
-            binding.amountReceived.text = getString(R.string.amount_to_transfer, formatDashValue, Constants.PREFIX_ALMOST_EQUAL_TO, formatFiatValue)
+            // For initial load till coinbase exchange rate loaded
+            if(enterAmountToTransferViewModel.coinbaseExchangeRate==null){
+                binding.amountReceived.text = getString(
+                    R.string.amount_to_transfer_dash,
+                    formatDashValue
+                )
+            }
+            enterAmountToTransferViewModel.coinbaseExchangeRate?.let {
+                binding.amountReceived.text = getString(
+                    R.string.amount_to_transfer,
+                    formatDashValue,
+                    Constants.PREFIX_ALMOST_EQUAL_TO,
+                    formatFiatValue
+                )
+            }
             binding.amountReceived.isVisible = enterAmountToTransferViewModel.hasBalance
         }
 

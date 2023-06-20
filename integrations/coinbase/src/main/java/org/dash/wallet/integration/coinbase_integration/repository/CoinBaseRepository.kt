@@ -96,7 +96,7 @@ class CoinBaseRepository @Inject constructor(
         userPreferences.setLastCoinBaseRefreshToken(null)
         userPreferences.setCoinBaseUserAccountId(null)
         config.clearAll()
-        safeApiCall { authApi.revokeToken() }
+        safeApiCall { authApi.revokeToken(userPreferences.lastCoinbaseAccessToken) }
     }
 
     override fun saveUserAccountId(accountId: String?) {

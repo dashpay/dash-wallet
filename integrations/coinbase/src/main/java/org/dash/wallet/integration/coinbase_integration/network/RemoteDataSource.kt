@@ -28,12 +28,10 @@ import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.repository.remote.CustomCacheInterceptor
 import org.dash.wallet.integration.coinbase_integration.repository.remote.HeadersInterceptor
 import org.dash.wallet.integration.coinbase_integration.repository.remote.TokenAuthenticator
-import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseTokenRefreshApi
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.io.File
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
@@ -41,12 +39,11 @@ import kotlin.time.toJavaDuration
 class RemoteDataSource @Inject constructor(
     @ApplicationContext private val context: Context,
     private val userPreferences: Configuration,
-    private val config: CoinbaseConfig,
-    private val broadcaster: CloseCoinbasePortalBroadcaster
+    private val config: CoinbaseConfig
 ) {
 
     fun <Api> buildApi(api: Class<Api>): Api {
-        val authenticator = TokenAuthenticator(buildTokenApi(), userPreferences, config, broadcaster)
+        val authenticator = TokenAuthenticator(buildTokenApi(), userPreferences, config)
         return Retrofit.Builder()
             .baseUrl(CoinbaseConstants.BASE_URL)
             .client(getOkHttpClient(authenticator))
