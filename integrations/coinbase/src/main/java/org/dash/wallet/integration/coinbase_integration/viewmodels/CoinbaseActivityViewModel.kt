@@ -35,6 +35,7 @@ import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepos
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseIdForFaitDataUIState
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.PaymentMethodsUiState
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
@@ -46,6 +47,9 @@ class CoinbaseActivityViewModel @Inject constructor(
 
 ) : ViewModel() {
 
+    companion object {
+        private val log = LoggerFactory.getLogger(CoinbaseActivityViewModel::class.java)
+    }
     private val _paymentMethodsUiState = MutableLiveData<PaymentMethodsUiState>(
         PaymentMethodsUiState.LoadingState(true)
     )
@@ -70,6 +74,22 @@ class CoinbaseActivityViewModel @Inject constructor(
         }
     }
 
+
+    suspend fun loginToCoinbase(code: String): Boolean {
+        when (val response = coinBaseRepository.completeCoinbaseAuthentication(code)) {
+            is ResponseResource.Success -> {
+                if (response.value) {
+                    return true
+                }
+            }
+
+            is ResponseResource.Failure -> {
+                log.error("Coinbase login error ${response.errorCode}: ${response.errorBody ?: "empty"}")
+            }
+        }
+
+        return false
+    }
     fun getBaseIdForFaitModel() = viewModelScope.launch(Dispatchers.Main) {
         _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(true)
 

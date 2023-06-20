@@ -17,14 +17,19 @@
 
 package de.schildbach.wallet.ui.coinbase
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseActivityViewModel
 
 @ExperimentalCoroutinesApi
@@ -37,13 +42,80 @@ class CoinbaseActivity : BaseMenuActivity() {
         return R.layout.activity_coinbase
     }
 
+    private val coinbaseAuthLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val data = result.data
+
+        if (result.resultCode == Activity.RESULT_OK) {
+            data?.extras?.getString(CoinBaseWebClientActivity.RESULT_TEXT)?.let { code ->
+                handleCoinbaseAuthResult(code)
+            }
+        }
+    }
+
+    private fun handleCoinbaseAuthResult(code: String) {
+        lifecycleScope.launchWhenResumed {
+            val success = AdaptiveDialog.withProgress(getString(R.string.loading), this@CoinbaseActivity) {
+                viewModel.loginToCoinbase(code)
+            }
+
+            if (success) {
+                val intent = intent
+                intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                finish()
+                overridePendingTransition(0, 0)
+                startActivity(intent)
+                overridePendingTransition(0, 0)
+
+                // findNavController().popBackStack()
+            } else {
+                AdaptiveDialog.create(
+                    R.drawable.ic_error,
+                    getString(R.string.login_error_title, getString(R.string.coinbase)),
+                    getString(R.string.login_error_message, getString(R.string.coinbase)),
+                    getString(android.R.string.cancel),
+                    getString(R.string.retry)
+                ).show(this@CoinbaseActivity) { retry ->
+                    if (retry == true) {
+                        handleCoinbaseAuthResult(code)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun continueCoinbase() {
+        coinbaseAuthLauncher.launch(
+            Intent(
+                this,
+                CoinBaseWebClientActivity::class.java
+            )
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         navController = setNavigationGraph()
 
         viewModel.coinbaseLogOutCallback.observe(this) {
-            finish()
+            AdaptiveDialog.create(
+                R.drawable.ic_relogin,
+                "Your Coinbase session has expired",
+                "Please log in to your Coinbase account",
+                getString(R.string.cancel),
+                "Log In"
+            ).also {
+                it.isCancelable = false
+            }.show(this) { login ->
+                if (login == true) {
+                    continueCoinbase()
+                } else {
+                    finish()
+                }
+            }
         }
 
         viewModel.getPaymentMethods()
