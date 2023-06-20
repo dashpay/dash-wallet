@@ -2,7 +2,7 @@ package de.schildbach.wallet.rates;
 
 import com.squareup.moshi.Moshi;
 
-import org.dash.wallet.common.data.BigDecimalAdapter;
+import de.schildbach.wallet.adapter.BigDecimalAdapter;
 
 import java.io.IOException;
 

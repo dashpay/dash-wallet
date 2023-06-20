@@ -17,29 +17,24 @@
 
 package org.dash.wallet.integration.uphold.api
 
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
-import org.dash.wallet.common.data.BigDecimalAdapter
 import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
-import retrofit2.converter.scalars.ScalarsConverterFactory
+import retrofit2.converter.gson.GsonConverterFactory
 
 class RemoteDataSource {
     fun <Api> buildApi(api: Class<Api>, baseUrl: String, client: OkHttpClient): Api {
         return Retrofit.Builder()
             .client(client)
             .baseUrl(baseUrl)
-            .addConverterFactory(ScalarsConverterFactory.create())
-            .addConverterFactory(MoshiConverterFactory.create(getMoshi()))
+            .addConverterFactory(
+                GsonConverterFactory.create(
+                    GsonBuilder()
+                        .setLenient()
+                        .create()
+                )
+            )
             .build()
             .create(api)
-    }
-
-    private fun getMoshi(): Moshi {
-        return Moshi.Builder()
-            .add(BigDecimalAdapter())
-            .addLast(KotlinJsonAdapterFactory())
-            .build()
     }
 }

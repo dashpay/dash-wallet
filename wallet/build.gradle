@@ -56,11 +56,6 @@ dependencies {
     //noinspection GradleDependency
     implementation 'com.google.zxing:core:3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
 
-    implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
-    implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
-
-    implementation 'com.squareup.moshi:moshi:1.11.0'
-    implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
     implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
         exclude(group: 'com.google.android', module: 'android')
@@ -70,6 +65,13 @@ dependencies {
     implementation 'com.tbuonomo:dotsindicator:4.2'
 
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
+
+    // Network
+    implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
+    implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
+    implementation 'com.squareup.moshi:moshi:1.11.0'
+    implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
+    implementation 'com.squareup.retrofit2:converter-moshi:2.6.4'
 
     // UI
     implementation "androidx.appcompat:appcompat:$appCompatVersion"
