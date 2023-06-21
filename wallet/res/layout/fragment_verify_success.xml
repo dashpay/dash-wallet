@@ -12,7 +12,7 @@
         android:id="@+id/icon"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_protected"
+        app:srcCompat="@drawable/ic_protected"
         android:layout_marginTop="54dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"

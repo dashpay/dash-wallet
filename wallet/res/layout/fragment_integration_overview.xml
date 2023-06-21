@@ -62,7 +62,7 @@
         android:layout_height="34dp"
         android:layout_marginTop="23dp"
         android:layout_marginStart="36dp"
-        android:src="@drawable/ic_buy_with_fiat"
+        app:srcCompat="@drawable/ic_buy_with_fiat"
         app:layout_constraintTop_toBottomOf="@id/headline"
         app:layout_constraintStart_toStartOf="parent" />
 
@@ -85,7 +85,7 @@
         android:layout_height="34dp"
         android:layout_marginTop="26dp"
         android:layout_marginStart="36dp"
-        android:src="@drawable/ic_buy_convert"
+        app:srcCompat="@drawable/ic_buy_convert"
         app:layout_constraintTop_toBottomOf="@id/buy_with_fiat_ic"
         app:layout_constraintStart_toStartOf="parent" />
 
@@ -108,7 +108,7 @@
         android:layout_height="34dp"
         android:layout_marginTop="26dp"
         android:layout_marginStart="36dp"
-        android:src="@drawable/ic_transfer_dash"
+        app:srcCompat="@drawable/ic_transfer_dash"
         app:layout_constraintTop_toBottomOf="@id/buy_convert_ic"
         app:layout_constraintStart_toStartOf="parent" />
 
