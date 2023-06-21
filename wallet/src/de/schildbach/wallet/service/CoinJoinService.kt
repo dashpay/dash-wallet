@@ -218,11 +218,6 @@ class CoinJoinMixingService @Inject constructor(
         }
     }
 
-    init {
-        // remove with Core 19
-        ProTxToOutpoint.initialize(Constants.NETWORK_PARAMETERS)
-    }
-
     override fun getMixingStatus(): MixingStatus {
         return mixingStatus
     }
