@@ -62,11 +62,7 @@ dependencies {
     // Retrofit + OkHttp
     api "com.squareup.okhttp3:okhttp:$ok_http_version"
     api "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
-    api 'com.squareup.moshi:moshi:1.11.0'
-    api 'com.squareup.moshi:moshi-kotlin:1.11.0'
     api 'com.squareup.retrofit2:retrofit:2.6.4'
-    api 'com.squareup.retrofit2:converter-moshi:2.6.4'
-    api 'com.squareup.retrofit2:converter-scalars:2.6.4'
     api 'com.squareup.retrofit2:converter-gson:2.6.1'
 
     // Android Arch

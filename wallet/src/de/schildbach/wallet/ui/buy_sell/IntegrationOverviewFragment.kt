@@ -39,6 +39,7 @@ import de.schildbach.wallet_test.databinding.FragmentIntegrationOverviewBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity
 
@@ -86,9 +87,7 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
         binding.headline.text = getText(R.string.uphold_link_title)
         binding.logo.setImageResource(R.drawable.ic_uphold)
         binding.logo.imageTintList = ColorStateList.valueOf(resources.getColor(android.R.color.white, null))
-        binding.logo.background = ResourcesCompat.getDrawable(
-            resources, R.drawable.uphold_gradient_background, null
-        )
+        binding.logo.background = resources.getRoundedBackground(R.style.UpholdLogoBackground)
         binding.buyWithFiatText.isVisible = false
         binding.buyWithFiatIc.isVisible = false
         binding.buyConvertIc.isVisible = false

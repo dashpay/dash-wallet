@@ -90,7 +90,7 @@ class ExploreSyncWorker @AssistedInject constructor(
                     ) {
                         // force data preloading for fresh installs
                         // and a newer preloaded DB
-                        ExploreDatabase.updateDatabase(appContext, exploreConfig, exploreRepository)
+                        ExploreDatabase.updateDatabase(appContext, exploreRepository)
                         databasePrefs = databasePrefs.copy(preloadedOnTimestamp = preloadedDbTimestamp)
                         exploreConfig.saveExploreDatabasePrefs(databasePrefs)
                     }
@@ -129,7 +129,7 @@ class ExploreSyncWorker @AssistedInject constructor(
 
                 syncStatus.setSyncProgress(80.0)
 
-                ExploreDatabase.updateDatabase(appContext, exploreConfig, exploreRepository)
+                ExploreDatabase.updateDatabase(appContext, exploreRepository)
             }
 
             log.info("sync explore db finished, took $timeInMillis ms")

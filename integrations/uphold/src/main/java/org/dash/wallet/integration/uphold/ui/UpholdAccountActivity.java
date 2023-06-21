@@ -39,6 +39,7 @@ import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.dash.wallet.common.util.ActivityExtKt;
 import org.dash.wallet.integration.uphold.R;
+import org.dash.wallet.integration.uphold.api.UpholdClientExtKt;
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult;
 import org.dash.wallet.integration.uphold.data.UpholdCard;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -142,7 +143,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         loadingDialog.setMessage(getString(R.string.loading));
         loadingDialog.show();
 
-        UpholdClient.getInstance().getDashBalance(new UpholdClient.Callback<BigDecimal>() {
+        UpholdClientExtKt.getDashBalance(UpholdClient.getInstance(), new UpholdClient.Callback<BigDecimal>() {
             @Override
             public void onSuccess(BigDecimal data) {
                 if (isFinishing()) {

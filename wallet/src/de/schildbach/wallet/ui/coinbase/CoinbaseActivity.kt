@@ -24,15 +24,11 @@ import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet_test.R
-import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseActivityViewModel
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class CoinbaseActivity : BaseMenuActivity() {
     private val viewModel: CoinbaseActivityViewModel by viewModels()
-    @Inject
-    lateinit var broadcaster: CloseCoinbasePortalBroadcaster
     private lateinit var navController: NavController
 
     override fun getLayoutId(): Int {
@@ -44,7 +40,7 @@ class CoinbaseActivity : BaseMenuActivity() {
 
         navController = setNavigationGraph()
 
-        broadcaster.closeCoinbasePortal.observe(this){
+        viewModel.coinbaseLogOutCallback.observe(this) {
             finish()
         }
 
@@ -60,7 +56,10 @@ class CoinbaseActivity : BaseMenuActivity() {
 
     override fun onLockScreenActivated() {
         if (navController.currentDestination?.id == R.id.enterTwoFaCodeFragment) {
-            navController.popBackStack(org.dash.wallet.integration.coinbase_integration.R.id.coinbaseServicesFragment, false)
+            navController.popBackStack(
+                org.dash.wallet.integration.coinbase_integration.R.id.coinbaseServicesFragment,
+                false
+            )
         }
     }
 }

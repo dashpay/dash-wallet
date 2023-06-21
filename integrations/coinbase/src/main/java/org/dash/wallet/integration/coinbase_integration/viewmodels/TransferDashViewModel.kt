@@ -81,6 +81,8 @@ class TransferDashViewModel @Inject constructor(
 
     val onFetchUserDataOnCoinbaseFailedCallback = SingleLiveEvent<Unit>()
 
+    val onAuthenticationErrorCallback = SingleLiveEvent<Unit>()
+
     private val _sendDashToCoinbaseError = MutableLiveData<NetworkFeeExceptionState>()
     val sendDashToCoinbaseError: LiveData<NetworkFeeExceptionState>
         get() = _sendDashToCoinbaseError
@@ -350,8 +352,8 @@ class TransferDashViewModel @Inject constructor(
                 }
 
                 is ResponseResource.Failure -> {
-                    _loadingState.value = false
-                    onFetchUserDataOnCoinbaseFailedCallback.call()
+                        _loadingState.value = false
+                        onFetchUserDataOnCoinbaseFailedCallback.call()
                 }
             }
         }
