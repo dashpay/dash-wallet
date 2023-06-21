@@ -298,6 +298,10 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     private fun playSentSound() {
+        if (!viewModel.shouldPlaySounds) {
+            return
+        }
+
         // play sound effect
         val soundResId = resources.getIdentifier(
             SEND_COINS_SOUND,
