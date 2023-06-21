@@ -27,6 +27,7 @@ import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletEx
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.slf4j.LoggerFactory
 import java.util.EnumSet
@@ -82,7 +83,7 @@ class EncryptWalletLiveData(
         }
 
         override fun doInBackground(vararg args: Any): Resource<Wallet> {
-            val wallet = walletApplication.wallet!!
+            val wallet = walletApplication.wallet as WalletEx
             val password = securityGuard.generateRandomPassword()
 
             return try {
@@ -91,6 +92,7 @@ class EncryptWalletLiveData(
                 val keyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
                 val newKey = keyCrypter.deriveKey(password)
                 wallet.encrypt(keyCrypter, newKey)
+
                 securityGuard.savePassword(password)
 
                 log.info("wallet successfully encrypted, using key derived by new spending password (${keyCrypter.scryptParameters.n} scrypt iterations)")

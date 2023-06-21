@@ -43,14 +43,21 @@ import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import org.bitcoinj.coinjoin.CoinJoinClientManager
+import org.bitcoinj.coinjoin.CoinJoinClientOptions
+import org.bitcoinj.coinjoin.PoolStatus
+import org.bitcoinj.coinjoin.listeners.MixingCompleteListener
+import org.bitcoinj.coinjoin.utils.ProTxToOutpoint
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.AuthenticationKeyChain
+import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.bitcoinj.wallet.WalletEx
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -166,6 +173,26 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    fun getWalletSeed(): DeterministicSeed? {
+        val wallet = walletApplication.wallet!!
+        return if (wallet.isEncrypted) {
+            val password = try {
+                // always create a SecurityGuard when it is required
+                val securityGuard = SecurityGuard()
+                securityGuard.retrievePassword()
+            } catch (e: IllegalArgumentException) {
+                log.error("There was an error retrieving the wallet password", e)
+                analytics.logError(e, "There was an error retrieving the wallet password")
+                null
+            }
+            // Don't bother with DeriveKeyTask here, just call deriveKey
+            val encryptionKey = wallet.keyCrypter!!.deriveKey(password)
+            wallet.keyChainSeed.decrypt(wallet.keyCrypter, "", encryptionKey)
+        } else {
+            null
+        }
+    }
+
     /**
      * This method looks at all items in the database tables
      * that have existing identites and saves them for future use.
@@ -176,7 +203,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private suspend fun initializeStateRepository() {
         // load our id
 
-        if (this::blockchainIdentity.isInitialized && blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED) {
+        if (this::blockchainIdentity.isInitialized && blockchainIdentity.isRegistered()) {
             val identityId = blockchainIdentity.uniqueIdString
             platform.stateRepository.addValidIdentity(Identifier.from(identityId))
 
@@ -546,8 +573,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter) {
         withContext(Dispatchers.IO) {
-            val wallet = walletApplication.wallet!!
+            val wallet = walletApplication.wallet as WalletEx
             // this will initialize any missing key chains
+            wallet.initializeCoinJoin(keyParameter)
             val authenticationGroupExtension = AuthenticationGroupExtension(wallet)
             authenticationGroupExtension.addEncryptedKeyChains(wallet.params, seed, keyParameter, keyChainTypes)
 
@@ -559,14 +587,13 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     // Step 2 is to create the credit funding transaction
     //
-    suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
+    suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, useCoinJoin: Boolean) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
-            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter)
+            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
         }
     }
-
 
     //
     // Step 2 is to obtain the credit funding transaction for invites
@@ -1034,7 +1061,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)
-        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, false)
+        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin = false)
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())
         // update database

@@ -609,7 +609,7 @@
     <string name="save_changes">Save Changes</string>
     <string name="save_profile_reminder_text">Would you like to save the changes you made to your profile?</string>
     <string name="invitation_notification_text">Invite your friends and family to join the Dash Network.</string>
-    <string name="dashpay_min_balance_disclaimer">You need at least <b>0.01 Dash</b> to get started</string>
+    <string name="dashpay_min_balance_disclaimer">You need at least <b>%s</b> to get started</string>
     <string name="dashpay_insuffient_credits">Insufficient credits to perform this action.</string>
 
     <string name="network_unavailable">Network Unavailable</string>

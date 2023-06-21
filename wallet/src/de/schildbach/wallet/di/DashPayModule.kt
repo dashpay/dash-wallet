@@ -22,11 +22,12 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import de.schildbach.wallet.service.CoinJoinMixingService
+import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformDocumentBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.PlatformSynchronizationService
-
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import javax.inject.Singleton
 
@@ -45,4 +46,8 @@ abstract class DashPayModule {
 
     @Binds
     abstract fun bindsPlatformBroadcastService(platformBroadcastService: PlatformDocumentBroadcastService): PlatformBroadcastService
+
+    @Binds
+    @Singleton
+    abstract fun bindsCoinJoinService(coinJoinMixingService: CoinJoinMixingService): CoinJoinService
 }

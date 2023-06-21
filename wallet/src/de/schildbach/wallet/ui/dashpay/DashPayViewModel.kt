@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. Dash Core Group.
+ * Copyright (c) 2020. Dash Core Group.
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -99,7 +99,6 @@ open class DashPayViewModel @Inject constructor(
             )
         )
     }
-
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
         getUsernameJob.cancel()
         getUsernameJob = Job()
@@ -135,7 +134,7 @@ open class DashPayViewModel @Inject constructor(
             try {
                 val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_SEARCH_QUERY)
                 var result = platformRepo.searchUsernames(search.text, false, search.limit)
-                result = result.filter {  !search.excludeIds.contains(it.dashPayProfile.userId) }
+                result = result.filter { !search.excludeIds.contains(it.dashPayProfile.userId) }
                 if (result.isNotEmpty()) {
                     val limit = result.size.coerceAtMost(search.limit)
                     result = result.subList(0, limit)
@@ -207,8 +206,8 @@ open class DashPayViewModel @Inject constructor(
         }
         recentlyModifiedContactsLiveData.postValue(recentlyModifiedContacts!!)
         SendContactRequestOperation(walletApplication)
-                .create(toUserId)
-                .enqueue()
+            .create(toUserId)
+            .enqueue()
     }
 
     val getContactRequestLiveData = Transformations.switchMap(contactRequestLiveData) {
@@ -303,6 +302,9 @@ open class DashPayViewModel @Inject constructor(
     suspend fun setLastNotificationTime(time: Long) =
         dashPayConfig.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, time)
 
-    private inner class UserSearch(val text: String, val limit: Int = 100,
-                                   val excludeIds: ArrayList<String> = arrayListOf())
+    private inner class UserSearch(
+        val text: String,
+        val limit: Int = 100,
+        val excludeIds: ArrayList<String> = arrayListOf(),
+    )
 }

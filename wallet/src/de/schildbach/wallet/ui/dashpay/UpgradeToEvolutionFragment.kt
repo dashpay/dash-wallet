@@ -26,10 +26,12 @@ import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUpgradeToEvolutionBinding
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.viewBinding
 
 @AndroidEntryPoint
@@ -51,6 +53,11 @@ class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evoluti
             binding.upgradeBtn.isEnabled = isAble
             binding.balanceRequirementDisclaimer.isVisible = !isAble
         }
+
+        binding.balanceRequirementDisclaimer.text = getString(
+            R.string.dashpay_min_balance_disclaimer,
+            MonetaryFormat.BTC.format(Constants.DASH_PAY_FEE)
+        )
     }
 
     override fun onResume() {

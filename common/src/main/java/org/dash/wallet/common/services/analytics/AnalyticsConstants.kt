@@ -371,4 +371,12 @@ object AnalyticsConstants {
         const val TRANSFER_ERROR_RETRY = "coinbase_transfer_error_b_retry"
         const val TRANSFER_ERROR_CLOSE = "coinbase_transfer_error_b_close"
     }
+
+    object CoinJoinPrivacy {
+        const val USERNAME_PRIVACY_BTN_CONTINUE = "username_privacy_btn_continue"
+        const val USERNAME_PRIVACY_WIFI_BTN_CONTINUE = "username_privacy_wifi_btn_continue"
+        const val USERNAME_PRIVACY_WIFI_BTN_CANCEL = "username_privacy_wifi_btn_cancel"
+        const val USERNAME_PRIVACY_CONFIRMATION_BTN_CONFIRM = "username_privacy_confirmation_btn_confirm"
+        const val USERNAME_PRIVACY_CONFIRMATION_BTN_CANCEL = "username_privacy_confirmation_btn_cancel"
+    }
 }

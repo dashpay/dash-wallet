@@ -18,7 +18,9 @@
 package org.dash.wallet.common.services
 
 import kotlinx.coroutines.flow.Flow
+import org.bitcoinj.core.AbstractBlockChain
 import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.data.NetworkStatus
 
 /**
  * Blockchain state provider
@@ -35,4 +37,10 @@ interface BlockchainStateProvider {
     fun observeState() : Flow<BlockchainState?>
     fun getMasternodeAPY(): Double
     fun getLastMasternodeAPY(): Double
+
+    fun getNetworkStatus(): NetworkStatus
+    fun observeNetworkStatus(): Flow<NetworkStatus>
+
+    fun getBlockChain(): AbstractBlockChain?
+    fun observeBlockChain(): Flow<AbstractBlockChain?>
 }

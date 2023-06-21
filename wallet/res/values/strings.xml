@@ -13,6 +13,7 @@
     <string name="blockchain_state_progress_stalled">Synchronization stalled</string>
     <string name="blockchain_state_progress_problem_storage">Synchronizing: Storage problem</string>
     <string name="blockchain_state_progress_problem_network">Synchronizing: Network problem</string>
+    <string name="mixing_state_progress_mixing">Mixing Coins (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Dash address copied to clipboard</string>
     <string name="wallet_address_dialog_fragment_hint">To protect your privacy, your address will change once it receives a payment.</string>
     <string name="wallet_balance_fragment_too_much">This amount is quite high for carrying in your pocket. Please move some to a safer place.</string>
@@ -388,4 +389,19 @@
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Clear Filter</string>
     <string name="reason">Reason</string>
+    <string name="select_privacy_preferences">Select your username privacy preferences</string>
+    <string name="please_note_cant_change_this_later">Please note that you will not be able to change this later</string>
+    <string name="Basic">Basic</string>
+    <string name="Intermediate">Intermediate</string>
+    <string name="basic_level_card_decs">Advanced users can determine your transaction history</string>
+    <string name="minutes_to_create_a_username">1-2 minutes to create a username</string>
+    <string name="intermediate_level_card_decs">Advanced users who have a very high level of technical expertise can determine your transaction history</string>
+    <string name="_1_2_hours">1-2 hours</string>
+    <string name="several_hours">Several hours</string>
+    <string name="advanced_level_card_decs">It would be very difficult for advanced users with any level of technical expertise to determine your transaction history</string>
+    <string name="advanced">Advanced</string>
+    <string name="Intermediate_level_WIFI_Warning">Intermediate privacy level requires a reliable internet connection</string>
+    <string name="Advanced_level_WIFI_Warning">Advanced privacy level requires a reliable internet connection</string>
+    <string name="privcay_level_WIFI_warning_desc">It is recommended to be on a Wi-Fi network to avoid losing any funds</string>
+    <string name="continue_anyway">Continue Anyway</string>
 </resources>

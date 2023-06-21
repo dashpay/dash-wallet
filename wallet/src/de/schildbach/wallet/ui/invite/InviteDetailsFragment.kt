@@ -128,7 +128,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
     }
 
     private fun initViewModel() {
-        val identityId = requireArguments().getString(ARG_IDENTITY_ID)!!
+        val identityId = requireArguments().getString(ARG_IDENTITY_ID)
         inviteIndex = requireArguments().getInt(ARG_INVITE_INDEX)
         viewModel.identityIdLiveData.value = identityId
 
@@ -142,7 +142,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                 memo.text = hint
             }
 
-            date.text = WalletUtils.formatDate(it.sentAt);
+            date.text = WalletUtils.formatDate(it.sentAt)
             if (it.acceptedAt != 0L) {
                 showClaimed()
             } else {
@@ -158,7 +158,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
     }
 
     private fun getTagHint() =
-            requireContext().getString(R.string.invitation_created_title) + " " + inviteIndex
+        requireContext().getString(R.string.invitation_created_title) + " " + inviteIndex
 
     private fun showPending(it: Invitation) {
         send_button.isVisible = it.canSendAgain()
@@ -236,7 +236,8 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
     override fun onStop() {
         super.onStop()
         // save memo to the database
-        if (tagModified)
+        if (tagModified) {
             viewModel.saveTag(tag_edit.text.toString())
+        }
     }
 }

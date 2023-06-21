@@ -74,11 +74,9 @@ public class TxResourceMapper {
 
                     if (dashPayWallet != null && CreditFundingTransaction.isCreditFundingTransaction(tx)) {
                         AuthenticationGroupExtension authExtension =
-                                (AuthenticationGroupExtension) dashPayWallet.addOrGetExistingExtension(
-                                        new AuthenticationGroupExtension(dashPayWallet.getParams())
-                                );
+                                (AuthenticationGroupExtension) dashPayWallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
                         CreditFundingTransaction cftx = authExtension.getCreditFundingTransaction(tx);
-                        // TODO: getKeyChainGroup and getKeyChainType are protected. Any other way to get the type?
+
                         AuthenticationKeyChainGroup group = ((AuthenticationKeyChainGroup)authExtension.getKeyChainGroup());
                         switch (group.getKeyChainType(cftx.getCreditBurnPublicKeyId().getBytes())) {
                             case INVITATION_FUNDING:

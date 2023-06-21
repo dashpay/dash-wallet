@@ -24,22 +24,31 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_integration_overview.*
 import kotlinx.android.synthetic.main.fragment_invite_friend.*
-import org.bitcoinj.core.Coin
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
-class InviteFriendFragment(private val startedByHistory: Boolean)
-    : Fragment(R.layout.fragment_invite_friend) {
+class InviteFriendFragment() :
+    Fragment(R.layout.fragment_invite_friend) {
 
     companion object {
-        fun newInstance(startedFromHistory: Boolean) = InviteFriendFragment(startedFromHistory)
+        private const val ARG_STARTED_FROM_HISTORY = "started_from_history"
+        fun newInstance(startedFromHistory: Boolean = false): InviteFriendFragment {
+            val fragment = InviteFriendFragment()
+            fragment.arguments = Bundle().apply {
+                putBoolean(ARG_STARTED_FROM_HISTORY, startedFromHistory)
+            }
+            return fragment
+        }
     }
 
     private lateinit var walletApplication: WalletApplication
@@ -57,54 +66,73 @@ class InviteFriendFragment(private val startedByHistory: Boolean)
         walletApplication = requireActivity().application as WalletApplication
         create_invitation_button.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Invites.INVITE_FRIEND)
-            showConfirmationDialog()
+            safeNavigate(InviteFriendFragmentDirections.inviteFriendFragmentToUsernamePrivacy())
         }
 
+        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<CoinJoinMode?>("mode")?.observe(
+            viewLifecycleOwner,
+        ) { result ->
+            // Do something with the result.
+            result?.let {
+                showConfirmationDialog()
+            }
+        }
         initViewModel()
     }
 
     private fun initViewModel() {
+        val startedByHistory = arguments?.getBoolean("startedFromHistory") ?: false
         val platformPaymentConfirmDialogViewModel = ViewModelProvider(requireActivity())[PlatformPaymentConfirmDialog.SharedViewModel::class.java]
-        platformPaymentConfirmDialogViewModel.clickConfirmButtonEvent.observe(viewLifecycleOwner, Observer {
-            confirmButtonClick()
-        })
+        platformPaymentConfirmDialogViewModel.clickConfirmButtonEvent.observe(
+            viewLifecycleOwner,
+        ) {
+            confirmButtonClick(startedByHistory)
+        }
     }
 
-    private fun confirmButtonClick() {
+    private fun confirmButtonClick(startedByHistory: Boolean) {
         showProgress()
         viewModel.sendInviteTransaction()
-        viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner, Observer {
-            if (it.status != Status.LOADING) {
-                dismissProgress()
-            }
-            when (it.status) {
-                Status.SUCCESS -> {
-                    if (it.data != null) {
-                        requireActivity().supportFragmentManager.beginTransaction()
-                                .replace(R.id.container, InviteCreatedFragment.newInstance(it.data.userId, startedByHistory))
-                                .commitNow()
+        viewModel.sendInviteStatusLiveData.observe(
+            viewLifecycleOwner,
+            Observer {
+                if (it.status != Status.LOADING) {
+                    dismissProgress()
+                }
+                when (it.status) {
+                    Status.SUCCESS -> {
+                        if (it.data != null) {
+                            safeNavigate(
+                                InviteFriendFragmentDirections
+                                    .inviteFriendFragmentToInviteCreatedFragment(identityId = it.data.userId, startedFromHistory = startedByHistory),
+                            )
+                        }
+                    }
+                    Status.LOADING -> {
+                        // sending has begun
+                    }
+                    else -> {
+                        // there was an error sending
+                        val errorDialog = FancyAlertDialog.newInstance(
+                            R.string.invitation_creating_error_title,
+                            R.string.invitation_creating_error_message,
+                            R.drawable.ic_error_creating_invitation,
+                            R.string.okay,
+                            0,
+                        )
+                        errorDialog.show(childFragmentManager, null)
+                        viewModel.logEvent(AnalyticsConstants.Invites.ERROR_CREATE)
                     }
                 }
-                Status.LOADING -> {
-                    // sending has begun
-                }
-                else -> {
-                    // there was an error sending
-                    val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_creating_error_title,
-                            R.string.invitation_creating_error_message, R.drawable.ic_error_creating_invitation,
-                            R.string.okay, 0)
-                    errorDialog.show(childFragmentManager, null)
-                    viewModel.logEvent(AnalyticsConstants.Invites.ERROR_CREATE)
-                }
-            }
-        })
+            },
+        )
     }
 
     private fun showConfirmationDialog() {
-        val upgradeFee = Coin.CENT
+        val upgradeFee = Constants.DASH_PAY_FEE
         val dialogTitle = getString(R.string.invitation_confirm_title)
         val dialogMessage = getString(R.string.invitation_confirm_message)
-        val dialog = PlatformPaymentConfirmDialog.createDialog(dialogTitle, dialogMessage, upgradeFee.value)
+        val dialog = PlatformPaymentConfirmDialog.createDialog(dialogTitle, dialogMessage, upgradeFee)
         dialog.show(childFragmentManager, null)
     }
 

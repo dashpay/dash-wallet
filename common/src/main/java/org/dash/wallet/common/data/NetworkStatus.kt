@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,11 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.services
 
-import kotlinx.coroutines.flow.StateFlow
+package org.dash.wallet.common.data
 
-interface NetworkStateInt {
-    val isConnected: StateFlow<Boolean>
-    fun isWifiConnected(): Boolean
+/**
+ * Network status
+ *
+ * Describes the network connection status with the Dash Network
+ */
+enum class NetworkStatus {
+    UNKNOWN,
+    CONNECTING,
+    CONNECTED,
+    DISCONNECTING,
+    DISCONNECTED,
+    STOPPED,
+    NOT_AVAILABLE
 }

@@ -192,6 +192,12 @@ class PlatformSynchronizationService @Inject constructor(
      * when the app starts, it has not yet been initialized
      */
     override suspend fun updateContactRequests() {
+
+        // if there is no wallet or identity, then skip the remaining steps of the update
+        if (platformRepo.hasIdentity || walletApplication.wallet == null) {
+            return
+        }
+
         // only allow this method to execute once at a time
         if (updatingContacts.get()) {
             log.info("updateContactRequests is already running")

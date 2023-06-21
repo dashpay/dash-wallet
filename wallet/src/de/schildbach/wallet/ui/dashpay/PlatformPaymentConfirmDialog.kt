@@ -43,14 +43,14 @@ class PlatformPaymentConfirmDialog : OffsetDialogFragment(R.layout.dialog_platfo
         private const val ARG_ISINVITE = "arg_isinvite"
 
         @JvmStatic
-        fun createDialog(title: String, messageHtml: String, amount: Long? = null, isInvite: Boolean = false): DialogFragment {
+        fun createDialog(title: String, messageHtml: String, amount: Coin? = null, isInvite: Boolean = false): DialogFragment {
             val dialog = PlatformPaymentConfirmDialog()
             dialog.arguments = Bundle().apply {
                 putString(ARG_TITLE, title)
                 putString(ARG_MESSAGE, messageHtml)
                 putBoolean(ARG_ISINVITE, isInvite)
                 if (amount != null) {
-                    putLong(ARG_AMOUNT, amount)
+                    putLong(ARG_AMOUNT, amount.value)
                 }
             }
             return dialog
@@ -66,7 +66,7 @@ class PlatformPaymentConfirmDialog : OffsetDialogFragment(R.layout.dialog_platfo
     }
 
     private val amount by lazy {
-        requireArguments().getLong(ARG_AMOUNT)
+        Coin.valueOf(requireArguments().getLong(ARG_AMOUNT))
     }
 
     private lateinit var viewModel: NewAccountConfirmDialogViewModel
@@ -108,7 +108,6 @@ class PlatformPaymentConfirmDialog : OffsetDialogFragment(R.layout.dialog_platfo
         title_view.text = title
         message_view.text = HtmlCompat.fromHtml(message, HtmlCompat.FROM_HTML_MODE_COMPACT)
 
-        val amount = Coin.valueOf(amount)
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
         val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount)
         // if the exchange rate is not available, then show "Not Available"
