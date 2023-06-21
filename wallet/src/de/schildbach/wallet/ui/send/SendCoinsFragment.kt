@@ -85,9 +85,9 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             requireActivity().finish()
         }
 
-        if (savedInstanceState == null) {
-            viewModel.initPaymentIntent(args.paymentIntent)
+        viewModel.initPaymentIntent(args.paymentIntent)
 
+        if (savedInstanceState == null) {
             val intentAmount = args.paymentIntent.amount
             var dashToFiat = viewModel.isDashToFiatPreferred
             // If an amount is specified (in Dash), then set the active currency to Dash
@@ -106,6 +106,10 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 .add(R.id.enter_amount_fragment_placeholder, fragment)
                 .commitNow()
             enterAmountFragment = fragment
+        } else {
+            enterAmountFragment = childFragmentManager.findFragmentById(
+                R.id.enter_amount_fragment_placeholder
+            ) as EnterAmountFragment
         }
 
         binding.hideButton.setOnClickListener {

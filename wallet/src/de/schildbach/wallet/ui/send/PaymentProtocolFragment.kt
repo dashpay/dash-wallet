@@ -78,10 +78,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         }
 
         initObservers()
-
-        if (savedInstanceState == null) {
-            viewModel.initPaymentIntent(args.paymentIntent)
-        }
+        viewModel.initPaymentIntent(args.paymentIntent)
     }
 
     private fun authenticateOrConfirm() {
