@@ -32,7 +32,6 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-//import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
@@ -88,8 +87,8 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         if (savedInstanceState == null) {
             val fragment = EnterAmountFragment.newInstance()
             supportFragmentManager.beginTransaction()
-                    .replace(R.id.container, fragment)
-                    .commitNow()
+                .replace(R.id.container, fragment)
+                .commitNow()
 
             val drawableDash = ResourcesCompat.getDrawable(resources, R.drawable.ic_dash_d_black, null)
             drawableDash!!.setBounds(0, 0, 38, 38)
@@ -144,34 +143,53 @@ class UpholdTransferActivity : InteractionAwareActivity() {
     private fun showPaymentConfirmation(amount: Coin) {
         val receiveAddress = walletDataProvider.freshReceiveAddress()
 
-        withdrawalDialog = UpholdWithdrawalHelper(BigDecimal(balance.toPlainString()), object : OnTransferListener {
-            override fun onConfirm(transaction: UpholdTransaction) {
-                val address: String = receiveAddress.toBase58()
-                val amountStr = transaction.origin.base.toPlainString()
+        withdrawalDialog = UpholdWithdrawalHelper(
+            BigDecimal(balance.toPlainString()),
+            object : OnTransferListener {
+                override fun onConfirm(transaction: UpholdTransaction) {
+                    val address: String = receiveAddress.toBase58()
+                    val amountStr = transaction.origin.base.toPlainString()
 
-                // if the exchange rate is not available, then show "Not Available"
-                val exchangeRate = enterAmountViewModel.selectedExchangeRate.value?.let { ExchangeRate(Coin.COIN, it.fiat) }
-                val fiatAmount = exchangeRate?.coinToFiat(amount)
-                val amountFiat = if (fiatAmount != null) Constants.LOCAL_FORMAT.format(fiatAmount).toString() else getString(R.string.transaction_row_rate_not_available)
-                val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
+                    // if the exchange rate is not available, then show "Not Available"
+                    val exchangeRate = enterAmountViewModel.selectedExchangeRate.value?.let {
+                        ExchangeRate(Coin.COIN, it.fiat)
+                    }
+                    val fiatAmount = exchangeRate?.coinToFiat(amount)
+                    val amountFiat = if (fiatAmount != null) {
+                        Constants.LOCAL_FORMAT.format(fiatAmount).toString()
+                    } else {
+                        getString(R.string.transaction_row_rate_not_available)
+                    }
+                    val fiatSymbol = fiatAmount?.let { GenericUtils.currencySymbol(it.currencyCode) } ?: ""
 
-                val fee = transaction.origin.fee.toPlainString()
-                val total = transaction.origin.amount.toPlainString()
-                lifecycleScope.launch {
-                    val toContinue = ConfirmTransactionDialog.showDialogAsync(this@UpholdTransferActivity, address, amountStr, amountFiat, fiatSymbol, fee, total)
+                    val fee = transaction.origin.fee.toPlainString()
+                    val total = transaction.origin.amount.toPlainString()
+                    lifecycleScope.launch {
+                        val toContinue = ConfirmTransactionDialog.showDialogAsync(
+                            this@UpholdTransferActivity,
+                            address,
+                            amountStr,
+                            amountFiat,
+                            fiatSymbol,
+                            fee,
+                            total
+                        )
 
-                    if (toContinue) {
-                        withdrawalDialog.commitTransaction(this@UpholdTransferActivity)
+                        if (toContinue) {
+                            withdrawalDialog.commitTransaction(this@UpholdTransferActivity)
+                        }
                     }
                 }
-            }
 
-            override fun onTransfer() {
-                transactionMetadataProvider.markAddressAsTransferInAsync(receiveAddress.toBase58(), ServiceName.Uphold)
-                finish()
+                override fun onTransfer() {
+                    transactionMetadataProvider.markAddressAsTransferInAsync(
+                        receiveAddress.toBase58(),
+                        ServiceName.Uphold
+                    )
+                    finish()
+                }
             }
-
-        })
+        )
         withdrawalDialog.transfer(this, receiveAddress.toBase58(), BigDecimal(amount.toPlainString()), false)
     }
 

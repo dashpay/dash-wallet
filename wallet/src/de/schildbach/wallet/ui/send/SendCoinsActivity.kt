@@ -24,17 +24,15 @@ import android.net.Uri
 import android.nfc.NdefMessage
 import android.nfc.NfcAdapter
 import android.os.Bundle
-import android.util.Log
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
-import kotlin.coroutines.resume
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.integration.android.BitcoinIntegration
-import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.util.InputParserException
 import de.schildbach.wallet.util.Nfc
 import de.schildbach.wallet_test.R
@@ -47,6 +45,7 @@ import org.bitcoinj.core.VerificationException
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import java.io.FileNotFoundException
+import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 @AndroidEntryPoint
@@ -249,9 +248,12 @@ open class SendCoinsActivity : LockScreenActivity() {
             }
         )
 
-        navController.setGraph(navGraph, bundleOf(
-            INTENT_EXTRA_PAYMENT_INTENT to paymentIntent
-        ))
+        navController.setGraph(
+            navGraph,
+            bundleOf(
+                INTENT_EXTRA_PAYMENT_INTENT to paymentIntent
+            )
+        )
     }
 
     private fun Uri.hasValidScheme() =

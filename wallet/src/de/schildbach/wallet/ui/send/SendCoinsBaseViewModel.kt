@@ -25,8 +25,8 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.util.Constants
 import javax.inject.Inject
 
 @HiltViewModel
@@ -59,7 +59,8 @@ open class SendCoinsBaseViewModel @Inject constructor(
         signInputs: Boolean,
         forceEnsureMinRequiredFee: Boolean
     ): SendRequest {
-        paymentIntent.setInstantX(false) // to make sure the correct instance of Transaction class is used in toSendRequest() method
+        // to make sure the correct instance of Transaction class is used in toSendRequest() method
+        paymentIntent.setInstantX(false)
         val sendRequest = paymentIntent.toSendRequest()
         sendRequest.coinSelector = ZeroConfCoinSelector.get()
         sendRequest.useInstantSend = false

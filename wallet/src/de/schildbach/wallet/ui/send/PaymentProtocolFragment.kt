@@ -28,14 +28,14 @@ import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.FragmentPaymentProtocolBinding
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.protocols.payments.PaymentProtocolException
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
-import de.schildbach.wallet_test.databinding.FragmentPaymentProtocolBinding
-import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -97,7 +97,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private fun confirmWhenAuthorizedAndNoException() {
-        if(viewModel.finalPaymentIntent!!.expired) {
+        if (viewModel.finalPaymentIntent!!.expired) {
             showRequestExpiredMessage()
             return
         }
@@ -206,7 +206,13 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         val payeeVerifiedBy = viewModel.finalPaymentIntent!!.payeeVerifiedBy
         requireActivity().run {
             val transactionResultIntent = TransactionResultActivity.createIntent(
-                    this, intent.action, transaction, userAuthorizedDuring, paymentMemo, payeeVerifiedBy)
+                this,
+                intent.action,
+                transaction,
+                userAuthorizedDuring,
+                paymentMemo,
+                payeeVerifiedBy
+            )
             startActivity(transactionResultIntent)
             finish()
         }
@@ -262,7 +268,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
 
         binding.paymentRequest.memo.text = paymentIntent.memo
         binding.paymentRequest.payeeSecuredBy.text = paymentIntent.payeeVerifiedBy
-                ?: getString(R.string.send_coins_fragment_payee_verified_by_unknown)
+            ?: getString(R.string.send_coins_fragment_payee_verified_by_unknown)
 
         val forceMarqueeOnClickListener = View.OnClickListener {
             it.isSelected = false
