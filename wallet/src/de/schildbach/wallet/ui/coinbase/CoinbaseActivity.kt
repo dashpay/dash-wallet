@@ -68,8 +68,6 @@ class CoinbaseActivity : BaseMenuActivity() {
                 overridePendingTransition(0, 0)
                 startActivity(intent)
                 overridePendingTransition(0, 0)
-
-                // findNavController().popBackStack()
             } else {
                 AdaptiveDialog.create(
                     R.drawable.ic_error,
@@ -103,10 +101,10 @@ class CoinbaseActivity : BaseMenuActivity() {
         viewModel.coinbaseLogOutCallback.observe(this) {
             AdaptiveDialog.create(
                 R.drawable.ic_relogin,
-                "Your Coinbase session has expired",
-                "Please log in to your Coinbase account",
+                getString(R.string.your_coinbase_session_has_expired),
+                getString(R.string.please_log_in_to_your_coinbase_account),
                 getString(R.string.cancel),
-                "Log In"
+                getString(R.string.log_in)
             ).also {
                 it.isCancelable = false
             }.show(this) { login ->
