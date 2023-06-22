@@ -19,12 +19,16 @@ package org.dash.wallet.integration.coinbase_integration.repository.remote
 import okhttp3.Interceptor
 import okhttp3.Response
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseActivityViewModel
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 class HeadersInterceptor @Inject constructor(
     private val userPreferences: Configuration
 ) : Interceptor {
-
+    companion object {
+        private val log = LoggerFactory.getLogger(HeadersInterceptor::class.java)
+    }
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
         val requestBuilder = original.newBuilder()
@@ -32,6 +36,7 @@ class HeadersInterceptor @Inject constructor(
 
         val accessToken = userPreferences.lastCoinbaseAccessToken
         if (accessToken.isNotEmpty()) {
+            log.info("Bearer $accessToken")
             requestBuilder.header("Authorization", "Bearer $accessToken")
         }
 
