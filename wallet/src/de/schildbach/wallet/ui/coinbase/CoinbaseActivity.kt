@@ -93,25 +93,33 @@ class CoinbaseActivity : BaseMenuActivity() {
         )
     }
 
+    private val reLoginDialog: AdaptiveDialog by lazy {
+        AdaptiveDialog.create(
+            R.drawable.ic_relogin,
+            getString(R.string.your_coinbase_session_has_expired),
+            getString(R.string.please_log_in_to_your_coinbase_account),
+            getString(R.string.cancel),
+            getString(R.string.log_in)
+        ).also {
+            it.isCancelable = false
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         navController = setNavigationGraph()
 
         viewModel.coinbaseLogOutCallback.observe(this) {
-            AdaptiveDialog.create(
-                R.drawable.ic_relogin,
-                getString(R.string.your_coinbase_session_has_expired),
-                getString(R.string.please_log_in_to_your_coinbase_account),
-                getString(R.string.cancel),
-                getString(R.string.log_in)
-            ).also {
-                it.isCancelable = false
-            }.show(this) { login ->
-                if (login == true) {
-                    continueCoinbase()
-                } else {
-                    finish()
+            if (reLoginDialog.isVisible) {
+                reLoginDialog.dismiss()
+            }
+            if (it == true) {
+                reLoginDialog.show(this) { login ->
+                    if (login == true) {
+                        continueCoinbase()
+                    } else {
+                        finish()
+                    }
                 }
             }
         }
