@@ -23,7 +23,6 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.Configuration
@@ -43,7 +42,7 @@ import javax.inject.Inject
 class CoinbaseActivityViewModel @Inject constructor(
     private val config: CoinbaseConfig,
     private val userPreference: Configuration,
-    private val coinBaseRepository: CoinBaseRepositoryInt,
+    private val coinBaseRepository: CoinBaseRepositoryInt
 
 ) : ViewModel() {
 
@@ -62,18 +61,18 @@ class CoinbaseActivityViewModel @Inject constructor(
     val baseIdForFaitModelCoinBase: LiveData<BaseIdForFaitDataUIState>
         get() = _baseIdForFaitModelCoinBase
 
-    val coinbaseLogOutCallback = SingleLiveEvent<Unit>()
+    val coinbaseLogOutCallback = SingleLiveEvent<Boolean>()
     init {
         viewModelScope.launch {
             config.observePreference(CoinbaseConfig.LOGOUT_COINBASE)
-                .filter { it == true }
                 .collect {
-                    config.clearAll()
-                    coinbaseLogOutCallback.call()
+                    if (it == true) {
+                        config.clearAll()
+                    }
+                    coinbaseLogOutCallback.value = it
                 }
         }
     }
-
 
     suspend fun loginToCoinbase(code: String): Boolean {
         when (val response = coinBaseRepository.completeCoinbaseAuthentication(code)) {
