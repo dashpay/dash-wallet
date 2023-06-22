@@ -59,7 +59,7 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     enum class State {
-        INPUT,  // asks for confirmation
+        INPUT, // asks for confirmation
         SENDING, SENT, FAILED // sending states
     }
 
@@ -117,8 +117,10 @@ class SendCoinsViewModel @Inject constructor(
         super.initPaymentIntent(paymentIntent)
 
         if (paymentIntent.hasPaymentRequestUrl()) {
-            throw IllegalArgumentException(PaymentProtocolFragment::class.java.simpleName
-                    + "class should be used to handle Payment requests (BIP70 and BIP270)")
+            throw IllegalArgumentException(
+                PaymentProtocolFragment::class.java.simpleName +
+                    "class should be used to handle Payment requests (BIP70 and BIP270)"
+            )
         }
 
         log.info("got {}", paymentIntent)
@@ -172,7 +174,7 @@ class SendCoinsViewModel @Inject constructor(
 
     fun shouldAdjustAmount(): Boolean {
         return dryRunException is InsufficientMoneyException &&
-                currentAmount.isLessThan(maxOutputAmount.value ?: Coin.ZERO)
+            currentAmount.isLessThan(maxOutputAmount.value ?: Coin.ZERO)
     }
 
     fun getAdjustedAmount(): Coin {
