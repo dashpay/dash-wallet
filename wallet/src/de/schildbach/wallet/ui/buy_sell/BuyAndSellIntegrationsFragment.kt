@@ -33,9 +33,9 @@ import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentBuySellIntegrationsBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity
@@ -135,9 +135,10 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
                 "",
                 "",
                 getString(android.R.string.ok)
-            ).apply { isCancelable = false }
-             .show(requireActivity()) {
-                 liquidClient.clearLiquidData()
+            ).apply {
+                isCancelable = false
+            }.show(requireActivity()) {
+                liquidClient.clearLiquidData()
             }
         }
     }

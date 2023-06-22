@@ -384,7 +384,7 @@
     <string name="payment_protocol_insufficient_funds_error_message">ليس لديك رصيد كافي لإتمام هذه المعاملة</string>
 
 
-    <string name="select_a_service_to_buy_and_sell_dash">حدد خدمة لبيع وشراء داش.</string>
+    <string name="buy_and_sell_subtitle">حدد خدمة لبيع وشراء داش.</string>
     <string name="select_a_service">اختر خدمة</string>
     <string name="activity_buy_and_sell_dash_filter">منقي</string>
     <string name="clear_filter">ازل فلتر البحث</string>

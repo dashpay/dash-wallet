@@ -5,49 +5,63 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/rounded_ripple_background"
-    android:theme="@style/ListViewButtonBackground"
-    android:layout_marginVertical="10dp"
-    android:paddingHorizontal="15dp"
-    android:paddingVertical="15dp">
+    android:theme="@style/BuySellServiceBackground"
+    android:layout_marginVertical="5dp"
+    android:paddingStart="10dp"
+    android:paddingEnd="15dp"
+    android:paddingBottom="10dp">
 
     <ImageView
-        android:id="@+id/serviceImg"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
+        android:id="@+id/service_img"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:padding="2dp"
+        android:layout_marginTop="11dp"
         android:contentDescription="@string/app_name"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:srcCompat="@drawable/ic_coinbase_full" />
+        tools:srcCompat="@drawable/ic_coinbase" />
 
     <TextView
         android:id="@+id/service_name"
-        style="@style/Subtitle2"
+        style="@style/Body2.Medium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
         android:layout_marginEnd="10dp"
-        android:gravity="center"
-        android:textAlignment="gravity"
-        app:layout_constraintBottom_toBottomOf="@+id/serviceImg"
-        app:layout_constraintStart_toEndOf="@+id/serviceImg"
-        app:layout_constraintTop_toTopOf="@+id/serviceImg" />
+        app:layout_constraintStart_toEndOf="@+id/service_img"
+        app:layout_constraintTop_toTopOf="@+id/service_img"
+        app:layout_constraintBottom_toTopOf="@+id/service_subtitle"
+        tools:text="Coinbase" />
+
+    <TextView
+        android:id="@+id/service_subtitle"
+        style="@style/Overline.Tertiary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="10dp"
+        android:text="@string/link_account"
+        app:layout_constraintStart_toEndOf="@+id/service_img"
+        app:layout_constraintTop_toBottomOf="@+id/service_name"
+        app:layout_constraintBottom_toBottomOf="@+id/service_img" />
 
     <ImageView
-        android:id="@+id/imgArrow"
+        android:id="@+id/img_arrow"
         style="@style/NavigationArrowStyle"
         android:contentDescription="@string/app_name"
-        app:layout_constraintBottom_toBottomOf="@+id/serviceImg"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/serviceImg" />
+        app:layout_constraintTop_toTopOf="@+id/service_img"
+        app:layout_constraintBottom_toBottomOf="@+id/service_img"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <View
         android:id="@+id/separator"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginTop="15dp"
-        android:background="@color/steel_gray_150"
-        app:layout_constraintTop_toBottomOf="@+id/serviceImg" />
+        android:layout_marginTop="10dp"
+        android:layout_marginStart="5dp"
+        android:background="@color/divider_color"
+        app:layout_constraintTop_toBottomOf="@+id/service_img" />
 
     <TextView
         android:id="@+id/connected"
@@ -55,12 +69,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:drawablePadding="5dp"
+        android:layout_marginStart="5dp"
         android:text="@string/connected"
         android:visibility="gone"
         app:drawableStartCompat="@drawable/ic_connected"
         app:iconGravity="textStart"
         app:layout_constraintBottom_toBottomOf="@+id/dash_icon"
-        app:layout_constraintStart_toStartOf="@+id/serviceImg"
+        app:layout_constraintStart_toStartOf="@+id/service_img"
         app:layout_constraintTop_toTopOf="@+id/dash_icon" />
 
     <TextView
@@ -69,12 +84,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:drawablePadding="5dp"
+        android:layout_marginStart="5dp"
         android:text="@string/disconnected"
         android:visibility="gone"
         app:drawableStartCompat="@drawable/ic_disconnected"
         app:iconGravity="textStart"
         app:layout_constraintBottom_toBottomOf="@+id/dash_icon"
-        app:layout_constraintStart_toStartOf="@+id/serviceImg"
+        app:layout_constraintStart_toStartOf="@+id/service_img"
         app:layout_constraintTop_toTopOf="@+id/dash_icon" />
 
     <androidx.appcompat.widget.AppCompatImageView

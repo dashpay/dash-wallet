@@ -17,23 +17,22 @@
 
 package de.schildbach.wallet.adapter
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
-import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import de.schildbach.wallet.data.ServiceStatus
+import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ItemServiceListBinding
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import androidx.recyclerview.widget.ListAdapter
-import de.schildbach.wallet_test.R
-import org.bitcoinj.utils.MonetaryFormat
-
 
 class BuyAndSellDashServicesAdapter(
     val balanceFormat: MonetaryFormat,
@@ -42,11 +41,17 @@ class BuyAndSellDashServicesAdapter(
     BuyAndSellDashDiffCallback()
 ) {
     class BuyAndSellDashDiffCallback : DiffUtil.ItemCallback<BuyAndSellDashServicesModel>() {
-        override fun areItemsTheSame(oldItem: BuyAndSellDashServicesModel, newItem: BuyAndSellDashServicesModel): Boolean {
-            return oldItem.serviceType == oldItem.serviceType
+        override fun areItemsTheSame(
+            oldItem: BuyAndSellDashServicesModel,
+            newItem: BuyAndSellDashServicesModel
+        ): Boolean {
+            return oldItem.serviceType == newItem.serviceType
         }
 
-        override fun areContentsTheSame(oldItem: BuyAndSellDashServicesModel, newItem: BuyAndSellDashServicesModel): Boolean {
+        override fun areContentsTheSame(
+            oldItem: BuyAndSellDashServicesModel,
+            newItem: BuyAndSellDashServicesModel
+        ): Boolean {
             return oldItem == newItem
         }
     }
@@ -66,79 +71,62 @@ class BuyAndSellDashServicesAdapter(
         holder.bindData(item)
     }
 
-    inner class BuyAndSellDashServicesViewHolder(val binding: ItemServiceListBinding) : RecyclerView.ViewHolder(binding.root) {
+    inner class BuyAndSellDashServicesViewHolder(val binding: ItemServiceListBinding) : RecyclerView.ViewHolder(
+        binding.root
+    ) {
+        @SuppressLint("SetTextI18n")
         fun bindData(data: BuyAndSellDashServicesModel?) {
             data?.let { service ->
-                binding.root.background = ContextCompat.getDrawable(binding.root.context,
+                binding.root.background = ContextCompat.getDrawable(
+                    binding.root.context,
                     if (service.isAvailable()) {
                         R.drawable.rounded_ripple_background
                     } else {
                         R.drawable.rounded_background
-                    })
+                    }
+                )
                 binding.root.setOnClickListener {
                     if (service.isAvailable()) {
                         onClickListener.invoke(data)
                     }
                 }
-                binding.serviceImg.setImageDrawable(ContextCompat.getDrawable(binding.root.context,
-                    if(service.isAvailable()) {
-                        service.serviceType.serviceIcon
-                    } else {
-                        service.serviceType.offlineServiceIcon
-                    }))
+                binding.serviceImg.setImageDrawable(
+                    ContextCompat.getDrawable(
+                        binding.root.context,
+                        if (service.isAvailable()) {
+                            service.serviceType.serviceIcon
+                        } else {
+                            service.serviceType.offlineServiceIcon
+                        }
+                    )
+                )
                 binding.serviceName.text = binding.root.context.getString(service.serviceType.serviceName)
+                setStatus(service.serviceStatus)
 
-                when (service.serviceStatus) {
-                    ServiceStatus.IDLE -> setIdleView()
-                    ServiceStatus.IDLE_DISCONNECTED -> setIdleDisconnectedView()
-                    ServiceStatus.CONNECTED -> setConnectedView()
-                    ServiceStatus.DISCONNECTED -> setDisconnectedView()
-                }
                 binding.serviceBalance.setFormat(balanceFormat)
                 binding.serviceBalance.setApplyMarkup(false)
                 binding.serviceBalance.setAmount(Coin.ZERO)
 
-                if(data.balance != null) {
+                if (data.balance != null) {
                     binding.serviceBalance.setAmount(data.balance)
                 }
 
-                if(data.localBalance != null) {
-                    binding.serviceFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} ${GenericUtils.fiatToString(data.localBalance)}"
+                if (data.localBalance != null) {
+                    binding.serviceFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} " +
+                        GenericUtils.fiatToString(data.localBalance)
                 }
             }
         }
 
-        private fun setIdleView() {
-            binding.coinbaseStatusGroup.isGone = true
-            binding.connected.isGone = true
-            binding.disconnected.isGone = true
-            binding.lastKnownBalance.isGone = true
-            binding.imgArrow.isVisible = true
-        }
-
-        private fun setIdleDisconnectedView() {
-            binding.coinbaseStatusGroup.isVisible = false
-            binding.connected.isVisible = false
-            binding.disconnected.isVisible = false
-            binding.lastKnownBalance.isVisible = false
-            binding.imgArrow.isVisible = false
-        }
-
-        private fun setConnectedView() {
-            binding.coinbaseStatusGroup.isVisible = true
-            binding.connected.isVisible = true
-            binding.disconnected.isGone = true
-            binding.lastKnownBalance.isGone = true
-            binding.imgArrow.isVisible = true
-        }
-
-        private fun setDisconnectedView() {
-            binding.coinbaseStatusGroup.isVisible = true
-            binding.connected.isGone = true
-            binding.disconnected.isVisible = true
-            binding.lastKnownBalance.isVisible = true
-            binding.imgArrow.isVisible = false
+        private fun setStatus(status: ServiceStatus) {
+            binding.coinbaseStatusGroup.isVisible = status == ServiceStatus.CONNECTED ||
+                status == ServiceStatus.DISCONNECTED
+            binding.connected.isVisible = status == ServiceStatus.CONNECTED
+            binding.disconnected.isVisible = status == ServiceStatus.DISCONNECTED
+            binding.lastKnownBalance.isVisible = status == ServiceStatus.DISCONNECTED
+            binding.imgArrow.isVisible = status == ServiceStatus.IDLE || status == ServiceStatus.CONNECTED
+            binding.serviceSubtitle.isVisible = status == ServiceStatus.IDLE ||
+                status == ServiceStatus.IDLE_DISCONNECTED
         }
     }
 }
-

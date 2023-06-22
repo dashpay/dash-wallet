@@ -14,125 +14,73 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_primary"
     android:fitsSystemWindows="true"
+    android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsFragment">
 
-    <com.google.android.material.appbar.AppBarLayout
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="?attr/actionBarSize"
+        app:navigationIcon="@drawable/ic_arrow_back_primary"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
 
-        <com.google.android.material.appbar.CollapsingToolbarLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:contentScrim="?attr/colorPrimary"
-            app:expandedTitleGravity="top"
-            app:expandedTitleMarginEnd="64dp"
-            app:expandedTitleMarginStart="48dp"
-            app:layout_scrollFlags="scroll|exitUntilCollapsed|snap">
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:background="@drawable/bg_dash_gradient"
-                app:layout_collapseMode="parallax"
-                app:layout_collapseParallaxMultiplier="0.7"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical">
-
-                <androidx.appcompat.widget.Toolbar
-                    android:id="@+id/toolbar"
-                    android:layout_width="match_parent"
-                    android:layout_height="?attr/actionBarSize"
-                    app:contentInsetStart="0dp"
-                    app:layout_collapseMode="pin"
-                    app:navigationIcon="@drawable/ic_arrow_back_white"
-                    app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-                    app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
-
-                <TextView
-                    style="@style/Headline5.White"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="15dp"
-                    android:layout_marginTop="5dp"
-                    android:text="@string/menu_buy_and_sell_title" />
-
-                <TextView
-                    android:id="@+id/select_a_service_to_buy_and_sell_dash"
-                    style="@style/Body2.White"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="15dp"
-                    android:layout_marginTop="10dp"
-                    android:text="@string/select_a_service_to_buy_and_sell_dash" />
-            </LinearLayout>
-        </com.google.android.material.appbar.CollapsingToolbarLayout>
-    </com.google.android.material.appbar.AppBarLayout>
-
-
-    <androidx.core.widget.NestedScrollView
-        android:id="@+id/rlTop"
+    <TextView
+        style="@style/Headline3"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:orientation="vertical"
-        android:paddingTop="40dp"
-        android:paddingBottom="4dp"
-        app:layout_anchor="@id/select_a_service_to_buy_and_sell_dash"
-        app:layout_anchorGravity="bottom"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/select_a_service_to_buy_and_sell_dash">
-       
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:orientation="vertical"
-            android:layout_height="match_parent">
+        android:layout_marginHorizontal="15dp"
+        android:text="@string/menu_buy_and_sell_title" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/dash_services_list"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="15dp"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                tools:itemCount="3"
-                tools:listitem="@layout/item_service_list" />
+    <TextView
+        android:id="@+id/select_a_service_to_buy_and_sell_dash"
+        style="@style/Body2.Secondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginTop="2dp"
+        android:text="@string/buy_and_sell_subtitle" />
 
-            <TextView
-                android:id="@+id/keys_missing_error"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_marginStart="15dp"
-                android:layout_marginTop="15dp"
-                android:layout_marginEnd="15dp"
-                android:text="@string/services_portal_subtitle_error"
-                android:textColor="@color/dash_red"
-                android:textSize="12sp"
-                android:visibility="gone"
-                tools:visibility="visible" />
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/dash_services_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginTop="15dp"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        tools:itemCount="3"
+        tools:listitem="@layout/item_service_list" />
 
-            <ViewStub
-                android:id="@+id/network_status_stub"
-                android:layout="@layout/network_unavailable_view"
-                android:inflatedId="@+id/network_status_container"
-                android:layout_width="match_parent"
-                android:layout_marginTop="50dp"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:visibility="gone"
-                app:layout_behavior="de.schildbach.wallet.ui.CollapsingImageBehavior"
-                tools:visibility="visible" />
-        </LinearLayout>
+    <TextView
+        android:id="@+id/keys_missing_error"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="15dp"
+        android:text="@string/services_portal_subtitle_error"
+        android:textColor="@color/dash_red"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:visibility="visible" />
 
-    </androidx.core.widget.NestedScrollView>
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
-
+    <ViewStub
+        android:id="@+id/network_status_stub"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="50dp"
+        android:layout_weight="1"
+        android:inflatedId="@+id/network_status_container"
+        android:layout="@layout/network_unavailable_view"
+        android:visibility="gone"
+        app:layout_behavior="de.schildbach.wallet.ui.CollapsingImageBehavior"
+        tools:visibility="visible" />
+</LinearLayout>

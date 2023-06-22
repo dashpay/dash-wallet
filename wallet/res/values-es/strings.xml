@@ -383,7 +383,7 @@
     <string name="payment_protocol_insufficient_funds_error_message">No tienes fondos suficientes para completar esta transacción.</string>
 
 
-    <string name="select_a_service_to_buy_and_sell_dash">Seleccione un servicio para comprar y vender Dash.</string>
+    <string name="buy_and_sell_subtitle">Seleccione un servicio para comprar y vender Dash.</string>
     <string name="select_a_service">Seleccionar un servicio</string>
     <string name="activity_buy_and_sell_dash_filter">Filtrar</string>
     <string name="clear_filter">Borrar filtro</string>

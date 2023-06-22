@@ -384,7 +384,7 @@
     <string name="payment_protocol_insufficient_funds_error_message">موجودی‌تان برای انجام این تراکنش، کافی نیست</string>
 
 
-    <string name="select_a_service_to_buy_and_sell_dash">انتخاب یک سرویس برای خرید و فروش دش</string>
+    <string name="buy_and_sell_subtitle">انتخاب یک سرویس برای خرید و فروش دش</string>
     <string name="select_a_service">یک خدمت را انتخاب کنید</string>
     <string name="activity_buy_and_sell_dash_filter">فیلتر</string>
     <string name="clear_filter">حذف فیلتر</string>

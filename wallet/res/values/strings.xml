@@ -373,11 +373,11 @@
     <string name="payment_protocol_insufficient_funds_error_title">Insufficient Funds</string>
     <string name="payment_protocol_insufficient_funds_error_message">You do not have sufficient funds to complete this transaction</string>
 
-
-    <string name="select_a_service_to_buy_and_sell_dash"> Select a service to buy and sell Dash.</string>
+    <string name="buy_and_sell_subtitle">Select a service to buy, sell, convert and transfer Dash</string>
     <string name="select_a_service">Select a Service</string>
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Clear Filter</string>
     <string name="select_currency">Select Currency</string>
     <string name="reason">Reason</string>
+    <string name="link_account">Link your account</string>
 </resources>
