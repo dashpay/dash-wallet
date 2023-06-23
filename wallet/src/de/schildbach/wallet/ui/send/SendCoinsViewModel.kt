@@ -39,6 +39,7 @@ import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -52,7 +53,8 @@ class SendCoinsViewModel @Inject constructor(
     val biometricHelper: BiometricHelper,
     private val analytics: AnalyticsService,
     private val configuration: Configuration,
-    private val sendCoinsTaskRunner: SendCoinsTaskRunner
+    private val sendCoinsTaskRunner: SendCoinsTaskRunner,
+    private val notificationService: NotificationService
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
@@ -96,6 +98,9 @@ class SendCoinsViewModel @Inject constructor(
     var isDashToFiatPreferred: Boolean
         get() = configuration.isDashToFiatDirection
         set(value) { configuration.isDashToFiatDirection = value }
+
+    val shouldPlaySounds: Boolean
+        get() = !notificationService.isDoNotDisturb
 
     init {
         blockchainStateDao.observeState()

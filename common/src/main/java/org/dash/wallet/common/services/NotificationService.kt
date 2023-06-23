@@ -21,6 +21,8 @@ import android.app.Notification
 import android.content.Intent
 
 interface NotificationService {
+    val isDoNotDisturb: Boolean
+
     fun showNotification(
         tag: String,
         message: String,
