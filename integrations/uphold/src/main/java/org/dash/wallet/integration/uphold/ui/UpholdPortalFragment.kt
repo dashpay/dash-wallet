@@ -23,6 +23,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.utils.MonetaryFormat
@@ -34,6 +35,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.uphold.R
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
 import org.dash.wallet.integration.uphold.data.UpholdConstants
@@ -53,15 +55,19 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
 
         binding.toolbarTitle.text = getString(R.string.uphold_account)
         binding.toolbarIcon.setImageResource(R.drawable.ic_uphold)
-        binding.connected.isVisible = false
+        binding.disconnectedIndicator.isVisible = false
         binding.balanceHeader.text = getString(R.string.uphold_account_dash_balance)
         binding.additionalInfo.isVisible = true
         binding.additionalInfoIcon.setImageResource(R.drawable.logo_topper)
         binding.additionalInfoTxt.text = getString(R.string.uphold_powered_by)
         binding.convertBtn.isVisible = false
         binding.transferSubtitle.text = getString(R.string.uphold_transfer_to_this_wallet)
-        binding.disconnectBtn.text = getString(R.string.uphold_disconnect)
+        binding.disconnectTitle.text = getString(R.string.uphold_disconnect)
         binding.linkAccountBtn.text = getString(R.string.uphold_link_account)
+
+        binding.toolbar.setOnClickListener {
+            findNavController().popBackStack()
+        }
 
         binding.transferBtn.setOnClickListener {
             if (!viewModel.uiState.value.balance.isZero) {

@@ -28,7 +28,7 @@
     <string name="disconnect_coinbase_account">Disconnect Coinbase Account</string>
     <string name="receive_directly_into_dash_wallet">Receive directly into Dash Wallet.</string>
     <string name="buy_dash">Buy Dash</string>
-    <string name="balance_on_coinbase">Balance on Coinbase</string>
+    <string name="balance_on_coinbase">Dash balance on Coinbase</string>
     <string name="sending_to">Sending to</string>
     <string name="dash_wallet_device">Dash Wallet on this device</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -68,7 +68,7 @@
     <string name="learn_more">Learn More</string>
     <string name="something_wrong_title">Something went wrong!</string>
     <string name="retry_later_message">Please retry a little bit later or contact our support center to get help</string>
-    <string name="between_dash_wallet_and_coinbase">Between Dash Wallet and Coinbase.</string>
+    <string name="between_dash_wallet_and_coinbase">Between Dash Wallet and Coinbase</string>
     <string name="conversion_preview">Conversion Preview</string>
     <string name="you_send">you send</string>
     <string name="from_your_coinbase_account">From your Coinbase account</string>
@@ -90,7 +90,6 @@
     <string name="send_to_wallet_error">Cannot send this amount without going over application limit</string>
     <string name="dont_have_any_dash"> You don\'t have any Dash in your Dash Wallet.</string>
     <string name="transfer_wallet_not_synced">Transfers from Dash Wallet to Coinbase are not possible until wallet sync is completed.</string>
-    <string name="disconnected">Disconnected</string>
 
     <string name="insufficient_money_title">Not enough coins</string>
     <string name="insufficient_money_msg">The amount of coins in the wallet is too small for sweeping.</string>

@@ -87,4 +87,5 @@
     <string name="buy_dash_subtitle">Receive directly into Dash Wallet</string>
     <string name="convert_crypto">Convert Crypto</string>
     <string name="last_known_balance" >Last known balance</string>
+    <string name="disconnected">Disconnected</string>
 </resources>

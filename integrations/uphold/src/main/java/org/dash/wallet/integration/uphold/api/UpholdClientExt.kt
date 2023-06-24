@@ -225,6 +225,5 @@ fun UpholdClient.getStoredAccessToken(): String? {
     return prefs.getString(UpholdClient.UPHOLD_ACCESS_TOKEN, null)
 }
 
-fun UpholdClient.isAuthenticated(): Boolean {
-    return getStoredAccessToken() != null
-}
+val UpholdClient.isAuthenticated: Boolean
+    get() = getStoredAccessToken() != null

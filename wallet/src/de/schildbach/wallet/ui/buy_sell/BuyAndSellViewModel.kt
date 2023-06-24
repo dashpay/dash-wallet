@@ -41,6 +41,7 @@ import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import org.dash.wallet.integration.uphold.api.UpholdClient
 import org.dash.wallet.integration.uphold.api.getDashBalance
 import org.dash.wallet.integration.uphold.api.hasValidCredentials
+import org.dash.wallet.integration.uphold.api.isAuthenticated
 import javax.inject.Inject
 
 /**

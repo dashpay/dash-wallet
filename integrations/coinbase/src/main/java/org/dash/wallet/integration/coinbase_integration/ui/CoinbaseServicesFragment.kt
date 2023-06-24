@@ -28,6 +28,7 @@ import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -35,15 +36,14 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
-import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.PaymentMethodsUiState
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseActivityViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
-    private val binding by viewBinding(FragmentCoinbaseServicesBinding::bind)
+class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) {
+    private val binding by viewBinding(FragmentIntegrationPortalBinding::bind)
     private val viewModel by viewModels<CoinbaseServicesViewModel>()
     private var loadingDialog: AdaptiveDialog? = null
     private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
@@ -54,19 +54,25 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.toolbar.title = getString(R.string.coinbase)
         binding.toolbar.setNavigationOnClickListener {
             requireActivity().finish()
         }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){
+        binding.toolbarTitle.text = getString(R.string.coinbase)
+        binding.toolbarIcon.setImageResource(R.drawable.ic_coinbase)
+        binding.balanceHeader.text = getString(R.string.balance_on_coinbase)
+        binding.transferSubtitle.text = getString(R.string.between_dash_wallet_and_coinbase)
+        binding.convertSubtitle.text = getString(R.string.between_dash_wallet_and_coinbase)
+        binding.disconnectTitle.text = getString(R.string.disconnect_coinbase_account)
+
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
             requireActivity().finish()
         }
 
-        binding.disconnectLayout.setOnClickListener {
+        binding.disconnectBtn.setOnClickListener {
             viewModel.disconnectCoinbaseAccount()
         }
 
-        binding.buyDashBtn.setOnClickListener {
+        binding.buyBtn.setOnClickListener {
             sharedViewModel.paymentMethodsUiState.observe(viewLifecycleOwner) { uiState ->
                 // New value received
                 when (uiState) {
@@ -100,19 +106,19 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             }
         }
 
-        binding.convertDashBtn.setOnClickListener {
+        binding.convertBtn.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_DASH)
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToConvertCrypto(true))
         }
 
-        binding.transferDashBtn.setOnClickListener {
+        binding.transferBtn.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Coinbase.TRANSFER_DASH)
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToTransferDash())
         }
 
-        binding.walletBalanceDash.setFormat(viewModel.balanceFormat)
-        binding.walletBalanceDash.setApplyMarkup(false)
-        binding.walletBalanceDash.setAmount(Coin.ZERO)
+        binding.balanceDash.setFormat(viewModel.balanceFormat)
+        binding.balanceDash.setApplyMarkup(false)
+        binding.balanceDash.setAmount(Coin.ZERO)
 
         viewModel.exchangeRate.observe(
             viewLifecycleOwner
@@ -132,7 +138,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         viewModel.user.observe(
             viewLifecycleOwner
         ) {
-            binding.walletBalanceDash.setAmount(Coin.parseCoin(it.balance?.amount))
+            binding.balanceDash.setAmount(Coin.parseCoin(it.balance?.amount))
             if (currentExchangeRate != null) {
                 setLocalFaitAmount(it.balance?.amount ?: "0")
             }
@@ -141,7 +147,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         viewModel.latestUserBalance.observe(
             viewLifecycleOwner
         ) {
-            binding.walletBalanceDash.setAmount(Coin.parseCoin(it))
+            binding.balanceDash.setAmount(Coin.parseCoin(it))
             if (currentExchangeRate != null) {
                 setLocalFaitAmount(it ?: "0")
             }
@@ -183,7 +189,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private fun setLocalFaitAmount(balance: String) {
         val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
         val localValue = exchangeRate.coinToFiat(Coin.parseCoin(balance))
-        binding.walletBalanceLocal.text = GenericUtils.fiatToString(localValue)
+        binding.balanceLocal.text = GenericUtils.fiatToString(localValue)
     }
 
     private fun showProgress(messageResId: Int) {
@@ -213,11 +219,9 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private fun setNetworkState(hasInternet: Boolean) {
         binding.lastKnownBalance.isVisible = !hasInternet
         binding.networkStatusStub.isVisible = !hasInternet
-        binding.coinbaseServicesGroup.isVisible = hasInternet
-        binding.connected.setText(if (hasInternet) R.string.connected else R.string.disconnected)
-        binding.connected.setCompoundDrawablesWithIntrinsicBounds(if (hasInternet)
-            org.dash.wallet.common.R.drawable.ic_connected else
-                org.dash.wallet.common.R.drawable.ic_disconnected, 0,0,0)
+        binding.actionsView.isVisible = hasInternet
+        binding.disconnectBtn.isVisible = hasInternet
+        binding.disconnectedIndicator.isVisible = !hasInternet
     }
 
     private fun showNoPaymentMethodsError() {
