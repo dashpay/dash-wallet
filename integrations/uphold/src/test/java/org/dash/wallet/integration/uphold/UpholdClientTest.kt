@@ -22,7 +22,6 @@ import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.dash.wallet.integration.uphold.api.RemoteDataSource
-import org.dash.wallet.integration.uphold.api.UpholdService
 import org.dash.wallet.integration.uphold.data.UpholdCapability
 import org.junit.After
 import org.junit.Before

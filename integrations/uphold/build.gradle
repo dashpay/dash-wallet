@@ -29,22 +29,29 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    buildFeatures {
+        viewBinding true
+    }
     namespace 'org.dash.wallet.integration.uphold'
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation project(path: ':common')
+
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'com.scottyab:secure-preferences-lib:0.1.7'
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
 
-    implementation project(path: ':common')
+    // UI / Architecture
+    implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
+    implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
+    implementation "com.google.android.material:material:$materialVersion"
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
-    implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     kapt "com.google.dagger:hilt-compiler:$hiltVersion"
 
     // Tests

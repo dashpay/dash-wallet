@@ -32,17 +32,13 @@ import de.schildbach.wallet.data.ServiceType
 import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentBuySellIntegrationsBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
-import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integrations) {
     companion object {
@@ -99,12 +95,7 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
 
     private fun onUpholdItemClicked() {
         viewModel.logEnterUphold()
-
-        if (viewModel.isUpholdAuthenticated) {
-            startActivity(Intent(requireContext(), UpholdAccountActivity::class.java))
-        } else {
-            startActivity(Intent(requireContext(), UpholdSplashActivity::class.java))
-        }
+        safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToUphold())
     }
 
     private fun onCoinbaseItemClicked() {

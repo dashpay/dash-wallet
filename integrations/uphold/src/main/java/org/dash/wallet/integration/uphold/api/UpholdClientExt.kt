@@ -17,8 +17,10 @@
 
 package org.dash.wallet.integration.uphold.api
 
+import org.dash.wallet.common.util.ensureSuccessful
 import org.dash.wallet.integration.uphold.data.UpholdCard
 import org.dash.wallet.integration.uphold.data.UpholdConstants
+import org.dash.wallet.integration.uphold.data.UpholdCryptoCardAddress
 import org.dash.wallet.integration.uphold.data.UpholdException
 import retrofit2.Call
 import retrofit2.Callback
@@ -75,25 +77,29 @@ fun UpholdClient.getDashBalance(callback: UpholdClient.Callback<BigDecimal>) {
     )
 }
 
-suspend fun UpholdClient.getAccessToken(code: String): String? {
-    return suspendCoroutine { continuation ->
-        this.getAccessToken(
-            code,
-            object : UpholdClient.Callback<String?> {
-                override fun onSuccess(dashCardId: String?) {
-                    continuation.resume(dashCardId)
-                }
+// TOOD: callers should handle
+// UpholdClient.log.error("Error obtaining Uphold access token " + response.message() + " code: " + response.code())
+suspend fun UpholdClient.getAccessToken(code: String?) {
+    val response = service.getAccessToken(
+        UpholdConstants.CLIENT_ID,
+        UpholdConstants.CLIENT_SECRET,
+        code,
+        "authorization_code"
+    )
+    response.ensureSuccessful()
 
-                override fun onError(e: Exception, otpRequired: Boolean) {
-                    continuation.resumeWithException(e)
-                }
-            }
-        )
+    if (response.isSuccessful) {
+        UpholdClient.log.info("Uphold access token obtained")
+        accessToken = response.body()!!.accessToken
+        storeAccessToken()
+        getCards(null, null)
+    } else {
+        throw UpholdException("Error obtaining Uphold access token", response.message(), response.code())
     }
 }
 
 fun UpholdClient.getCards(
-    callback: UpholdClient.Callback<String>,
+    callback: UpholdClient.Callback<String>?,
     getDashCardCb: UpholdClient.Callback<List<UpholdCard>>?
 ) {
     service.cards.enqueue(object : Callback<List<UpholdCard>> {
@@ -117,18 +123,108 @@ fun UpholdClient.getCards(
                         UpholdClient.log.info("Dash Card has no addresses")
                         createDashAddress(dashCard.id)
                     }
-                    callback.onSuccess(dashCard.id)
+                    callback?.onSuccess(dashCard.id)
                     getDashCardCb?.onSuccess(listOf(dashCard))
                 }
             } else {
                 UpholdClient.log.error("Error obtaining cards " + response.message() + " code: " + response.code())
-                callback.onError(UpholdException("Error obtaining cards", response.message(), response.code()), false)
+                callback?.onError(UpholdException("Error obtaining cards", response.message(), response.code()), false)
             }
         }
 
         override fun onFailure(call: Call<List<UpholdCard>>, t: Throwable) {
             UpholdClient.log.error("Error obtaining cards: " + t.message)
-            callback.onError(java.lang.Exception(t), false)
+            callback?.onError(java.lang.Exception(t), false)
         }
     })
+}
+
+suspend fun UpholdClient.revokeAccessToken() {
+    val response = service.revokeAccessToken(accessToken)
+    response.ensureSuccessful()
+
+    if (response.body()?.lowercase() == "ok") {
+        UpholdClient.log.info("Uphold access token revoked")
+        accessToken = null
+        storeAccessToken()
+    } else {
+        UpholdClient.log.error(
+            "Error revoking Uphold access token: " + response.message() + " code: " + response.code()
+        )
+        throw UpholdException("Error revoking Uphold access token", response.message(), response.code())
+    }
+}
+
+suspend fun UpholdClient.checkCapabilities() {
+    val operation = "withdrawals"
+    val response = service.getCapabilities(operation)
+    response.ensureSuccessful()
+    val capability = response.body()
+
+    if (capability != null && capability.key == operation) {
+        requirements[capability.key] = capability.requirements
+    }
+}
+
+fun UpholdClient.createDashCard(
+    callback: UpholdClient.Callback<String>?,
+    getDashCardCb: UpholdClient.Callback<List<UpholdCard>>?
+) {
+    val body: MutableMap<String, String> = HashMap()
+    body["label"] = "Dash Card"
+    body["currency"] = "DASH"
+
+    service.createCard(body).enqueue(object : Callback<UpholdCard?> {
+        override fun onResponse(call: Call<UpholdCard?>, response: Response<UpholdCard?>) {
+            if (response.isSuccessful && response.body() != null) {
+                UpholdClient.log.info("Dash Card created successfully")
+                dashCard = response.body()!!
+                val dashCardId: String = dashCard.id
+                callback?.onSuccess(dashCardId)
+                createDashAddress(dashCardId)
+                getDashCardCb?.onSuccess(listOf(response.body()!!))
+            } else {
+                UpholdClient.log.error("Error creating Dash Card: " + response.message() + " code: " + response.code())
+                callback?.onError(
+                    UpholdException("Error creating Dash Card", response.message(), response.code()),
+                    false
+                )
+            }
+        }
+
+        override fun onFailure(call: Call<UpholdCard?>, t: Throwable) {
+            UpholdClient.log.error("Error creating Dash Card " + t.message)
+        }
+    })
+}
+
+fun UpholdClient.createDashAddress(cardId: String?) {
+    val body: MutableMap<String, String> = HashMap()
+    body["network"] = "dash"
+    service.createCardAddress(cardId, body).enqueue(object : Callback<UpholdCryptoCardAddress?> {
+        override fun onResponse(call: Call<UpholdCryptoCardAddress?>, response: Response<UpholdCryptoCardAddress?>) {
+            UpholdClient.log.info("Dash Card address created")
+        }
+
+        override fun onFailure(call: Call<UpholdCryptoCardAddress?>, t: Throwable) {
+            UpholdClient.log.error("Error creating Dash Card address: " + t.message)
+        }
+    })
+}
+
+fun UpholdClient.getWithdrawalRequirements(): List<String> {
+    val result = requirements["withdrawals"]
+    return result ?: emptyList()
+}
+
+fun UpholdClient.storeAccessToken() {
+    prefs.edit().putString(UpholdClient.UPHOLD_ACCESS_TOKEN, accessToken).apply()
+}
+
+fun UpholdClient.getStoredAccessToken(): String? {
+    return prefs.getString(UpholdClient.UPHOLD_ACCESS_TOKEN, null)
+}
+
+fun UpholdClient.isAuthenticated(): Boolean {
+    return getStoredAccessToken() != null
 }

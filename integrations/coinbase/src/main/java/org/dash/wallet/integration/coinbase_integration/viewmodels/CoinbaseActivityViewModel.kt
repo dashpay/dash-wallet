@@ -22,7 +22,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -37,13 +36,11 @@ import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.mode
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
 
-@ExperimentalCoroutinesApi
 @HiltViewModel
 class CoinbaseActivityViewModel @Inject constructor(
     private val config: CoinbaseConfig,
     private val userPreference: Configuration,
-    private val coinBaseRepository: CoinBaseRepositoryInt,
-
+    private val coinBaseRepository: CoinBaseRepositoryInt
 ) : ViewModel() {
 
     private val _paymentMethodsUiState = MutableLiveData<PaymentMethodsUiState>(

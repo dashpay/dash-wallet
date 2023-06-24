@@ -63,3 +63,10 @@ fun Response.ensureSuccessful() {
         throw IOException("HTTP error: $code; $message")
     }
 }
+
+fun <T> retrofit2.Response<T>.ensureSuccessful() {
+    if (!isSuccessful) {
+        log.error("got http error {}: {}", code(), message())
+        throw IOException("HTTP error: ${code()}; ${message()}")
+    }
+}

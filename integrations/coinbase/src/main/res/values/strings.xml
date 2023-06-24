@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >Last known balance</string>
     <string name="coinbase_link_title">Link your Coinbase account</string>
     <string name="coinbase_link">Link Coinbase Account</string>
     <string name="coinbase_transfer_details">Between Dash Wallet and your Coinbase account</string>
@@ -69,7 +68,6 @@
     <string name="learn_more">Learn More</string>
     <string name="something_wrong_title">Something went wrong!</string>
     <string name="retry_later_message">Please retry a little bit later or contact our support center to get help</string>
-    <string name="convert_crypto">Convert Crypto</string>
     <string name="between_dash_wallet_and_coinbase">Between Dash Wallet and Coinbase.</string>
     <string name="conversion_preview">Conversion Preview</string>
     <string name="you_send">you send</string>

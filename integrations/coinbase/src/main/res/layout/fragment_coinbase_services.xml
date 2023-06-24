@@ -8,13 +8,58 @@
     android:background="@color/background_primary"
     tools:context=".ui.CoinbaseServicesFragment">
 
-    <include
-        android:id="@+id/title_bar"
-        layout="@layout/app_bar_with_icon"
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@android:color/white"
+        app:contentInsetStart="0dp"
+        app:contentInsetStartWithNavigation="0dp"
+        app:navigationIcon="@drawable/ic_back_arrow"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginRight="20dp">
+
+            <ImageView
+                android:id="@+id/toolbarIcon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignTop="@+id/toolbar_title"
+                android:layout_alignBottom="@+id/connected"
+                android:src="@drawable/ic_coinbase" />
+
+            <TextView
+                android:id="@+id/toolbar_title"
+                style="@style/Subtitle1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:layout_marginStart="11dp"
+                android:layout_marginTop="7dp"
+                android:layout_marginEnd="10dp"
+                android:layout_toEndOf="@+id/toolbarIcon"
+                android:gravity="center" />
+
+            <TextView
+                android:id="@+id/connected"
+                style="@style/Overline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/toolbar_title"
+                android:layout_marginStart="11dp"
+                android:layout_toEndOf="@+id/toolbarIcon"
+                android:drawablePadding="5dp"
+                app:drawableStartCompat="@drawable/ic_connected"
+                app:iconGravity="textStart" />
+        </RelativeLayout>
+    </androidx.appcompat.widget.Toolbar>
 
     <TextView
         android:id="@+id/title"
@@ -27,8 +72,7 @@
         android:text="@string/balance_on_coinbase"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/title_bar" />
-
+        app:layout_constraintTop_toBottomOf="@+id/toolbar" />
 
     <ImageView
         android:id="@+id/dash_icon"
@@ -97,7 +141,7 @@
             style="@style/MenuRowIcon"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_buy_dash_green"
+            android:src="@drawable/ic_buy"
             app:layout_constraintBottom_toBottomOf="@+id/buy_dash_subtitle"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@id/buy_dash_title" />
@@ -151,7 +195,7 @@
             style="@style/MenuRowIcon"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_convert_circle_fill"
+            android:src="@drawable/ic_convert"
             app:layout_constraintBottom_toBottomOf="@+id/convert_dash_subtitle"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@id/convert_dash_title" />
@@ -257,7 +301,7 @@
         <ImageView
             android:id="@+id/disconnect_icon"
             style="@style/MenuRowIcon"
-            android:src="@drawable/ic_disconnect_account"
+            android:src="@drawable/ic_disconnect"
             android:layout_marginStart="14dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"

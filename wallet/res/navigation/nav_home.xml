@@ -190,6 +190,13 @@
             app:enterAnim="@anim/slide_in_bottom"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/buySell_to_uphold"
+            app:destination="@id/upholdPortalFragment"
+            app:enterAnim="@anim/slide_in_bottom"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -203,6 +210,12 @@
             android:defaultValue="COINBASE"
             app:argType="de.schildbach.wallet.data.ServiceType" />
     </fragment>
+
+    <fragment
+        android:id="@+id/upholdPortalFragment"
+        android:name="org.dash.wallet.integration.uphold.ui.UpholdPortalFragment"
+        android:label="upholdPortalFragment"
+        tools:layout="@layout/fragment_integration_portal" />
 
     <fragment
         android:id="@+id/securityFragment"

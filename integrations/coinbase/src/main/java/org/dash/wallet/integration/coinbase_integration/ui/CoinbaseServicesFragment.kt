@@ -26,7 +26,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -42,7 +41,6 @@ import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseActiv
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 import javax.inject.Inject
 
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private val binding by viewBinding(FragmentCoinbaseServicesBinding::bind)
@@ -56,8 +54,8 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.titleBar.toolbarTitle.setText(R.string.coinbase)
-        binding.titleBar.toolbar.setNavigationOnClickListener {
+        binding.toolbar.title = getString(R.string.coinbase)
+        binding.toolbar.setNavigationOnClickListener {
             requireActivity().finish()
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){
@@ -184,8 +182,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
     private fun setLocalFaitAmount(balance: String) {
         val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
-        val localValue =
-            exchangeRate.coinToFiat(Coin.parseCoin(balance))
+        val localValue = exchangeRate.coinToFiat(Coin.parseCoin(balance))
         binding.walletBalanceLocal.text = GenericUtils.fiatToString(localValue)
     }
 
@@ -217,8 +214,8 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         binding.lastKnownBalance.isVisible = !hasInternet
         binding.networkStatusStub.isVisible = !hasInternet
         binding.coinbaseServicesGroup.isVisible = hasInternet
-        binding.titleBar.connected.setText(if (hasInternet) R.string.connected else R.string.disconnected)
-        binding.titleBar.connected.setCompoundDrawablesWithIntrinsicBounds(if (hasInternet)
+        binding.connected.setText(if (hasInternet) R.string.connected else R.string.disconnected)
+        binding.connected.setCompoundDrawablesWithIntrinsicBounds(if (hasInternet)
             org.dash.wallet.common.R.drawable.ic_connected else
                 org.dash.wallet.common.R.drawable.ic_disconnected, 0,0,0)
     }
