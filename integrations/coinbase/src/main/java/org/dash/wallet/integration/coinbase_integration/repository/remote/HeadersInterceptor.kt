@@ -26,9 +26,6 @@ import javax.inject.Inject
 class HeadersInterceptor @Inject constructor(
     private val userPreferences: Configuration
 ) : Interceptor {
-    companion object {
-        private val log = LoggerFactory.getLogger(HeadersInterceptor::class.java)
-    }
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
         val requestBuilder = original.newBuilder()
@@ -36,7 +33,6 @@ class HeadersInterceptor @Inject constructor(
 
         val accessToken = userPreferences.lastCoinbaseAccessToken
         if (accessToken.isNotEmpty()) {
-            log.info("Bearer $accessToken")
             requestBuilder.header("Authorization", "Bearer $accessToken")
         }
 
