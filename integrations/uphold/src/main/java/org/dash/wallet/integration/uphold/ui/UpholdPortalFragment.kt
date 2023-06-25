@@ -30,6 +30,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
@@ -203,5 +204,13 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
     private fun setConnectedState(isConnected: Boolean) {
         binding.connectedGroup.isVisible = isConnected
         binding.linkAccountBtn.isVisible = !isConnected
+        binding.transferBtn.isEnabled = isConnected
+        binding.transferIcon.setRoundedBackground(
+            if (isConnected) {
+                R.style.TransferDashCircle
+            } else {
+                R.style.DisabledCircle
+            }
+        )
     }
 }

@@ -34,7 +34,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
-import org.dash.wallet.common.ui.getRoundedBackground
+import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.EnterTwoFaCodeFragmentBinding
@@ -74,7 +74,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
         }
 
         viewModel.twoFaErrorState.observe(viewLifecycleOwner){
-            binding.enterCodeField.background = resources.getRoundedBackground(org.dash.wallet.common.R.style.InputErrorBackground)
+            binding.enterCodeField.setRoundedBackground(org.dash.wallet.common.R.style.InputErrorBackground)
             binding.incorrectCodeGroup.isVisible = true
             binding.enterCodeDetails.isVisible = false
         }
