@@ -101,6 +101,7 @@
     <color name="extra_dark_gray_0.1">#1A525C66</color>
     <color name="dash_blue_0.1">#1A008DE4</color>
     <color name="dash_blue_0.05">#0D008DE4</color>
+    <color name="dash_blue_0.08">#14008DE4</color>
 
     <color name="blue_50">#F0F8FE</color>
     <color name="light_blue">#1A008DE4</color>

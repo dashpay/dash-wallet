@@ -198,7 +198,7 @@
 
         <Button
             android:id="@+id/notify_when_done"
-            style="@style/Button.Primary.Large.LightGrey"
+            style="@style/Button.Primary.Large.LightBlue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="20dp"

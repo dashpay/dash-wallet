@@ -381,7 +381,7 @@
 
     <Button
         android:id="@+id/link_account_btn"
-        style="@style/Button.Primary.Large.Blue"
+        style="@style/Button.Primary.Large.LightBlue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="15dp"
