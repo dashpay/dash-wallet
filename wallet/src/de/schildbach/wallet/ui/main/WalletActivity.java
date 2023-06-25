@@ -275,7 +275,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             log.info("the wallet is not encrypted");
             viewModel.logError(new Exception("the wallet is not encrypted / OnboardingActivity"),
                     "no other details are available without the user submitting a report");
-            AdaptiveDialog dialog = AdaptiveDialog.custom(R.layout.dialog_adaptive,
+            AdaptiveDialog dialog = AdaptiveDialog.create(
                     R.drawable.ic_error,
                     getString(R.string.wallet_encryption_error_title),
                     getString(R.string.wallet_not_encrypted_error_message),

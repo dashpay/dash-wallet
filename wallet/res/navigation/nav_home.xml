@@ -195,6 +195,7 @@
             android:id="@+id/buySell_to_uphold"
             app:destination="@id/upholdPortalFragment"
             app:enterAnim="@anim/slide_in_bottom"
+            app:popEnterAnim="@anim/activity_stay"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
     </fragment>

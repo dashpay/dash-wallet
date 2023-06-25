@@ -38,6 +38,8 @@ import org.dash.wallet.common.util.toCoin
 import org.dash.wallet.integration.uphold.api.UpholdClient
 import org.dash.wallet.integration.uphold.api.checkCapabilities
 import org.dash.wallet.integration.uphold.api.getDashBalance
+import org.dash.wallet.integration.uphold.api.isAuthenticated
+import org.dash.wallet.integration.uphold.api.preferences
 import org.dash.wallet.integration.uphold.api.revokeAccessToken
 import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.data.UpholdException
@@ -63,7 +65,7 @@ class UpholdViewModel @Inject constructor(
     }
 
     private var exchangeRate: ExchangeRate? = null
-    private val _uiState = MutableStateFlow(UpholdPortalUIState())
+    private val _uiState = MutableStateFlow(UpholdPortalUIState(isUserLoggedIn = upholdClient.isAuthenticated))
     val uiState: StateFlow<UpholdPortalUIState> = _uiState.asStateFlow()
 
     init {
@@ -79,6 +81,12 @@ class UpholdViewModel @Inject constructor(
                 _uiState.update { it.copy(fiatBalance = fiatBalance) }
             }
             .launchIn(viewModelScope)
+
+        upholdClient.preferences.registerOnSharedPreferenceChangeListener { _, prefName ->
+            if (prefName == UpholdClient.UPHOLD_ACCESS_TOKEN) {
+                _uiState.update { it.copy(isUserLoggedIn = upholdClient.isAuthenticated) }
+            }
+        }
     }
 
     suspend fun refreshBalance() {

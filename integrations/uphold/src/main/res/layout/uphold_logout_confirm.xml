@@ -18,21 +18,59 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:fillViewport="true"
-    android:scrollbars="none"
-    style="@style/DialogContainer">
+    android:layout_height="wrap_content">
 
     <TextView
-        android:id="@+id/uphold_logout_explanation"
+        android:id="@+id/dialog_title"
+        style="@style/Subtitle1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="@string/uphold_logout_explanation_text" />
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="10dp"
+        android:gravity="center"
+        android:textAlignment="gravity"
+        android:text="@string/uphold_logout_title" />
+
+    <TextView
+        android:id="@+id/dialog_message"
+        style="@style/Body2.Secondary"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginBottom="25dp"
+        android:gravity="center"
+        android:textAlignment="gravity"
+        android:layout_weight="1"
+        android:text="@string/uphold_logout_explanation_text"
+        app:layout_constraintTop_toTopOf="@id/title" />
 
     <ImageView
         android:id="@+id/uphold_logout_instruction_image"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:srcCompat="@drawable/logout" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="15dp"
+        android:layout_marginBottom="15dp">
+
+        <Button
+            android:id="@+id/dialog_negative_button"
+            style="@style/Button.Tertiary.Blue"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@android:string/cancel" />
+
+        <Button
+            android:id="@+id/dialog_positive_button"
+            style="@style/Button.Primary.Blue"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="@string/uphold_go_to_website" />
+    </LinearLayout>
 </LinearLayout>

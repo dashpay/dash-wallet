@@ -17,6 +17,8 @@
 
 package org.dash.wallet.integration.uphold.api
 
+import android.content.SharedPreferences
+import com.securepreferences.SecurePreferences
 import org.dash.wallet.common.util.ensureSuccessful
 import org.dash.wallet.integration.uphold.data.UpholdCard
 import org.dash.wallet.integration.uphold.data.UpholdConstants
@@ -227,3 +229,6 @@ fun UpholdClient.getStoredAccessToken(): String? {
 
 val UpholdClient.isAuthenticated: Boolean
     get() = getStoredAccessToken() != null
+
+val UpholdClient.preferences: SharedPreferences
+    get() = prefs

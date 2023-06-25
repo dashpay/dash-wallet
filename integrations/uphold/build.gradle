@@ -35,6 +35,15 @@ android {
     namespace 'org.dash.wallet.integration.uphold'
 }
 
+kapt {
+    correctErrorTypes true
+}
+
+hilt {
+    enableAggregatingTask = true
+}
+
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation project(path: ':common')

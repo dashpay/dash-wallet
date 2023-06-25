@@ -119,14 +119,7 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         val liquidClient = LiquidClient.getInstance()
 
         if (liquidClient.isAuthenticated) {
-            AdaptiveDialog.custom(
-                R.layout.dialog_liquid_unavailable,
-                null,
-                "",
-                "",
-                "",
-                getString(android.R.string.ok)
-            ).apply {
+            AdaptiveDialog.custom(R.layout.dialog_liquid_unavailable).apply {
                 isCancelable = false
             }.show(requireActivity()) {
                 liquidClient.clearLiquidData()

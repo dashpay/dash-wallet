@@ -71,11 +71,6 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
             val goodToGo = if (viewModel.shouldShowCoinbaseInfoPopup) {
                 AdaptiveDialog.custom(
                     R.layout.dialog_withdrawal_limit_info,
-                    null,
-                    getString(R.string.set_auth_limit),
-                    getString(R.string.change_withdrawal_limit),
-                    "",
-                    getString(R.string.got_it)
                 ).showAsync(requireActivity()) ?: false
             } else {
                 true

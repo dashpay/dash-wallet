@@ -134,7 +134,14 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/balance_local"
+        app:layout_constraintBottom_toTopOf="@id/actions_view"
         tools:visibility="visible" />
+
+    <Space
+        android:id="@+id/header_space"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        app:layout_constraintTop_toBottomOf="@+id/last_known_balance" />
 
     <androidx.cardview.widget.CardView
         android:id="@+id/actions_view"
@@ -142,9 +149,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="15dp"
-        android:layout_marginTop="22dp"
+        android:layout_marginTop="8dp"
         app:cardCornerRadius="12dp"
-        app:layout_constraintTop_toBottomOf="@id/last_known_balance"
+        app:layout_constraintTop_toBottomOf="@id/header_space"
         app:layout_constraintVertical_chainStyle="packed">
 
         <LinearLayout
@@ -382,4 +389,10 @@
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         tools:text="Link Coinbase Account" />
+
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/connected_group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:constraint_referenced_ids="balance_header, balance_local, balance_dash, dash_icon, header_space, disconnect_btn" />
 </androidx.constraintlayout.widget.ConstraintLayout>

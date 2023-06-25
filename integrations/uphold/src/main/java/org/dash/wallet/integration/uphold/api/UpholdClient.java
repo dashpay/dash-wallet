@@ -20,8 +20,6 @@ package org.dash.wallet.integration.uphold.api;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import androidx.annotation.NonNull;
-
 import com.securepreferences.SecurePreferences;
 
 import org.dash.wallet.integration.uphold.data.UpholdApiException;
@@ -32,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +56,7 @@ public class UpholdClient {
     static final Logger log = LoggerFactory.getLogger(UpholdClient.class);
 
     private static final String UPHOLD_PREFS = "uphold_prefs.xml";
-    static final String UPHOLD_ACCESS_TOKEN = "access_token";
+    public static final String UPHOLD_ACCESS_TOKEN = "access_token";
 
     private static final String OTP_REQUIRED_KEY = "OTP-Token";
     private static final String OTP_REQUIRED_VALUE = "required";

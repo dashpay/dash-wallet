@@ -29,13 +29,11 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
-import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.uphold.R
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
 import org.dash.wallet.integration.uphold.data.UpholdConstants
@@ -65,6 +63,8 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
         binding.disconnectTitle.text = getString(R.string.uphold_disconnect)
         binding.linkAccountBtn.text = getString(R.string.uphold_link_account)
 
+        setConnectedState(viewModel.uiState.value.isUserLoggedIn)
+
         binding.toolbar.setOnClickListener {
             findNavController().popBackStack()
         }
@@ -80,7 +80,7 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
             linkAccount()
         }
 
-        binding.disconnectBtn.setOnClickListener { openLogOutUrl() }
+        binding.disconnectBtn.setOnClickListener { confirmLogout() }
 
         viewModel.uiState.observe(viewLifecycleOwner) { uiState ->
             binding.balanceDash.setAmount(uiState.balance)
@@ -88,8 +88,11 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
                 binding.balanceLocal.text = GenericUtils.fiatToString(it)
             }
 
-            if (!uiState.isUserLoggedIn) {
-//                startUpholdSplashActivity() TODO: change the screen state instead, show showNotLoggedInDialog dialog
+            if (uiState.isUserLoggedIn) {
+                setConnectedState(true)
+            } else if (binding.connectedGroup.isVisible) {
+                // The screen thinks it's still connected. Show the dialog and change the state.
+                showNotLoggedInDialog()
             }
 
             uiState.errorCode?.let {
@@ -139,16 +142,15 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
 //        startActivityForResult(intent, REQUEST_CODE_TRANSFER)
     }
 
-    private fun revokeAccessToken() {
-        val inflater = this.layoutInflater
-        val dialogView: View = inflater.inflate(R.layout.uphold_logout_confirm, null)
-        val alertDialogBuilder = BaseAlertDialogBuilder(requireContext())
-        alertDialogBuilder.title = getString(R.string.uphold_logout_title)
-        alertDialogBuilder.positiveText = getString(R.string.uphold_go_to_website)
-        alertDialogBuilder.positiveAction = {
-            lifecycleScope.launch {
-                viewModel.revokeUpholdAccessToken()
-            }
+    private fun confirmLogout() {
+        AdaptiveDialog.custom(R.layout.uphold_logout_confirm).show(requireActivity())
+//
+//        alertDialogBuilder.title = getString(R.string.uphold_logout_title)
+//        alertDialogBuilder.positiveText = getString(R.string.uphold_go_to_website)
+//        alertDialogBuilder.positiveAction = {
+//            lifecycleScope.launch {
+//                viewModel.revokeUpholdAccessToken()
+//            }
 
             // TODO
 //            fun onSuccess(result: String) {
@@ -167,22 +169,15 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
 //                    showErrorAlert(e.code)
 //                } else showErrorAlert(-1)
 //            }
-        }
-        alertDialogBuilder.negativeText = getString(android.R.string.cancel)
-        alertDialogBuilder.view = dialogView
-        // TODO: show
+//        }
+//        alertDialogBuilder.negativeText = getString(android.R.string.cancel)
+//        alertDialogBuilder.view = dialogView
     }
 
     private fun openUpholdToLogout() {
         val url = UpholdConstants.LOGOUT_URL
         requireActivity().openCustomTab(url)
 //        super.turnOffAutoLogout() TODO
-    }
-
-    // TODO
-    private fun openLogOutUrl() {
-        // revoke access to the token
-        revokeAccessToken()
     }
 
     private fun showNotLoggedInDialog() {
@@ -194,10 +189,8 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
             ""
         )
         dialog.isCancelable = false
-        dialog.show(requireActivity()) { result: Boolean? ->
-            if (result != null && result) {
-//                startUpholdSplashActivity() TODO
-            }
+        dialog.show(requireActivity()) {
+            setConnectedState(false)
         }
     }
 
@@ -205,5 +198,10 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
         val url = viewModel.getLinkAccountUrl()
         viewModel.logEvent(AnalyticsConstants.Uphold.LINK_ACCOUNT)
         requireActivity().openCustomTab(url)
+    }
+
+    private fun setConnectedState(isConnected: Boolean) {
+        binding.connectedGroup.isVisible = isConnected
+        binding.linkAccountBtn.isVisible = !isConnected
     }
 }
