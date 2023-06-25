@@ -40,7 +40,8 @@
         android:layout_height="80dp"
         android:padding="12dp"
         android:src="@drawable/ic_uphold"
-        android:background="@drawable/uphold_gradient_background"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/UpholdLogoBackground"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -64,7 +65,7 @@
         android:layout_height="34dp"
         android:layout_marginTop="23dp"
         android:layout_marginStart="36dp"
-        android:src="@drawable/ic_transfer_dash"
+        app:srcCompat="@drawable/ic_transfer_dash"
         app:layout_constraintTop_toBottomOf="@id/headline"
         app:layout_constraintStart_toStartOf="parent" />
 

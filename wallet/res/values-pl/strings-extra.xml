@@ -408,7 +408,17 @@
     <string name="masternode_key_type_operator">Klucze operatora</string>
     <string name="masternode_key_type_platform">Operator Kluczy do HPMN</string>
     <string name="masternode_key_type_total">%d kluczy</string>
+    <string name="masternode_key_type_used">%d użyte</string>
+    <string name="masternode_key_pair_index">Para Kluczy %d</string>
     <string name="masternode_key_address">Adres</string>
+    <string name="masternode_key_id">Identyfikator Klucza</string>
+    <string name="masternode_key_public">Klucz Publiczny</string>
+    <string name="masternode_key_public_legacy">Klucz Publiczny (ze starej wersji)</string>
+    <string name="masternode_key_private_hex">Klucz Prywatny</string>
+    <string name="masternode_key_private_wif">Klucz Prywatny WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
     <string name="masternode_key_ip_address_unknown">Nieznany</string>
+    <string name="masternode_key_not_used">Nie użyte</string>
     <string name="masternode_key_revoked">Unieważniony</string>
-    </resources>
+    <string name="masternode_key_private_public_base64">Prywatne / Publiczne (base64)</string>
+</resources>

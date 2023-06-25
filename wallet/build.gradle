@@ -36,9 +36,9 @@ dependencies {
 
     // Android arch
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.annotation:annotation:1.2.0'
+    implementation 'androidx.annotation:annotation:1.5.0'
     implementation "androidx.core:core-ktx:$jetpackVersion"
-    implementation "androidx.fragment:fragment-ktx:1.3.6"
+    implementation "androidx.fragment:fragment-ktx:1.5.0"
     implementation('androidx.legacy:legacy-support-v13:1.0.0') {
         exclude(group: 'com.android.support', module: 'support-fragment')
         exclude(group: 'com.android.support', module: 'support-media-compat')
@@ -56,11 +56,6 @@ dependencies {
     //noinspection GradleDependency
     implementation 'com.google.zxing:core:3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
 
-    implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
-    implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
-
-    implementation 'com.squareup.moshi:moshi:1.11.0'
-    implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
     implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
         exclude(group: 'com.google.android', module: 'android')
@@ -70,6 +65,13 @@ dependencies {
     implementation 'com.tbuonomo:dotsindicator:4.2'
 
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
+
+    // Network
+    implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
+    implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
+    implementation 'com.squareup.moshi:moshi:1.11.0'
+    implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
+    implementation 'com.squareup.retrofit2:converter-moshi:2.6.4'
 
     // UI
     implementation "androidx.appcompat:appcompat:$appCompatVersion"
@@ -187,8 +189,8 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 31
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 90010
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "9.0.1"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 90020
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "9.0.2"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true

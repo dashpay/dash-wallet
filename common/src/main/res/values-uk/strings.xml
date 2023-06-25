@@ -16,7 +16,11 @@
     <string name="error">Помилка</string>
     <string name="select_a_coin">Виберіть монету</string>
     <string name="request_coins_share_dialog_title">Поділитись запитом Dash-монет…</string>
+    <string name="buy_with_fiat">Купити Dash за фіат</string>
+    <string name="buy_and_convert">Купуйте та конвертуйте Dash за допомогою іншої криптовалюти</string>
     <string name="transfer_dash">Переказати Dash</string>
+    <string name="login_error_title">Навдалося ввійти в ваш %s акаунт</string>
+    <string name="login_error_message">Сталася помилка під час входу до вашого %s акаунту.</string>
     <string name="balance">Баланс:</string>
 
     <!-- Local Currency List: GGP -->
@@ -51,6 +55,7 @@
     <string name="button_understand">Я розумію</string>
     <string name="button_okay">Згода</string>
     <string name="button_share">Поділитися</string>
+    <string name="share_address">Поділитися адресою</string>
     <string name="verify">Підтвердити</string>
     <string name="receive_enter_amount_button">Вкажіть суму</string>
 

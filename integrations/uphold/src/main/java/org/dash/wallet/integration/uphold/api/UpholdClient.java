@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -53,15 +52,15 @@ import retrofit2.Response;
 public class UpholdClient {
 
     private static UpholdClient instance;
-    private final UpholdService service;
+    public final UpholdService service;
     private final SharedPreferences prefs;
     private final String encryptionKey;
-    private String accessToken;
+    public String accessToken;
     private String otpToken;
-    private UpholdCard dashCard;
+    public UpholdCard dashCard;
     private final Map<String, List<String>> requirements = new HashMap<>();
 
-    private static final Logger log = LoggerFactory.getLogger(UpholdClient.class);
+    public static final Logger log = LoggerFactory.getLogger(UpholdClient.class);
 
     private static final String UPHOLD_PREFS = "uphold_prefs.xml";
     private static final String UPHOLD_ACCESS_TOKEN = "access_token";
@@ -125,7 +124,7 @@ public class UpholdClient {
                     log.info("Uphold access token obtained");
                     accessToken = response.body().getAccessToken();
                     storeAccessToken();
-                    getCards(callback, null);
+                    UpholdClientExtKt.getCards(UpholdClient.this, callback, null);
                 } else {
                     log.error("Error obtaining Uphold access token " + response.message() + " code: " + response.code());
                     callback.onError(new UpholdException("Error obtaining Uphold access token", response.message(), response.code()), false);
@@ -191,7 +190,7 @@ public class UpholdClient {
         return result == null ? Collections.emptyList() : result;
     }
 
-    private void storeAccessToken() {
+    public void storeAccessToken() {
         prefs.edit().putString(UPHOLD_ACCESS_TOKEN, accessToken).apply();
     }
 
@@ -199,41 +198,7 @@ public class UpholdClient {
         return prefs.getString(UPHOLD_ACCESS_TOKEN, null);
     }
 
-    private void getCards(final Callback<String> callback, final Callback<UpholdCard> getDashCardCb) {
-        service.getCards().enqueue(new retrofit2.Callback<List<UpholdCard>>() {
-            @Override
-            public void onResponse(Call<List<UpholdCard>> call, Response<List<UpholdCard>> response) {
-                if (response.isSuccessful()) {
-                    log.info("get cards success");
-                    dashCard = getDashCard(response.body());
-                    if (dashCard == null) {
-                        log.info("Dash Card not available");
-                        createDashCard(callback, getDashCardCb);
-                    } else {
-                        if (dashCard.getAddress().getCryptoAddress() == null) {
-                            log.info("Dash Card has no addresses");
-                            createDashAddress(dashCard.getId());
-                        }
-                        callback.onSuccess(dashCard.getId());
-                        if (getDashCardCb != null) {
-                            getDashCardCb.onSuccess(dashCard);
-                        }
-                    }
-                } else {
-                    log.error("Error obtaining cards " + response.message() + " code: " + response.code());
-                    callback.onError(new UpholdException("Error obtaining cards", response.message(), response.code()), false);
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<UpholdCard>> call, Throwable t) {
-                log.error("Error obtaining cards: " + t.getMessage());
-                callback.onError(new Exception(t), false);
-            }
-        });
-    }
-
-    private void createDashCard(final Callback<String> callback, final Callback<UpholdCard> getDashCardCb) {
+    public void createDashCard(final Callback<String> callback, final Callback<List<UpholdCard>> getDashCardCb) {
         Map<String, String> body = new HashMap<>();
         body.put("label", "Dash Card");
         body.put("currency", "DASH");
@@ -247,7 +212,7 @@ public class UpholdClient {
                     callback.onSuccess(dashCardId);
                     createDashAddress(dashCardId);
                     if (getDashCardCb != null) {
-                        getDashCardCb.onSuccess(response.body());
+                        getDashCardCb.onSuccess(Collections.singletonList(response.body()));
                     }
                 } else {
                     log.error("Error creating Dash Card: " + response.message() + " code: " + response.code());
@@ -262,7 +227,7 @@ public class UpholdClient {
         });
     }
 
-    private void createDashAddress(String cardId) {
+    public void createDashAddress(String cardId) {
         Map<String, String> body = new HashMap<>();
         body.put("network", "dash");
         service.createCardAddress(cardId, body).enqueue(new retrofit2.Callback<UpholdCryptoCardAddress>() {
@@ -274,50 +239,6 @@ public class UpholdClient {
             @Override
             public void onFailure(Call<UpholdCryptoCardAddress> call, Throwable t) {
                 log.error("Error creating Dash Card address: " + t.getMessage());
-            }
-        });
-    }
-
-    private UpholdCard getDashCard(List<UpholdCard> cards) {
-        for (UpholdCard card : cards) {
-            if (card.getCurrency().equalsIgnoreCase("dash")) {
-                return card;
-            }
-        }
-        return null;
-    }
-
-    public void getDashBalance(final Callback<BigDecimal> callback) {
-        getCards(new Callback<String>() {
-            @Override
-            public void onSuccess(String data) {
-
-            }
-
-            @Override
-            public void onError(Exception e, boolean otpRequired) {
-                log.error("Error loading Dash balance: " + e.getMessage());
-                if (e instanceof UpholdException) {
-                    UpholdException ue = (UpholdException) e;
-                    if (ue.getCode() == 401) {
-                        //we don't have the correct access token, let's logout
-                        accessToken = null;
-                        storeAccessToken();
-                    }
-                }
-                callback.onError(e, otpRequired);
-            }
-        }, new Callback<UpholdCard>() {
-            @Override
-            public void onSuccess(UpholdCard card) {
-                log.info("Dash balance loaded");
-                callback.onSuccess(new BigDecimal(card.getAvailable()));
-            }
-
-            @Override
-            public void onError(Exception e, boolean otpRequired) {
-                log.error("Error loading Dash balance: " + e.getMessage());
-                callback.onError(e, otpRequired);
             }
         });
     }
@@ -401,41 +322,5 @@ public class UpholdClient {
         void onSuccess(T data);
 
         void onError(Exception e, boolean otpRequired);
-    }
-
-    public interface CallbackFilter<T> {
-        void onSuccess(T data, String length);
-
-        void onError(Exception e, boolean otpRequired);
-    }
-
-    public void getUpholdCurrency(String rangeString, final CallbackFilter<String> callback) {
-
-        service.getUpholdCurrency(rangeString, UpholdConstants.UPHOLD_CURRENCY_LIST).enqueue(new retrofit2.Callback<String>() {
-            @Override
-            public void onResponse(Call<String> call, Response<String> response) {
-                System.out.println("Response::" + response);
-                String length = "";
-                if (rangeString == "items=0-50") {
-
-                    length = response.headers().get("content-range");
-                }
-
-                System.out.println("ContentLength::" + length);
-
-
-                if (response.isSuccessful()) {
-                    callback.onSuccess(response.body(), length);
-                } else {
-                    log.error("Error obtaining Uphold access token " + response.message() + " code: " + response.code());
-                    callback.onError(new UpholdException("Error obtaining Uphold access token", response.message(), response.code()), false);
-                }
-            }
-
-            @Override
-            public void onFailure(Call<String> call, Throwable t) {
-                callback.onError(new Exception(t), false);
-            }
-        });
     }
 }

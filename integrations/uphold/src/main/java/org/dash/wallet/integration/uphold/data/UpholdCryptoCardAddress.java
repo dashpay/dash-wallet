@@ -17,11 +17,11 @@
 
 package org.dash.wallet.integration.uphold.data;
 
-import com.squareup.moshi.Json;
+import com.google.gson.annotations.SerializedName;
 
 public class UpholdCryptoCardAddress {
 
-    @Json(name = "id")
+    @SerializedName("id")
     private String address;
     private String network;
 

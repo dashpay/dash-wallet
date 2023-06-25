@@ -399,7 +399,17 @@
     <string name="masternode_key_type_operator">操作員公鑰</string>
     <string name="masternode_key_type_platform">HPMN 操作員公鑰</string>
     <string name="masternode_key_type_total">%d 密鑰</string>
+    <string name="masternode_key_type_used">%d 己使用</string>
+    <string name="masternode_key_pair_index">密鑰對%d</string>
     <string name="masternode_key_address">地址</string>
+    <string name="masternode_key_id">密鑰 Id</string>
+    <string name="masternode_key_public">公鑰</string>
+    <string name="masternode_key_public_legacy">公鑰 (legacy)</string>
+    <string name="masternode_key_private_hex">私鑰</string>
+    <string name="masternode_key_private_wif">私鑰 WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
     <string name="masternode_key_ip_address_unknown">未知的</string>
+    <string name="masternode_key_not_used">尚未使用</string>
     <string name="masternode_key_revoked">已撤銷</string>
-    </resources>
+    <string name="masternode_key_private_public_base64">私鑰 / 公鑰 (base64)</string>
+</resources>

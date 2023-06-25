@@ -1,4 +1,8 @@
 Dash Wallet
+v9.0.2
+* update to dashj 19.0.2
+* Coinbase: hide Transfer Dash when network offline
+
 v9.0.1
 * update to dashj 19.0.1 (sync fixes and crash fixes)
 

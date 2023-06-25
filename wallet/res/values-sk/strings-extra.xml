@@ -27,6 +27,8 @@
     <string name="dialog_confirm_total">Celkovo</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_secure_now">Záloha</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Skenovať</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Poslať</string>
@@ -208,6 +210,12 @@
     <string name="verify_continue">Pokračovať</string>
     <string name="verify_backup_wallet">Zálohovať peňaženku</string>
     <string name="verify_show_recovery_phrase">Zobraziť frázu obnovenia</string>
+    <string name="verify_info_title">Zálohujte si frázu na obnovenie</string>
+    <string name="verify_info_subtitle">Túto frázu pre obnovenie budete potrebovať na prístup k vašim finančným prostriedkom, ak dôjde k strate či poškodeniu zariadenia, alebo odinštalovaniu Dash Wallet zo zariadenia.</string>
+    <string name="verify_info_title_1">Dash Core Group neuchováva túto frázu pre obnovenie</string>
+    <string name="verify_info_subtitle_1">Ktokoľvek, kto má vašu frázu na obnovenie, má prístup k vašim finančným prostriedkom.</string>
+    <string name="verify_info_title_2">Bez frázy na obnovenie NEBUDETE môcť obnoviť peňaženku</string>
+    <string name="verify_info_subtitle_2">Napíšte ju na bezpečné miesto a nikomu ju neukazujte.</string>
     <string name="verify_seed_buttons_tip">Klepnite na slová z obnovovacej frázy v správnom poradí</string>
     <string name="verify_seed_success_title">Úspešne overené</string>
     <string name="verify_seed_success_message">Vaša peňaženka je zabezpečená. Frázu pre obnovenie môžete kedykoľvek použiť na obnovenie svojho účtu na inom zariadení.</string>
@@ -241,6 +249,10 @@
     <string name="transaction_details_moved_from">Presunuté z</string>
     <string name="transaction_details_moved_internally_to">Interne presunuté do</string>
     <string name="transaction_failed_details">Transakcia zlyhala</string>
+    <string name="transaction_failed_resolve">Toto by sa dalo vyriešiť pomocou</string>
+    <string name="transaction_failed_rescan">preskenovaním blockchainu</string>
+    <string name="transaction_failed_in_conflict">To je možné, ak je peňaženka nainštalovaná na dvoch zariadeniach.</string>
+
     <string name="authenticate_fingerprint_title">Overiť</string>
     <string name="authenticate_fingerprint_message">Pre pokračovanie potvrďte odtlačok prsta</string>
     <string name="authenticate_pin_message">Pokračujte zadaním PIN kódu</string>
@@ -273,6 +285,7 @@
     <string name="about_review_and_rate">Pridať recenziu alebo ohodnotiť applikáciu</string>
     <string name="about_contact_support">Kontaktovať podporu</string>
     <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
+    <string name="about_copyright">Autorské práva © 2023 Dash Core Group</string>
     <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
     <string name="about_last_explore_device_sync">Posledná synchronizácia preskúmania zariadenia</string>
@@ -358,6 +371,7 @@
     <string name="yesterday">Včera</string>
 
     <string name="syncing">Synchronizuje sa</string>
+    <string name="syncing_balance">Synchronizuje sa zostatok</string>
     <string name="transaction_count">%d transakcií</string>
     <string name="all_transactions">Všetko</string>
     <string name="received_transactions">Prijté</string>
@@ -388,10 +402,23 @@
     <string name="reclassify_transactions_linked_accounts_message">v predvolenom nastavení budú všetky transakcie do alebo z vašich prepojených účtov (výmeny, vkladanie atď.) označené ako prevody.</string>
     <string name="reclassify_transactions_change_explanation">Na domovskej stránke vyberte ľubovoľnú transakciu a zmeňte kategóriu na stránke podrobností transakcie.</string>
 
+    <string name="masternode_keys_title">Kľúče Masternode</string>
     <string name="masternode_key_type_owner">Kľúče vlastníka</string>
     <string name="masternode_key_type_voting">Hlasovacie kľúče</string>
     <string name="masternode_key_type_operator">Kľúče operátora</string>
+    <string name="masternode_key_type_platform">Kľúče operátora HPMN</string>
+    <string name="masternode_key_type_total">%d kľúče</string>
+    <string name="masternode_key_type_used">%d použité</string>
+    <string name="masternode_key_pair_index">Kľúčový pár %d</string>
     <string name="masternode_key_address">Adresa</string>
+    <string name="masternode_key_id">Id kľúča</string>
+    <string name="masternode_key_public">Verejný kľúč</string>
+    <string name="masternode_key_public_legacy">Verejný kľúč (starý)</string>
+    <string name="masternode_key_private_hex">Súkromný kľúč</string>
+    <string name="masternode_key_private_wif">Súkromný kľúč WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
     <string name="masternode_key_ip_address_unknown">Neznáme</string>
+    <string name="masternode_key_not_used">Nepoužité</string>
     <string name="masternode_key_revoked">Zrušený</string>
-    </resources>
+    <string name="masternode_key_private_public_base64">Súkromné / Verejné kľúče (base64)</string>
+</resources>

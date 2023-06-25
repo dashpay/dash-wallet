@@ -85,9 +85,9 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             requireActivity().finish()
         }
 
-        if (savedInstanceState == null) {
-            viewModel.initPaymentIntent(args.paymentIntent)
+        viewModel.initPaymentIntent(args.paymentIntent)
 
+        if (savedInstanceState == null) {
             val intentAmount = args.paymentIntent.amount
             var dashToFiat = viewModel.isDashToFiatPreferred
             // If an amount is specified (in Dash), then set the active currency to Dash
@@ -106,6 +106,10 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 .add(R.id.enter_amount_fragment_placeholder, fragment)
                 .commitNow()
             enterAmountFragment = fragment
+        } else {
+            enterAmountFragment = childFragmentManager.findFragmentById(
+                R.id.enter_amount_fragment_placeholder
+            ) as EnterAmountFragment
         }
 
         binding.hideButton.setOnClickListener {
@@ -129,7 +133,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
 
         enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.currentAmount = it }
-        enterAmountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) { viewModel.isDashToFiatPreferred = it}
+        enterAmountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) { viewModel.isDashToFiatPreferred = it }
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             lifecycleScope.launch { authenticateOrConfirm() }
         }
@@ -154,15 +158,19 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
         enterAmountFragment?.setError(errorMessage)
         enterAmountViewModel.blockContinue = errorMessage.isNotEmpty() ||
-                !viewModel.everythingPlausible() ||
-                viewModel.isBlockchainReplaying.value ?: false
+            !viewModel.everythingPlausible() ||
+            viewModel.isBlockchainReplaying.value ?: false
 
-        enterAmountFragment?.setViewDetails(getString(when (state) {
-            SendCoinsViewModel.State.INPUT -> R.string.send_coins_fragment_button_send
-            SendCoinsViewModel.State.SENDING -> R.string.send_coins_sending_msg
-            SendCoinsViewModel.State.SENT -> R.string.send_coins_sent_msg
-            SendCoinsViewModel.State.FAILED -> R.string.send_coins_failed_msg
-        }))
+        enterAmountFragment?.setViewDetails(
+            getString(
+                when (state) {
+                    SendCoinsViewModel.State.INPUT -> R.string.send_coins_fragment_button_send
+                    SendCoinsViewModel.State.SENDING -> R.string.send_coins_sending_msg
+                    SendCoinsViewModel.State.SENT -> R.string.send_coins_sent_msg
+                    SendCoinsViewModel.State.FAILED -> R.string.send_coins_failed_msg
+                }
+            )
+        )
     }
 
     private suspend fun authenticateOrConfirm() {
@@ -257,8 +265,13 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val fee = txFee?.toPlainString() ?: ""
 
         val confirmed = ConfirmTransactionDialog.showDialogAsync(
-            requireActivity(), address, amountStr, amountFiat,
-            fiatSymbol, fee, total ?: ""
+            requireActivity(),
+            address,
+            amountStr,
+            amountFiat,
+            fiatSymbol,
+            fee,
+            total ?: ""
         )
 
         if (confirmed) {
@@ -292,12 +305,18 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
         val transactionResultIntent = TransactionResultActivity.createIntent(
             requireActivity(),
-            requireActivity().intent.action, transaction, false
+            requireActivity().intent.action,
+            transaction,
+            false
         )
         startActivity(transactionResultIntent)
     }
 
     private fun playSentSound() {
+        if (!viewModel.shouldPlaySounds) {
+            return
+        }
+
         // play sound effect
         val soundResId = resources.getIdentifier(
             SEND_COINS_SOUND,
@@ -308,7 +327,8 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         if (soundResId > 0) {
             RingtoneManager.getRingtone(
                 requireActivity(),
-                Uri.parse("android.resource://" + requireActivity().packageName + "/" + soundResId))
+                Uri.parse("android.resource://" + requireActivity().packageName + "/" + soundResId)
+            )
                 .play()
         }
     }
@@ -399,11 +419,13 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
 
         revealBalance = isRevealing
-        viewModel.logEvent(if (revealBalance) {
-            AnalyticsConstants.SendReceive.ENTER_AMOUNT_SHOW_BALANCE
-        } else {
-            AnalyticsConstants.SendReceive.ENTER_AMOUNT_HIDE_BALANCE
-        })
+        viewModel.logEvent(
+            if (revealBalance) {
+                AnalyticsConstants.SendReceive.ENTER_AMOUNT_SHOW_BALANCE
+            } else {
+                AnalyticsConstants.SendReceive.ENTER_AMOUNT_HIDE_BALANCE
+            }
+        )
         viewModel.maxOutputAmount.value?.let { balance ->
             updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
         }
