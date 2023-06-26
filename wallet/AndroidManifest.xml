@@ -378,8 +378,8 @@
 
         <activity
             android:name="de.schildbach.wallet.ui.coinbase.CoinbaseActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/LockScreenActivity.Theme" />
+            android:theme="@style/LockScreenActivity.Child.Theme"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name="de.schildbach.wallet.ui.coinbase.CoinBaseWebClientActivity"
