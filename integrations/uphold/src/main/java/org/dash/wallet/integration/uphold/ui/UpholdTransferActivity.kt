@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.send
+package org.dash.wallet.integration.uphold.ui
 
 import android.content.Context
 import android.content.Intent
@@ -31,8 +31,6 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
-import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
@@ -40,15 +38,16 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.openCustomTab
+import org.dash.wallet.integration.uphold.R
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
 import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.data.UpholdTransaction
-import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper
 import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper.OnTransferListener
 import java.math.BigDecimal
 import javax.inject.Inject
@@ -58,9 +57,9 @@ class UpholdTransferActivity : InteractionAwareActivity() {
 
     companion object {
 
-        private const val EXTRA_MAX_AMOUNT = "extra_max_amount"
-        private const val EXTRA_TITLE = "extra_title"
-        private const val EXTRA_MESSAGE = "extra_message"
+        const val EXTRA_MAX_AMOUNT = "extra_max_amount"
+        const val EXTRA_TITLE = "extra_title"
+        const val EXTRA_MESSAGE = "extra_message"
 
         fun createIntent(context: Context, title: String, message: CharSequence, maxAmount: String): Intent {
             val intent = Intent(context, UpholdTransferActivity::class.java)
@@ -74,15 +73,15 @@ class UpholdTransferActivity : InteractionAwareActivity() {
     private val enterAmountViewModel by viewModels<EnterAmountViewModel>()
     @Inject lateinit var walletDataProvider: WalletDataProvider
     @Inject lateinit var transactionMetadataProvider: TransactionMetadataProvider
+    @Inject lateinit var confirmTransactionLauncher: ConfirmTransactionService
     private lateinit var balance: Coin
     private lateinit var withdrawalDialog: UpholdWithdrawalHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_uphold_tranfser)
 
-        val balanceStr = intent.getStringExtra(EXTRA_MAX_AMOUNT)
-        balance = Coin.parseCoin(balanceStr)
+        setContentView(R.layout.activity_uphold_tranfser)
+        balance = intent.extras?.get(EXTRA_MAX_AMOUNT) as Coin? ?: Coin.ZERO
 
         if (savedInstanceState == null) {
             val fragment = EnterAmountFragment.newInstance()
@@ -149,15 +148,29 @@ class UpholdTransferActivity : InteractionAwareActivity() {
                 val amountStr = transaction.origin.base.toPlainString()
 
                 // if the exchange rate is not available, then show "Not Available"
-                val exchangeRate = enterAmountViewModel.selectedExchangeRate.value?.let { ExchangeRate(Coin.COIN, it.fiat) }
+                val exchangeRate = enterAmountViewModel.selectedExchangeRate.value?.let {
+                    ExchangeRate(Coin.COIN, it.fiat)
+                }
                 val fiatAmount = exchangeRate?.coinToFiat(amount)
-                val amountFiat = if (fiatAmount != null) Constants.LOCAL_FORMAT.format(fiatAmount).toString() else getString(R.string.transaction_row_rate_not_available)
+                val amountFiat = if (fiatAmount != null) {
+                    GenericUtils.fiatToString(fiatAmount)
+                } else {
+                    getString(R.string.transaction_row_rate_not_available)
+                }
                 val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
 
                 val fee = transaction.origin.fee.toPlainString()
                 val total = transaction.origin.amount.toPlainString()
                 lifecycleScope.launch {
-                    val toContinue = ConfirmTransactionDialog.showDialogAsync(this@UpholdTransferActivity, address, amountStr, amountFiat, fiatSymbol, fee, total)
+                    val toContinue = confirmTransactionLauncher.showTransactionDetailsPreview(
+                        this@UpholdTransferActivity,
+                        address,
+                        amountStr,
+                        amountFiat,
+                        fiatSymbol,
+                        fee,
+                        total
+                    )
 
                     if (toContinue) {
                         withdrawalDialog.commitTransaction(this@UpholdTransferActivity)
@@ -169,7 +182,6 @@ class UpholdTransferActivity : InteractionAwareActivity() {
                 transactionMetadataProvider.markAddressAsTransferInAsync(receiveAddress.toBase58(), ServiceName.Uphold)
                 finish()
             }
-
         })
         withdrawalDialog.transfer(this, receiveAddress.toBase58(), BigDecimal(amount.toPlainString()), false)
     }

@@ -88,4 +88,6 @@
     <string name="convert_crypto">Convert Crypto</string>
     <string name="last_known_balance" >Last known balance</string>
     <string name="disconnected">Disconnected</string>
+    <string name="enter_amount_available">available</string>
+    <string name="transaction_row_rate_not_available">Not available</string>
 </resources>

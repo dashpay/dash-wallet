@@ -37,6 +37,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.toCoin
 import org.dash.wallet.integration.uphold.api.UpholdClient
 import org.dash.wallet.integration.uphold.api.checkCapabilities
+import org.dash.wallet.integration.uphold.api.getAccessToken
 import org.dash.wallet.integration.uphold.api.getDashBalance
 import org.dash.wallet.integration.uphold.api.isAuthenticated
 import org.dash.wallet.integration.uphold.api.preferences
@@ -44,6 +45,7 @@ import org.dash.wallet.integration.uphold.api.revokeAccessToken
 import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.data.UpholdException
 import org.slf4j.LoggerFactory
+import retrofit2.HttpException
 import javax.inject.Inject
 
 data class UpholdPortalUIState(
@@ -107,6 +109,26 @@ class UpholdViewModel @Inject constructor(
             } else {
                 _uiState.update { it.copy(errorCode = -1) }
             }
+        }
+    }
+
+    suspend fun onAuthResult(code: String, state: String) {
+        if (upholdClient.encryptionKey.equals(state)) {
+            try {
+                upholdClient.getAccessToken(code)
+                _uiState.update { it.copy(isUserLoggedIn = true) }
+                refreshBalance()
+                checkCapabilities()
+            } catch (ex: Exception) {
+                log.error("Error obtaining Uphold access token: ${ex.message}")
+
+                if (ex is HttpException) {
+                    _uiState.update { it.copy(errorCode = ex.code()) }
+                }
+            }
+        } else {
+            log.error("Uphold state does not match the encryption key")
+            _uiState.update { it.copy(errorCode = -1) }
         }
     }
 

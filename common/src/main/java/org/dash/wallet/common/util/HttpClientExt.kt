@@ -22,6 +22,7 @@ import android.graphics.BitmapFactory
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.*
 import org.slf4j.LoggerFactory
+import retrofit2.HttpException
 import java.io.BufferedInputStream
 import java.io.IOException
 import kotlin.coroutines.resume
@@ -66,7 +67,7 @@ fun Response.ensureSuccessful() {
 
 fun <T> retrofit2.Response<T>.ensureSuccessful() {
     if (!isSuccessful) {
-        log.error("got http error {}: {}", code(), message())
-        throw IOException("HTTP error: ${code()}; ${message()}")
+        log.error("got retrofit error {}: {}", code(), message())
+        throw HttpException(this)
     }
 }

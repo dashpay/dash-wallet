@@ -17,12 +17,18 @@
 
 package org.dash.wallet.integration.uphold.ui
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -41,10 +47,32 @@ import org.dash.wallet.integration.uphold.data.UpholdConstants
 
 @AndroidEntryPoint
 class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
+    companion object {
+        const val AUTH_RESULT_ACTION = "UpholdPortalFragment.AUTH_RESULT"
+    }
+
     private val binding by viewBinding(FragmentIntegrationPortalBinding::bind)
     private val monetaryFormat = MonetaryFormat().noCode().minDecimals(8)
 
     private val viewModel by viewModels<UpholdViewModel>()
+
+    private val authResultReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val uri = intent.extras?.get("uri") as Uri?
+            val code = uri?.getQueryParameter("code")
+            val state = uri?.getQueryParameter("state")
+
+            if (code != null && state != null) {
+                lifecycleScope.launch {
+                    AdaptiveDialog.withProgress(getString(R.string.loading), requireActivity()) {
+                        viewModel.onAuthResult(code, state)
+                    }
+                }
+            }
+
+            startActivity(intent)
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -101,10 +129,17 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
             }
         }
 
-        lifecycleScope.launch {
-            viewModel.refreshBalance()
-            viewModel.checkCapabilities()
+        if (viewModel.uiState.value.isUserLoggedIn) {
+            lifecycleScope.launch {
+                viewModel.refreshBalance()
+                viewModel.checkCapabilities()
+            }
         }
+
+        LocalBroadcastManager.getInstance(requireContext()).registerReceiver(
+            authResultReceiver,
+            IntentFilter(AUTH_RESULT_ACTION)
+        )
     }
 
     private fun showErrorAlert(code: Int) {
@@ -134,13 +169,11 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
     }
 
     private fun openTransferActivity() {
-        // TODO
-//        val intent = Intent()
-//        intent.setClassName(requireContext(), "de.schildbach.wallet.ui.send.UpholdTransferActivity")
-//        intent.putExtra("extra_title", getString(R.string.uphold_account))
-//        intent.putExtra("extra_message", getString(R.string.uphold_withdrawal_instructions))
-//        intent.putExtra("extra_max_amount", viewModel.uiState.value.balance.toString())
-//        startActivityForResult(intent, REQUEST_CODE_TRANSFER)
+        val intent = Intent(requireContext(), UpholdTransferActivity::class.java)
+        intent.putExtra(UpholdTransferActivity.EXTRA_TITLE, getString(R.string.uphold_account))
+        intent.putExtra(UpholdTransferActivity.EXTRA_MESSAGE, getString(R.string.uphold_withdrawal_instructions))
+        intent.putExtra(UpholdTransferActivity.EXTRA_MAX_AMOUNT, viewModel.uiState.value.balance)
+        startActivity(intent)
     }
 
     private fun confirmLogout() {
@@ -153,7 +186,7 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
 //                viewModel.revokeUpholdAccessToken()
 //            }
 
-            // TODO
+        // TODO
 //            fun onSuccess(result: String) {
 //                if (isFinishing()) {
 //                    return
@@ -204,6 +237,7 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
     private fun setConnectedState(isConnected: Boolean) {
         binding.connectedGroup.isVisible = isConnected
         binding.linkAccountBtn.isVisible = !isConnected
+        binding.additionalInfo.isVisible = !isConnected
         binding.transferBtn.isEnabled = isConnected
         binding.transferIcon.setRoundedBackground(
             if (isConnected) {
@@ -212,5 +246,10 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
                 R.style.DisabledCircle
             }
         )
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(authResultReceiver)
     }
 }

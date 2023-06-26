@@ -326,8 +326,6 @@
     <string name="security_very_high">Very High</string>
     <string name="max">Max</string>
 
-    <string name="enter_amount_available">available</string>
-
     <string name="skip">skip</string>
     <string name="get_started">Get Started</string>
     <string name="welcome_screen_title_1_new_install">Welcome</string>

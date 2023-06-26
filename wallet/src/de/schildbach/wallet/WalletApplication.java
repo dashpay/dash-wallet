@@ -64,7 +64,6 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
-import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
@@ -391,7 +390,7 @@ public class WalletApplication extends MultiDexApplication
 
         UpholdConstants.CLIENT_ID = BuildConfig.UPHOLD_CLIENT_ID;
         UpholdConstants.CLIENT_SECRET = BuildConfig.UPHOLD_CLIENT_SECRET;
-        UpholdConstants.initialize(Constants.NETWORK_PARAMETERS.getId().contains("test"));
+        UpholdConstants.INSTANCE.initialize(Constants.NETWORK_PARAMETERS.getId().contains("test"));
         UpholdClient.init(getApplicationContext(), authenticationHash);
         LiquidClient.Companion.init(getApplicationContext(), authenticationHash);
     }

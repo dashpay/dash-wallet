@@ -17,7 +17,6 @@
 package org.dash.wallet.integration.uphold.ui;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
@@ -39,7 +38,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-import kotlin.Function;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 

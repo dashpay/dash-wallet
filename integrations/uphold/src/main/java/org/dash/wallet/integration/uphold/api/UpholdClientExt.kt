@@ -18,7 +18,6 @@
 package org.dash.wallet.integration.uphold.api
 
 import android.content.SharedPreferences
-import com.securepreferences.SecurePreferences
 import org.dash.wallet.common.util.ensureSuccessful
 import org.dash.wallet.integration.uphold.data.UpholdCard
 import org.dash.wallet.integration.uphold.data.UpholdConstants
@@ -79,9 +78,7 @@ fun UpholdClient.getDashBalance(callback: UpholdClient.Callback<BigDecimal>) {
     )
 }
 
-// TOOD: callers should handle
-// UpholdClient.log.error("Error obtaining Uphold access token " + response.message() + " code: " + response.code())
-suspend fun UpholdClient.getAccessToken(code: String?) {
+suspend fun UpholdClient.getAccessToken(code: String) {
     val response = service.getAccessToken(
         UpholdConstants.CLIENT_ID,
         UpholdConstants.CLIENT_SECRET,
@@ -90,14 +87,9 @@ suspend fun UpholdClient.getAccessToken(code: String?) {
     )
     response.ensureSuccessful()
 
-    if (response.isSuccessful) {
-        UpholdClient.log.info("Uphold access token obtained")
-        accessToken = response.body()!!.accessToken
-        storeAccessToken()
-        getCards(null, null)
-    } else {
-        throw UpholdException("Error obtaining Uphold access token", response.message(), response.code())
-    }
+    UpholdClient.log.info("Uphold access token obtained")
+    accessToken = response.body()!!.accessToken
+    storeAccessToken()
 }
 
 fun UpholdClient.getCards(
@@ -200,7 +192,7 @@ fun UpholdClient.createDashCard(
     })
 }
 
-fun UpholdClient.createDashAddress(cardId: String?) {
+fun UpholdClient.createDashAddress(cardId: String) {
     val body: MutableMap<String, String> = HashMap()
     body["network"] = "dash"
     service.createCardAddress(cardId, body).enqueue(object : Callback<UpholdCryptoCardAddress?> {

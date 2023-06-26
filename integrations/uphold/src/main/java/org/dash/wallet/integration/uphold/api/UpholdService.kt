@@ -37,15 +37,15 @@ interface UpholdService {
     @FormUrlEncoded
     @POST("oauth2/token")
     suspend fun getAccessToken(
-        @Field("client_id") clientId: String?,
-        @Field("client_secret") clientSecret: String?,
-        @Field("code") code: String?,
-        @Field("grant_type") grantType: String?
+        @Field("client_id") clientId: String,
+        @Field("client_secret") clientSecret: String,
+        @Field("code") code: String,
+        @Field("grant_type") grantType: String
     ): Response<UpholdAccessToken?>
 
     @FormUrlEncoded
     @POST("oauth2/revoke")
-    suspend fun revokeAccessToken(@Field("token") token: String?): Response<String?>
+    suspend fun revokeAccessToken(@Field("token") token: String): Response<String?>
 
     @get:GET("v0/me/cards")
     val cards: Call<List<UpholdCard>>
@@ -54,17 +54,18 @@ interface UpholdService {
     fun createCard(@Body body: Map<String, String>): Call<UpholdCard?>
 
     @POST("v0/me/cards/{id}/addresses")
-    fun createCardAddress(@Path("id") cardId: String?, @Body body: Map<String, String>): Call<UpholdCryptoCardAddress?>
+    fun createCardAddress(@Path("id") cardId: String, @Body body: Map<String, String>): Call<UpholdCryptoCardAddress?>
 
     @POST("v0/me/cards/{cardId}/transactions")
-    fun createTransaction(@Path("cardId") cardId: String?, @Body body: Map<String?, Any?>?): Call<UpholdTransaction?>
+    @JvmSuppressWildcards
+    fun createTransaction(@Path("cardId") cardId: String, @Body body: Map<String, Any>): Call<UpholdTransaction?>
 
     @POST("v0/me/cards/{cardId}/transactions/{txId}/commit")
-    fun commitTransaction(@Path("cardId") cardId: String?, @Path("txId") txId: String?): Call<Any?>
+    fun commitTransaction(@Path("cardId") cardId: String, @Path("txId") txId: String?): Call<Any?>
 
     @GET
-    fun getUpholdCurrency(@Header("Range") range: String?, @Url url: String?): Call<String?>
+    fun getUpholdCurrency(@Header("Range") range: String?, @Url url: String): Call<String?>
 
     @GET("v0/me/capabilities/{operation}")
-    suspend fun getCapabilities(@Path("operation") operation: String?): Response<UpholdCapability?>
+    suspend fun getCapabilities(@Path("operation") operation: String): Response<UpholdCapability?>
 }
