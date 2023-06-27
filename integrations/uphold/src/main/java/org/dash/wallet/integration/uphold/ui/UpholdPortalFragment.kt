@@ -46,7 +46,7 @@ import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
 import org.dash.wallet.integration.uphold.data.UpholdConstants
 
 @AndroidEntryPoint
-class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
+class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
     companion object {
         const val AUTH_RESULT_ACTION = "UpholdPortalFragment.AUTH_RESULT"
     }
