@@ -24,6 +24,7 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -32,7 +33,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -52,8 +52,6 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
     }
 
     private val binding by viewBinding(FragmentIntegrationPortalBinding::bind)
-    private val monetaryFormat = MonetaryFormat().noCode().minDecimals(8)
-
     private val viewModel by viewModels<UpholdViewModel>()
 
     private val authResultReceiver = object : BroadcastReceiver() {
@@ -77,7 +75,7 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        binding.balanceDash.setFormat(monetaryFormat)
+        binding.balanceDash.setFormat(viewModel.balanceFormat)
         binding.balanceDash.setApplyMarkup(false)
 
         binding.toolbarTitle.text = getString(R.string.uphold_account)
@@ -98,6 +96,9 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
             findNavController().popBackStack()
         }
 
+        binding.buyBtn.setOnClickListener {
+            Toast.makeText(requireContext(), "Topper: not implemented", Toast.LENGTH_SHORT).show()
+        }
         binding.transferBtn.setOnClickListener {
             if (!viewModel.uiState.value.balance.isZero) {
                 viewModel.logEvent(AnalyticsConstants.Uphold.TRANSFER_DASH)
@@ -177,41 +178,15 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
     }
 
     private fun confirmLogout() {
-        AdaptiveDialog.custom(R.layout.uphold_logout_confirm).show(requireActivity())
-//
-//        alertDialogBuilder.title = getString(R.string.uphold_logout_title)
-//        alertDialogBuilder.positiveText = getString(R.string.uphold_go_to_website)
-//        alertDialogBuilder.positiveAction = {
-//            lifecycleScope.launch {
-//                viewModel.revokeUpholdAccessToken()
-//            }
+        lifecycleScope.launch {
+            val logout = AdaptiveDialog.custom(R.layout.uphold_logout_confirm).showAsync(requireActivity())
 
-        // TODO
-//            fun onSuccess(result: String) {
-//                if (isFinishing()) {
-//                    return
-//                }
-//                startUpholdSplashActivity()
-//                openUpholdToLogout()
-//            }
-//
-//            override fun onError(e: Exception, otpRequired: Boolean) {
-//                if (isFinishing()) {
-//                    return
-//                }
-//                if (e is UpholdException) {
-//                    showErrorAlert(e.code)
-//                } else showErrorAlert(-1)
-//            }
-//        }
-//        alertDialogBuilder.negativeText = getString(android.R.string.cancel)
-//        alertDialogBuilder.view = dialogView
-    }
-
-    private fun openUpholdToLogout() {
-        val url = UpholdConstants.LOGOUT_URL
-        requireActivity().openCustomTab(url)
-//        super.turnOffAutoLogout() TODO
+            if (logout == true) {
+                setConnectedState(false)
+                viewModel.revokeUpholdAccessToken()
+                requireActivity().openCustomTab(UpholdConstants.LOGOUT_URL)
+            }
+        }
     }
 
     private fun showNotLoggedInDialog() {
@@ -219,7 +194,7 @@ class UpholdPortalFragment: Fragment(R.layout.fragment_integration_portal) {
             R.drawable.ic_error,
             getString(R.string.uphold_error),
             getString(R.string.uphold_error_not_logged_in),
-            getString(R.string.uphold_link_account),
+            getString(R.string.button_dismiss),
             ""
         )
         dialog.isCancelable = false

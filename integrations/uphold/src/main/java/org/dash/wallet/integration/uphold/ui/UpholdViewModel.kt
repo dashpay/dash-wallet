@@ -20,6 +20,7 @@ package org.dash.wallet.integration.uphold.ui
 import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.securepreferences.SecurePreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,9 +28,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -51,7 +54,7 @@ import javax.inject.Inject
 data class UpholdPortalUIState(
     val balance: Coin = Coin.ZERO,
     val fiatBalance: Fiat? = null,
-    val isUserLoggedIn: Boolean = true,
+    val isUserLoggedIn: Boolean = false,
     val errorCode: Int? = null
 )
 
@@ -67,8 +70,12 @@ class UpholdViewModel @Inject constructor(
     }
 
     private var exchangeRate: ExchangeRate? = null
+
     private val _uiState = MutableStateFlow(UpholdPortalUIState(isUserLoggedIn = upholdClient.isAuthenticated))
     val uiState: StateFlow<UpholdPortalUIState> = _uiState.asStateFlow()
+
+    val balanceFormat: MonetaryFormat
+        get() = globalConfig.format.noCode()
 
     init {
         globalConfig.lastUpholdBalance?.let { balance ->
@@ -85,7 +92,7 @@ class UpholdViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         upholdClient.preferences.registerOnSharedPreferenceChangeListener { _, prefName ->
-            if (prefName == UpholdClient.UPHOLD_ACCESS_TOKEN) {
+            if (prefName == SecurePreferences.hashPrefKey(UpholdClient.UPHOLD_ACCESS_TOKEN)) {
                 _uiState.update { it.copy(isUserLoggedIn = upholdClient.isAuthenticated) }
             }
         }
@@ -101,7 +108,6 @@ class UpholdViewModel @Inject constructor(
         } catch (ex: Exception) {
             if (ex is UpholdException) {
                 if (ex.code == 401) {
-                    // we don't have the correct access token
                     _uiState.update { it.copy(isUserLoggedIn = false) }
                 } else {
                     _uiState.update { it.copy(errorCode = ex.code) }
@@ -140,13 +146,18 @@ class UpholdViewModel @Inject constructor(
         }
     }
 
-    suspend fun revokeUpholdAccessToken() {
-        analytics.logEvent(AnalyticsConstants.Uphold.DISCONNECT, bundleOf())
+    fun revokeUpholdAccessToken() {
+        viewModelScope.launch {
+            analytics.logEvent(AnalyticsConstants.Uphold.DISCONNECT, bundleOf())
 
-        try {
-            upholdClient.revokeAccessToken()
-        } catch (ex: Exception) {
-            log.error("Error revoking Uphold access token: " + ex.message)
+            try {
+                upholdClient.revokeAccessToken()
+                _uiState.update { it.copy(isUserLoggedIn = false) }
+            } catch (ex: Exception) {
+                log.error("Error revoking Uphold access token: " + ex.message)
+                val errorCode = if (ex is HttpException) ex.code() else -1
+                _uiState.update { it.copy(errorCode = errorCode) }
+            }
         }
     }
 
