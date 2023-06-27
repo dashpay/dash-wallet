@@ -37,6 +37,13 @@ class NotificationManagerWrapper @Inject constructor(
         Context.NOTIFICATION_SERVICE
     ) as NotificationManager
 
+    override val isDoNotDisturb: Boolean
+        get() {
+            return notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALARMS ||
+                notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_PRIORITY ||
+                notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE
+        }
+
     override fun showNotification(
         tag: String,
         message: String,

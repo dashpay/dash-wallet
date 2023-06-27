@@ -21,29 +21,32 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:paddingBottom="12dp"
     android:background="@color/background_secondary"
-    tools:context="de.schildbach.wallet.ui.buy_sell.IntegrationOverviewFragment">
+    tools:context="org.dash.wallet.integration.uphold.ui.UpholdSplashActivity">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:layout_marginStart="4dp"
+        android:layout_marginTop="20dp"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_arrow_back_primary" />
-    
+
     <ImageView
         android:id="@+id/logo"
         android:layout_width="80dp"
         android:layout_height="80dp"
         android:padding="12dp"
-        android:src="@drawable/ic_coinbase_letter"
+        android:src="@drawable/ic_uphold"
         android:background="@drawable/rounded_background"
-        android:theme="@style/CoinbaseLogoRadius19"
+        android:theme="@style/UpholdLogoBackground"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        tools:background="@color/coinbase_blue" />
+        app:tint="@android:color/white"
+        tools:tint="@android:color/white" />
 
     <TextView
         android:id="@+id/headline"
@@ -53,63 +56,17 @@
         android:layout_margin="20dp"
         android:gravity="center"
         android:textAlignment="gravity"
-        android:text="@string/coinbase_link_title"
+        android:text="@string/uphold_link_title"
         app:layout_constraintTop_toBottomOf="@id/logo" />
-
-    <ImageView
-        android:id="@+id/buy_with_fiat_ic"
-        android:layout_width="34dp"
-        android:layout_height="34dp"
-        android:layout_marginTop="23dp"
-        android:layout_marginStart="36dp"
-        app:srcCompat="@drawable/ic_buy_with_fiat"
-        app:layout_constraintTop_toBottomOf="@id/headline"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/buy_with_fiat_text"
-        android:layout_height="wrap_content"
-        android:layout_width="0dp"
-        android:layout_marginStart="18dp"
-        android:layout_marginEnd="20dp"
-        style="@style/Subtitle2"
-        android:text="@string/buy_with_fiat"
-        app:layout_constraintTop_toTopOf="@id/buy_with_fiat_ic"
-        app:layout_constraintBottom_toBottomOf="@id/buy_with_fiat_ic"
-        app:layout_constraintStart_toEndOf="@id/buy_with_fiat_ic"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <ImageView
-        android:id="@+id/buy_convert_ic"
-        android:layout_width="34dp"
-        android:layout_height="34dp"
-        android:layout_marginTop="26dp"
-        android:layout_marginStart="36dp"
-        app:srcCompat="@drawable/ic_buy_convert"
-        app:layout_constraintTop_toBottomOf="@id/buy_with_fiat_ic"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/buy_convert_text"
-        android:layout_height="wrap_content"
-        android:layout_width="0dp"
-        android:layout_marginStart="18dp"
-        android:layout_marginEnd="20dp"
-        style="@style/Subtitle2"
-        android:text="@string/buy_and_convert"
-        app:layout_constraintTop_toTopOf="@id/buy_convert_ic"
-        app:layout_constraintBottom_toBottomOf="@id/buy_convert_ic"
-        app:layout_constraintStart_toEndOf="@id/buy_convert_ic"
-        app:layout_constraintEnd_toEndOf="parent" />
 
     <ImageView
         android:id="@+id/transfer_ic"
         android:layout_width="34dp"
         android:layout_height="34dp"
-        android:layout_marginTop="26dp"
+        android:layout_marginTop="23dp"
         android:layout_marginStart="36dp"
         app:srcCompat="@drawable/ic_transfer_dash"
-        app:layout_constraintTop_toBottomOf="@id/buy_convert_ic"
+        app:layout_constraintTop_toBottomOf="@id/headline"
         app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
@@ -131,17 +88,17 @@
         android:layout_width="0dp"
         android:layout_marginEnd="20dp"
         style="@style/Caption.Secondary"
-        android:text="@string/coinbase_transfer_details"
+        android:text="@string/uphold_transfer_details"
         app:layout_constraintTop_toBottomOf="@id/transfer_item"
         app:layout_constraintStart_toStartOf="@id/transfer_item"
         app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
-        android:id="@+id/continue_btn"
+        android:id="@+id/uphold_link_account"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="15dp"
-        android:text="@string/coinbase_link"
+        android:text="@string/uphold_link_account"
         style="@style/Button.Primary.Large.Blue"
         app:layout_constraintBottom_toBottomOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

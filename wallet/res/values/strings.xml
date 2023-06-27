@@ -379,4 +379,7 @@
     <string name="select_currency">Select Currency</string>
     <string name="reason">Reason</string>
     <string name="link_account">Link your account</string>
+    <string name="your_coinbase_session_has_expired">Your Coinbase session has expired</string>
+    <string name="please_log_in_to_your_coinbase_account">Please log in to your Coinbase account</string>
+    <string name="log_in">Log In</string>
 </resources>

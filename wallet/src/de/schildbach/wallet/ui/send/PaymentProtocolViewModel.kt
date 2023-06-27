@@ -73,7 +73,6 @@ class PaymentProtocolViewModel @Inject constructor(
     var baseSendRequest: SendRequest? = null
     var finalPaymentIntent: PaymentIntent? = null
 
-
     private val _sendRequestLiveData = MutableLiveData<Resource<SendRequest?>>()
     val sendRequestLiveData: LiveData<Resource<SendRequest?>>
         get() = _sendRequestLiveData
@@ -106,8 +105,8 @@ class PaymentProtocolViewModel @Inject constructor(
 
         if (!paymentIntent.hasPaymentRequestUrl()) {
             throw UnsupportedOperationException(
-                PaymentProtocolFragment::class.java.simpleName
-                        + "class should be used to handle Payment requests (BIP70 and BIP270)"
+                PaymentProtocolFragment::class.java.simpleName +
+                    "class should be used to handle Payment requests (BIP70 and BIP270)"
             )
         }
 
@@ -116,15 +115,15 @@ class PaymentProtocolViewModel @Inject constructor(
             paymentIntent.isBluetoothPaymentRequestUrl -> {
                 log.warn("PaymentRequest via Bluetooth is not supported anymore")
                 throw UnsupportedOperationException(
-                    SendCoinsFragment::class.java.simpleName
-                            + "class should be used to handle this type of payment $paymentIntent"
+                    SendCoinsFragment::class.java.simpleName +
+                        "class should be used to handle this type of payment $paymentIntent"
                 )
             }
             else -> {
                 log.warn("Incorrect payment type $paymentIntent")
                 throw UnsupportedOperationException(
-                    SendCoinsFragment::class.java.simpleName
-                            + "class should be used to handle this type of payment $paymentIntent"
+                    SendCoinsFragment::class.java.simpleName +
+                        "class should be used to handle this type of payment $paymentIntent"
                 )
             }
         }
@@ -133,8 +132,7 @@ class PaymentProtocolViewModel @Inject constructor(
     fun requestPaymentRequest(basePaymentIntent: PaymentIntent) {
         _sendRequestLiveData.value = Resource.loading(null)
 
-        val requestCallback: RequestPaymentRequestTask.ResultCallback = object : RequestPaymentRequestTask.ResultCallback {
-
+        val requestCallback = object : RequestPaymentRequestTask.ResultCallback {
             override fun onPaymentIntent(paymentIntent: PaymentIntent) {
                 if (basePaymentIntent.isExtendedBy(paymentIntent, true)) {
                     finalPaymentIntent = paymentIntent
@@ -150,8 +148,11 @@ class PaymentProtocolViewModel @Inject constructor(
                 finalPaymentIntent = null
                 if (ex != null) {
                     val errorMessage =
-                            if (messageResId > 0) walletApplication.getString(messageResId, *messageArgs)
-                            else ex.message!!
+                        if (messageResId > 0) {
+                            walletApplication.getString(messageResId, *messageArgs)
+                        } else {
+                            ex.message!!
+                        }
                     _sendRequestLiveData.value = Resource.error(ex, errorMessage)
                 } else {
                     val errorMessage = walletApplication.getString(messageResId, *messageArgs)
@@ -161,19 +162,28 @@ class PaymentProtocolViewModel @Inject constructor(
         }
 
         HttpRequestTask(backgroundHandler, requestCallback, walletApplication.httpUserAgent())
-                .requestPaymentRequest(basePaymentIntent.paymentRequestUrl)
+            .requestPaymentRequest(basePaymentIntent.paymentRequestUrl)
     }
 
     fun createBaseSendRequest(paymentIntent: PaymentIntent) {
-
         backgroundHandler.post {
             Context.propagate(Constants.CONTEXT)
             try {
-                var sendRequest = createSendRequest(false, paymentIntent, signInputs = false, forceEnsureMinRequiredFee = false)
+                var sendRequest = createSendRequest(
+                    false,
+                    paymentIntent,
+                    signInputs = false,
+                    forceEnsureMinRequiredFee = false
+                )
 
                 wallet.completeTx(sendRequest)
                 if (checkDust(sendRequest)) {
-                    sendRequest = createSendRequest(false, paymentIntent, signInputs = false, forceEnsureMinRequiredFee = true)
+                    sendRequest = createSendRequest(
+                        false,
+                        paymentIntent,
+                        signInputs = false,
+                        forceEnsureMinRequiredFee = true
+                    )
                     wallet.completeTx(sendRequest)
                 }
                 callbackHandler?.post {
@@ -203,7 +213,13 @@ class PaymentProtocolViewModel @Inject constructor(
     fun directPay(sendRequest: SendRequest) {
         wallet.completeTx(sendRequest)
         val refundAddress = wallet.freshAddress(KeyPurpose.REFUND)
-        val payment = PaymentProtocol.createPaymentMessage(listOf(sendRequest.tx), finalPaymentIntent!!.amount, refundAddress, null, finalPaymentIntent!!.payeeData)
+        val payment = PaymentProtocol.createPaymentMessage(
+            listOf(sendRequest.tx),
+            finalPaymentIntent!!.amount,
+            refundAddress,
+            null,
+            finalPaymentIntent!!.payeeData
+        )
 
         val callback: DirectPaymentTask.ResultCallback = object : DirectPaymentTask.ResultCallback {
             override fun onResult(ack: Boolean) {
@@ -227,7 +243,7 @@ class PaymentProtocolViewModel @Inject constructor(
         }
 
         HttpPaymentTask(backgroundHandler, callback, finalPaymentIntent!!.paymentUrl, walletApplication.httpUserAgent())
-                .send(payment)
+            .send(payment)
     }
 
     suspend fun commitAndBroadcast(sendRequest: SendRequest): Transaction {
