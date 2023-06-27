@@ -992,7 +992,9 @@ public class WalletApplication extends MultiDexApplication
 
     @Override
     public void startAutoLogoutTimer() {
-        autoLogout.startTimer();
+        if (!autoLogout.isTimerActive()) {
+            autoLogout.startTimer();
+        }
     }
 
     @Override

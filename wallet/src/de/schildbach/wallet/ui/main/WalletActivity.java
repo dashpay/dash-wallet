@@ -131,6 +131,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     protected void onResume() {
         super.onResume();
 
+        turnOnAutoLogout();
         WalletActivityExt.INSTANCE.checkTimeSkew(this, viewModel);
         WalletActivityExt.INSTANCE.checkLowStorageAlert(this);
         checkWalletEncryptionDialog();
