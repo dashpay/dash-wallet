@@ -3,7 +3,7 @@ buildscript {
         kotlin_version = '1.6.10'
         coroutines_version = '1.6.1'
         ok_http_version = '4.9.1'
-        dashjVersion = '19.0.2'
+        dashjVersion = '19.0.3-SNAPSHOT'
         hiltVersion = '2.40.1'
         hiltWorkVersion = '1.0.0'
         workRuntimeVersion='2.7.1'
