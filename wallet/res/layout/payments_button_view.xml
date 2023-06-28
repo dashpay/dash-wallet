@@ -12,7 +12,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintWidth_percent="0.13"
-        app:srcCompat="@drawable/ic_scan_qr" />
+        app:srcCompat="@drawable/ic_qr"
+        app:tint="@color/content_primary" />
 
     <LinearLayout
         android:layout_width="0dp"

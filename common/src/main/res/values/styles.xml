@@ -1151,7 +1151,7 @@
         <item name="android:layout_width">14dp</item>
         <item name="android:layout_height">14dp</item>
         <item name="android:rotation">180</item>
-        <item name="android:src">@drawable/ic_back_arrow</item>
+        <item name="android:src">@drawable/ic_chevron</item>
         <item name="android:tint">@color/steel_gray_200</item>
     </style>
 
@@ -1225,7 +1225,7 @@
         <item name="android:layout_width">16dp</item>
         <item name="android:layout_height">16dp</item>
         <item name="android:rotation">180</item>
-        <item name="android:src">@drawable/ic_back_arrow</item>
+        <item name="android:src">@drawable/ic_chevron</item>
         <item name="android:tint">@color/light_gray</item>
     </style>
 
