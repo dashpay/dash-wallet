@@ -106,6 +106,8 @@ class UpholdViewModel @Inject constructor(
             val fiatBalance = exchangeRate?.coinToFiat(coin)
             _uiState.update { it.copy(balance = coin, fiatBalance = fiatBalance) }
         } catch (ex: Exception) {
+            log.error("Error refreshing balance: ${ex.message}")
+
             if (ex is UpholdException) {
                 if (ex.code == 401) {
                     _uiState.update { it.copy(isUserLoggedIn = false) }
@@ -156,7 +158,12 @@ class UpholdViewModel @Inject constructor(
             } catch (ex: Exception) {
                 log.error("Error revoking Uphold access token: " + ex.message)
                 val errorCode = if (ex is HttpException) ex.code() else -1
-                _uiState.update { it.copy(errorCode = errorCode) }
+
+                if (errorCode == 401) {
+                    _uiState.update { it.copy(isUserLoggedIn = false) }
+                } else {
+                    _uiState.update { it.copy(errorCode = errorCode) }
+                }
             }
         }
     }
