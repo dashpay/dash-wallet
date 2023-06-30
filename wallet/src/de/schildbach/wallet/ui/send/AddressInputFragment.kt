@@ -27,25 +27,21 @@ import android.text.method.LinkMovementMethod
 import android.text.style.BackgroundColorSpan
 import android.text.style.ClickableSpan
 import android.text.style.ForegroundColorSpan
+import android.util.Log
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.ui.payments.SweepWalletActivity
+import de.schildbach.wallet.payments.parsers.AddressParser
 import de.schildbach.wallet.ui.scan.ScanActivity
-import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentAddressInputBinding
-import org.bitcoinj.core.PrefixedChecksummedBytes
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.VerificationException
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
@@ -62,7 +58,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
 
         if (result.resultCode == Activity.RESULT_OK && intent != null) {
             val input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
-            input?.let { handleString(input, R.string.button_scan, R.string.input_parser_cannot_classify) }
+            input?.let { viewModel.setInput(input) }
         }
     }
 
@@ -74,17 +70,27 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
         }
 
         binding.addressInput.doOnTextChanged { text, _, _, _ ->
+            binding.continueBtn.isEnabled = !text.isNullOrEmpty()
             binding.inputWrapper.isErrorEnabled = false
-            binding.continueBtn.isEnabled = isAddress(text)
+            binding.errorText.isVisible = false
+            binding.inputWrapper.endIconDrawable = ResourcesCompat.getDrawable(
+                resources,
+                if (text.isNullOrEmpty()) R.drawable.ic_scan_qr else R.drawable.ic_clear_input,
+                null
+            )
         }
 
         val continueAction = {
             val input = binding.addressInput.text.toString()
 
             if (isAddress(input)) {
+                binding.inputWrapper.isErrorEnabled = false
+                binding.errorText.isVisible = false
+                Log.i("SENDFLOW", "Good address, continue")
 //                continueCreating(input)
             } else {
                 binding.inputWrapper.isErrorEnabled = true
+                binding.errorText.isVisible = true
             }
         }
 
@@ -99,8 +105,12 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
         }
 
         binding.inputWrapper.setEndIconOnClickListener {
-            val intent = ScanActivity.getTransitionIntent(activity, binding.inputWrapper)
-            scanLauncher.launch(intent)
+            if (binding.addressInput.text.isNullOrEmpty()) {
+                val intent = ScanActivity.getTransitionIntent(activity, binding.inputWrapper)
+                scanLauncher.launch(intent)
+            } else {
+                binding.addressInput.text?.clear()
+            }
         }
 
         binding.continueBtn.setOnClickListener {
@@ -108,7 +118,6 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
         }
 
         binding.showClipboardBtn.setOnClickListener {
-            binding.screenshot.isVisible = true
             viewModel.showClipboardContent()
         }
 
@@ -117,8 +126,11 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
         }
 
         viewModel.uiState.observe(viewLifecycleOwner) {
-            binding.addressInput.setText(it.addressInput)
-            binding.addressInput.setSelection(it.addressInput.length)
+            if (it.addressInput.isNotEmpty()) {
+                binding.addressInput.setText(it.addressInput)
+                binding.addressInput.setSelection(it.addressInput.length)
+            }
+
             binding.showClipboardBtn.isVisible = it.hasClipboardText && it.clipboardText.isEmpty()
             binding.clipboardContentContainer.isVisible = it.clipboardText.isNotEmpty()
 
@@ -134,7 +146,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
                             ds.isUnderlineText = false
                         }
                         override fun onClick(view: View) {
-                            viewModel.selectAddress(it.clipboardText.substring(range.first, range.last))
+                            viewModel.setInput(it.clipboardText.substring(range.first, range.last))
                         }
                     }
                     spannable.setSpan(clickableSpan, range.first, range.last, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
@@ -150,64 +162,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
         KeyboardUtil.showSoftKeyboard(requireContext(), binding.addressInput)
     }
 
-    fun handlePaste(input: String) {
-        if (input.isNotEmpty()) {
-//            handleString( StringInputParser.parse
-//                input,
-//                R.string.scan_to_pay_error_dialog_title,
-//                R.string.scan_to_pay_error_dialog_message
-//            )
-        } else {
-            AdaptiveDialog.create(
-                R.drawable.ic_info_red,
-                getString(R.string.shortcut_pay_to_address),
-                getString(R.string.scan_to_pay_error_dialog_message_no_data),
-                getString(R.string.button_close),
-                null
-            ).show(requireActivity())
-        }
-    }
-
-    private fun isAddress(text: CharSequence?): Boolean {
-        return true
-    }
-
-    // TODO: handle
-    private fun handleString(input: String, errorDialogTitleResId: Int, cannotClassifyCustomMessageResId: Int) {
-        object : InputParser.StringInputParser(input, true) {
-            override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
-                SendCoinsActivity.start(requireActivity(), paymentIntent)
-            }
-
-            override fun handlePrivateKey(key: PrefixedChecksummedBytes) {
-                SweepWalletActivity.start(requireContext(), key, true)
-            }
-
-            @Throws(VerificationException::class)
-            override fun handleDirectTransaction(tx: Transaction) {
-//                viewModel.processDirectTransaction(tx)
-            }
-
-            override fun error(x: Exception?, messageResId: Int, vararg messageArgs: Any) {
-                val dialog = AdaptiveDialog.create(
-                    R.drawable.ic_info_red,
-                    getString(errorDialogTitleResId),
-                    if (messageArgs.isNotEmpty()) {
-                        getString(messageResId, *messageArgs)
-                    } else {
-                        getString(messageResId)
-                    },
-                    getString(R.string.button_close),
-                    null
-                )
-                dialog.isMessageSelectable = true
-                dialog.show(requireActivity())
-            }
-
-            override fun cannotClassify(input: String) {
-//                WalletFragment.log.info("cannot classify: '{}'", input)
-                error(null, cannotClassifyCustomMessageResId, input)
-            }
-        }.parse()
+    private fun isAddress(text: String): Boolean {
+        return AddressParser.exactMatch(text)
     }
 }

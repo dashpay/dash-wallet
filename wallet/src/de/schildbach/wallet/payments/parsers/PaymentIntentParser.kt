@@ -27,7 +27,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
-import org.bitcoinj.core.Base58
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.protocols.payments.PaymentProtocolException
 import org.bitcoinj.protocols.payments.PaymentProtocolException.PkiVerificationException
@@ -101,7 +100,7 @@ object PaymentIntentParser {
 
                 return@withContext paymentIntent
             }
-        } else if (AddressParser.matches(inputStr)) {
+        } else if (AddressParser.exactMatch(inputStr)) {
             try {
                 val address = Address.fromString(Constants.NETWORK_PARAMETERS, inputStr)
                 return@withContext PaymentIntent.fromAddress(address, null)

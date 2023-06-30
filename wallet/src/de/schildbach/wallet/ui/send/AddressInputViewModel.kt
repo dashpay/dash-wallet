@@ -57,7 +57,7 @@ class AddressInputViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(clipboardText = text, addressRanges = addressRanges)
     }
 
-    fun selectAddress(address: String) {
+    fun setInput(address: String) {
         _uiState.value = _uiState.value.copy(addressInput = address)
     }
 

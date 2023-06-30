@@ -24,7 +24,7 @@ import org.bitcoinj.core.Base58
 object AddressParser {
     private val PATTERN_BITCOIN_ADDRESS = Regex("[${Base58.ALPHABET.joinToString(separator = "")}]{20,40}")
 
-    fun matches(inputText: String): Boolean {
+    fun exactMatch(inputText: String): Boolean {
         return PATTERN_BITCOIN_ADDRESS.matches(inputText)
     }
 
