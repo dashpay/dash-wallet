@@ -57,8 +57,8 @@ class AddressInputViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(clipboardText = text, addressRanges = addressRanges)
     }
 
-    fun setInput(address: String) {
-        _uiState.value = _uiState.value.copy(addressInput = address)
+    fun setInput(text: String) {
+        _uiState.value = _uiState.value.copy(addressInput = text)
     }
 
     private fun hasClipboardInput(): Boolean {
@@ -77,23 +77,18 @@ class AddressInputViewModel @Inject constructor(
     }
 
     private fun getClipboardInput(): String {
-        if (!clipboardManager.hasPrimaryClip()) {
+        if (!clipboardManager.hasPrimaryClip() || clipboardManager.primaryClip == null) {
             return ""
         }
 
-        val clip = clipboardManager.primaryClip ?: return ""
-        val clipDescription = clip.description
-        var input: String? = null
-
-        if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
-            input = clip.getItemAt(0).uri?.toString()
-        } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
-            clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
-        ) {
-            input = clip.getItemAt(0).text?.toString()
+        clipboardManager.primaryClip!!.run {
+            return when {
+                description.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) -> getItemAt(0).uri?.toString()
+                description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) -> getItemAt(0).text?.toString()
+                description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML) -> getItemAt(0).text?.toString()
+                else -> null
+            } ?: ""
         }
-
-        return input ?: ""
     }
 
     override fun onCleared() {

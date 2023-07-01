@@ -71,6 +71,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
         }
 
         binding.addressInput.doOnTextChanged { text, _, _, _ ->
+            viewModel.setInput(text.toString())
             binding.continueBtn.isEnabled = !text.isNullOrEmpty()
             binding.inputWrapper.isErrorEnabled = false
             binding.errorText.isVisible = false
@@ -96,7 +97,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
                 val intent = ScanActivity.getTransitionIntent(activity, binding.inputWrapper)
                 scanLauncher.launch(intent)
             } else {
-                binding.addressInput.text?.clear()
+                viewModel.setInput("")
             }
         }
 
@@ -113,7 +114,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
         }
 
         viewModel.uiState.observe(viewLifecycleOwner) {
-            if (it.addressInput.isNotEmpty()) {
+            if (!binding.addressInput.text.contentEquals(it.addressInput)) {
                 binding.addressInput.setText(it.addressInput)
                 binding.addressInput.setSelection(it.addressInput.length)
             }
@@ -158,6 +159,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
                 binding.inputWrapper.isErrorEnabled = false
                 binding.errorText.isVisible = false
                 SendCoinsActivity.start(requireContext(), paymentIntent)
+                requireActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
             } catch (ex: Exception) {
                 binding.inputWrapper.isErrorEnabled = true
                 binding.errorText.isVisible = true
