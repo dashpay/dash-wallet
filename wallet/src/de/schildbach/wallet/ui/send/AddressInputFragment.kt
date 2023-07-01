@@ -27,7 +27,6 @@ import android.text.method.LinkMovementMethod
 import android.text.style.BackgroundColorSpan
 import android.text.style.ClickableSpan
 import android.text.style.ForegroundColorSpan
-import android.util.Log
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,12 +35,14 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.payments.parsers.AddressParser
+import de.schildbach.wallet.payments.parsers.PaymentIntentParser
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentAddressInputBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
@@ -78,20 +79,6 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
                 if (text.isNullOrEmpty()) R.drawable.ic_scan_qr else R.drawable.ic_clear_input,
                 null
             )
-        }
-
-        val continueAction = {
-            val input = binding.addressInput.text.toString()
-
-            if (isAddress(input)) {
-                binding.inputWrapper.isErrorEnabled = false
-                binding.errorText.isVisible = false
-                Log.i("SENDFLOW", "Good address, continue")
-//                continueCreating(input)
-            } else {
-                binding.inputWrapper.isErrorEnabled = true
-                binding.errorText.isVisible = true
-            }
         }
 
         binding.addressInput.setOnEditorActionListener { _, actionId, _ ->
@@ -162,7 +149,19 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
         KeyboardUtil.showSoftKeyboard(requireContext(), binding.addressInput)
     }
 
-    private fun isAddress(text: String): Boolean {
-        return AddressParser.exactMatch(text)
+    private fun continueAction() {
+        lifecycleScope.launch {
+            val input = binding.addressInput.text.toString()
+
+            try {
+                val paymentIntent = PaymentIntentParser.parse(input, true)
+                binding.inputWrapper.isErrorEnabled = false
+                binding.errorText.isVisible = false
+                SendCoinsActivity.start(requireContext(), paymentIntent)
+            } catch (ex: Exception) {
+                binding.inputWrapper.isErrorEnabled = true
+                binding.errorText.isVisible = true
+            }
+        }
     }
 }
