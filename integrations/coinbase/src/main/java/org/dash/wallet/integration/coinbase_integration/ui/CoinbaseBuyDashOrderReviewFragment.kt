@@ -68,7 +68,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                 binding.confirmBtn.text = getString(R.string.retry)
                 binding.retryIcon.visibility = View.VISIBLE
                 isRetrying = true
-                setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_TransparentBlue, org.dash.wallet.common.R.color.dash_blue)
+                setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_LightGrey, org.dash.wallet.common.R.color.dash_blue)
             }
         }
     }

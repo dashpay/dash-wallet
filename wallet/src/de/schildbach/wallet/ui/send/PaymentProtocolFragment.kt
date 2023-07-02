@@ -254,7 +254,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         val fiatAmountStr = if (fiatAmount != null) {
             GenericUtils.fiatToString(fiatAmount)
         } else {
-            getString(R.string.transaction_row_rate_not_available)
+            getString(R.string.rate_not_available)
         }
         val txFee = if (sendRequest != null) sendRequest.tx.fee else PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
 

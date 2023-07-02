@@ -31,7 +31,6 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
@@ -43,7 +42,6 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
 import org.dash.wallet.integration.uphold.data.UpholdConstants
@@ -154,14 +152,6 @@ class UpholdTransferActivity : InteractionAwareActivity() {
                     val exchangeRate = enterAmountViewModel.selectedExchangeRate.value?.let {
                         ExchangeRate(Coin.COIN, it.fiat)
                     }
-                    val fiatAmount = exchangeRate?.coinToFiat(amount)
-                    val amountFiat = if (fiatAmount != null) {
-                        Constants.LOCAL_FORMAT.format(fiatAmount).toString()
-                    } else {
-                        getString(R.string.transaction_row_rate_not_available)
-                    }
-                    val fiatSymbol = fiatAmount?.let { GenericUtils.currencySymbol(it.currencyCode) } ?: ""
-
                     val fee = transaction.origin.fee.toPlainString()
                     val total = transaction.origin.amount.toPlainString()
                     lifecycleScope.launch {
@@ -169,8 +159,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
                             this@UpholdTransferActivity,
                             address,
                             amountStr,
-                            amountFiat,
-                            fiatSymbol,
+                            exchangeRate,
                             fee,
                             total
                         )

@@ -173,7 +173,7 @@
     <string name="transaction_row_status_error_other">Neznáme</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Dňa %s o %s</string>
-    <string name="transaction_row_rate_not_available">Nie je k dispozícií</string>
+    <string name="rate_not_available">Nie je k dispozícií</string>
     <string name="transaction_row_status_masternode_registration">Registracia masternódu</string>
     <string name="transaction_row_status_masternode_update_registrar">Aktualizácia masternódu</string>
     <string name="transaction_row_status_masternode_update_service">Aktualizácia masternódu</string>

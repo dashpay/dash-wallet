@@ -173,7 +173,7 @@
     <string name="transaction_row_status_error_other">Hindi kilala</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Sa %sat %s</string>
-    <string name="transaction_row_rate_not_available">Hindi available</string>
+    <string name="rate_not_available">Hindi available</string>
     <string name="transaction_row_status_masternode_registration">Pagpaparehistro ng Masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Pag-update ng Masternode</string>
     <string name="transaction_row_status_masternode_update_service">Pag-update ng Masternode</string>

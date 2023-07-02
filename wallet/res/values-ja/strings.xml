@@ -173,7 +173,7 @@
     <string name="transaction_row_status_error_other">未知の</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text"> %sに関して %sで</string>
-    <string name="transaction_row_rate_not_available">ご利用できません</string>
+    <string name="rate_not_available">ご利用できません</string>
     <string name="transaction_row_status_masternode_registration">マスターノードの登録</string>
     <string name="transaction_row_status_masternode_update_registrar">マスターノードのアップデート</string>
     <string name="transaction_row_status_masternode_update_service">マスターノードのアップデート</string>

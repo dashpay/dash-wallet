@@ -173,7 +173,7 @@
     <string name="transaction_row_status_error_other">Άγνωστο</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Σε %s στο %s</string>
-    <string name="transaction_row_rate_not_available">Μη διαθέσιμο</string>
+    <string name="rate_not_available">Μη διαθέσιμο</string>
     <string name="transaction_row_status_masternode_registration">Εγγραφή Masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Ανανέωση Masternode</string>
     <string name="transaction_row_status_masternode_update_service">Ανανέωση Masternode</string>

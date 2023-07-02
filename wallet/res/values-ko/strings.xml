@@ -173,7 +173,7 @@
     <string name="transaction_row_status_error_other">알 수 없음</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">%s의 %s에서</string>
-    <string name="transaction_row_rate_not_available">이용할 수 없음</string>
+    <string name="rate_not_available">이용할 수 없음</string>
     <string name="transaction_row_status_masternode_registration">마스터노드 등록</string>
     <string name="transaction_row_status_masternode_update_registrar">마스터노드 업데이트</string>
     <string name="transaction_row_status_masternode_update_service">마스터노드 업데이트</string>

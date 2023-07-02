@@ -173,7 +173,7 @@
     <string name="transaction_row_status_error_other">ซึ่งเป็นไม่เป็นที่รู้จัก</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">บน %s ที่ %s</string>
-    <string name="transaction_row_rate_not_available">ที่ไม่สามารถใช้ประโยชน์ได้</string>
+    <string name="rate_not_available">ที่ไม่สามารถใช้ประโยชน์ได้</string>
     <string name="transaction_row_status_masternode_registration">การลงทะเบียน Masternode </string>
     <string name="transaction_row_status_masternode_update_registrar">อัพเดต Masternode</string>
     <string name="transaction_row_status_masternode_update_service">อัพเดต Masternode</string>
