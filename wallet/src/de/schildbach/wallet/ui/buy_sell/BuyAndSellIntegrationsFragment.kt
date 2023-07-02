@@ -84,7 +84,7 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         binding.dashServicesList.adapter = buyAndSellDashServicesAdapter
 
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { isConnected ->
-            binding.networkStatusStub.isVisible = !isConnected
+            binding.noNetworkIndicator.isVisible = !isConnected
         }
 
         viewModel.servicesList.observe(viewLifecycleOwner) {

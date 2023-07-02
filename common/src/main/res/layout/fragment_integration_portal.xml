@@ -214,7 +214,7 @@
                     android:padding="5dp"
                     android:layout_marginTop="2dp"
                     android:background="@drawable/rounded_background"
-                    android:theme="@style/TextHighlightGrayTheme"
+                    android:theme="@style/UpholdTextHighlight"
                     android:orientation="horizontal"
                     android:gravity="center"
                     android:visibility="gone"

@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import de.schildbach.wallet.data.ServiceStatus
+import de.schildbach.wallet.data.ServiceType
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ItemServiceListBinding
 import org.bitcoinj.core.Coin
@@ -93,11 +94,7 @@ class BuyAndSellDashServicesAdapter(
                 binding.serviceImg.setImageDrawable(
                     ContextCompat.getDrawable(
                         binding.root.context,
-                        if (service.isAvailable()) {
-                            service.serviceType.serviceIcon
-                        } else {
-                            service.serviceType.offlineServiceIcon
-                        }
+                        service.serviceType.serviceIcon
                     )
                 )
                 binding.serviceName.text = binding.root.context.getString(service.serviceType.serviceName)
@@ -115,6 +112,8 @@ class BuyAndSellDashServicesAdapter(
                     binding.serviceFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} " +
                         GenericUtils.fiatToString(data.localBalance)
                 }
+
+                binding.additionalInfo.isVisible = data.serviceType == ServiceType.TOPPER
             }
         }
 

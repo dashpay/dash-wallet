@@ -1260,4 +1260,10 @@
         <item name="strokeColor">@android:color/transparent</item>
         <item name="backgroundColor">@color/dash_black_0.05</item>
     </style>
+
+    <style name="NoNetworkBackground">
+        <item name="cornerRadius">8dp</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="backgroundColor">@color/dash_black_0.9</item>
+    </style>
 </resources>

@@ -70,6 +70,36 @@
         app:layout_constraintBottom_toBottomOf="@+id/service_img"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <LinearLayout
+        android:id="@+id/additional_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="5dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/TextHighlightGrayTheme"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/service_img"
+        tools:background="@color/dash_black_0.05"
+        tools:visibility="visible">
+
+        <ImageView
+            android:id="@+id/additional_info_icon"
+            android:layout_width="12dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_uphold" />
+
+        <TextView
+            android:id="@+id/additional_info_txt"
+            style="@style/Overline"
+            android:layout_marginStart="6dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/topper_powered_by" />
+    </LinearLayout>
+
     <View
         android:id="@+id/separator"
         android:layout_width="match_parent"
@@ -77,7 +107,7 @@
         android:layout_marginTop="10dp"
         android:layout_marginStart="5dp"
         android:background="@color/divider_color"
-        app:layout_constraintTop_toBottomOf="@+id/service_img" />
+        app:layout_constraintTop_toBottomOf="@+id/additional_info" />
 
     <TextView
         android:id="@+id/connected"
