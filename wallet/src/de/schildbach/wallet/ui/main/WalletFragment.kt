@@ -244,8 +244,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     private fun handlePayToAddress() {
         viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SEND_TO_ADDRESS)
-//        val input = viewModel.getClipboardInput()
-//        handlePaste(input)
         safeNavigate(WalletFragmentDirections.homeToAddressInput())
     }
 
