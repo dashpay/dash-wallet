@@ -1,4 +1,15 @@
 Dash Wallet
+v9.0.3
+* Update to dashj 19.0.3 (supports Dash Core 19.2)
+* Coinbase: properly handle expired sessions
+* Uphold: update logo
+* Uphold: fix incorrect balance when there are multiple Dash cards
+* Don't make sounds when Do Not Disturb mode is ON
+* Delete old explore databases to reduce storage requirements
+* Fix crash with icons with gradients on Android 6
+* Fix crash when sending Dash
+* Fix crash from Importing Private Key funding by a tx without confirmations
+
 v9.0.2
 * update to dashj 19.0.2
 * Coinbase: hide Transfer Dash when network offline
