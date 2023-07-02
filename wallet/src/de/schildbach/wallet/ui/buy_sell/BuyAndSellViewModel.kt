@@ -17,13 +17,14 @@
 package de.schildbach.wallet.ui.buy_sell
 
 import androidx.core.os.bundleOf
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import de.schildbach.wallet.data.ServiceStatus
 import de.schildbach.wallet.data.ServiceType
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -64,9 +65,8 @@ class BuyAndSellViewModel @Inject constructor(
 
     private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
 
-    private val _servicesList = MutableLiveData(BuyAndSellDashServicesModel.getBuyAndSellDashServicesList())
-    val servicesList: LiveData<List<BuyAndSellDashServicesModel>>
-        get() = _servicesList
+    private val _servicesList = MutableStateFlow(BuyAndSellDashServicesModel.getBuyAndSellDashServicesList())
+    val servicesList: StateFlow<List<BuyAndSellDashServicesModel>> = _servicesList.asStateFlow()
 
     val isUpholdAuthenticated: Boolean
         get() = upholdClient.isAuthenticated
@@ -76,7 +76,6 @@ class BuyAndSellViewModel @Inject constructor(
 
     val hasValidCredentials: Boolean
         get() = upholdClient.hasValidCredentials
-
 
     init {
         exchangeRates.observeExchangeRate(config.exchangeCurrencyCode!!)
@@ -128,6 +127,10 @@ class BuyAndSellViewModel @Inject constructor(
         var hasValidCredentials = false
 
         when (service) {
+            ServiceType.TOPPER -> {
+                hasValidCredentials = upholdClient.hasValidCredentials // TODO
+                isAuthenticated = false
+            }
             ServiceType.UPHOLD -> {
                 hasValidCredentials = upholdClient.hasValidCredentials
                 isAuthenticated = upholdClient.isAuthenticated
@@ -180,7 +183,9 @@ class BuyAndSellViewModel @Inject constructor(
         viewModelScope.launch {
             when (val response = coinBaseRepository.getUserAccount()) {
                 is ResponseResource.Success -> {
-                    response.value?.balance?.amount?.let { coinbaseConfig.setPreference(CoinbaseConfig.LAST_BALANCE, Coin.parseCoin(it).value) }
+                    response.value?.balance?.amount?.let {
+                        coinbaseConfig.setPreference(CoinbaseConfig.LAST_BALANCE, Coin.parseCoin(it).value)
+                    }
                     showRowBalance(ServiceType.COINBASE, response.value?.balance?.amount ?: coinbaseBalanceString())
                 }
                 is ResponseResource.Failure -> {
@@ -206,19 +211,25 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
     fun logEnterUphold() {
-        analytics.logEvent(if (upholdClient.isAuthenticated) {
-            AnalyticsConstants.Uphold.ENTER_CONNECTED
-        } else {
-            AnalyticsConstants.Uphold.ENTER_DISCONNECTED
-        }, bundleOf())
+        analytics.logEvent(
+            if (upholdClient.isAuthenticated) {
+                AnalyticsConstants.Uphold.ENTER_CONNECTED
+            } else {
+                AnalyticsConstants.Uphold.ENTER_DISCONNECTED
+            },
+            bundleOf()
+        )
     }
 
     fun logEnterCoinbase() {
-        analytics.logEvent(if (coinBaseRepository.isUserConnected()) {
-            AnalyticsConstants.Coinbase.ENTER_CONNECTED
-        } else {
-            AnalyticsConstants.Coinbase.ENTER_DISCONNECTED
-        }, bundleOf())
+        analytics.logEvent(
+            if (coinBaseRepository.isUserConnected()) {
+                AnalyticsConstants.Coinbase.ENTER_CONNECTED
+            } else {
+                AnalyticsConstants.Coinbase.ENTER_DISCONNECTED
+            },
+            bundleOf()
+        )
     }
 
     private suspend fun coinbaseBalanceString(): String =

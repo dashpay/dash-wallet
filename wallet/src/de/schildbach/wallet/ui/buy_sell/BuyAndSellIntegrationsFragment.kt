@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.buy_sell
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -35,6 +36,7 @@ import de.schildbach.wallet_test.databinding.FragmentBuySellIntegrationsBinding
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -50,6 +52,7 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
     private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
         BuyAndSellDashServicesAdapter(viewModel.config.format.noCode()) { model ->
             when (model.serviceType) {
+                ServiceType.TOPPER -> onTopperItemClicked()
                 ServiceType.UPHOLD -> onUpholdItemClicked()
                 ServiceType.COINBASE -> onCoinbaseItemClicked()
             }
@@ -91,6 +94,10 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         lifecycleScope.launchWhenResumed {
             checkLiquidStatus()
         }
+    }
+
+    private fun onTopperItemClicked() {
+        Toast.makeText(requireContext(), "Topper", Toast.LENGTH_SHORT).show()
     }
 
     private fun onUpholdItemClicked() {

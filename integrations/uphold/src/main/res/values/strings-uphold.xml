@@ -2,8 +2,10 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="topper">Topper</string>
     <string name="uphold_link_title">Link your Uphold account</string>
     <string name="uphold_powered_by">Powered by Topper</string>
+    <string name="topper_powered_by">Powered by Uphold</string>
     <string name="uphold_transfer_details">From Uphold to your Dash Wallet</string>
     <string name="uphold_buy_dash_activity_title">Buy/Sell Dash with Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Buy Dash with Uphold account</string>
