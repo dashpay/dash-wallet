@@ -17,8 +17,6 @@
 
 package de.schildbach.wallet.util.viewModels
 
-import android.content.ClipDescription
-import android.content.ClipboardManager
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.SavedStateHandle
@@ -120,70 +118,11 @@ class MainViewModelTest {
     }
 
     @Test
-    fun getClipboardInput_noClip_returnsEmptyString() {
-        val clipboardManagerMock = mockk<ClipboardManager>()
-        every { clipboardManagerMock.hasPrimaryClip() } returns false
-
-        val viewModel = spyk(
-            MainViewModel(
-                mockk(), clipboardManagerMock, configMock, uiConfigMock, blockChainStateMock,
-                exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock,
-                mockk()
-            )
-        )
-
-        val clipboardInput = viewModel.getClipboardInput()
-        assertEquals("", clipboardInput)
-    }
-
-    @Test
-    fun getClipboardInput_returnsCorrectText() {
-        val mockUri = "mock://example.uri"
-        val mockText = "some text"
-        val clipboardManagerMock = mockk<ClipboardManager>()
-        val clipDescription = mockk<ClipDescription>()
-
-        every { clipboardManagerMock.hasPrimaryClip() } returns true
-        every { clipboardManagerMock.primaryClip?.description } returns clipDescription
-
-        val viewModel = spyk(
-            MainViewModel(
-                mockk(), clipboardManagerMock, configMock, uiConfigMock, blockChainStateMock,
-                exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock,
-                mockk()
-            )
-        )
-
-        every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) } returns true
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) } returns false
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML) } returns false
-
-        var clipboardInput = viewModel.getClipboardInput()
-        assertEquals(mockUri, clipboardInput)
-
-        every { clipboardManagerMock.primaryClip?.getItemAt(0)?.text?.toString() } returns mockText
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) } returns false
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) } returns true
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML) } returns false
-
-        clipboardInput = viewModel.getClipboardInput()
-        assertEquals(mockText, clipboardInput)
-
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) } returns false
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) } returns false
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML) } returns true
-
-        clipboardInput = viewModel.getClipboardInput()
-        assertEquals(mockText, clipboardInput)
-    }
-
-    @Test
     fun observeBlockchainState_replaying_notSynced() {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
         val model = try {
             MainViewModel(
-                mockk(), mockk(), configMock, uiConfigMock, blockChainStateMock,
+                mockk(), configMock, uiConfigMock, blockChainStateMock,
                 exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock,
                 mockk()
             )
@@ -205,7 +144,7 @@ class MainViewModelTest {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(state)
         val viewModel = spyk(
             MainViewModel(
-                mockk(), mockk(), configMock, uiConfigMock, blockChainStateMock,
+                mockk(), configMock, uiConfigMock, blockChainStateMock,
                 exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock,
                 mockk()
             )
