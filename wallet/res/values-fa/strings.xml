@@ -44,13 +44,6 @@
     <string name="wallet_low_storage_dialog_button_apps">مدیریت اپلیکیشن‌ها</string>
     <string name="wallet_timeskew_dialog_title">بررسی تاریخ &amp; تنظیمات تاریخ</string>
     <string name="wallet_timeskew_dialog_msg">زمان دستگاه شما %dدقیقه با زمان رسمی تفاوت دارد. به همین خاطر، امکان ارسال و یا دریافت دش را نخواهید داشت. n\n\ باید زمان دستگاه خود را بررسی کرده و تاریخ، ساعت و نیز منطقه زمانی آن را به درستی تنظیم کنید. </string>
-    <string name="wallet_version_dialog_title">نسخه جدید این اپلیکیشن در دسترس است!</string>
-    <string name="wallet_version_dialog_msg">در این نسخه از اپلیکیشن، برخی مشکلات مهم برطرف شده است. برای اطلاع از جزئیات آن می‌توانید به صفحه مربوطه در گوگل پلی مراجعه کنید.</string>
-    <string name="wallet_version_dialog_msg_deprecated">اگر نسخه جدید را مشاهده نمی‌کنید، احتمالا به این معناست که نسخه کنونی اندروید شما دیگر پشتیبانی نمی‌شود. </string>
-    <string name="wallet_version_dialog_button_market">گوگل پلی</string>
-    <string name="wallet_version_dialog_button_binary">دانلود</string>
-    <string name="wallet_old_sdk_dialog_title">نسخه کنونی اندروید شما قدیمی شده است</string>
-    <string name="wallet_old_sdk_dialog_message">این احتمال وجود دارد که یکی از نسخه‌های به‌روزرسانی دش والت در آینده دیگر از دستگاه‌ شما پشتیبانی نکند. در این صورت، ارسال دش برایتان دشوار خواهد شد. n\n\ توصیه می‌شود موجودی‌تان را به کیف پول دیگری منتقل کنید. در غیر این صورت باید از پیامدهای ادامه فعالیت در این نسخه آگاه باشید. </string>
     <string name="send_coins_activity_title">ارسال دش</string>
     <string name="send_coins_fragment_request_payment_request_progress">در حال دریافت امضاء از %s ...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">دریافت امضاء ناموفق بود</string>
@@ -206,8 +199,6 @@
     <string name="restore_wallet_dialog_success_replay">کیف پول‌تان با موفقیت بازگردانی شد. موجودی آن بعدا تعیین می‌شود. این کار زمان‌بر خواهد بود. </string>
     <string name="restore_wallet_dialog_success_encrypted">هشدار: کیف پول‌تان دارای رمز ویژه خرج کردن است. پیش از دریافت این کیف پول، اطمینان یابید که همچنان این رمز ویژه را به خاطر می‌آورید. </string>
     <string name="import_keys_dialog_failure">کیف پول را نمی‌توان بازگردانی کرد: n\n\%sn\n\آیا مطمئن هستید گذرواژه درست است؟</string>
-    <string name="backup_wallet_permission_dialog_title">مجوز نوشتن پیدا نشد!</string>
-    <string name="backup_wallet_permission_dialog_message">به منظور گرفتن نسخه پشتیبان از کیف پول‌تان بر روی حافظه خارجی، باید مجوز نوشتن داشته باشید. </string>
     <string name="export_keys_dialog_title">تهیه نسخه پشتیبان از کیف پول</string>
     <string name="backup_wallet_dialog_message">نسخه پشتیبان با گذرواژه انتخابی رمزگذاری شده و بر روی حافظه خارجی نوشته می‌شود.</string>
     <string name="backup_wallet_dialog_warning_encrypted">کیف پول‌تان توسط رمزپرداخت حفاظت می‌شود. اطمینان یابید که علاوه بر گذرواژه نسخه پشتیبان، این رمز را نیز به خاطر داشته باشید!</string>

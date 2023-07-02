@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Spravovať aplikácie</string>
     <string name="wallet_timeskew_dialog_title">Kontrola nastavenia času a dátumu</string>
     <string name="wallet_timeskew_dialog_msg">Čas na vašom zariadené je posunutý o %d minút. Kvôli tomuto problému pravdepodobne nemôžete odosielať alebo prijímať Dash.\n\nMali by ste skontrolovať a v prípade potreby opraviť dátum, čas a časové pásmo.</string>
-    <string name="wallet_version_dialog_title">Je dostupná nová verzia!</string>
-    <string name="wallet_version_dialog_msg">Táto verzia opravuje kritické chyby. Pre viac informácií navštívte Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Ak nevidíte aktualizáciu, znamená to, že verzia vášho operačného systému Android už nie je podporovaná.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Stiahnuť</string>
-    <string name="wallet_old_sdk_dialog_title">Verzia Vášho Androidu je zastaralá</string>
-    <string name="wallet_old_sdk_dialog_message">Je možné, že v novších verziách Dash peňaženky už nebude podporované vaše zariadenie. V určitých prípadoch môže byť obtiažne minúť Dashe z tohoto zariadenia.\n\nJe odporúčané presunúť Dashe čo najskôr.</string>
     <string name="send_coins_activity_title">Poslať Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Získavanie podpisu z %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Získavanie podpisu zlyhalo</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">Vaša peňaženka bola úspešne obnovená. Jej bilancia bude následne vypočítaná. Zaberie to nejaký čas.</string>
     <string name="restore_wallet_dialog_success_encrypted">Upozornenie: Vaša peňaženka je chránená výdavkovým PIN-om. Uistite sa, že si ho stale pamätáte pred prijatím do tejto peňaženky.</string>
     <string name="import_keys_dialog_failure">Peňaženku sa nepodarilo obnoviť:\n\n%s\n\nNesprávne heslo?</string>
-    <string name="backup_wallet_permission_dialog_title">Chyba povolenie k ukladaniu dát</string>
-    <string name="backup_wallet_permission_dialog_message">Aby ste mohli zálohovať vašu peňaženku na externé úložisko, potrebujete povoliť zapisovanie dát. </string>
     <string name="export_keys_dialog_title">Zálohovať peňaženku</string>
     <string name="backup_wallet_dialog_message">Vaša záloha bude zašifrovaná zvoleným heslom a uložená na externú pamäť.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Vaša peňaženka je zabezpečená PIN-om. Uistite sa že si pamätáte nie len PIN ale tiež heslo k zálohe! </string>

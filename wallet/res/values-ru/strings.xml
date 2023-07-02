@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Управлять приложениями</string>
     <string name="wallet_timeskew_dialog_title">Проверьте настройки даты и времени</string>
     <string name="wallet_timeskew_dialog_msg">Время на Вашем устройстве отличается на %d минут. По этой причине Вы, возможно, не сможете отправлять или получать средства.\\n\\nПроверьте настройки и при необходимости скорректируйте дату, время и часовой пояс.</string>
-    <string name="wallet_version_dialog_title">Доступна новая версия!</string>
-    <string name="wallet_version_dialog_msg">Эта версия исправляет важные ошибки. Детали на Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Если Вы не видите обновления, это означает, что Ваша версия Android больше не поддерживается.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Скачать</string>
-    <string name="wallet_old_sdk_dialog_title">Версия Android устарела</string>
-    <string name="wallet_old_sdk_dialog_message">Велики шансы того, что один из будущих релизов кошелька Dash уже не будет поддерживать это устройство. В ряде случаев возможны затруднения с использованием средств из этого кошелька.\n\nЕсли Вы плохо понимаете связанные с этим риски, рекомендуется уже сейчас вывести Ваши средства отсюда.</string>
     <string name="send_coins_activity_title">Отправить Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Получение подписи %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ошибка при получении подписи</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">Ваш кошелёк успешно восстановлен. Сейчас определится его баланс. Это может занять какое-то время.</string>
     <string name="restore_wallet_dialog_success_encrypted">Предупреждение: Ваш кошелёк защищён PIN-кодом. Прежде чем получить средства на этот кошелёк, убедитесь, что Вы его помните.</string>
     <string name="import_keys_dialog_failure">Кошелёк не может быть восстановлен:\n\n%s\n\nПроверьте правильность набора пароля.</string>
-    <string name="backup_wallet_permission_dialog_title">Отсутствуют права на запись</string>
-    <string name="backup_wallet_permission_dialog_message">Для того, чтобы сохранить резервную копию кошелька на внешнем устройстве, Вам нужно предоставить права на запись.</string>
     <string name="export_keys_dialog_title">Резервная копия кошелька</string>
     <string name="backup_wallet_dialog_message">Резервная копия будет зашифрована выбранным паролем и сохранена на внешнем устройстве.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Ваш кошелёк защищен PIN-кодом. Запомните ваш PIN-код и пароль для восстановления резервной копии.</string>

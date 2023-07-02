@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Διαχείριση εφαρμογών</string>
     <string name="wallet_timeskew_dialog_title">Ελέξτε ρυθμίσεις ημερομηνίας &amp; χρόνου</string>
     <string name="wallet_timeskew_dialog_msg">Ο χρόνος της συσκευής σας είναι λάθος κατά %d λεπτά. Ενδεχομένως να μην μπορείτε να στείλετε ή να λάβετε Dash εξαιτίας αυτού του προβλήματος.\n\nΠρέπει να ελέγξετε και αν χρειάζεται να διορθώσετε στις ρυθμίσεις την ημερομηνία, την ώρα και την ζώνη ώρας.</string>
-    <string name="wallet_version_dialog_title">Μία νέα έκδοση είναι διαθέσιμη!</string>
-    <string name="wallet_version_dialog_msg">Αυτή η έκδοση διορθώνει σημαντικά προβλήματα. Για λεπτομέρειες, δείτε το σύνολο των αλλαγών στο Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Αν δεν βλέπετε καμιά ενημέρωση λογισμικού, αυτό πιθανά σημαίνει ότι  η έκδοση του Android δεν υποστηρίζεται πια.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Λήψη</string>
-    <string name="wallet_old_sdk_dialog_title">Η έκδοση για Android είναι παρωχημένη</string>
-    <string name="wallet_old_sdk_dialog_message">Είναι πολύ πιθανόν μία από τις επόμενες εκδόσεις του Dash Wallet να μην υποστηρίζουν άλλο την συσκευή σας. Σε μερικές περιπτώσεις, μπορεί να γίνει πολύ δύσκολο το να ξοδεύετε νομίσματα σε αυτή την συσκευή.\n\nΕκτός αν ξέρετε τι κάνετε, καλύτερα να μεταφέρετε τα νομίσματά σας το συντομότερο.</string>
     <string name="send_coins_activity_title">Αποστολή Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Παραλαβή υπογραφής από %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Η παραλαβή της υπογραφής απέτυχε</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">Το πορτοφόλι σας αποκαταστάθηκε με επιτυχία. Το ποσό του θα καθοριστεί στη συνέχεια. Αυτό θα πάρει κάποιο χρόνο.</string>
     <string name="restore_wallet_dialog_success_encrypted">Προειδοποίηση: Το πορτοφόλι σας προστατεύεται από ένα PIN ξοδέματος. Βεβαιωθείτε ότι το θυμάστε ακόμα πριν να λάβετε σε αυτό το πορτοφόλι.</string>
     <string name="import_keys_dialog_failure">Το πορτοφόλι δεν θα μπορούσε να αποκατασταθεί:\n\n%s\n\nΛάθος κωδικός;</string>
-    <string name="backup_wallet_permission_dialog_title">Δεν έχετε άδεια εγγραφής</string>
-    <string name="backup_wallet_permission_dialog_message">Για να μπορέστε κάνετε backup του πορτοφολιού σας σε εξωτερική αποθηκευτική μονάδα, χρειάζεται να χορηγήσετε άδεια εγγραφής.</string>
     <string name="export_keys_dialog_title">Αντίγραφο ασφαλείας πορτοφολιού</string>
     <string name="backup_wallet_dialog_message">Το αντίγραφο ασφαλείας σας θα κρυπτογραφηθεί με τον επιλεγμένο κωδικό και θα αποθηκευτεί στον εξωτερικό χώρο αποθήκευσης.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Το πορτοφόλι σας προστατεύεται από PIN ξοδέματος. Βεβαιωθείτε ότι θυμάστε το PIN εκτός από τον εφεδρικό κωδικό πρόσβασης!</string>

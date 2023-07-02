@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Zarządzaj aplikacjami</string>
     <string name="wallet_timeskew_dialog_title">Sprawdź datę i ustawienia czasu</string>
     <string name="wallet_timeskew_dialog_msg">Czas na twoim urządzeniu jest opóźniony o %d minuty. Z tego powodu prawdopodobnie nie będziesz mógł wysyłać i odbierać Dash.\\n\\nSprawdź i w razie konieczności popraw ustawienia daty, godziny i strefy czasowej.</string>
-    <string name="wallet_version_dialog_title">Dostępna jest nowa wersja!</string>
-    <string name="wallet_version_dialog_msg">W tej wersji poprawiono ważne błędy. Więcej szczegółów znajdziesz w dzienniku zmian na Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Jeśli nie widzisz uaktualnienia, prawdopodobnie znaczy to, że Twoja wersja Androida nie jest już wspierana.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Pobierz</string>
-    <string name="wallet_old_sdk_dialog_title">Ta wersja Androida jest przestarzała </string>
-    <string name="wallet_old_sdk_dialog_message">Istnieje możliwość, że jedno z następnych wydań portfela Dash Wallet nie będzie już wspierało twojego urządzenia. W niektórych wypadkach wydanie monet na tym urządzeniu będzie utrudnione.\n\n Zaleca się w najbliższym czasie przelać swoje monety. Chyba, że wiesz co robisz.</string>
     <string name="send_coins_activity_title">Wyślij Dashe</string>
     <string name="send_coins_fragment_request_payment_request_progress">Pobieranie podpisu z %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Pobieranie podpisu nie powiodło się</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">Twój portfel został przywrócony pomyślnie. Następnie zostanie określone jego saldo. Może to zająć chwilę.</string>
     <string name="restore_wallet_dialog_success_encrypted">Uwaga! Twój portfel jest zabezpieczony za pomocą kodu PIN. Upewnij się, że  pamiętasz swój PIN zanim wyślesz tam fundusze. </string>
     <string name="import_keys_dialog_failure">Nie udało się zaimportować kluczy prywatnych:\n\n%s\n\nBłędne hasło?</string>
-    <string name="backup_wallet_permission_dialog_title">Brak zezwolenia na zapis</string>
-    <string name="backup_wallet_permission_dialog_message">Aby móc wykonać kopię bezpieczeństwa, wymagane jest udzielenie pozwolenia na zapis.</string>
     <string name="export_keys_dialog_title">Eksportuj prywatne klucze</string>
     <string name="backup_wallet_dialog_message">Twoje prywatne klucze zostaną zaszyfrowane wybranym hasłem a następnie zapisane na zewnętrznym nośniku.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Twój portfel jest chroniony przez PIN do wydawania. Miej pewność, że pamiętasz PIN w dodatku hasło zapasowe!</string>

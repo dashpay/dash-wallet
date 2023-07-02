@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Apps beheren</string>
     <string name="wallet_timeskew_dialog_title">controleer datum &amp; tijd instellingen</string>
     <string name="wallet_timeskew_dialog_msg">De tijd op je apparaat is %d minuten uit sync. Door dit probleem kun je waarschijnlijk geen Dash versturen of ontvangen.\\n\\nJe dient uw datum, tijd en tijdzone-instellingen te controleren en zo nodig te corrigeren. </string>
-    <string name="wallet_version_dialog_title">Er is een nieuwe versie beschikbaar!</string>
-    <string name="wallet_version_dialog_msg">Deze versie lost belangrijke fouten op. Kijk voor details naar het wijzigingslog op Google Play</string>
-    <string name="wallet_version_dialog_msg_deprecated">Als je geen update ziet dan wordt je versie van Android niet meer ondersteund.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Downloaden</string>
-    <string name="wallet_old_sdk_dialog_title">Verouderde Androidversie</string>
-    <string name="wallet_old_sdk_dialog_message">De kans bestaat dat één van de volgende versies van Dash Wallet je apparaat niet langer ondersteunen zal. In sommige gevallen kan het lastig worden nog met Dash te kunnen betalen vanaf dit apparaat.\n\nTenzij je weet wat je aan het doen bent wordt het je aanbevolen om je huidige aanwezige Dash saldo snel elders onder te brengen.</string>
     <string name="send_coins_activity_title">Dash versturen</string>
     <string name="send_coins_fragment_request_payment_request_progress">Bezig met ophalen van handtekening van %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Het ophalen van de handtekening is mislukt</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">Je portemonnee is met succes hersteld. Nu zal het saldo worden vastgesteld. Dit kan enige tijd duren.</string>
     <string name="restore_wallet_dialog_success_encrypted">Waarschuwing: je portemonnee is beveiligd met een pincode. Zorg ervoor dat je deze onthoudt voordat je met deze portemonnee geld ontvangt.</string>
     <string name="import_keys_dialog_failure">Portemonnee kon niet hersteld worden:\n\n%s\n\nVerkeerd wachtwoord?</string>
-    <string name="backup_wallet_permission_dialog_title">Schrijftoegang ontbreekt</string>
-    <string name="backup_wallet_permission_dialog_message">Je hebt schrijftoegang nodig om je portemonnee op externe opslag op te slaan.</string>
     <string name="export_keys_dialog_title">Back-upportemonnee</string>
     <string name="backup_wallet_dialog_message">Je back-up zal versleuteld worden met het gekozen wachtwoord en weggeschreven naar een externe opslaglocatie.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Je portemonnee is beveiligd met een pincode om te kunnen betalen. Onthoud deze pincode net als je back-upwachtwoord! </string>

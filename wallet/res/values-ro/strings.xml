@@ -38,13 +38,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Management de applicatii </string>
     <string name="wallet_timeskew_dialog_title">Verifică data &amp; setările de timp</string>
     <string name="wallet_timeskew_dialog_msg">Timpul dispozitivului este decalat cu %d minute. Probabil că nu poți trimite sau primi Dash din cauza acestei probleme.\n\nVerifică și, dacă este necesar, corectează setările datei, orei și fusului orar.</string>
-    <string name="wallet_version_dialog_title">O versiune nouă este disponibilă!</string>
-    <string name="wallet_version_dialog_msg">Această versiune repară bug-uri importante. Pentru detalii, consultă jurnalul de modificări de pe Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Dacă nu vezi o actualizare, înseamnă că versiunea ta de Android nu mai este acceptată.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Descarcă</string>
-    <string name="wallet_old_sdk_dialog_title">Versiunea Android nu este actualizată</string>
-    <string name="wallet_old_sdk_dialog_message">Este posibil ca una din următoarele versiuni ale portofelului Dash să nu mai accepte dispozitivul tău. În unele cazuri, poate fi dificil să cheltuiești monede pe acest dispozitiv.\n\nDacă nu știi ce faci, este recomandat să muți în curând monedele.</string>
     <string name="send_coins_activity_title">Trimite Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Preluare semnătura de la %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Preluarea semnăturii a eșuat</string>
@@ -172,8 +165,6 @@
     <string name="restore_wallet_dialog_success">Portofelul a fost restaurat.</string>
     <string name="restore_wallet_dialog_success_replay">Portofelul tău a fost restaurat cu succes. Soldul va fi determinat în continuare. Acest lucru va dura ceva timp.</string>
     <string name="import_keys_dialog_failure">Portofelul nu a putut fi restaurat:\n\n%s\n\nParolă greșită?</string>
-    <string name="backup_wallet_permission_dialog_title">Permisiunea de scriere lipsește</string>
-    <string name="backup_wallet_permission_dialog_message">Pentru a salva portofelul pe un spațiu de stocare extern, trebuie să acorzi permisiunea de scriere.</string>
     <string name="export_keys_dialog_title">Efectuează backup pentru portofel</string>
     <string name="backup_wallet_dialog_message">Backup-ul tău va fi securizat cu parola aleasă și scrisă pe spațiul de stocare extern.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Portofelul tău este protejat de un PIN de cheltuieli. Asigură-te că îți amintiți codul PIN pe lângă parola de backup!</string>
