@@ -36,6 +36,7 @@ open class DashPayConfig @Inject constructor(private val context: Context) {
 
         val LAST_SEEN_NOTIFICATION_TIME = longPreferencesKey("last_seen_notification_time")
         val LAST_METADATA_PUSH = longPreferencesKey("last_metadata_push")
+        val HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN = booleanPreferencesKey("has_dash_pay_info_screen_been_shown")
     }
 
     private val Context.dataStore by preferencesDataStore("dashpay", produceMigrations = {
