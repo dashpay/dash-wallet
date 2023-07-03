@@ -78,7 +78,6 @@ dependencies {
     implementation 'androidx.coordinatorlayout:coordinatorlayout:1.2.0'
     implementation "com.google.android.material:material:$materialVersion"
     implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
-    implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "com.github.bumptech.glide:glide:$glideVersion"

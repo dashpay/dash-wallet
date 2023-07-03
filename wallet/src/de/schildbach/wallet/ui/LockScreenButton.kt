@@ -25,13 +25,13 @@ import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.LockScreenButtonBinding
-import org.dash.wallet.common.ui.getRoundedRippleBackground
+import org.dash.wallet.common.ui.setRoundedRippleBackground
 
 class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
     private val binding = LockScreenButtonBinding.inflate(LayoutInflater.from(context), this)
 
     init {
-        background = resources.getRoundedRippleBackground(R.style.TertiaryButtonTheme_Large_White)
+        setRoundedRippleBackground(R.style.TertiaryButtonTheme_Large_White)
         orientation = VERTICAL
 
         val attrsArray = context.obtainStyledAttributes(attrs, R.styleable.LockScreenButton)

@@ -15,16 +15,10 @@
     <color name="error_red">#BF2827</color>
     <!-- added for transaction status -->
     <color name="secondary_status">#E78010</color>
-    <color name="primary_status">#4A4A4A</color>
 
-    <color name="darkest_blue">#FF111921</color>
     <color name="vivid_red">#ec2227</color>
     <color name="white">#ffffff</color>
     <color name="menu_gray">#FFC9C9C9</color>
-    <color name="old_gray">#FF979797</color>
-    <color name="medium_gray">#ff4a4a4a</color>
-    <color name="black_text">#ff171717</color>
-    <color name="shadow_color">#33000000</color>
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>
     <color name="fg_less_significant">#ff666666</color>
@@ -32,7 +26,6 @@
     <color name="fg_error">#ffff0000</color>
     <color name="fg_network_significant">#ffffffff</color>
     <color name="fg_network_insignificant">#ffa0a0a0</color>
-    <color name="gift_card_orange">#FA9269</color>
 
     <!-- background -->
     <color name="bg_bright">#ffffffff</color>
@@ -44,8 +37,6 @@
     <color name="bg_dialog_title">@android:color/transparent</color>
     <color name="bg_shortcut">@color/colorPrimary</color>
     <color name="black">#000000</color>
-    <color name="black_liquid">#171717</color>
-    <color name="grey_liquid">#9B9B9B</color>
 
 
     <!-- Design System colors -->
@@ -100,6 +91,8 @@
     <color name="system_red">#E85C4A</color>
     <color name="system_green">#3CB878</color>
     <color name="tangerine">#FA9269</color>
+    <color name="system_teal">#78C4F5</color>
+    <color name="purple">#6273BD</color>
 
     <color name="dash_black_0.7">#B3191C1F</color>
     <color name="dash_black_0.05">#0D191C1F</color>
@@ -108,6 +101,7 @@
     <color name="extra_dark_gray_0.1">#1A525C66</color>
     <color name="dash_blue_0.1">#1A008DE4</color>
     <color name="dash_blue_0.05">#0D008DE4</color>
+    <color name="dash_blue_0.08">#14008DE4</color>
 
     <color name="blue_50">#F0F8FE</color>
     <color name="light_blue">#1A008DE4</color>

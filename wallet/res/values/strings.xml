@@ -166,7 +166,6 @@
     <string name="transaction_row_status_error_other">Unknown</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">On %s at %s</string>
-    <string name="transaction_row_rate_not_available">Not available</string>
     <string name="transaction_row_status_masternode_registration">Masternode Registration</string>
     <string name="transaction_row_status_masternode_update_registrar">Masternode Update</string>
     <string name="transaction_row_status_masternode_update_service">Masternode Update</string>
@@ -373,13 +372,13 @@
     <string name="payment_protocol_insufficient_funds_error_title">Insufficient Funds</string>
     <string name="payment_protocol_insufficient_funds_error_message">You do not have sufficient funds to complete this transaction</string>
 
-
-    <string name="select_a_service_to_buy_and_sell_dash"> Select a service to buy and sell Dash.</string>
+    <string name="buy_and_sell_subtitle">Select a service to buy, sell, convert and transfer Dash</string>
     <string name="select_a_service">Select a Service</string>
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Clear Filter</string>
     <string name="select_currency">Select Currency</string>
     <string name="reason">Reason</string>
+    <string name="link_account">Link your account</string>
     <string name="your_coinbase_session_has_expired">Your Coinbase session has expired</string>
     <string name="please_log_in_to_your_coinbase_account">Please log in to your Coinbase account</string>
     <string name="log_in">Log In</string>

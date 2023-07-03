@@ -82,4 +82,12 @@
     <string name="empty_wallet_warning_title">Looks like you are emptying your Dash Wallet</string>
     <string name="empty_wallet_crowdnode_warning">Please note, you will not be able to withdraw your funds from CrowdNode to this wallet until you increase your balance to 0.0003 Dash.</string>
     <string name="syncing">Syncing</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">Receive directly into Dash Wallet</string>
+    <string name="convert_crypto">Convert Crypto</string>
+    <string name="last_known_balance" >Last known balance</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="enter_amount_available">available</string>
+    <string name="transaction_row_rate_not_available">Not available</string>
 </resources>

@@ -224,12 +224,6 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdSplashActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
-
-        <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdAccountActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
-
         <activity
             android:name="de.schildbach.wallet.ui.LockScreenActivity"
             android:screenOrientation="portrait"
@@ -289,7 +283,7 @@
             android:theme="@style/LockScreenActivity.Theme" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.send.UpholdTransferActivity"
+            android:name="org.dash.wallet.integration.uphold.ui.UpholdTransferActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 

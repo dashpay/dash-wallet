@@ -30,8 +30,8 @@ import coil.load
 import coil.transform.CircleCropTransformation
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.RadiobuttonRowBinding
-import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
+import org.dash.wallet.common.ui.setRoundedBackground
 
 class RadioGroupAdapter(
     defaultSelectedIndex: Int = 0,
@@ -118,11 +118,13 @@ class RadioButtonViewHolder(
             }
 
 
-            binding.iconWrapper.background = when {
-                option.iconSelectMode != IconSelectMode.Encircle  -> null
-                isSelected -> resources.getRoundedBackground(R.style.EncircledIconSelectedTheme)
-                else -> resources.getRoundedBackground(R.style.EncircledIconTheme)
-            }
+            binding.iconWrapper.setRoundedBackground(
+                when {
+                    option.iconSelectMode != IconSelectMode.Encircle -> null
+                    isSelected -> R.style.EncircledIconSelectedTheme
+                    else -> R.style.EncircledIconTheme
+                }
+            )
         }
 
         option.iconUrl?.let {

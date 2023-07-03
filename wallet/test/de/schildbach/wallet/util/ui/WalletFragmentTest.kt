@@ -54,13 +54,13 @@ class WalletFragmentTest {
         val mockedDialog = spyk(AdaptiveDialog(0))
         val walletFragment = spyk(WalletFragment())
 
-        every { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any(), any()) } returns mockedDialog
+        every { AdaptiveDialog.Companion.custom(any()) } returns mockedDialog
         every { mockedDialog.show(walletFragment.requireActivity(), any()) } returns Unit
         every { walletFragment.getString(any()) } returns dialogMessage
 
         walletFragment.handlePaste("")
 
-        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any(), any(), dialogMessage, dialogMessage, any(), any()) }
+        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any()) }
         verify(exactly = 1) { mockedDialog.show(walletFragment.requireActivity(), any()) }
     }
 
@@ -74,14 +74,14 @@ class WalletFragmentTest {
         val mockedDialog = spyk(AdaptiveDialog(0))
         val walletFragment = spyk(WalletFragment())
 
-        every { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any(), any()) } returns mockedDialog
+        every { AdaptiveDialog.Companion.custom(any()) } returns mockedDialog
         every { walletFragment.getString(any()) } returns errorDialogTitle
         every { walletFragment.getString(any(), any()) } returns errorDialogTitle
         every { mockedDialog.show(walletFragment.requireActivity(), any()) } returns Unit
 
         walletFragment.handlePaste(input)
 
-        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any()) }
         verify(exactly = 1) { mockedDialog.show(walletFragment.requireActivity(), any()) }
     }
 
@@ -160,14 +160,14 @@ class WalletFragmentTest {
         val mockedDialog = spyk(AdaptiveDialog(0))
         val walletFragment = spyk(WalletFragment())
 
-        every { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any(), any()) } returns mockedDialog
+        every { AdaptiveDialog.Companion.custom(any()) } returns mockedDialog
         every { walletFragment.getString(any()) } returns errorDialogTitle
         every { walletFragment.getString(any(), any()) } returns errorDialogTitle
         every { mockedDialog.show(walletFragment.requireActivity(), any()) } returns Unit
 
         walletFragment.handlePaste(dashAddress)
 
-        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any(), any(), errorDialogTitle, errorDialogTitle, any(), any()) }
+        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any()) }
         verify(exactly = 1) { mockedDialog.show(walletFragment.requireActivity(), any()) }
     }
 
@@ -235,7 +235,7 @@ class WalletFragmentTest {
         val dialogCallbackSlot = slot<(Boolean?) -> Unit>()
         val paymentIntentSlot = slot<PaymentIntent>()
 
-        every { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any(), any()) } returns mockedDialog
+        every { AdaptiveDialog.Companion.custom(any()) } returns mockedDialog
         every { walletFragment.getString(any()) } returns confirmDialogTitle
         every { walletFragment.getString(any(), any()) } returns confirmDialogTitle
         every { mockedDialog.show(walletFragment.requireActivity(), capture(dialogCallbackSlot)) } answers {
@@ -254,7 +254,7 @@ class WalletFragmentTest {
         walletFragment.handlePaste(input)
 
         assertTrue(paymentIntentSlot.captured.shouldConfirmAddress)
-        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any(), any(), confirmDialogTitle, dashAddress, any(), any()) }
+        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any()) }
         assertEquals(dashAddress, paymentIntentSlot.captured.address?.toBase58())
         verify(exactly = 1) { SendCoinsActivity.start(any(), any(), any(), any()) }
 
@@ -262,7 +262,7 @@ class WalletFragmentTest {
         walletFragment.handlePaste(input)
 
         assertTrue(paymentIntentSlot.captured.shouldConfirmAddress)
-        verify(exactly = 2) { AdaptiveDialog.Companion.custom(any(), any(), confirmDialogTitle, dashAddress, any(), any()) }
+        verify(exactly = 2) { AdaptiveDialog.Companion.custom(any()) }
         assertEquals(dashAddress, paymentIntentSlot.captured.address?.toBase58())
         verify(exactly = 2) { SendCoinsActivity.start(any(), any(), any(), any()) }
     }

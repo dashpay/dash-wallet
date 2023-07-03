@@ -24,7 +24,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import de.schildbach.wallet.data.ServiceStatus
 import de.schildbach.wallet.data.ServiceType
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -42,12 +41,12 @@ import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import org.dash.wallet.integration.uphold.api.UpholdClient
 import org.dash.wallet.integration.uphold.api.getDashBalance
 import org.dash.wallet.integration.uphold.api.hasValidCredentials
+import org.dash.wallet.integration.uphold.api.isAuthenticated
 import javax.inject.Inject
 
 /**
  * @author Eric Britten
  */
-@ExperimentalCoroutinesApi
 @HiltViewModel
 class BuyAndSellViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
