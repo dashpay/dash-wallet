@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Gestionar aplicaciones</string>
     <string name="wallet_timeskew_dialog_title">Verifica la fecha&amp; y configuración de hora.s</string>
     <string name="wallet_timeskew_dialog_msg">Tu dispositivo se ha desconectado por %d minutos. Probablemente no podrás enviar o recibir Dash por este problema.\\n\\nDeberás revisar si es necesario corregir la configuración de fecha, hora o zona horaria.</string>
-    <string name="wallet_version_dialog_title">¡Hay una nueva versión disponible!</string>
-    <string name="wallet_version_dialog_msg">Esta versión corrige fallos importantes. Más detalles en el historial de cambios de Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Si no ves una actualización, es probable que tu versión de Android ya no sea compatible.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Descargar</string>
-    <string name="wallet_old_sdk_dialog_title">Versión de Android desactualizada</string>
-    <string name="wallet_old_sdk_dialog_message">Es probable que una de las próximas versiones de Dash Wallet no sea compatible con tu dispositivo. En algunos casos, puede ser dificil gastar las monedas en este dispositivo.\n\nA menos que sepas lo que haces, es recomendable transferir tus monedas pronto.</string>
     <string name="send_coins_activity_title">Enviar Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Adquiriendo firma de %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ha fallado la adquisición de firma</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">Tu billetera fue restaurada satisfactoriamente. El balance será determinado a continuación. Esto llevará algún tiempo.</string>
     <string name="restore_wallet_dialog_success_encrypted">Advertencia: tu billetera está protegida por un PIN. Asegúrate de recordarlo antes de recibir fondos en esta billetera.</string>
     <string name="import_keys_dialog_failure">La billetera no pudo ser restaurada:\n\n%s\n\n¿Contraseña errónea?</string>
-    <string name="backup_wallet_permission_dialog_title">Permisos de escritura no encontrados</string>
-    <string name="backup_wallet_permission_dialog_message">Para respaldar tu billetera a un medio externo, necesitas dar permisos de escritura.</string>
     <string name="export_keys_dialog_title">Hacer copia de seguridad de la cartera</string>
     <string name="backup_wallet_dialog_message">Tu copia de seguridad será encriptada con la contraseña que elijas y guardada en una unidad de almacenamiento externo.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Tu cartera está protegida con un PIN de pagos. ¡Asegúrate de recordar el PIN, además de la contraseña de tu copia de seguridad!</string>

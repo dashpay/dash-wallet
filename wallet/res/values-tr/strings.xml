@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Uygulamaları yönet</string>
     <string name="wallet_timeskew_dialog_title">Tarihi kontrol et &amp; zaman ayarları</string>
     <string name="wallet_timeskew_dialog_msg">Cihazınızın saati %d dakika farklılık göstermekte. Muhtemelen, bu problemden dolayı Dash gönderemeyecek ve alamayacaksınız.\n\nTarih, saat ve saat dilimi ayarlarınızı kontrol etmelisiniz, gerektiği takdirde ise düzeltmelisiniz.</string>
-    <string name="wallet_version_dialog_title">Yeni bir sürüm mevcuttur!</string>
-    <string name="wallet_version_dialog_msg">Bu sürüm önemli hataları düzeltir. Detaylar için, Google Play\'deki değişim günlüğüne bakınız.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Eğer bir güncelleme görmüyorsanız, bu muhtemelen Android sürümünüzün artık desteklenmediği anlamına gelir.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">İndir</string>
-    <string name="wallet_old_sdk_dialog_title">Android sürümü güncel değil</string>
-    <string name="wallet_old_sdk_dialog_message">Gelecek Dash Wallet sürümlerinden birinin cihazınızı desteklememesi olası bir ihtimaldir. Bazı durumlarda, bu cihaz üzerinden Dash harcamak zorlaşabilir. In some cases, it can get difficult to spend coins on this device.\n\nVelev ki ne yaptığınızı biliyorsanız durum başka, Dash\'lerinizi kısa zamanda başka bir yere aktarmanz tavsiye edilir.</string>
     <string name="send_coins_activity_title">Dash Gönder</string>
     <string name="send_coins_fragment_request_payment_request_progress">%s tarafından imza alınıyor…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">İmza alımı başarısız</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">Cüzdanınız başarılı bir şekilde geri yüklendi. Bundan sonra bakiyesi belirlenecektir. Bu biraz vakit alacaktır.</string>
     <string name="restore_wallet_dialog_success_encrypted">Uyarı: Cüzdanınız bir harcama PİN\'i ile korunmaktadır. Bu cüzdana gönderimler yapmadan önce PİN\'i bildiğinizden emin olun.</string>
     <string name="import_keys_dialog_failure">Cüzdan geri yüklenemedi:\n\n%s\n\nYanlış şifre olmasın?</string>
-    <string name="backup_wallet_permission_dialog_title">Yazma izni eksik</string>
-    <string name="backup_wallet_permission_dialog_message">Cüzdanınızı harici bir belleğe yedeklemek için, yazma izni vermeniz gerekiyor.</string>
     <string name="export_keys_dialog_title">Cüzdanı yedekle</string>
     <string name="backup_wallet_dialog_message">Yedeğiniz seçtiğiniz parola ile şifrelenecek ve harici belleğe yazılacaktır.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Cüzdanınız bir harcama PİN\'i ile korunmaktadır. Yedekleme parolasına ilâve olarak bu PİN\'i hatırlayacağınızdan emin olunuz!</string>

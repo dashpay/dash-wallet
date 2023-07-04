@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Gérer les applications</string>
     <string name="wallet_timeskew_dialog_title">Veuillez vérifier les réglages de date &amp; heure.</string>
     <string name="wallet_timeskew_dialog_msg">L\'horloge de votre appareil est décalée de %d minutes. Vous ne pouvez sans doute pas envoyer ou recevoir de dashs pour cette raison.\n\nVeuillez vérifier et éventuellement corriger la date, l\'heure et le fuseau horaire de votre appareil.</string>
-    <string name="wallet_version_dialog_title">Une nouvelle version est disponible !</string>
-    <string name="wallet_version_dialog_msg">Cette version corrige des bugs importants. Pour plus de détails, voir le journal des changements sur Google Play Store.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Si aucune mise à jour ne vous est proposée, ceci signifie sans doute que votre version d\'Android n\'est plus prise en charge.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Télécharger</string>
-    <string name="wallet_old_sdk_dialog_title">La version d\'Android est obsolète</string>
-    <string name="wallet_old_sdk_dialog_message">Il y a de bonnes chances que votre appareil ne puisse accueillir les prochaines versions du portefeuille Dash. Dans certains cas, il pourra être difficile d\'envoyer de l\'argent depuis cet appareil.\n\nÀ moins que vous ne sachiez ce que vous faites, il vous est recommandé de sortir vos fonds rapidement de cet appareil.</string>
     <string name="send_coins_activity_title">Envoyer dashs</string>
     <string name="send_coins_fragment_request_payment_request_progress">Récupération de la signature de %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Échec lors de la récupération de la signature</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">Votre portefeuille a été restauré avec succès. Son solde va maintenant être calculé. Cela prendra un certain temps.</string>
     <string name="restore_wallet_dialog_success_encrypted">Attention : les dépenses depuis votre portefeuille sont protégées par un code PIN. Assurez-vous de vous souvenir de ce code PIN avant de recevoir dans ce portefeuille.</string>
     <string name="import_keys_dialog_failure">Impossible de restaurer le portefeuille :\n\n%s\n\nMot de passe erroné ?</string>
-    <string name="backup_wallet_permission_dialog_title">Autorisation d\'écriture manquante</string>
-    <string name="backup_wallet_permission_dialog_message">Pour sauvegarder votre portefeuille sur votre unité extérieure de stockage, vous devez accorder les autorisations d\'écriture.</string>
     <string name="export_keys_dialog_title">Sauvegarder le portefeuille</string>
     <string name="backup_wallet_dialog_message">Votre sauvegarde sera chiffrée avec le mot de passe choisi et enregistrée sur le stockage externe.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Votre portefeuille est protégé par un code PIN de paiement. Assurez-vous de retenir le code PIN en plus du mot de passe de sauvegarde !</string>

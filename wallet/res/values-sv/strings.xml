@@ -32,13 +32,6 @@
     <string name="wallet_low_storage_dialog_title">Lagringsutrymme snart slut</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet använder intern lagring för att komma ihåg transaktioner och block. Om lagringsutrymmet tar slut kommer den att sluta fungera och dina Dash hamnar i riskzonen!\n\nVill du öppna Application Manager för att avinstallera onödiga appar?</string>
     <string name="wallet_low_storage_dialog_button_apps">Hantera appar</string>
-    <string name="wallet_version_dialog_title">En ny version är tillgänglig!</string>
-    <string name="wallet_version_dialog_msg">Denna version löser viktiga buggar. För mer information, se ändringsloggen på Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Om du inte ser en uppdatering så beror det förmodligen på att din version av Android inte stöds längre.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Ladda ner</string>
-    <string name="wallet_old_sdk_dialog_title">Android-versionen är inaktuell</string>
-    <string name="wallet_old_sdk_dialog_message">Chansen är stor att någon av de kommande releaserna av Dash Wallet inte kommer att fungera på din enhet längre. I vissa fall kan det bli svårt att spendera dina tillgångar med den här enheten.\n\nSåvida du inte vet vad du gör, rekommenderas att du flyttar dina Dash snart.</string>
     <string name="send_coins_activity_title">Skicka Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Hämtar signatur från %s</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Hämtning av signatur misslyckades</string>

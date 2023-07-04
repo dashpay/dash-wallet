@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Керування додатками</string>
     <string name="wallet_timeskew_dialog_title">Перевірте налаштування дати та часу</string>
     <string name="wallet_timeskew_dialog_msg">Час на Вашому пристрої відрізняється на %d хвилин. З цієї причини Ви, можливо, не зможете надсилати або отримувати кошти.\\n\\nПеревірте налаштування та за потреби скоригуйте дату, час та часовий пояс.</string>
-    <string name="wallet_version_dialog_title">Доступна нова версія!</string>
-    <string name="wallet_version_dialog_msg">Ця версія виправляє важливі помилки. Деталі на Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Якщо ви не бачите оновлення, це значить, що ваша версія Android більше не підтримується.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Завантажити</string>
-    <string name="wallet_old_sdk_dialog_title">Версія для Android застаріла</string>
-    <string name="wallet_old_sdk_dialog_message">Ймовірно що одна з майбутніх версій Dash Wallet перестане підтримувати ваш пристрій. В деяких випадках буде складно витратити монети з цього пристрою.\n\nЯкщо ви не впевнені в тому що робите, рекомендується як найшвидше вивести монети з пристрою.</string>
     <string name="send_coins_activity_title">Відправка Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Отримання підпису %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Помилка при отриманні підпису</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">Ваш гаманець був успішно відновлений. Його баланс визначиться згодом. Це займе трохи часу.</string>
     <string name="restore_wallet_dialog_success_encrypted">Попередження: ваш гаманець захищено PIN-кодом витрат. Переконайтеся, що ви пам’ятаєте про це, перш ніж отримати платіж на цей гаманець.</string>
     <string name="import_keys_dialog_failure">Гаманець не можливо відновити:\n\n%s\n\Неправильний пароль?</string>
-    <string name="backup_wallet_permission_dialog_title">Відсутній дозвіл на запис</string>
-    <string name="backup_wallet_permission_dialog_message">Щоб створити резервну копію гаманця у зовнішній пам’яті, вам потрібно надати дозвіл на запис.</string>
     <string name="export_keys_dialog_title">Резервна копія гаманця</string>
     <string name="backup_wallet_dialog_message">Ваш гаманець буде зашифрований за допомогою пароля і будет записаний на зовнішній накопичувач.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Ваш гаманець захищений платіжним PIN-кодом. Обов’язково запам’ятайте PIN-код на додаток до резервного пароля!</string>

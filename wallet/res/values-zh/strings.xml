@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">管理应用程序</string>
     <string name="wallet_timeskew_dialog_title">检查日期 &amp; 时间设置</string>
     <string name="wallet_timeskew_dialog_msg">您的设备停止了 %d 分钟. 由于此原因, 您可能无法发送或接收Dash.\\n\\n您应当检查, 并修正您的日期, 时区设置.</string>
-    <string name="wallet_version_dialog_title">有新的版本可用!</string>
-    <string name="wallet_version_dialog_msg">该版本修复了重要的bug, 详情请详见 Google Play 上的更改日志.</string>
-    <string name="wallet_version_dialog_msg_deprecated">如果您没有看到更新, 这可能意味您的 Android 版本已经不被支持了.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">下载</string>
-    <string name="wallet_old_sdk_dialog_title">您的 Android 版本已过时</string>
-    <string name="wallet_old_sdk_dialog_message">当下一版本Dash钱包发布时, 有些许的可能它将不在支持您当前的设备. 也就是说您将无法再用这台设备发送Dash./n/n除非您知道您在做什么, 否则建议您尽快将您的资金进行转移.</string>
     <string name="send_coins_activity_title">发送Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">正在从 %s 读取签名…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">获取签名失败</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">您的钱包已经成功恢复. 下一步将会确定您的余额, 这将会花费一些时间.</string>
     <string name="restore_wallet_dialog_success_encrypted">警告: 您的钱包受消费PIN码保护. 在您通过此钱包收款前, 确保您仍记得PIN码.</string>
     <string name="import_keys_dialog_failure">无法恢复钱包:\n\n%s\n\n是否输入了错误的密码?</string>
-    <string name="backup_wallet_permission_dialog_title">写入权限缺失</string>
-    <string name="backup_wallet_permission_dialog_message">为了将钱包备份到外部设备, 您需要准许写入权限.</string>
     <string name="export_keys_dialog_title">备份钱包</string>
     <string name="backup_wallet_dialog_message">您的备份将会使用选定的密码进行加密, 然后放置在外部存储设备上.</string>
     <string name="backup_wallet_dialog_warning_encrypted">您的钱包受支付PIN码保护. 除了备份密码以外, 请确保您记住该PIN码!</string>

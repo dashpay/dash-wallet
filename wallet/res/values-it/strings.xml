@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Gestisci applicazioni</string>
     <string name="wallet_timeskew_dialog_title">Controlla data &amp; impostazioni di tempo</string>
     <string name="wallet_timeskew_dialog_msg">Il tuo dispositivo è spento da %d minuti. Probabilmente non puoi inviare ne ricevere Dash per via di questo problema.\n\nDevi controllare e correggere l\'ora e il fuso orario del tuo dispositivo.</string>
-    <string name="wallet_version_dialog_title">Una nuova versione è disponibile!</string>
-    <string name="wallet_version_dialog_msg">Questa versione ha corretto bug importanti. Per dettagli, guarda il "chan" su Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Se non si vede un aggiornamento, questo probabilmente significa che la vostra versione di Android non è più supportata.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Scarica</string>
-    <string name="wallet_old_sdk_dialog_title">La versione Android non è aggiornata</string>
-    <string name="wallet_old_sdk_dialog_message">Potrebabilmente le prossime versioni di Dash Wallet non supporteranno più il tuo dispositivo. In questi casi, potrebbe essere difficile spendere i Dash su dato dispositivo.\n\nA meno che tu non sappia quello che stai facendo, ti raccomandiamo di spostare il tuo denaro al più presto.</string>
     <string name="send_coins_activity_title">Invia Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Acquisizione firma da %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Acquisizione firma fallita</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">Il tuo portafoglio è stato ripristinato correttamente. Il bilancio verrà determinato in un secondo momento. Questo potrebbe richiedere diverso tempo</string>
     <string name="restore_wallet_dialog_success_encrypted">Attenzione: il tuo portafoglio è protetto da un PIN di spesa. Assicurati di ricordarlo ancora prima di ricevere su questo portafoglio.</string>
     <string name="import_keys_dialog_failure">Il portafoglio non può essere recuperato:\n\n%s\n\nPassword sbagliata?</string>
-    <string name="backup_wallet_permission_dialog_title">Permesso di scrittura mancante.</string>
-    <string name="backup_wallet_permission_dialog_message">Per eseguire il backup del tuo portafoglio su una memoria esterna, devi concedere il permesso di scrittura.</string>
     <string name="export_keys_dialog_title">Backup portafoglio</string>
     <string name="backup_wallet_dialog_message">Il vostro backup sarà cifrato con la password scelta e salvato su una memoria esterna.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Il tuo portafoglio è protetto da un PIN di sicurezza. Assicurati di ricordare il PIN assieme alla password di backup!</string>
