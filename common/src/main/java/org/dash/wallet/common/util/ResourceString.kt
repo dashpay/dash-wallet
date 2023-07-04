@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,21 +14,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.common.services
 
-import androidx.fragment.app.FragmentActivity
-import org.bitcoinj.utils.ExchangeRate
+package org.dash.wallet.common.util
 
-interface ConfirmTransactionService {
-    suspend fun showTransactionDetailsPreview(
-        activity: FragmentActivity,
-        address: String,
-        amount: String,
-        exchangeRate: ExchangeRate?,
-        fee: String,
-        total: String,
-        payeeName: String? = null,
-        payeeVerifiedBy: String? = null,
-        buttonText: String? = null
-    ): Boolean
+import android.content.res.Resources
+import androidx.annotation.StringRes
+
+data class ResourceString(
+    @StringRes val resourceId: Int,
+    val args: List<Any> = listOf()
+) {
+    fun format(resources: Resources): String {
+        return resources.getString(resourceId, *args.toTypedArray())
+    }
 }

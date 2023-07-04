@@ -166,7 +166,7 @@
     <string name="transaction_row_status_error_other">Невідомий</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">На %s в %s</string>
-    <string name="transaction_row_rate_not_available">Недоступний</string>
+    <string name="rate_not_available">Недоступний</string>
     <string name="transaction_row_status_masternode_registration">Реєстрація Мастерноди</string>
     <string name="transaction_row_status_masternode_update_registrar">Оновлення Мастерноди</string>
     <string name="transaction_row_status_masternode_update_service">Оновлення Мастерноди</string>

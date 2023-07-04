@@ -167,7 +167,7 @@
     <string name="transaction_row_status_error_other">ناشناخته</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">در تاریخ %s ساعت %s</string>
-    <string name="transaction_row_rate_not_available">در دسترس نیست</string>
+    <string name="rate_not_available">در دسترس نیست</string>
     <string name="transaction_row_status_masternode_registration">ثبت مسترند</string>
     <string name="transaction_row_status_masternode_update_registrar">به‌روزرسانی مسترند</string>
     <string name="transaction_row_status_masternode_update_service">به‌روزرسانی مسترند</string>

@@ -166,7 +166,7 @@
     <string name="transaction_row_status_error_other">Inconnu</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Sur %s à %s</string>
-    <string name="transaction_row_rate_not_available">Non disponible</string>
+    <string name="rate_not_available">Non disponible</string>
     <string name="transaction_row_status_masternode_registration">Enregistrement de masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Mettre à jour un masternode</string>
     <string name="transaction_row_status_masternode_update_service">Mettre à jour un masternode</string>

@@ -42,7 +42,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            tools:src="@drawable/ic_back_arrow" />
+            tools:src="@drawable/ic_chevron" />
     </FrameLayout>
 
     <TextView
