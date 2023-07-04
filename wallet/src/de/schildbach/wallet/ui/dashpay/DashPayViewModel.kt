@@ -31,6 +31,7 @@ import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
+import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -96,6 +97,8 @@ open class DashPayViewModel @Inject constructor(
     private var searchContactsJob = Job()
     private var contactRequestJob = Job()
     private var getContactJob = Job()
+
+    var createUsernameArgs :CreateUsernameArgs? = null
 
     val recentlyModifiedContactsLiveData = MutableLiveData<HashSet<String>>()
 

@@ -5,14 +5,15 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameVotingInfoBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
@@ -27,14 +28,19 @@ class UsernameVotingInfoFragment : Fragment(R.layout.fragment_username_voting_in
         }
 
         binding.usernameVotingInfoContinueBtn.setOnClickListener {
-            findNavController().popBackStack(
-                findNavController().graph.findStartDestination().id,
-                false
-            )
+            dashPayViewModel.createUsernameArgs?.let { args ->
+                safeNavigate(
+                    UsernameVotingInfoFragmentDirections.welcomeToDashPayFragmentToCreateUsernameFragment(
+                        args
+                    )
+                )
+            }
         }
 
         lifecycleScope.launchWhenStarted {
-            dashPayViewModel.setIsDashPayInfoShown(true)
+            lifecycleScope.launch {
+                dashPayViewModel.setIsDashPayInfoShown(true)
+            }
         }
     }
 }

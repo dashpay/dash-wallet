@@ -21,6 +21,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.InvitationLinkData
@@ -114,15 +115,29 @@ class CreateUsernameActivity : InteractionAwareActivity() {
         val username = intent?.extras?.getString(EXTRA_USERNAME)
         val invite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
         val fromOnboardng = intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)
-        val createUsernameArgs = CreateUsernameArgs(
-            actions = action,
-            userName = username,
-            invite = invite,
-            fromOnboardng = fromOnboardng,
-        )
-        val bundle = Bundle()
-        bundle.putParcelable(CreateUsernameFragment.CREATE_USER_NAME_ARGS, createUsernameArgs)
 
-        navController.setGraph(navController.graph, bundle)
+        lifecycleScope.launchWhenCreated {
+            val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_create_user_name_fragment) as NavHostFragment
+            val navController = navHostFragment.navController
+            val navGraph = navController.navInflater.inflate(R.navigation.nav_username)
+            val bundle = Bundle()
+
+            dashPayViewModel.createUsernameArgs = CreateUsernameArgs(
+                actions = action,
+                userName = username,
+                invite = invite,
+                fromOnboardng = fromOnboardng
+            )
+
+            if (!dashPayViewModel.isDashPayInfoShown()) {
+                navGraph.setStartDestination(R.id.welcomeToDashPayFragment)
+            } else {
+                bundle.putParcelable(CreateUsernameFragment.CREATE_USER_NAME_ARGS, dashPayViewModel.createUsernameArgs)
+                navGraph.setStartDestination(R.id.createUsernameFragment)
+            }
+
+            navController.graph = navGraph
+            navController.setGraph(navController.graph, bundle)
+        }
     }
 }
