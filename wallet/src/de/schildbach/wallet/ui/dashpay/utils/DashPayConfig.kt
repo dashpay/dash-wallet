@@ -19,12 +19,18 @@ package de.schildbach.wallet.ui.dashpay.utils
 
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -34,12 +40,12 @@ open class DashPayConfig @Inject constructor(private val context: Context) {
     companion object {
         const val DISABLE_NOTIFICATIONS: Long = -1
 
+        const val DASHPAY_PREFS_DIRECTORY = "dashpay"
         val LAST_SEEN_NOTIFICATION_TIME = longPreferencesKey("last_seen_notification_time")
         val LAST_METADATA_PUSH = longPreferencesKey("last_metadata_push")
         val HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN = booleanPreferencesKey("has_dash_pay_info_screen_been_shown")
     }
-
-    private val Context.dataStore by preferencesDataStore("dashpay", produceMigrations = {
+    private val Context.dataStore by preferencesDataStore(DASHPAY_PREFS_DIRECTORY, produceMigrations = {
         listOf(
             // Migrating relevant keys from default prefs
             SharedPreferencesMigration(
@@ -86,4 +92,9 @@ open class DashPayConfig @Inject constructor(private val context: Context) {
     open suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
     }
+
+    fun clearDashPayConfig() =
+        GlobalScope.launch { clearAll() }
 }
+
+

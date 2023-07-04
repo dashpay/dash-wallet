@@ -140,6 +140,7 @@ import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.security.PinRetryController;
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig;
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
@@ -783,6 +784,21 @@ public class WalletApplication extends MultiDexApplication
             }
         }
     }
+
+    private void clearDashPayPrefs() {
+        final File folder = new File(getFilesDir(), DashPayConfig. DASHPAY_PREFS_DIRECTORY);
+
+        if (folder.isDirectory()) {
+            log.info("removing datastore preferences");
+            final File[] files = folder.listFiles();
+
+            if (files != null) {
+                for (File file: files) {
+                    file.delete();
+                }
+            }
+        }
+    }
     private void clearWebCookies() {
         CookieManager.getInstance().removeAllCookies(null);
         CookieManager.getInstance().flush();
@@ -973,6 +989,7 @@ public class WalletApplication extends MultiDexApplication
         cleanupFiles();
         config.clear();
         clearDatastorePrefs();
+        clearDashPayPrefs();
         clearWebCookies();
         notifyWalletWipe();
         PinRetryController.getInstance().clearPinFailPrefs();
