@@ -196,6 +196,9 @@ public class WalletApplication extends MultiDexApplication
     protected AnalyticsService analyticsService;
     @Inject
     BlockchainStateDao blockchainStateDao;
+
+    @Inject
+    DashPayConfig dashPayConfig;
     @Inject
     CrowdNodeConfig crowdNodeConfig;
     @Inject
@@ -786,18 +789,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void clearDashPayPrefs() {
-        final File folder = new File(getFilesDir(), DashPayConfig. DASHPAY_PREFS_DIRECTORY);
-
-        if (folder.isDirectory()) {
-            log.info("removing datastore preferences");
-            final File[] files = folder.listFiles();
-
-            if (files != null) {
-                for (File file: files) {
-                    file.delete();
-                }
-            }
-        }
+        dashPayConfig.clearDashPayConfig();
     }
     private void clearWebCookies() {
         CookieManager.getInstance().removeAllCookies(null);
@@ -988,8 +980,8 @@ public class WalletApplication extends MultiDexApplication
         shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
-        clearDatastorePrefs();
         clearDashPayPrefs();
+        clearDatastorePrefs();
         clearWebCookies();
         notifyWalletWipe();
         PinRetryController.getInstance().clearPinFailPrefs();
