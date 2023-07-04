@@ -3,11 +3,8 @@ package de.schildbach.wallet.ui.username
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentWelcomeToDashpayBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,7 +15,7 @@ import org.dash.wallet.common.util.safeNavigate
 @ExperimentalCoroutinesApi
 class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) {
     private val binding by viewBinding(FragmentWelcomeToDashpayBinding::bind)
-    private val dashPayViewModel: DashPayViewModel by activityViewModels()
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -26,9 +23,6 @@ class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) 
 
         binding.welcomeDashpayContinueBtn.setOnClickListener {
             safeNavigate(WelcomeToDashPayFragmentDirections.welcomeToDashPayFragmentToUsernameVotingInfoFragment())
-        }
-        lifecycleScope.launchWhenStarted {
-            dashPayViewModel.setIsDashPayInfoShown(true)
         }
     }
 }
