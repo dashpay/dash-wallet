@@ -65,6 +65,17 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     kapt "com.google.dagger:hilt-compiler:$hiltVersion"
 
+    // JWT
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly('io.jsonwebtoken:jjwt-orgjson:0.11.5') {
+        exclude(group: 'org.json', module: 'json') //provided by Android natively
+    }
+
+    implementation 'com.madgag.spongycastle:core:1.50.0.0'
+    implementation 'com.madgag.spongycastle:prov:1.50.0.0'
+    implementation 'com.madgag.spongycastle:pkix:1.50.0.0'
+
     // Tests
     testImplementation "junit:junit:$junitVersion"
     testImplementation "androidx.test:core-ktx:1.5.0"

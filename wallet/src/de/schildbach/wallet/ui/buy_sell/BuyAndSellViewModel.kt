@@ -31,14 +31,17 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
+import org.dash.wallet.integration.uphold.api.TopperClient
 import org.dash.wallet.integration.uphold.api.UpholdClient
 import org.dash.wallet.integration.uphold.api.getDashBalance
 import org.dash.wallet.integration.uphold.api.hasValidCredentials
@@ -52,11 +55,13 @@ import javax.inject.Inject
 class BuyAndSellViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
     val config: Configuration,
-    val coinbaseConfig: CoinbaseConfig,
+    private val coinbaseConfig: CoinbaseConfig,
     val analytics: AnalyticsService,
     private val upholdClient: UpholdClient,
+    private val topperClient: TopperClient,
     networkState: NetworkStateInt,
-    exchangeRates: ExchangeRatesProvider
+    exchangeRates: ExchangeRatesProvider,
+    private val walletData: WalletDataProvider
 ): ConnectivityViewModel(networkState) {
 
     companion object {
@@ -87,7 +92,7 @@ class BuyAndSellViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        isDeviceConnectedToInternet.observeForever { isConnected ->
+        isDeviceConnectedToInternet.observeForever {
             updateServicesStatus()
             updateBalances()
         }
@@ -99,7 +104,7 @@ class BuyAndSellViewModel @Inject constructor(
 
     fun updateServicesStatus() {
         setDashServiceList(
-            (_servicesList.value ?: listOf()).map { model ->
+            _servicesList.value.map { model ->
                 val serviceStatus = getItemStatus(model.serviceType)
                 if (serviceStatus != model.serviceStatus) {
                     model.copy(serviceStatus = serviceStatus)
@@ -155,7 +160,7 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
     private fun showRowBalance(serviceType: ServiceType, amount: String) {
-        val list = (_servicesList.value ?: listOf()).map { model ->
+        val list = _servicesList.value.map { model ->
             if (model.serviceType == serviceType) {
                 val balance = try {
                     Coin.parseCoin(amount)
@@ -229,6 +234,15 @@ class BuyAndSellViewModel @Inject constructor(
                 AnalyticsConstants.Coinbase.ENTER_DISCONNECTED
             },
             bundleOf()
+        )
+    }
+
+    fun topperBuyUrl(walletName: String): String {
+        return topperClient.getOnRampUrl(
+            Constants.USD_CURRENCY,
+            10.0,
+            walletData.freshReceiveAddress(),
+            walletName
         )
     }
 

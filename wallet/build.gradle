@@ -268,63 +268,46 @@ android {
     }
     flavorDimensions "default"
     productFlavors {
+        all {
+            def coinbaseClientId = props.getProperty("COINBASE_CLIENT_ID", "\"COINBASE_CLIENT_ID\"")
+            def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET", "\"COINBASE_CLIENT_SECRET\"")
+            buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
+            buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
+        }
         prod {
             applicationId = "hashengineering.darkcoin.wallet"
-            def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID")
-            def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET")
-            if (upholdClientId == null) {
-                upholdClientId = "\"UPHOLD_CLIENT_ID\""
-            }
-            if (upholdClientSecret == null) {
-                upholdClientSecret = "\"UPHOLD_CLIENT_SECRET\""
-            }
+
+            def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
+            def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
             buildConfigField("String", "UPHOLD_CLIENT_ID", upholdClientId)
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", upholdClientSecret)
 
-            def coinbaseClientId = props.getProperty("COINBASE_CLIENT_ID")
-            def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET")
-
-            if (coinbaseClientId == null) {
-                coinbaseClientId = "\"COINBASE_CLIENT_ID\""
-            }
-            if (coinbaseClientSecret == null) {
-                coinbaseClientSecret = "\"COINBASE_CLIENT_SECRET\""
-            }
-            buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
-            buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
-
+            def topperKeyId = props.getProperty("TOPPER_KEY_ID", "\"TOPPER_KEY_ID\"")
+            def topperWidgetId = props.getProperty("TOPPER_WIDGET_ID", "\"TOPPER_WIDGET_ID\"")
+            def topperPrivateKey = props.getProperty("TOPPER_PRIVATE_KEY", "\"TOPPER_PRIVATE_KEY\"")
+            buildConfigField("String", "TOPPER_KEY_ID", topperKeyId)
+            buildConfigField("String", "TOPPER_WIDGET_ID", topperWidgetId)
+            buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
-            def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
-            def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
-            if (imgurClientId == null) {
-                imgurClientId = "\"UPHOLD_CLIENT_ID\""
-            }
-            if (imgurClientSecret == null) {
-                imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
-            }
-            buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
-            buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
 
-            def coinbaseClientId = props.getProperty("COINBASE_CLIENT_ID")
-            def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET")
+            def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX", "\"UPHOLD_CLIENT_ID\"")
+            def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX", "\"UPHOLD_CLIENT_SECRET\"")
+            buildConfigField("String", "UPHOLD_CLIENT_ID", upholdClientId)
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", upholdClientSecret)
 
-            if (coinbaseClientId == null) {
-                coinbaseClientId = "\"COINBASE_CLIENT_ID\""
-            }
-            if (coinbaseClientSecret == null) {
-                coinbaseClientSecret = "\"COINBASE_CLIENT_SECRET\""
-            }
-            buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
-            buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
+            def topperKeyId = props.getProperty("TOPPER_KEY_ID_SANDBOX", "\"TOPPER_KEY_ID\"")
+            def topperWidgetId = props.getProperty("TOPPER_WIDGET_ID_SANDBOX", "\"TOPPER_WIDGET_ID\"")
+            def topperPrivateKey = props.getProperty("TOPPER_PRIVATE_KEY_SANDBOX", "\"TOPPER_PRIVATE_KEY\"")
+            buildConfigField("String", "TOPPER_KEY_ID", topperKeyId)
+            buildConfigField("String", "TOPPER_WIDGET_ID", topperWidgetId)
+            buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
         }
         devnet {
             applicationId = "org.dash.wallet.devnet"
             buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
-            buildConfigField("String", "COINBASE_CLIENT_ID", "\"\"")
-            buildConfigField("String", "COINBASE_CLIENT_SECRET", "\"\"")
         }
     }
 
@@ -358,15 +341,6 @@ android {
     }
     buildFeatures {
         viewBinding true
-    }
-    lint {
-        abortOnError false
-        disable 'MissingTranslation'
-    }
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-        kotlinOptions {
-            freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
-        }
     }
     lint {
         abortOnError false

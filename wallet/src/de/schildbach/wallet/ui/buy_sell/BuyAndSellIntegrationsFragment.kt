@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui.buy_sell
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -37,6 +36,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -97,7 +97,8 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
     }
 
     private fun onTopperItemClicked() {
-        Toast.makeText(requireContext(), "Topper", Toast.LENGTH_SHORT).show()
+        val uri = viewModel.topperBuyUrl(getString(R.string.app_name))
+        requireActivity().openCustomTab(uri)
     }
 
     private fun onUpholdItemClicked() {
