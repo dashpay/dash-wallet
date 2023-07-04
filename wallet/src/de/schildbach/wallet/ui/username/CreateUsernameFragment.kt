@@ -86,13 +86,6 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        lifecycleScope.launch {
-            if (!dashPayViewModel.isDashPayInfoShown()) {
-               safeNavigate(CreateUsernameFragmentDirections.createUsernameToWelcomeToDashPayFragment())
-                dashPayViewModel.setIsDashPayInfoShown(true)
-            }
-        }
-
         binding.chooseUsernameTitle.text = getText(R.string.choose_your_username)
         binding.closeBtn.setOnClickListener { requireActivity().finish() }
         binding.username.addTextChangedListener(this)
@@ -133,6 +126,12 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
             }
             else -> {
                 // not sure what we need to do here
+            }
+        }
+
+        lifecycleScope.launchWhenStarted {
+            if (!dashPayViewModel.isDashPayInfoShown()) {
+                safeNavigate(CreateUsernameFragmentDirections.createUsernameToWelcomeToDashPayFragment())
             }
         }
     }
