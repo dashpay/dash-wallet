@@ -25,15 +25,16 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BlockchainState
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseToDashExchangeRateUIModel
 import java.math.BigDecimal
@@ -167,7 +168,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
     val hasBalance: Boolean
         get() = inputValue.isNotEmpty() &&
-                (inputValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
+            (inputValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
 
     fun setOnTransferDirectionListener(walletToCoinbase: Boolean) {
         // there must be a non-zero balance
@@ -178,7 +179,6 @@ class EnterAmountToTransferViewModel @Inject constructor(
         _isTransferFromWalletToCoinbase.value = !walletToCoinbase
     }
 
-
     val maxValue: String
         get() {
             val amount = if (_isTransferFromWalletToCoinbase.value) {
@@ -188,7 +188,9 @@ class EnterAmountToTransferViewModel @Inject constructor(
             }
             val cleanedValue = if (isFiatSelected) {
                 applyCoinbaseExchangeRate(amount)
-            } else amount
+            } else {
+                amount
+            }
 
             return cleanedValue
         }
@@ -211,7 +213,6 @@ class EnterAmountToTransferViewModel @Inject constructor(
     }
 
     fun applyExchangeRateToFiat(fiatValue: Fiat): Coin {
-
         return coinbaseExchangeRate?.let {
             val cleanedValue =
                 fiatValue.toBigDecimal() * it.currencyToDashExchangeRate.toBigDecimal()
@@ -229,14 +230,18 @@ class EnterAmountToTransferViewModel @Inject constructor(
             val cleanedValue = scaleValue(inputValue)
             val dashAmount = toCoin(cleanedValue)
 
-            return if (dashAmount.isZero) CoinbaseConstants.VALUE_ZERO.toBigDecimal()
-                .toPlainString() else cleanedValue
+            return if (dashAmount.isZero) {
+                CoinbaseConstants.VALUE_ZERO.toBigDecimal()
+                    .toPlainString()
+            } else {
+                cleanedValue
+            }
         }
 
     private val amountInDash: Coin
         get() {
             val scaledValue = scaleValue(inputValue)
-            return if (scaledValue.isEmpty()){
+            return if (scaledValue.isEmpty()) {
                 Coin.ZERO
             } else {
                 toCoin(scaledValue)
@@ -246,7 +251,6 @@ class EnterAmountToTransferViewModel @Inject constructor(
     private val coinbaseExchangeRateAppliedOnInput: String
         get() = applyCoinbaseExchangeRate(inputValue)
 
-
     val formatInput: String
         get() {
             return if ((inputValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO) {
@@ -255,7 +259,9 @@ class EnterAmountToTransferViewModel @Inject constructor(
                 } else {
                     applyCoinbaseExchangeRateToFiat
                 }
-            } else inputValue
+            } else {
+                inputValue
+            }
         }
 
     fun setBalanceForWallet() {
@@ -281,6 +287,13 @@ class EnterAmountToTransferViewModel @Inject constructor(
         return GenericUtils.fiatToString(fiat)
     }
 
+    fun getExchangeRate(): org.bitcoinj.utils.ExchangeRate? {
+        return coinbaseExchangeRate?.let {
+            val rate = BigDecimal.ONE.divide(it.currencyToDashExchangeRate.toBigDecimal(), 10, RoundingMode.HALF_UP)
+            org.bitcoinj.utils.ExchangeRate(rate.toFiat(localCurrencyCode))
+        }
+    }
+
     private fun scaleValue(valueToScale: String): String {
         return coinbaseExchangeRate?.let {
             val cleanedValue = valueToScale.toBigDecimal() * it.currencyToDashExchangeRate.toBigDecimal()
@@ -297,7 +310,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
         }
     }
 
-    fun getFiat(dashValue: String): Fiat {
+    private fun getFiat(dashValue: String): Fiat {
         val rateApplied = applyCoinbaseExchangeRate(dashValue)
         val formattedValue = GenericUtils.formatFiatWithoutComma(rateApplied)
         return Fiat.parseFiat(localCurrencyCode, formattedValue)

@@ -42,7 +42,6 @@ import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.integration.uphold.R
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
@@ -153,14 +152,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
                     val exchangeRate = enterAmountViewModel.selectedExchangeRate.value?.let {
                         ExchangeRate(Coin.COIN, it.fiat)
                     }
-                    val fiatAmount = exchangeRate?.coinToFiat(amount)
-                    val amountFiat = if (fiatAmount != null) {
-                        GenericUtils.fiatToString(fiatAmount)
-                    } else {
-                        getString(R.string.transaction_row_rate_not_available)
-                    }
 
-                    val fiatSymbol = fiatAmount?.let { GenericUtils.currencySymbol(it.currencyCode) } ?: ""
                     val fee = transaction.origin.fee.toPlainString()
                     val total = transaction.origin.amount.toPlainString()
                     lifecycleScope.launch {
@@ -168,8 +160,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
                             this@UpholdTransferActivity,
                             address,
                             amountStr,
-                            amountFiat,
-                            fiatSymbol,
+                            exchangeRate,
                             fee,
                             total
                         )

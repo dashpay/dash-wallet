@@ -267,6 +267,8 @@ public final class Constants {
     public static long EARLIEST_HD_SEED_CREATION_TIME = 1427610960L;
 
     public static String WALLET_URI_SCHEME = "dashwallet";
+    public static String ANYPAY_SCHEME = "pay";
+    public static String DASH_SCHEME = "dash";
 
     public static boolean ENABLE_ZERO_FEES = false; //Enable Zero Fee's on TestNet only.
 

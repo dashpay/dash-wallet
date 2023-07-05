@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">จัดการ แอพพลิเคชั่น</string>
     <string name="wallet_timeskew_dialog_title">ตรวจสอบวันที่  &amp; ตั้งค่าเวลา</string>
     <string name="wallet_timeskew_dialog_msg">อุปกรณ์ของคุณจะปิดภายใน %d นาที  คุณอาจจะไม่สามารถส่งหรือรับDashได้เนื่องจากปัญหานี้ \n\n คุณควรตรวจสอบและหากจำเป็นควรแก้ไขการตั้งค่าวันที่เวลาและเขตเวลา</string>
-    <string name="wallet_version_dialog_title">มีเวอร์ชั่นใหม่แล้ว!</string>
-    <string name="wallet_version_dialog_msg">รุ่นนี้แก้ไขข้อบกพร่องที่สำคัญ สำหรับรายละเอียดโปรดดูบันทึกการเปลี่ยนแปลงใน Google Play</string>
-    <string name="wallet_version_dialog_msg_deprecated">หากคุณไม่เห็นการอัปเดต อาจหมายความว่าแอนดรอยด์เวอร์ชันของคุณไม่รองรับอีกแล้ว</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">ดาวน์โหลด</string>
-    <string name="wallet_old_sdk_dialog_title">Android รุ่นนี้ ล่าสมัยแล้ว</string>
-    <string name="wallet_old_sdk_dialog_message">มีโอกาสที่ หนึ่งใน Dash Wallet รุ่นถัดไปจะไม่สนับสนุนอุปกรณ์ของคุณอีกต่อไป ในบางกรณีมันอาจเกิดความยากที่จะใช้เหรียญในอุปกรณ์นี้ .\n\n นอกเสียจากว่าคุณรู้ว่าคุณกำลังทำอะไรอยู่ ขอแนะนำให้ย้ายเหรียญของคุณออกเร็ว ๆ นี้</string>
     <string name="send_coins_activity_title">ส่ง Dash </string>
     <string name="send_coins_fragment_request_payment_request_progress">กำลังดึงข้อมูลลายเซ็นจาก %s </string>
     <string name="send_coins_fragment_request_payment_request_failed_title">การดึงข้อมูลลายเซ็นล้มเหลว</string>
@@ -173,7 +166,7 @@
     <string name="transaction_row_status_error_other">ซึ่งเป็นไม่เป็นที่รู้จัก</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">บน %s ที่ %s</string>
-    <string name="transaction_row_rate_not_available">ที่ไม่สามารถใช้ประโยชน์ได้</string>
+    <string name="rate_not_available">ที่ไม่สามารถใช้ประโยชน์ได้</string>
     <string name="transaction_row_status_masternode_registration">การลงทะเบียน Masternode </string>
     <string name="transaction_row_status_masternode_update_registrar">อัพเดต Masternode</string>
     <string name="transaction_row_status_masternode_update_service">อัพเดต Masternode</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">wallet ของคุณกู้คืนเรียบร้อยแล้ว ยอดคงเหลือจะถูกกำหนดในครั้งต่อไป การดำเนินการนี้จะใช้เวลาสักครู่ </string>
     <string name="restore_wallet_dialog_success_encrypted">คำเตือน: กระเป๋าเงินของคุณได้รับการปกป้องโดย PIN การใช้จ่าย ตรวจสอบให้แน่ใจว่าคุณยังจำมันได้ก่อนที่คุณจะได้รับกระเป๋าเงินนี้</string>
     <string name="import_keys_dialog_failure">ไม่สามารถกู้คืน wallet ได้ :\n\n%s\n\n รหัสไม่ถูกต้อง?</string>
-    <string name="backup_wallet_permission_dialog_title">ไม่พบสิทธิ์ในการเขียน</string>
-    <string name="backup_wallet_permission_dialog_message">เพื่อให้สามารถค้นหา wallet ในที่จัดเก็บข้อมูลภายนอกได้ คุณต้องให้สิทธิ์ในการเขียน</string>
     <string name="export_keys_dialog_title">สำรองข้อมูล wallet </string>
     <string name="backup_wallet_dialog_message">การสำรองของคุณจะได้รับการเข้ารหัสด้วยรหัสผ่านที่คุณเลือกและที่ถูกเขียนไว้ในพื้นที่เก็บข้อมูลภายนอก</string>
     <string name="backup_wallet_dialog_warning_encrypted">wallet ของคุณถูกป้องกันโดยการใช้ PIN  ตรวจสอบให้แน่ใจว่าคุณได้จำรหัส PIN ไว้นอกเหนือกจากรหัสสำรอง</string>

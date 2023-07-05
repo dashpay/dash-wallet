@@ -42,13 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Управление на приложения</string>
     <string name="wallet_timeskew_dialog_title">Провери дата &amp; времеви настройки</string>
     <string name="wallet_timeskew_dialog_msg">Вашето устройство е изключено от %d минути. Поради този проблем вероятно няма да може да изпращате и получавате Dash.\\n\\nТрябва да проверите и ако е необходимо да коригирате настройките за дата, час и часова зона.</string>
-    <string name="wallet_version_dialog_title">Нова версия е налична!</string>
-    <string name="wallet_version_dialog_msg">Тази версия оправя важни проблеми. За детайли вижте списъка с промените в Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Ако не виждате обновяването, това вероятно значи, че вашата версия на Android не я поддържа.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Сваляне</string>
-    <string name="wallet_old_sdk_dialog_title">Версията на Android е стара</string>
-    <string name="wallet_old_sdk_dialog_message">В някоя от следващите версии на Dash портфейла може да липсва поддръжка за вашето устройство. В някой случай може да е трудно да похарчите вашите монети от това устройство.\n\nАко не знаете какво да направите е препоръчително да преместите вашите монети възможно най-скоро.</string>
     <string name="send_coins_activity_title">Изпрати Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Извличане на подписа от %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Извличането на подписа е неуспешно</string>
@@ -172,7 +165,7 @@
     <string name="transaction_row_status_error_other">Непознат</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">На %s от %s</string>
-    <string name="transaction_row_rate_not_available">Не е налично</string>
+    <string name="rate_not_available">Не е налично</string>
     <string name="transaction_row_status_masternode_registration">Masternode регистрирация</string>
     <string name="transaction_row_status_masternode_update_registrar">Masternode обновяване</string>
     <string name="transaction_row_status_masternode_update_service">Masternode обновяване</string>
@@ -203,8 +196,6 @@
     <string name="restore_wallet_dialog_success">Портфейлът беше възстановен.</string>
     <string name="restore_wallet_dialog_success_replay">Вашият портфейл беше успешно възстановен. Следва балансът да бъде установен. Това ще отнеме известно време.</string>
     <string name="import_keys_dialog_failure">Портфейлът не може да бъде възстановен:\\n\\n%s\\n\\nСлаба парола?</string>
-    <string name="backup_wallet_permission_dialog_title">Липсват права за запис</string>
-    <string name="backup_wallet_permission_dialog_message">За да правите резервно копие на външна памет, трябва да предоставите права за запис.</string>
     <string name="export_keys_dialog_title">Резервно копие портфейл</string>
     <string name="backup_wallet_dialog_message">Вашето резервно копие беше криптирано с избраната парола и записано на външната памет.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Вашият портфейл е защитен с  ПИН за плащане. Бъдете сигурни, че сте запомнили ПИН-ът и паролата за резервното копие.</string>

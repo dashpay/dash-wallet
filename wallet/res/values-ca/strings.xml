@@ -31,13 +31,6 @@
     <string name="wallet_low_storage_dialog_title">Espai d\'emmagatzematge intern baix!</string>
     <string name="wallet_low_storage_dialog_msg">La Cartera de Dash utilitza emmagatzematge intern per a recordar els blocs i les transaccions. Si es queda sense espai, deixara de funcionar i els teus Dash estaran en risc!\n\nVols obrir el Gestor d\'Aplicacions per a desinstal·lar aplicacions innecessàries?</string>
     <string name="wallet_low_storage_dialog_button_apps">Gestiona les aplicacions</string>
-    <string name="wallet_version_dialog_title">Hi ha una nova versió disponible!</string>
-    <string name="wallet_version_dialog_msg">Aquesta versió corregeix fallades importants. Per a més detalls, consulta l\'informe de canvis a Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Si no veus cap actualització, segurament voldrà dir que la teva versió Android ha deixat de ser suportada.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Descarrega</string>
-    <string name="wallet_old_sdk_dialog_title">La versió Android està des-actualitzada.</string>
-    <string name="wallet_old_sdk_dialog_message">El risc es que algun dels següents llançaments de la Cartera Dash no siguin compatibles amb el teu dispositiu. En alguns casos, et pot ser difícil gastar les monedes en aquest dispositiu.\n\nA no ser que sàpigues el que estàs fent, es recomana treure prompte les teves monedes.</string>
     <string name="send_coins_activity_title">Envia Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Important signatura des de %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Importació de signatura fallida</string>

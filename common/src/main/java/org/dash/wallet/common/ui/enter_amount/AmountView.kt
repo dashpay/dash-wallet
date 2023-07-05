@@ -93,11 +93,13 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
                 } else {
                     binding.resultAmount.text = dashFormat.format(dashAmount)
 
-                    exchangeRate?.let {
-                        fiatAmount = it.coinToFiat(dashAmount)
+                    if (exchangeRate != null) {
+                        fiatAmount = exchangeRate!!.coinToFiat(dashAmount)
                         _input = fiatFormat.minDecimals(0)
                             .optionalDecimals(0, 2).format(fiatAmount).toString()
                         binding.inputAmount.text = formatInputWithCurrency()
+                    } else {
+                        binding.inputAmount.text = resources.getString(R.string.rate_not_available)
                     }
                 }
             }
@@ -168,7 +170,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
                 dashFormat.format(dashAmount)
             }
         } else {
-            binding.resultAmount.text = "0"
+            binding.resultAmount.text = resources.getString(R.string.rate_not_available)
             Log.e(AmountView::class.java.name, "Exchange rate is not initialized")
         }
     }

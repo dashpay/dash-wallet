@@ -20,7 +20,6 @@ import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.view.animation.AccelerateInterpolator
-import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -46,17 +45,6 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
 
         const val ACTIVE_TAB_RECEIVE = 0
         const val ACTIVE_TAB_PAY = 1
-
-        @JvmStatic
-        fun newInstance(activeTab: Int? = null): PaymentsFragment {
-            val instance = PaymentsFragment()
-
-            if (activeTab != null) {
-                instance.arguments = bundleOf(ARG_ACTIVE_TAB to activeTab)
-            }
-
-            return instance
-        }
     }
 
     private val binding by viewBinding(FragmentPaymentsBinding::bind)
@@ -75,10 +63,12 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
             findNavController().popBackStack()
         }
 
-        binding.tabs.provideOptions(listOf(
-            SegmentedOption(getString(R.string.payments_tab_receive_label), R.drawable.ic_arrow_down),
-            SegmentedOption(getString(R.string.payments_tab_pay_label), R.drawable.ic_arrow_up)
-        ))
+        binding.tabs.provideOptions(
+            listOf(
+                SegmentedOption(getString(R.string.payments_tab_receive_label), R.drawable.ic_arrow_down),
+                SegmentedOption(getString(R.string.payments_tab_pay_label), R.drawable.ic_arrow_up)
+            )
+        )
 
         binding.tabs.setOnOptionPickedListener { _, index ->
             binding.pager.currentItem = index

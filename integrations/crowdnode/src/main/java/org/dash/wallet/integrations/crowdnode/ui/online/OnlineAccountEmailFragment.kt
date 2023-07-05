@@ -17,11 +17,9 @@
 
 package org.dash.wallet.integrations.crowdnode.ui.online
 
-import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -31,6 +29,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentOnlineAccountEmailBinding
@@ -120,28 +119,17 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
         }
 
         if (viewModel.onlineAccountStatus != OnlineAccountStatus.Creating) {
-            showKeyboard()
+            KeyboardUtil.showSoftKeyboard(requireContext(), binding.emailInput)
         }
     }
 
     private fun continueCreating(email: String) {
-        hideKeyboard()
+        KeyboardUtil.hideKeyboard(requireContext(), binding.emailInput)
         viewModel.signAndSendEmail(email)
     }
 
     private fun isEmail(text: CharSequence?): Boolean {
         return !text.isNullOrEmpty() &&
                 android.util.Patterns.EMAIL_ADDRESS.matcher(text).matches()
-    }
-
-    private fun showKeyboard() {
-        binding.emailInput.requestFocus()
-        val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        inputManager?.showSoftInput(binding.emailInput, InputMethodManager.SHOW_IMPLICIT)
-    }
-
-    private fun hideKeyboard() {
-        val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        inputManager?.hideSoftInputFromWindow(binding.emailInput.windowToken, 0)
     }
 }

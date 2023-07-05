@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">管理App</string>
     <string name="wallet_timeskew_dialog_title">檢查日期 &amp; 時間設置</string>
     <string name="wallet_timeskew_dialog_msg">你的裝置時間慢了%d分鐘。由於這個問題，您可能無法發送或接收達世幣。\n\n您應該檢查，如有必要，更正您的日期，時間和時區設置。</string>
-    <string name="wallet_version_dialog_title">有新版本!</string>
-    <string name="wallet_version_dialog_msg">這版本修正重要的錯誤，細節請參閱Google Play上說明。</string>
-    <string name="wallet_version_dialog_msg_deprecated">如果你看不到任何 App 更新，很可能你的 Android 版本已經不再支援。</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">下載</string>
-    <string name="wallet_old_sdk_dialog_title">Android 版本太舊</string>
-    <string name="wallet_old_sdk_dialog_message">下個版本的達世幣錢包可能不再支援你的裝置。在某些情況下，在這台裝置上的錢可能會出現發送困難的情況。\n\n除非你知道你在做什麼，否則建議你盡快轉出你的幣。</string>
     <string name="send_coins_activity_title">達世幣付款</string>
     <string name="send_coins_fragment_request_payment_request_progress">由 %s 讀取簽名…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">讀取簽名失敗</string>
@@ -173,7 +166,7 @@
     <string name="transaction_row_status_error_other">未知的</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">在 %s 的 %s</string>
-    <string name="transaction_row_rate_not_available">無法使用</string>
+    <string name="rate_not_available">無法使用</string>
     <string name="transaction_row_status_masternode_registration">主節點註冊</string>
     <string name="transaction_row_status_masternode_update_registrar">主節點更新</string>
     <string name="transaction_row_status_masternode_update_service">主節點更新</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">你的錢包已經成功恢復。下一步將會確定你的餘額，這將會花費一些時間。</string>
     <string name="restore_wallet_dialog_success_encrypted">警告: 您的錢包受到支付密碼的保護。 確保您在使用此錢包之前還記得它。</string>
     <string name="import_keys_dialog_failure">錢包無法回復:\n\n%s\n\n密碼錯誤?</string>
-    <string name="backup_wallet_permission_dialog_title">沒有寫入權限</string>
-    <string name="backup_wallet_permission_dialog_message">為了將錢包備份到外部存儲，您需要授予寫入權限。</string>
     <string name="export_keys_dialog_title">備份錢包</string>
     <string name="backup_wallet_dialog_message">你的錢包將依照選取密碼加密並存到外部存放</string>
     <string name="backup_wallet_dialog_warning_encrypted">你的錢包受支付PIN碼保護。除了備份密碼以外，請確保你記住該PIN碼！</string>

@@ -45,6 +45,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
@@ -422,7 +423,12 @@ public class SweepWalletFragment extends Fragment {
                     Transaction fakeTx = fakeTxns.get(utxo.getHash());
                     if (fakeTx == null) {
                         fakeTx = new FakeTransaction(Constants.NETWORK_PARAMETERS, utxo.getHash());
-                        fakeTx.getConfidence().setConfidenceType(ConfidenceType.BUILDING);
+                        // if this "fake" transaction is not ours then set the confidence type to BUILDING
+                        // otherwise use our transaction confidence.  This will prevent a wallet corruption
+                        // where an unconfirmed transaction will get assigned a BUILDING confidence type
+                        // before the transaction is received via the blockchain.
+                        if (fakeTx.getConfidence().getSource() != TransactionConfidence.Source.SELF)
+                            fakeTx.getConfidence().setConfidenceType(ConfidenceType.BUILDING);
                         fakeTxns.put(fakeTx.getTxId(), fakeTx);
                     }
                     final TransactionOutput fakeOutput = new TransactionOutput(Constants.NETWORK_PARAMETERS, fakeTx,

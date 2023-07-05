@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_content"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_primary"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true"
+    tools:context="de.schildbach.wallet.ui.send.AddressInputFragment">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:contentInsetStart="0dp"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:theme="@style/ThemeOverlay.AppCompat.ActionBar">
+
+        <TextView
+            style="@style/Subtitle2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/send_coins_activity_title"
+            android:textAlignment="gravity" />
+    </androidx.appcompat.widget.Toolbar>
+
+    <org.dash.wallet.common.ui.text.InputWrapper
+        android:id="@+id/input_wrapper"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:hint="@string/wallet_address"
+        android:layout_marginHorizontal="11dp"
+        android:theme="@style/SecondaryBackground"
+        android:translationZ="10dp"
+        app:endIconDrawable="@drawable/ic_scan_qr"
+        app:endIconTint="@color/content_primary"
+        app:endIconMode="custom">
+
+        <EditText
+            android:id="@+id/address_input"
+            style="@style/Body2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionNext"
+            android:importantForAutofill="no"
+            android:inputType="textMultiLine"
+            android:maxLines="8"
+            android:singleLine="false" />
+    </org.dash.wallet.common.ui.text.InputWrapper>
+
+    <TextView
+        android:id="@+id/error_text"
+        style="@style/Overline.Red"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="4dp"
+        android:layout_marginHorizontal="30dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/not_dash_address"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <Button
+        android:id="@+id/show_clipboard_btn"
+        style="@style/Button.Primary.Small.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="11dp"
+        android:layout_marginHorizontal="15dp"
+        android:text="@string/show_clipboard" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginHorizontal="10dp"
+        android:layout_marginTop="-10dp"
+        android:paddingTop="25dp"
+        android:paddingBottom="10dp"
+        android:clipToPadding="false"
+        android:translationZ="0dp"
+        android:overScrollMode="never">
+
+        <LinearLayout
+            android:id="@+id/clipboard_content_container"
+            style="@style/ViewRaised"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_background"
+            android:layout_marginHorizontal="5dp"
+            android:paddingHorizontal="15dp"
+            android:paddingVertical="10dp"
+            android:theme="@style/SecondaryBackground"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                style="@style/Overline.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tap_to_paste" />
+
+            <TextView
+                android:id="@+id/clipboard_content"
+                style="@style/Overline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                tools:text="Hey! Here is my primary Dash address Xsic8B4tmiMHMe98H7XoMnv55bee8Ms9is" />
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/continue_btn"
+        style="@style/Button.Primary.Large.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:layout_marginHorizontal="15dp"
+        android:enabled="false"
+        android:text="@string/button_continue" />
+</LinearLayout>

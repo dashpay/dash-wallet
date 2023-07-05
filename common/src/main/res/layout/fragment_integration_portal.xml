@@ -29,7 +29,7 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         app:contentInsetStart="0dp"
-        app:navigationIcon="@drawable/ic_arrow_back_primary"
+        app:navigationIcon="@drawable/ic_arrow_back"
         app:theme="@style/ThemeOverlay.AppCompat.ActionBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">

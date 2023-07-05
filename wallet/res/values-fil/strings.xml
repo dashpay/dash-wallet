@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Pangasiwaan ang apps</string>
     <string name="wallet_timeskew_dialog_title">Suriin ang settings ng petsa &amp; oras </string>
     <string name="wallet_timeskew_dialog_msg">Ang oras sa iyong device ay huli ng %d minuto. Maaaring hindi ka makapagpadala o makatanggap ng Dash dahil sa problemang ito.\n\nPalaging suriin at hanggat maaari ayusin ang settings ng iyong petsa, oras at time zone.</string>
-    <string name="wallet_version_dialog_title">May bagong bersyon na available!</string>
-    <string name="wallet_version_dialog_msg">Ang bersyon na ito ay nag-aayos ng mahahalagang bugs. Para sa detalye, tingnan ang change log sa Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Kung wala kang makitang update, maaaring ito ay nangangahulugan na ang bersyon ng Android na gamit mo ay hindi na suportado.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Download</string>
-    <string name="wallet_old_sdk_dialog_title">Ang bersyon ng Andriod ay luma na</string>
-    <string name="wallet_old_sdk_dialog_message">May posibilidad na ang susunod na paglabas ng Dash Wallet ay hindi na masusuportahan ng iyong device. May pagkakataon na mahirap na gamitin ang barya sa device na ito.\n\nMaliban nalang kung alam mo ang ginagawa mo, mas makabubuti kung aalisin mo na dito ang iyong barya sa lalong madaling panahon.</string>
     <string name="send_coins_activity_title">Ipadala ang Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Nakakuha ng pansin ang lagda mula %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ang pagkuha ng pansin ng lagda ay hindi nagtagumpay</string>
@@ -173,7 +166,7 @@
     <string name="transaction_row_status_error_other">Hindi kilala</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Sa %sat %s</string>
-    <string name="transaction_row_rate_not_available">Hindi available</string>
+    <string name="rate_not_available">Hindi available</string>
     <string name="transaction_row_status_masternode_registration">Pagpaparehistro ng Masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Pag-update ng Masternode</string>
     <string name="transaction_row_status_masternode_update_service">Pag-update ng Masternode</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">Ang iyong pitaka ay matagumpay na naibalik. Ang balanse nito ay sunod na malalaman. Ito ay maaaring tumagal.</string>
     <string name="restore_wallet_dialog_success_encrypted">Babala: Ang iyong pitaka ay protektado ng isang paggastos na PIN. Tiyaking naaalala mo pa ito bago mo matanggap sa wallet na ito.</string>
     <string name="import_keys_dialog_failure">Ang wallet ay hindi pwedeng ibalik:\n\n%s\n\nMaling password?</string>
-    <string name="backup_wallet_permission_dialog_title">Nawawala ang pagsulat ng pahintulot</string>
-    <string name="backup_wallet_permission_dialog_message">Para ma-back up ang pitaka sa external storage, kinakailangang aprobahan ang pagsulat sa pahintulot.</string>
     <string name="export_keys_dialog_title">I-back up ang wallet</string>
     <string name="backup_wallet_dialog_message">Ang iyong backup ay mae-encrypt sa piniling password at masusulat sa external storage.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Ang iyong wallet ay protektado ng spending PIN. Siguraduhin na naalala mo ang iyong PIN at saka ang iyong backup password!</string>
