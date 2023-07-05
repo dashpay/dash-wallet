@@ -96,6 +96,10 @@ class BuyAndSellViewModel @Inject constructor(
             updateServicesStatus()
             updateBalances()
         }
+
+        viewModelScope.launch {
+            topperClient.refreshSupportedAssets()
+        }
     }
 
     private fun setDashServiceList(list: List<BuyAndSellDashServicesModel>) {
@@ -133,7 +137,7 @@ class BuyAndSellViewModel @Inject constructor(
 
         when (service) {
             ServiceType.TOPPER -> {
-                hasValidCredentials = upholdClient.hasValidCredentials // TODO
+                hasValidCredentials = topperClient.hasValidCredentials
                 isAuthenticated = false
             }
             ServiceType.UPHOLD -> {
@@ -239,8 +243,7 @@ class BuyAndSellViewModel @Inject constructor(
 
     fun topperBuyUrl(walletName: String): String {
         return topperClient.getOnRampUrl(
-            Constants.USD_CURRENCY,
-            10.0,
+            config.exchangeCurrencyCode!!,
             walletData.freshReceiveAddress(),
             walletName
         )

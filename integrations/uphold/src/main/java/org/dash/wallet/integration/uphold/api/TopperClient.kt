@@ -17,10 +17,16 @@
 
 package org.dash.wallet.integration.uphold.api
 
+import com.google.gson.Gson
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.io.Decoders
+import okhttp3.OkHttpClient
 import org.bitcoinj.core.Address
+import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.get
+import org.dash.wallet.integration.uphold.data.SupportedTopperAssets
+import org.slf4j.LoggerFactory
 import org.spongycastle.asn1.ASN1Sequence
 import org.spongycastle.asn1.pkcs.PrivateKeyInfo
 import org.spongycastle.asn1.sec.ECPrivateKey
@@ -28,19 +34,30 @@ import org.spongycastle.asn1.x509.AlgorithmIdentifier
 import org.spongycastle.asn1.x9.X9ObjectIdentifiers
 import org.spongycastle.jce.provider.BouncyCastleProvider
 import org.spongycastle.openssl.jcajce.JcaPEMKeyConverter
+import java.lang.Exception
 import java.util.Date
+import java.util.SortedSet
 import java.util.UUID
+import javax.inject.Inject
 
-class TopperClient {
+class TopperClient @Inject constructor(
+    private val httpClient: OkHttpClient
+) {
     companion object {
         private const val BASE_URL = "https://app.topperpay.com/"
         private const val SANDBOX_URL = "https://app.sandbox.topperpay.com/"
+        private const val SUPPORTED_ASSETS_URL = "https://api.topperpay.com/assets/crypto-onramp"
+        private val log = LoggerFactory.getLogger(TopperClient::class.java)
     }
 
     private lateinit var keyId: String
     private lateinit var widgetId: String
     private lateinit var privateKey: String
     private var isSandbox: Boolean = false
+    private var supportedAssets: SortedSet<String> = sortedSetOf<String>()
+
+    val hasValidCredentials: Boolean
+        get() = keyId.isNotEmpty() && widgetId.isNotEmpty() && privateKey.isNotEmpty()
 
     fun init(keyId: String, widgetId: String, privateKey: String, isSandbox: Boolean) {
         this.keyId = keyId
@@ -50,15 +67,19 @@ class TopperClient {
     }
 
     fun getOnRampUrl(
-        sourceAsset: String,
-        sourceAmount: Double,
+        desiredSourceAsset: String,
         receiverAddress: Address,
         walletName: String
     ): String {
+        val currency = if (isSupportedAsset(desiredSourceAsset)) {
+            desiredSourceAsset
+        } else {
+            Constants.USD_CURRENCY
+        }
+
         val token = generateToken(
             Decoders.BASE64.decode(privateKey),
-            sourceAsset,
-            sourceAmount,
+            currency,
             receiverAddress,
             walletName
         )
@@ -66,10 +87,24 @@ class TopperClient {
         return "${if (isSandbox) SANDBOX_URL else BASE_URL}?bt=$token"
     }
 
+    suspend fun refreshSupportedAssets() {
+        supportedAssets = try {
+            val response = httpClient.get(SUPPORTED_ASSETS_URL)
+            val root = Gson().fromJson(response.body?.string(), SupportedTopperAssets::class.java)
+            root.assets.source.map { it.code }.toSortedSet()
+        } catch (ex: Exception) {
+            log.error("Failed to get supported assets from Topper", ex)
+            sortedSetOf()
+        }
+    }
+
+    fun isSupportedAsset(asset: String): Boolean {
+        return supportedAssets.contains(asset)
+    }
+
     private fun generateToken(
         privateKey: ByteArray,
         sourceAsset: String,
-        sourceAmount: Double,
         receiverAddress: Address,
         walletName: String
     ): String {
@@ -88,15 +123,13 @@ class TopperClient {
             .setIssuedAt(Date())
             .claim(
                 "source",
-                mapOf(
-                    "asset" to sourceAsset,
-                    "amount" to sourceAmount.toString()
-                )
+                mapOf("asset" to sourceAsset)
             )
             .claim(
                 "target",
                 mapOf(
                     "address" to receiverAddress.toString(),
+                    "amount" to "1",
                     "asset" to "DASH",
                     "network" to "dash",
                     "priority" to "fast",

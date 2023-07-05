@@ -34,10 +34,12 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.toCoin
+import org.dash.wallet.integration.uphold.api.TopperClient
 import org.dash.wallet.integration.uphold.api.UpholdClient
 import org.dash.wallet.integration.uphold.api.checkCapabilities
 import org.dash.wallet.integration.uphold.api.getAccessToken
@@ -63,6 +65,8 @@ class UpholdViewModel @Inject constructor(
     private val upholdClient: UpholdClient,
     private val analytics: AnalyticsService,
     private val globalConfig: Configuration,
+    private val topperClient: TopperClient,
+    private val walletData: WalletDataProvider,
     exchangeRatesProvider: ExchangeRatesProvider
 ) : ViewModel() {
     companion object {
@@ -170,6 +174,14 @@ class UpholdViewModel @Inject constructor(
 
     fun getLinkAccountUrl(): String {
         return String.format(UpholdConstants.INITIAL_URL, upholdClient.encryptionKey)
+    }
+
+    fun topperBuyUrl(walletName: String): String {
+        return topperClient.getOnRampUrl(
+            globalConfig.exchangeCurrencyCode!!,
+            walletData.freshReceiveAddress(),
+            walletName
+        )
     }
 
     fun logEvent(eventName: String) {

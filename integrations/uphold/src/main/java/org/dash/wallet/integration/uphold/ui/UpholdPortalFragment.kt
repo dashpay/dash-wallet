@@ -97,7 +97,8 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
         }
 
         binding.buyBtn.setOnClickListener {
-            Toast.makeText(requireContext(), "Topper: not implemented", Toast.LENGTH_SHORT).show()
+            val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
+            requireActivity().openCustomTab(uri)
         }
         binding.transferBtn.setOnClickListener {
             if (!viewModel.uiState.value.balance.isZero) {

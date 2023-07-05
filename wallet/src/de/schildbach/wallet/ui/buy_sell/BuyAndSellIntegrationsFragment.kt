@@ -97,7 +97,7 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
     }
 
     private fun onTopperItemClicked() {
-        val uri = viewModel.topperBuyUrl(getString(R.string.app_name))
+        val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
         requireActivity().openCustomTab(uri)
     }
 
