@@ -11,12 +11,6 @@
     <declare-styleable name="KeyboardResponsiveCoordinatorLayout">
         <attr name="viewToHideWhenSoftKeyboardIsOpen" format="reference" />
     </declare-styleable>
-    <declare-styleable name="PaymentsButtonView">
-        <attr name="pb_icon" format="integer" />
-        <attr name="pb_title" format="string" />
-        <attr name="pb_sub_title" format="string" />
-        <attr name="pb_active" format="boolean" />
-    </declare-styleable>
     <declare-styleable name="PinPreviewView">
         <attr name="pp_item_size" format="dimension" />
         <attr name="pp_custom_drawable" format="reference" />

@@ -382,4 +382,10 @@
     <string name="your_coinbase_session_has_expired">Your Coinbase session has expired</string>
     <string name="please_log_in_to_your_coinbase_account">Please log in to your Coinbase account</string>
     <string name="log_in">Log In</string>
+
+    <string name="wallet_address">Wallet Address</string>
+    <string name="show_clipboard">Show content in the clipboard</string>
+    <string name="tap_to_paste">Tap the address from the clipboard to paste it</string>
+    <string name="not_dash_address">Not a valid Dash Address or URL request</string>
+    <string name="send_to_address">Send to Address</string>
 </resources>

@@ -166,7 +166,7 @@
     <string name="transaction_row_status_error_other">Onbekend</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Op %ster hoogte van %s</string>
-    <string name="transaction_row_rate_not_available">Niet beschikbaar</string>
+    <string name="rate_not_available">Niet beschikbaar</string>
     <string name="transaction_row_status_masternode_registration">Masternode registratie</string>
     <string name="transaction_row_status_masternode_update_registrar">Masternode updaten</string>
     <string name="transaction_row_status_masternode_update_service">Masternode updaten</string>

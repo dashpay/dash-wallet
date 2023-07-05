@@ -165,7 +165,7 @@
     <string name="transaction_row_status_error_other">Không biết</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Vào%slúc %s</string>
-    <string name="transaction_row_rate_not_available">Không sẵn sàng</string>
+    <string name="rate_not_available">Không sẵn sàng</string>
     <string name="transaction_row_status_masternode_registration">Đăng ký Masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Cập nhật Masternode</string>
     <string name="transaction_row_status_masternode_update_service">Cập nhật Masternode</string>

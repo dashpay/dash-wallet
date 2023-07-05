@@ -166,7 +166,7 @@
     <string name="transaction_row_status_error_other">Neznámý</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">%s v %s</string>
-    <string name="transaction_row_rate_not_available">Není dostupný</string>
+    <string name="rate_not_available">Není dostupný</string>
     <string name="transaction_row_status_masternode_registration">Registrace masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Aktualizace masternode</string>
     <string name="transaction_row_status_masternode_update_service">Aktualizace masternode</string>

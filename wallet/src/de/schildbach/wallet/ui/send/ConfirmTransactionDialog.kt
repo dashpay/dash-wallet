@@ -26,6 +26,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogConfirmTransactionBinding
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import kotlin.coroutines.resume
@@ -40,8 +41,7 @@ class ConfirmTransactionDialog(
         private val TAG = ConfirmTransactionDialog::class.java.simpleName
         private const val ARG_ADDRESS = "arg_address"
         private const val ARG_AMOUNT = "arg_amount"
-        private const val ARG_AMOUNT_FIAT = "arg_amount_fiat"
-        private const val ARG_FIAT_SYMBOL = "arg_fiat_symbol"
+        private const val ARG_EXCHANGE_RATE = "arg_exchange_rate"
         private const val ARG_FEE = "arg_fee"
         private const val ARG_TOTAL = "arg_total"
         private const val ARG_BUTTON_TEXT = "arg_button_text"
@@ -51,8 +51,7 @@ class ConfirmTransactionDialog(
         private fun setBundle(
             address: String,
             amount: String,
-            amountFiat: String,
-            fiatSymbol: String,
+            exchangeRate: ExchangeRate?,
             fee: String,
             total: String,
             payeeName: String? = null,
@@ -62,8 +61,7 @@ class ConfirmTransactionDialog(
             return Bundle().apply {
                 putString(ARG_ADDRESS, address)
                 putString(ARG_AMOUNT, amount)
-                putString(ARG_AMOUNT_FIAT, amountFiat)
-                putString(ARG_FIAT_SYMBOL, fiatSymbol)
+                putSerializable(ARG_EXCHANGE_RATE, exchangeRate)
                 putString(ARG_FEE, fee)
                 putString(ARG_TOTAL, total)
                 putString(ARG_PAYEE_NAME, payeeName)
@@ -85,8 +83,7 @@ class ConfirmTransactionDialog(
             activity: FragmentActivity,
             address: String,
             amount: String,
-            amountFiat: String,
-            fiatSymbol: String,
+            exchangeRate: ExchangeRate?,
             fee: String,
             total: String
         ) = suspendCancellableCoroutine<Boolean> { coroutine ->
@@ -96,7 +93,7 @@ class ConfirmTransactionDialog(
                 }
             }
             try {
-                val bundle = setBundle(address, amount, amountFiat, fiatSymbol, fee, total)
+                val bundle = setBundle(address, amount, exchangeRate, fee, total)
                 show(confirmTransactionDialog, bundle, activity)
             } catch (e: Exception) {
                 if (coroutine.isActive) {
@@ -114,14 +111,21 @@ class ConfirmTransactionDialog(
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        binding.amountView.dashToFiat = true
+        binding.amountView.showCurrencySelector = false
+
         requireArguments().apply {
-            binding.inputValue.text = getString(ARG_AMOUNT)
-            binding.fiatSymbol.text = getString(ARG_FIAT_SYMBOL)
-            binding.fiatValue.text = getString(ARG_AMOUNT_FIAT)
+            val exchangeRate = getSerializable(ARG_EXCHANGE_RATE) as? ExchangeRate
+
+            binding.amountView.input = getString(ARG_AMOUNT) ?: ""
+            binding.amountView.exchangeRate = exchangeRate
             binding.transactionFee.text = getString(ARG_FEE)
             binding.totalAmount.text = getString(ARG_TOTAL)
+
             val payeeName = getString(ARG_PAYEE_NAME)
             val payeeVerifiedBy = getString(ARG_PAYEE_VERIFIED_BY)
+
             if (payeeName != null && payeeVerifiedBy != null) {
                 binding.address.text = payeeName
                 binding.payeeSecuredBy.text = payeeVerifiedBy
@@ -140,11 +144,13 @@ class ConfirmTransactionDialog(
                 binding.confirmPayment.text = this
             }
         }
-        binding.collapseButton.setOnClickListener {
-            dismiss()
-        }
+
         binding.confirmPayment.setOnClickListener {
             onTransactionConfirmed?.invoke(true)
+            dismiss()
+        }
+
+        binding.dismissBtn.setOnClickListener {
             dismiss()
         }
     }
