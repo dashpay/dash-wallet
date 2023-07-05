@@ -55,13 +55,15 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/dash_services_list"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="15dp"
+        android:layout_height="0dp"
+        android:paddingHorizontal="15dp"
         android:layout_marginTop="15dp"
+        android:clipToPadding="false"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         tools:itemCount="3"
         tools:listitem="@layout/item_service_list"
-        app:layout_constraintTop_toBottomOf="@id/subtitle" />
+        app:layout_constraintTop_toBottomOf="@id/subtitle"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <TextView
         android:id="@+id/keys_missing_error"

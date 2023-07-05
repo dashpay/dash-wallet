@@ -113,7 +113,13 @@ class BuyAndSellDashServicesAdapter(
                         GenericUtils.fiatToString(data.localBalance)
                 }
 
-                binding.additionalInfo.isVisible = data.serviceType == ServiceType.TOPPER
+                if (data.serviceType == ServiceType.TOPPER) {
+                    binding.serviceSubtitle.text = binding.root.context.getString(R.string.buy_no_account_needed)
+                    binding.additionalInfo.isVisible = true
+                } else {
+                    binding.serviceSubtitle.text = binding.root.context.getString(R.string.link_account)
+                    binding.additionalInfo.isVisible = false
+                }
             }
         }
 
