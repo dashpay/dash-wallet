@@ -37,7 +37,6 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
@@ -80,7 +79,9 @@ class BuyAndSellViewModel @Inject constructor(
         get() = coinBaseRepository.isAuthenticated
 
     val hasValidCredentials: Boolean
-        get() = upholdClient.hasValidCredentials
+        get() = upholdClient.hasValidCredentials &&
+            coinBaseRepository.hasValidCredentials &&
+            topperClient.hasValidCredentials
 
     init {
         exchangeRates.observeExchangeRate(config.exchangeCurrencyCode!!)
