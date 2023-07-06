@@ -19,11 +19,7 @@
 -keepattributes Signature
 -keepattributes Exceptions
 
-#Moshi
--dontwarn javax.annotation.**
--keepclasseswithmembers class * {
-    @com.squareup.moshi.* <methods>;
-}
--keep @com.squareup.moshi.JsonQualifier interface *
--dontnote com.squareup.moshi.**
--dontwarn com.squareup.moshi.**
+# Spongy Castle
+-keep class org.spongycastle.** { *; }
+-keepclassmembers class org.spongycastle.** { *; }
+-dontwarn org.spongycastle.**

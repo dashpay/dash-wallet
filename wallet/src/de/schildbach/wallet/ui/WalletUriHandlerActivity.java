@@ -22,6 +22,8 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
+
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -29,7 +31,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
-import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
+import org.dash.wallet.integration.uphold.ui.UpholdPortalFragment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
+import de.schildbach.wallet.ui.main.WalletActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.util.InputParser;
 import de.schildbach.wallet.ui.util.WalletUri;
@@ -91,23 +94,12 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
         if (Intent.ACTION_VIEW.equals(action) && Constants.WALLET_URI_SCHEME.equals(scheme)) {
             if (intentUri.getHost().equalsIgnoreCase("brokers")) {
                 if (intentUri.getPath().contains("uphold")) {
-                    String code = intentUri.getQueryParameter("code");
-                    String state = intentUri.getQueryParameter("state");
-                    if (code != null && state != null) {
-                        Intent upholdActivityIntent = new Intent(this, UpholdSplashActivity.class);
-                        upholdActivityIntent.putExtra(UpholdSplashActivity.UPHOLD_EXTRA_CODE, code);
-                        upholdActivityIntent.putExtra(UpholdSplashActivity.UPHOLD_EXTRA_STATE,
-                                intentUri.getQueryParameter("state"));
-                        upholdActivityIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                        upholdActivityIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                        if(isTaskRoot()) {
-                            //I'm in my own task and not the main task
-                            upholdActivityIntent.setAction(UpholdSplashActivity.FINISH_ACTION);
-                            LocalBroadcastManager.getInstance(this).sendBroadcast(upholdActivityIntent);
-                        } else {
-                            startActivity(upholdActivityIntent);
-                        }
-                    }
+                    Intent activityIntent = new Intent(this, WalletActivity.class);
+                    activityIntent.putExtra("uri", intentUri);
+                    activityIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    activityIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    activityIntent.setAction(UpholdPortalFragment.AUTH_RESULT_ACTION);
+                    LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent);
                 }
                 finish();
             } else {

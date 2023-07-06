@@ -374,7 +374,7 @@
     <string name="payment_protocol_insufficient_funds_error_message">У вас недостатньо коштів для завершення цієї операції</string>
 
 
-    <string name="select_a_service_to_buy_and_sell_dash">Виберіть сервіс для купівлі та продажу Dash.</string>
+    <string name="buy_and_sell_subtitle">Виберіть сервіс для купівлі та продажу Dash.</string>
     <string name="select_a_service">Виберіть послугу</string>
     <string name="activity_buy_and_sell_dash_filter">Фільтр</string>
     <string name="clear_filter">Очистити фільтр</string>

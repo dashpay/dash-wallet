@@ -158,7 +158,7 @@ public final class EditAddressBookEntryFragment extends BaseDialogFragment {
             Button negativeButton = alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
             Button neutralButton = alertDialog.getButton(AlertDialog.BUTTON_NEUTRAL);
 
-            int colorMediumGray = getResources().getColor(R.color.medium_gray, null);
+            int colorMediumGray = getResources().getColor(R.color.content_secondary, null);
             if (negativeButton != null) {
                 negativeButton.setTextColor(colorMediumGray);
             }

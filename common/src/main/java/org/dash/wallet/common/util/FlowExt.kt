@@ -19,7 +19,10 @@ import kotlin.time.ExperimentalTime
  */
 @FlowPreview
 @ExperimentalTime
-class TickerFlow(private val period: Duration, private val initialDelay: Duration = Duration.ZERO): AbstractFlow<Unit>() {
+class TickerFlow(
+    private val period: Duration,
+    private val initialDelay: Duration = Duration.ZERO
+): AbstractFlow<Unit>() {
     override suspend fun collectSafely(collector: FlowCollector<Unit>) {
         delay(initialDelay)
         while (true) {

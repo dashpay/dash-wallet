@@ -1,53 +1,113 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/rounded_ripple_background"
-    android:theme="@style/ListViewButtonBackground"
-    android:layout_marginVertical="10dp"
-    android:paddingHorizontal="15dp"
-    android:paddingVertical="15dp">
+    android:theme="@style/BuySellServiceBackground"
+    android:layout_marginVertical="5dp"
+    android:paddingStart="10dp"
+    android:paddingEnd="15dp"
+    android:paddingBottom="10dp">
 
     <ImageView
-        android:id="@+id/serviceImg"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
+        android:id="@+id/service_img"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:padding="2dp"
+        android:layout_marginTop="11dp"
         android:contentDescription="@string/app_name"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:srcCompat="@drawable/ic_coinbase_full" />
+        tools:srcCompat="@drawable/ic_coinbase" />
 
     <TextView
         android:id="@+id/service_name"
-        style="@style/Subtitle2"
+        style="@style/Body2.Medium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
         android:layout_marginEnd="10dp"
-        android:gravity="center"
-        android:textAlignment="gravity"
-        app:layout_constraintBottom_toBottomOf="@+id/serviceImg"
-        app:layout_constraintStart_toEndOf="@+id/serviceImg"
-        app:layout_constraintTop_toTopOf="@+id/serviceImg" />
+        app:layout_constraintStart_toEndOf="@+id/service_img"
+        app:layout_constraintTop_toTopOf="@+id/service_img"
+        app:layout_constraintBottom_toTopOf="@+id/service_subtitle"
+        tools:text="Coinbase" />
+
+    <TextView
+        android:id="@+id/service_subtitle"
+        style="@style/Overline.Tertiary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="10dp"
+        android:text="@string/link_account"
+        app:layout_constraintStart_toEndOf="@+id/service_img"
+        app:layout_constraintTop_toBottomOf="@+id/service_name"
+        app:layout_constraintBottom_toBottomOf="@+id/service_img" />
 
     <ImageView
-        android:id="@+id/imgArrow"
+        android:id="@+id/img_arrow"
         style="@style/NavigationArrowStyle"
         android:contentDescription="@string/app_name"
-        app:layout_constraintBottom_toBottomOf="@+id/serviceImg"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/serviceImg" />
+        app:layout_constraintTop_toTopOf="@+id/service_img"
+        app:layout_constraintBottom_toBottomOf="@+id/service_img"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/additional_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="5dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/TextHighlightGrayTheme"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/service_img"
+        tools:background="@color/dash_black_0.05"
+        tools:visibility="visible">
+
+        <ImageView
+            android:id="@+id/additional_info_icon"
+            android:layout_width="12dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_uphold" />
+
+        <TextView
+            android:id="@+id/additional_info_txt"
+            style="@style/Overline"
+            android:layout_marginStart="6dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/topper_powered_by" />
+    </LinearLayout>
 
     <View
         android:id="@+id/separator"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginTop="15dp"
-        android:background="@color/steel_gray_150"
-        app:layout_constraintTop_toBottomOf="@+id/serviceImg" />
+        android:layout_marginTop="10dp"
+        android:layout_marginStart="5dp"
+        android:background="@color/divider_color"
+        app:layout_constraintTop_toBottomOf="@+id/additional_info" />
 
     <TextView
         android:id="@+id/connected"
@@ -55,12 +115,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:drawablePadding="5dp"
+        android:layout_marginStart="5dp"
         android:text="@string/connected"
         android:visibility="gone"
         app:drawableStartCompat="@drawable/ic_connected"
         app:iconGravity="textStart"
         app:layout_constraintBottom_toBottomOf="@+id/dash_icon"
-        app:layout_constraintStart_toStartOf="@+id/serviceImg"
+        app:layout_constraintStart_toStartOf="@+id/service_img"
         app:layout_constraintTop_toTopOf="@+id/dash_icon" />
 
     <TextView
@@ -69,12 +130,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:drawablePadding="5dp"
+        android:layout_marginStart="5dp"
         android:text="@string/disconnected"
         android:visibility="gone"
         app:drawableStartCompat="@drawable/ic_disconnected"
         app:iconGravity="textStart"
         app:layout_constraintBottom_toBottomOf="@+id/dash_icon"
-        app:layout_constraintStart_toStartOf="@+id/serviceImg"
+        app:layout_constraintStart_toStartOf="@+id/service_img"
         app:layout_constraintTop_toTopOf="@+id/dash_icon" />
 
     <androidx.appcompat.widget.AppCompatImageView

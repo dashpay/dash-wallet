@@ -31,11 +31,11 @@ enum class ServiceStatus {
 
 enum class ServiceType(
     @StringRes val serviceName: Int,
-    @DrawableRes val serviceIcon: Int,
-    @DrawableRes val offlineServiceIcon: Int
+    @DrawableRes val serviceIcon: Int
 ) {
-    UPHOLD(R.string.uphold_account, R.drawable.ic_uphold, R.drawable.ic_uphold_saturated),
-    COINBASE(R.string.coinbase, R.drawable.ic_coinbase, R.drawable.ic_coinbase_saturated)
+    TOPPER(R.string.topper, R.drawable.logo_topper),
+    UPHOLD(R.string.uphold_account, R.drawable.ic_uphold),
+    COINBASE(R.string.coinbase, R.drawable.ic_coinbase)
 }
 
 @Parcelize
@@ -47,6 +47,7 @@ data class BuyAndSellDashServicesModel(
 ): Parcelable {
     companion object {
         fun getBuyAndSellDashServicesList() = listOf(
+            BuyAndSellDashServicesModel(ServiceType.TOPPER, ServiceStatus.IDLE),
             BuyAndSellDashServicesModel(ServiceType.UPHOLD, ServiceStatus.IDLE),
             BuyAndSellDashServicesModel(ServiceType.COINBASE, ServiceStatus.IDLE)
         )

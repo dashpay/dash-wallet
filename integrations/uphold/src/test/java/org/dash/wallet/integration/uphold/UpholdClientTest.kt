@@ -18,6 +18,7 @@
 package org.dash.wallet.integration.uphold
 
 import junit.framework.TestCase.assertEquals
+import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -106,7 +107,7 @@ class UpholdClientTest {
     }
 
     @Test
-    fun getCapabilities_returnsCapabilitiesObject() {
+    fun getCapabilities_returnsCapabilitiesObject() = runTest {
         val response = MockResponse()
             .setResponseCode(HttpURLConnection.HTTP_OK)
             .setBody(capabilitiesJson)
@@ -121,7 +122,7 @@ class UpholdClientTest {
             listOf()
         )
 
-        val actualResponse = api.getCapabilities("withdrawals").execute()
+        val actualResponse = api.getCapabilities("withdrawals")
         assertEquals(expected, actualResponse.body())
     }
 

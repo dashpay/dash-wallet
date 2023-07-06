@@ -17,24 +17,27 @@
 
 package org.dash.wallet.common.ui
 
-import android.content.res.Resources
-import android.graphics.drawable.Drawable
+import android.view.View
 import androidx.annotation.StyleRes
 import androidx.core.content.res.ResourcesCompat
 import org.dash.wallet.common.R
 
-fun Resources.getRoundedBackground(@StyleRes style: Int): Drawable? {
-    return ResourcesCompat.getDrawable(
-        this,
-        R.drawable.rounded_background,
-        this.newTheme().apply { applyStyle(style, true) }
-    )
+fun View.setRoundedBackground(@StyleRes style: Int?) {
+    style?.let {
+        this.background = ResourcesCompat.getDrawable(
+            this.resources,
+            R.drawable.rounded_background,
+            this.resources.newTheme().apply { applyStyle(style, true) }
+        )
+    }
 }
 
-fun Resources.getRoundedRippleBackground(@StyleRes style: Int): Drawable? {
-    return ResourcesCompat.getDrawable(
-        this,
-        R.drawable.rounded_ripple_background,
-        this.newTheme().apply { applyStyle(style, true) }
-    )
+fun View.setRoundedRippleBackground(@StyleRes style: Int?) {
+    style?.let {
+        this.background = ResourcesCompat.getDrawable(
+            this.resources,
+            R.drawable.rounded_ripple_background,
+            this.resources.newTheme().apply { applyStyle(style, true) }
+        )
+    }
 }

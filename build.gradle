@@ -4,7 +4,7 @@ buildscript {
         coroutines_version = '1.6.1'
         ok_http_version = '4.9.1'
         dashjVersion = '19.0.3'
-        hiltVersion = '2.40.1'
+        hiltVersion = '2.45'
         hiltWorkVersion = '1.0.0'
         workRuntimeVersion='2.7.1'
         firebaseVersion = '28.4.2'
@@ -40,6 +40,7 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        maven { url "https://plugins.gradle.org/m2/" }
     }
 
     dependencies {
@@ -50,6 +51,7 @@ buildscript {
         classpath "com.google.dagger:hilt-android-gradle-plugin:$hiltVersion"
         classpath "androidx.navigation:navigation-safe-args-gradle-plugin:$navigationVersion"
         classpath "com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin:2.0.1"
+        classpath "org.jlleitschuh.gradle:ktlint-gradle:11.3.1"
     }
 }
 

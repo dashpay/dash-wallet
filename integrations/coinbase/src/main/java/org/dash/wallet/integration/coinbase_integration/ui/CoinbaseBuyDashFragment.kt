@@ -132,14 +132,7 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
 
         binding.authLimitBanner.root.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_AUTH_LIMIT)
-            AdaptiveDialog.custom(
-                R.layout.dialog_withdrawal_limit_info,
-                null,
-                getString(R.string.set_auth_limit),
-                getString(R.string.change_withdrawal_limit),
-                "",
-                getString(R.string.got_it)
-            ).show(requireActivity())
+            AdaptiveDialog.custom(R.layout.dialog_withdrawal_limit_info).show(requireActivity())
         }
 
         monitorNetworkChanges()
