@@ -341,10 +341,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         String msgSuffix = packageFlavor != null ? " [" + packageFlavor + "]" : "";
 
         if (exchangeRate != null) {
-            exchangeRate.coinToFiat(amount);
             MonetaryFormat format = Constants.LOCAL_FORMAT.code(0,
                     PREFIX_ALMOST_EQUAL_TO + exchangeRate.fiat.getCurrencyCode());
-            msgSuffix += " " + format.format(exchangeRate.coinToFiat(amount));
+            msgSuffix += " " + format.format(exchangeRate.coinToFiat(notificationAccumulatedAmount));
         }
 
         final String tickerMsg = getString(R.string.notification_coins_received_msg, btcFormat.format(amount))
