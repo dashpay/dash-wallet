@@ -180,7 +180,7 @@
             style="@style/Overline.Tertiary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/transaction_row_rate_not_available"
+            android:text="@string/rate_not_available"
             tools:text="Not available"
             tools:visibility="visible" />
     </FrameLayout>

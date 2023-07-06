@@ -135,8 +135,7 @@ class PaymentProtocolViewModel @Inject constructor(
     fun requestPaymentRequest(basePaymentIntent: PaymentIntent) {
         _sendRequestLiveData.value = Resource.loading(null)
 
-        val requestCallback: RequestPaymentRequestTask.ResultCallback = object : RequestPaymentRequestTask.ResultCallback {
-
+        val requestCallback = object : RequestPaymentRequestTask.ResultCallback {
             override fun onPaymentIntent(paymentIntent: PaymentIntent) {
                 if (basePaymentIntent.isExtendedBy(paymentIntent, true)) {
                     finalPaymentIntent = paymentIntent
@@ -251,8 +250,7 @@ class PaymentProtocolViewModel @Inject constructor(
             callback,
             finalPaymentIntent!!.paymentUrl,
             packageInfoProvider.httpUserAgent()
-        )
-            .send(payment)
+        ).send(payment)
     }
 
     suspend fun commitAndBroadcast(sendRequest: SendRequest): Transaction {

@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">إدارة التطبيقات</string>
     <string name="wallet_timeskew_dialog_title">راجع التاريخ  &amp;؛ اعدادات الوقت</string>
     <string name="wallet_timeskew_dialog_msg">إن إعدادت الوقت لجهازك خاطئة ب%d دقائق، لا يمكنك ارسال او استلام مبالغ داش بسبب هذه المشكلة.\n\nيجب عليك التحقق ، وإذا لزم الأمر ، قم بتصحيح إعدادات التاريخ والوقت والمنطقة الزمنية.</string>
-    <string name="wallet_version_dialog_title">إصدار جديد متوفر!</string>
-    <string name="wallet_version_dialog_msg">يعمل هذا الإصدار على إصلاح الأخطاء المهمة. للحصول على التفاصيل ، راجع سجل التغيير على Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">إذا لم ترى تحديثًا ، فربما يعني هذا أن إصدار Android لديك لم يعد مدعومًا.</string>
-    <string name="wallet_version_dialog_button_market">متجر جوجل بلاي Google Play.</string>
-    <string name="wallet_version_dialog_button_binary">تحميل</string>
-    <string name="wallet_old_sdk_dialog_title">إصدار اندرويد قديم</string>
-    <string name="wallet_old_sdk_dialog_message">من المحتمل أن أحد الإصدارات التالية من محفظة داش لن تدعم جهازك بعد الآن. في بعض الحالات، قد يكون من الصعب إنفاق عملاتك على هذا الجهاز.\n\nما لم تكن تعرف ما تفعله، فمن المستحسن إخراج عملاتك قريبًا.</string>
     <string name="send_coins_activity_title">إرسال داش</string>
     <string name="send_coins_fragment_request_payment_request_progress">جلب التوقيع من %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">فشل جلب التوقيع</string>
@@ -174,7 +167,7 @@
     <string name="transaction_row_status_error_other">مجهول</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">على%s في%s</string>
-    <string name="transaction_row_rate_not_available">غير متاح</string>
+    <string name="rate_not_available">غير متاح</string>
     <string name="transaction_row_status_masternode_registration">تسجيل ماسترنود</string>
     <string name="transaction_row_status_masternode_update_registrar">تحديث ماسترنود</string>
     <string name="transaction_row_status_masternode_update_service">تحديث ماسترنود</string>
@@ -206,8 +199,6 @@
     <string name="restore_wallet_dialog_success_replay">تمت استعادة محفظتك بنجاح. وسيتم تحديد رصيدها بعد ذلك. سيستغرق ذلك بعض الوقت.</string>
     <string name="restore_wallet_dialog_success_encrypted">تحذير: محفظتك محمية برمز PIN للإنفاق. تأكد من أنك لا تزال تتذكرها قبل أن تتلقى الى هذه المحفظة.</string>
     <string name="import_keys_dialog_failure">لم تتم استعادة المحفظة:\n\n%s\n\nخطأ في كلمة المرور ؟</string>
-    <string name="backup_wallet_permission_dialog_title">إذن الكتابة مفقود</string>
-    <string name="backup_wallet_permission_dialog_message">لنسخ محفظتك احتياطيًا إلى وحدة تخزين خارجية ، تحتاج إلى منح إذن الكتابة.</string>
     <string name="export_keys_dialog_title">محفظة النسخ الاحتياطي</string>
     <string name="backup_wallet_dialog_message">سيتم تشفير النسخة الاحتياطية باستخدام كلمة المرور المختارة وكتابتها على وحدة التخزين الخارجية.</string>
     <string name="backup_wallet_dialog_warning_encrypted">محفظتك محمية برقم تعريف شخصي للانفاق. تأكد من تذكر رقم التعريف الشخصي بالإضافة إلى كلمة مرور النسخ الاحتياطي!</string>

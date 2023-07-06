@@ -19,6 +19,7 @@ package de.schildbach.wallet.payments
 
 import androidx.fragment.app.FragmentActivity
 import de.schildbach.wallet.ui.send.ConfirmTransactionDialog
+import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.services.ConfirmTransactionService
 import javax.inject.Inject
 
@@ -27,8 +28,7 @@ class ConfirmTransactionLauncher @Inject constructor(): ConfirmTransactionServic
         activity: FragmentActivity,
         address: String,
         amount: String,
-        amountFiat: String,
-        fiatSymbol: String,
+        exchangeRate: ExchangeRate?,
         fee: String,
         total: String,
         payeeName: String?,
@@ -39,8 +39,7 @@ class ConfirmTransactionLauncher @Inject constructor(): ConfirmTransactionServic
             activity,
             address,
             amount,
-            amountFiat,
-            fiatSymbol,
+            exchangeRate,
             fee,
             total
         )

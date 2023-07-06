@@ -797,7 +797,15 @@
     <style name="PrimaryButtonTheme.Large.TransparentBlue">
         <item name="backgroundColor">@color/light_blue</item>
         <item name="strokeColor">@android:color/transparent</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="titleTextColor">@color/content_primary</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.Large.Grey">
+        <item name="backgroundColor">@color/dash_black_0.05</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="titleTextColor">@color/content_primary</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
     <style name="PrimaryButtonTheme.Large.Inverted">
@@ -882,6 +890,10 @@
 
     <style name="Button.Primary.Large.Orange">
         <item name="android:theme">@style/PrimaryButtonTheme.Large.Orange</item>
+    </style>
+
+    <style name="Button.Primary.Large.Grey">
+        <item name="android:theme">@style/PrimaryButtonTheme.Large.Grey</item>
     </style>
 
     <style name="Button.Primary.Large.Inverted">
@@ -1208,7 +1220,7 @@
         <item name="android:layout_width">16dp</item>
         <item name="android:layout_height">16dp</item>
         <item name="android:rotation">180</item>
-        <item name="android:src">@drawable/ic_back_arrow</item>
+        <item name="android:src">@drawable/ic_chevron</item>
         <item name="android:tint">@color/light_gray</item>
     </style>
 

@@ -17,8 +17,6 @@
 
 package de.schildbach.wallet.ui.main
 
-import android.content.ClipDescription
-import android.content.ClipboardManager
 import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
@@ -58,7 +56,6 @@ import kotlin.math.abs
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val analytics: AnalyticsService,
-    private val clipboardManager: ClipboardManager,
     private val config: Configuration,
     private val walletUIConfig: WalletUIConfig,
     exchangeRatesProvider: ExchangeRatesProvider,
@@ -190,25 +187,6 @@ class MainViewModel @Inject constructor(
 
     fun logError(ex: Exception, details: String) {
         analytics.logError(ex, details)
-    }
-
-    fun getClipboardInput(): String {
-        var input: String? = null
-
-        if (clipboardManager.hasPrimaryClip()) {
-            val clip = clipboardManager.primaryClip ?: return ""
-            val clipDescription = clip.description
-
-            if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
-                input = clip.getItemAt(0).uri?.toString()
-            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
-                clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
-            ) {
-                input = clip.getItemAt(0).text?.toString()
-            }
-        }
-
-        return input ?: ""
     }
 
     fun triggerHideBalance() {

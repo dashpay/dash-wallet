@@ -44,13 +44,6 @@
     <string name="wallet_timeskew_dialog_title">Datums- und Zeit-Einstellungen überprüfen</string>
     <string name="wallet_timeskew_dialog_msg">Die Gerätezeit geht %dMinuten falsch. Daher ist es möglicherweise nicht möglich Dash zu senden. 
 Überprüfe und korrigiere bitte Datum, Uhrzeit und Zeitzone, falls dies nötig ist.</string>
-    <string name="wallet_version_dialog_title">Eine neue Version ist verfügbar!</string>
-    <string name="wallet_version_dialog_msg">Diese Version behebt wichtige Fehler. Die Einzelheiten stehen in der Liste der Änderungen auf Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Wenn du kein Update siehst, heißt das vermutlich daß deine Android-Version nicht mehr unterstützt wird.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Herunterladen</string>
-    <string name="wallet_old_sdk_dialog_title">Android ist veraltet</string>
-    <string name="wallet_old_sdk_dialog_message">Es ist möglich, dass dieses Modell von der nächsten Versionen von Dash Wallet nicht mehr unterstützt wird. Es könnte daher unter bestimmten Umständen schwierig werden, Zahlungen zu tätigen.\n\nSolange Du nicht bereit bist dies in Kauf zu nehmen, solltest Du Deine Dash baldigst verschieben.</string>
     <string name="send_coins_activity_title">Dash senden</string>
     <string name="send_coins_fragment_request_payment_request_progress">Rufe Signatur von %s ab…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Abrufen der Signatur fehlgeschlagen</string>
@@ -174,7 +167,7 @@
     <string name="transaction_row_status_error_other">Unbekannt</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Auf %s bei %s</string>
-    <string name="transaction_row_rate_not_available">Nicht verfügbar</string>
+    <string name="rate_not_available">Nicht verfügbar</string>
     <string name="transaction_row_status_masternode_registration">Masternode-Registrierung</string>
     <string name="transaction_row_status_masternode_update_registrar">Masternode-Update</string>
     <string name="transaction_row_status_masternode_update_service">Masternode-Update</string>
@@ -206,8 +199,6 @@
     <string name="restore_wallet_dialog_success_replay">Deine Wallet wurde erfolgreich wiederhergestellt. Jetzt wird das Guthaben ermittelt. Das wird einige Zeit dauern.</string>
     <string name="restore_wallet_dialog_success_encrypted">Warnung: Deine Wallet ist durch eine Ausgabe-PIN geschützt. Vergewissere dich, dass du dich noch an diese erinnern kannst, bevor du Geld mit dieser Wallet empfängst.</string>
     <string name="import_keys_dialog_failure">Die Wallet konnte nicht wieder hergestellt werden:\n\n%s\n\nFalsches Passwort?</string>
-    <string name="backup_wallet_permission_dialog_title">Schreibe-Erlaubnis fehlt</string>
-    <string name="backup_wallet_permission_dialog_message">Damit ein Wallet-Backup auf Deinen externen Speicher geschrieben werden kann, musst Du eine Schreibe-Erlaubnis erteilen.</string>
     <string name="export_keys_dialog_title">Wallet sichern</string>
     <string name="backup_wallet_dialog_message">Dein Backup wird mit dem gewählten Passwort verschlüsselt und auf dem externen Speicher gesichert.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Deine Wallet ist durch eine Ausgabe-PIN geschützt. Stell bitte sicher, dass Du die PIN, sowie das Backup-Passwort nicht vergisst!</string>

@@ -37,13 +37,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Upravljanje z aplikacijami</string>
     <string name="wallet_timeskew_dialog_title">Preveri nastavitve datuma &amp; ure</string>
     <string name="wallet_timeskew_dialog_msg">Vaša naprava zaostaja za %d minut. Zaradi tega verjetno ne morete prejemati ali pošiljati Dash kovancev. \n\nPreverite in ustrezno nastavite datum, uro in časovni pas.</string>
-    <string name="wallet_version_dialog_title">Na voljo je nova verzija!</string>
-    <string name="wallet_version_dialog_msg">Ta verzija vsebuje pomembne popravke. Podrobnosti si lahko ogledate na Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Če ne vidite nove verzije, vaša verzija Androida najbrž ni več podprta.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Prenos</string>
-    <string name="wallet_old_sdk_dialog_title">Verzija Androida je zastarela</string>
-    <string name="wallet_old_sdk_dialog_message">Možno je, da naslednja verzija Dash denarnice vaše naprave ne bo več podpirala. V nekaterih primerih bo potem težje preposlati kovance, ki jih imate shranjene tu.\n\nČe niste popolnoma prepričani, kaj počnete, svetujemo, da kovance čim prej prenesete drugam.</string>
     <string name="send_coins_activity_title">Pošlji Dash kovance</string>
     <string name="send_coins_fragment_request_payment_request_progress">Pridobivam podpis od %s..</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Pridobivanje podpisa spodletelo</string>
@@ -164,8 +157,6 @@
     <string name="restore_wallet_dialog_success">Denarnica je obnovljena.</string>
     <string name="restore_wallet_dialog_success_replay">Vaša denarnica je bila uspešno obnovljena. Kmalu se bo osvežilo stanje na računu. </string>
     <string name="import_keys_dialog_failure">Zasebnih ključev ni bilo mogoče obnoviti:\n\n%s\n\nNapačno geslo?</string>
-    <string name="backup_wallet_permission_dialog_title">Dovoljenje za pisanje je onemogočeno</string>
-    <string name="backup_wallet_permission_dialog_message">V kolikor želite ustvariti varnostno kopijo in jo shraniti na zunanji disk/pomnilnik, morate dovoliti pisanje nanj.</string>
     <string name="export_keys_dialog_title">Ustvarite varnostno kopijo vaše denarnice. </string>
     <string name="backup_wallet_dialog_message">Vaši varnostna kopija bo šifrirana z izbranim geslom in shranjena na zunanji pomnilnik.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Vaša denarnica je zaščitena s PIN številko. Zapomnite si PIN številko, v kolikor boste želeli obnoviti geslo varnostne kopije. </string>

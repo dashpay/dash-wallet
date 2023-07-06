@@ -145,7 +145,7 @@ class CoinBaseRepository @Inject constructor(
             it?.let { tokenResponse ->
                 userPreferences.setLastCoinBaseAccessToken(tokenResponse.accessToken)
                 userPreferences.setLastCoinBaseRefreshToken(tokenResponse.refreshToken)
-
+                config.setPreference(CoinbaseConfig.LOGOUT_COINBASE, false)
                 getUserAccount()
             }
         }

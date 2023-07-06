@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Scan to Send</string>
     <string name="scan_to_pay_error_dialog_message">Not a valid Dash Address or URL request in clipboard:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Not a valid Dash Address or URL request in clipboard.</string>
-    <string name="pay_to_confirm_address">Is this the Dash address you want to send payment to?</string>
 
     <string name="receive_title">Receive</string>
     <string name="receive_enter_amount_message">Specify the amount to be received</string>

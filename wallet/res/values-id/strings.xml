@@ -43,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Mengelola Aplikasi</string>
     <string name="wallet_timeskew_dialog_title">Periksa pengaturan tanggal &amp; waktu</string>
     <string name="wallet_timeskew_dialog_msg">Waktu perangkat Anda tidak aktif dalam %d menit. Anda mungkin tidak dapat mengirim atau menerima Dash karena masalah ini.\n\nAnda harus memeriksa dan jika perlu memperbaiki pengaturan tanggal, waktu dan zona waktu Anda.</string>
-    <string name="wallet_version_dialog_title">Versi baru tersedia!</string>
-    <string name="wallet_version_dialog_msg">Versi ini memperbaiki bug penting. Untuk detailnya, lihat log perubahan di Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Jika Anda tidak melihat pembaruan, ini mungkin berarti versi Android Anda tidak didukung lagi.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Unduh</string>
-    <string name="wallet_old_sdk_dialog_title">Versi Android kedaluwarsa</string>
-    <string name="wallet_old_sdk_dialog_message">Kemungkinannya adalah bahwa salah satu rilis berikutnya domet Dash tidak akan mendukung perangkat Anda lagi. Dalam beberapa kasus, akan sulit mengirimkan koin pada perangkat ini. \ N \ nKecuali Anda tahu apa yang Anda lakukan, disarankan untuk segera memindahkan koin Anda.</string>
     <string name="send_coins_activity_title">Kirim Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Mengambil tanda tangan dari %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Gagal mengambil tanda tangan</string>
@@ -173,7 +166,7 @@
     <string name="transaction_row_status_error_other">Tidak diketahui</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Di %s pada %s</string>
-    <string name="transaction_row_rate_not_available">Tak tersedia</string>
+    <string name="rate_not_available">Tak tersedia</string>
     <string name="transaction_row_status_masternode_registration">Pendaftaran Masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Pembaruan Masternode</string>
     <string name="transaction_row_status_masternode_update_service">Pembaruan Masternode</string>
@@ -205,8 +198,6 @@
     <string name="restore_wallet_dialog_success_replay">Dompet Anda berhasil dipulihkan. Saldonya akan ditentukan selanjutnya. Ini akan memakan waktu.</string>
     <string name="restore_wallet_dialog_success_encrypted">Peringatan: Dompet Anda dilindungi oleh PIN. Pastikan Anda masih mengingatnya sebelum menerima dompet ini.</string>
     <string name="import_keys_dialog_failure">Kunci pribadi tidak dpt dipulihkan:\n\n%s\n\nKata sandi salah?</string>
-    <string name="backup_wallet_permission_dialog_title">Izin menulis hilang</string>
-    <string name="backup_wallet_permission_dialog_message">Untuk mencadangkan dompet Anda ke penyimpanan eksternal, Anda perlu memberikan izin menulis.</string>
     <string name="export_keys_dialog_title">Cadangkan kunci pribadi</string>
     <string name="backup_wallet_dialog_message">Kunci pribadi Anda akan dienkripsi dgn kata sandi terpilih dan akan disimpan ke penyimpanan eksternal.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Dompet Anda dilindungi oleh PIN pengiriman. Pastikan Anda mengingat PIN sebagai tambahan kata sandi cadangan!</string>
