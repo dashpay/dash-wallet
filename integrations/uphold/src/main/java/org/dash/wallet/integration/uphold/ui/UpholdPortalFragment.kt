@@ -88,6 +88,7 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
         binding.transferSubtitle.text = getString(R.string.uphold_transfer_to_this_wallet)
         binding.disconnectTitle.text = getString(R.string.uphold_disconnect)
         binding.linkAccountBtn.text = getString(R.string.uphold_link_account)
+        binding.additionalInfo.setRoundedBackground(R.style.UpholdTextHighlight)
 
         setConnectedState(viewModel.uiState.value.isUserLoggedIn)
 
