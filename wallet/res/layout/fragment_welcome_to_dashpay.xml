@@ -24,7 +24,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:src="@drawable/ic_welcome_to_dashpay" />
+            app:srcCompat ="@drawable/ic_welcome_to_dashpay" />
 
         <TextView
             style="@style/Headline5"
@@ -50,11 +50,10 @@
                 android:id="@+id/create_a_username_icon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_create_a_username"
+                app:srcCompat="@drawable/ic_create_a_username"
                 app:layout_constraintEnd_toStartOf="@id/create_a_username_title"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/create_a_username_title" />
-            >
 
             <TextView
                 android:id="@+id/create_a_username_title"
@@ -93,7 +92,7 @@
                 android:id="@+id/add_your_friends_icon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_add_your_friends"
+                app:srcCompat ="@drawable/ic_add_your_friends"
                 app:layout_constraintEnd_toStartOf="@id/add_your_friends_title"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/add_your_friends_title" />
@@ -135,11 +134,10 @@
                 android:id="@+id/personalise_profile_icon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_personalise_profile"
+                app:srcCompat ="@drawable/ic_personalise_profile"
                 app:layout_constraintEnd_toStartOf="@id/personalise_profile_title"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/personalise_profile_title" />
-            >
 
             <TextView
                 android:id="@+id/personalise_profile_title"

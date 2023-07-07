@@ -140,7 +140,6 @@ import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.security.PinRetryController;
-import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig;
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
@@ -196,9 +195,6 @@ public class WalletApplication extends MultiDexApplication
     protected AnalyticsService analyticsService;
     @Inject
     BlockchainStateDao blockchainStateDao;
-
-    @Inject
-    DashPayConfig dashPayConfig;
     @Inject
     CrowdNodeConfig crowdNodeConfig;
     @Inject
@@ -788,9 +784,6 @@ public class WalletApplication extends MultiDexApplication
         }
     }
 
-    private void clearDashPayPrefs() {
-        dashPayConfig.clearDashPayConfig();
-    }
     private void clearWebCookies() {
         CookieManager.getInstance().removeAllCookies(null);
         CookieManager.getInstance().flush();
@@ -980,7 +973,6 @@ public class WalletApplication extends MultiDexApplication
         shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
-        clearDashPayPrefs();
         clearDatastorePrefs();
         clearWebCookies();
         notifyWalletWipe();

@@ -19,7 +19,6 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class CreateUsernamePrivacyFragment : Fragment(R.layout.fragment_user_name_privacy) {
     private val binding by viewBinding(FragmentUserNamePrivacyBinding::bind)
     private val viewModel by viewModels<CreateUsernamePrivacyViewModel>()

@@ -86,13 +86,6 @@ class CreateUsernameActivity : InteractionAwareActivity() {
         }
     }
 
-    private val navController by lazy {
-        val navHostFragment = supportFragmentManager
-            .findFragmentById(R.id.nav_host_create_user_name_fragment) as NavHostFragment
-
-        navHostFragment.navController
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

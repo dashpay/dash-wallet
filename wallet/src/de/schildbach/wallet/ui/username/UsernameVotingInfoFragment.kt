@@ -16,7 +16,6 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class UsernameVotingInfoFragment : Fragment(R.layout.fragment_username_voting_info) {
     private val binding by viewBinding(FragmentUsernameVotingInfoBinding::bind)
     private val dashPayViewModel: DashPayViewModel by activityViewModels()

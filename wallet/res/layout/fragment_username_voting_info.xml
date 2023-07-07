@@ -24,7 +24,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:src="@drawable/ic_username_voting" />
+            app:srcCompat ="@drawable/ic_username_voting" />
 
         <TextView
             style="@style/Headline5"
@@ -60,7 +60,7 @@
                 android:id="@+id/create_a_username_icon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_blue_clock"
+                app:srcCompat ="@drawable/ic_blue_clock"
                 app:layout_constraintEnd_toStartOf="@id/create_a_username_title"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -102,7 +102,7 @@
                 android:id="@+id/request_not_approved_icon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_request_not_approved"
+                app:srcCompat ="@drawable/ic_request_not_approved"
                 app:layout_constraintEnd_toStartOf="@id/request_not_approved_title"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/request_not_approved_title" />
@@ -144,7 +144,7 @@
                 android:id="@+id/passphrase_icon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_passphrase"
+                app:srcCompat ="@drawable/ic_passphrase"
                 app:layout_constraintEnd_toStartOf="@id/passphrase_title"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/passphrase_title" />

@@ -19,23 +19,32 @@ package de.schildbach.wallet.ui.dashpay.utils
 
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.BaseConfig
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-open class DashPayConfig @Inject constructor(private val context: Context) {
+open class DashPayConfig @Inject constructor(private val context: Context, walletDataProvider: WalletDataProvider)
+:BaseConfig(
+    context,
+    DASHPAY_PREFS_DIRECTORY,
+    walletDataProvider,
+    migrations = listOf(
+        SharedPreferencesMigration(
+            context = context,
+            sharedPreferencesName = context.packageName + "_preferences",
+            keysToMigrate = setOf(
+                LAST_SEEN_NOTIFICATION_TIME.name
+            )
+        )
+    )
+) {
     companion object {
         const val DISABLE_NOTIFICATIONS: Long = -1
 
@@ -44,41 +53,6 @@ open class DashPayConfig @Inject constructor(private val context: Context) {
         val LAST_METADATA_PUSH = longPreferencesKey("last_metadata_push")
         val HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN = booleanPreferencesKey("has_dash_pay_info_screen_been_shown")
     }
-    private val Context.dataStore by preferencesDataStore(DASHPAY_PREFS_DIRECTORY, produceMigrations = {
-        listOf(
-            // Migrating relevant keys from default prefs
-            SharedPreferencesMigration(
-                context = context,
-                sharedPreferencesName = context.packageName + "_preferences",
-                keysToMigrate = setOf(
-                    LAST_SEEN_NOTIFICATION_TIME.name
-                )
-            )
-        )
-    })
-
-    private val dataStore = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-
-    open fun <T> observe(key: Preferences.Key<T>): Flow<T?> {
-        return dataStore.map { preferences -> preferences[key] }
-    }
-
-    open suspend fun <T> get(key: Preferences.Key<T>): T? {
-        return dataStore.map { preferences -> preferences[key] }.first()
-    }
-
-    open suspend fun <T> set(key: Preferences.Key<T>, value: T) {
-        context.dataStore.edit { preferences ->
-            preferences[key] = value
-        }
-    }
 
     open suspend fun areNotificationsDisabled(): Boolean {
         return (get(LAST_SEEN_NOTIFICATION_TIME) ?: 0) == DISABLE_NOTIFICATIONS
@@ -86,13 +60,5 @@ open class DashPayConfig @Inject constructor(private val context: Context) {
 
     open suspend fun disableNotifications() {
         set(LAST_SEEN_NOTIFICATION_TIME, DISABLE_NOTIFICATIONS)
-    }
-
-    open suspend fun clearAll() {
-        context.dataStore.edit { it.clear() }
-    }
-
-    fun clearDashPayConfig() = runBlocking {
-        clearAll()
     }
 }

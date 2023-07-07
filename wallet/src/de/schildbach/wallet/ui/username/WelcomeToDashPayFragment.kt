@@ -11,7 +11,6 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) {
     private val binding by viewBinding(FragmentWelcomeToDashpayBinding::bind)
 
