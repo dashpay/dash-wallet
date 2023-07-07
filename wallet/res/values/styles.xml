@@ -118,13 +118,6 @@
         <item name="android:drawablePadding">4dp</item>
     </style>
 
-    <style name="ListSeparator">
-        <item name="android:alpha">0.25</item>
-        <item name="android:background">@color/gray</item>
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">1dp</item>
-    </style>
-
     <style name="ProgressBar.Horizontal" parent="Base.Widget.AppCompat.ProgressBar.Horizontal">
         <item name="android:progressDrawable">@drawable/progress_horizontal</item>
         <item name="android:minHeight">6dp</item>
@@ -164,5 +157,10 @@
         <item name="rippleColor">@color/button_ripple_color</item>
         <item name="cornerRadius">22dp</item>
         <item name="roundButtonRadius">22dp</item>
+    </style>
+
+    <style name="BuySellServiceBackground" parent="SecondaryBackground">
+        <item name="cornerRadius">8dp</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 </resources>

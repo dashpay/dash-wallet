@@ -255,14 +255,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
         binding.authLimitBanner.root.setOnClickListener {
             transferDashViewModel.logEvent(AnalyticsConstants.Coinbase.TRANSFER_AUTH_LIMIT)
-            AdaptiveDialog.custom(
-                R.layout.dialog_withdrawal_limit_info,
-                null,
-                getString(R.string.set_auth_limit),
-                getString(R.string.change_withdrawal_limit),
-                "",
-                getString(R.string.got_it)
-            ).show(requireActivity())
+            AdaptiveDialog.custom(R.layout.dialog_withdrawal_limit_info).show(requireActivity())
         }
 
         transferDashViewModel.observeCoinbaseAddressState.observe(viewLifecycleOwner) { address ->

@@ -39,7 +39,7 @@ import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.common.ui.getRoundedBackground
+import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.util.GenericUtils
 
 open class HistoryViewHolder(root: View): RecyclerView.ViewHolder(root)
@@ -156,7 +156,7 @@ class TransactionAdapter(
             )
 
             binding.icon.setImageResource(txView.icon)
-            binding.icon.background = resources.getRoundedBackground(txView.iconBackground)
+            binding.icon.setRoundedBackground(txView.iconBackground)
 
             binding.primaryStatus.text = resources.getString(txView.titleRes)
             binding.primaryStatus.setTextColor(contentColor)

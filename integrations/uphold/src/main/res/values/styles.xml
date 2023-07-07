@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="UpholdLogoBackground">
-        <item name="backgroundColor">#49CC68</item>
+    <style name="UpholdTextHighlight">
+        <item name="backgroundColor">#26BCF292</item>
         <item name="strokeColor">@android:color/transparent</item>
-        <item name="cornerRadius">19dp</item>
+        <item name="cornerRadius">5dp</item>
     </style>
 </resources>
+

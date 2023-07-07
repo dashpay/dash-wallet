@@ -28,11 +28,9 @@ import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseActivityViewModel
 
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class CoinbaseActivity : BaseMenuActivity() {
     private val viewModel: CoinbaseActivityViewModel by viewModels()
