@@ -20,12 +20,9 @@ package de.schildbach.wallet.ui.dashpay.utils
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
-import kotlinx.coroutines.flow.catch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,7 +30,7 @@ import javax.inject.Singleton
 open class DashPayConfig @Inject constructor(private val context: Context, walletDataProvider: WalletDataProvider)
 :BaseConfig(
     context,
-    DASHPAY_PREFS_DIRECTORY,
+    PREFERENCES_NAME,
     walletDataProvider,
     migrations = listOf(
         SharedPreferencesMigration(
@@ -48,7 +45,7 @@ open class DashPayConfig @Inject constructor(private val context: Context, walle
     companion object {
         const val DISABLE_NOTIFICATIONS: Long = -1
 
-        const val DASHPAY_PREFS_DIRECTORY = "dashpay"
+        const val PREFERENCES_NAME = "dashpay"
         val LAST_SEEN_NOTIFICATION_TIME = longPreferencesKey("last_seen_notification_time")
         val LAST_METADATA_PUSH = longPreferencesKey("last_metadata_push")
         val HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN = booleanPreferencesKey("has_dash_pay_info_screen_been_shown")
