@@ -70,26 +70,12 @@ open class DashPayViewModel @Inject constructor(
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String?>()
 
-    val notificationsLiveData = NotificationsLiveData(
-        walletApplication,
-        platformRepo,
-        platformSyncService,
-        viewModelScope,
-        userAlertDao
-    )
+    val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope, userAlertDao)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformSyncService)
-    val frequentContactsLiveData = FrequentContactsLiveData(
-        walletApplication,
-        platformRepo,
-        platformSyncService,
-        viewModelScope
-    )
+    val frequentContactsLiveData = FrequentContactsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
     val blockchainStateData = blockchainState.load()
 
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
-
-    suspend fun isDashPayInfoShown(): Boolean =
-        dashPayConfig.get(DashPayConfig.HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN) ?: false
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
     private var getUsernameJob = Job()
@@ -103,6 +89,9 @@ open class DashPayViewModel @Inject constructor(
     val recentlyModifiedContactsLiveData = MutableLiveData<HashSet<String>>()
 
     private var timerUsernameSearch: AnalyticsTimer? = null
+
+    suspend fun isDashPayInfoShown(): Boolean =
+        dashPayConfig.get(DashPayConfig.HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN) ?: false
 
     suspend fun setIsDashPayInfoShown(isShown: Boolean) {
         dashPayConfig.set(DashPayConfig.HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN, isShown)
@@ -152,11 +141,7 @@ open class DashPayViewModel @Inject constructor(
         liveData(context = searchUsernamesJob + Dispatchers.IO) {
             emit(Resource.loading(null))
             try {
-                val timerIsLock = AnalyticsTimer(
-                    analytics,
-                    log,
-                    AnalyticsConstants.Process.PROCESS_USERNAME_SEARCH_QUERY
-                )
+                val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_SEARCH_QUERY)
                 var result = platformRepo.searchUsernames(search.text, false, search.limit)
                 result = result.filter { !search.excludeIds.contains(it.dashPayProfile.userId) }
                 if (result.isNotEmpty()) {
@@ -329,6 +314,6 @@ open class DashPayViewModel @Inject constructor(
     private inner class UserSearch(
         val text: String,
         val limit: Int = 100,
-        val excludeIds: ArrayList<String> = arrayListOf()
+        val excludeIds: ArrayList<String> = arrayListOf(),
     )
 }

@@ -73,7 +73,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="@string/pay_to_usernames_no_more_alphanumeric_addresses"
+                android:text="@string/pay_to_usernames"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="@+id/create_a_username_title"
                 app:layout_constraintTop_toBottomOf="@+id/create_a_username_title" />
@@ -158,7 +158,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="@string/upload_your_picture_personalize_your_identity"
+                android:text="@string/upload_your_picture"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="@+id/personalise_profile_title"
                 app:layout_constraintTop_toBottomOf="@+id/personalise_profile_title" />
