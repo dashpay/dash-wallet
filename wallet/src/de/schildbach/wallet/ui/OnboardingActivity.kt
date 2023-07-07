@@ -206,7 +206,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun startMainActivity() {
-        startActivity(WalletActivity.createIntent(this))
+        val intent = Intent(this, WalletActivity::class.java).apply {
+            putExtras(this@OnboardingActivity.intent.extras ?: Bundle())
+        }
+        startActivity(intent)
         finish()
     }
 

@@ -152,6 +152,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void handleIntent(final Intent intent) {
         final String action = intent.getAction();
+        final Bundle extras = intent.getExtras();
 
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
             final String inputType = intent.getType();
@@ -173,6 +174,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     alertDialog.show();
                 }
             }.parse();
+        } else if (extras != null && extras.containsKey(WalletActivityExt.NOTIFICATION_ACTION_KEY)) {
+            WalletActivityExt.INSTANCE.handleFirebaseAction(this, extras);
         }
     }
 

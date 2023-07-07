@@ -273,8 +273,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         notificationService.showNotification(
                                 "deposit_received",
                                 getString(R.string.crowdnode_deposit_received),
-                                false,
-                                new Intent(BlockchainServiceImpl.this, StakingActivity.class)
+                                null,
+                                null,
+                                new Intent(BlockchainServiceImpl.this, StakingActivity.class),
+                                null
                         );
                     } else if (apiConfirmationHandler != null && apiConfirmationHandler.matches(tx)) {
                         apiConfirmationHandler.handle(tx);

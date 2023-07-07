@@ -94,8 +94,7 @@ class CrowdNodeAPIConfirmationHandler(
         notificationService.showNotification(
             "crowdnode_bad_confirmation",
             resources.getString(R.string.crowdnode_bad_confirmation),
-            false,
-            intent
+            intent = intent
         )
     }
 }
