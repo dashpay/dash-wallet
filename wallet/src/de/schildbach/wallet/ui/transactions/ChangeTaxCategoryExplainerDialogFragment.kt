@@ -23,11 +23,12 @@ import android.view.ViewGroup
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogChangeTaxCategoryExplainerBinding
+import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -78,7 +79,12 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
 
             walletData.wallet?.let { wallet ->
                 val tx = walletData.wallet!!.getTransaction(exampleTxId)
-                val transactionResultViewBinder = TransactionResultViewBinder(wallet, config.format.noCode(), transactionDetails)
+                val contentBinding = TransactionResultContentBinding.bind(transactionDetails)
+                val transactionResultViewBinder = TransactionResultViewBinder(
+                    wallet,
+                    config.format.noCode(),
+                    contentBinding
+                )
                 tx?.apply {
                     transactionResultViewBinder.bind(this)
                     transactionResultViewBinder.setTransactionMetadata(
@@ -86,7 +92,11 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
                             tx.txId,
                             tx.updateTime.time,
                             tx.getValue(wallet),
-                            TransactionCategory.fromTransaction(tx.type, tx.getValue(wallet), isEntirelySelf(tx, wallet))
+                            TransactionCategory.fromTransaction(
+                                tx.type,
+                                tx.getValue(wallet),
+                                isEntirelySelf(tx, wallet)
+                            )
                         )
                     )
                 }

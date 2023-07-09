@@ -75,7 +75,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         val transactionResultViewBinder = TransactionResultViewBinder(
             viewModel.wallet!!,
             viewModel.dashFormat,
-            binding.transactionResultContainer
+            contentBinding
         )
 
         viewModel.init(txId)
