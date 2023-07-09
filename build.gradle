@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        kotlin_version = '1.6.10'
+        kotlin_version = '1.8.22'
         coroutines_version = '1.6.1'
         ok_http_version = '4.9.1'
         dashjVersion = '19.0.3'
