@@ -12,7 +12,9 @@
         android:layout_height="match_parent"
         tools:ignore="UselessParent">
 
-        <include layout="@layout/activity_lock_screen" />
+        <include
+            android:id="@+id/lock_screen"
+            layout="@layout/activity_lock_screen" />
 
         <FrameLayout
             android:id="@+id/regular_content"

@@ -29,17 +29,17 @@ import androidx.fragment.app.*
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.RestartService
-import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentEnterPinBinding
-import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
-import kotlin.coroutines.resumeWithException
 import javax.inject.Inject
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 @AndroidEntryPoint
 open class CheckPinDialog(
@@ -88,6 +88,14 @@ open class CheckPinDialog(
 
     @Inject
     lateinit var restartService: RestartService
+
+    protected var title: String
+        get() = binding.title.text.toString()
+        set(value) { binding.title.text = value }
+
+    protected var message: String
+        get() = binding.message.text.toString()
+        set(value) { binding.message.text = value }
 
     constructor(): this(null)
 
@@ -138,7 +146,6 @@ open class CheckPinDialog(
             }
 
             override fun onFunction() {
-
             }
         }
         binding.pinPreview.setTextColor(R.color.dash_light_gray)

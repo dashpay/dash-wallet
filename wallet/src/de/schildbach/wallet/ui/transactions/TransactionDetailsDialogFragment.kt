@@ -22,10 +22,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
-import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionDetailsDialogBinding
@@ -92,7 +90,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         }
 
         viewModel.transactionMetadata.observe(this) { metadata ->
-            if(metadata != null && tx.txId == metadata.txId) {
+            if (metadata != null && tx.txId == metadata.txId) {
                 transactionResultViewBinder.setTransactionMetadata(metadata)
             }
         }
@@ -110,9 +108,8 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
     private fun showReportIssue() {
         ReportIssueDialogBuilder.createReportIssueDialog(
             requireActivity(),
-            WalletApplication.getInstance()
-        )
-            .buildAlertDialog().show()
+            viewModel.walletApplication
+        ).buildAlertDialog().show()
     }
 
     private fun viewOnBlockExplorer() {

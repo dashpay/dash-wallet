@@ -40,8 +40,6 @@ import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentToolsBinding
-import kotlinx.android.synthetic.main.fragment_tools.*
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -52,7 +50,6 @@ import org.dash.wallet.common.util.Qr
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
-@FlowPreview
 @AndroidEntryPoint
 class ToolsFragment : Fragment(R.layout.fragment_tools) {
     @Inject lateinit var authManager: SecurityFunctions
@@ -112,7 +109,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
             isSyncing = it?.replaying == true
         }
 
-        transaction_export.setOnClickListener {
+        binding.transactionExport.setOnClickListener {
             if (isSyncing) {
                 val dialog = AdaptiveDialog.create(
                     null,

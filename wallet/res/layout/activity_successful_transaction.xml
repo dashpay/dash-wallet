@@ -14,7 +14,9 @@
         android:clipToPadding="false"
         android:orientation="vertical">
 
-        <include layout="@layout/transaction_result_content" />
+        <include
+            android:id="@+id/result_content"
+            layout="@layout/transaction_result_content" />
 
         <Button
             android:id="@+id/transaction_close_btn"

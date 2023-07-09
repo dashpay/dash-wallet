@@ -28,10 +28,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_enter_pin.*
 
 @AndroidEntryPoint
-open class SetupPinDuringUpgradeDialog(
+class SetupPinDuringUpgradeDialog(
     private var onResult: ((Boolean?, String?) -> Unit)?
 ) : CheckPinDialog() {
 
@@ -68,8 +67,8 @@ open class SetupPinDuringUpgradeDialog(
         positiveButton.visibility = View.GONE
 
         if (!setPinViewModel.isWalletEncrypted) {
-            title.setText(R.string.forgot_pin_instruction_2)
-            message.setText(R.string.lock_enter_pin)
+            title = getString(R.string.forgot_pin_instruction_2)
+            message = getString(R.string.lock_enter_pin)
             negativeButton.setText(R.string.button_cancel)
             negativeButton.isEnabled = false
         } else {
@@ -98,7 +97,7 @@ open class SetupPinDuringUpgradeDialog(
     override fun onStart() {
         super.onStart()
         dialog?.window?.run {
-            //make the background opaque (not dimmed)
+            // make the background opaque (not dimmed)
             val windowParams = attributes
             windowParams.dimAmount = 0.00f
             windowParams.flags = windowParams.flags or WindowManager.LayoutParams.FLAG_DIM_BEHIND

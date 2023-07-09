@@ -20,12 +20,15 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import de.schildbach.wallet.WalletApplication
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.BlockInfo
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_block_info.*
+import de.schildbach.wallet_test.databinding.ActivityBlockInfoBinding
+import org.dash.wallet.common.Configuration
+import javax.inject.Inject
 
-class BlockInfoActivity : BaseMenuActivity() {
+@AndroidEntryPoint
+class BlockInfoActivity : LockScreenActivity() {
 
     companion object {
 
@@ -39,26 +42,33 @@ class BlockInfoActivity : BaseMenuActivity() {
         }
     }
 
-    override fun getLayoutId(): Int {
-        return R.layout.activity_block_info
-    }
+    private lateinit var binding: ActivityBlockInfoBinding
+    @Inject
+    lateinit var config: Configuration
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setTitle(R.string.block_info)
+        binding = ActivityBlockInfoBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        binding.appBar.toolbar.title = getString(R.string.block_info)
+        binding.appBar.toolbar.setNavigationOnClickListener { finish() }
 
         val blockInfo = intent.getSerializableExtra(BLOCK_INFO_EXTRA) as BlockInfo
-        block_height.text = "${blockInfo.height}"
-        block_time.text = blockInfo.time
-        block_hash.text = blockInfo.hash
+        binding.blockHeight.text = "${blockInfo.height}"
+        binding.blockTime.text = blockInfo.time
+        binding.blockHash.text = blockInfo.hash
 
-        view_on_explorer.setOnClickListener {
-            val config = WalletApplication.getInstance().configuration
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.withAppendedPath(
-                    config.getBlockExplorer(R.array.preferences_block_explorer_values),
-                    "block/" + blockInfo.hash)))
+        binding.viewOnExplorer.setOnClickListener {
+            startActivity(
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.withAppendedPath(
+                        config.getBlockExplorer(R.array.preferences_block_explorer_values),
+                        "block/" + blockInfo.hash
+                    )
+                )
+            )
         }
     }
-
 }

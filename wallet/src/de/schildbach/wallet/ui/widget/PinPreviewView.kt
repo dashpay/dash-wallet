@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.widget
 import android.content.Context
 import android.graphics.drawable.TransitionDrawable
 import android.util.AttributeSet
+import android.view.LayoutInflater
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
@@ -26,8 +27,7 @@ import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet.ui.ForgotPinActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.pin_preview_view.view.*
-
+import de.schildbach.wallet_test.databinding.PinPreviewViewBinding
 
 class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
 
@@ -41,17 +41,19 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
 
     private var drawableResId: Int
 
+    private val binding = PinPreviewViewBinding.inflate(LayoutInflater.from(context), this)
+
     var mode: PinType = PinType.STANDARD
         set(value) {
             field = value
             if (value == PinType.STANDARD) {
-                lastIndex = standard_pin_preview.childCount - 1
-                standard_pin_preview.visibility = View.VISIBLE
-                custom_pin_preview.visibility = View.GONE
+                lastIndex = binding.standardPinPreview.childCount - 1
+                binding.standardPinPreview.visibility = View.VISIBLE
+                binding.customPinPreview.visibility = View.GONE
             } else {
                 lastIndex = CUSTOM_PIN_LENGTH
-                standard_pin_preview.visibility = View.GONE
-                custom_pin_preview.visibility = View.VISIBLE
+                binding.standardPinPreview.visibility = View.GONE
+                binding.customPinPreview.visibility = View.VISIBLE
             }
             clear()
         }
@@ -59,12 +61,11 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
     private val pinItems = arrayListOf<View>()
 
     enum class PinType {
-        STANDARD,   // standard pin - 4 digits
-        CUSTOM    // custom pin - more or less than 4 digits
+        STANDARD, // standard pin - 4 digits
+        CUSTOM // custom pin - more or less than 4 digits
     }
 
     init {
-        inflate(context, R.layout.pin_preview_view, this)
         orientation = VERTICAL
         val itemSize: Int
         val attrsArray = context.obtainStyledAttributes(attrs, R.styleable.PinPreviewView)
@@ -75,9 +76,9 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
             attrsArray.recycle()
         }
 
-        lastIndex = standard_pin_preview.childCount - 1
-        for (i in 0 until standard_pin_preview.childCount) {
-            val item = standard_pin_preview.getChildAt(i)
+        lastIndex = binding.standardPinPreview.childCount - 1
+        for (i in 0 until binding.standardPinPreview.childCount) {
+            val item = binding.standardPinPreview.getChildAt(i)
             item.setBackgroundResource(drawableResId)
             pinItems.add(item)
             if (itemSize > 0) {
@@ -86,12 +87,12 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
             }
         }
         if (drawableResId == R.drawable.pin_item) {
-            custom_pin_preview.setBackgroundResource(R.drawable.custom_pin_preview_background_gray)
+            binding.customPinPreview.setBackgroundResource(R.drawable.custom_pin_preview_background_gray)
         } else {
-            custom_pin_preview.setBackgroundResource(R.drawable.custom_pin_preview_background)
+            binding.customPinPreview.setBackgroundResource(R.drawable.custom_pin_preview_background)
         }
 
-        forgot_pin.setOnClickListener {
+        binding.forgotPin.setOnClickListener {
             if (context is AppCompatActivity) {
                 context.startActivity(ForgotPinActivity.createIntent(context))
             }
@@ -100,7 +101,7 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
 
     fun clear() {
         activeIndex = 0
-        for (i in 0 until standard_pin_preview.childCount) {
+        for (i in 0 until binding.standardPinPreview.childCount) {
             val pinItemViewBackground = pinItems[i].background as TransitionDrawable
             pinItemViewBackground.resetTransition()
         }
@@ -108,7 +109,7 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
     }
 
     private fun setState(itemIndex: Int, active: Boolean) {
-        if (itemIndex < standard_pin_preview.childCount) {
+        if (itemIndex < binding.standardPinPreview.childCount) {
             val pinItemViewBackground = pinItems[itemIndex].background as TransitionDrawable
             pinItemViewBackground.isCrossFadeEnabled = true
             val durationMs = 100
@@ -139,19 +140,19 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
     }
 
     private fun updateCustomPinPreview() {
-        val numOfDots = custom_pin_preview.childCount
+        val numOfDots = binding.customPinPreview.childCount
         if (numOfDots > activeIndex) {
-            custom_pin_preview.removeViews(activeIndex, numOfDots - activeIndex)
+            binding.customPinPreview.removeViews(activeIndex, numOfDots - activeIndex)
         } else {
             val numOfMissingDots = activeIndex - numOfDots
             for (i in 0 until numOfMissingDots) {
                 val dot = FrameLayout(context)
                 dot.setBackgroundResource(R.drawable.custom_pin_preview_item_dot)
-                if (custom_pin_preview.childCount > 7) {
-                    //avoid extending the width of custom_pin_preview when PIN is very long
+                if (binding.customPinPreview.childCount > 7) {
+                    // avoid extending the width of custom_pin_preview when PIN is very long
                     dot.visibility = View.GONE
                 }
-                custom_pin_preview.addView(dot, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
+                binding.customPinPreview.addView(dot, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
             }
         }
     }
@@ -162,20 +163,20 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
     }
 
     fun badPin(remainingAttemptsMessage: String) {
-        bad_pin.text = resources.getString(R.string.wallet_lock_wrong_pin, remainingAttemptsMessage)
-        bad_pin.visibility = View.VISIBLE
+        binding.badPin.text = resources.getString(R.string.wallet_lock_wrong_pin, remainingAttemptsMessage)
+        binding.badPin.visibility = View.VISIBLE
     }
 
     fun clearBadPin() {
-        bad_pin.visibility = View.GONE
+        binding.badPin.visibility = View.GONE
     }
 
     fun setTextColor(colorResId: Int) {
-        bad_pin.setTextColor(colorResId)
-        forgot_pin.setTextColor(colorResId)
+        binding.badPin.setTextColor(colorResId)
+        binding.forgotPin.setTextColor(colorResId)
     }
 
     fun hideForgotPinAction() {
-        forgot_pin.visibility = View.GONE
+        binding.forgotPin.visibility = View.GONE
     }
 }
