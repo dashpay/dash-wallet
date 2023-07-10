@@ -56,7 +56,6 @@ dependencies {
 
     // Firebase
     implementation platform("com.google.firebase:firebase-bom:$firebaseVersion")
-    implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-analytics-ktx'
     implementation 'com.google.firebase:firebase-crashlytics-ktx'
 
