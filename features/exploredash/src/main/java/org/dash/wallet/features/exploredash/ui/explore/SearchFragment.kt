@@ -312,6 +312,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
+            searchHeaderAdapter.isFilterButtonVisible = mode != FilterMode.Online
             binding.noResultsPanel.isVisible = false
             searchHeaderAdapter.title = getSearchTitle()
             searchHeaderAdapter.subtitle = getSearchSubtitle()

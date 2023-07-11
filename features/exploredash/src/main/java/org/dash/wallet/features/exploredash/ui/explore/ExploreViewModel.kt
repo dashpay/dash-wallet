@@ -355,10 +355,10 @@ class ExploreViewModel @Inject constructor(
                 val lastResolved = lastResolvedAddress
                 isLocationEnabled.value == true &&
                     it.zoomLevel > MIN_ZOOM_LEVEL && (
-                    selectedTerritory.value?.isEmpty() == true ||
-                        lastResolved == null ||
-                        locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2
-                    )
+                        selectedTerritory.value?.isEmpty() == true ||
+                            lastResolved == null ||
+                            locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2
+                        )
             }
             .onEach(::resolveAddress)
             .launchIn(viewModelWorkerScope)
