@@ -103,7 +103,8 @@
             android:label="@string/app_name_short"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize"
+            android:launchMode="singleTop" />
 
         <activity-alias
             android:name="de.schildbach.wallet.WalletActivity"

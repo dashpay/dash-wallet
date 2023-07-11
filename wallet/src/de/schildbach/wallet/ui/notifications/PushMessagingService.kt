@@ -17,22 +17,24 @@
 
 package de.schildbach.wallet.ui.notifications
 
-import android.app.NotificationManager
-import android.content.Context
-import android.util.Log
-import androidx.core.app.NotificationCompat
-import com.bumptech.glide.Glide
+import android.content.Intent
+import androidx.core.os.bundleOf
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
+import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.services.NotificationService
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class PushMessagingService : FirebaseMessagingService() {
     companion object {
         private const val FOREGROUND_KEY = "foreground"
     }
+
+    @Inject
+    lateinit var notificationService: NotificationService
 
     override fun onNewToken(token: String) { }
 
@@ -43,30 +45,15 @@ class PushMessagingService : FirebaseMessagingService() {
             return
         }
 
-        val notificationBuilder = NotificationCompat.Builder(this, getString(R.string.fcm_notification_channel_id))
-            .setSmallIcon(R.drawable.ic_dash_d_white)
-            .setContentTitle(remoteMessage.notification?.title)
-            .setContentText(remoteMessage.notification?.body)
-            .setAutoCancel(true)
-
-        remoteMessage.notification?.imageUrl?.let { image ->
-            val futureTarget = Glide.with(this)
-                .asBitmap()
-                .load(image)
-                .submit()
-
-            val bitmap = futureTarget.get()
-
-            notificationBuilder
-                .setLargeIcon(bitmap)
-                .setStyle(NotificationCompat.BigPictureStyle()
-                    .bigPicture(bitmap)
-                    .bigLargeIcon(null))
-
-            Glide.with(this).clear(futureTarget)
-        }
-
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify("firebase_push".hashCode(), notificationBuilder.build())
+        notificationService.showNotification(
+            tag = "firebase_push",
+            message = remoteMessage.notification?.body ?: "",
+            title = remoteMessage.notification?.title,
+            imageUrl = remoteMessage.notification?.imageUrl?.toString(),
+            intent = Intent(this, WalletActivity::class.java).apply {
+                putExtras(bundleOf(*remoteMessage.data.map { it.key to it.value }.toTypedArray()))
+            },
+            channelId = getString(R.string.fcm_notification_channel_id)
+        )
     }
 }
