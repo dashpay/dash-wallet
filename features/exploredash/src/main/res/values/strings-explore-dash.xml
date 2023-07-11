@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Explore Dash</string>
     <string name="explore_title">Explore</string>
-    <string name="explore_subtitle">Easily shop with your DASH at over 155,000 locations and online merchants</string>
+    <string name="explore_subtitle">Find merchants that accept Dash, where to buy it and how to earn income with it.</string>
     <string name="explore_merchants_title">Where to Spend?</string>
     <string name="explore_merchants_subtitle">Find merchants who accept Dash as payment.</string>
     <string name="explore_atms_title">ATMs</string>
