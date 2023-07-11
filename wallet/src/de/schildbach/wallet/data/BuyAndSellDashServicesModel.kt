@@ -21,7 +21,7 @@ import android.os.Parcelable
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import de.schildbach.wallet_test.R
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 

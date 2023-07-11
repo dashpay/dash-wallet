@@ -17,7 +17,7 @@
 
 package de.schildbach.wallet.ui.more
 
-import android.content.*
+import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
 import android.os.Bundle
@@ -31,7 +31,6 @@ import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityAboutBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.VersionMessage
 import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -39,7 +38,6 @@ import org.dash.wallet.features.exploredash.ExploreSyncWorker
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class AboutActivity : LockScreenActivity() {
     companion object {
         private val log = LoggerFactory.getLogger(AboutActivity::class.java)

@@ -77,7 +77,7 @@ import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.DynamicFeeLoader;
+import de.schildbach.wallet.data.StaticFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
 
 import de.schildbach.wallet.payments.DecodePrivateKeyTask;
@@ -142,7 +142,7 @@ public class SweepWalletFragment extends Fragment {
         @NonNull
         @Override
         public Loader<Map<FeeCategory, Coin>> onCreateLoader(final int id, final Bundle args) {
-            return new DynamicFeeLoader(activity);
+            return new StaticFeeLoader(activity);
         }
 
         @Override

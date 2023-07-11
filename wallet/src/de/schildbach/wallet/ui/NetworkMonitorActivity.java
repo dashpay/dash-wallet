@@ -30,12 +30,10 @@ import androidx.fragment.app.FragmentStatePagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 
 import de.schildbach.wallet_test.R;
-import kotlinx.coroutines.FlowPreview;
 
 /**
  * @author Andreas Schildbach
  */
-@FlowPreview
 public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
 
     private PeerListFragment peerListFragment;
