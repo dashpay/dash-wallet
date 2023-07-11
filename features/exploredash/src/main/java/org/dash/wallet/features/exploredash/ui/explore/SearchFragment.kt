@@ -479,30 +479,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
-        binding.itemDetails.setOnBuyGiftCardButtonClicked {
-            lifecycleScope.launch {
-                if (!dashDirectViewModel.isUserSignInDashDirect()) {
-                    showLoginDialog()
-                } else {
-                    openPurchaseGiftCardFragment()
-                }
-            }
-        }
-
-        binding.itemDetails.setOnDashDirectLogOutClicked {
-            lifecycleScope.launch {
-                if (dashDirectViewModel.isUserSignInDashDirect()) {
-                    dashDirectViewModel.logout()
-                }
-            }
-        }
-
-        dashDirectViewModel.userEmail.observe(viewLifecycleOwner) { email ->
-            lifecycleScope.launch {
-                binding.itemDetails.setDashDirectLogInUser(email, dashDirectViewModel.isUserSignInDashDirect())
-            }
-        }
-
         trackMerchantDetailsEvents(binding)
     }
 
