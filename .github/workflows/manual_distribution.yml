@@ -126,7 +126,7 @@ jobs:
         ruby ./exploredata.rb "${{ github.event.inputs.flavor }}"
 
     - name: Test
-      run: bundle exec fastlane test flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" version_code:"${{ env.build_number }}" store_pass:"${{ secrets.SIGNING_STORE_PASS }}"
+      run: bundle exec fastlane test flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" versioncode:"${{ env.build_number }}" storepass:"${{ secrets.SIGNING_STORE_PASS }}"
       
     - name: Build and Firebase Distribution
-      run: bundle exec fastlane build_distribute flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" version_code:"${{ env.build_number }}" store_pass:"${{ secrets.SIGNING_STORE_PASS }}" comment:"${{ github.event.inputs.taskID }}" app_id:"${{ env.firebase_app_id }}" test_group:"qa"
+      run: bundle exec fastlane build_distribute flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" versioncode:"${{ env.build_number }}" storepass:"${{ secrets.SIGNING_STORE_PASS }}" comment:"${{ github.event.inputs.taskID }}" appid:"${{ env.firebase_app_id }}" testgroup:"qa"
