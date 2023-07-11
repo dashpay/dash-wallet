@@ -36,7 +36,7 @@ import coil.load
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
 import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.ui.getRoundedRippleBackground
+import org.dash.wallet.common.ui.setRoundedRippleBackground
 import org.dash.wallet.common.util.makeLinks
 import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
@@ -209,14 +209,14 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             if (isDash) {
                 payBtn.isVisible = true
                 payBtnTxt.text = context.getText(R.string.explore_pay_with_dash)
-                payBtn.background = resources.getRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Blue)
+                payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Blue)
                 payBtn.setOnClickListener { onSendDashClicked?.invoke(true) }
             } else {
                 // DashDirect allows payments via API, other sources require a deeplink
                 payBtn.isVisible = merchant.source?.lowercase() == ServiceName.DashDirect ||
                     !merchant.deeplink.isNullOrBlank()
                 payBtnTxt.text = context.getText(R.string.explore_buy_gift_card)
-                payBtn.background = resources.getRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Orange)
+                payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Orange)
                 payBtn.setOnClickListener { onBuyGiftCardButtonClicked?.invoke() }
             }
 

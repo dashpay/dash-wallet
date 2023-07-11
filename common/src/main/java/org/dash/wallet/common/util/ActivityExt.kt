@@ -22,17 +22,22 @@ import android.app.ActivityManager
 import android.content.Intent
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
+import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
 import org.dash.wallet.common.R
+import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 
 fun Activity.openCustomTab(url: String) {
     val fixedUrl = if (!url.startsWith("http")) "https://$url" else url
     val builder = CustomTabsIntent.Builder()
     val toolbarColor = ContextCompat.getColor(this, R.color.colorPrimary)
-    val customTabsIntent = builder.setShowTitle(true).setToolbarColor(toolbarColor).build()
+    val customTabsIntent = builder.setShowTitle(true).setDefaultColorSchemeParams(
+        CustomTabColorSchemeParams.Builder().setToolbarColor(toolbarColor).build()
+    ).build()
 
+    (this as? SecureActivity)?.turnOffAutoLogout()
     CustomTabActivityHelper.openCustomTab(this, customTabsIntent, Uri.parse(fixedUrl)) { _, _ ->
         val intent = Intent(Intent.ACTION_VIEW)
         intent.data = Uri.parse(fixedUrl)

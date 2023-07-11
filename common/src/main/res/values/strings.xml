@@ -80,6 +80,7 @@
     <string name="send_coins_error_dusty_send">The amount is too small to send</string>
     <string name="send_coins_error_insufficient_money">Insufficient funds</string>
     <string name="syncing">Syncing</string>
+    <string name="no_connection">No internet connection</string>
     <string name="rate_not_available">Not available</string>
 
     <!-- CrowdNode warning -->
@@ -90,4 +91,12 @@
     <string name="payment_request_problem_title">Payment was not acknowledged</string>
     <string name="payment_protocol_default_error_title">Payment error</string>
     <string name="payment_request_problem_message">Your payment could not be processed by the server, please inquire with the merchant</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">Receive directly into Dash Wallet</string>
+    <string name="convert_crypto">Convert Crypto</string>
+    <string name="last_known_balance" >Last known balance</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="enter_amount_available">available</string>
+    <string name="transaction_row_rate_not_available">Not available</string>
 </resources>

@@ -41,7 +41,7 @@ import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.common.ui.getRoundedBackground
+import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.util.GenericUtils
 
 open class HistoryViewHolder(root: View): RecyclerView.ViewHolder(root)
@@ -53,7 +53,6 @@ class TransactionAdapter(
     private val clickListener: (HistoryRowView, Int) -> Unit
 ) : ListAdapter<HistoryRowView, HistoryViewHolder>(DiffCallback()) {
     private val contentColor = resources.getColor(R.color.content_primary, null)
-    private val warningColor = resources.getColor(R.color.content_warning, null)
     private val colorSecondaryStatus = resources.getColor(R.color.orange, null)
 
     class DiffCallback : DiffUtil.ItemCallback<HistoryRowView>() {
@@ -193,7 +192,7 @@ class TransactionAdapter(
             } else {
                 val padding = resources.getDimensionPixelOffset(R.dimen.transaction_icon_padding)
                 binding.primaryIcon.updatePadding(padding, padding, padding, padding)
-                binding.primaryIcon.background = resources.getRoundedBackground(iconBackground!!)
+                binding.primaryIcon.setRoundedBackground(iconBackground!!)
                 binding.primaryIcon.load(icon)
                 binding.secondaryIcon.isVisible = false
             }

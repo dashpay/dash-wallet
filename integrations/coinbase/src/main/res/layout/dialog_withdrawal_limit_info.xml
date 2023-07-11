@@ -21,7 +21,6 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@color/background_primary"
-    android:orientation="vertical"
     tools:context="org.dash.wallet.common.ui.dialogs.AdaptiveDialog"
     tools:ignore="ContentDescription">
 

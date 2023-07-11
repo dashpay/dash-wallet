@@ -31,6 +31,9 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.payments.ConfirmTransactionLauncher
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.service.*
+import de.schildbach.wallet.service.AndroidActionsService
+import de.schildbach.wallet.service.AppRestartService
+import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.*

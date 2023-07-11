@@ -375,7 +375,7 @@
     <string name="payment_protocol_insufficient_funds_error_message">Dein Guthaben reicht nicht aus, um diese Transaktion zu tätigen</string>
 
 
-    <string name="select_a_service_to_buy_and_sell_dash">Wähle einen Anbieter zum Kaufen und Verkaufen von Dash.</string>
+    <string name="buy_and_sell_subtitle">Wähle einen Anbieter zum Kaufen und Verkaufen von Dash.</string>
     <string name="select_a_service">Dienst auswählen</string>
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Filter leeren</string>

@@ -32,9 +32,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
-import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.payment_method_picker.CardUtils
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
+import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
@@ -68,7 +68,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                 binding.confirmBtn.text = getString(R.string.retry)
                 binding.retryIcon.visibility = View.VISIBLE
                 isRetrying = true
-                setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_LightGrey, org.dash.wallet.common.R.color.dash_blue)
+                setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_LightBlue, org.dash.wallet.common.R.color.dash_blue)
             }
         }
     }
@@ -250,7 +250,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     }
 
     private fun setConfirmBtnStyle(@StyleRes buttonStyle: Int, @ColorRes colorRes: Int) {
-        binding.confirmBtnContainer.background = resources.getRoundedBackground(buttonStyle)
+        binding.confirmBtnContainer.setRoundedBackground(buttonStyle)
         binding.confirmBtn.setTextColor(resources.getColor(colorRes))
     }
 

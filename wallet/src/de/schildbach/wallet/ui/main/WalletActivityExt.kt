@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.main
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import android.os.Bundle
 import android.os.storage.StorageManager
 import android.provider.Settings
 import android.view.MenuItem
@@ -34,12 +35,17 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.util.openCustomTab
 
 object WalletActivityExt {
     private const val TIME_SKEW_TOLERANCE = 60 // minutes
     private const val STORAGE_TOLERANCE = 500 // MB
     private var timeSkewDialogShown = false
     private var lowStorageDialogShown = false
+
+    const val NOTIFICATION_ACTION_KEY = "action"
+    private const val BROWSER_ACTION_KEY = "browser"
+    private const val ACTION_URL_KEY = "url"
 
     fun WalletActivity.setupBottomNavigation(viewModel: MainViewModel) {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
@@ -101,6 +107,18 @@ object WalletActivityExt {
                 lowStorageDialogShown = true
                 showLowStorageAlertDialog()
             }
+        }
+    }
+
+    fun WalletActivity.handleFirebaseAction(extras: Bundle) {
+        when (extras.getString(NOTIFICATION_ACTION_KEY)) {
+            BROWSER_ACTION_KEY -> {
+                extras.getString(ACTION_URL_KEY)?.let { url ->
+                    openCustomTab(url)
+                }
+            }
+            // Other actions, e.g. Dialog action
+            else -> {}
         }
     }
 

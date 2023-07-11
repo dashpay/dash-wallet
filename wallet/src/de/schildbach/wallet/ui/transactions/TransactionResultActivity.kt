@@ -30,8 +30,8 @@ import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_successful_transaction.*
-import kotlinx.android.synthetic.main.transaction_result_content.*
+import de.schildbach.wallet_test.databinding.ActivitySuccessfulTransactionBinding
+import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -53,18 +53,34 @@ class TransactionResultActivity : LockScreenActivity() {
         private const val EXTRA_PAYEE_VERIFIED_BY = "payee_verified_by"
 
         @JvmStatic
-        fun createIntent(context: Context, action: String? = null, transaction: Transaction, userAuthorized: Boolean): Intent {
+        fun createIntent(
+            context: Context,
+            action: String? = null,
+            transaction: Transaction,
+            userAuthorized: Boolean
+        ): Intent {
             return createIntent(context, action, transaction, userAuthorized, null, null)
         }
 
         @JvmStatic
-        fun createIntent(context: Context, transaction: Transaction, userAuthorized: Boolean, payeeName: String? = null,
-                         payeeVerifiedBy: String? = null): Intent {
+        fun createIntent(
+            context: Context,
+            transaction: Transaction,
+            userAuthorized: Boolean,
+            payeeName: String? = null,
+            payeeVerifiedBy: String? = null
+        ): Intent {
             return createIntent(context, null, transaction, userAuthorized, payeeName, payeeVerifiedBy)
         }
 
-        fun createIntent(context: Context, action: String?, transaction: Transaction, userAuthorized: Boolean,
-                         paymentMemo: String? = null, payeeVerifiedBy: String? = null): Intent {
+        fun createIntent(
+            context: Context,
+            action: String?,
+            transaction: Transaction,
+            userAuthorized: Boolean,
+            paymentMemo: String? = null,
+            payeeVerifiedBy: String? = null
+        ): Intent {
             return Intent(context, TransactionResultActivity::class.java).apply {
                 setAction(action)
                 putExtra(EXTRA_TX_ID, transaction.txId)
@@ -76,21 +92,25 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private val viewModel: TransactionResultViewModel by viewModels()
+    private lateinit var binding: ActivitySuccessfulTransactionBinding
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val txId = intent.getSerializableExtra(EXTRA_TX_ID) as Sha256Hash
-        if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false)!!)
+        if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false)!!) {
             intent.putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true)
+        }
 
-        setContentView(R.layout.activity_successful_transaction)
+        binding = ActivitySuccessfulTransactionBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
+        val contentBinding = TransactionResultContentBinding.bind(binding.container)
         val transactionResultViewBinder = TransactionResultViewBinder(
             walletData.wallet!!,
             configuration.format.noCode(),
-            container
+            contentBinding
         )
 
         viewModel.init(txId)
@@ -101,12 +121,12 @@ class TransactionResultActivity : LockScreenActivity() {
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
             transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
             transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
-            open_explorer_card.setOnClickListener { viewOnExplorer(tx) }
-            tax_category_layout.setOnClickListener { viewOnTaxCategory()}
-            transaction_close_btn.setOnClickListener {
+            contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
+            contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
+            binding.transactionCloseBtn.setOnClickListener {
                 onTransactionDetailsDismiss()
             }
-            report_issue_card.setOnClickListener {
+            contentBinding.reportIssueCard.setOnClickListener {
                 showReportIssue()
             }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,16 +15,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integration.coinbase_integration.service
+package org.dash.wallet.integration.uphold.data
 
-import org.dash.wallet.common.data.SingleLiveEvent
+data class SupportedTopperAssets(
+    val assets: Assets
+)
 
-class CloseCoinbasePortalBroadcaster {
-    private val _closeCoinbasePortal = SingleLiveEvent<Unit>()
-    val closeCoinbasePortal
-        get() = _closeCoinbasePortal
+data class Assets(
+    val source: List<Source>,
+    val target: List<Target>
 
-    fun dispatchCall(){
-        closeCoinbasePortal.postCall()
-    }
-}
+)
+
+data class Source(
+    val code: String,
+    val name: String,
+    val symbol: String
+)
+
+data class Target(
+    val code: String,
+    val name: String,
+    val networks: List<Network>,
+    val symbol: String?
+)
+
+data class Network(
+    val code: String,
+    val name: String,
+    val priorities: List<String>,
+    val tagTypes: List<String>
+)

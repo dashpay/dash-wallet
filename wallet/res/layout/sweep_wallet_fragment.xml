@@ -141,7 +141,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:layout_marginTop="4dp"
-                        app:tint="@color/darkest_blue"
+                        app:tint="@color/content_primary"
                         app:srcCompat="@drawable/ic_dash_d_white" />
 
                     <org.dash.wallet.common.ui.CurrencyTextView

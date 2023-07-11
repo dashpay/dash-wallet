@@ -35,9 +35,9 @@ import de.schildbach.wallet_test.databinding.FragmentBuySellIntegrationsBinding
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
-import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -52,6 +52,7 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
     private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
         BuyAndSellDashServicesAdapter(viewModel.config.format.noCode()) { model ->
             when (model.serviceType) {
+                ServiceType.TOPPER -> onTopperItemClicked()
                 ServiceType.UPHOLD -> onUpholdItemClicked()
                 ServiceType.COINBASE -> onCoinbaseItemClicked()
             }
@@ -83,7 +84,7 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         binding.dashServicesList.adapter = buyAndSellDashServicesAdapter
 
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { isConnected ->
-            binding.networkStatusStub.isVisible = !isConnected
+            binding.noNetworkIndicator.isVisible = !isConnected
         }
 
         viewModel.servicesList.observe(viewLifecycleOwner) {
@@ -95,14 +96,14 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         }
     }
 
+    private fun onTopperItemClicked() {
+        val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
+        requireActivity().openCustomTab(uri)
+    }
+
     private fun onUpholdItemClicked() {
         viewModel.logEnterUphold()
-
-        if (viewModel.isUpholdAuthenticated) {
-            startActivity(Intent(requireContext(), UpholdAccountActivity::class.java))
-        } else {
-            startActivity(Intent(requireContext(), UpholdSplashActivity::class.java))
-        }
+        safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToUphold())
     }
 
     private fun onCoinbaseItemClicked() {
@@ -125,17 +126,11 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         val liquidClient = LiquidClient.getInstance()
 
         if (liquidClient.isAuthenticated) {
-            AdaptiveDialog.custom(
-                R.layout.dialog_liquid_unavailable,
-                null,
-                "",
-                "",
-                "",
-                getString(android.R.string.ok)
-            ).apply { isCancelable = false }
-                .show(requireActivity()) {
-                    liquidClient.clearLiquidData()
-                }
+            AdaptiveDialog.custom(R.layout.dialog_liquid_unavailable).apply {
+                isCancelable = false
+            }.show(requireActivity()) {
+                liquidClient.clearLiquidData()
+            }
         }
     }
 }

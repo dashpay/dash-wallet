@@ -24,27 +24,27 @@ import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import androidx.core.content.res.ResourcesCompat
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.BaseMenuActivity
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_advanced_security.*
+import de.schildbach.wallet_test.databinding.ActivityAdvancedSecurityBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-
 
 enum class SecurityLevel {
     NONE, LOW, MEDIUM, HIGH, VERY_HIGH
 }
 
 @AndroidEntryPoint
-class AdvancedSecurityActivity : BaseMenuActivity() {
+class AdvancedSecurityActivity : LockScreenActivity() {
     @Inject
     lateinit var analytics: AnalyticsService
+    private lateinit var binding: ActivityAdvancedSecurityBinding
 
     private val onAutoLogoutSeekBarListener = object : OnSeekBarChangeListener {
         override fun onStopTrackingTouch(seekBar: SeekBar?) {
-            val value = autoLogoutProgressToTimeValue(auto_logout_seekbar.progress)
+            val value = autoLogoutProgressToTimeValue(binding.autoLogoutSeekbar.progress)
             analytics.logEvent(
                 AnalyticsConstants.Security.AUTO_LOGOUT_TIMER_VALUE,
                 mapOf(AnalyticsConstants.Parameter.VALUE to value)
@@ -52,14 +52,14 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
         }
         override fun onStartTrackingTouch(seekBar: SeekBar?) { }
         override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-            configuration.autoLogoutMinutes = autoLogoutProgressToTimeValue(auto_logout_seekbar.progress)
+            configuration.autoLogoutMinutes = autoLogoutProgressToTimeValue(binding.autoLogoutSeekbar.progress)
             updateView()
         }
     }
 
     private val onBiometricLimitSeekBarChangeListener = object : OnSeekBarChangeListener {
         override fun onStopTrackingTouch(seekBar: SeekBar?) {
-            val value = biometricProgressToLimitValue(biometric_limit_seekbar.progress)
+            val value = biometricProgressToLimitValue(binding.biometricLimitSeekbar.progress)
             analytics.logEvent(
                 AnalyticsConstants.Security.SPENDING_CONFIRMATION_LIMIT,
                 mapOf(AnalyticsConstants.Parameter.VALUE to value)
@@ -67,46 +67,52 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
         }
         override fun onStartTrackingTouch(seekBar: SeekBar?) { }
         override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-            configuration.biometricLimit = biometricProgressToLimitValue(biometric_limit_seekbar.progress)
+            configuration.biometricLimit = biometricProgressToLimitValue(binding.biometricLimitSeekbar.progress)
             updateView()
         }
     }
     private lateinit var dashSymbol: ImageSpan
 
-    override fun getLayoutId(): Int {
-        return R.layout.activity_advanced_security
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val drawableDash = ResourcesCompat.getDrawable(resources,
-                R.drawable.ic_dash_d_black, null)
+        binding = ActivityAdvancedSecurityBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        binding.appBar.toolbar.title = getString(R.string.security_title)
+        binding.appBar.toolbar.setNavigationOnClickListener { finish() }
+
+        val drawableDash = ResourcesCompat.getDrawable(
+            resources,
+            R.drawable.ic_dash_d_black,
+            null
+        )
         drawableDash!!.setBounds(0, 0, 32, 32)
         dashSymbol = ImageSpan(drawableDash, ImageSpan.ALIGN_BASELINE)
 
-        auto_logout_switch.setOnCheckedChangeListener { _, enabled ->
+        binding.autoLogoutSwitch.setOnCheckedChangeListener { _, enabled ->
             if (configuration.autoLogoutEnabled != enabled) {
                 analytics.logEvent(
                     if (enabled) {
                         AnalyticsConstants.Security.AUTO_LOGOUT_ON
                     } else {
                         AnalyticsConstants.Security.AUTO_LOGOUT_OFF
-                    }, mapOf()
+                    },
+                    mapOf()
                 )
             }
             configuration.autoLogoutEnabled = enabled
             updateView()
         }
 
-        spending_confirmation_switch.setOnCheckedChangeListener { _, enabled ->
+        binding.spendingConfirmationSwitch.setOnCheckedChangeListener { _, enabled ->
             if (configuration.spendingConfirmationEnabled != enabled) {
                 analytics.logEvent(
                     if (enabled) {
                         AnalyticsConstants.Security.SPENDING_CONFIRMATION_ON
                     } else {
                         AnalyticsConstants.Security.SPENDING_CONFIRMATION_OFF
-                    }, mapOf()
+                    },
+                    mapOf()
                 )
             }
 
@@ -114,11 +120,11 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
             updateView()
         }
 
-        auto_logout_seekbar.setOnSeekBarChangeListener(onAutoLogoutSeekBarListener)
-        biometric_limit_seekbar.setOnSeekBarChangeListener(onBiometricLimitSeekBarChangeListener)
+        binding.autoLogoutSeekbar.setOnSeekBarChangeListener(onAutoLogoutSeekBarListener)
+        binding.biometricLimitSeekbar.setOnSeekBarChangeListener(onBiometricLimitSeekBarChangeListener)
+        binding.resetToDefaultBtn.setOnClickListener { resetToDefault() }
 
         updateView()
-        setTitle(R.string.security_title)
     }
 
     private fun getSecurityLevel(): SecurityLevel {
@@ -147,17 +153,19 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
 
     private fun updateView() {
         // Auto Logout group
-        auto_logout_switch.isChecked = configuration.autoLogoutEnabled
+        binding.autoLogoutSwitch.isChecked = configuration.autoLogoutEnabled
         if (configuration.autoLogoutEnabled) {
-            auto_logout_group.visibility = View.VISIBLE
-            logout_after_time.text = getString(when(configuration.autoLogoutMinutes) {
-                0 -> R.string.immediately
-                1 -> R.string.one_minute
-                5 -> R.string.five_minute
-                60 -> R.string.one_hour
-                else -> R.string.twenty_four_hours
-            })
-            auto_logout_seekbar.progress = when(configuration.autoLogoutMinutes) {
+            binding.autoLogoutGroup.visibility = View.VISIBLE
+            binding.logoutAfterTime.text = getString(
+                when (configuration.autoLogoutMinutes) {
+                    0 -> R.string.immediately
+                    1 -> R.string.one_minute
+                    5 -> R.string.five_minute
+                    60 -> R.string.one_hour
+                    else -> R.string.twenty_four_hours
+                }
+            )
+            binding.autoLogoutSeekbar.progress = when (configuration.autoLogoutMinutes) {
                 0 -> 0
                 1 -> 1
                 5 -> 2
@@ -165,65 +173,76 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
                 else -> 4
             }
         } else {
-            auto_logout_group.visibility = View.GONE
+            binding.autoLogoutGroup.visibility = View.GONE
         }
 
-        spending_confirmation_switch.isChecked = configuration.spendingConfirmationEnabled
+        binding.spendingConfirmationSwitch.isChecked = configuration.spendingConfirmationEnabled
         if (configuration.spendingConfirmationEnabled) {
-            spending_confirmation_group.visibility = if (configuration.enableFingerprint) {
+            binding.spendingConfirmationGroup.visibility = if (configuration.enableFingerprint) {
                 View.VISIBLE
             } else {
                 View.GONE
             }
 
-            biometric_limit_value.text = configuration.biometricLimit
-                    .toString().removeSuffix(".0")
-            biometric_limit_seekbar.progress = when(configuration.biometricLimit) {
+            binding.biometricLimitValue.text = configuration.biometricLimit
+                .toString().removeSuffix(".0")
+            binding.biometricLimitSeekbar.progress = when (configuration.biometricLimit) {
                 0f -> 0
                 .1f -> 1
                 .5f -> 2
                 1f -> 3
                 else -> 4
             }
+
             if (configuration.biometricLimit == 0f) {
-                spending_confirmation_hint.text = getText(R.string.spending_confirmation_hint_zero)
+                binding.spendingConfirmationHint.text = getText(R.string.spending_confirmation_hint_zero)
             } else {
                 val builder = SpannableStringBuilder()
                 builder.append(getText(R.string.spending_confirmation_hint_above_zero)).append("  ")
                 builder.setSpan(dashSymbol, builder.length - 1, builder.length, 0)
-                builder.append(" ").append(biometric_limit_value.text)
-                spending_confirmation_hint.text = builder
+                builder.append(" ").append(binding.biometricLimitValue.text)
+                binding.spendingConfirmationHint.text = builder
             }
         } else {
-            spending_confirmation_group.visibility = View.GONE
+            binding.spendingConfirmationGroup.visibility = View.GONE
         }
 
         // Security Level
         val securityLevel = getSecurityLevel()
-        security_level.text = getString(when(securityLevel) {
-            SecurityLevel.NONE -> R.string.security_none
-            SecurityLevel.LOW -> R.string.security_low
-            SecurityLevel.MEDIUM -> R.string.security_medium
-            SecurityLevel.HIGH -> R.string.security_high
-            else -> R.string.security_very_high
-        })
-        security_level.setTextColor(ResourcesCompat.getColor(resources, when(securityLevel) {
-            SecurityLevel.NONE -> R.color.dash_red
-            SecurityLevel.LOW -> R.color.dash_orange
-            SecurityLevel.MEDIUM -> R.color.dash_orange
-            SecurityLevel.HIGH -> R.color.dash_blue
-            else -> R.color.dash_green
-        }, null))
-        security_icon.setImageResource(when(securityLevel) {
-            SecurityLevel.NONE -> R.drawable.security_filled_red
-            SecurityLevel.LOW -> R.drawable.security_filled_orange
-            SecurityLevel.MEDIUM -> R.drawable.security_filled_orange
-            SecurityLevel.HIGH -> R.drawable.security_filled_blue
-            else -> R.drawable.security_filled_green
-        })
+        binding.securityLevel.text = getString(
+            when (securityLevel) {
+                SecurityLevel.NONE -> R.string.security_none
+                SecurityLevel.LOW -> R.string.security_low
+                SecurityLevel.MEDIUM -> R.string.security_medium
+                SecurityLevel.HIGH -> R.string.security_high
+                else -> R.string.security_very_high
+            }
+        )
+        binding.securityLevel.setTextColor(
+            ResourcesCompat.getColor(
+                resources,
+                when (securityLevel) {
+                    SecurityLevel.NONE -> R.color.dash_red
+                    SecurityLevel.LOW -> R.color.dash_orange
+                    SecurityLevel.MEDIUM -> R.color.dash_orange
+                    SecurityLevel.HIGH -> R.color.dash_blue
+                    else -> R.color.dash_green
+                },
+                null
+            )
+        )
+        binding.securityIcon.setImageResource(
+            when (securityLevel) {
+                SecurityLevel.NONE -> R.drawable.security_filled_red
+                SecurityLevel.LOW -> R.drawable.security_filled_orange
+                SecurityLevel.MEDIUM -> R.drawable.security_filled_orange
+                SecurityLevel.HIGH -> R.drawable.security_filled_blue
+                else -> R.drawable.security_filled_green
+            }
+        )
     }
 
-    fun resetToDefault(view: View) {
+    private fun resetToDefault() {
         configuration.autoLogoutEnabled = true
         configuration.autoLogoutMinutes = 1
         configuration.spendingConfirmationEnabled = true
@@ -233,7 +252,7 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
     }
 
     private fun autoLogoutProgressToTimeValue(progress: Int): Int {
-        return when(progress) {
+        return when (progress) {
             0 -> 0
             1 -> 1
             2 -> 5
@@ -243,7 +262,7 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
     }
 
     private fun biometricProgressToLimitValue(progress: Int): Float {
-        return when(progress) {
+        return when (progress) {
             0 -> 0f
             1 -> 0.1f
             2 -> 0.5f

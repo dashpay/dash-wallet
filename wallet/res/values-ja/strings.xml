@@ -374,7 +374,7 @@
     <string name="payment_protocol_insufficient_funds_error_message">この取引を完了するのに十分な資金がありません</string>
 
 
-    <string name="select_a_service_to_buy_and_sell_dash">サービスを選択してDashを売買します。</string>
+    <string name="buy_and_sell_subtitle">サービスを選択してDashを売買します。</string>
     <string name="select_a_service">サービスを選択する</string>
     <string name="activity_buy_and_sell_dash_filter">絞り込み</string>
     <string name="clear_filter">フィルターをクリアする</string>

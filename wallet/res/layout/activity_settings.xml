@@ -10,6 +10,7 @@
     tools:context="de.schildbach.wallet.ui.SettingsActivity">
 
     <include
+        android:id="@+id/app_bar"
         layout="@layout/app_bar_general"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />

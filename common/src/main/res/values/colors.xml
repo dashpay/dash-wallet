@@ -14,12 +14,9 @@
     <color name="ripple_dark">#80012060</color>
     <color name="error_red">#BF2827</color>
 
-    <color name="darkest_blue">#FF111921</color>
     <color name="vivid_red">#ec2227</color>
     <color name="white">#ffffff</color>
     <color name="menu_gray">#FFC9C9C9</color>
-    <color name="medium_gray">#ff4a4a4a</color>
-    <color name="shadow_color">#33000000</color>
 
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>
@@ -92,14 +89,18 @@
     <color name="system_red">#E85C4A</color>
     <color name="system_green">#3CB878</color>
     <color name="orange">#FA9269</color>
+    <color name="system_teal">#78C4F5</color>
+    <color name="purple">#6273BD</color>
 
     <color name="dash_black_0.7">#B3191C1F</color>
     <color name="dash_black_0.05">#0D191C1F</color>
     <color name="dash_black_0.08">#14191C1F</color>
+    <color name="dash_black_0.9">#E5191C1F</color>
     <color name="system_green_0.1">#1A3CB878</color>
     <color name="extra_dark_gray_0.1">#1A525C66</color>
     <color name="dash_blue_0.1">#1A008DE4</color>
     <color name="dash_blue_0.05">#0D008DE4</color>
+    <color name="dash_blue_0.08">#14008DE4</color>
 
     <color name="blue_50">#F0F8FE</color>
     <color name="light_blue">#1A008DE4</color>

@@ -858,8 +858,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             notificationService.showNotification(
                 tag,
                 message,
-                false,
-                notificationIntent
+                intent = notificationIntent
             )
         }
     }

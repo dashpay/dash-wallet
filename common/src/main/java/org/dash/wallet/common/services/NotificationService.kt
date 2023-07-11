@@ -26,13 +26,17 @@ interface NotificationService {
     fun showNotification(
         tag: String,
         message: String,
-        isOngoing: Boolean = false,
-        intent: Intent? = null
+        title: String? = null,
+        imageUrl: String? = null,
+        intent: Intent? = null,
+        channelId: String? = null
     )
 
     fun buildNotification(
         message: String,
-        isOngoing: Boolean = false,
-        intent: Intent? = null
+        title: String? = null,
+        imageUrl: String? = null,
+        intent: Intent? = null,
+        channelId: String? = null
     ): Notification
 }

@@ -43,7 +43,7 @@ class TransactionResultViewModel @Inject constructor(
     val walletData: WalletDataProvider,
     private val configuration: Configuration,
     private val analytics: AnalyticsService,
-    private val walletApplication: WalletApplication
+    val walletApplication: WalletApplication
 ) : ViewModel() {
 
     val dashFormat: MonetaryFormat = configuration.format.noCode()

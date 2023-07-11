@@ -24,7 +24,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
-import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionDetailsDialogBinding
@@ -84,7 +83,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         val transactionResultViewBinder = TransactionResultViewBinder(
             viewModel.wallet!!,
             viewModel.dashFormat,
-            binding.transactionResultContainer
+            contentBinding
         )
 
         viewModel.init(txId)

@@ -41,7 +41,6 @@ class CoinbaseActivityViewModel @Inject constructor(
     private val config: CoinbaseConfig,
     private val userPreference: Configuration,
     private val coinBaseRepository: CoinBaseRepositoryInt
-
 ) : ViewModel() {
 
     companion object {

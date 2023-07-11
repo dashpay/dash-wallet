@@ -79,7 +79,7 @@ import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.DynamicFeeLoader;
+import de.schildbach.wallet.data.StaticFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
 
 import de.schildbach.wallet.payments.DecodePrivateKeyTask;
@@ -142,14 +142,11 @@ public class SweepWalletFragment extends Fragment {
 
     private static final Logger log = LoggerFactory.getLogger(SweepWalletFragment.class);
 
-    @Inject
-    PackageInfoProvider packageInfoProvider;
-
     private final LoaderManager.LoaderCallbacks<Map<FeeCategory, Coin>> dynamicFeesLoaderCallbacks = new LoaderManager.LoaderCallbacks<Map<FeeCategory, Coin>>() {
         @NonNull
         @Override
         public Loader<Map<FeeCategory, Coin>> onCreateLoader(final int id, final Bundle args) {
-            return new DynamicFeeLoader(activity, packageInfoProvider);
+            return new StaticFeeLoader(activity);
         }
 
         @Override

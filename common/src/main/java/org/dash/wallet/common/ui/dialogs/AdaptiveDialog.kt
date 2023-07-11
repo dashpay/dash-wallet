@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.LayoutRes
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.DialogFragment
@@ -49,6 +50,7 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
         const val MESSAGE_ARG = "message"
         const val POS_BUTTON_ARG = "positive_text"
         const val NEG_BUTTON_ARG = "negative_text"
+        const val CUSTOM_DIALOG_ARG = "custom_dialog"
 
         @JvmStatic
         fun simple(
@@ -56,7 +58,7 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
             negativeButtonText: String,
             positiveButtonText: String? = null
         ): AdaptiveDialog {
-            return custom(
+            return create(
                 R.layout.dialog_simple,
                 null,
                 null,
@@ -86,7 +88,7 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
         fun progress(
             message: String
         ): AdaptiveDialog {
-            return custom(
+            return create(
                 R.layout.dialog_progress,
                 null,
                 null,
@@ -104,7 +106,7 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
             negativeButtonText: String,
             positiveButtonText: String? = null
         ): AdaptiveDialog {
-            return custom(
+            return create(
                 R.layout.dialog_adaptive,
                 icon,
                 title,
@@ -115,7 +117,16 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
         }
 
         @JvmStatic
-        fun custom(
+        fun custom(@LayoutRes layout: Int): AdaptiveDialog {
+            return AdaptiveDialog(layout).apply {
+                arguments = bundleOf(
+                    CUSTOM_DIALOG_ARG to true
+                )
+            }
+        }
+
+        @JvmStatic
+        private fun create(
             @LayoutRes layout: Int,
             @DrawableRes icon: Int?,
             title: String?,
@@ -265,11 +276,10 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
         val args = requireArguments()
         val text = args.getString(argKey)
 
+        view.isVisible = !text.isNullOrEmpty() || args.getBoolean(CUSTOM_DIALOG_ARG, false)
+
         if (!text.isNullOrEmpty()) {
             view.text = text
-            view.isVisible = true
-        } else {
-            view.isVisible = false
         }
 
         return view.isVisible
@@ -282,12 +292,10 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
 
         val args = requireArguments()
         val resId = if (args.containsKey(argKey)) args.getInt(argKey) else 0
+        view.isVisible = resId != 0 || args.getBoolean(CUSTOM_DIALOG_ARG, false)
 
         if (resId != 0) {
             view.setImageResource(resId)
-            view.isVisible = true
-        } else {
-            view.isVisible = false
         }
 
         return view.isVisible

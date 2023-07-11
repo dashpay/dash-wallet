@@ -32,7 +32,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.common.collect.ImmutableList;
-import com.squareup.okhttp.HttpUrl;
 
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
@@ -123,6 +122,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     protected void onResume() {
         super.onResume();
 
+        turnOnAutoLogout();
         WalletActivityExt.INSTANCE.checkTimeSkew(this, viewModel);
         WalletActivityExt.INSTANCE.checkLowStorageAlert(this);
         checkWalletEncryptionDialog();
@@ -143,6 +143,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void handleIntent(final Intent intent) {
         final String action = intent.getAction();
+        final Bundle extras = intent.getExtras();
 
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
             final String inputType = intent.getType();
@@ -164,6 +165,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     alertDialog.show();
                 }
             }.parse();
+        } else if (extras != null && extras.containsKey(WalletActivityExt.NOTIFICATION_ACTION_KEY)) {
+            WalletActivityExt.INSTANCE.handleFirebaseAction(this, extras);
         }
     }
 
@@ -181,13 +184,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void checkAlerts() {
         final PackageInfo packageInfo = packageInfoProvider.getPackageInfo();
-        final int versionNameSplit = packageInfo.versionName.indexOf('-');
-        final HttpUrl.Builder url = HttpUrl
-                .parse(Constants.VERSION_URL
-                        + (versionNameSplit >= 0 ? packageInfo.versionName.substring(versionNameSplit) : ""))
-                .newBuilder();
-        url.addEncodedQueryParameter("package", packageInfo.packageName);
-        url.addQueryParameter("current", Integer.toString(packageInfo.versionCode));
 
         if (CrashReporter.hasSavedCrashTrace()) {
             final StringBuilder stackTrace = new StringBuilder();
@@ -271,7 +267,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             log.info("the wallet is not encrypted");
             viewModel.logError(new Exception("the wallet is not encrypted / OnboardingActivity"),
                     "no other details are available without the user submitting a report");
-            AdaptiveDialog dialog = AdaptiveDialog.custom(R.layout.dialog_adaptive,
+            AdaptiveDialog dialog = AdaptiveDialog.create(
                     R.drawable.ic_error,
                     getString(R.string.wallet_encryption_error_title),
                     getString(R.string.wallet_not_encrypted_error_message),
