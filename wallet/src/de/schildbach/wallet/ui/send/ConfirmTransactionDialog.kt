@@ -104,6 +104,7 @@ class ConfirmTransactionDialog(
     }
 
     private val binding by viewBinding(DialogConfirmTransactionBinding::bind)
+    override val backgroundStyle = R.style.PrimaryBackground
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_confirm_transaction, container, false)

@@ -152,7 +152,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
 
     private fun continueAction() {
         lifecycleScope.launch {
-            val input = binding.addressInput.text.toString()
+            val input = binding.addressInput.text.toString().trim()
 
             try {
                 val paymentIntent = PaymentIntentParser.parse(input, true)
