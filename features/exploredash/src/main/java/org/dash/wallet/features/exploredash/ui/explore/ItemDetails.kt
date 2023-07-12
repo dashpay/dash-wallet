@@ -298,7 +298,8 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     }
 
     private fun openWebsite(website: String) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(website))
+        val fixedUrl = if (!website.startsWith("http")) "https://$website" else website
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(fixedUrl))
         context.startActivity(intent)
     }
 
