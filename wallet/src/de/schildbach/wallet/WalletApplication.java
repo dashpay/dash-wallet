@@ -783,6 +783,7 @@ public class WalletApplication extends MultiDexApplication
             }
         }
     }
+
     private void clearWebCookies() {
         CookieManager.getInstance().removeAllCookies(null);
         CookieManager.getInstance().flush();

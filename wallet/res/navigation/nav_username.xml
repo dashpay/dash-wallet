@@ -19,6 +19,13 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/create_username_to_welcomeToDashPayFragment"
+            app:destination="@id/welcomeToDashPayFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -31,5 +38,30 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/welcomeToDashPayFragment"
+        android:name="de.schildbach.wallet.ui.username.WelcomeToDashPayFragment"
+        tools:layout="@layout/fragment_welcome_to_dashpay">
+        <action
+            android:id="@+id/welcomeToDashPayFragment_to_UsernameVotingInfoFragment"
+            app:destination="@id/usernameVotingInfoFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/usernameVotingInfoFragment"
+        android:name="de.schildbach.wallet.ui.username.UsernameVotingInfoFragment"
+        tools:layout="@layout/fragment_username_voting_info">
+        <action
+            android:id="@+id/welcomeToDashPayFragment_to_createUsernameFragment"
+            app:destination="@id/createUsernameFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            app:popUpTo="@id/createUsernameFragment" />
     </fragment>
 </navigation>

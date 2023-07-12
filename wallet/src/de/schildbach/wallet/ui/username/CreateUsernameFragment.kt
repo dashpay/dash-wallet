@@ -14,6 +14,7 @@ import android.view.animation.AnimationUtils
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
@@ -31,13 +32,15 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentCreateUsernameBinding
 import kotlinx.android.parcel.Parcelize
 import kotlinx.android.synthetic.main.users_orbit.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.safeNavigate
-import javax.inject.Inject
 
 enum class CreateUsernameActions {
     CREATE_NEW,
@@ -86,7 +89,9 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
         super.onViewCreated(view, savedInstanceState)
 
         binding.chooseUsernameTitle.text = getText(R.string.choose_your_username)
-        binding.closeBtn.setOnClickListener { requireActivity().finish() }
+        binding.closeBtn.setOnClickListener {
+            requireActivity().finish()
+        }
         binding.username.addTextChangedListener(this)
         binding.registerBtn.setOnClickListener {
             safeNavigate(CreateUsernameFragmentDirections.createUsernameToUsernamePrivacy())

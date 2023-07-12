@@ -151,7 +151,6 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.editUpdateSwitcher.isVisible = false
         binding.joinDashpayBtn.setOnClickListener {
             startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
-            findNavController().popBackStack()
         }
         initViewModel()
     }
