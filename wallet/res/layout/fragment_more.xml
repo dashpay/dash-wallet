@@ -343,6 +343,24 @@
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
+                <LinearLayout
+                    android:id="@+id/username_voting"
+                    android:orientation="horizontal"
+                    style="@style/MenuRow">
+
+                    <ImageView
+                        android:id="@+id/voting_icon"
+                        style="@style/MenuRowIcon"
+                        android:layout_gravity="center_vertical"
+                        app:srcCompat="@drawable/ic_voting" />
+
+                    <TextView
+                        android:id="@+id/voting_title"
+                        style="@style/MenuRowTitle"
+                        android:layout_gravity="center_vertical"
+                        android:text="@string/username_voting" />
+                </LinearLayout>
+
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/contact_support"
                     style="@style/MenuRow">

@@ -437,7 +437,6 @@
     <string name="invitation_onboarding_has_began_error_title">Onboarding Error</string>
     <string name="invitation_onboarding_has_began_error">Onboarding is in process, please claim your invite after you have created your wallet.</string>
     <string name="invitation_accept_title_1">Get your Username</string>
-    <string name="invitation_accept_message_1">Pay to usernames. No more alphanumeric addresses</string>
     <string name="invitation_accept_title_2">Add your Friends &amp; Family</string>
     <string name="invitation_accept_message_2">Invite your family, find your friends by searching their usernames</string>
     <string name="invitation_accept_title_3">Personalize</string>

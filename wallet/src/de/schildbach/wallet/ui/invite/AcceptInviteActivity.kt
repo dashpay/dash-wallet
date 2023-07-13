@@ -99,7 +99,7 @@ class AcceptInviteActivity : InteractionAwareActivity() {
 
         override fun getItem(position: Int): Fragment {
             when (position) {
-                0 -> return AcceptInviteFragment.newInstance(R.string.invitation_accept_title_1, R.string.invitation_accept_message_1,
+                0 -> return AcceptInviteFragment.newInstance(R.string.invitation_accept_title_1, R.string.pay_to_usernames,
                         R.drawable.ic_accept_invite_slide_1)
                 1 -> return AcceptInviteFragment.newInstance(R.string.invitation_accept_title_2, R.string.invitation_accept_message_2,
                         R.drawable.ic_accept_invite_slide_2)

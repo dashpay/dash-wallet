@@ -40,7 +40,7 @@
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:textAlignment="gravity"
-            android:text="@string/invitation_accept_message_1" />
+            android:text="@string/pay_to_usernames" />
 
     </LinearLayout>
 
