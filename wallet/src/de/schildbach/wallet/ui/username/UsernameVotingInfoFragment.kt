@@ -10,7 +10,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameVotingInfoBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
@@ -29,7 +28,7 @@ class UsernameVotingInfoFragment : Fragment(R.layout.fragment_username_voting_in
         binding.usernameVotingInfoContinueBtn.setOnClickListener {
             dashPayViewModel.createUsernameArgs?.let { args ->
                 safeNavigate(
-                    UsernameVotingInfoFragmentDirections.welcomeToDashPayFragmentToCreateUsernameFragment(
+                    UsernameVotingInfoFragmentDirections.usernameVotingInfoFragmentToCreateUsernameFragment(
                         args
                     )
                 )

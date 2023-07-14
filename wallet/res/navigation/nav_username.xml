@@ -57,11 +57,26 @@
         android:name="de.schildbach.wallet.ui.username.UsernameVotingInfoFragment"
         tools:layout="@layout/fragment_username_voting_info">
         <action
-            android:id="@+id/welcomeToDashPayFragment_to_createUsernameFragment"
+            android:id="@+id/usernameVotingInfoFragment_to_createUsernameFragment"
             app:destination="@id/createUsernameFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left"
             app:popUpTo="@id/createUsernameFragment" />
+
+        <action
+            android:id="@+id/usernameVotingInfoFragment_to_requestUsernameFragment"
+            app:destination="@id/requestUsernameFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            app:popUpTo="@id/requestUsernameFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/requestUsernameFragment"
+        android:name="de.schildbach.wallet.ui.username.RequestUsernameFragment"
+        tools:layout="@layout/fragment_request_username">
+
     </fragment>
 </navigation>

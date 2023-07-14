@@ -419,4 +419,10 @@
     <string name="voting_will_not_required_forever">Voting will not be required forever</string>
     <string name="dash_network_must_vote_to_approve">The Dash network must vote to approve your username before it is created.</string>
     <string name="what_is_username_voting">What is username voting?</string>
+    <string name="request_your_username">Request your username</string>
+    <string name="request_your_hint">Once the voting ends you can create any username you want as long as it hasn’t already been created</string>
+    <string name="request_username">Request Username</string>
+    <string name="voting">Voting:</string>
+    <string name="request_username_min_balance_disclaimer">To request a username on the Dash Network, you need to have more than %s Dash</string>
+    <string name="this_username_has_already_been_requested">This username has already been requested, but you can request it too and let the network vote to decide if you can have it</string>
 </resources>
