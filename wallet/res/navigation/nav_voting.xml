@@ -19,34 +19,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_voting"
-    app:startDestination="@id/paymentsReceiveFragment">
+    app:startDestination="@id/usernameRequestsFragment">
 
     <fragment
-        android:id="@+id/paymentsReceiveFragment"
-        android:name="de.schildbach.wallet.ui.payments.PaymentsReceiveFragment"
-        android:label="PaymentsReceiveFragment"
-        tools:layout="@layout/fragment_payments_receive">
-
-        <argument
-            android:name="showImportPrivateKey"
-            android:defaultValue="false"
-            app:argType="boolean" />
-
-        <argument
-            android:name="centerVertically"
-            android:defaultValue="true"
-            app:argType="boolean" />
-
-        <action
-            android:id="@+id/payments_to_receive"
-            app:destination="@id/receiveFragment"
-            app:enterAnim="@anim/slide_in_bottom"
-            app:popExitAnim="@anim/fade_out" />
+        android:id="@+id/usernameRequestsFragment"
+        android:name="de.schildbach.wallet.ui.username.UsernameRequestsFragment"
+        android:label="UsernameRequestsFragment"
+        tools:layout="@layout/fragment_username_requests">
     </fragment>
-
-    <fragment
-        android:id="@+id/receiveFragment"
-        android:name="de.schildbach.wallet.ui.payments.ReceiveFragment"
-        android:label="Receive"
-        tools:layout="@layout/fragment_receive"/>
 </navigation>

@@ -421,4 +421,6 @@
     <string name="what_is_username_voting">What is username voting?</string>
     <string name="username_voting">Username Voting</string>
     <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before users will be able to create it.</string>
+    <string name="voting_duplicates_only_title">Vote only on duplicates</string>
+    <string name="voting_duplicates_only_message">You can review all requests but you only need to vote on duplicates</string>
 </resources>

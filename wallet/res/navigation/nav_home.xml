@@ -189,6 +189,13 @@
             app:popExitAnim="@anim/slide_out_left" />
 
         <action
+            android:id="@+id/more_to_usernameVoting"
+            app:destination="@id/nav_voting"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
             android:id="@+id/more_to_security"
             app:destination="@id/securityFragment"
             app:enterAnim="@anim/slide_in_right"
@@ -318,4 +325,5 @@
     </fragment>
 
     <include app:graph="@navigation/nav_explore" />
+    <include app:graph="@navigation/nav_voting" />
 </navigation>
