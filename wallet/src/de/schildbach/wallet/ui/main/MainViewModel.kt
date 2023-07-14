@@ -180,21 +180,20 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    val isAbleToCreateIdentityLiveData = MutableLiveData<Boolean>(true)
-//        MediatorLiveData<Boolean>().apply {
-//        addSource(isPlatformAvailableData) {
-//            value = combineLatestData()
-//        }
-//        addSource(_isBlockchainSynced) {
-//            value = combineLatestData()
-//        }
-//        addSource(blockchainIdentity) {
-//            value = combineLatestData()
-//        }
-//        addSource(_balance) {
-//            value = combineLatestData()
-//        }
-//    }
+    val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
+        addSource(isPlatformAvailableData) {
+            value = combineLatestData()
+        }
+        addSource(_isBlockchainSynced) {
+            value = combineLatestData()
+        }
+        addSource(blockchainIdentity) {
+            value = combineLatestData()
+        }
+        addSource(_balance) {
+            value = combineLatestData()
+        }
+    }
 
     val isAbleToCreateIdentity: Boolean
         get() = isAbleToCreateIdentityLiveData.value ?: false
