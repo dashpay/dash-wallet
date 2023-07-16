@@ -114,4 +114,9 @@ object DatabaseModule {
     fun provideDashPayContactRequestDao(appDatabase: AppDatabase): DashPayContactRequestDao {
         return appDatabase.dashPayContactRequestDao()
     }
+
+    @Provides
+    fun provideUsernameRequestDao(appDatabase: AppDatabase): UsernameRequestDao {
+        return appDatabase.usernameRequestDao()
+    }
 }
