@@ -32,6 +32,11 @@ object AnalyticsConstants {
         const val BUY_DASH = "uphold_buy_dash"
     }
 
+    object Topper {
+        const val ENTER_BUY_SELL = "buy_sell_portal_topper"
+        const val ENTER_UPHOLD = "uphold_topper_buy_dash"
+    }
+
     object MoreMenu {
         const val BUY_SELL_MORE = "more_buy_sell_dash"
     }

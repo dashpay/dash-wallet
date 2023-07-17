@@ -250,6 +250,10 @@ class BuyAndSellViewModel @Inject constructor(
         )
     }
 
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, bundleOf())
+    }
+
     private suspend fun coinbaseBalanceString(): String =
         Coin.valueOf(coinbaseConfig.getPreference(CoinbaseConfig.LAST_BALANCE) ?: 0).toPlainString()
 }
