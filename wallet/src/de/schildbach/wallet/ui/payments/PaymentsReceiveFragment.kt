@@ -21,7 +21,6 @@ import android.os.Bundle
 import android.view.Gravity.CENTER_VERTICAL
 import android.view.View
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams

@@ -152,6 +152,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.joinDashpayBtn.setOnClickListener {
             startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
         }
+        binding.usernameVoting.setOnClickListener {
+            safeNavigate(MoreFragmentDirections.moreToUsernameVoting())
+        }
+
         initViewModel()
     }
 
