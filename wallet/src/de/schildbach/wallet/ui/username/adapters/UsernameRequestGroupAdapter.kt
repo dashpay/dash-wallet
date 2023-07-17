@@ -43,7 +43,7 @@ class UsernameRequestGroupAdapter: ListAdapter<UsernameRequestGroupView, Usernam
         }
 
         override fun areContentsTheSame(oldItem: UsernameRequestGroupView, newItem: UsernameRequestGroupView): Boolean {
-            return oldItem == newItem // TODO: needed? && oldItem.requests == newItem.requests
+            return oldItem == newItem
         }
     }
 

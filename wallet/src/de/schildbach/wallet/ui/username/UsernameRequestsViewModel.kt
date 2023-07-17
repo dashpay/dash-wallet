@@ -67,7 +67,10 @@ class UsernameRequestsViewModel @Inject constructor(
                     .map { (username, list) ->
                         UsernameRequestGroupView(
                             username,
-                            list.sortedByDescending { it.votes }
+                            list.sortedByDescending { it.votes },
+                            isExpanded = _uiState.value.usernameRequests.find {
+                                it.username == username
+                            }?.isExpanded ?: false
                         )
                     }
             }
