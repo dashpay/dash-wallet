@@ -18,7 +18,6 @@
     <!-- Explore screen -->
     <string name="explore_dash">Jelajahi Dash</string>
     <string name="explore_title">Jelajahi</string>
-    <string name="explore_subtitle">Berbelanja dengan mudah dengan DASH di lebih dari 155.000 lokasi dan pedagang online</string>
     <string name="explore_merchants_title">Dimana harus Belanja?</string>
     <string name="explore_merchants_subtitle">Temukan pedagang yang menerima Dash sebagai pembayaran.</string>
     <string name="explore_atms_title">ATM</string>

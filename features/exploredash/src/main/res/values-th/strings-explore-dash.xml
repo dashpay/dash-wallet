@@ -18,7 +18,6 @@
     <!-- Explore screen -->
     <string name="explore_dash">สำรวจ Dash</string>
     <string name="explore_title">สำรวจ </string>
-    <string name="explore_subtitle">ซื้อสินค้าด้วย DASH ของคุณได้อย่างง่ายดายที่สถานที่และร้านค้าออนไลน์มากกว่า 155,000 แห่ง</string>
     <string name="explore_merchants_title">จะใช้จ่ายที่ไหน?</string>
     <string name="explore_merchants_subtitle">ค้นหาร้าค้าที่ยอมรับการชำระเงินด้วย Dash </string>
     <string name="explore_atms_title">เอทีเอ็ม</string>

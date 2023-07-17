@@ -136,27 +136,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         super.onCreate(savedInstanceState)
 
         lifecycleScope.launch {
-            if (!viewModel.isInfoShown() && args.type == ExploreTopic.Merchants) {
-                safeNavigate(SearchFragmentDirections.exploreToInfo())
-                viewModel.setIsInfoShown(true)
-            }
+            viewModel.setIsInfoShown(false)
         }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        binding.toolbar.menu.findItem(R.id.menu_info).apply { isVisible = args.type == ExploreTopic.Merchants }
-
-        binding.toolbar.setOnMenuItemClickListener {
-            if (it.itemId == R.id.menu_info) {
-                if (args.type == ExploreTopic.Merchants) {
-                    viewModel.logEvent(AnalyticsConstants.Explore.INFO_EXPLORE_MERCHANT)
-                }
-                safeNavigate(SearchFragmentDirections.exploreToInfo())
-            }
-            true
-        }
 
         val binding = binding // Avoids IllegalStateException in onStateChanged callback
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
@@ -327,6 +312,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
+            searchHeaderAdapter.isFilterButtonVisible = mode != FilterMode.Online
             binding.noResultsPanel.isVisible = false
             searchHeaderAdapter.title = getSearchTitle()
             searchHeaderAdapter.subtitle = getSearchSubtitle()
@@ -490,30 +476,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 binding.toolbarTitle.text = item.name
             } else {
                 binding.toolbarTitle.text = getToolbarTitle()
-            }
-        }
-
-        binding.itemDetails.setOnBuyGiftCardButtonClicked {
-            lifecycleScope.launch {
-                if (!dashDirectViewModel.isUserSignInDashDirect()) {
-                    showLoginDialog()
-                } else {
-                    openPurchaseGiftCardFragment()
-                }
-            }
-        }
-
-        binding.itemDetails.setOnDashDirectLogOutClicked {
-            lifecycleScope.launch {
-                if (dashDirectViewModel.isUserSignInDashDirect()) {
-                    dashDirectViewModel.logout()
-                }
-            }
-        }
-
-        dashDirectViewModel.userEmail.observe(viewLifecycleOwner) { email ->
-            lifecycleScope.launch {
-                binding.itemDetails.setDashDirectLogInUser(email, dashDirectViewModel.isUserSignInDashDirect())
             }
         }
 
