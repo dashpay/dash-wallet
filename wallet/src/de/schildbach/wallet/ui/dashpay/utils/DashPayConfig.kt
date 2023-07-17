@@ -27,8 +27,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-open class DashPayConfig @Inject constructor(private val context: Context, walletDataProvider: WalletDataProvider)
-:BaseConfig(
+open class DashPayConfig @Inject constructor(
+    context: Context,
+    walletDataProvider: WalletDataProvider
+): BaseConfig(
     context,
     PREFERENCES_NAME,
     walletDataProvider,
@@ -49,6 +51,7 @@ open class DashPayConfig @Inject constructor(private val context: Context, walle
         val LAST_SEEN_NOTIFICATION_TIME = longPreferencesKey("last_seen_notification_time")
         val LAST_METADATA_PUSH = longPreferencesKey("last_metadata_push")
         val HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN = booleanPreferencesKey("has_dash_pay_info_screen_been_shown")
+        val VOTING_INFO_SHOWN = booleanPreferencesKey("voting_info_shown")
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {
