@@ -33,6 +33,7 @@ interface UsernameRequestDao {
         """
         SELECT * FROM username_requests WHERE username IN 
             (SELECT username FROM username_requests GROUP BY username HAVING COUNT(username) > 1)
+        ORDER BY username COLLATE NOCASE ASC
         """
     )
     fun observeDuplicates(): Flow<List<UsernameRequest>>

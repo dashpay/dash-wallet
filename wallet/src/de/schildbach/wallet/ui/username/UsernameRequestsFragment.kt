@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.username
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -62,8 +63,11 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
                 }
             }
 
-            binding.filterSubtitle.text = getString(R.string.n_duplicates, state.usernameRequests.size)
             adapter.submitList(state.usernameRequests)
+            binding.filterSubtitle.text = getString(R.string.n_duplicates, state.usernameRequests.size)
+            binding.filterSubtitle.isVisible = state.usernameRequests.isNotEmpty()
+            binding.searchPanel.isVisible = state.usernameRequests.isNotEmpty()
+            binding.noItemsTxt.isVisible = state.usernameRequests.isEmpty()
         }
     }
 }

@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.username
 
-import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,6 +37,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.math.min
 import kotlin.random.Random
 
 data class UsernameRequestsUIState(
@@ -54,7 +54,7 @@ class UsernameRequestsViewModel @Inject constructor(
     val uiState: StateFlow<UsernameRequestsUIState> = _uiState.asStateFlow()
 
     private val workerJob = SupervisorJob()
-    val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
+    private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
     init {
         dashPayConfig.observe(DashPayConfig.VOTING_INFO_SHOWN)
@@ -89,7 +89,7 @@ class UsernameRequestsViewModel @Inject constructor(
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, nameCount)],
+                    names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(1689230321, now),
                     "dslfsdkfsjs",
                     "https://example.com",
@@ -99,7 +99,7 @@ class UsernameRequestsViewModel @Inject constructor(
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, nameCount)],
+                    names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(1689230321, now),
                     "dslfsdkfsjs",
                     null,
@@ -109,7 +109,7 @@ class UsernameRequestsViewModel @Inject constructor(
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, nameCount)],
+                    names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(1689230321, now),
                     "dslfsdkfsjs",
                     null,
@@ -119,7 +119,7 @@ class UsernameRequestsViewModel @Inject constructor(
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, nameCount)],
+                    names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(1689230321, now),
                     "dslfsdkfsjs",
                     "https://example.com",
@@ -129,7 +129,7 @@ class UsernameRequestsViewModel @Inject constructor(
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, nameCount)],
+                    names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(1689230321, now),
                     "dslfsdkfsjs",
                     null,
@@ -139,7 +139,7 @@ class UsernameRequestsViewModel @Inject constructor(
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, nameCount)],
+                    names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(1689230321, now),
                     "dslfsdkfsjs",
                     null,
@@ -149,7 +149,7 @@ class UsernameRequestsViewModel @Inject constructor(
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, nameCount)],
+                    names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(1689230321, now),
                     "dslfsdkfsjs",
                     null,

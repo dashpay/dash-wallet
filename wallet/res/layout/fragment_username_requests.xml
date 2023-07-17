@@ -182,6 +182,17 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/search_panel"
                 tools:listitem="@layout/username_request_group_view" />
+
+            <TextView
+                android:id="@+id/no_items_txt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/Overline.Tertiary"
+                android:text="@string/nothing_here"
+                android:layout_marginTop="20dp"
+                android:gravity="center"
+                android:textAlignment="gravity"
+                app:layout_constraintTop_toBottomOf="@id/search_panel" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

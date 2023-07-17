@@ -41,8 +41,8 @@
         style="@style/Overline.Tertiary"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="10dp"
-        app:layout_constraintEnd_toStartOf="@id/chevron"
+        android:layout_marginEnd="38dp"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/username"
         app:layout_constraintBottom_toBottomOf="@id/username"
         tools:text="4 requests" />
