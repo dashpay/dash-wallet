@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >Último saldo conocido</string>
     <string name="coinbase_link_title">Vincula tu cuenta de Coinbase</string>
     <string name="coinbase_link">Vincular cuenta de Coinbase</string>
     <string name="coinbase_transfer_details">Entre la billetera de Dash y tu cuenta de Coinbase.</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">Desconectar la cuenta de Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Recibe directamente en la billetera Dash.</string>
     <string name="buy_dash">Comprar Dash</string>
-    <string name="balance_on_coinbase">Balance en Coinbase</string>
+    <string name="balance_on_coinbase">Saldo de Dash en Coinbase</string>
     <string name="sending_to">Enviando a</string>
     <string name="dash_wallet_device">Billetera de Dash en este dispositivo</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,7 @@
     <string name="learn_more">Aprende más</string>
     <string name="something_wrong_title">¡Algo salió mal!</string>
     <string name="retry_later_message">Vuelve a intentarlo un poco más tarde o comunícate con nuestro centro de soporte para obtener ayuda.</string>
-    <string name="convert_crypto">Convertir Criptomonedas</string>
-    <string name="between_dash_wallet_and_coinbase">Entre la billetera de Dash y Coinbase.</string>
+    <string name="between_dash_wallet_and_coinbase">Entre la billetera de Dash y Coinbase</string>
     <string name="conversion_preview">Vista previa de conversión</string>
     <string name="you_send">Tu envías</string>
     <string name="from_your_coinbase_account">Desde tu cuenta de Coinbase</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">No se puede enviar esta cantidad sin sobrepasar el límite de la solicitud</string>
     <string name="dont_have_any_dash">No tienes Dash en tu billetera de Dash.</string>
     <string name="transfer_wallet_not_synced">Las transferencias de la billetera de Dash a Coinbase no son posibles hasta que se complete la sincronización de la billetera.</string>
-    <string name="disconnected">Desconectado</string>
 
     <string name="insufficient_money_title">No hay suficientes Dash</string>
     <string name="insufficient_money_msg">La cantidad de Dash en tu billetera es demasiado pequeña para efectuar el barrido.</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg">Hubo un problema al transferirlo a la billetera de Dash en este dispositivo.</string>
     <string name="insufficient_money_to_transfer">La cantidad de monedas en la billetera es demasiado pequeña para transferir.</string>
     <string name="amount_to_transfer">Tu recibirás %s %s %s</string>
-
+    <string name="amount_to_transfer_dash">Vas a recibir %s</string>
     </resources>

@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >Laatst bekende saldo</string>
     <string name="coinbase_link_title">Koppel je Coinbase account</string>
     <string name="coinbase_link">Koppel Coinbase account</string>
     <string name="coinbase_transfer_details">Tussen Dash portemonnee en je Coinbase account</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">Koppel Coinbase account los</string>
     <string name="receive_directly_into_dash_wallet">Ontvang direct in Dash portemonnee.</string>
     <string name="buy_dash">Koop Dash</string>
-    <string name="balance_on_coinbase">Saldo op Coinbase</string>
+    <string name="balance_on_coinbase">Dash saldo op Coinbase</string>
     <string name="sending_to">Verzenden naar</string>
     <string name="dash_wallet_device">Dash portemonnee op dit apparaat</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,7 @@
     <string name="learn_more">Lees verder</string>
     <string name="something_wrong_title">Er is iets verkeerd gegaan</string>
     <string name="retry_later_message">Probeer het later opnieuw of neem contact met ons op voor hulp</string>
-    <string name="convert_crypto">Converteer crypto</string>
-    <string name="between_dash_wallet_and_coinbase">Tussen Dash portemonnee en Coinbase.</string>
+    <string name="between_dash_wallet_and_coinbase">Tussen de Dash portemonnee en Coinbase</string>
     <string name="conversion_preview">Conversie voorbeeld</string>
     <string name="you_send">je verstuurd</string>
     <string name="from_your_coinbase_account">Van je Coinbase account</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">Kan dit bedrag niet verzenden zonder de aanvraaglimiet te overschrijden</string>
     <string name="dont_have_any_dash">Je hebt geen Dash in je Dash portemonnee</string>
     <string name="transfer_wallet_not_synced">Overboekingen van je Dash portemonnee naar Coinbase zijn niet mogelijk totdat de synchronisatie van de portemonnee is voltooid.</string>
-    <string name="disconnected">Verbinding verbroken</string>
 
     <string name="insufficient_money_title">Onvoldoende munten</string>
     <string name="insufficient_money_msg">De hoeveelheid munten in je portemonnee is te laag om te worden overgedragen.</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg">Er is een probleem opgetreden bij het overzetten naar de Dash portemonnee op dit apparaat.</string>
     <string name="insufficient_money_to_transfer">Het aantal munten in de portemonnee is te klein om over te dragen.</string>
     <string name="amount_to_transfer">Je ontvangt %s%s%s</string>
-
+    <string name="amount_to_transfer_dash">Je zal %s ontvangen</string>
     </resources>

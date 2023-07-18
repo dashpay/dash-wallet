@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">코인베이스</string>
-    <string name="last_known_balance" >마지막 확인된 잔고</string>
     <string name="coinbase_link_title">당신의 코인베이스 계정을 연결하세요</string>
     <string name="coinbase_link">코인베이스 계정 연결하기</string>
     <string name="coinbase_transfer_details">대시 지갑과 코인베이스 계정간</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">코인베이스 계정 연결 해제</string>
     <string name="receive_directly_into_dash_wallet">대시 지갑으로 직접 받기</string>
     <string name="buy_dash">대시 매수</string>
-    <string name="balance_on_coinbase">코인베이스 잔고</string>
+    <string name="balance_on_coinbase">코인베이스의 대시 잔액</string>
     <string name="sending_to">다음에 전송합니다</string>
     <string name="dash_wallet_device">이 기기의 대시 지갑</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,7 @@
     <string name="learn_more">더 알아보기</string>
     <string name="something_wrong_title">무언가 잘못되었습니다!</string>
     <string name="retry_later_message">잠시 후 다시 시도하시거나 지원 센터에 문의해주십시오</string>
-    <string name="convert_crypto">암호화폐를 환전하세요</string>
-    <string name="between_dash_wallet_and_coinbase">대시 지갑과 코인베이스 사이에서</string>
+    <string name="between_dash_wallet_and_coinbase">대시 지갑과 코인베이스 사이</string>
     <string name="conversion_preview">환전 미리보기</string>
     <string name="you_send">코인베이스 계정으로부터</string>
     <string name="from_your_coinbase_account">송금하세요</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">어플리케이션 제한을 넘기지 않고 이 금액을 송금할 수 없습니다</string>
     <string name="dont_have_any_dash">당신의 대시 지갑에 보유하고 있는 대시가 없습니다.</string>
     <string name="transfer_wallet_not_synced">지갑 동기화가 완료될 때까지 대시 지갑에서 코인베이스로 송금할 수 없습니다.</string>
-    <string name="disconnected">연결 해제</string>
 
     <string name="insufficient_money_title">보유 금액 부족</string>
     <string name="insufficient_money_msg">지갑 내 코인의 양이 너무 적어 스위프할 수 없습니다.</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg">이 기기의 대시 지갑에 전송하는 데 문제가 발생하였습니다.</string>
     <string name="insufficient_money_to_transfer">지갑 내 코인의 양이 너무 적어 송금할 수 없습니다.</string>
     <string name="amount_to_transfer">%s%s%s을 받습니다.</string>
-
+    <string name="amount_to_transfer_dash">%s을 받습니다.</string>
     </resources>

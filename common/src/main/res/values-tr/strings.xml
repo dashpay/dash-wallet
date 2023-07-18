@@ -75,8 +75,17 @@
     <string name="select_currency">Para Birimini Seçin</string>
     <string name="send_coins_error_dusty_send">Bu miktar göndermek için çok düşüktür</string>
     <string name="send_coins_error_insufficient_money">Yetersiz bakiye</string>
+    <string name="rate_not_available">Mevcut değil</string>
 
     <string name="empty_wallet_warning_title">Dash Cüzdanınızı boşaltıyor gibisiniz</string>
     <string name="empty_wallet_crowdnode_warning">Bakiyenizi 0.0003 Dash\'in üstüne çıkmadan CrowdNode\'dan bu cüzdana para çekemeyeceğinizi lütfen unutmayın.</string>
     <string name="syncing">Senkronize ediliyor</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">Doğrudan Dash Cüzdan\'a al</string>
+    <string name="convert_crypto">Kriptoyu Dönüştür</string>
+    <string name="last_known_balance" >Bilinen son bakiye</string>
+    <string name="disconnected">Bağlantı kesildi</string>
+    <string name="enter_amount_available">mevcut</string>
+    <string name="transaction_row_rate_not_available">Mevcut değil</string>
 </resources>

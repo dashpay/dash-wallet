@@ -7,8 +7,6 @@
     <string name="uphold_buy_dash_button">Dash Vétel</string>
     <string name="uphold_transfer_to_this_wallet_button">Utalás Uphold-tól</string>
     <string name="uphold_link_account">Uphold Fiók Összekapcsolása</string>
-    <string name="uphold_account_dash_balance">A jelenlegi Uphold egyenleged </string>
-    <string name="uphold_transfer_to_this_wallet">Utalj Dash-t az Uphold fiókodból ebbe a tárcába</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">A díj a kért összegből kerül levonásra</string>
     <string name="uphold_withdrawal_success_title">Siker</string>
     <string name="uphold_withdrawal_success_message">A tranzakciót elküldtük feldolgozásra, az összeg pár perc múlva megjelenik majd az egyenlegeden. \n\nTranzakciós azonosító: %s</string>
@@ -19,7 +17,6 @@
     <string name="uphold_logout">Kijelentkezés</string>
     <string name="uphold_go_to_website">Irány a weboldal</string>
     <string name="uphold_error">Uphold Hiba</string>
-    <string name="uphold_error_not_logged_in">Az Uphold fiókod nincs összekapcsolva a Dash Tárcáddal. Nyomj az \'Összekapcsolódás az Uphold fiókkal\' gombra a következő képernyőn.</string>
     <string name="uphold_error_not_available">Jelenleg az Uphold szolgáltatása nem elérhető. Próbálkozz később.</string>
     <string name="uphold_error_report_issue">Kérlek jelezd ezt a hibát a Dash Tárca csapatának a \"Hibabejelentés\" menüpont alatt.</string>
 

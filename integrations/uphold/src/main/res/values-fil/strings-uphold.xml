@@ -2,15 +2,18 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="topper">Topper</string>
     <string name="uphold_link_title">I-link ang iyong Uphold account</string>
+    <string name="uphold_powered_by">Pinapatakbo ng Topper</string>
+    <string name="topper_powered_by">Pinapatakbo ng Uphold</string>
     <string name="uphold_transfer_details">Mula sa Uphold hanggang sa iyong Dash Wallet</string>
     <string name="uphold_buy_dash_activity_title">Bumili/Magbenta sa Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Bumili ng Dash sa Uphold na account</string>
     <string name="uphold_buy_dash_button">Bumili ng Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Ilipat mula sa Uphold</string>
     <string name="uphold_link_account">I-liink ang Uphold Account</string>
-    <string name="uphold_account_dash_balance">Ang balanse ng iyong Uphold account Dash ay</string>
-    <string name="uphold_transfer_to_this_wallet">Ilipat ang Dash mula sa iyong Uphold account patungong pitaka</string>
+    <string name="uphold_account_dash_balance">Dash balanse sa Uphold</string>
+    <string name="uphold_transfer_to_this_wallet">Mula sa Uphold hanggang Dash Wallet</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Ang bayad ay ibabawas mula sa hiniling na halaga.</string>
     <string name="uphold_withdrawal_instructions">Ilagay ang halaga na ipamamahagi</string>
     <string name="uphold_withdrawal_success_title">Tagumpay</string>
@@ -19,11 +22,12 @@
     <string name="uphold_transfer">Ipadala</string>
     <string name="uphold_see_on_uphold">Tingnan sa Uphold</string>
     <string name="uphold_logout_title">Mag-log out mula sa Uphold</string>
+    <string name="uphold_disconnect">Idiskonekta ang Uphold Account</string>
     <string name="uphold_logout">Mag-log out</string>
     <string name="uphold_logout_explanation_text">Kailangan mo ring mag-log out mula sa Uphold website gamit ang iyong browser.</string>
     <string name="uphold_go_to_website">Pumunta sa Website</string>
     <string name="uphold_error">Uphold Error</string>
-    <string name="uphold_error_not_logged_in">Ang iyong dash wallet ay hindi na konektado sa iyong Uphold account.  Sa susunod na screen pindutin ang Link Uphold account</string>
+    <string name="uphold_error_not_logged_in">Hindi na naka-link ang Dash Wallet sa iyong Uphold account.</string>
     <string name="uphold_error_not_available">Ang serbisyo ng uphold ay hindi maaring gamitin. Subukan ulit mamaya.</string>
     <string name="uphold_error_report_issue">Paki-report ang isyu ng Dash Wallet support team gamit ang "Isumbong Isyu" mula sa pangunahing menu. </string>
 

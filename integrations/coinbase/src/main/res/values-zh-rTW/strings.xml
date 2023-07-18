@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >最後已知結餘</string>
     <string name="coinbase_link_title">鏈接您的 Coinbase 帳戶</string>
     <string name="coinbase_link">鏈接 Coinbase 帳戶</string>
     <string name="coinbase_transfer_details">在達世幣錢包和您的 Coinbase 帳戶之間</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">斷開 Coinbase 帳戶的連接</string>
     <string name="receive_directly_into_dash_wallet">直接從達世幣錢包收款。</string>
     <string name="buy_dash">購買達世幣</string>
-    <string name="balance_on_coinbase">Coinbase 上的結餘</string>
+    <string name="balance_on_coinbase">Coinbase 上的達世幣結餘</string>
     <string name="sending_to">發送到</string>
     <string name="dash_wallet_device">此設備上的達世幣錢包</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,7 +68,6 @@
     <string name="learn_more">了解更多</string>
     <string name="something_wrong_title">出了些問題!</string>
     <string name="retry_later_message">請稍後重試或聯繫我們的支持中心以獲取幫助</string>
-    <string name="convert_crypto">兌換加密貨幣</string>
     <string name="between_dash_wallet_and_coinbase">在達世幣錢包和 Coinbase 之間。</string>
     <string name="conversion_preview">兌換預覽</string>
     <string name="you_send">你發送</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">您所設定的金額超過軟件的限制，因此無法發送此金額</string>
     <string name="dont_have_any_dash">您的達世幣錢包中沒有任何 Dash。</string>
     <string name="transfer_wallet_not_synced">在錢包同步完成之前，無法從達世幣錢包轉賬到 Coinbase。</string>
-    <string name="disconnected">斷開連接</string>
 
     <string name="insufficient_money_title">餘額不足</string>
     <string name="insufficient_money_msg">錢包餘額不足移轉</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg">將資金轉賬到此設備上的達世幣錢包時出現問題。</string>
     <string name="insufficient_money_to_transfer">錢包中餘額不足，因此無法進行轉賬。</string>
     <string name="amount_to_transfer">您將會收到 %s %s %s</string>
-
+    <string name="amount_to_transfer_dash">您將會收到 %s</string>
     </resources>

@@ -55,6 +55,11 @@
     <string name="select_currency">Vybrat měnu</string>
     <string name="send_coins_error_dusty_send">Částka je příliš nízká pro odeslání</string>
     <string name="send_coins_error_insufficient_money">Nedostatečný zůstatek</string>
+    <string name="rate_not_available">Není dostupný</string>
 
     <string name="syncing">Synchronizace</string>
+
+    <string name="disconnected">Odpojeno</string>
+    <string name="enter_amount_available">k dispozici</string>
+    <string name="transaction_row_rate_not_available">Není dostupný</string>
 </resources>

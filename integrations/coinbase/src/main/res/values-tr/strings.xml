@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >Bilinen son bakiye</string>
     <string name="coinbase_link_title">Coinbase hesabınızı bağlayın</string>
     <string name="coinbase_link">Coinbase Hesabını Bağla</string>
     <string name="coinbase_transfer_details">Dash Cüzdanı ile Coinbase hesabınız arasında</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">Coinbase Hesabının Bağlantısını Kes</string>
     <string name="receive_directly_into_dash_wallet">Doğrudan Dash Cüzdanına alın.</string>
     <string name="buy_dash">Dash Al</string>
-    <string name="balance_on_coinbase">Coinbase\'dek\' Bakiye</string>
+    <string name="balance_on_coinbase">Coinbase\'deki Dash bakiyesi</string>
     <string name="sending_to">Gönderiliyor</string>
     <string name="dash_wallet_device">Bu cihazdaki Dash Cüzdanı</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,6 @@
     <string name="learn_more">Daha fazla bilgi edin</string>
     <string name="something_wrong_title">Bir şeyler yanlış gitti!</string>
     <string name="retry_later_message">Lütfen biraz sonra tekrar deneyin veya yardım almak için destek merkezimizle iletişime geçin.</string>
-    <string name="convert_crypto">Kriptoyu Dönüştür</string>
-    <string name="between_dash_wallet_and_coinbase">Dash Cüzdanı ve Coinbase arasında.</string>
     <string name="conversion_preview">Dönüşüm Önizleme</string>
     <string name="you_send">Göndereceğiniz</string>
     <string name="from_your_coinbase_account">Coinbase hesabınızdan</string>
@@ -91,7 +88,6 @@
     <string name="send_to_wallet_error">Başvuru limitini aşmadan bu miktar gönderilemez</string>
     <string name="dont_have_any_dash">Dash Cüzdanınızda Dash yok.</string>
     <string name="transfer_wallet_not_synced">Dash Cüzdanından Coinbase\'e transferler, cüzdan senkronizasyonu tamamlanmadan mümkün değildir.</string>
-    <string name="disconnected">Bağlantı kesildi</string>
 
     <string name="insufficient_money_title">Bakiye yetersiz</string>
     <string name="insufficient_money_msg">Cüzdandaki Dash miktarı tarama işlemi için yetersiz.</string>
@@ -118,5 +114,4 @@
     <string name="transfer_dash_failed_msg">Bu cihazdaki Dash Cüzdanınaa aktarılırken bir sorun oluştu.</string>
     <string name="insufficient_money_to_transfer">Cüzdandaki jeton miktarı transfer edilemeyecek kadar az.</string>
     <string name="amount_to_transfer">%s %s %s alacaksınız</string>
-
     </resources>

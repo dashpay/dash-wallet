@@ -75,8 +75,18 @@
     <string name="select_currency">选择货币</string>
     <string name="send_coins_error_dusty_send">该金额太小, 无法支付</string>
     <string name="send_coins_error_insufficient_money">资金不足</string>
+    <string name="no_connection">没有网络连接</string>
+    <string name="rate_not_available">不可用</string>
 
     <string name="empty_wallet_warning_title">看起来您正在清空Dash钱包</string>
     <string name="empty_wallet_crowdnode_warning">请注意, 您需要增加余额至 0.0003 Dash才能够从CrowdNode账户中提币到此钱包.</string>
     <string name="syncing">正在同步</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">直接在Dash钱包上收款</string>
+    <string name="convert_crypto">兑换加密货币</string>
+    <string name="last_known_balance" >最后已知余额</string>
+    <string name="disconnected">连接断开</string>
+    <string name="enter_amount_available">可用</string>
+    <string name="transaction_row_rate_not_available">不可用</string>
 </resources>

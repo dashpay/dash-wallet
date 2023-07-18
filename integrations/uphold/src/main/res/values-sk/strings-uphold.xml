@@ -2,15 +2,18 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="topper">Topper</string>
     <string name="uphold_link_title">Pripojiť váš Uphold účet</string>
+    <string name="uphold_powered_by">Používa technológiu Topper</string>
+    <string name="topper_powered_by">Používa technológiu Uphold</string>
     <string name="uphold_transfer_details">Z Upholdu do vašej Dash peňaženky</string>
     <string name="uphold_buy_dash_activity_title">Kúpiť/Predať Dash na Upholde</string>
     <string name="uphold_buy_dash_with_uphold">Kúpiť Dash s Uphold účtom</string>
     <string name="uphold_buy_dash_button">Kúpiť Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Presunúť s Uphold</string>
     <string name="uphold_link_account">Pripojiť Uphold účet</string>
-    <string name="uphold_account_dash_balance">Vaša Dash bilancia na Uphold je</string>
-    <string name="uphold_transfer_to_this_wallet">Presunúť Dash z Uphold účtu do tejto peňaženky</string>
+    <string name="uphold_account_dash_balance">Zostatok Dash na Upholde</string>
+    <string name="uphold_transfer_to_this_wallet">Z Upholdu do Dash peňaženky</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Poplatok bude odpočítaný z požadovanej sumy.</string>
     <string name="uphold_withdrawal_instructions">Zadajte sumu, ktorú chcete previesť</string>
     <string name="uphold_withdrawal_success_title">Úspešné</string>
@@ -19,11 +22,12 @@
     <string name="uphold_transfer">Presun</string>
     <string name="uphold_see_on_uphold">Zobraziť na Upholde</string>
     <string name="uphold_logout_title">Odhlásiť s Upholdu</string>
+    <string name="uphold_disconnect">Odpojiť Uphold účet</string>
     <string name="uphold_logout">Odhlásiť</string>
     <string name="uphold_logout_explanation_text">Budete sa tiež musieť odhlásiť z webovej stránky Upholdu pomocou svojho prehliadača</string>
     <string name="uphold_go_to_website">Prejsť na webovú stránku</string>
     <string name="uphold_error">Chyba Upholdu</string>
-    <string name="uphold_error_not_logged_in">Dash peňaženka už nie je prepojená s vaším účtom na Upholde. Na ďalšej obrazovke stlačte "Prepojiť Uphold účet".</string>
+    <string name="uphold_error_not_logged_in">Dash peňaženka už nie je prepojená s vaším účtom na Upholde.</string>
     <string name="uphold_error_not_available">Služba Uphold nie je k dispozícii. Skúste neskôr prosím.</string>
     <string name="uphold_error_report_issue">Nahláste tento problém tímu podpory Dash peňaženky pomocou položky "Nahlásiť problém" z hlavnej ponuky.</string>
 

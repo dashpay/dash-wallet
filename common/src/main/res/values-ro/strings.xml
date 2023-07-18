@@ -1,7 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Generic titles/messages -->
     <string name="loading">Se încarca…</string>
     <string name="loading_error">A apărut o eroare. Încearcă din nou mai târziu.</string>
     <string name="dash_available">%1$s disponibil</string>
-    <string name="button_retry">Încearcă din nou</string>
-</resources>
+    <string name="buy_dash">Cumpără Dash</string>
+    <string name="copied">Copiat</string>
+    <string name="error">Eroare</string>
+    <string name="request_coins_share_dialog_title">Trimite solicitarea pentru Dash...</string>
+    <!-- Generic buttons -->
+    <string name="button_dismiss">Renunță</string>
+    <string name="button_retry">Reîncercă</string>
+    <string name="button_copy_address">Copiază adresa</string>
+    <string name="button_share">Distribuie</string>
+    <string name="dash">Dash</string>
+    <string name="send_coins_error_insufficient_money">Fonduri nesuficiente</string>
+    <string name="enter_amount_available">valabil</string>
+    </resources>

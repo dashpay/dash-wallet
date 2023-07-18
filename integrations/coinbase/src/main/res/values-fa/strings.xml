@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">کوین‌بیس</string>
-    <string name="last_known_balance" >آخرین موجودی به‌روزشده</string>
     <string name="coinbase_link_title">حساب کوین‌بیس‌تان را متصل کنید</string>
     <string name="coinbase_link">حساب کوین‌بیس‌ را متصل کنید</string>
     <string name="coinbase_transfer_details">بین داش والت و حساب کوین‌بیس شما</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">قطع اتصال به حساب کوین‌بیس</string>
     <string name="receive_directly_into_dash_wallet">دریافت مسقیم در دش والت</string>
     <string name="buy_dash">خرید دش</string>
-    <string name="balance_on_coinbase">موجودی در کوین‌بیس</string>
+    <string name="balance_on_coinbase">موجودش دش در کوینبیس</string>
     <string name="sending_to">ارسال برای </string>
     <string name="dash_wallet_device">دش والت روی این دستگاه</string>
     <string name="exchange_rate_template">%1$s دش = %2$s</string>
@@ -69,8 +68,7 @@
     <string name="learn_more">اطلاعات بیشتر</string>
     <string name="something_wrong_title">مشکلی به وجود آمد! </string>
     <string name="retry_later_message">لطفا کمی بعد دوباره امتحان کنید و یا برای دریافت کمک با مرکز پشتیبانی تماس بگیرید</string>
-    <string name="convert_crypto">تبدیل رمزارز</string>
-    <string name="between_dash_wallet_and_coinbase">بین دش والت و کوین‌بیس</string>
+    <string name="between_dash_wallet_and_coinbase">بین دش والت و کوینبیس</string>
     <string name="conversion_preview">پیش‌نمایس تبدیل</string>
     <string name="you_send">شما ارسال می‌کنید</string>
     <string name="from_your_coinbase_account">از حساب کوین‌بیس‌تان</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">امکان ارسال این مبلغ بدون فراتر رفتن از محدوده تعریف‌شده وجود ندارد. </string>
     <string name="dont_have_any_dash">هیچ دشی در دش والت‌تان ندارید. </string>
     <string name="transfer_wallet_not_synced">تا وقتی که همزمان‌سازی دش والت تکمیل نشده، انتقال از دش والت به کوین‌بیس امکان‌پذیر نیست. </string>
-    <string name="disconnected">عدم اتصال به شبکه</string>
 
     <string name="insufficient_money_title">موجودی کافی نیست</string>
     <string name="insufficient_money_msg">موجودی کیف پول آن قدر نیست که بتوان همه آن را برداشت کرد.</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg"> انتقال دش از دش والت به این دستگاه با مشکل روبرو شد. </string>
     <string name="insufficient_money_to_transfer">مقدار دش در کیف‌ پول‌تان آن قدر نیست که بتوانید انتقال دهید. </string>
     <string name="amount_to_transfer">شما این مقدار دریافت کردید: %s%s%s</string>
-
+    <string name="amount_to_transfer_dash">شما %s دریافت خواهید کرد</string>
     </resources>
