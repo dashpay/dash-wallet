@@ -75,8 +75,18 @@
     <string name="select_currency">واحد پول‌تان را انتخاب کنید</string>
     <string name="send_coins_error_dusty_send">مبلغ مورد نظر، بیش از حد کم است</string>
     <string name="send_coins_error_insufficient_money">موجودی ناکافی</string>
+    <string name="no_connection">به اینترنت متصل نیستید</string>
+    <string name="rate_not_available">در دسترس نیست</string>
 
     <string name="empty_wallet_warning_title">به نظر می‌رسد موجودی دش والت‌تان را خالی می‌کنید</string>
     <string name="empty_wallet_crowdnode_warning">لطفا دقت داشته باشید که تا وقتی موجودی آن را به ۰.۰۰۰۳ دش افزایش نداده‌اید، نمی‌توانید از این کیف پول از کراودنود چیزی برداشت کنید. </string>
     <string name="syncing">در حال همزمان‌سازی</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">مستقیما روی دش والت دریافت کنید</string>
+    <string name="convert_crypto">تبدیل رمزارز</string>
+    <string name="last_known_balance" >آخرین موجودی به‌روزشده</string>
+    <string name="disconnected">عدم اتصال به شبکه</string>
+    <string name="enter_amount_available">موجود</string>
+    <string name="transaction_row_rate_not_available">در دسترس نیست</string>
 </resources>

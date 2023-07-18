@@ -75,8 +75,18 @@
     <string name="select_currency">Вибрати Валюту</string>
     <string name="send_coins_error_dusty_send">Сума надто мала для відправки</string>
     <string name="send_coins_error_insufficient_money">Недостатньо коштів</string>
+    <string name="no_connection">Немає підключення до Інтернету</string>
+    <string name="rate_not_available">Недоступний</string>
 
     <string name="empty_wallet_warning_title">Схоже ви спустошуєте свій гаманець</string>
     <string name="empty_wallet_crowdnode_warning">Пам\'ятайте, що ви не зможете вивести кошти з CrowdNode на цей гаманець, доки на балансі не буде хоча б 0.0003 Dash.</string>
     <string name="syncing">Синхронізація</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">Отримуйте безпосередньо в Dash Wallet.</string>
+    <string name="convert_crypto">Конвертувати криптовалюту</string>
+    <string name="last_known_balance" >Останній відомий баланс</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="enter_amount_available">доступно</string>
+    <string name="transaction_row_rate_not_available">Недоступний</string>
 </resources>

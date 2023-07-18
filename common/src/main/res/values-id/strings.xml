@@ -75,8 +75,17 @@
     <string name="select_currency">Pilih mata uang</string>
     <string name="send_coins_error_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
     <string name="send_coins_error_insufficient_money">Dana tidak mencukupi</string>
+    <string name="rate_not_available">Tak tersedia</string>
 
     <string name="empty_wallet_warning_title">Sepertinya Anda sedang mengosongkan Dompet Dash Anda</string>
     <string name="empty_wallet_crowdnode_warning">Harap dicatat, Anda tidak akan dapat menarik dana Anda dari CrowdNode ke dompet ini sampai saldo Anda meningkat menjadi 0,0003 Dash.</string>
     <string name="syncing">Menyingkronkan:</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">Terima langsung ke Dash Wallet</string>
+    <string name="convert_crypto">Konversi Kripto</string>
+    <string name="last_known_balance" >Saldo terakhir yang diketahui</string>
+    <string name="disconnected">Terputus</string>
+    <string name="enter_amount_available">tersedia</string>
+    <string name="transaction_row_rate_not_available">Tak tersedia</string>
 </resources>

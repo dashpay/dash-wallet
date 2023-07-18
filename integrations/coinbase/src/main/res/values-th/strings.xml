@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >ยอดคงเหลือล่าสุด</string>
     <string name="coinbase_link_title">เชื่อมบัญชี Coinbase ของคุณ </string>
     <string name="coinbase_link">เชื่อมต่อบัญชี Coinbase ของคุณ </string>
     <string name="coinbase_transfer_details">ระหว่างกระเป๋าเงิน Dash และบัญชี Coinbase ของคุณ</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">ตัดการเชื่อมต่อบัญชี Coinbase</string>
     <string name="receive_directly_into_dash_wallet">รับโดยตรงไปยังกระเป๋า Dash </string>
     <string name="buy_dash">ซื้อ Dash </string>
-    <string name="balance_on_coinbase">ยอดคงเหลือบน Coinbase</string>
+    <string name="balance_on_coinbase">ยอดคงเหลือของ Dash บน Coinbase</string>
     <string name="sending_to">ส่งไปยัง</string>
     <string name="dash_wallet_device">กระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,6 @@
     <string name="learn_more">เรียนรู้เพิ่มเติม</string>
     <string name="something_wrong_title">บางอย่างผิดพลาด!</string>
     <string name="retry_later_message">โปรดลองอีกครั้งในภายหลังหรือติดต่อฝ่ายสนับสนุนของเราเพื่อขอความช่วยเหลือ</string>
-    <string name="convert_crypto">การแปลงคริปโต</string>
-    <string name="between_dash_wallet_and_coinbase">ระหว่างกระเป๋าเงิน Dash และ Coinbase</string>
     <string name="conversion_preview">ตัวอย่างการแปลง</string>
     <string name="you_send">คุณส่ง</string>
     <string name="from_your_coinbase_account">จากบัญชี Coinbase ของคุณ</string>
@@ -91,7 +88,6 @@
     <string name="send_to_wallet_error">ไม่สามารถส่งจำนวนนี้ได้โดยไม่ต้องเกินขีดจำกัดของแอปพลิเคชั่น</string>
     <string name="dont_have_any_dash">คุณไม่มี Dash ในกระเป๋าเงิน Dash ของคุณ</string>
     <string name="transfer_wallet_not_synced">การถ่ายโอนจากกระเป๋า Dash ไปยัง Coinbase เป็นไปไม่ได้จนกว่าการซิงค์กระเป๋าเงินจะเสร็จสมบูรณ์</string>
-    <string name="disconnected">ตัดการเชื่อมต่อ</string>
 
     <string name="insufficient_money_title">เหรียญไม่เพียงพอ</string>
     <string name="insufficient_money_msg">ปริมาณเหรียญในกระเป๋าเงินนั้นน้อยเกินไป</string>
@@ -118,5 +114,4 @@
     <string name="transfer_dash_failed_msg">มีปัญหาในการโอน Dash ไปยังกระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
     <string name="insufficient_money_to_transfer">จำนวนเหรียญในกระเป๋าเงินนั้นน้อยเกินในการโอน</string>
     <string name="amount_to_transfer">คุณจะได้รับ %s %s %s</string>
-
     </resources>

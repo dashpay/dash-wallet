@@ -1,9 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Generic titles/messages -->
     <string name="loading">Зареждане…</string>
     <string name="loading_error">Възникна грешка. Моля опитайте отново по-късно.</string>
     <string name="please_wait_title">Моля изчакайте</string>
     <string name="dash_available">%1$s налични</string>
+    <string name="buy_dash">Купи Dash</string>
     <string name="copied">Копирано</string>
-    <string name="button_retry">Опитай отново</string>
+    <string name="error">Грешка</string>
+    <string name="request_coins_share_dialog_title">Споделете заявка за Dash…</string>
+    <!-- Generic buttons -->
+    <string name="button_dismiss">Отхвърляне</string>
+    <string name="button_continue">Продължи</string>
+    <string name="button_close">Затвори</string>
+    <string name="button_retry">Отново</string>
+    <string name="button_copy_address">Копирай адрес</string>
+    <string name="button_share">Сподели</string>
+    <string name="verify">Провери</string>
+    <string name="receive_enter_amount_button">Посочете сума</string>
+
+    <string name="max">Максимум</string>
+    <string name="dash">Dash</string>
+    <string name="send_coins_error_dusty_send">Тази сума е прекалено малка за да бъде изпратена.</string>
+    <string name="send_coins_error_insufficient_money">Недостатъчно средства</string>
+    <string name="rate_not_available">Не е налично</string>
+
+    <string name="syncing">Синхронизиране</string>
+
+    <string name="enter_amount_available">налично</string>
+    <string name="transaction_row_rate_not_available">Не е налично</string>
 </resources>

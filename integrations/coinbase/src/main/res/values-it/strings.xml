@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >Ultimo saldo noto</string>
     <string name="coinbase_link_title">Collega il tuo account Coinbase</string>
     <string name="coinbase_link">Collega l\'account Coinbase</string>
     <string name="coinbase_transfer_details">Tra Dash Wallet e il tuo account Coinbase</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">Disconnetti l\'account Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Ricevi direttamente nel Dash Wallet.</string>
     <string name="buy_dash">Compra Dash</string>
-    <string name="balance_on_coinbase">Saldo su Coinbase</string>
+    <string name="balance_on_coinbase">Saldo Dash  su Coinbase</string>
     <string name="sending_to">Invio a</string>
     <string name="dash_wallet_device">Dash Wallet su questo dispositivo</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,7 @@
     <string name="learn_more">Per saperne di più</string>
     <string name="something_wrong_title">Qualcosa è andato storto!</string>
     <string name="retry_later_message">Riprova più tardi o contatta il nostro centro di supporto per ricevere assistenza</string>
-    <string name="convert_crypto">Converti criptovalute</string>
-    <string name="between_dash_wallet_and_coinbase">Tra Dash Wallet e Coinbase.</string>
+    <string name="between_dash_wallet_and_coinbase">Tra Dash Wallet e Coinbase</string>
     <string name="conversion_preview">Anteprima della conversione</string>
     <string name="you_send">tu invii</string>
     <string name="from_your_coinbase_account">Dal tuo account Coinbase</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">Non è possibile inviare questo importo senza superare il limite di richiesta</string>
     <string name="dont_have_any_dash">Non hai Dash nel tuo Dash Wallet.</string>
     <string name="transfer_wallet_not_synced">I trasferimenti dal Dash Wallet a Coinbase non sono possibili fino al completamento della sincronizzazione del Wallet.</string>
-    <string name="disconnected">Disconnesso</string>
 
     <string name="insufficient_money_title">Non hai abbastanza soldi disponibili</string>
     <string name="insufficient_money_msg">La quantità di monete che hai nel portafoglio è troppo piccolo</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg">Si è verificato un problema durante il trasferimento al Dash Wallet su questo dispositivo.</string>
     <string name="insufficient_money_to_transfer">La quantità di coins nel portafoglio è troppo piccola per essere trasferita.</string>
     <string name="amount_to_transfer">Riceverai %s %s %s</string>
-
+    <string name="amount_to_transfer_dash">Riceverai %s</string>
     </resources>

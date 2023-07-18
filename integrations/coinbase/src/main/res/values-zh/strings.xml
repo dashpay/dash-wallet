@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >最后已知余额</string>
     <string name="coinbase_link_title">关联您的Coinbase账户</string>
     <string name="coinbase_link">关联Coinbase账户</string>
     <string name="coinbase_transfer_details">在Dash钱包和您的Coinbase账户之间</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">取消 Coinbase账户的关联</string>
     <string name="receive_directly_into_dash_wallet">直接从 Dash钱包收款.</string>
     <string name="buy_dash">购买Dash</string>
-    <string name="balance_on_coinbase">Coinbase的余额</string>
+    <string name="balance_on_coinbase">Coinbase上的Dash余额</string>
     <string name="sending_to">正在发送至</string>
     <string name="dash_wallet_device">此设备的 Dash钱包</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,7 @@
     <string name="learn_more">了解更多</string>
     <string name="something_wrong_title">出错了!</string>
     <string name="retry_later_message">请稍后重试或联系我们的客服中心以获得帮助</string>
-    <string name="convert_crypto">兑换加密货币</string>
-    <string name="between_dash_wallet_and_coinbase">在 Dash钱包和 Coinbase之间.</string>
+    <string name="between_dash_wallet_and_coinbase">在 Dash钱包与 Coinbase之间</string>
     <string name="conversion_preview">兑换预览</string>
     <string name="you_send">您发送</string>
     <string name="from_your_coinbase_account">从您的 Coinbase账户</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">您所设置的金额超过软件的限制, 因此无法发送此金额</string>
     <string name="dont_have_any_dash">您的 Dash钱包中没有任何 Dash.</string>
     <string name="transfer_wallet_not_synced">在钱包同步完成前, 无法从 Dash钱包转账到 Coinbase.</string>
-    <string name="disconnected">连接断开</string>
 
     <string name="insufficient_money_title">Dash不足</string>
     <string name="insufficient_money_msg">该钱包上的Dash金额太小, 无法交换.</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg">将资金转账到此设备的 Dash钱包时出错.</string>
     <string name="insufficient_money_to_transfer">钱包余额不足, 因此无法进行转账.</string>
     <string name="amount_to_transfer">您将会收到%s%s%s</string>
-
+    <string name="amount_to_transfer_dash">您将会收到 %s</string>
     </resources>

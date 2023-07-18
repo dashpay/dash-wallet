@@ -9,8 +9,6 @@
     <string name="uphold_buy_dash_button">Dash Al</string>
     <string name="uphold_transfer_to_this_wallet_button">Uphold\'dan aktar</string>
     <string name="uphold_link_account">Uphold Hesabını Bağla</string>
-    <string name="uphold_account_dash_balance">Uphold hesabınızdaki Dash bakiyesi </string>
-    <string name="uphold_transfer_to_this_wallet">Uphold hesabınızdan bu cüzdana Dash aktarın</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Ücret talep edilen tutardan düşülecek.</string>
     <string name="uphold_withdrawal_instructions">Aktarılacak tutarı girin</string>
     <string name="uphold_withdrawal_success_title">Başarılı</string>
@@ -23,7 +21,6 @@
     <string name="uphold_logout_explanation_text">Aynı zamanda tarayıcınızda Uphold internet sitesinden çıkış yapmanız gerekecek</string>
     <string name="uphold_go_to_website">İnternet sitesine git</string>
     <string name="uphold_error">Uphold Hatası</string>
-    <string name="uphold_error_not_logged_in">Dash Cüzdan artık Uphold hesabınıza bağlı değil. Bir sonraki ekranda cüzdanınızı Uphold hesabınıza bağlayın.</string>
     <string name="uphold_error_not_available">Uphold hizmeti şuan kullanım dışı. Lütfen daha sonra tekrar deneyin.</string>
     <string name="uphold_error_report_issue">Lütfen bu sorunu ana menüden "Sorun Bildir" i kullanarak Dash Wallet destek ekibine bildirin.</string>
 

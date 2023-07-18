@@ -75,8 +75,18 @@
     <string name="select_currency">Piliin ang Pera</string>
     <string name="send_coins_error_dusty_send">Ang halaga ay sobrang liit para maipadala</string>
     <string name="send_coins_error_insufficient_money">Hindi sapat na pondo</string>
+    <string name="no_connection">Walang koneksyon sa internet</string>
+    <string name="rate_not_available">Hindi available</string>
 
     <string name="empty_wallet_warning_title">Mukhang inubos mo ang laman ng iyong Dash Wallet</string>
     <string name="empty_wallet_crowdnode_warning">Pakitandaan, hindi mo mai-withdraw ang iyong mga pondo mula sa CrowdNode patungo sa wallet na ito hanggang sa mapataas mo ang iyong balanse sa 0.0003 Dash.</string>
     <string name="syncing">Nagsi-sync</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">Direktang tumanggap sa Dash Wallet.</string>
+    <string name="convert_crypto">I-convert ang Crypto</string>
+    <string name="last_known_balance" >Huling alam na balanse</string>
+    <string name="disconnected">Idiskonekta</string>
+    <string name="enter_amount_available">magagamit</string>
+    <string name="transaction_row_rate_not_available">Hindi available</string>
 </resources>

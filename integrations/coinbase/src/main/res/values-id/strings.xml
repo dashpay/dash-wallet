@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >Saldo terakhir yang diketahui</string>
     <string name="coinbase_link_title">Tautkan akun Coinbase Anda</string>
     <string name="coinbase_link">Tautkan akun Coinbase</string>
     <string name="coinbase_transfer_details">Antara Dash Wallet dan akun Coinbase Anda</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">Putuskan Sambungan Akun Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Terima langsung ke Dompet Dash.</string>
     <string name="buy_dash">Beli Dash</string>
-    <string name="balance_on_coinbase">Saldo di Coinbase</string>
+    <string name="balance_on_coinbase">Saldo Dash di Coinbase</string>
     <string name="sending_to">Mengirim ke</string>
     <string name="dash_wallet_device">Dompet Dash di perangkat ini</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,6 @@
     <string name="learn_more">Pelajari lebih lanjut</string>
     <string name="something_wrong_title">Ada yang salah!</string>
     <string name="retry_later_message">Silakan coba lagi nanti atau hubungi pusat dukungan kami untuk mendapatkan bantuan</string>
-    <string name="convert_crypto">Konversi Kripto</string>
-    <string name="between_dash_wallet_and_coinbase">Antara Dompet Dash dan Coinbase.</string>
     <string name="conversion_preview">Pratinjau Konversi</string>
     <string name="you_send">Anda mengirim</string>
     <string name="from_your_coinbase_account">Dari akun Coinbase Anda</string>
@@ -91,7 +88,6 @@
     <string name="send_to_wallet_error">Tidak dapat mengirim jumlah ini tanpa melampaui batas aplikasi</string>
     <string name="dont_have_any_dash">Anda tidak memiliki Dash di Dompet Dash Anda.</string>
     <string name="transfer_wallet_not_synced">Transfer dari Dompet Dash ke Coinbase tidak dapat dilakukan hingga sinkronisasi dompet selesai.</string>
-    <string name="disconnected">Terputus</string>
 
     <string name="insufficient_money_title">Koin tidak cukup</string>
     <string name="insufficient_money_msg">Jumlah koin dalam dompet terlalu kecil untuk dibersihkan.</string>
@@ -118,5 +114,4 @@
     <string name="transfer_dash_failed_msg">Terjadi masalah saat mentransfernya ke Dompet Dash di perangkat ini.</string>
     <string name="insufficient_money_to_transfer">Jumlah koin di dompet terlalu kecil untuk ditransfer.</string>
     <string name="amount_to_transfer">Anda akan menerima %s %s %s</string>
-
     </resources>
