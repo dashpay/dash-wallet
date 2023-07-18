@@ -20,7 +20,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
-    tools:context="org.dash.wallet.features.exploredash.ui.SearchFragment">
+    tools:context="org.dash.wallet.features.exploredash.ui.explore.SearchFragment">
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
@@ -38,7 +38,6 @@
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
-                app:menu="@menu/info_menu"
                 app:navigationIcon="@drawable/ic_arrow_back">
 
                 <TextView
@@ -52,7 +51,7 @@
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/explore_map"
-            android:name="org.dash.wallet.features.exploredash.ui.ExploreMapFragment"
+            android:name="org.dash.wallet.features.exploredash.ui.explore.ExploreMapFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginTop="?attr/actionBarSize"
@@ -181,7 +180,7 @@
                     android:text="@string/explore_reset_all_filters" />
             </LinearLayout>
 
-            <org.dash.wallet.features.exploredash.ui.ItemDetails
+            <org.dash.wallet.features.exploredash.ui.explore.ItemDetails
                 android:id="@+id/item_details"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"

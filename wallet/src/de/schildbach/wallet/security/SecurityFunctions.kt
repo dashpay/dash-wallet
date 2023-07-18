@@ -24,7 +24,6 @@ import androidx.fragment.app.FragmentActivity
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.ui.CheckPinDialog
-import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine

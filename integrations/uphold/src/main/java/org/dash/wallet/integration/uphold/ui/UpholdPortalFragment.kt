@@ -37,9 +37,9 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
+import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integration.uphold.R
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
 import org.dash.wallet.integration.uphold.data.UpholdConstants
@@ -117,7 +117,7 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
         viewModel.uiState.observe(viewLifecycleOwner) { uiState ->
             binding.balanceDash.setAmount(uiState.balance)
             uiState.fiatBalance?.let {
-                binding.balanceLocal.text = GenericUtils.fiatToString(it)
+                binding.balanceLocal.text = it.toFormattedString()
             }
 
             if (uiState.isUserLoggedIn) {

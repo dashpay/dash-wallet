@@ -120,7 +120,6 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
 
     override fun onResume() {
         super.onResume()
-        viewModel.monitorNetworkStateChange()
         viewModel.updateBalances()
         viewModel.updateServicesStatus()
     }

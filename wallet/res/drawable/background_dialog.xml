@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/round_corner_bgd_white"
-    android:insetTop="20dp">
-
-</inset>

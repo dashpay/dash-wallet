@@ -16,10 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import androidx.core.os.bundleOf
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
@@ -28,15 +25,14 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
@@ -45,11 +41,11 @@ import javax.inject.Inject
 class CoinbaseServicesViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     val exchangeRatesProvider: ExchangeRatesProvider,
-    val preferences: Configuration,
+    private val preferences: Configuration,
     private val config: CoinbaseConfig,
     networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
-) : ConnectivityViewModel(networkState) {
+) : ViewModel() {
 
     private val _user: MutableLiveData<CoinBaseUserAccountData> = MutableLiveData()
     val user: LiveData<CoinBaseUserAccountData>
@@ -72,6 +68,8 @@ class CoinbaseServicesViewModel @Inject constructor(
     private val _latestUserBalance: MutableLiveData<String> = MutableLiveData()
     val latestUserBalance: LiveData<String>
         get() = _latestUserBalance
+
+    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
     val balanceFormat: MonetaryFormat
         get() = preferences.format.noCode()
@@ -107,7 +105,7 @@ class CoinbaseServicesViewModel @Inject constructor(
     }
 
     fun disconnectCoinbaseAccount() = viewModelScope.launch(Dispatchers.Main) {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.DISCONNECT, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.DISCONNECT, mapOf())
 
         _showLoading.value = true
         coinBaseRepository.disconnectCoinbaseAccount()
@@ -116,6 +114,6 @@ class CoinbaseServicesViewModel @Inject constructor(
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 }

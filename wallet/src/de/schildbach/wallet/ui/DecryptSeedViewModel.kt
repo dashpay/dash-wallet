@@ -21,8 +21,8 @@ import androidx.lifecycle.MutableLiveData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.SecurityFunctions
+import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet.security.SecurityGuard
-import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService

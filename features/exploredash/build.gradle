@@ -4,6 +4,8 @@ plugins {
     id 'kotlin-kapt'
     id 'androidx.navigation.safeargs.kotlin'
     id 'dagger.hilt.android.plugin'
+    id 'kotlin-parcelize'
+    id 'org.jlleitschuh.gradle.ktlint'
 }
 
 android {
@@ -14,6 +16,11 @@ android {
         targetSdkVersion 31
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
+            }
+        }
     }
 
     buildTypes {
@@ -23,6 +30,7 @@ android {
         }
     }
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
@@ -56,13 +64,16 @@ dependencies {
     // Core
     implementation "androidx.core:core-ktx:$jetpackVersion"
     implementation "androidx.appcompat:appcompat:$appCompatVersion"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$coroutines_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$coroutinesVersion"
     implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
+    implementation "org.dashj:dashj-core:$dashjVersion"
 
     // Architecture
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
     implementation "androidx.navigation:navigation-ui-ktx:$navigationVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
+    implementation "androidx.datastore:datastore-preferences:$datastoreVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion"
 
     // Database
     implementation "androidx.room:room-ktx:$roomVersion"
@@ -77,9 +88,10 @@ dependencies {
     // UI
     implementation "com.google.android.material:material:$materialVersion"
     implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
-    implementation "com.github.bumptech.glide:glide:$glideVersion"
-    kapt "com.github.bumptech.glide:compiler:$glideVersion"
     api 'androidx.paging:paging-runtime-ktx:3.1.1'
+    implementation "io.coil-kt:coil:$coilVersion"
+    //noinspection GradleDependency
+    implementation "com.google.zxing:core:$zxingVersion"
 
     // Maps & Location
     implementation 'com.google.android.gms:play-services-location:18.0.0'
@@ -97,11 +109,13 @@ dependencies {
 
     // Tools
     implementation 'net.lingala.zip4j:zip4j:2.9.1'
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$desugaringLibraryVersion"
 
 
     // Tests
     testImplementation "junit:junit:$junitVersion"
-    testImplementation 'androidx.test:core-ktx:1.4.0'
+    testImplementation "androidx.test:core-ktx:$testCoreVersion"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
     testImplementation "androidx.arch.core:core-testing:$coreTestingVersion"
     testImplementation "org.robolectric:robolectric:4.8.1"

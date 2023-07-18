@@ -18,7 +18,6 @@
     <!-- Explore screen -->
     <string name="explore_dash">Objavte Dash</string>
     <string name="explore_title">Objaviť</string>
-    <string name="explore_subtitle">Jednoducho nakupujte s vašim DASH-om na viac ako 155 000 miestach a online obchodoch</string>
     <string name="explore_merchants_title">Kde minúť?</string>
     <string name="explore_merchants_subtitle">Nájsť obchodníkov, ktorí akceptujú Dash ako platbu.</string>
     <string name="explore_atms_title">Bankomaty</string>

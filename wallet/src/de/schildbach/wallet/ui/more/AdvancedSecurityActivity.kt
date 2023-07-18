@@ -23,7 +23,6 @@ import android.view.View
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
@@ -48,7 +47,7 @@ class AdvancedSecurityActivity : LockScreenActivity() {
             val value = autoLogoutProgressToTimeValue(binding.autoLogoutSeekbar.progress)
             analytics.logEvent(
                 AnalyticsConstants.Security.AUTO_LOGOUT_TIMER_VALUE,
-                bundleOf("timer_value" to value)
+                mapOf(AnalyticsConstants.Parameter.VALUE to value)
             )
         }
         override fun onStartTrackingTouch(seekBar: SeekBar?) { }
@@ -63,7 +62,7 @@ class AdvancedSecurityActivity : LockScreenActivity() {
             val value = biometricProgressToLimitValue(binding.biometricLimitSeekbar.progress)
             analytics.logEvent(
                 AnalyticsConstants.Security.SPENDING_CONFIRMATION_LIMIT,
-                bundleOf("limit_value" to value)
+                mapOf(AnalyticsConstants.Parameter.VALUE to value)
             )
         }
         override fun onStartTrackingTouch(seekBar: SeekBar?) { }
@@ -98,7 +97,7 @@ class AdvancedSecurityActivity : LockScreenActivity() {
                     } else {
                         AnalyticsConstants.Security.AUTO_LOGOUT_OFF
                     },
-                    bundleOf()
+                    mapOf()
                 )
             }
             configuration.autoLogoutEnabled = enabled
@@ -113,7 +112,7 @@ class AdvancedSecurityActivity : LockScreenActivity() {
                     } else {
                         AnalyticsConstants.Security.SPENDING_CONFIRMATION_OFF
                     },
-                    bundleOf()
+                    mapOf()
                 )
             }
 
@@ -249,7 +248,7 @@ class AdvancedSecurityActivity : LockScreenActivity() {
         configuration.spendingConfirmationEnabled = true
         configuration.biometricLimit = .5f
         updateView()
-        analytics.logEvent(AnalyticsConstants.Security.RESET_TO_DEFAULT, bundleOf())
+        analytics.logEvent(AnalyticsConstants.Security.RESET_TO_DEFAULT, mapOf())
     }
 
     private fun autoLogoutProgressToTimeValue(progress: Int): Int {

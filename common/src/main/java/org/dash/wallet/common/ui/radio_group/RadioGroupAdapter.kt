@@ -35,7 +35,7 @@ import org.dash.wallet.common.ui.setRoundedBackground
 
 class RadioGroupAdapter(
     defaultSelectedIndex: Int = 0,
-    private val roundCheckMark: Boolean = false,
+    private val isCheckMark: Boolean = false,
     private val clickListener: (IconifiedViewItem, Int) -> Unit
 ): ListAdapter<IconifiedViewItem, RadioButtonViewHolder>(DiffCallback()) {
 
@@ -53,7 +53,7 @@ class RadioGroupAdapter(
         val inflater = LayoutInflater.from(parent.context)
         val binding = RadiobuttonRowBinding.inflate(inflater, parent, false)
 
-        return RadioButtonViewHolder(binding, this.roundCheckMark)
+        return RadioButtonViewHolder(binding, this.isCheckMark)
     }
 
     override fun onBindViewHolder(holder: RadioButtonViewHolder, position: Int) {
@@ -74,7 +74,7 @@ class RadioGroupAdapter(
 
     class DiffCallback : DiffUtil.ItemCallback<IconifiedViewItem>() {
         override fun areItemsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
-            return oldItem.title == newItem.title && oldItem.icon == newItem.icon
+            return oldItem.title == newItem.title && oldItem.iconRes == newItem.iconRes
         }
 
         override fun areContentsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
@@ -85,27 +85,44 @@ class RadioGroupAdapter(
 
 class RadioButtonViewHolder(
     val binding: RadiobuttonRowBinding,
-    private val roundCheckMark: Boolean
+    private val isCheckMark: Boolean
 ) : RecyclerView.ViewHolder(binding.root) {
     fun bind(option: IconifiedViewItem, isSelected: Boolean) {
         val resources = binding.root.resources
 
         binding.title.text = option.title
-        binding.title.setTextColor(resources.getColorStateList(
-            if (option.iconSelectMode == IconSelectMode.Encircle) R.color.content_primary else R.color.radiobutton_text_color,
-            null
-        ))
+        binding.title.setTextColor(
+            resources.getColorStateList(
+                if (option.iconSelectMode == IconSelectMode.Encircle) {
+                    R.color.content_primary
+                } else {
+                    R.color.radiobutton_text_color
+                },
+                null
+            )
+        )
 
         binding.subtitle.isVisible = option.subtitle.isNotEmpty()
         binding.subtitle.text = option.subtitle
 
-        binding.iconWrapper.isVisible = option.icon != null
-        option.icon?.let {
+        if (option.iconRes != null) {
             binding.icon.setImageDrawable(
                 ResourcesCompat.getDrawable(
-                    resources, option.icon, null
+                    resources,
+                    option.iconRes,
+                    null
                 )
             )
+        } else if (option.iconUrl != null) {
+            binding.icon.load(option.iconUrl) {
+                crossfade(true)
+                placeholder(R.drawable.ic_default_flag)
+                transformations(CircleCropTransformation())
+            }
+        }
+
+        if (option.iconUrl != null || option.iconRes != null) {
+            binding.iconWrapper.isVisible = true
 
             val tint = when (option.iconSelectMode) {
                 IconSelectMode.Encircle -> R.color.radiobutton_icon_color
@@ -117,7 +134,6 @@ class RadioButtonViewHolder(
                 binding.icon.imageTintList = resources.getColorStateList(tint, null)
             }
 
-
             binding.iconWrapper.setRoundedBackground(
                 when {
                     option.iconSelectMode != IconSelectMode.Encircle -> null
@@ -125,14 +141,8 @@ class RadioButtonViewHolder(
                     else -> R.style.EncircledIconTheme
                 }
             )
-        }
-
-        option.iconUrl?.let {
-            binding.icon.load(it) {
-                crossfade(true)
-                placeholder(R.drawable.ic_default_flag)
-                transformations(CircleCropTransformation())
-            }
+        } else {
+            binding.iconWrapper.isVisible = false
         }
 
         option.subtitleDrawable?.let { res ->
@@ -148,30 +158,37 @@ class RadioButtonViewHolder(
 
         binding.additionalInfo.isVisible = !option.additionalInfo.isNullOrEmpty()
         binding.additionalInfo.text = option.additionalInfo
-        if(!option.subtitleAdditionalInfo.isNullOrEmpty()){
+
+        if (!option.subtitleAdditionalInfo.isNullOrEmpty()) {
             TextViewCompat.setTextAppearance(binding.additionalInfo, R.style.Body2)
-        }else{
+        } else {
             TextViewCompat.setTextAppearance(binding.additionalInfo, R.style.Body2_Tertiary)
         }
 
         binding.additionalInfoSubtitle.isVisible = !option.subtitleAdditionalInfo.isNullOrEmpty()
         binding.additionalInfoSubtitle.text = option.subtitleAdditionalInfo
 
-        if (this.roundCheckMark) {
-            binding.checkmark.setImageDrawable(ResourcesCompat.getDrawable(
-                resources,
-                if (isSelected) {
-                    R.drawable.checkbox_checked
-                } else {
-                    R.drawable.checkbox_unchecked
-                },
-                null
-            ))
-        } else {
-            binding.checkmark.setImageDrawable(ResourcesCompat.getDrawable(
-                resources, R.drawable.ic_checkmark_blue, null
-            ))
+        if (this.isCheckMark) {
+            binding.checkmark.setImageDrawable(
+                ResourcesCompat.getDrawable(
+                    resources,
+                    R.drawable.ic_checkmark_blue,
+                    null
+                )
+            )
             binding.checkmark.isVisible = isSelected
+        } else {
+            binding.checkmark.setImageDrawable(
+                ResourcesCompat.getDrawable(
+                    resources,
+                    if (isSelected) {
+                        R.drawable.ic_radiobutton_on
+                    } else {
+                        R.drawable.ic_radiobutton_off
+                    },
+                    null
+                )
+            )
         }
     }
 }

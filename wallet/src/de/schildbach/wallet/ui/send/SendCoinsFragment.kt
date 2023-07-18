@@ -49,7 +49,7 @@ import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -67,7 +67,6 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
     @Inject lateinit var authManager: AuthenticationManager
     private var enterAmountFragment: EnterAmountFragment? = null
-    private var revealBalance = false
     private var userAuthorizedDuring: Boolean = false
         get() = field || enterAmountFragment?.didAuthorize == true
         set(value) {
@@ -111,7 +110,9 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             ) as EnterAmountFragment
         }
 
-        binding.hideButton.setOnClickListener {
+        binding.paymentHeader.setTitle(getString(R.string.send_coins_fragment_button_send))
+        binding.paymentHeader.setProposition(getString(R.string.to))
+        binding.paymentHeader.setOnShowHideBalanceClicked {
             lifecycleScope.launch { revealOrHideBalance(requirePinForBalance) }
         }
 
@@ -125,7 +126,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             }
         }
         viewModel.state.observe(viewLifecycleOwner) { updateView() }
-        viewModel.address.observe(viewLifecycleOwner) { binding.address.text = it }
+        viewModel.address.observe(viewLifecycleOwner) { binding.paymentHeader.setSubtitle(it) }
         viewModel.maxOutputAmount.observe(viewLifecycleOwner) { balance ->
             enterAmountViewModel.setMaxAmount(balance)
             updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
@@ -320,16 +321,11 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
     }
 
-    private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.ExchangeRate?) {
+    private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.entity.ExchangeRate?) {
         val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat) }
-
-        if (revealBalance) {
-            var balanceText = viewModel.dashFormat.format(balance).toString()
-            exchangeRate?.let { balanceText += " ~ ${GenericUtils.fiatToString(exchangeRate.coinToFiat(balance))}" }
-            binding.balanceLabel.text = balanceText
-        } else {
-            binding.balanceLabel.text = "**********"
-        }
+        var balanceText = viewModel.dashFormat.format(balance).toString()
+        exchangeRate?.let { balanceText += " ~ ${exchangeRate.coinToFiat(balance).toFormattedString()}" }
+        binding.paymentHeader.setBalanceValue(balanceText)
     }
 
     private suspend fun showInsufficientMoneyDialog(missing: Coin) {
@@ -398,16 +394,16 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     private suspend fun revealOrHideBalance(requirePin: Boolean) {
-        val isRevealing = !revealBalance
+        val isRevealing = !binding.paymentHeader.revealBalance
 
         if (isRevealing && requirePin && !userAuthorizedDuring) {
             authManager.authenticate(requireActivity(), false) ?: return
             userAuthorizedDuring = true
         }
 
-        revealBalance = isRevealing
+        binding.paymentHeader.triggerRevealBalance()
         viewModel.logEvent(
-            if (revealBalance) {
+            if (binding.paymentHeader.revealBalance) {
                 AnalyticsConstants.SendReceive.ENTER_AMOUNT_SHOW_BALANCE
             } else {
                 AnalyticsConstants.SendReceive.ENTER_AMOUNT_HIDE_BALANCE

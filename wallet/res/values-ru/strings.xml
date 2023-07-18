@@ -378,6 +378,5 @@
     <string name="select_a_service">Выберите сервис</string>
     <string name="activity_buy_and_sell_dash_filter">Фильтр</string>
     <string name="clear_filter">Очистить фильтр</string>
-    <string name="select_currency">Выберите валюту</string>
     <string name="reason">Причина</string>
 </resources>

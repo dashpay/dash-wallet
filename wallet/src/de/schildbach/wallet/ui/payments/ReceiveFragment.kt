@@ -69,7 +69,7 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
         }
 
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
-            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_RECEIVE, bundleOf())
+            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_RECEIVE, mapOf())
             val dashAmount = it.first
             val fiatAmount = it.second
             val address = walletData.freshReceiveAddress()

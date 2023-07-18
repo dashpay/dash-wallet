@@ -26,10 +26,12 @@ import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.viewBinding
@@ -40,7 +42,9 @@ import javax.inject.Inject
 class MoreFragment : Fragment(R.layout.fragment_more) {
     private val binding by viewBinding(FragmentMoreBinding::bind)
     @Inject lateinit var analytics: AnalyticsService
-    @Inject lateinit var walletApplication: WalletApplication
+    @Inject lateinit var packageInfoProvider: PackageInfoProvider
+    @Inject lateinit var configuration: Configuration
+    @Inject lateinit var walletData: WalletDataProvider
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -83,7 +87,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.contactSupport.setOnClickListener {
             val alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
                 requireActivity(),
-                walletApplication
+                packageInfoProvider,
+                configuration,
+                walletData.wallet
             ).buildAlertDialog()
             (requireActivity() as LockScreenActivity).alertDialog = alertDialog
             alertDialog.show()
@@ -91,7 +97,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     private fun startBuyAndSellActivity() {
-        analytics.logEvent(AnalyticsConstants.MoreMenu.BUY_SELL_MORE, bundleOf())
+        analytics.logEvent(AnalyticsConstants.MoreMenu.BUY_SELL_MORE, mapOf())
         safeNavigate(MoreFragmentDirections.moreToBuySell())
     }
 }

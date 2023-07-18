@@ -11,14 +11,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 
 /**
  * @author Joffrey Bion
  * https://stackoverflow.com/a/54828055/2279177
  */
-@FlowPreview
-@ExperimentalTime
+@OptIn(FlowPreview::class)
 class TickerFlow(
     private val period: Duration,
     private val initialDelay: Duration = Duration.ZERO

@@ -23,6 +23,7 @@
     <dimen name="scan_laser_width">4dp</dimen>
     <dimen name="scan_dot_size">8dp</dimen>
     <dimen name="shortcut_padding">2dp</dimen>
+    <dimen name="shortcut_button_padding">4dp</dimen>
     <dimen name="shortcut_size">48dp</dimen>
     <dimen name="shortcut_icon_size">32dp</dimen>
     <dimen name="request_coins_qr_margin_top">84dp</dimen>
@@ -49,6 +50,8 @@
     <dimen name="char_counter_top_padding">-3dp</dimen>
     <dimen name="char_counter_bottom_padding">10dp</dimen>
     <dimen name="char_counter_end_padding">12dp</dimen>
-    <dimen name="transaction_row_vertical_padding">13dp</dimen>
+    <dimen name="transaction_row_vertical_padding">10dp</dimen>
     <dimen name="transaction_row_extended_padding">17dp</dimen>
+    <dimen name="transaction_filter_separator_start">57dp</dimen>
+    <dimen name="transaction_details_icon_size">52dp</dimen>
 </resources>

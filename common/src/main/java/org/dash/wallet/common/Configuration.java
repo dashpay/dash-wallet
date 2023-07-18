@@ -50,7 +50,6 @@ public class Configuration {
     private final SharedPreferences prefs;
     private final Resources res;
 
-    public static final String PREFS_KEY_SEND_COINS_AUTOCLOSE = "send_coins_autoclose";
     public static final String PREFS_KEY_CONNECTIVITY_NOTIFICATION = "connectivity_notification";
     public static final String PREFS_KEY_EXCHANGE_CURRENCY = "exchange_currency";
     public static final String PREFS_KEY_EXCHANGE_CURRENCY_DETECTED = "exchange_currency_detected";
@@ -59,7 +58,6 @@ public class Configuration {
     public static final String PREFS_KEY_BLOCK_EXPLORER = "block_explorer";
     public static final String PREFS_KEY_REMIND_BALANCE = "remind_balance";
     public static final String PREFS_KEY_REMIND_BALANCE_TIME = "remind_balance_time";
-    private static final String PREFS_KEY_LABS_QR_PAYMENT_REQUEST = "labs_qr_payment_request";
     private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
     public static final String PREFS_KEY_AUTO_LOGOUT_ENABLED = "auto_logout_enabled";
     public static final String PREFS_KEY_AUTO_LOGOUT_MINUTES = "auto_logout_minutes";
@@ -94,19 +92,12 @@ public class Configuration {
     public static final String PREFS_KEY_COINBASE_AUTH_INFO_SHOWN = "coinbase_auth_info_shown";
     public static final String PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT = "withdrawal_limit";
     public static final String PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY = "send_limit_currency";
-
-
-
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     public static final int PREFS_DEFAULT_BTC_PRECISION = 8;
     public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
     public static final String PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER = "show_notifications_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER = "show_tax_catagory_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME = "show_tax_catagory_install_time";
-
-    // Explore Dash
-    public static final String PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY = "has_info_screen_been_shown";
-    public static final String PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN = "has_location_dialog_been_shown";
 
     // CrowdNode
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
@@ -155,20 +146,6 @@ public class Configuration {
         final int decimalRepetitions = (PREFS_DEFAULT_BTC_PRECISION - minPrecision) / numberToRepeat;
         return new MonetaryFormat().shift(PREFS_DEFAULT_BTC_SHIFT).minDecimals(minPrecision).repeatOptionalDecimals(numberToRepeat,
                 decimalRepetitions);
-    }
-
-    public MonetaryFormat getMaxPrecisionFormat() {
-        final int shift = getBtcShift();
-        if (shift == 0)
-            return new MonetaryFormat().shift(0).minDecimals(2).optionalDecimals(2, 2, 2);
-        else if (shift == 3)
-            return new MonetaryFormat().shift(3).minDecimals(2).optionalDecimals(2, 1);
-        else
-            return new MonetaryFormat().shift(6).minDecimals(0).optionalDecimals(2);
-    }
-
-    public boolean getSendCoinsAutoclose() {
-        return prefs.getBoolean(PREFS_KEY_SEND_COINS_AUTOCLOSE, true);
     }
 
     public boolean getConnectivityNotificationEnabled() {
@@ -261,10 +238,6 @@ public class Configuration {
         return prefs.getLong(PREFS_KEY_LAST_RESTORE, 0);
     }
 
-    public void updateLastRestoreTime() {
-        prefs.edit().putLong(PREFS_KEY_LAST_RESTORE, System.currentTimeMillis()).apply();
-    }
-
     public boolean lastBackupSeedReminderMoreThan24hAgo() {
         long lastReminder = prefs.getLong(PREFS_KEY_LAST_BACKUP_SEED_TIME, 0);
         if (lastReminder > 0) {
@@ -316,10 +289,6 @@ public class Configuration {
         return prefs.getInt(PREFS_KEY_PREVIOUS_VERSION, 0) != 0;
     }
 
-    public boolean getQrPaymentRequestEnabled() {
-        return prefs.getBoolean(PREFS_KEY_LABS_QR_PAYMENT_REQUEST, false);
-    }
-
     public boolean versionCodeCrossed(final int currentVersionCode, final int triggeringVersionCode) {
         final boolean wasBelow = lastVersionCode < triggeringVersionCode;
         final boolean wasUsedBefore = lastVersionCode > 0;
@@ -338,10 +307,6 @@ public class Configuration {
             log.info("detected app upgrade: " + lastVersionCode + " -> " + currentVersionCode);
         else if (currentVersionCode < lastVersionCode)
             log.warn("detected app downgrade: " + lastVersionCode + " -> " + currentVersionCode);
-    }
-
-    public boolean hasBeenUsed() {
-        return prefs.contains(PREFS_KEY_LAST_USED);
     }
 
     public long getLastUsedAgo() {
@@ -504,27 +469,8 @@ public class Configuration {
         prefs.edit().putLong(PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME, time).apply();
     }
 
-    // Explore Dash
-
-    public boolean hasExploreDashInfoScreenBeenShown() {
-        return prefs.getBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, false);
-    }
-
-    public void setHasExploreDashInfoScreenBeenShown(boolean isShown){
-        prefs.edit().putBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, isShown).apply();
-    }
-
-    public boolean hasExploreDashLocationDialogBeenShown() {
-        return prefs.getBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, false);
-    }
-
-    public void setHasExploreDashLocationDialogBeenShown(boolean isShown) {
-        prefs.edit().putBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, isShown).apply();
-    }
-
     // Coinbase
     // TODO: put new preferences in the CoinbaseConfig and migrate these.
-
     public void setLastCoinBaseAccessToken(String token) {
         prefs.edit().putString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, token).apply();
     }
@@ -571,7 +517,7 @@ public class Configuration {
     }
 
     public String getCoinbaseSendLimitCurrency() {
-        return prefs.getString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, GenericUtils.getLocaleCurrencyCode());
+        return prefs.getString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, GenericUtils.INSTANCE.getLocaleCurrencyCode());
     }
 
     // CrowdNode

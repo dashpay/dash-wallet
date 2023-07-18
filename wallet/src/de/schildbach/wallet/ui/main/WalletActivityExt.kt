@@ -54,8 +54,11 @@ object WalletActivityExt {
         setupWithNavController(navView, navController)
         navView.itemIconTintList = null
         navView.setOnItemSelectedListener { item: MenuItem ->
-            if (item.itemId == R.id.paymentsFragment) {
-                viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
+            when (item.itemId) {
+                R.id.walletFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_HOME)
+                R.id.paymentsFragment -> viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
+                R.id.moreFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_MORE)
+                else -> { }
             }
             onNavDestinationSelected(item, navController)
             true

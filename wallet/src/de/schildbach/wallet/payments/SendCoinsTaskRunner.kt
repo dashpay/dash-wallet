@@ -18,30 +18,49 @@ package de.schildbach.wallet.payments
 
 import androidx.annotation.VisibleForTesting
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.payments.parsers.PaymentIntentParser
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import de.schildbach.wallet.service.PackageInfoProvider
+import kotlinx.coroutines.*
+import okhttp3.CacheControl
+import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.Request
+import okhttp3.RequestBody
+import okio.BufferedSink
+import okio.IOException
+import org.bitcoin.protocols.payments.Protos
+import org.bitcoin.protocols.payments.Protos.Payment
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IKey
 import org.bitcoinj.crypto.KeyCrypterException
+import org.bitcoinj.protocols.payments.PaymentProtocol
+import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentRequestURL
 import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.*
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
+import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.call
+import org.dash.wallet.common.util.ensureSuccessful
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
-import kotlin.jvm.Throws
 
 class SendCoinsTaskRunner @Inject constructor(
     private val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
-    private val securityFunctions: SecurityFunctions
+    private val securityFunctions: SecurityFunctions,
+    private val packageInfoProvider: PackageInfoProvider
 ) : SendPaymentService {
-    private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
+    companion object {
+        private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
+        private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
+    }
 
     @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
@@ -51,7 +70,7 @@ class SendCoinsTaskRunner @Inject constructor(
         emptyWallet: Boolean,
         checkBalanceConditions: Boolean
     ): Transaction {
-        val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
 
         if (checkBalanceConditions && !wallet.isAddressMine(address)) {
@@ -69,7 +88,7 @@ class SendCoinsTaskRunner @Inject constructor(
         amount: Coin,
         emptyWallet: Boolean
     ): SendPaymentService.TransactionDetails {
-        val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         var sendRequest = createSendRequest(address, amount, null, emptyWallet, false)
         val securityGuard = SecurityGuard()
         val password = securityGuard.retrievePassword()
@@ -82,7 +101,7 @@ class SendCoinsTaskRunner @Inject constructor(
             wallet.completeTx(sendRequest)
         }
 
-        val txFee:Coin? = sendRequest.tx.fee
+        val txFee: Coin? = sendRequest.tx.fee
 
         val amountToSend = if (sendRequest.emptyWallet) {
             amount.minus(txFee)
@@ -97,6 +116,137 @@ class SendCoinsTaskRunner @Inject constructor(
         }
 
         return SendPaymentService.TransactionDetails(txFee?.toPlainString() ?: "", amountToSend, totalAmount)
+    }
+
+    override suspend fun payWithDashUrl(dashUri: String): Transaction {
+        return withContext(Dispatchers.IO) {
+            val paymentIntent = PaymentIntentParser.parse(dashUri, false)
+            createPaymentRequest(paymentIntent)
+        }
+    }
+
+    private suspend fun createPaymentRequest(basePaymentIntent: PaymentIntent): Transaction {
+        val requestUrl = basePaymentIntent.paymentRequestUrl
+            ?: throw InvalidPaymentRequestURL("Payment request URL is null")
+
+        val request = buildOkHttpPaymentRequest(requestUrl)
+        val response = Constants.HTTP_CLIENT.call(request)
+        response.ensureSuccessful()
+
+        val contentType = response.header("Content-Type")
+        val byteStream = response.body?.byteStream()
+
+        if (byteStream == null || contentType.isNullOrEmpty()) {
+            throw IOException("Null response for the payment request: $requestUrl")
+        }
+
+        val paymentIntent = PaymentIntentParser.parse(byteStream, contentType)
+
+        if (!basePaymentIntent.isExtendedBy(paymentIntent, true)) {
+            log.info("BIP72 trust check failed")
+            throw IllegalStateException("BIP72 trust check failed: $requestUrl")
+        }
+
+        val sendRequest = createRequestFromPaymentIntent(paymentIntent)
+        return sendPayment(paymentIntent, sendRequest)
+    }
+
+    fun createRequestFromPaymentIntent(paymentIntent: PaymentIntent): SendRequest {
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        Context.propagate(de.schildbach.wallet.Constants.CONTEXT)
+        var sendRequest = createSendRequest(
+            false,
+            paymentIntent,
+            signInputs = false,
+            forceEnsureMinRequiredFee = false
+        )
+
+        wallet.completeTx(sendRequest)
+        if (checkDust(sendRequest)) {
+            sendRequest = createSendRequest(
+                false,
+                paymentIntent,
+                signInputs = false,
+                forceEnsureMinRequiredFee = true
+            )
+            wallet.completeTx(sendRequest)
+        }
+
+        return sendRequest
+    }
+
+    private suspend fun sendPayment(
+        finalPaymentIntent: PaymentIntent,
+        sendRequest: SendRequest
+    ): Transaction {
+        val finalSendRequest = createSendRequest(
+            false,
+            finalPaymentIntent,
+            true,
+            sendRequest.ensureMinRequiredFee
+        )
+        signSendRequest(finalSendRequest)
+
+        return directPay(finalSendRequest, finalPaymentIntent)
+    }
+
+    private suspend fun directPay(
+        sendRequest: SendRequest,
+        finalPaymentIntent: PaymentIntent
+    ): Transaction {
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        wallet.completeTx(sendRequest)
+        val refundAddress = wallet.freshAddress(KeyChain.KeyPurpose.REFUND)
+        val payment = PaymentProtocol.createPaymentMessage(
+            listOf(sendRequest.tx),
+            finalPaymentIntent.amount,
+            refundAddress,
+            null,
+            finalPaymentIntent.payeeData
+        )
+
+        val requestUrl = finalPaymentIntent.paymentUrl
+            ?: throw InvalidPaymentRequestURL("Final payment intent URL is null")
+        log.info("trying to send tx to {}", requestUrl)
+        val request = buildOkHttpDirectPayRequest(requestUrl, payment)
+        val response = Constants.HTTP_CLIENT.call(request)
+        response.ensureSuccessful()
+        log.info("tx sent via http")
+
+        val byteStream = response.body?.byteStream()
+            ?: throw IOException("Null response for the payment request: $requestUrl")
+
+        val paymentAck = byteStream.use { Protos.PaymentACK.parseFrom(byteStream) }
+        val acknowledged = PaymentProtocol.parsePaymentAck(paymentAck).memo != "nack"
+        log.info("received {} via http", if (acknowledged) "ack" else "nack")
+
+        if (!acknowledged) {
+            throw DirectPayException("Payment was not acknowledged by the server")
+        }
+
+        return sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true)
+    }
+
+    fun createSendRequest(
+        mayEditAmount: Boolean,
+        paymentIntent: PaymentIntent,
+        signInputs: Boolean,
+        forceEnsureMinRequiredFee: Boolean
+    ): SendRequest {
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        // to make sure the correct instance of Transaction class is used in toSendRequest() method
+        paymentIntent.setInstantX(false)
+        val sendRequest = paymentIntent.toSendRequest()
+        sendRequest.coinSelector = ZeroConfCoinSelector.get()
+        sendRequest.useInstantSend = false
+        sendRequest.feePerKb = Constants.ECONOMIC_FEE
+        sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
+        sendRequest.signInputs = signInputs
+
+        val walletBalance = wallet.getBalance(MaxOutputAmountCoinSelector())
+        sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
+
+        return sendRequest
     }
 
     @VisibleForTesting
@@ -127,7 +277,7 @@ class SendCoinsTaskRunner @Inject constructor(
         txCompleted: Boolean = false,
         checkBalanceConditions: Boolean = true
     ): Transaction = withContext(Dispatchers.IO) {
-        val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
 
         if (checkBalanceConditions) {
@@ -197,5 +347,36 @@ class SendCoinsTaskRunner @Inject constructor(
                 }
             } catch (ignored: ScriptException) { }
         }
+    }
+
+    private fun buildOkHttpPaymentRequest(requestUrl: String): Request {
+        return Request.Builder()
+            .url(requestUrl)
+            .cacheControl(CacheControl.Builder().noCache().build())
+            .header("Accept", PaymentProtocol.MIMETYPE_PAYMENTREQUEST)
+            .header("User-Agent", packageInfoProvider.httpUserAgent())
+            .build()
+    }
+
+    private fun buildOkHttpDirectPayRequest(requestUrl: String, payment: Payment): Request {
+        return Request.Builder()
+            .url(requestUrl)
+            .cacheControl(CacheControl.Builder().noCache().build())
+            .header("Accept", PaymentProtocol.MIMETYPE_PAYMENTACK)
+            .header("User-Agent", packageInfoProvider.httpUserAgent())
+            .post(object : RequestBody() {
+                override fun contentType(): MediaType? {
+                    return PaymentProtocol.MIMETYPE_PAYMENT.toMediaTypeOrNull()
+                }
+
+                override fun contentLength(): Long {
+                    return payment.serializedSize.toLong()
+                }
+
+                override fun writeTo(sink: BufferedSink) {
+                    payment.writeTo(sink.outputStream())
+                }
+            })
+            .build()
     }
 }

@@ -172,11 +172,6 @@
             android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.preference.PreferenceActivity"
-            android:label="@string/preferences_activity_title"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
-
-        <activity
             android:name="de.schildbach.wallet.ui.BlockInfoActivity"
             android:label="@string/block_info"
             android:theme="@style/LockScreenActivity.Child.Theme" />

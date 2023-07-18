@@ -33,17 +33,11 @@ import org.bitcoinj.params.ScrewDriverDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.EnumSet;
-import java.util.concurrent.TimeUnit;
 
 import de.schildbach.wallet_test.BuildConfig;
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
 
 /**
  * @author Andreas Schildbach
@@ -74,7 +68,7 @@ public final class Constants {
                 IS_PROD_BUILD = true;
                 FILENAME_NETWORK_SUFFIX = "";
                 WALLET_NAME_CURRENCY_CODE = "dash";
-                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore.db");
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-testnet.db");
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 break;
             }
@@ -239,24 +233,6 @@ public final class Constants {
             .equals(NetworkParameters.ID_MAINNET) ? 50001 : 51001;
     public static final int ELECTRUM_SERVER_DEFAULT_PORT_TLS = NETWORK_PARAMETERS.getId()
             .equals(NetworkParameters.ID_MAINNET) ? 50002 : 51002;
-
-    /** Shared HTTP client, can reuse connections */
-    public static final OkHttpClient HTTP_CLIENT = new OkHttpClient.Builder()
-            .followRedirects(false)
-            .followSslRedirects(true)
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .addInterceptor(new HttpLoggingInterceptor(
-                    new HttpLoggingInterceptor.Logger() {
-                        @Override
-                        public void log(final String message) {
-                            log.debug(message);
-                        }
-                    }).setLevel(HttpLoggingInterceptor.Level.BASIC))
-            .build();
-
-    private static final Logger log = LoggerFactory.getLogger(Constants.class);
 
     //Dash Specific
     public static long EARLIEST_HD_SEED_CREATION_TIME = 1427610960L;

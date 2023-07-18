@@ -28,7 +28,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseIdForFaitDataUIState
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.PaymentMethodsUiState
@@ -172,6 +172,7 @@ class CoinbaseActivityViewModel @Inject constructor(
             "ideal_bank_account", "eft_bank_account", "interac" -> PaymentMethodType.BankAccount
             "bank_wire" -> PaymentMethodType.WireTransfer
             "paypal_account" -> PaymentMethodType.PayPal
+            "apple_pay" -> PaymentMethodType.ApplePay
             else -> PaymentMethodType.Unknown
         }
     }

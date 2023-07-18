@@ -22,8 +22,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.SavedStateHandle
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletUIConfig
-import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.transactions.TxDirection
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
@@ -39,10 +38,12 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.BlockchainState
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -66,13 +67,23 @@ class MainCoroutineRule(
 
 class MainViewModelTest {
     private val configMock = mockk<Configuration>()
-    private val blockChainStateMock = mockk<BlockchainStateDao>()
     private val exchangeRatesMock = mockk<ExchangeRatesProvider>()
-    private val walletDataMock = mockk<WalletDataProvider>()
     private val savedStateMock = mockk<SavedStateHandle>()
+
+    private val analyticsService = mockk<AnalyticsService> {
+        every { logError(any(), any()) } returns Unit
+    }
+
+    private val walletDataMock = mockk<WalletDataProvider> {
+        every { wallet } returns null
+    }
 
     private val blockchainStateMock = mockk<BlockchainStateProvider> {
         every { getMasternodeAPY() } returns 5.9
+    }
+
+    private val transactionMetadataMock = mockk<TransactionMetadataProvider> {
+        every { observePresentableMetadata() } returns MutableStateFlow(mapOf())
     }
 
     private val uiConfigMock = mockk<WalletUIConfig> {
@@ -91,7 +102,7 @@ class MainViewModelTest {
         every { configMock.format } returns MonetaryFormat()
         every { configMock.registerOnSharedPreferenceChangeListener(any()) } just runs
 
-        every { blockChainStateMock.observeState() } returns flow { BlockchainState() }
+        every { blockchainStateMock.observeState() } returns flow { BlockchainState() }
         every { exchangeRatesMock.observeExchangeRate(any()) } returns flow { ExchangeRate("USD", "100") }
         every { walletDataMock.observeBalance() } returns flow { Coin.COIN }
         every { walletDataMock.observeMostRecentTransaction() } returns flow {
@@ -113,23 +124,20 @@ class MainViewModelTest {
             )
         }
 
-        every { savedStateMock.get<TxDirection>(eq("tx_direction")) } returns TxDirection.ALL
-        every { savedStateMock.set<TxDirection>(any(), any()) } just runs
+        every { savedStateMock.get<TxFilterType>(eq("tx_direction")) } returns TxFilterType.ALL
+        every { savedStateMock.set<TxFilterType>(any(), any()) } just runs
     }
 
     @Test
     fun observeBlockchainState_replaying_notSynced() {
-        every { blockChainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
-        val model = try {
+        every { blockchainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
+        val viewModel = spyk(
             MainViewModel(
-                mockk(), configMock, uiConfigMock, blockChainStateMock,
-                exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock,
-                mockk()
+                analyticsService, configMock, uiConfigMock,
+                exchangeRatesMock, walletDataMock, savedStateMock, transactionMetadataMock,
+                blockchainStateMock, mockk()
             )
-        } catch (ex:Exception) {
-            null
-        }
-        val viewModel = spyk(model!!)
+        )
 
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
             assertEquals(false, viewModel.isBlockchainSynced.value)
@@ -141,12 +149,12 @@ class MainViewModelTest {
     @Ignore("Unreliable test. Needs investigating")
     fun observeBlockchainState_progress100percent_synced() {
         val state = BlockchainState().apply { replaying = false; percentageSync = 100 }
-        every { blockChainStateMock.observeState() } returns MutableStateFlow(state)
+        every { blockchainStateMock.observeState() } returns MutableStateFlow(state)
         val viewModel = spyk(
             MainViewModel(
-                mockk(), configMock, uiConfigMock, blockChainStateMock,
-                exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock,
-                mockk()
+                analyticsService, configMock, uiConfigMock,
+                exchangeRatesMock, walletDataMock, savedStateMock, transactionMetadataMock,
+                blockchainStateMock, mockk()
             )
         )
 

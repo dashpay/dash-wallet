@@ -29,6 +29,8 @@ import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
+import coil.transform.RoundedCornersTransformation
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.transactions.TransactionGroupHeaderViewHolder
 import de.schildbach.wallet.ui.transactions.TransactionRowView
@@ -51,7 +53,7 @@ class TransactionAdapter(
     private val clickListener: (HistoryRowView, Int) -> Unit
 ) : ListAdapter<HistoryRowView, HistoryViewHolder>(DiffCallback()) {
     private val contentColor = resources.getColor(R.color.content_primary, null)
-    private val colorSecondaryStatus = resources.getColor(R.color.secondary_status, null)
+    private val colorSecondaryStatus = resources.getColor(R.color.orange, null)
 
     class DiffCallback : DiffUtil.ItemCallback<HistoryRowView>() {
         override fun areItemsTheSame(oldItem: HistoryRowView, newItem: HistoryRowView): Boolean {
@@ -104,7 +106,7 @@ class TransactionAdapter(
                 holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
             }
             is TransactionGroupHeaderViewHolder -> {
-                holder.bind((item as HistoryRowView).localDate)
+                holder.bind((item as HistoryRowView).localDate!!)
                 holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
             }
         }
@@ -113,6 +115,7 @@ class TransactionAdapter(
     inner class TransactionViewHolder(
         val binding: TransactionRowBinding
     ) : HistoryViewHolder(binding.root) {
+        private val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_icon_size)
         private val resourceMapper = TxResourceMapper()
 
         init {
@@ -155,11 +158,10 @@ class TransactionAdapter(
                 )
             )
 
-            binding.icon.setImageResource(txView.icon)
-            binding.icon.setRoundedBackground(txView.iconBackground)
-
-            binding.primaryStatus.text = resources.getString(txView.titleRes)
-            binding.primaryStatus.setTextColor(contentColor)
+            txView.title?.let {
+                binding.primaryStatus.text = resources.getString(it.resourceId, *it.args.toTypedArray())
+                binding.primaryStatus.setTextColor(contentColor)
+            }
 
             if (txView.statusRes < 0) {
                 binding.secondaryStatus.text = null
@@ -168,10 +170,32 @@ class TransactionAdapter(
                 binding.secondaryStatus.setTextColor(colorSecondaryStatus)
             }
 
+            setIcon(txView)
             setValue(txView.value, txView.hasErrors)
             setFiatValue(txView.value, txView.exchangeRate)
             setTime(txView.time, resourceMapper.dateTimeFormat)
             setDetails(txView.transactionAmount)
+        }
+
+        private fun setIcon(txView: TransactionRowView) {
+            val iconBackground = txView.iconBackground
+            val icon = txView.icon
+
+            if (txView.iconBitmap != null) {
+                binding.primaryIcon.updatePadding(0, 0, 0, 0)
+                binding.primaryIcon.background = null
+                binding.primaryIcon.load(txView.iconBitmap) {
+                    transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
+                }
+                binding.secondaryIcon.isVisible = true
+                binding.secondaryIcon.setImageResource(icon)
+            } else {
+                val padding = resources.getDimensionPixelOffset(R.dimen.transaction_icon_padding)
+                binding.primaryIcon.updatePadding(padding, padding, padding, padding)
+                binding.primaryIcon.setRoundedBackground(iconBackground!!)
+                binding.primaryIcon.load(icon)
+                binding.secondaryIcon.isVisible = false
+            }
         }
 
         private fun setDetails(transactionAmount: Int) {

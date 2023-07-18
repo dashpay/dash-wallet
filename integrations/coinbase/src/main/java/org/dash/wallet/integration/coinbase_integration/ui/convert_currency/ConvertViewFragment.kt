@@ -36,6 +36,7 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentConvertCurrencyBinding
@@ -359,20 +360,19 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             } else {
                 balance
             }
-            val text = if (GenericUtils.isCurrencyFirst(fiatAmount)) {
+            val text = if (fiatAmount.isCurrencyFirst()) {
                 "$localCurrencySymbol $faitBalance"
             } else {
                 "$faitBalance $localCurrencySymbol"
             }
             SpannableString(text).apply {
-                if (GenericUtils.isCurrencyFirst(fiatAmount) && text.length - faitBalance.length > 0) {
+                if (fiatAmount.isCurrencyFirst() && text.length - faitBalance.length > 0) {
                     setAmountFormat(this, 0, text.length - faitBalance.length)
                 } else {
                     setAmountFormat(this, balance.length, text.length)
                 }
             }
         } else {
-
             val formattedValue = if (balance.contains("E")) {
                 DecimalFormat("########.########").format(balance.toDouble())
             } else {

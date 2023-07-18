@@ -165,7 +165,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
         viewModel.getUserAccountAddressFailedCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.error),
                 getString(R.string.error),
                 getString(R.string.close)
@@ -174,7 +174,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
         viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.insufficient_money_title),
                 getString(R.string.insufficient_money_msg),
                 getString(R.string.close)
@@ -183,7 +183,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
         viewModel.onFailure.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.send_coins_error_msg),
                 getString(R.string.insufficient_money_msg),
                 getString(R.string.close)
@@ -324,7 +324,6 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         } else {
             setRetryStatus()
         }
-        viewModel.monitorNetworkStateChange()
     }
 
     override fun onPause() {

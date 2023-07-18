@@ -17,23 +17,27 @@
 
 package org.dash.wallet.common.util
 
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import org.bitcoinj.core.Coin
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.utils.MonetaryFormat
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
 
 object Constants {
+    private val log: Logger = LoggerFactory.getLogger(Constants::class.java)
+
     const val CHAR_HAIR_SPACE = '\u200a'
     const val CHAR_THIN_SPACE = '\u2009'
     const val CHAR_ALMOST_EQUAL_TO = '\u2248'
-    const val CHAR_CHECKMARK = '\u2713'
     const val CURRENCY_PLUS_SIGN = '\uff0b'
     const val CURRENCY_MINUS_SIGN = '\uff0d'
     const val PREFIX_ALMOST_EQUAL_TO = CHAR_ALMOST_EQUAL_TO.toString() + CHAR_THIN_SPACE
 
-    const val REQUEST_CODE_BUY_SELL = 100
     const val USER_BUY_SELL_DASH = 101
     const val RESULT_CODE_GO_HOME = 100
-    const val COIN_BASE_AUTH = 102
 
     var MAX_MONEY: Coin = MainNetParams.get().maxMoney
     val ECONOMIC_FEE: Coin = Coin.valueOf(1000)
@@ -41,9 +45,23 @@ object Constants {
         MonetaryFormat().withLocale(GenericUtils.getDeviceLocale()).minDecimals(2)
             .optionalDecimals()
 
+    const val ANDROID_KEY_STORE = "AndroidKeyStore"
+
     lateinit var EXPLORE_GC_FILE_PATH: String
     var DEEP_LINK_PREFIX = "android-app://hashengineering.darkcoin.wallet"
 
     const val DASH_CURRENCY = "DASH"
     const val USD_CURRENCY = "USD"
+
+    /** Shared HTTP client, can reuse connections  */
+    val HTTP_CLIENT: OkHttpClient = OkHttpClient.Builder()
+        .followRedirects(false)
+        .followSslRedirects(true)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .writeTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .addInterceptor(
+            HttpLoggingInterceptor { log.debug(it) }.setLevel(HttpLoggingInterceptor.Level.BASIC)
+        )
+        .build()
 }

@@ -214,7 +214,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
                 } else if (passwordLength < 8) {
                     passwordStrengthView.setText(R.string.encrypt_keys_dialog_password_strength_fair);
                     passwordStrengthView
-                            .setTextColor(getResources().getColor(R.color.tangerine));
+                            .setTextColor(getResources().getColor(R.color.orange));
                 } else if (passwordLength < 10) {
                     passwordStrengthView.setText(R.string.encrypt_keys_dialog_password_strength_good);
                     passwordStrengthView

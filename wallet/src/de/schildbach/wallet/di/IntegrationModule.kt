@@ -32,7 +32,9 @@ import javax.inject.Singleton
 object IntegrationModule {
     @Singleton
     @Provides
-    fun provideTopperClient() = TopperClient(Constants.HTTP_CLIENT).apply {
+    fun provideTopperClient() = TopperClient(
+        org.dash.wallet.common.util.Constants.HTTP_CLIENT
+    ).apply {
         init(
             BuildConfig.TOPPER_KEY_ID,
             BuildConfig.TOPPER_WIDGET_ID,

@@ -36,7 +36,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 import org.dash.wallet.common.util.GenericUtils;
 import org.dash.wallet.common.util.MonetarySpannable;
 import org.slf4j.Logger;
@@ -44,6 +44,11 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 
+import dagger.hilt.EntryPoint;
+import dagger.hilt.InstallIn;
+import dagger.hilt.android.EntryPointAccessors;
+import dagger.hilt.components.SingletonComponent;
+import de.schildbach.wallet.database.dao.ExchangeRatesDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.payments.QuickReceiveActivity;
 import de.schildbach.wallet.ui.send.SendCoinsQrActivity;
@@ -55,6 +60,11 @@ import static org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO;
  * @author Andreas Schildbach
  */
 public class WalletBalanceWidgetProvider extends AppWidgetProvider {
+    @EntryPoint
+    @InstallIn(SingletonComponent.class)
+    interface BalanceWidgetEntryPoint {
+        ExchangeRatesDao provideExchangeRatesDao();
+    }
 
     private static final Logger log = LoggerFactory.getLogger(WalletBalanceWidgetProvider.class);
 
@@ -123,10 +133,13 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
                 MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
 
         new AsyncTask<Context, Void, ExchangeRate>() {
+            private final ExchangeRatesDao exchangeRatesDao =
+                EntryPointAccessors.fromApplication(context, BalanceWidgetEntryPoint.class).provideExchangeRatesDao();
+
+
             @Override
             protected ExchangeRate doInBackground(Context... contexts) {
-                return AppDatabase.getAppDatabase().exchangeRatesDao()
-                        .getRateSync(config.getExchangeCurrencyCode());
+                return exchangeRatesDao.getRateSync(config.getExchangeCurrencyCode());
             }
 
             @Override
@@ -139,7 +152,7 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
                             exchangeRate.getFiat());
                     final Fiat localBalance = rate.coinToFiat(balance);
                     final MonetaryFormat localFormat = Constants.LOCAL_FORMAT.code(0,
-                            PREFIX_ALMOST_EQUAL_TO + GenericUtils.currencySymbol(exchangeRate.getCurrencyCode()));
+                            PREFIX_ALMOST_EQUAL_TO + GenericUtils.INSTANCE.currencySymbol(exchangeRate.getCurrencyCode()));
                     final Object[] prefixSpans = new Object[]{MonetarySpannable.SMALLER_SPAN,
                             new ForegroundColorSpan(context.getResources().getColor(R.color.fg_less_significant))};
                     localBalanceStr = new MonetarySpannable(localFormat, localBalance).applyMarkup(prefixSpans,

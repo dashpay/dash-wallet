@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash
 
 import android.content.Context
 import android.database.sqlite.SQLiteException
-import android.preference.PreferenceManager
 import androidx.annotation.VisibleForTesting
 import androidx.room.Database
 import androidx.room.Room
@@ -28,13 +27,14 @@ import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.data.RoomConverters
-import org.dash.wallet.features.exploredash.data.AtmDao
-import org.dash.wallet.features.exploredash.data.MerchantDao
-import org.dash.wallet.features.exploredash.data.model.Atm
-import org.dash.wallet.features.exploredash.data.model.AtmFTS
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.MerchantFTS
+import org.dash.wallet.features.exploredash.data.explore.AtmDao
+import org.dash.wallet.features.exploredash.data.explore.MerchantDao
+import org.dash.wallet.features.exploredash.data.explore.model.Atm
+import org.dash.wallet.features.exploredash.data.explore.model.AtmFTS
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
+import org.dash.wallet.features.exploredash.data.explore.model.MerchantFTS
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
+import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.slf4j.LoggerFactory
 import java.io.File
 import kotlin.coroutines.resume
@@ -47,7 +47,8 @@ import kotlin.coroutines.resumeWithException
         Atm::class,
         AtmFTS::class
     ],
-    version = 1
+    version = 1,
+    exportSchema = true
 )
 @TypeConverters(RoomConverters::class)
 abstract class ExploreDatabase : RoomDatabase() {
@@ -60,9 +61,9 @@ abstract class ExploreDatabase : RoomDatabase() {
         private val log = LoggerFactory.getLogger(ExploreDatabase::class.java)
         private var instance: ExploreDatabase? = null
 
-        fun getAppDatabase(context: Context): ExploreDatabase {
+        suspend fun getAppDatabase(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
             if (instance == null) {
-                instance = open(context)
+                instance = open(context, exploreConfig)
             }
             return instance!!
         }
@@ -75,8 +76,8 @@ abstract class ExploreDatabase : RoomDatabase() {
             instance = update(context, repository)
         }
 
-        private fun open(context: Context): ExploreDatabase {
-            fixObsoleteName(context)
+        private suspend fun open(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
+            fixObsoleteName(context, exploreConfig)
 
             val dbBuilder = Room.databaseBuilder(
                 context,
@@ -121,40 +122,42 @@ abstract class ExploreDatabase : RoomDatabase() {
                     object : PrepackagedDatabaseCallback() {
                         override fun onOpenPrepackagedDatabase(db: SupportSQLiteDatabase) {
                             log.info("onOpenPrepackagedDatabase")
-                        } }
+                        }
+                    }
                 )
 
-                val onOpenCallback = object : Callback() {
-                    override fun onOpen(db: SupportSQLiteDatabase) {
-                        log.info("opened database: ${db.path}")
-                        if (!dbUpdateFile.delete()) {
-                            log.error("unable to delete " + dbUpdateFile.absolutePath)
-                        }
-
-                        try {
-                            if (hasExpectedData(db)) {
-                                repository.finalizeUpdate()
-                                log.info("successfully loaded new version of explore db")
-
-                                if (coroutine.isActive) {
-                                    coroutine.resume(database!!)
-                                }
-                            } else {
-                                log.info("database update file was empty")
-
-                                if (coroutine.isActive) {
-                                    coroutine.resumeWithException(SQLiteException("Database update file is empty"))
-                                }
+                val onOpenCallback =
+                    object : Callback() {
+                        override fun onOpen(db: SupportSQLiteDatabase) {
+                            log.info("opened database: ${db.path}")
+                            if (!dbUpdateFile.delete()) {
+                                log.error("unable to delete " + dbUpdateFile.absolutePath)
                             }
-                        } catch (ex: Exception) {
-                            log.error("error reading merchant & atm count", ex)
 
-                            if (coroutine.isActive) {
-                                coroutine.resumeWithException(ex)
+                            try {
+                                if (hasExpectedData(db)) {
+                                    repository.finalizeUpdate()
+                                    log.info("successfully loaded new version of explore db")
+
+                                    if (coroutine.isActive) {
+                                        coroutine.resume(database!!)
+                                    }
+                                } else {
+                                    log.info("database update file was empty")
+
+                                    if (coroutine.isActive) {
+                                        coroutine.resumeWithException(SQLiteException("Database update file is empty"))
+                                    }
+                                }
+                            } catch (ex: Exception) {
+                                log.error("error reading merchant & atm count", ex)
+
+                                if (coroutine.isActive) {
+                                    coroutine.resumeWithException(ex)
+                                }
                             }
                         }
                     }
-                }
 
                 database = dbBuilder
                     .setJournalMode(JournalMode.TRUNCATE)
@@ -182,9 +185,8 @@ abstract class ExploreDatabase : RoomDatabase() {
             return merchantCount > 0 && atmCount > 0
         }
 
-        private fun fixObsoleteName(context: Context) {
-            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            prefs.getString("explore_database_name", null)?.let { previousName ->
+        private suspend fun fixObsoleteName(context: Context, config: ExploreConfig) {
+            config.get(ExploreConfig.EXPLORE_DATABASE_NAME)?.let { previousName ->
                 val file = context.getDatabasePath(previousName)
                 file.renameTo(context.getDatabasePath(EXPLORE_DB_NAME))
             }

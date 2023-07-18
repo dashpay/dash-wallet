@@ -29,21 +29,21 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.integration.android.BitcoinIntegration
+import de.schildbach.wallet.payments.parsers.PaymentIntentParser
+import de.schildbach.wallet.payments.parsers.PaymentIntentParserException
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.util.InputParser
-import de.schildbach.wallet.ui.util.InputParserException
 import de.schildbach.wallet.util.Nfc
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySendCoinsBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.bitcoinj.core.PrefixedChecksummedBytes
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.VerificationException
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.util.ResourceString
 import java.io.FileNotFoundException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -53,8 +53,6 @@ open class SendCoinsActivity : LockScreenActivity() {
     companion object {
         const val ACTION_SEND_FROM_WALLET_URI = "de.schildbach.wallet.action.SEND_FROM_WALLET_URI"
         const val INTENT_EXTRA_PAYMENT_INTENT = "paymentIntent"
-        const val ANYPAY_SCHEME = "pay"
-        const val DASH_SCHEME = "dash"
 
         fun start(context: Context, paymentIntent: PaymentIntent?) {
             start(context, null, paymentIntent, false)
@@ -100,8 +98,13 @@ open class SendCoinsActivity : LockScreenActivity() {
                     val paymentIntent = initPaymentIntentFromIntent(intent)
                     initNavController(paymentIntent)
                 } catch (ex: Exception) {
+                    val message = if (ex is PaymentIntentParserException) {
+                        ex.localizedMessage.format(resources)
+                    } else {
+                        ex.message
+                    } ?: getString(R.string.error)
                     AdaptiveDialog.simple(
-                        ex.message ?: getString(R.string.error),
+                        message,
                         getString(R.string.button_dismiss),
                         ""
                     ).show(this@SendCoinsActivity) {
@@ -122,7 +125,7 @@ open class SendCoinsActivity : LockScreenActivity() {
         return if ((action == Intent.ACTION_VIEW || action == NfcAdapter.ACTION_NDEF_DISCOVERED) &&
             intentUri?.hasValidScheme() == true
         ) {
-            initStateFromDashUri(intentUri)
+            PaymentIntentParser.parse(intentUri.toString(), true)
         } else if (action == NfcAdapter.ACTION_NDEF_DISCOVERED && mimeType == PaymentProtocol.MIMETYPE_PAYMENTREQUEST) {
             val ndefMessage = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)?.get(0) as? NdefMessage
             val ndefMessagePayload = ndefMessage?.let {
@@ -152,39 +155,6 @@ open class SendCoinsActivity : LockScreenActivity() {
         }
     }
 
-    private suspend fun initStateFromDashUri(dashUri: Uri): PaymentIntent {
-        return suspendCancellableCoroutine { coroutine ->
-            object : InputParser.StringInputParser(dashUri.toString(), true) {
-                override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
-                    if (coroutine.isActive) {
-                        coroutine.resume(paymentIntent)
-                    }
-                }
-
-                override fun handlePrivateKey(key: PrefixedChecksummedBytes) {
-                    if (coroutine.isActive) {
-                        coroutine.resumeWithException(UnsupportedOperationException())
-                    }
-                }
-
-                @Throws(VerificationException::class)
-                override fun handleDirectTransaction(transaction: Transaction) {
-                    if (coroutine.isActive) {
-                        coroutine.resumeWithException(UnsupportedOperationException())
-                    }
-                }
-
-                override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
-                    if (coroutine.isActive) {
-                        coroutine.resumeWithException(
-                            InputParserException(ex, getString(messageResId, *messageArgs))
-                        )
-                    }
-                }
-            }.parse()
-        }
-    }
-
     private suspend fun initStateFromPaymentRequest(mimeType: String, input: ByteArray): PaymentIntent {
         return suspendCancellableCoroutine { coroutine ->
             object : InputParser.BinaryInputParser(mimeType, input) {
@@ -194,10 +164,10 @@ open class SendCoinsActivity : LockScreenActivity() {
                     }
                 }
 
-                override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
+                override fun error(ex: Exception, messageResId: Int, vararg messageArgs: Any) {
                     if (coroutine.isActive) {
                         coroutine.resumeWithException(
-                            InputParserException(ex, getString(messageResId, *messageArgs))
+                            PaymentIntentParserException(ex, ResourceString(messageResId, messageArgs.asList()))
                         )
                     }
                 }
@@ -216,10 +186,10 @@ open class SendCoinsActivity : LockScreenActivity() {
                             }
                         }
 
-                        override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
+                        override fun error(ex: Exception, messageResId: Int, vararg messageArgs: Any) {
                             if (coroutine.isActive) {
                                 coroutine.resumeWithException(
-                                    InputParserException(ex, getString(messageResId, *messageArgs))
+                                    PaymentIntentParserException(ex, ResourceString(messageResId, messageArgs.toList()))
                                 )
                             }
                         }
@@ -228,7 +198,10 @@ open class SendCoinsActivity : LockScreenActivity() {
             } catch (ex: FileNotFoundException) {
                 if (coroutine.isActive) {
                     coroutine.resumeWithException(
-                        InputParserException(ex, ex.toString())
+                        PaymentIntentParserException(
+                            ex,
+                            ResourceString(R.string.input_parser_io_error, listOf(ex.message ?: ""))
+                        )
                     )
                 }
             }
@@ -257,5 +230,5 @@ open class SendCoinsActivity : LockScreenActivity() {
     }
 
     private fun Uri.hasValidScheme() =
-        this.scheme == DASH_SCHEME || this.scheme == ANYPAY_SCHEME
+        this.scheme == Constants.DASH_SCHEME || this.scheme == Constants.ANYPAY_SCHEME
 }

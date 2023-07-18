@@ -76,13 +76,28 @@
 
     <ImageView
         android:id="@+id/check_icon"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:layout_width="@dimen/transaction_details_icon_size"
+        android:layout_height="@dimen/transaction_details_icon_size"
         app:layout_constraintBottom_toBottomOf="@id/fiat_value"
         app:layout_constraintEnd_toStartOf="@id/right_guideline"
         app:layout_constraintTop_toTopOf="@id/transaction_title"
         app:srcCompat="@drawable/check_animated"
         tools:src="@drawable/ic_transaction_sent" />
+
+    <ImageView
+        android:id="@+id/secondary_icon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:padding="2dp"
+        android:layout_marginBottom="-2dp"
+        android:layout_marginEnd="-2dp"
+        android:src="@drawable/ic_transaction_sent"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/SecondaryBackground"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/check_icon"
+        app:layout_constraintEnd_toEndOf="@id/check_icon"
+        tools:visibility="visible" />
 
     <LinearLayout
         android:id="@+id/transaction_details_card"
@@ -325,15 +340,16 @@
                 android:src="@drawable/ic_toggle_arrows" />
         </LinearLayout>
     </RelativeLayout>
+
     <RelativeLayout
         android:id="@+id/open_explorer_card"
         style="@style/ViewRaised"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="15dp"
-        android:background="@drawable/rounded_ripple_background"
         android:paddingHorizontal="15dp"
         android:paddingVertical="17dp"
+        android:background="@drawable/rounded_ripple_background"
         android:theme="@style/ListViewButtonBackground"
         app:layout_constraintTop_toBottomOf="@id/open_tax_category_card">
 

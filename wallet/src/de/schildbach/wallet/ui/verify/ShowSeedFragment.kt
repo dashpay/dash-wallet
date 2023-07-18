@@ -26,6 +26,7 @@ import androidx.navigation.fragment.navArgs
 import de.schildbach.wallet.ui.DecryptSeedViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentShowSeedBinding
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.goBack
 import org.dash.wallet.common.util.safeNavigate
@@ -64,7 +65,7 @@ class ShowSeedFragment : Fragment(R.layout.fragment_show_seed) {
         }
 
         binding.explanationBtn.setOnClickListener {
-            VerifySeedWarningDialog().show(parentFragmentManager, "verify_seed_warning")
+            OffsetDialogFragment(R.layout.dialog_verify_seed_warning).show(requireActivity())
         }
     }
 }
