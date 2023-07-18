@@ -254,7 +254,7 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
     fun logEvent(eventName: String) {
-        analytics.logEvent(eventName, bundleOf())
+        analytics.logEvent(eventName, mapOf())
     }
 
     private suspend fun coinbaseBalanceString(): String =
