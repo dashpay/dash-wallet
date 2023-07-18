@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="15dp"
+    android:background="@drawable/rounded_background"
+    android:theme="@style/SecondaryBackground"
+    tools:context="de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupViewHolder">
+
+    <TextView
+        android:id="@+id/username"
+        style="@style/Body2.Medium"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:paddingVertical="17dp"
+        android:layout_marginStart="15dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="John" />
+
+    <TextView
+        android:id="@+id/requests_amount"
+        style="@style/Overline.Tertiary"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="38dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/username"
+        app:layout_constraintBottom_toBottomOf="@id/username"
+        tools:text="4 requests" />
+
+    <ImageView
+        android:id="@+id/chevron"
+        android:layout_width="11dp"
+        android:layout_height="11dp"
+        android:src="@drawable/ic_back_arrow"
+        android:rotation="270"
+        android:layout_marginEnd="17dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/username"
+        app:layout_constraintBottom_toBottomOf="@id/username" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/requests_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="-5dp"
+        android:paddingBottom="6dp"
+        android:overScrollMode="never"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintTop_toBottomOf="@id/username"
+        tools:listitem="@layout/username_request_view"
+        tools:itemCount="5" />
+</androidx.constraintlayout.widget.ConstraintLayout>

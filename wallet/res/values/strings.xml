@@ -423,4 +423,8 @@
     <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before users will be able to create it.</string>
     <string name="voting_duplicates_only_title">Vote only on duplicates</string>
     <string name="voting_duplicates_only_message">You can review all requests but you only need to vote on duplicates</string>
+    <string name="all">All</string>
+    <string name="n_duplicates">%d duplicates</string>
+    <string name="n_requests">%d requests</string>
+    <string name="search_by_username">Search by username</string>
 </resources>

@@ -19,22 +19,35 @@ package de.schildbach.wallet.ui.username
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupAdapter
 import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.FragmentUsernameRequestsBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 
 @AndroidEntryPoint
 class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
     private val viewModel: UsernameRequestsViewModel by viewModels()
+    private val binding by viewBinding(FragmentUsernameRequestsBinding::bind)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
+        binding.filterBtn.setOnClickListener {
+            viewModel.prepopulateList()
+        }
+        val adapter = UsernameRequestGroupAdapter()
+        binding.requestGroups.adapter = adapter
 
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
             if (state.showFirstTimeInfo) {
@@ -49,6 +62,12 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
                     viewModel.setFirstTimeInfoShown()
                 }
             }
+
+            adapter.submitList(state.usernameRequests)
+            binding.filterSubtitle.text = getString(R.string.n_duplicates, state.usernameRequests.size)
+            binding.filterSubtitle.isVisible = state.usernameRequests.isNotEmpty()
+            binding.searchPanel.isVisible = state.usernameRequests.isNotEmpty()
+            binding.noItemsTxt.isVisible = state.usernameRequests.isEmpty()
         }
     }
 }
