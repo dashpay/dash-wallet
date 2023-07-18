@@ -62,17 +62,17 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        analytics.logEvent(AnalyticsConstants.SendReceive.SHOW_QR_CODE, bundleOf())
+        analytics.logEvent(AnalyticsConstants.SendReceive.SHOW_QR_CODE, mapOf())
 
         binding.receiveInfo.setOnSpecifyAmountClicked {
-            analytics.logEvent(AnalyticsConstants.SendReceive.SPECIFY_AMOUNT, bundleOf())
+            analytics.logEvent(AnalyticsConstants.SendReceive.SPECIFY_AMOUNT, mapOf())
             findNavController().navigate(PaymentsFragmentDirections.paymentsToReceive())
         }
         binding.receiveInfo.setOnAddressClicked {
-            analytics.logEvent(AnalyticsConstants.SendReceive.COPY_ADDRESS, bundleOf())
+            analytics.logEvent(AnalyticsConstants.SendReceive.COPY_ADDRESS, mapOf())
         }
         binding.receiveInfo.setOnShareClicked {
-            analytics.logEvent(AnalyticsConstants.SendReceive.SHARE, bundleOf())
+            analytics.logEvent(AnalyticsConstants.SendReceive.SHARE, mapOf())
         }
 
         binding.receiveInfo.setInfo(walletDataProvider.freshReceiveAddress(), null)

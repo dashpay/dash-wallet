@@ -25,10 +25,12 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
+import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -40,40 +42,36 @@ class ExploreSyncWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val analytics: AnalyticsService,
     private val exploreRepository: ExploreRepository,
-    private val syncStatus: ExploreDataSyncStatus
-): CoroutineWorker(appContext, workerParams) {
+    private val syncStatus: ExploreDataSyncStatus,
+    private val exploreConfig: ExploreConfig
+) : CoroutineWorker(appContext, workerParams) {
     companion object {
         const val USE_TEST_DB_KEY = "use_test_database"
         private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
 
         fun run(@ApplicationContext context: Context, isMainNet: Boolean) {
-            val inputData = Data.Builder().putBoolean(
-                USE_TEST_DB_KEY,
-                !isMainNet
-            )
-            val syncDataWorkRequest = OneTimeWorkRequest.Builder(ExploreSyncWorker::class.java)
-                .setBackoffCriteria(
-                    BackoffPolicy.EXPONENTIAL,
-                    WorkRequest.DEFAULT_BACKOFF_DELAY_MILLIS,
-                    TimeUnit.MILLISECONDS
-                )
-                .setInputData(inputData.build())
-                .build()
+            val inputData = Data.Builder().putBoolean(USE_TEST_DB_KEY, !isMainNet)
+            val syncDataWorkRequest =
+                OneTimeWorkRequest.Builder(ExploreSyncWorker::class.java)
+                    .setBackoffCriteria(
+                        BackoffPolicy.EXPONENTIAL,
+                        WorkRequest.DEFAULT_BACKOFF_DELAY_MILLIS,
+                        TimeUnit.MILLISECONDS
+                    )
+                    .setInputData(inputData.build())
+                    .build()
 
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                "Sync Explore Data",
-                ExistingWorkPolicy.KEEP,
-                syncDataWorkRequest
-            )
+            WorkManager.getInstance(context)
+                .enqueueUniqueWork("Sync Explore Data", ExistingWorkPolicy.KEEP, syncDataWorkRequest)
         }
     }
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         log.info("sync explore db started")
 
-        var localDataTimestamp = 0L
         var remoteDataTimestamp = 0L
         var preloadedDbTimestamp = 0L
+        var databasePrefs = exploreConfig.exploreDatabasePrefs.first()
 
         try {
             syncStatus.setSyncProgress(0.0)
@@ -87,16 +85,14 @@ class ExploreSyncWorker @AssistedInject constructor(
                     preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
                     log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
 
-                    if (exploreRepository.localDatabaseTimestamp == 0L ||
-                        exploreRepository.localDatabaseTimestamp < preloadedDbTimestamp
+                    if (databasePrefs.localDbTimestamp == 0L ||
+                        databasePrefs.localDbTimestamp < preloadedDbTimestamp
                     ) {
                         // force data preloading for fresh installs
                         // and a newer preloaded DB
-                        ExploreDatabase.updateDatabase(
-                            appContext,
-                            exploreRepository
-                        )
-                        exploreRepository.preloadedOnTimestamp = preloadedDbTimestamp
+                        ExploreDatabase.updateDatabase(appContext, exploreRepository)
+                        databasePrefs = databasePrefs.copy(preloadedOnTimestamp = preloadedDbTimestamp)
+                        exploreConfig.saveExploreDatabasePrefs(databasePrefs)
                     }
                 }
 
@@ -104,22 +100,26 @@ class ExploreSyncWorker @AssistedInject constructor(
                     log.error("unable to delete " + updateFile.absolutePath)
                 }
 
-                localDataTimestamp = exploreRepository.localDatabaseTimestamp
-                log.info("local data timestamp: $localDataTimestamp (${Date(localDataTimestamp)})")
+                log.info(
+                    "local data timestamp: ${databasePrefs.localDbTimestamp} (${Date(databasePrefs.localDbTimestamp)})"
+                )
 
                 remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
                 log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
 
-                if (localDataTimestamp >= remoteDataTimestamp) {
+                if (databasePrefs.localDbTimestamp >= remoteDataTimestamp) {
                     log.info("explore db is up to date, nothing to sync")
                     syncStatus.setSyncProgress(100.0)
-                    exploreRepository.failedSyncAttempts = 0
+                    databasePrefs = databasePrefs.copy(failedSyncAttempts = 0)
 
-                    if (exploreRepository.lastSyncAttemptTimestamp <= 0) {
-                        // Some devices might have this as 0 due to the bug. Need to update manually
+                    if (databasePrefs.lastSyncTimestamp <= 0) {
+                        // Some devices might have this as 0 due to the bug. Need to update
+                        // manually
                         // TODO: this can be removed after some time
-                        exploreRepository.lastSyncAttemptTimestamp = remoteDataTimestamp
+                        databasePrefs = databasePrefs.copy(lastSyncTimestamp = remoteDataTimestamp)
                     }
+
+                    exploreConfig.saveExploreDatabasePrefs(databasePrefs)
 
                     return@withContext Result.success()
                 }
@@ -129,29 +129,31 @@ class ExploreSyncWorker @AssistedInject constructor(
 
                 syncStatus.setSyncProgress(80.0)
 
-                ExploreDatabase.updateDatabase(
-                    appContext,
-                    exploreRepository
-                )
+                ExploreDatabase.updateDatabase(appContext, exploreRepository)
             }
 
             log.info("sync explore db finished, took $timeInMillis ms")
 
             syncStatus.setSyncProgress(100.0)
-
         } catch (ex: FirebaseNetworkException) {
             log.warn("sync explore no network", ex)
             syncStatus.setSyncError(ex)
             return@withContext Result.failure()
         } catch (ex: Exception) {
-            analytics.logError(ex, "local: $localDataTimestamp, preloaded: ${preloadedDbTimestamp}, remote: $remoteDataTimestamp")
+            analytics.logError(
+                ex,
+                "local: ${databasePrefs.localDbTimestamp}, " +
+                    "preloaded: $preloadedDbTimestamp, remote: $remoteDataTimestamp"
+            )
             log.error("sync explore db crashed ${ex.message}", ex)
             syncStatus.setSyncError(ex)
-            exploreRepository.failedSyncAttempts += 1
+            exploreConfig.saveExploreDatabasePrefs(
+                databasePrefs.copy(failedSyncAttempts = databasePrefs.failedSyncAttempts + 1)
+            )
             return@withContext Result.failure()
         }
 
-        exploreRepository.failedSyncAttempts = 0
+        exploreConfig.saveExploreDatabasePrefs(databasePrefs.copy(failedSyncAttempts = 0))
         return@withContext Result.success()
     }
 }

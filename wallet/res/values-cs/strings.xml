@@ -375,5 +375,4 @@
     <string name="select_a_service">Vybrat službu</string>
     <string name="activity_buy_and_sell_dash_filter">Filtr</string>
     <string name="clear_filter">Zrušit filtr</string>
-    <string name="select_currency">Vybrat měnu</string>
-    </resources>
+</resources>

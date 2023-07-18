@@ -19,9 +19,7 @@ package org.dash.wallet.common.ui.exchange_rates
 
 import android.content.Context
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.core.content.ContextCompat
@@ -34,9 +32,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.R
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.databinding.DialogOptionPickerBinding
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -44,32 +41,25 @@ import org.dash.wallet.common.ui.radio_group.IconSelectMode
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
 import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 
 @AndroidEntryPoint
 class ExchangeRatesDialog(
     private val selectedCurrencyCode: String = "USD",
     private val clickListener: (ExchangeRate, Int, DialogFragment) -> Unit
-) : OffsetDialogFragment() {
+) : OffsetDialogFragment(R.layout.dialog_option_picker) {
     override val forceExpand: Boolean = true
     private val binding by viewBinding(DialogOptionPickerBinding::bind)
     private val viewModel: ExchangeRatesViewModel by viewModels()
     private var itemList = listOf<IconifiedViewItem>()
     private var didFocusOnSelected = false
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.dialog_option_picker, container, false)
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.searchTitle.text = getString(R.string.select_currency)
 
-        val adapter = RadioGroupAdapter(0, true) { item, index ->
+        val adapter = RadioGroupAdapter(0) { item, index ->
             viewModel.exchangeRates.value?.firstOrNull {
                 it.currencyCode == item.additionalInfo
             }?.let {
@@ -89,11 +79,13 @@ class ExchangeRatesDialog(
         binding.searchQuery.doOnTextChanged { text, _, _, _ ->
             binding.clearBtn.isVisible = !text.isNullOrEmpty()
 
-            adapter.submitList(if (text.isNullOrBlank()) {
-                itemList
-            } else {
-                filterByQuery(itemList, text.toString())
-            })
+            adapter.submitList(
+                if (text.isNullOrBlank()) {
+                    itemList
+                } else {
+                    filterByQuery(itemList, text.toString())
+                }
+            )
         }
 
         binding.searchQuery.setOnEditorActionListener { _, actionId, _ ->
@@ -116,6 +108,7 @@ class ExchangeRatesDialog(
                     it.getCurrencyName(requireContext()),
                     Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode().format(it.fiat).toString(),
                     getFlagFromCurrencyCode(it.currencyCode),
+                    null,
                     IconSelectMode.None,
                     it.currencyCode
                 )
@@ -154,14 +147,15 @@ class ExchangeRatesDialog(
     private fun filterByQuery(items: List<IconifiedViewItem>, query: String): List<IconifiedViewItem> {
         return items.filter {
             it.title.lowercase().contains(query.lowercase()) ||
-                    it.additionalInfo?.lowercase()?.contains(query.lowercase()) == true
+                it.additionalInfo?.lowercase()?.contains(query.lowercase()) == true
         }
     }
 
     private fun getFlagFromCurrencyCode(currencyCode: String): Int {
         val resourceId = resources.getIdentifier(
             "currency_code_" + currencyCode.lowercase(),
-            "drawable", requireContext().packageName
+            "drawable",
+            requireContext().packageName
         )
         return if (resourceId == 0) R.drawable.ic_default_flag else resourceId
     }

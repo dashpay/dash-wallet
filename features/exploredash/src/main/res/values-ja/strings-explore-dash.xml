@@ -18,7 +18,6 @@
     <!-- Explore screen -->
     <string name="explore_dash">Dashを探求する</string>
     <string name="explore_title">探求する</string>
-    <string name="explore_subtitle">155,000以上の店舗やオンライン加盟店で、DASHを使って簡単にお買い物ができます。</string>
     <string name="explore_merchants_title">どこで使えますか。</string>
     <string name="explore_merchants_subtitle">Dashでの支払いが可能な加盟店を探します。</string>
     <string name="explore_atms_title">ATM</string>

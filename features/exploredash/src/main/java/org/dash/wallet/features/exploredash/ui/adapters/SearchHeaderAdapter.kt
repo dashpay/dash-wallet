@@ -27,8 +27,8 @@ import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.SearchHeaderViewBinding
-import org.dash.wallet.features.exploredash.ui.ExploreTopic
-import org.dash.wallet.features.exploredash.ui.FilterMode
+import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
+import org.dash.wallet.features.exploredash.ui.explore.FilterMode
 
 class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private lateinit var binding: SearchHeaderViewBinding
@@ -85,6 +85,14 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
             }
         }
 
+    var isFilterButtonVisible: Boolean = true
+        set(value) {
+            field = value
+            if (::binding.isInitialized) {
+                binding.filterBtn.isVisible = value
+            }
+        }
+
     override fun getItemCount() = 1
 
     override fun getItemViewType(position: Int) = R.layout.search_header_view
@@ -97,31 +105,34 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
     }
 
     override fun onBindViewHolder(viewHolder: RecyclerView.ViewHolder, position: Int) {
-        val options = binding.root.resources.getStringArray(
-            if (topic == ExploreTopic.Merchants) {
-                R.array.merchants_filter_options
-            } else {
-                R.array.atms_filter_options
-            }
-        ).map { SegmentedOption(it) }
+        val options =
+            binding.root.resources
+                .getStringArray(
+                    if (topic == ExploreTopic.Merchants) {
+                        R.array.merchants_filter_options
+                    } else {
+                        R.array.atms_filter_options
+                    }
+                )
+                .map { SegmentedOption(it) }
         binding.filterOptions.provideOptions(options)
         binding.filterOptions.setSelectedIndex(currentFilterOption)
         binding.filterOptions.setOnOptionPickedListener { _, index ->
             onFilterOptionChosen?.invoke(
-                    if (topic == ExploreTopic.Merchants) {
-                        when (index) {
-                            0 -> FilterMode.Online
-                            1 -> FilterMode.Nearby
-                            else -> FilterMode.All
-                        }
-                    } else {
-                        when (index) {
-                            1 -> FilterMode.Buy
-                            2 -> FilterMode.Sell
-                            3 -> FilterMode.BuySell
-                            else -> FilterMode.All
-                        }
+                if (topic == ExploreTopic.Merchants) {
+                    when (index) {
+                        0 -> FilterMode.Online
+                        1 -> FilterMode.Nearby
+                        else -> FilterMode.All
                     }
+                } else {
+                    when (index) {
+                        1 -> FilterMode.Buy
+                        2 -> FilterMode.Sell
+                        3 -> FilterMode.BuySell
+                        else -> FilterMode.All
+                    }
+                }
             )
         }
 
@@ -139,37 +150,34 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
             true
         }
 
-        binding.clearBtn.setOnClickListener {
-            clearSearchQuery()
-        }
-
-        binding.filterBtn.setOnClickListener {
-            onFilterButtonClicked?.invoke()
-        }
+        binding.clearBtn.setOnClickListener { clearSearchQuery() }
+        binding.filterBtn.setOnClickListener { onFilterButtonClicked?.invoke() }
 
         binding.search.setText(searchText)
         binding.searchTitle.text = title
         binding.searchSubtitle.text = subtitle
         binding.searchSubtitle.isVisible = subtitle.isNotEmpty()
+        binding.filterBtn.isVisible = isFilterButtonVisible
         refreshControls(controlsVisible)
         refreshSpaceForMessage(allowSpaceForMessage)
     }
 
     fun setFilterMode(mode: FilterMode) {
-        val index = if (topic == ExploreTopic.Merchants) {
-            when (mode) {
-                FilterMode.Online -> 0
-                FilterMode.Nearby -> 1
-                else -> 2
+        val index =
+            if (topic == ExploreTopic.Merchants) {
+                when (mode) {
+                    FilterMode.Online -> 0
+                    FilterMode.Nearby -> 1
+                    else -> 2
+                }
+            } else {
+                when (mode) {
+                    FilterMode.Buy -> 1
+                    FilterMode.Sell -> 2
+                    FilterMode.BuySell -> 3
+                    else -> 0
+                }
             }
-        } else {
-            when (mode) {
-                FilterMode.Buy -> 1
-                FilterMode.Sell -> 2
-                FilterMode.BuySell -> 3
-                else -> 0
-            }
-        }
 
         currentFilterOption = index
 

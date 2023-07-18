@@ -18,9 +18,7 @@ package de.schildbach.wallet.ui.send
 
 import android.os.Bundle
 import android.text.TextUtils
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
@@ -35,7 +33,7 @@ import kotlin.coroutines.resumeWithException
 @AndroidEntryPoint
 class ConfirmTransactionDialog(
     private val onTransactionConfirmed: ((Boolean) -> Unit)? = null
-) : OffsetDialogFragment() {
+) : OffsetDialogFragment(R.layout.dialog_confirm_transaction) {
 
     companion object {
         private val TAG = ConfirmTransactionDialog::class.java.simpleName
@@ -104,10 +102,7 @@ class ConfirmTransactionDialog(
     }
 
     private val binding by viewBinding(DialogConfirmTransactionBinding::bind)
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_confirm_transaction, container, false)
-    }
+    override val backgroundStyle = R.style.PrimaryBackground
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

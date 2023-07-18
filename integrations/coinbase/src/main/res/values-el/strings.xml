@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >Τελευταίο γνωστό υπόλοιπο</string>
     <string name="coinbase_link_title">Συνδέστε το λογαριασμό σας στην Coinbase</string>
     <string name="coinbase_link">Συνδέστε το λογαριασμό στην Coinbase</string>
     <string name="coinbase_transfer_details">Μεταξύ του Dash Wallet και του λογαριασμού σας στην Coinbase.</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">Αποσύνδεση λογαριασμού Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Λάβετε απευθείας στο Dash Wallet.</string>
     <string name="buy_dash">Αγορά Dash</string>
-    <string name="balance_on_coinbase">Υπόλοιπο στην Coinbase</string>
+    <string name="balance_on_coinbase">Υπόλοιπο Dash στην Coinbase</string>
     <string name="sending_to">Αποστολή στο</string>
     <string name="dash_wallet_device">Dash Wallet σε αυτή τη συσκευή</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,7 +68,6 @@
     <string name="learn_more">Μάθετε περισσότερα</string>
     <string name="something_wrong_title">Κάτι πήγε στραβά</string>
     <string name="retry_later_message">Παρακαλώ δοκιμάστε ξανά λίγο αργότερα ή επικοινωνήστε με το κέντρο υποστήριξής μας για να λάβετε βοήθεια.</string>
-    <string name="convert_crypto">Μετατροπή Κρυπτονομισμάτων</string>
     <string name="between_dash_wallet_and_coinbase">Μεταξύ Dash Wallet και Coinbase.</string>
     <string name="conversion_preview">Προεπισκόπηση μετατροπής</string>
     <string name="you_send">θα στείλετε</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">Δεν μπορείτε να στείλετε αυτό το ποσό χωρίς να υπερβείτε το όριο της εφαρμογής</string>
     <string name="dont_have_any_dash"> Δεν έχετε Dash στο Dash Wallet σας.</string>
     <string name="transfer_wallet_not_synced">Οι μεταφορές από το Dash Wallet στο Coinbase δεν είναι δυνατές μέχρι να ολοκληρωθεί ο συγχρονισμός του πορτοφολιού.</string>
-    <string name="disconnected">Αποσυνδεδεμένο</string>
 
     <string name="insufficient_money_title">Ανεπαρκή διαθέσιμα νομίσματα</string>
     <string name="insufficient_money_msg">Το ποσό των νομισμάτων στο πορτοφόλι είναι πολύ μικρό για σάρωση.</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg"> Υπήρξε πρόβλημα με τη μεταφορά στο Dash Wallet σε αυτή τη συσκευή.</string>
     <string name="insufficient_money_to_transfer">Το ποσό των νομισμάτων στο πορτοφόλι είναι πολύ μικρό για μεταφορά.</string>
     <string name="amount_to_transfer">Θα λάβετε %s %s %s</string>
-
+    <string name="amount_to_transfer_dash">θα λάβετε %s</string>
     </resources>

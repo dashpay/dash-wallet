@@ -29,7 +29,7 @@
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:layout_gravity="center_horizontal"
-        tools:src="@drawable/ic_info_red" />
+        tools:src="@drawable/ic_error" />
 
     <TextView
         android:id="@+id/dialog_title"

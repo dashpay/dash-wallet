@@ -130,7 +130,7 @@ public class UpholdWithdrawalHelper {
         }
 
         AdaptiveDialog dialog = AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 activity.getString(R.string.uphold_api_error_title),
                 activity.getString(R.string.uphold_requirement_not_met_base_message, messageDetails),
                 activity.getString(R.string.button_dismiss),

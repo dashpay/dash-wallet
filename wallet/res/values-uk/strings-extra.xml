@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Сканувати для відправки</string>
     <string name="scan_to_pay_error_dialog_message">Некоректна адреса Dash або URL запит у буфері обміну:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Некоректна адреса Dash або URL запит у буфері обміну.</string>
-    <string name="pay_to_confirm_address">Це адреса Dash, на яку ви хочете надіслати платіж?</string>
 
     <string name="receive_title">Отримати</string>
     <string name="receive_enter_amount_message">Вкажіть суму для отримання</string>
@@ -327,8 +326,6 @@
     <string name="security_high">Високий</string>
     <string name="security_very_high">Дуже високий</string>
     <string name="max">Максимум</string>
-
-    <string name="enter_amount_available">доступно</string>
 
     <string name="skip">пропустити</string>
     <string name="get_started">Почати</string>

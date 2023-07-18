@@ -31,10 +31,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
 import de.schildbach.wallet.ui.main.WalletActivity
-import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardingBinding
 import de.schildbach.wallet_test.databinding.ActivityOnboardingPermLockBinding
@@ -206,7 +206,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun startMainActivity() {
-        startActivity(WalletActivity.createIntent(this))
+        val intent = Intent(this, WalletActivity::class.java).apply {
+            putExtras(this@OnboardingActivity.intent.extras ?: Bundle())
+        }
+        startActivity(intent)
         finish()
     }
 

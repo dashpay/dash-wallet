@@ -32,6 +32,7 @@ import de.schildbach.wallet.data.ServiceType
 import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentBuySellIntegrationsBinding
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
@@ -98,6 +99,7 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
 
     private fun onTopperItemClicked() {
         val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
+        viewModel.logEvent(AnalyticsConstants.Topper.ENTER_BUY_SELL)
         requireActivity().openCustomTab(uri)
     }
 
@@ -118,7 +120,6 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
 
     override fun onResume() {
         super.onResume()
-        viewModel.monitorNetworkStateChange()
         viewModel.updateBalances()
         viewModel.updateServicesStatus()
     }

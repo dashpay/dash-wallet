@@ -16,14 +16,13 @@
  */
 package de.schildbach.wallet.ui.send
 
-import androidx.core.os.bundleOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
@@ -146,7 +145,7 @@ class SendCoinsViewModel @Inject constructor(
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
 
         val transaction = try {
-            val finalSendRequest = createSendRequest(
+            val finalSendRequest = sendCoinsTaskRunner.createSendRequest(
                 basePaymentIntent.mayEditAmount(),
                 finalPaymentIntent,
                 true,
@@ -193,14 +192,14 @@ class SendCoinsViewModel @Inject constructor(
 
     fun logSentEvent(dashToFiat: Boolean) {
         if (dashToFiat) {
-            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_DASH, bundleOf())
+            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_DASH, mapOf())
         } else {
-            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_FIAT, bundleOf())
+            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_FIAT, mapOf())
         }
     }
 
     fun logEvent(eventName: String) {
-        analytics.logEvent(eventName, bundleOf())
+        analytics.logEvent(eventName, mapOf())
     }
 
     private fun isPayeePlausible(): Boolean {
@@ -221,7 +220,7 @@ class SendCoinsViewModel @Inject constructor(
 
         try {
             // check regular payment
-            var sendRequest = createSendRequest(
+            var sendRequest = sendCoinsTaskRunner.createSendRequest(
                 basePaymentIntent.mayEditAmount(),
                 finalPaymentIntent,
                 signInputs = false,
@@ -230,7 +229,7 @@ class SendCoinsViewModel @Inject constructor(
             wallet.completeTx(sendRequest)
 
             if (checkDust(sendRequest)) {
-                sendRequest = createSendRequest(
+                sendRequest = sendCoinsTaskRunner.createSendRequest(
                     basePaymentIntent.mayEditAmount(),
                     finalPaymentIntent,
                     signInputs = false,

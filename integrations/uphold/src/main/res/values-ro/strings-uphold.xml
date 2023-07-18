@@ -7,8 +7,6 @@
     <string name="uphold_buy_dash_button">Cumpără Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Transferă din Uphold</string>
     <string name="uphold_link_account">Link Contul Uphold</string>
-    <string name="uphold_account_dash_balance">Soldul tău Dash din contul Uphold este</string>
-    <string name="uphold_transfer_to_this_wallet">Transferă Dash din contul tău Uphold în acest portofel</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Taxa va fi dedusă din suma solicitată.</string>
     <string name="uphold_withdrawal_success_title">Success</string>
     <string name="uphold_withdrawal_success_message">Tranzacția ta a fost trimisă, iar suma ar trebui să apară în portofel în câteva minute.\n\nIDTranzacție: %s</string>
@@ -20,7 +18,6 @@
     <string name="uphold_logout_explanation_text">De asemenea, va trebui să te deconectezi de pe site-ul Uphold folosind browserul tău.</string>
     <string name="uphold_go_to_website">Mergi la Website</string>
     <string name="uphold_error">Eroare Uphold</string>
-    <string name="uphold_error_not_logged_in">Portofelul Dash nu mai este conectat la contul tău Uphold. Pe ecranul următor, apasă Conectează contul Uphold.</string>
     <string name="uphold_error_not_available">Serviciul Uphold nu este disponibil. Te rog să încerci din nou mai târziu.</string>
     <string name="uphold_error_report_issue">Te rog să raportezi această problemă echipei de asistență Dash Wallet folosind „Raportează problema” din meniul principal.</string>
 

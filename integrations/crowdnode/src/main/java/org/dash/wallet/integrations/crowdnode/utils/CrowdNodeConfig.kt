@@ -18,19 +18,23 @@
 package org.dash.wallet.integrations.crowdnode.utils
 
 import android.content.Context
-import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import java.io.IOException
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.BaseConfig
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-open class CrowdNodeConfig @Inject constructor(private val context: Context) {
+open class CrowdNodeConfig @Inject constructor(
+    context: Context,
+    walletDataProvider: WalletDataProvider
+) : BaseConfig(context, PREFERENCES_NAME, walletDataProvider) {
     companion object {
+        const val PREFERENCES_NAME = "crowdnode"
+
         val INFO_SHOWN = booleanPreferencesKey("info_shown")
         val ONLINE_INFO_SHOWN = booleanPreferencesKey("online_info_shown")
         val CONFIRMATION_DIALOG_SHOWN = booleanPreferencesKey("confirmation_dialog_shown")
@@ -42,33 +46,5 @@ open class CrowdNodeConfig @Inject constructor(private val context: Context) {
         val WITHDRAWAL_LIMIT_PER_TX = longPreferencesKey("withdrawal_limit_per_tx")
         val WITHDRAWAL_LIMIT_PER_HOUR = longPreferencesKey("withdrawal_limit_per_hour")
         val WITHDRAWAL_LIMIT_PER_DAY = longPreferencesKey("withdrawal_limit_per_day")
-    }
-
-    private val Context.dataStore by preferencesDataStore("crowdnode")
-    private val dataStore = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-
-    open fun <T> observePreference(key: Preferences.Key<T>): Flow<T?> {
-        return dataStore.map { preferences -> preferences[key] }
-    }
-
-    open suspend fun <T> getPreference(key: Preferences.Key<T>): T? {
-        return dataStore.map { preferences -> preferences[key] }.first()
-    }
-
-    open suspend fun <T> setPreference(key: Preferences.Key<T>, value: T) {
-        context.dataStore.edit { preferences ->
-            preferences[key] = value
-        }
-    }
-
-    open suspend fun clearAll() {
-        context.dataStore.edit { it.clear() }
     }
 }

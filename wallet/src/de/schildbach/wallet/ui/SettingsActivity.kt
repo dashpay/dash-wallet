@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.more.AboutActivity
@@ -27,7 +26,7 @@ import de.schildbach.wallet.ui.rates.ExchangeRatesActivity
 import de.schildbach.wallet.ui.rates.ExchangeRatesFragment.*
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySettingsBinding
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -57,11 +56,11 @@ class SettingsActivity : LockScreenActivity() {
         binding.appBar.toolbar.setNavigationOnClickListener { finish() }
 
         binding.about.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.ABOUT, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.ABOUT, mapOf())
             startActivity(Intent(this, AboutActivity::class.java))
         }
         binding.localCurrency.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY, mapOf())
             val intent = Intent(this, ExchangeRatesActivity::class.java)
             intent.putExtra(ARG_SHOW_AS_DIALOG, false)
             intent.putExtra(ARG_CURRENCY_CODE, configuration.exchangeCurrencyCode)
@@ -87,13 +86,13 @@ class SettingsActivity : LockScreenActivity() {
         ).show(this) {
             if (it == true) {
                 log.info("manually initiated blockchain reset")
-                analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, bundleOf())
+                analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, mapOf())
 
                 walletApplication.resetBlockchain()
                 configuration.updateLastBlockchainResetTime()
                 startActivity(WalletActivity.createIntent(this@SettingsActivity))
             } else {
-                analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, bundleOf())
+                analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, mapOf())
             }
         }
     }

@@ -25,17 +25,17 @@ import androidx.core.view.isVisible
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.bitmap.RoundedCorners
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import coil.load
+import coil.size.Scale
+import coil.transform.RoundedCornersTransformation
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.*
+import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.AtmRowBinding
 import org.dash.wallet.features.exploredash.databinding.MerchantRowBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import java.util.*
 
-open class ExploreViewHolder(root: View): RecyclerView.ViewHolder(root) {
+open class ExploreViewHolder(root: View) : RecyclerView.ViewHolder(root) {
     fun getDistanceText(resources: Resources, item: SearchResult?): String {
         val isMetric = Locale.getDefault().isMetric
         val distanceStr = item?.getDistanceStr(isMetric)
@@ -48,7 +48,7 @@ open class ExploreViewHolder(root: View): RecyclerView.ViewHolder(root) {
     }
 }
 
-class SearchResultDiffCallback<T: SearchResult> : DiffUtil.ItemCallback<T>() {
+class SearchResultDiffCallback<T : SearchResult> : DiffUtil.ItemCallback<T>() {
     override fun areItemsTheSame(oldItem: T, newItem: T): Boolean {
         return oldItem.id == newItem.id
     }
@@ -58,9 +58,8 @@ class SearchResultDiffCallback<T: SearchResult> : DiffUtil.ItemCallback<T>() {
     }
 }
 
-class MerchantsAtmsResultAdapter(
-    private val clickListener: (SearchResult, RecyclerView.ViewHolder) -> Unit
-) : PagingDataAdapter<SearchResult, RecyclerView.ViewHolder>(SearchResultDiffCallback()) {
+class MerchantsAtmsResultAdapter(private val clickListener: (SearchResult, RecyclerView.ViewHolder) -> Unit) :
+    PagingDataAdapter<SearchResult, RecyclerView.ViewHolder>(SearchResultDiffCallback()) {
 
     override fun getItemViewType(position: Int): Int {
         if (position >= itemCount) {
@@ -113,17 +112,19 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
         val resources = binding.root.resources
         binding.title.text = merchant?.name
         binding.subtitle.text = getDistanceText(resources, merchant)
-        binding.subtitle.isVisible = merchant?.type != MerchantType.ONLINE &&
-                binding.subtitle.text.isNotEmpty()
+        binding.subtitle.isVisible = merchant?.type != MerchantType.ONLINE && binding.subtitle.text.isNotEmpty()
 
-        Glide.with(binding.root.context)
-            .load(merchant?.logoLocation)
-            .error(R.drawable.ic_image_placeholder)
-            .transition(DrawableTransitionOptions.withCrossFade(200))
-            .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
-            .into(binding.logoImg)
+        binding.logoImg.load(merchant?.logoLocation) {
+            crossfade(200)
+            scale(Scale.FILL)
+            placeholder(R.drawable.ic_image_placeholder)
+            error(R.drawable.ic_image_placeholder)
+            transformations(
+                RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
+            )
+        }
 
-        when(merchant?.paymentMethod?.trim()?.lowercase()) {
+        when (merchant?.paymentMethod?.trim()?.lowercase()) {
             PaymentMethod.DASH -> binding.methodImg.setImageResource(R.drawable.ic_dash_pay)
             PaymentMethod.GIFT_CARD -> binding.methodImg.setImageResource(R.drawable.ic_gift_card_rounded)
         }
@@ -136,21 +137,25 @@ class AtmViewHolder(val binding: AtmRowBinding) : ExploreViewHolder(binding.root
         binding.title.text = atm?.name
         val manufacturer = atm?.manufacturer?.replaceFirstChar { it.titlecase() } ?: ""
         val distanceText = getDistanceText(resources, atm)
-        binding.subtitle.text = if (distanceText.isEmpty()) {
-            manufacturer
-        } else {
-            "$distanceText • $manufacturer"
-        }
+        binding.subtitle.text =
+            if (distanceText.isEmpty()) {
+                manufacturer
+            } else {
+                "$distanceText • $manufacturer"
+            }
         binding.subtitle.isVisible = binding.subtitle.text.isNotEmpty()
 
-        Glide.with(binding.root.context)
-            .load(atm?.logoLocation)
-            .error(R.drawable.ic_image_placeholder)
-            .transition(DrawableTransitionOptions.withCrossFade(200))
-            .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
-            .into(binding.logoImg)
+        binding.logoImg.load(atm?.logoLocation) {
+            crossfade(200)
+            scale(Scale.FILL)
+            placeholder(R.drawable.ic_image_placeholder)
+            error(R.drawable.ic_image_placeholder)
+            transformations(
+                RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
+            )
+        }
 
-        binding.buyIcon.isVisible = atm?.type == AtmType.BOTH || atm?.type == AtmType.BUY
-        binding.sellIcon.isVisible = atm?.type == AtmType.BOTH || atm?.type == AtmType.SELL
+        binding.buyIcon.isVisible = atm?.type != AtmType.SELL
+        binding.sellIcon.isVisible = atm?.type != AtmType.BUY && !atm?.type.isNullOrEmpty()
     }
 }

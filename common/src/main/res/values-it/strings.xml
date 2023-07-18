@@ -75,8 +75,18 @@
     <string name="select_currency">Seleziona Valuta</string>
     <string name="send_coins_error_dusty_send">L\'importo è troppo piccolo per l\'invio</string>
     <string name="send_coins_error_insufficient_money">Fondi insufficenti</string>
+    <string name="no_connection">Nessuna connessione internet</string>
+    <string name="rate_not_available">Non disponibile</string>
 
     <string name="empty_wallet_warning_title">Sembra che tu stia svuotando il tuo Dash Wallet</string>
     <string name="empty_wallet_crowdnode_warning">Attenzione: non potrai prelevare i tuoi fondi da CrowdNode su questo portafoglio finché non aumenterai il tuo saldo a 0,0003 Dash.</string>
     <string name="syncing">Sincronizzazione</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">Ricevi direttamente in Dash Wallet</string>
+    <string name="convert_crypto">Converti criptovalute</string>
+    <string name="last_known_balance" >Ultimo saldo noto</string>
+    <string name="disconnected">Disconnesso</string>
+    <string name="enter_amount_available">disponibile</string>
+    <string name="transaction_row_rate_not_available">Non disponibile</string>
 </resources>

@@ -20,10 +20,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
-import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.util.Constants
@@ -51,27 +49,6 @@ open class SendCoinsBaseViewModel @Inject constructor(
         if (paymentIntent.hasAddress()) { // avoid the exception for a missing address in a BIP70 payment request
             _address.value = paymentIntent.address.toBase58()
         }
-    }
-
-    protected fun createSendRequest(
-        mayEditAmount: Boolean,
-        paymentIntent: PaymentIntent,
-        signInputs: Boolean,
-        forceEnsureMinRequiredFee: Boolean
-    ): SendRequest {
-        // to make sure the correct instance of Transaction class is used in toSendRequest() method
-        paymentIntent.setInstantX(false)
-        val sendRequest = paymentIntent.toSendRequest()
-        sendRequest.coinSelector = ZeroConfCoinSelector.get()
-        sendRequest.useInstantSend = false
-        sendRequest.feePerKb = Constants.ECONOMIC_FEE
-        sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
-        sendRequest.signInputs = signInputs
-
-        val walletBalance = wallet.getBalance(MaxOutputAmountCoinSelector())
-        sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
-
-        return sendRequest
     }
 
     protected fun checkDust(req: SendRequest): Boolean {

@@ -75,8 +75,18 @@
     <string name="select_currency">Vyberte menu</string>
     <string name="send_coins_error_dusty_send">Čiastka je príliš nízka pre odoslanie</string>
     <string name="send_coins_error_insufficient_money">Nedostatok prostriedkov</string>
+    <string name="no_connection">Žiadne pripojenie k internetu</string>
+    <string name="rate_not_available">Nie je k dispozícií</string>
 
     <string name="empty_wallet_warning_title">Zdá sa, že vyprázdňujete svoju Dash peňaženku</string>
     <string name="empty_wallet_crowdnode_warning">Upozorňujeme, že nebudete môcť vybrať svoje prostriedky z CrowdNode do tejto peňaženky, kým nezvýšite svoj zostatok na 0,0003 Dash.</string>
     <string name="syncing">Synchronizuje sa</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">Obdržať priamo do Dash peňaženky</string>
+    <string name="convert_crypto">Zameniť kryptomeny</string>
+    <string name="last_known_balance" >Posledná známa bilancia</string>
+    <string name="disconnected">Odpojený</string>
+    <string name="enter_amount_available">dostupné</string>
+    <string name="transaction_row_rate_not_available">Nie je k dispozícií</string>
 </resources>

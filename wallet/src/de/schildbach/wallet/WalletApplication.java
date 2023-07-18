@@ -30,9 +30,6 @@ import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager.NameNotFoundException;
 import android.database.sqlite.SQLiteException;
 import android.media.AudioAttributes;
 import android.net.Uri;
@@ -63,6 +60,8 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.crypto.LinuxSecureRandom;
+import org.bitcoinj.utils.Threading;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.utils.Threading;
@@ -84,8 +83,10 @@ import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
-import org.dash.wallet.features.exploredash.di.ExploreDashModule;
+import org.dash.wallet.features.exploredash.utils.DashDirectConstants;
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants;
+
+import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -121,8 +122,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import dagger.hilt.android.HiltAndroidApp;
-import org.dash.wallet.common.data.BlockchainState;
-import de.schildbach.wallet.data.BlockchainStateDao;
+import org.dash.wallet.common.data.entity.BlockchainState;
+import de.schildbach.wallet.database.dao.BlockchainStateDao;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
@@ -131,7 +132,7 @@ import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.transactions.WalletObserver;
 import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
-import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.security.PinRetryController;
 import de.schildbach.wallet.security.SecurityGuard;
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.CrashReporter;
@@ -162,7 +163,6 @@ public class WalletApplication extends MultiDexApplication
     private File walletFile;
     private Wallet wallet;
     private AuthenticationGroupExtension authenticationGroupExtension;
-    private PackageInfo packageInfo;
 
     public static final String ACTION_WALLET_REFERENCE_CHANGED = WalletApplication.class.getPackage().getName()
             + ".wallet_reference_changed";
@@ -189,9 +189,10 @@ public class WalletApplication extends MultiDexApplication
     BlockchainStateDao blockchainStateDao;
     @Inject
     CrowdNodeConfig crowdNodeConfig;
-
     @Inject
     TransactionMetadataProvider transactionMetadataProvider;
+    @Inject
+    PackageInfoProvider packageInfoProvider;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -266,14 +267,14 @@ public class WalletApplication extends MultiDexApplication
 
         Threading.uncaughtExceptionHandler = (thread, throwable) -> {
             log.info("dashj uncaught exception", throwable);
-            CrashReporter.saveBackgroundTrace(throwable, packageInfo);
+            CrashReporter.saveBackgroundTrace(throwable, packageInfoProvider.getPackageInfo());
         };
 
         try {
             syncExploreData();
         } catch (Exception ex) {
             log.error(ex.getMessage(), ex);
-            CrashReporter.saveBackgroundTrace(ex, packageInfo);
+            CrashReporter.saveBackgroundTrace(ex, packageInfoProvider.getPackageInfo());
         }
 
         resetBlockchainSyncProgress();
@@ -311,8 +312,6 @@ public class WalletApplication extends MultiDexApplication
 
         log.info("=== starting app using configuration: {}, {}", BuildConfig.FLAVOR,
                 Constants.NETWORK_PARAMETERS.getId());
-
-        packageInfo = packageInfoFromContext(this);
 
         MnemonicCodeExt.initMnemonicCode(this);
 
@@ -358,13 +357,13 @@ public class WalletApplication extends MultiDexApplication
     public void finalizeInitialization() {
         wallet.getContext().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
 
-        if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER)
+        if (config.versionCodeCrossed(packageInfoProvider.getVersionCode(), VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
             log.info("showing backup reminder once, because of imported keys being present");
             config.armBackupReminder();
         }
 
-        config.updateLastVersionCode(packageInfo.versionCode);
+        config.updateLastVersionCode(packageInfoProvider.getVersionCode());
 
         if (config.getTaxCategoryInstallTime() == 0) {
             config.setTaxCategoryInstallTime(System.currentTimeMillis());
@@ -380,6 +379,7 @@ public class WalletApplication extends MultiDexApplication
 
         initUphold();
         initCoinbase();
+        initDashDirect();
     }
 
     private void initUphold() {
@@ -398,6 +398,10 @@ public class WalletApplication extends MultiDexApplication
     private void initCoinbase() {
         CoinBaseClientConstants.CLIENT_ID = BuildConfig.COINBASE_CLIENT_ID;
         CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
+    }
+
+    private void initDashDirect() {
+        DashDirectConstants.CLIENT_ID = BuildConfig.DASHDIRECT_CLIENT_ID;
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -708,12 +712,6 @@ public class WalletApplication extends MultiDexApplication
             }
         }
     }
-
-    private void clearExploreConfig() {
-        SharedPreferences prefs = getSharedPreferences(ExploreDashModule.Companion.getPREFERENCES_FILENAME(), Context.MODE_PRIVATE);
-        prefs.edit().clear().apply();
-    }
-
     private void clearWebCookies() {
         CookieManager.getInstance().removeAllCookies(null);
         CookieManager.getInstance().flush();
@@ -801,39 +799,6 @@ public class WalletApplication extends MultiDexApplication
         intent.putExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH, tx.getHash().getBytes());
         startService(intent);
     }
-
-    public static PackageInfo packageInfoFromContext(final Context context) {
-        try {
-            return context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
-        } catch (final NameNotFoundException x) {
-            throw new RuntimeException(x);
-        }
-    }
-
-    public PackageInfo packageInfo() {
-        return packageInfo;
-    }
-
-    public final String applicationPackageFlavor() {
-        final String packageName = getPackageName();
-        final int index = packageName.lastIndexOf('_');
-
-        if (index != -1)
-            return packageName.substring(index + 1);
-        else
-            return null;
-    }
-
-    public static String httpUserAgent(final String versionName) {
-        final VersionMessage versionMessage = new VersionMessage(Constants.NETWORK_PARAMETERS, 0);
-        versionMessage.appendToSubVer(Constants.USER_AGENT, versionName, null);
-        return versionMessage.subVer;
-    }
-
-    public String httpUserAgent() {
-        return httpUserAgent(packageInfo().versionName);
-    }
-
     public boolean isLowRamDevice() {
         if (activityManager == null)
             return false;
@@ -936,7 +901,6 @@ public class WalletApplication extends MultiDexApplication
         shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
-        clearExploreConfig();
         clearDatastorePrefs();
         clearWebCookies();
         notifyWalletWipe();
@@ -1057,6 +1021,12 @@ public class WalletApplication extends MultiDexApplication
         }
 
         return new MasternodeObserver(authenticationGroupExtension).observeAuthenticationKeyUsage();
+    }
+
+    @Nullable
+    @Override
+    public Transaction getTransaction(@NonNull Sha256Hash hash) {
+        return wallet.getTransaction(hash);
     }
 
     @NonNull

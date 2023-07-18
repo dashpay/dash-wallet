@@ -34,7 +34,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -43,8 +43,10 @@ import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.ui.wiggle
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentTransferBinding
 import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardDepositHeaderBinding
@@ -132,7 +134,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 getString(
                     R.string.exchange_rate_template,
                     Coin.COIN.toPlainString(),
-                    GenericUtils.fiatToString(rate.fiat)
+                    rate.fiat.toFormattedString()
                 )
             } else {
                 ""
@@ -311,29 +313,14 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         binding.balanceText.text = when {
             dashToFiat -> getString(R.string.available_balance, balance.toFriendlyString())
             rate != null -> getString(R.string.available_balance,
-                GenericUtils.fiatToString(rate.coinToFiat(balance)))
+                rate.coinToFiat(balance).toFormattedString())
             else -> ""
         }
     }
 
     private fun showErrorBanner() {
         binding.messageBanner.setBackgroundColor(resources.getColor(R.color.content_warning, null))
-        runWiggleAnimation(binding.messageBanner)
-    }
-
-    private fun runWiggleAnimation(view: View) {
-        val frequency = 3f
-        val decay = 2f
-        val decayingSineWave = TimeInterpolator { input ->
-            val raw = sin(frequency * input * 2 * Math.PI)
-            (raw * exp((-input * decay).toDouble())).toFloat()
-        }
-
-        view.animate()
-            .xBy(-100f)
-            .setInterpolator(decayingSineWave)
-            .setDuration(300)
-            .start()
+        binding.messageBanner.wiggle()
     }
 
     private suspend fun showWithdrawalLimitsInfo() {

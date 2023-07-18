@@ -33,7 +33,7 @@ import de.schildbach.wallet_test.databinding.ItemServiceListBinding
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 
 class BuyAndSellDashServicesAdapter(
     val balanceFormat: MonetaryFormat,
@@ -110,7 +110,7 @@ class BuyAndSellDashServicesAdapter(
 
                 if (data.localBalance != null) {
                     binding.serviceFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} " +
-                        GenericUtils.fiatToString(data.localBalance)
+                        data.localBalance.toFormattedString()
                 }
 
                 if (data.serviceType == ServiceType.TOPPER) {

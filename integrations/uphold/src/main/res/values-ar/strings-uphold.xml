@@ -9,8 +9,6 @@
     <string name="uphold_buy_dash_button">شراء داش</string>
     <string name="uphold_transfer_to_this_wallet_button">نقل من Uphold</string>
     <string name="uphold_link_account">اربط حساب Uphold</string>
-    <string name="uphold_account_dash_balance">رصيد داش في حسابك في Uphold هو</string>
-    <string name="uphold_transfer_to_this_wallet">نقل داش من حسابك في Uphold لهذه المحفظة</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">سيتم خصم الرسوم من الرصيد المطلوب.</string>
     <string name="uphold_withdrawal_instructions">أدخل المبلغ المراد تحويله</string>
     <string name="uphold_withdrawal_success_title">نجاح</string>
@@ -23,7 +21,6 @@
     <string name="uphold_logout_explanation_text">ستحتاج أيضًا إلى تسجيل الخروج من موقع Uphold باستخدام متصفحك</string>
     <string name="uphold_go_to_website">اذهب الى الموقع</string>
     <string name="uphold_error">خطأ Uphold</string>
-    <string name="uphold_error_not_logged_in">لم تعد Dash Wallet مرتبطة بحسابك في Uphold. في الشاشة التالية ، اضغط على ربط حساب Uphold .</string>
     <string name="uphold_error_not_available">خدمة Uphold غير متوفرة. الرجاء معاودة المحاولة في وقت لاحق.</string>
     <string name="uphold_error_report_issue">يرجى الإبلاغ عن هذه المشكلة إلى فريق دعم Dash Wallet باستخدام \"الابلاغ عن مشكلة\" من القائمة الرئيسية.</string>
 

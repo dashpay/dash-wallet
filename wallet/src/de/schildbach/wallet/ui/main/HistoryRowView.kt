@@ -17,21 +17,20 @@
 
 package de.schildbach.wallet.ui.main
 
+import org.dash.wallet.common.util.ResourceString
 import java.time.LocalDate
 
 open class HistoryRowView(
-    val title: String = "",
-    val status: String = "",
-    val localDate: LocalDate = LocalDate.now()
+    open val title: ResourceString? = null,
+    val localDate: LocalDate? = null
 ) {
     override fun equals(other: Any?): Boolean {
-        return other is HistoryRowView &&
-            other.title == title && other.status == status
+        return other is HistoryRowView && other.title == title && other.localDate == localDate
     }
 
     override fun hashCode(): Int {
-        var result = title.hashCode()
-        result = 31 * result + status.hashCode()
+        var result = title?.hashCode() ?: 0
+        result = 31 * result + (localDate?.hashCode() ?: 0)
         return result
     }
 }

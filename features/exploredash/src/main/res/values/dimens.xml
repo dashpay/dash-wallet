@@ -34,4 +34,7 @@
     <dimen name="search_results_margin_top">12dp</dimen>
     <dimen name="all_locations_margin_top">6dp</dimen>
     <dimen name="markers_offset">50dp</dimen>
+
+    <dimen name="gift_card_icon_size">50dp</dimen>
+    <dimen name="barcode_qr_size">160dp</dimen>
 </resources>

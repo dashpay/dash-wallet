@@ -20,31 +20,27 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.Event
-import org.dash.wallet.common.livedata.NetworkStateInt
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.*
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.util.toFormattedStringNoCode
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
 
-@ExperimentalCoroutinesApi
 @HiltViewModel
 class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
@@ -52,24 +48,24 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val config: CoinbaseConfig,
     private val walletDataProvider: WalletDataProvider,
     var exchangeRates: ExchangeRatesProvider,
-    var networkState: NetworkStateInt,
+    networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
-) : ConnectivityViewModel(networkState) {
+) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
     private val _baseIdForFaitModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
 
-    private val _swapTradeOrder: MutableLiveData<Event<SwapTradeUIModel>> = MutableLiveData()
-    val swapTradeOrder: LiveData<Event<SwapTradeUIModel>>
-        get() = _swapTradeOrder
+    val swapTradeOrder = SingleLiveEvent<SwapTradeUIModel>()
 
     val swapTradeFailedCallback = SingleLiveEvent<String?>()
 
     private val _dashWalletBalance = MutableLiveData<Coin>()
     val dashWalletBalance: LiveData<Coin>
         get() = this._dashWalletBalance
+
+    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
     lateinit var exchangeRate: ExchangeRate
 
@@ -93,7 +89,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
             _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == Constants.DASH_CURRENCY }?.base_id ?: ""
 
         val tradesRequest = TradesRequest(
-            GenericUtils.fiatToStringWithoutCurrencyCode(valueToConvert),
+            valueToConvert.toFormattedStringNoCode(),
             userPreference.exchangeCurrencyCode!!,
             source_asset = source_asset,
             target_asset = target_asset
@@ -116,7 +112,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
                         this.outputCurrencyName = if (dashToCrypt) selectedCoinBaseAccount.coinBaseUserAccountData.currency?.name ?: ""
                         else
                             "Dash"
-                        _swapTradeOrder.value = Event(this)
+                        swapTradeOrder.value = this
                     }
                 }
             }
@@ -139,7 +135,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     }
 
     suspend fun getUserWalletAccounts(dashToCrypt: Boolean): List<CoinBaseUserAccountDataUIModel> {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SELECT_COIN, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SELECT_COIN, mapOf())
 
         return when (
             val response = coinBaseRepository.getUserAccounts(userPreference.exchangeCurrencyCode!!)
@@ -156,7 +152,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 
     suspend fun getLastBalance(): Coin {

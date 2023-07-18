@@ -17,7 +17,6 @@
 package de.schildbach.wallet.ui.more
 
 import android.content.Intent
-import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -74,15 +73,15 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         }
 
         binding.addressBook.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.ADDRESS_BOOK, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.ADDRESS_BOOK, mapOf())
             startActivity(Intent(requireContext(), AddressBookActivity::class.java))
         }
         binding.importKeys.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, mapOf())
             startActivity(Intent(requireContext(), SweepWalletActivity::class.java))
         }
         binding.networkMonitor.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.NETWORK_MONITORING, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.NETWORK_MONITORING, mapOf())
             startActivity(Intent(requireContext(), NetworkMonitorActivity::class.java))
         }
         binding.masternodeKeys.setOnClickListener {
@@ -140,14 +139,10 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
 
     private fun showExtendedPublicKeyDialog(xpubWithCreationDate: String, xpub: String) {
         val view = LayoutInflater.from(requireContext()).inflate(R.layout.extended_public_key_dialog, null)
-        val bitmap = BitmapDrawable(
-            resources,
-            Qr.bitmap(xpubWithCreationDate)
-        )
-        bitmap.isFilterBitmap = false
+        val drawable = Qr.themeAwareDrawable(xpubWithCreationDate, resources)
         val imageView = view.findViewById<ImageView>(R.id.extended_public_key_dialog_image)
         val xpubView = view.findViewById<TextView>(R.id.extended_public_key_dialog_xpub)
-        imageView.setImageDrawable(bitmap)
+        imageView.setImageDrawable(drawable)
         xpubView.text = xpub
 
         xpubView.setOnClickListener {

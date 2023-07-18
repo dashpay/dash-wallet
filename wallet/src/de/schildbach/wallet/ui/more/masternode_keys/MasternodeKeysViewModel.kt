@@ -309,7 +309,7 @@ class MasternodeKeysViewModel @Inject constructor(
         val bytes = ByteArray(64)
         decryptedKey.privKeyBytes.copyInto(bytes, 0, 0, 32)
         // public key bytes have a 0x00 prefix byte that is ignored
-        decryptedKey.pubKey.copyInto(bytes, 32, 1, 32)
+        decryptedKey.pubKey.copyInto(bytes, 32, 1, 33)
         val privatePublicKeyBase64 = Base64.toBase64String(bytes)
 
         return MasternodeKeyInfo(key, privateKeyHex, privateKeyWif, privatePublicKeyBase64)

@@ -43,11 +43,6 @@ abstract class DataProviderModule {
         fun provideWalletData(
             @ApplicationContext context: Context
         ): WalletDataProvider = context as WalletApplication
-
-        @Singleton
-        @Provides
-        fun provideExchangeRateRepository(): ExchangeRatesProvider =
-            ExchangeRatesRepository.instance
     }
 
     @Binds
@@ -59,4 +54,10 @@ abstract class DataProviderModule {
     abstract fun bindTransactionMetadata(
         transactionMetadataService: WalletTransactionMetadataProvider
     ): TransactionMetadataProvider
+
+    @Singleton
+    @Binds
+    abstract fun bindExchangeRateRepository(
+        exchangeRatesRepository: ExchangeRatesRepository
+    ): ExchangeRatesProvider
 }

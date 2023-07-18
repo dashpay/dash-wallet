@@ -2,15 +2,18 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="topper">Topper</string>
     <string name="uphold_link_title">Прив’яжіть свій обліковий запис Uphold</string>
+    <string name="uphold_powered_by">Технологія Topper</string>
+    <string name="topper_powered_by">Технологія Uphold</string>
     <string name="uphold_transfer_details">Від Uphold до вашого Dash Wallet</string>
     <string name="uphold_buy_dash_activity_title">Купуйте/продавайте Dash з Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Купити Dash за допомогою акаунта Uphold</string>
     <string name="uphold_buy_dash_button">Купити Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Переказ з Uphold</string>
     <string name="uphold_link_account">Прив\'язати акаунт Uphold</string>
-    <string name="uphold_account_dash_balance">Ваш баланс Dash на Uphold складає</string>
-    <string name="uphold_transfer_to_this_wallet">Переказати Dash з Uphold облікового запису на цей гаманець</string>
+    <string name="uphold_account_dash_balance">Баланс Dash на Uphold</string>
+    <string name="uphold_transfer_to_this_wallet">Від Uphold до Dash Wallet</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Комісія буде списана із запитаної суми.</string>
     <string name="uphold_withdrawal_instructions">Вкажіть суму переказу</string>
     <string name="uphold_withdrawal_success_title">Успішно</string>
@@ -19,11 +22,12 @@
     <string name="uphold_transfer">Переказати</string>
     <string name="uphold_see_on_uphold">Переглянути на Uphold</string>
     <string name="uphold_logout_title">Вийти з Uphold</string>
+    <string name="uphold_disconnect">ВІдключити обліковий запис Uphold</string>
     <string name="uphold_logout">Вийти</string>
     <string name="uphold_logout_explanation_text">Вам також потрібно буде вийти з веб-сайту Uphold за допомогою браузера</string>
     <string name="uphold_go_to_website">Перейти на сайт</string>
     <string name="uphold_error">Помилка Uphold</string>
-    <string name="uphold_error_not_logged_in">Dash Wallet більше не пов’язано з вашим обліковим записом Uphold. На наступному екрані натисніть Прив\'язати акаунт Uphold.</string>
+    <string name="uphold_error_not_logged_in">Dash Wallet більше не з\'єднаний з вашим обліковим записом Uphold.</string>
     <string name="uphold_error_not_available">Сервіс Uphold недоступний. Будь ласка, спробуйте пізніше.</string>
     <string name="uphold_error_report_issue">Повідомте про цю проблему команді підтримки Dash Wallet за допомогою пункту Повідомити про проблему в головному меню.</string>
 

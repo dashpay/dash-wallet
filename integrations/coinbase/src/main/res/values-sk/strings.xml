@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >Posledná známa bilancia</string>
     <string name="coinbase_link_title">Prepojiť váš účet na Coinbase</string>
     <string name="coinbase_link">Prepojiť účet na Coinbase</string>
     <string name="coinbase_transfer_details">Medzi Dash peňaženkou a vaším účtom na Coinbase</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">Odpojte Coinbase účet</string>
     <string name="receive_directly_into_dash_wallet">Prijímajte priamo do Dash peňaženky.</string>
     <string name="buy_dash">Kúpiť Dash</string>
-    <string name="balance_on_coinbase">Zostatok na Coinbase</string>
+    <string name="balance_on_coinbase">Zostatok Dash na Coinbase</string>
     <string name="sending_to">Posiela sa</string>
     <string name="dash_wallet_device">Peňaženka Dash v tomto zariadení</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,7 @@
     <string name="learn_more">Ďalšie informácie</string>
     <string name="something_wrong_title">Niečo sa pokazilo!</string>
     <string name="retry_later_message">Skúste to znova o niečo neskôr alebo kontaktujte naše centrum podpory a požiadajte o pomoc</string>
-    <string name="convert_crypto">Zameniť kryptomeny</string>
-    <string name="between_dash_wallet_and_coinbase">Medzi peňaženkou Dash a Coinbase.</string>
+    <string name="between_dash_wallet_and_coinbase">Medzi Dash peňaženkou a Coinbase</string>
     <string name="conversion_preview">Ukážka konverzie</string>
     <string name="you_send">vy posielate</string>
     <string name="from_your_coinbase_account">Z vášho Coinbase účtu</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">Túto sumu nie je možné odoslať bez prekročenia limitu aplikácie</string>
     <string name="dont_have_any_dash">V Dash peňaženke nemáte žiadny Dash.</string>
     <string name="transfer_wallet_not_synced">Prevody z Dash peňaženky do Coinbase nie sú možné, kým nie je dokončená synchronizácia peňaženky.</string>
-    <string name="disconnected">Odpojený</string>
 
     <string name="insufficient_money_title">Nedostatok mincí</string>
     <string name="insufficient_money_msg">Počet mincí v peňaženke je pre načítanie príliš nízky.</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg"> Pri prenose do Dash peňaženky na tomto zariadení sa vyskytol problém.</string>
     <string name="insufficient_money_to_transfer">Na prevod je množstvo mincí v peňaženke príliš malé.</string>
     <string name="amount_to_transfer">Dostanete %s %s%s</string>
-
+    <string name="amount_to_transfer_dash">Dostanete %s</string>
     </resources>

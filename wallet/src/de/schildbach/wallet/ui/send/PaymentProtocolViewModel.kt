@@ -1,17 +1,18 @@
 /*
- * Copyright 2020 Dash Core Group
+ * Copyright 2020 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package de.schildbach.wallet.ui.send
 
@@ -33,6 +34,7 @@ import de.schildbach.wallet.offline.DirectPaymentTask.HttpPaymentTask
 import de.schildbach.wallet.payments.RequestPaymentRequestTask
 import de.schildbach.wallet.payments.RequestPaymentRequestTask.HttpRequestTask
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -46,7 +48,7 @@ import org.bitcoinj.wallet.KeyChain.KeyPurpose
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -57,6 +59,7 @@ class PaymentProtocolViewModel @Inject constructor(
     configuration: Configuration,
     exchangeRates: ExchangeRatesProvider,
     private val walletApplication: WalletApplication,
+    private val packageInfoProvider: PackageInfoProvider,
     private val sendCoinsTaskRunner: SendCoinsTaskRunner
 ) : SendCoinsBaseViewModel(walletData, configuration) {
 
@@ -161,7 +164,7 @@ class PaymentProtocolViewModel @Inject constructor(
             }
         }
 
-        HttpRequestTask(backgroundHandler, requestCallback, walletApplication.httpUserAgent())
+        HttpRequestTask(backgroundHandler, requestCallback, packageInfoProvider.httpUserAgent())
             .requestPaymentRequest(basePaymentIntent.paymentRequestUrl)
     }
 
@@ -169,7 +172,7 @@ class PaymentProtocolViewModel @Inject constructor(
         backgroundHandler.post {
             Context.propagate(Constants.CONTEXT)
             try {
-                var sendRequest = createSendRequest(
+                var sendRequest = sendCoinsTaskRunner.createSendRequest(
                     false,
                     paymentIntent,
                     signInputs = false,
@@ -178,7 +181,7 @@ class PaymentProtocolViewModel @Inject constructor(
 
                 wallet.completeTx(sendRequest)
                 if (checkDust(sendRequest)) {
-                    sendRequest = createSendRequest(
+                    sendRequest = sendCoinsTaskRunner.createSendRequest(
                         false,
                         paymentIntent,
                         signInputs = false,
@@ -200,7 +203,7 @@ class PaymentProtocolViewModel @Inject constructor(
     }
 
     fun sendPayment() {
-        val finalSendRequest = createSendRequest(
+        val finalSendRequest = sendCoinsTaskRunner.createSendRequest(
             basePaymentIntent.mayEditAmount(),
             finalPaymentIntent!!,
             true,
@@ -242,8 +245,12 @@ class PaymentProtocolViewModel @Inject constructor(
             }
         }
 
-        HttpPaymentTask(backgroundHandler, callback, finalPaymentIntent!!.paymentUrl, walletApplication.httpUserAgent())
-            .send(payment)
+        HttpPaymentTask(
+            backgroundHandler,
+            callback,
+            finalPaymentIntent!!.paymentUrl,
+            packageInfoProvider.httpUserAgent()
+        ).send(payment)
     }
 
     suspend fun commitAndBroadcast(sendRequest: SendRequest): Transaction {

@@ -1,10 +1,28 @@
+/*
+ * Copyright 2023 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package de.schildbach.wallet.service
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.database.dao.BlockchainStateDao
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.bitcoinj.core.Block
 import org.bitcoinj.core.CheckpointManager
 import org.bitcoinj.core.Coin
@@ -13,7 +31,7 @@ import org.bitcoinj.core.StoredBlock
 import org.bitcoinj.store.BlockStoreException
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.BlockchainState
+import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.BlockchainStateProvider
 import java.io.IOException
 import java.io.InputStream
@@ -54,7 +72,7 @@ class BlockchainStateDataProvider @Inject constructor(
     }
 
     override fun observeState(): Flow<BlockchainState?> {
-        return blockchainStateDao.observeState()
+        return blockchainStateDao.observeState().distinctUntilChanged()
     }
 
     override fun getLastMasternodeAPY(): Double {

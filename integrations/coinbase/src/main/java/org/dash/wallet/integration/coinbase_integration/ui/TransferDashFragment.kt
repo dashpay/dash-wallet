@@ -36,7 +36,6 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
@@ -44,8 +43,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
-import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.common.util.*
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.TransferDashFragmentBinding
@@ -201,7 +199,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
         enterAmountToTransferViewModel.dashWalletEmptyCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.dont_have_any_dash),
                 "",
                 "",
@@ -216,7 +214,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
             val formatDashValue = "$dashInStr ${Constants.DASH_CURRENCY}"
 
-            val formatFiatValue = if (GenericUtils.isCurrencyFirst(it.first)) {
+            val formatFiatValue = if (it.first.isCurrencyFirst()) {
                 "$fiatSymbol $amountFiat"
             } else {
                 "$amountFiat $fiatSymbol"
@@ -288,7 +286,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
         transferDashViewModel.onAddressCreationFailedCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.error),
                 getString(R.string.address_creation_failed),
                 getString(R.string.close)
@@ -304,15 +302,13 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             safeNavigate(TransferDashFragmentDirections.transferDashToTwoFaCode(it))
         }
 
-        monitorNetworkChanges()
-
         transferDashViewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
             setInternetAccessState(hasInternet)
         }
 
         transferDashViewModel.onFetchUserDataOnCoinbaseFailedCallback.observe(viewLifecycleOwner){
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.coinbase_dash_wallet_error_title),
                 getString(R.string.coinbase_dash_wallet_error_message),
                 getString(R.string.close),
@@ -406,7 +402,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private fun setMinAmountErrorMessage() {
         binding.dashWalletLimitBanner.text = "${getString(
             R.string.entered_amount_is_too_low
-        )} ${GenericUtils.fiatToString(transferDashViewModel.minFaitAmount)}"
+        )} ${transferDashViewModel.minFaitAmount.toFormattedString()}"
     }
 
     @SuppressLint("SetTextI18n")
@@ -449,12 +445,6 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         binding.authLimitBanner.root.isVisible = false
         binding.topGuideLine.updateLayoutParams<ConstraintLayout.LayoutParams> {
             guidePercent = 0.09f
-        }
-    }
-
-    private fun monitorNetworkChanges(){
-        lifecycleScope.launchWhenResumed {
-            transferDashViewModel.monitorNetworkStateChange()
         }
     }
 }

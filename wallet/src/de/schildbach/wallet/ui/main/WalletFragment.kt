@@ -166,8 +166,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     findNavController().navigate(
                         R.id.paymentsFragment,
                         bundleOf(
-                            PaymentsFragment.ARG_ACTIVE_TAB to
-                                PaymentsFragment.ACTIVE_TAB_RECEIVE
+                            PaymentsFragment.ARG_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_RECEIVE
                         )
                     )
                 }
@@ -175,6 +174,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     SweepWalletActivity.start(requireContext(), true)
                 }
                 binding.shortcutsPane.explore -> {
+                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_EXPLORE)
                     findNavController().navigate(
                         R.id.exploreFragment,
                         bundleOf(),
@@ -264,7 +264,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
             override fun error(x: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 val dialog = AdaptiveDialog.create(
-                    R.drawable.ic_info_red,
+                    R.drawable.ic_error,
                     getString(errorDialogTitleResId),
                     if (messageArgs.isNotEmpty()) {
                         getString(messageResId, *messageArgs)
@@ -275,7 +275,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     null
                 )
                 dialog.isMessageSelectable = true
-                dialog.show(requireActivity())
+                dialog.show(requireActivity()) {
+                    viewModel.logEvent(AnalyticsConstants.Home.NO_ADDRESS_COPIED)
+                }
             }
 
             override fun cannotClassify(input: String) {

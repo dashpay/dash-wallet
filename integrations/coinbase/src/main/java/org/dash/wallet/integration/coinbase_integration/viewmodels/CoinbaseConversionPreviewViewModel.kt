@@ -16,11 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import android.app.Service
-import androidx.core.os.bundleOf
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -31,16 +27,15 @@ import org.bitcoinj.core.InsufficientMoneyException
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.*
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import java.util.*
 import javax.inject.Inject
@@ -51,10 +46,10 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     private val walletDataProvider: WalletDataProvider,
     private val sendPaymentService: SendPaymentService,
-    val networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService,
+    networkState: NetworkStateInt,
     private val transactionMetadataProvider: TransactionMetadataProvider
-) : ConnectivityViewModel(networkState) {
+) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -67,6 +62,8 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     val swapTradeOrder: LiveData<SwapTradeUIModel>
         get() = _swapTradeOrder
 
+    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
+
     val commitSwapTradeSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
     val sellSwapSuccessState = SingleLiveEvent<Unit>()
     val swapTradeFailureState = SingleLiveEvent<String?>()
@@ -78,7 +75,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     var isFirstTime = true
 
     fun commitSwapTrade(tradeId: String, inputCurrency: String, inputAmount: String) = viewModelScope.launch(Dispatchers.Main) {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
 
         _showLoading.value = true
         when (val result = coinBaseRepository.commitSwapTrade(tradeId)) {
@@ -169,12 +166,12 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     }
 
     fun onRefreshOrderClicked(swapTradeUIModel: SwapTradeUIModel) {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_RETRY, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_RETRY, mapOf())
         swapTrade(swapTradeUIModel)
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 
     private suspend fun sellDashToCoinBase(coin: Coin) {

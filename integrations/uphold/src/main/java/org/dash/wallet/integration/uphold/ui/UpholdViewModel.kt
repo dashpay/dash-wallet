@@ -17,7 +17,6 @@
 
 package org.dash.wallet.integration.uphold.ui
 
-import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.securepreferences.SecurePreferences
@@ -154,7 +153,7 @@ class UpholdViewModel @Inject constructor(
 
     fun revokeUpholdAccessToken() {
         viewModelScope.launch {
-            analytics.logEvent(AnalyticsConstants.Uphold.DISCONNECT, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Uphold.DISCONNECT, mapOf())
 
             try {
                 upholdClient.revokeAccessToken()
@@ -185,7 +184,7 @@ class UpholdViewModel @Inject constructor(
     }
 
     fun logEvent(eventName: String) {
-        analytics.logEvent(eventName, bundleOf())
+        analytics.logEvent(eventName, mapOf())
     }
 
     fun errorHandled() {

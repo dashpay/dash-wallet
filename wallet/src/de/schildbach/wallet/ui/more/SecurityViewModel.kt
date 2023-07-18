@@ -31,11 +31,12 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import javax.inject.Inject
 
 @HiltViewModel
@@ -82,14 +83,14 @@ class SecurityViewModel @Inject constructor(
     fun getBalanceInLocalFormat(): String {
         selectedExchangeRate?.fiat?.let {
             val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it)
-            return GenericUtils.fiatToString(exchangeRate.coinToFiat(balance))
+            return exchangeRate.coinToFiat(balance).toFormattedString()
         }
 
         return ""
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     fun triggerWipe() {
@@ -106,8 +107,7 @@ class SecurityViewModel @Inject constructor(
                     AnalyticsConstants.Security.FINGERPRINT_ON
                 } else {
                     AnalyticsConstants.Security.FINGERPRINT_OFF
-                },
-                bundleOf()
+                }, mapOf()
             )
 
             configuration.enableFingerprint = isEnabled
@@ -126,8 +126,7 @@ class SecurityViewModel @Inject constructor(
                     AnalyticsConstants.Security.AUTOHIDE_BALANCE_ON
                 } else {
                     AnalyticsConstants.Security.AUTOHIDE_BALANCE_OFF
-                },
-                bundleOf()
+                }, mapOf()
             )
         }
     }

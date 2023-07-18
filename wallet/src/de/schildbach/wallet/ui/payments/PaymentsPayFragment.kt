@@ -21,7 +21,6 @@ import android.app.Activity
 import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.FragmentNavigator
@@ -65,13 +64,13 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.scanBtn.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.SendReceive.SCAN_TO_SEND, bundleOf())
+            analytics.logEvent(AnalyticsConstants.SendReceive.SCAN_TO_SEND, mapOf())
             val intent = ScanActivity.getTransitionIntent(activity, binding.scanBtn)
             scanLauncher.launch(intent)
         }
 
         binding.sendBtn.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.SendReceive.SEND_TO_ADDRESS, bundleOf())
+            analytics.logEvent(AnalyticsConstants.SendReceive.SEND_TO_ADDRESS, mapOf())
             val destination = findNavController().currentDestination as? FragmentNavigator.Destination
 
             if (destination?.className == PaymentsFragment::class.java.name) {

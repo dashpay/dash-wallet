@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Base64;
 
+import org.dash.wallet.common.util.security.EncryptionProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,13 +19,13 @@ public class SecurityGuard {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityGuard.class);
 
-    private static final String SECURITY_PREFS_NAME = "security";
+    public static final String SECURITY_PREFS_NAME = "security";
 
     private static final String UI_PIN_KEY_ALIAS = "ui_pin_key";
     private static final String WALLET_PASSWORD_KEY_ALIAS = "wallet_password_key";
 
     private SharedPreferences securityPrefs;
-    private EncryptionProviderFactory.EncryptionProvider encryptionProvider;
+    private EncryptionProvider encryptionProvider;
 
     public SecurityGuard() throws GeneralSecurityException, IOException {
         securityPrefs = WalletApplication.getInstance().getSharedPreferences(SECURITY_PREFS_NAME, Context.MODE_PRIVATE);

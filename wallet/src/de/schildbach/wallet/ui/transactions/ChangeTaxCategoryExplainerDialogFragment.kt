@@ -17,9 +17,7 @@
 package de.schildbach.wallet.ui.transactions
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogChangeTaxCategoryExplainerBinding
@@ -27,7 +25,7 @@ import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -35,7 +33,7 @@ import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
+class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment(R.layout.dialog_change_tax_category_explainer) {
 
     private val binding by viewBinding(DialogChangeTaxCategoryExplainerBinding::bind)
     private val exampleTxId by lazy { arguments?.get(TX_ID) as? Sha256Hash }
@@ -60,14 +58,6 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
     }
 
     override val forceExpand = true
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.dialog_change_tax_category_explainer, container, false)
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -95,7 +85,7 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
                             TransactionCategory.fromTransaction(
                                 tx.type,
                                 tx.getValue(wallet),
-                                isEntirelySelf(tx, wallet)
+                                isEntirelySelf(wallet)
                             )
                         )
                     )

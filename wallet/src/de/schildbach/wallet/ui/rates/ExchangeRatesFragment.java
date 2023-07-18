@@ -49,7 +49,7 @@ import com.google.common.base.Strings;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -81,7 +81,7 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
     private EditText searchView;
     private String query = null;
     private TextView closeSearchView;
-    private ImageView closeIconView, backPressView, closeViewBtn;
+    private ImageView closeIconView, backPressView;
     private ConstraintLayout viewContainer;
     private Group settingsGroup, sendPaymentGroup;
     public static final String ARG_SHOW_AS_DIALOG = "ARG_SHOW_AS_DIALOG";
@@ -177,7 +177,6 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
         closeSearchView = view.findViewById(R.id.search_close_btn);
         closeIconView = view.findViewById(R.id.close_icon);
         backPressView = view.findViewById(R.id.white_back_press_btn);
-        closeViewBtn = view.findViewById(R.id.close_exchange_rate_btn);
         recyclerView.setLayoutManager(new LinearLayoutManager(activity));
         recyclerView.setHasFixedSize(true);
         recyclerView.setAdapter(adapter);
@@ -185,7 +184,6 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
         closeSearchView.setOnClickListener(this);
         closeIconView.setOnClickListener(this);
         backPressView.setOnClickListener(this);
-        closeViewBtn.setOnClickListener(this);
         updateCloseButton();
         return view;
     }
@@ -295,7 +293,6 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
                     imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
                 }
                 break;
-            case R.id.close_exchange_rate_btn:
             case R.id.white_back_press_btn:
                 getActivity().finish();
                 break;
@@ -308,7 +305,6 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
         float scale = getResources().getDisplayMetrics().density;
         int sizeInDp = (int)(paddingTopDp * scale);
         viewContainer.setPadding(0,sizeInDp,0,0);
-        viewContainer.setBackgroundResource(R.drawable.background_dialog);
     }
 
     @Override

@@ -18,14 +18,18 @@
 package de.schildbach.wallet.ui.transactions
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.graphics.drawable.Animatable
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
+import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
+import coil.load
+import coil.transform.RoundedCornersTransformation
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Address
@@ -33,10 +37,13 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
-import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import org.dash.wallet.common.util.currencySymbol
 import org.dash.wallet.common.util.makeLinks
 
 /**
@@ -47,8 +54,8 @@ class TransactionResultViewBinder(
     private val dashFormat: MonetaryFormat,
     private val binding: TransactionResultContentBinding
 ) {
+    private val iconSize = binding.root.context.resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
     private val context by lazy { binding.root.context }
-
     private val resourceMapper = TxResourceMapper()
     private val taxCategoryNames = mapOf(
         TaxCategory.Income to R.string.tax_category_income,
@@ -58,22 +65,18 @@ class TransactionResultViewBinder(
     )
     private var onRescanTriggered: (() -> Unit)? = null
 
+    private lateinit var transaction: Transaction
+    private var isError = false
+    private var iconBitmap: Bitmap? = null
+    @DrawableRes
+    private var iconRes: Int? = null
+    private var customTitle: String? = null
+
     fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
+        this.transaction = tx
+
         val value = tx.getValue(wallet)
         val isSent = value.signum() < 0
-
-        val primaryStatus = resourceMapper.getTransactionTypeName(tx, wallet)
-        val secondaryStatus = resourceMapper.getReceivedStatusString(tx, wallet.context)
-        var primaryStatusStr = if (tx.type != Transaction.Type.TRANSACTION_NORMAL || tx.isCoinBase) {
-            context.getString(primaryStatus)
-        } else {
-            ""
-        }
-        var secondaryStatusStr = if (secondaryStatus != -1) {
-            context.getString(secondaryStatus)
-        } else {
-            ""
-        }
 
         if (payeeName != null) {
             binding.paymentMemo.text = payeeName
@@ -88,19 +91,15 @@ class TransactionResultViewBinder(
             }
         }
 
-        // handle sending
-        if (resourceMapper.isSending(tx, wallet)) {
-            primaryStatusStr = context.getString(R.string.transaction_row_status_sending)
-            secondaryStatusStr = ""
-        }
+        updateStatus()
 
-        //Address List
+        // Address List
         val inputAddresses: List<Address>
         val outputAddresses: List<Address>
 
         if (isSent) {
             inputAddresses = TransactionUtils.getFromAddressOfSent(tx)
-            outputAddresses = if (TransactionUtils.isEntirelySelf(tx, wallet)) {
+            outputAddresses = if (tx.isEntirelySelf(wallet)) {
                 binding.inputAddressesLabel.setText(R.string.transaction_details_moved_from)
                 binding.outputAddressesLabel.setText(R.string.transaction_details_moved_internally_to)
                 tx.allOutputAddresses
@@ -115,24 +114,11 @@ class TransactionResultViewBinder(
         }
 
         val inflater = LayoutInflater.from(context)
-        binding.inputsContainer.isVisible = inputAddresses.isNotEmpty()
-        inputAddresses.forEach {
-            val addressView = inflater.inflate(R.layout.transaction_result_address_row,
-                binding.transactionInputAddressesContainer, false) as TextView
-            addressView.text = it.toBase58()
-            binding.transactionInputAddressesContainer.addView(addressView)
-        }
-        binding.outputsContainer.isVisible = outputAddresses.isNotEmpty()
-        outputAddresses.forEach {
-            val addressView = inflater.inflate(R.layout.transaction_result_address_row,
-                binding.transactionOutputAddressesContainer, false) as TextView
-            addressView.text = it.toBase58()
-            binding.transactionOutputAddressesContainer.addView(addressView)
-        }
-
+        setInputs(inputAddresses, inflater)
+        setOutputs(outputAddresses, inflater)
         binding.dashAmount.setFormat(dashFormat)
 
-        //For displaying purposes only
+        // For displaying purposes only
         if (value.isNegative) {
             binding.dashAmount.setAmount(value.negate())
         } else {
@@ -144,18 +130,97 @@ class TransactionResultViewBinder(
             binding.transactionFee.setAmount(tx.fee)
         }
 
-        binding.transactionDateAndTime.text = DateUtils.formatDateTime(context, tx.updateTime.time,
-                DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME)
+        binding.transactionDateAndTime.text = DateUtils.formatDateTime(
+            context,
+            tx.updateTime.time,
+            DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME
+        )
 
         val exchangeRate = tx.exchangeRate
         if (exchangeRate != null) {
-            binding.fiatValue.setFiatAmount(tx.getValue(wallet), exchangeRate, Constants.LOCAL_FORMAT,
-                    exchangeRate.fiat?.currencySymbol)
+            binding.fiatValue.setFiatAmount(
+                tx.getValue(wallet),
+                exchangeRate,
+                Constants.LOCAL_FORMAT,
+                exchangeRate.fiat?.currencySymbol
+            )
         } else {
             binding.fiatValue.isVisible = false
         }
+    }
 
-        setTransactionDirection(tx, wallet)
+    private fun updateStatus(fromConfidence: Boolean = false) {
+        if (!fromConfidence || isError) {
+            // If it's a confidence update, not need to set the send/receive icons again.
+            // Some hosts are replacing those with custom animated ones.
+            updateIcon()
+        }
+
+        setTransactionDirection(transaction, wallet)
+    }
+
+    fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
+        val strResource = if (transactionMetadata.taxCategory != null) {
+            taxCategoryNames[transactionMetadata.taxCategory!!]
+        } else {
+            taxCategoryNames[transactionMetadata.defaultTaxCategory]
+        }
+        binding.taxCategory.text = context.getString(strResource!!)
+
+        if (transactionMetadata.service == ServiceName.DashDirect) {
+            iconRes = R.drawable.ic_gift_card_tx
+        }
+
+        updateIcon()
+    }
+
+    fun setTransactionIcon(bitmap: Bitmap) {
+        iconBitmap = bitmap
+        updateIcon()
+    }
+
+    fun setTransactionIcon(@DrawableRes drawableRes: Int) {
+        iconRes = drawableRes
+        updateIcon()
+    }
+
+    fun setCustomTitle(title: String) {
+        customTitle = title
+        binding.transactionTitle.text = customTitle
+        binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.content_primary))
+    }
+
+    private fun updateIcon() {
+        val iconRes = if (isError) {
+            R.drawable.ic_transaction_failed
+        } else if (iconRes != null) {
+            iconRes!!
+        } else if (transaction.getValue(wallet).signum() >= 0) {
+            R.drawable.ic_transaction_received
+        } else if (transaction.isEntirelySelf(wallet)) {
+            R.drawable.ic_internal
+        } else {
+            R.drawable.ic_transaction_sent
+        }
+
+        if (iconBitmap == null) {
+            binding.checkIcon.setImageResource(iconRes)
+            binding.secondaryIcon.isVisible = false
+
+            if (binding.checkIcon.drawable is Animatable) {
+                binding.checkIcon.isVisible = false
+                binding.checkIcon.postDelayed({
+                    binding.checkIcon.isVisible = true
+                    (binding.checkIcon.drawable as Animatable).start()
+                }, 300)
+            }
+        } else {
+            binding.checkIcon.load(iconBitmap) {
+                transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
+            }
+            binding.secondaryIcon.isVisible = true
+            binding.secondaryIcon.setImageResource(iconRes)
+        }
     }
 
     @SuppressLint("SetTextI18n")
@@ -202,11 +267,13 @@ class TransactionResultViewBinder(
             }
         } else {
             if (tx.getValue(wallet).signum() < 0) {
-                binding.checkIcon.setImageResource(if (TransactionUtils.isEntirelySelf(tx, wallet)) {
-                    R.drawable.ic_internal
-                } else {
-                    R.drawable.ic_transaction_sent
-                })
+                binding.checkIcon.setImageResource(
+                    if (tx.isEntirelySelf(wallet)) {
+                        R.drawable.ic_internal
+                    } else {
+                        R.drawable.ic_transaction_sent
+                    }
+                )
 
                 binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
                 binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_sent)
@@ -224,20 +291,37 @@ class TransactionResultViewBinder(
         }
     }
 
-    fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
-        val strResource = if (transactionMetadata.taxCategory != null) {
-            taxCategoryNames[transactionMetadata.taxCategory!!]
-        } else {
-            taxCategoryNames[transactionMetadata.defaultTaxCategory]
-        }
-        binding.taxCategory.text = context.getString(strResource!!)
-    }
-
     fun setOnRescanTriggered(listener: () -> Unit) {
         onRescanTriggered = listener
     }
 
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {
         return transactionFee != null && transactionFee.isPositive
+    }
+
+    private fun setInputs(inputAddresses: List<Address>, inflater: LayoutInflater) {
+        binding.inputsContainer.isVisible = inputAddresses.isNotEmpty()
+        inputAddresses.forEach {
+            val addressView = inflater.inflate(
+                R.layout.transaction_result_address_row,
+                binding.transactionInputAddressesContainer,
+                false
+            ) as TextView
+            addressView.text = it.toBase58()
+            binding.transactionInputAddressesContainer.addView(addressView)
+        }
+    }
+
+    private fun setOutputs(outputAddresses: List<Address>, inflater: LayoutInflater) {
+        binding.outputsContainer.isVisible = outputAddresses.isNotEmpty()
+        outputAddresses.forEach {
+            val addressView = inflater.inflate(
+                R.layout.transaction_result_address_row,
+                binding.transactionOutputAddressesContainer,
+                false
+            ) as TextView
+            addressView.text = it.toBase58()
+            binding.transactionOutputAddressesContainer.addView(addressView)
+        }
     }
 }

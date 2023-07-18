@@ -1,17 +1,18 @@
 /*
- * Copyright 2020 Dash Core Group
+ * Copyright 2020 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package de.schildbach.wallet.ui.send
@@ -40,7 +41,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -216,14 +217,22 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private fun handleSendRequestException() {
-        val exception = viewModel.sendRequestLiveData.value!!.exception!!
-        log.error("unable to handle payment request $exception")
-        when (exception) {
+        val resource = viewModel.sendRequestLiveData.value!!
+        log.error("unable to handle payment request ${resource.exception?.message ?: resource.message}")
+        when (resource.exception) {
             is InsufficientMoneyException -> {
                 showInsufficientMoneyDialog()
             }
             else -> {
-                showErrorDialog(exception)
+                val exception = resource.exception
+                val message = if (exception == null) {
+                    resource.message
+                } else if (!exception.message.isNullOrEmpty()) {
+                    exception.message
+                } else {
+                    exception.toString()
+                }
+                showErrorDialog(message ?: "")
             }
         }
     }
@@ -237,11 +246,11 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         ).show(requireActivity())
     }
 
-    private fun showErrorDialog(exception: Exception) {
+    private fun showErrorDialog(message: String) {
         AdaptiveDialog.create(
             R.drawable.ic_error,
             title = getString(R.string.payment_protocol_default_error_title),
-            message = if (exception.message.isNullOrEmpty()) exception.toString() else exception.message!!,
+            message = message,
             getString(android.R.string.ok)
         ).show(requireActivity())
     }
@@ -251,11 +260,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
 
         val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount)
-        val fiatAmountStr = if (fiatAmount != null) {
-            GenericUtils.fiatToString(fiatAmount)
-        } else {
-            getString(R.string.rate_not_available)
-        }
+        val fiatAmountStr = fiatAmount?.toFormattedString() ?: getString(R.string.transaction_row_rate_not_available)
         val txFee = if (sendRequest != null) sendRequest.tx.fee else PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
 
         binding.paymentRequest.amount.inputValue.text = amountStr

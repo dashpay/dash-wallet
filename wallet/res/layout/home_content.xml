@@ -56,7 +56,7 @@
                         android:background="@color/background_primary"
                         android:orientation="vertical"
                         android:paddingStart="16dp"
-                        android:paddingTop="58dp"
+                        android:paddingTop="54dp"
                         android:paddingEnd="16dp">
 
                         <include

@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >Alle Standorte anzeigen</string>
     <string name="coinbase_link_title">Dein Coinbase Konto verknüpfen</string>
     <string name="coinbase_link">Coinbase Konto verknüpfen</string>
     <string name="coinbase_transfer_details">Zwischen Dash Wallet und deinem Coinbase Konto</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">Coinbase Konto trennen</string>
     <string name="receive_directly_into_dash_wallet">Direkt in die Dash Wallet erhalten.</string>
     <string name="buy_dash">Dash kaufen</string>
-    <string name="balance_on_coinbase">Guthaben auf Coinbase</string>
+    <string name="balance_on_coinbase">Dash Guthaben auf Coinbase</string>
     <string name="sending_to">Senden an</string>
     <string name="dash_wallet_device">Dash Wallet auf diesem Gerät</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,7 @@
     <string name="learn_more">Mehr erfahren</string>
     <string name="something_wrong_title">Etwas ist schiefgelaufen!</string>
     <string name="retry_later_message">Bitte probiere es später erneut oder frage unser Support Center um Hilfe</string>
-    <string name="convert_crypto">Kryptowährung umwandeln</string>
-    <string name="between_dash_wallet_and_coinbase">Zwischen Dash Wallet und Coinbase.</string>
+    <string name="between_dash_wallet_and_coinbase">Zwischen der Dash Wallet und Coinbase</string>
     <string name="conversion_preview">Konvertierungsvorschau</string>
     <string name="you_send">du sendest</string>
     <string name="from_your_coinbase_account">Von deinem Coinbase Konto</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">Dieser Betrag kann nicht gesendet werden, da er das Anwendungslimit überschreitet</string>
     <string name="dont_have_any_dash">Du besitzt keine Dash in deiner Dash Wallet.</string>
     <string name="transfer_wallet_not_synced">Transfers von der Dash Wallet zu Coinbase sind nicht möglich solange die Wallet nicht vollständig synchronisiert ist.</string>
-    <string name="disconnected">Verbindung getrennt</string>
 
     <string name="insufficient_money_title">Nicht genug Dash</string>
     <string name="insufficient_money_msg">Das zu leerende Guthaben ist zu gering zum Entleeren.</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg">Es gab ein Problem bei dem Übertragen auf die Dash Wallet dieses Gerätes.</string>
     <string name="insufficient_money_to_transfer">Die Menge an Coins in der Wallet ist zu klein um sie zu versenden.</string>
     <string name="amount_to_transfer">Du erhältst %s %s %s</string>
-
+    <string name="amount_to_transfer_dash">Du wirst %s erhalten.</string>
     </resources>

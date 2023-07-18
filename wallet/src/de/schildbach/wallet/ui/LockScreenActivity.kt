@@ -43,9 +43,10 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.BiometricLockoutException
+import de.schildbach.wallet.security.PinRetryController
+import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.payments.QuickReceiveActivity
-import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.send.SendCoinsQrActivity
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
@@ -80,6 +81,8 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var restartService: RestartService
     @Inject lateinit var pinRetryController: PinRetryController
     @Inject lateinit var biometricHelper: BiometricHelper
+    @Inject lateinit var packageInfoProvider: PackageInfoProvider
+
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
     private val checkPinViewModel by viewModels<CheckPinViewModel>()
     private lateinit var binding: ActivityLockScreenRootBinding
@@ -381,7 +384,7 @@ open class LockScreenActivity : SecureActivity() {
 
                     if (pinRetryController.remainingAttempts == 1) {
                         val dialog = AdaptiveDialog.create(
-                            R.drawable.ic_info_red,
+                            R.drawable.ic_warning,
                             getString(R.string.wallet_last_attempt),
                             getString(R.string.wallet_last_attempt_message),
                             "",

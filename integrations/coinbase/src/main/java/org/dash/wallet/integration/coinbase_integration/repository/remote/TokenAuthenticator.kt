@@ -25,8 +25,8 @@ import okhttp3.Response
 import okhttp3.Route
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.model.TokenResponse
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
-import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.safeApiCall
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseTokenRefreshApi
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject

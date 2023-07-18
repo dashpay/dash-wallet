@@ -14,72 +14,12 @@
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_arrow_back" />
 
-    <LinearLayout
-        android:id="@+id/address_container"
+    <org.dash.wallet.common.ui.PaymentHeaderView
+        android:id="@+id/payment_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/title_bar">
-
-        <TextView
-            style="@style/Headline3"
-            android:text="@string/send_coins_fragment_button_send"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <TextView
-            style="@style/Body2"
-            android:layout_marginStart="8dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/to" />
-
-        <TextView
-            android:id="@+id/address"
-            style="@style/Body2"
-            android:layout_marginStart="4dp"
-            android:maxLines="1"
-            android:ellipsize="middle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="Xti5jqb9tf3sS...RJnQCpmkeSU2T" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/balance_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/address_container">
-
-        <TextView
-            style="@style/Caption.Secondary"
-            android:text="@string/balance"
-            android:layout_gravity="center"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <TextView
-            android:id="@+id/balance_label"
-            style="@style/Caption.Secondary"
-            android:layout_marginStart="8dp"
-            android:layout_gravity="center"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="**********" />
-
-        <ImageButton
-            android:id="@+id/hide_button"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginStart="10dp"
-            android:background="@drawable/rounded_background"
-            android:src="@drawable/ic_hide"
-            android:theme="@style/ImageButtonGrayTheme"
-            tools:background="@color/dash_black_0.05" />
-    </LinearLayout>
+        app:layout_constraintTop_toBottomOf="@id/title_bar" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/enter_amount_guideline"

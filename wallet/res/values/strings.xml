@@ -368,7 +368,6 @@
     <string name="activity_security_hide_balance">Autohide Balance</string>
     <string name="reset_to_default">Reset to Default</string>
 
-    <string name="payment_protocol_default_error_title">Payment error</string>
     <string name="payment_protocol_insufficient_funds_error_title">Insufficient Funds</string>
     <string name="payment_protocol_insufficient_funds_error_message">You do not have sufficient funds to complete this transaction</string>
 
@@ -376,7 +375,6 @@
     <string name="select_a_service">Select a Service</string>
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Clear Filter</string>
-    <string name="select_currency">Select Currency</string>
     <string name="reason">Reason</string>
     <string name="link_account">Link your account</string>
     <string name="buy_no_account_needed">Buy Dash · No account needed</string>

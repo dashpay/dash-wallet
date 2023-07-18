@@ -29,7 +29,7 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.security.BiometricHelper;
 import de.schildbach.wallet.security.BiometricLockoutException;
-import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.security.PinRetryController;
 import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;

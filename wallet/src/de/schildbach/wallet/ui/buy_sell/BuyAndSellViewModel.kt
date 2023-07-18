@@ -16,7 +16,7 @@
 
 package de.schildbach.wallet.ui.buy_sell
 
-import androidx.core.os.bundleOf
+import androidx.lifecycle.*
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
@@ -32,12 +32,11 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.livedata.NetworkStateInt
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.ConnectivityViewModel
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import org.dash.wallet.integration.uphold.api.TopperClient
@@ -58,19 +57,21 @@ class BuyAndSellViewModel @Inject constructor(
     val analytics: AnalyticsService,
     private val upholdClient: UpholdClient,
     private val topperClient: TopperClient,
-    networkState: NetworkStateInt,
+    private val networkState: NetworkStateInt,
     exchangeRates: ExchangeRatesProvider,
     private val walletData: WalletDataProvider
-): ConnectivityViewModel(networkState) {
+): ViewModel() {
 
     companion object {
         private const val ZERO_BALANCE = "0.0"
     }
 
-    private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
+    private var currentExchangeRate: org.dash.wallet.common.data.entity.ExchangeRate? = null
 
     private val _servicesList = MutableStateFlow(BuyAndSellDashServicesModel.getBuyAndSellDashServicesList())
     val servicesList: StateFlow<List<BuyAndSellDashServicesModel>> = _servicesList.asStateFlow()
+
+    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
     val isUpholdAuthenticated: Boolean
         get() = upholdClient.isAuthenticated
@@ -93,10 +94,12 @@ class BuyAndSellViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        isDeviceConnectedToInternet.observeForever {
-            updateServicesStatus()
-            updateBalances()
-        }
+        networkState.isConnected
+            .onEach {
+                updateServicesStatus()
+                updateBalances()
+            }
+            .launchIn(viewModelScope)
 
         viewModelScope.launch {
             topperClient.refreshSupportedAssets()
@@ -121,7 +124,7 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
     fun updateBalances() {
-        if (isDeviceConnectedToInternet.value == true) {
+        if (networkState.isConnected.value) {
             if (upholdClient.isAuthenticated) {
                 updateUpholdBalance()
             }
@@ -155,7 +158,7 @@ class BuyAndSellViewModel @Inject constructor(
             return ServiceStatus.IDLE_DISCONNECTED
         }
 
-        val hasNetwork = isDeviceConnectedToInternet.value == true
+        val hasNetwork = networkState.isConnected.value
 
         return if (isAuthenticated) {
             if (hasNetwork) ServiceStatus.CONNECTED else ServiceStatus.DISCONNECTED
@@ -227,7 +230,7 @@ class BuyAndSellViewModel @Inject constructor(
             } else {
                 AnalyticsConstants.Uphold.ENTER_DISCONNECTED
             },
-            bundleOf()
+            mapOf()
         )
     }
 
@@ -238,7 +241,7 @@ class BuyAndSellViewModel @Inject constructor(
             } else {
                 AnalyticsConstants.Coinbase.ENTER_DISCONNECTED
             },
-            bundleOf()
+            mapOf()
         )
     }
 
@@ -248,6 +251,10 @@ class BuyAndSellViewModel @Inject constructor(
             walletData.freshReceiveAddress(),
             walletName
         )
+    }
+
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, mapOf())
     }
 
     private suspend fun coinbaseBalanceString(): String =

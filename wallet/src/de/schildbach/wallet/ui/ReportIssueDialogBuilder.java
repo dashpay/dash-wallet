@@ -26,6 +26,8 @@ import java.util.ArrayList;
 
 import javax.annotation.Nullable;
 
+import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +36,7 @@ import com.google.common.base.Charsets;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
@@ -219,20 +222,24 @@ public abstract class ReportIssueDialogBuilder extends BaseAlertDialogBuilder {
         startSend(subject(), text, attachments);
     }
 
-    public static ReportIssueDialogBuilder createReportIssueDialog(final Activity context,
-                                                                   final WalletApplication application) {
-        final ReportIssueDialogBuilder dialog = new ReportIssueDialogBuilder(context,
+    public static ReportIssueDialogBuilder createReportIssueDialog(
+            final Activity context,
+            final PackageInfoProvider packageInfoProvider,
+            final Configuration configuration,
+            final Wallet wallet
+    ) {
+        return new ReportIssueDialogBuilder(context,
                 R.string.report_issue_dialog_title_issue, R.string.report_issue_dialog_message_issue) {
             @Override
             protected CharSequence subject() {
-                return Constants.REPORT_SUBJECT_BEGIN + application.packageInfo().versionName + " "
+                return Constants.REPORT_SUBJECT_BEGIN + packageInfoProvider.getVersionName() + " "
                         + Constants.REPORT_SUBJECT_ISSUE;
             }
 
             @Override
             protected CharSequence collectApplicationInfo() throws IOException {
                 final StringBuilder applicationInfo = new StringBuilder();
-                CrashReporter.appendApplicationInfo(applicationInfo, application);
+                CrashReporter.appendApplicationInfo(applicationInfo, packageInfoProvider, configuration, wallet);
                 return applicationInfo;
             }
 
@@ -245,11 +252,10 @@ public abstract class ReportIssueDialogBuilder extends BaseAlertDialogBuilder {
 
             @Override
             protected CharSequence collectWalletDump() {
-                return application.getWallet().toString(false, true,
+                return wallet.toString(false, true,
                         true, null);
             }
         };
-        return dialog;
     }
 
     private void startSend(final CharSequence subject, final CharSequence text, final ArrayList<Uri> attachments) {

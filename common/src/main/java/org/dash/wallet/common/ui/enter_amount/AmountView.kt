@@ -37,15 +37,16 @@ import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.AmountViewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.*
 
 class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs) {
     private val binding = AmountViewBinding.inflate(LayoutInflater.from(context), this)
-    val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    val dashFormat: MonetaryFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
-    val fiatFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    val fiatFormat: MonetaryFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals()
 
     private var onCurrencyToggleClicked: (() -> Unit)? = null
@@ -112,6 +113,12 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             binding.resultCurrencyToggle.isVisible = dashToFiat && value
         }
 
+    var showResultContainer: Boolean = true
+        set(value) {
+            field = value
+            binding.resultContainer.isVisible = !dashToFiat && value
+        }
+
     init {
         val padding = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
         updatePadding(left = padding, right = padding)
@@ -165,7 +172,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             fiatAmount = pair.second!!
 
             binding.resultAmount.text = if (dashToFiat) {
-                GenericUtils.fiatToString(fiatAmount)
+                fiatAmount.toFormattedString()
             } else {
                 dashFormat.format(dashAmount)
             }

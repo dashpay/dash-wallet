@@ -25,7 +25,9 @@ import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Toast;
 import de.schildbach.wallet_test.R;
@@ -42,9 +44,12 @@ import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.text.format.DateUtils;
 
+import javax.inject.Inject;
+
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public final class AcceptBluetoothService extends Service {
     private WalletApplication application;
     private Wallet wallet;
@@ -59,6 +64,9 @@ public final class AcceptBluetoothService extends Service {
     private static final long TIMEOUT_MS = 5 * DateUtils.MINUTE_IN_MILLIS;
 
     private static final Logger log = LoggerFactory.getLogger(AcceptBluetoothService.class);
+
+    @Inject
+    PackageInfoProvider packageInfoProvider;
 
     @Override
     public IBinder onBind(final Intent intent) {
@@ -110,7 +118,7 @@ public final class AcceptBluetoothService extends Service {
             paymentProtocolThread.start();
         } catch (final IOException x) {
             new Toast(this).longToast(R.string.error_bluetooth, x.getMessage());
-            CrashReporter.saveBackgroundTrace(x, application.packageInfo());
+            CrashReporter.saveBackgroundTrace(x, packageInfoProvider.getPackageInfo());
         }
     }
 

@@ -2,15 +2,18 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="topper">Topper</string>
     <string name="uphold_link_title">关联您的Uphold账户</string>
+    <string name="uphold_powered_by">由 Topper 提供</string>
+    <string name="topper_powered_by">由 Uphold 提供</string>
     <string name="uphold_transfer_details">从Uphold到您的Dash钱包</string>
     <string name="uphold_buy_dash_activity_title">通过Uphold 买/卖Dash</string>
     <string name="uphold_buy_dash_with_uphold">通过Uphold账户购买Dash</string>
     <string name="uphold_buy_dash_button">购买Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">从Uphold进行转账</string>
     <string name="uphold_link_account">关联Uphold账号</string>
-    <string name="uphold_account_dash_balance">您Uphold账户Dash余额为</string>
-    <string name="uphold_transfer_to_this_wallet">将Dash从您的Uphold账户转账到本钱包</string>
+    <string name="uphold_account_dash_balance">Uphold 上的Dash余额</string>
+    <string name="uphold_transfer_to_this_wallet">从 Uphold 转到您的Dash钱包</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">手续费将从申请数额中扣除.</string>
     <string name="uphold_withdrawal_instructions">输入转账数额</string>
     <string name="uphold_withdrawal_success_title">成功</string>
@@ -19,11 +22,12 @@
     <string name="uphold_transfer">转账</string>
     <string name="uphold_see_on_uphold">在Uphold中浏览</string>
     <string name="uphold_logout_title">从Uphold退出</string>
+    <string name="uphold_disconnect">断开 Uphold 账户</string>
     <string name="uphold_logout">退出</string>
     <string name="uphold_logout_explanation_text">您同样需要使用浏览器从Uphold网站退出</string>
     <string name="uphold_go_to_website">进入网站</string>
     <string name="uphold_error">Uphold错误</string>
-    <string name="uphold_error_not_logged_in">Dash Wallet与您的Uphold账户已解除关联. 在下一个界面点击关联Uphold账户.</string>
+    <string name="uphold_error_not_logged_in">Dash钱包不再与您的 Uphold 账户关联.</string>
     <string name="uphold_error_not_available">Uphold服务不可用. 请稍后再试.</string>
     <string name="uphold_error_report_issue">请使用主目录的报告问题, 将此问题发送给Dash Wallet支持团队.</string>
 

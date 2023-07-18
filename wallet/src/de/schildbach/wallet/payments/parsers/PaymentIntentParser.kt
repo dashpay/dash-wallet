@@ -186,6 +186,7 @@ object PaymentIntentParser {
         }
     }
 
+    @Suppress("UnstableApiUsage")
     private fun parsePaymentRequest(serializedPaymentRequest: ByteArray): PaymentIntent {
         try {
             if (serializedPaymentRequest.size > 50000) {

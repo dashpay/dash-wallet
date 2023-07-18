@@ -22,10 +22,9 @@ import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.uphold.api.UpholdClient
-import org.dash.wallet.integration.uphold.api.getAccessToken
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -63,6 +62,6 @@ class IntegrationOverviewViewModel @Inject constructor(
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 }

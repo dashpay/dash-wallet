@@ -138,7 +138,7 @@ public final class CurrencyAmountView extends FrameLayout {
             localCurrencyCode = null;
         } else if (currencyCode != null) // fiat
         {
-            final String currencySymbol = GenericUtils.currencySymbol(currencyCode);
+            final String currencySymbol = GenericUtils.INSTANCE.currencySymbol(currencyCode);
             final float textSize = textView.getTextSize();
             final float smallerTextSize = textSize * 0.85f;
             Typeface typeface = ResourcesCompat.getFont(getContext(), R.font.inter_semibold);

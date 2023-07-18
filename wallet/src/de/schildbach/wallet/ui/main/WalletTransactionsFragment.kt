@@ -24,22 +24,22 @@ import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.style.StyleSpan
 import android.view.View
-import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment.Companion.newInstance
+import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.GiftCardDetailsDialog
 import java.time.Instant
 import java.time.ZoneId
 
@@ -59,18 +59,23 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         super.onViewCreated(view, savedInstanceState)
 
         val adapter = TransactionAdapter(
-            viewModel.balanceDashFormat, resources, true
+            viewModel.balanceDashFormat,
+            resources,
+            true
         ) { rowView, _ ->
-            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-
             if (rowView is TransactionRowView) {
-                if (rowView.txWrapper != null) {
-                    val fragment = TransactionGroupDetailsFragment(rowView.txWrapper)
-                    fragment.show(requireActivity())
+                val fragment = if (rowView.txWrapper != null) {
+                    viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                    TransactionGroupDetailsFragment(rowView.txWrapper)
+                } else if (rowView.service == ServiceName.DashDirect) {
+                    viewModel.logEvent(AnalyticsConstants.DashDirect.DETAILS_GIFT_CARD)
+                    GiftCardDetailsDialog.newInstance(rowView.txId)
                 } else {
-                    val transactionDetailsDialogFragment = newInstance(rowView.txId)
-                    transactionDetailsDialogFragment.show(requireActivity())
+                    viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                    TransactionDetailsDialogFragment.newInstance(rowView.txId)
                 }
+
+                fragment.show(requireActivity())
             }
         }
 
@@ -83,12 +88,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         })
 
         binding.transactionFilterBtn.setOnClickListener {
-            val dialogFragment = TransactionsFilterDialog { direction, _ ->
+            val dialogFragment = TransactionsFilterDialog(viewModel.transactionsDirection) { direction, _ ->
                 viewModel.transactionsDirection = direction
                 viewModel.logDirectionChangedEvent(direction)
             }
 
-            dialogFragment.show(childFragmentManager, null)
+            dialogFragment.show(requireActivity())
         }
 
         binding.walletTransactionsList.setHasFixedSize(true)
@@ -99,7 +104,9 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         val verticalMargin = resources.getDimensionPixelOffset(R.dimen.default_vertical_padding)
         binding.walletTransactionsList.addItemDecoration(object : RecyclerView.ItemDecoration() {
             override fun getItemOffsets(
-                outRect: Rect, view: View, parent: RecyclerView,
+                outRect: Rect,
+                view: View,
+                parent: RecyclerView,
                 state: RecyclerView.State
             ) {
                 super.getItemOffsets(outRect, view, parent, state)
@@ -111,15 +118,6 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 }
             }
         })
-
-        binding.walletTransactionsList.addItemDecoration(
-            ListDividerDecorator(
-                ResourcesCompat.getDrawable(resources, R.drawable.list_divider, null)!!,
-                showAfterLast = false,
-                marginStart = horizontalMargin + resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start),
-                marginEnd = horizontalMargin
-            )
-        )
 
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
@@ -133,9 +131,9 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
                 }.map {
                     val outList = mutableListOf<HistoryRowView>()
-                    outList.add(HistoryRowView(it.key.toString(), "Tuesedey", it.key))
+                    outList.add(HistoryRowView(null, it.key))
                     outList.apply { addAll(it.value) }
-                }.reduce { acc, list -> acc.apply { addAll(list) }}
+                }.reduce { acc, list -> acc.apply { addAll(list) } }
 
                 adapter.submitList(groupedByDate)
                 showTransactionList()
@@ -165,7 +163,9 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 val start = syncing.length + 1
                 val end = str.length
                 str.setSpan(
-                    StyleSpan(Typeface.BOLD), start, end,
+                    StyleSpan(Typeface.BOLD),
+                    start,
+                    end,
                     Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
                 binding.syncing.text = str

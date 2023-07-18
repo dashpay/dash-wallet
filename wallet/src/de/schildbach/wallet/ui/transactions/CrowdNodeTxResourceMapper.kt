@@ -23,6 +23,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
 import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.integrations.crowdnode.transactions.*
 
 class CrowdNodeTxResourceMapper: TxResourceMapper() {
@@ -36,7 +37,7 @@ class CrowdNodeTxResourceMapper: TxResourceMapper() {
             return super.getTransactionTypeName(tx, bag)
         }
 
-        return if (TransactionUtils.isEntirelySelf(tx, bag)) {
+        return if (tx.isEntirelySelf(bag)) {
             R.string.shuffle_coins
         } else if (CrowdNodeSignUpTx(tx.params).matches(tx)) {
             R.string.account_create

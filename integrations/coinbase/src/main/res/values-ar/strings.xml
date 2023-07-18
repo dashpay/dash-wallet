@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">كوين بيس</string>
-    <string name="last_known_balance" >آخر رصيد معروف</string>
     <string name="coinbase_link_title">اربط حسابك على Coinbase</string>
     <string name="coinbase_link">ربط حساب Coinbase</string>
     <string name="coinbase_transfer_details">بين محفظة داش وحساب Coinbase الخاص بك</string>
@@ -29,7 +28,6 @@
     <string name="disconnect_coinbase_account">افصل حساب كوين بيس</string>
     <string name="receive_directly_into_dash_wallet">تلقي مباشرة في محفظة داش.</string>
     <string name="buy_dash">شراء داش</string>
-    <string name="balance_on_coinbase">الرصيد على كوين بيس</string>
     <string name="sending_to">إرسال إلى</string>
     <string name="dash_wallet_device">محفظة داش على هذا الجهاز</string>
     <string name="exchange_rate_template">%1$s داش = %2$s</string>
@@ -69,8 +67,6 @@
     <string name="learn_more">اعرف المزيد</string>
     <string name="something_wrong_title">هناك خطأ ما</string>
     <string name="retry_later_message">يرجى إعادة المحاولة لاحقًا أو الاتصال بمركز الدعم للحصول على المساعدة</string>
-    <string name="convert_crypto">تحويل العملات المشفرة</string>
-    <string name="between_dash_wallet_and_coinbase">بين محفظة داش و كوين بيس.</string>
     <string name="conversion_preview">معاينة التحويل</string>
     <string name="you_send">انت ارسل</string>
     <string name="from_your_coinbase_account">من حساب كوين بيس الخاص بك</string>
@@ -91,7 +87,6 @@
     <string name="send_to_wallet_error">لا يمكن إرسال هذا المبلغ دون تجاوز حد التطبيق</string>
     <string name="dont_have_any_dash">ليس لديك أي داش في محفظة داش الخاصة بك.</string>
     <string name="transfer_wallet_not_synced">لا يمكن التحويل من محفظة داش إلى كوين بيس حتى تكتمل مزامنة المحفظة.</string>
-    <string name="disconnected">تم قطع الاتصال</string>
 
     <string name="insufficient_money_title">لا يوجد عملات كافية</string>
     <string name="insufficient_money_msg">كمية القطع في المحفظة صغيرة جدا للنقل.</string>
@@ -118,5 +113,4 @@
     <string name="transfer_dash_failed_msg">حدثت مشكلة في نقلها إلى محفظة داش على هذا الجهاز.</string>
     <string name="insufficient_money_to_transfer">كمية العملات في المحفظة صغيرة جدًا بحيث لا يمكن تحويلها.</string>
     <string name="amount_to_transfer">ستستلم %s%s%s</string>
-
     </resources>

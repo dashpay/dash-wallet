@@ -25,19 +25,8 @@
                 android:text="@string/select_currency"
                 android:layout_marginLeft="15dp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintBottom_toBottomOf="@+id/close_exchange_rate_btn"
-                app:layout_constraintTop_toTopOf="@+id/close_exchange_rate_btn" />
-
-            <ImageView
-                android:id="@+id/close_exchange_rate_btn"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:layout_marginTop="20dp"
-                android:background="@drawable/close_exchange_rates_view"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                android:layout_marginRight="15dp"
-                />
+                app:layout_constraintBottom_toBottomOf="@+id/settings_header_bgd"
+                app:layout_constraintTop_toTopOf="@+id/settings_header_bgd" />
 
             <View
                 android:id="@+id/settings_header_bgd"
@@ -74,7 +63,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:visibility="gone"
-                app:constraint_referenced_ids="select_currency_label, close_exchange_rate_btn"
+                app:constraint_referenced_ids="select_currency_label"
                 tools:visibility="gone" />
 
             <androidx.constraintlayout.widget.Group
@@ -124,7 +113,7 @@
                     android:paddingRight="8dp"
                     android:paddingBottom="12dp"
                     android:singleLine="true"
-                    android:textColorHint="@color/steel_gray_300"
+                    android:textColorHint="@color/dark_gray"
                     app:drawableLeftCompat="@drawable/ic_search_exchange_rates" />
 
                 <ImageView
