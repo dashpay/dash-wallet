@@ -6,21 +6,15 @@ if [[ -z "$version_code" ]]; then
   exit 1
 fi
 
-echo -e "# Fill in the changelog for version $version_code\n# en\n\n# es\n\n# de" > changelog.txt
+echo -e "# Fill in the changelog for version $version_code\n# en-US\n\n# es-ES\n\n# de-DE\n\n# ko-KR\n\n# fr-FR" > changelog.txt
 nano changelog.txt
 
 current_lang=""
 while IFS= read -r line
 do
-  if [[ $line == "# en" ]]
+  if [[ $line == "#"* ]]
   then
-    current_lang="en-US"
-  elif [[ $line == "# es" ]]
-  then
-    current_lang="es-ES"
-  elif [[ $line == "# de" ]]
-  then
-    current_lang="de-DE"
+    current_lang="${line:2}"
   fi
 
   if [[ $line != "#"* && -n $line ]]
