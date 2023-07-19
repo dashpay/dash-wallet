@@ -45,6 +45,13 @@ data class UsernameRequestsUIState(
     val showFirstTimeInfo: Boolean = false
 )
 
+data class FiltersUIState(
+    val sortByOption: UsernameSortOption = UsernameSortOption.DateDescending,
+    val typeOption: UsernameTypeOption = UsernameTypeOption.All,
+    val onlyDuplicates: Boolean = true,
+    val onlyLinks: Boolean = false
+)
+
 @HiltViewModel
 class UsernameRequestsViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
@@ -52,6 +59,9 @@ class UsernameRequestsViewModel @Inject constructor(
 ): ViewModel() {
     private val _uiState = MutableStateFlow(UsernameRequestsUIState())
     val uiState: StateFlow<UsernameRequestsUIState> = _uiState.asStateFlow()
+
+    private val _filterState = MutableStateFlow(FiltersUIState())
+    val filterState: StateFlow<FiltersUIState> = _filterState.asStateFlow()
 
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
@@ -80,6 +90,22 @@ class UsernameRequestsViewModel @Inject constructor(
 
     suspend fun setFirstTimeInfoShown() {
         dashPayConfig.set(DashPayConfig.VOTING_INFO_SHOWN, true)
+    }
+
+    fun applyFilters(
+        sortByOption: UsernameSortOption,
+        typeOption: UsernameTypeOption,
+        onlyDuplicates: Boolean,
+        onlyLinks: Boolean
+    ) {
+        _filterState.update {
+            it.copy(
+                sortByOption = sortByOption,
+                typeOption = typeOption,
+                onlyDuplicates = onlyDuplicates,
+                onlyLinks = onlyLinks
+            )
+        }
     }
 
     private var nameCount = 1

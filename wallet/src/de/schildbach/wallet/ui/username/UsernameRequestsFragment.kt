@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
 class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
@@ -44,7 +45,8 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
         binding.filterBtn.setOnClickListener {
-            viewModel.prepopulateList()
+//            viewModel.prepopulateList()
+            safeNavigate(UsernameRequestsFragmentDirections.usernameRequestsToFilters())
         }
         val adapter = UsernameRequestGroupAdapter()
         binding.requestGroups.adapter = adapter

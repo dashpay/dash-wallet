@@ -26,5 +26,18 @@
         android:name="de.schildbach.wallet.ui.username.UsernameRequestsFragment"
         android:label="UsernameRequestsFragment"
         tools:layout="@layout/fragment_username_requests">
+
+        <action
+            android:id="@+id/usernameRequests_to_filters"
+            app:destination="@id/usernameRequestFilterDialog"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
+
+    <dialog
+        android:id="@+id/usernameRequestFilterDialog"
+        android:name="de.schildbach.wallet.ui.username.UsernameRequestFilterDialog"
+        android:label="UsernameRequestFilterDialog"
+        tools:layout="@layout/dialog_username_request_filters" />
 </navigation>
