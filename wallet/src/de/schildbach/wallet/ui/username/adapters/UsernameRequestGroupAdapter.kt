@@ -39,11 +39,15 @@ class UsernameRequestGroupAdapter: ListAdapter<UsernameRequestGroupView, Usernam
 ) {
     class DiffCallback : DiffUtil.ItemCallback<UsernameRequestGroupView>() {
         override fun areItemsTheSame(oldItem: UsernameRequestGroupView, newItem: UsernameRequestGroupView): Boolean {
-            return oldItem.username == newItem.username
+            val areSame = oldItem.username == newItem.username
+            Log.i("VOTING", "areItemsTheSame: $areSame")
+            return areSame
         }
 
         override fun areContentsTheSame(oldItem: UsernameRequestGroupView, newItem: UsernameRequestGroupView): Boolean {
-            return oldItem == newItem
+            val areTheSame = oldItem == newItem
+            Log.i("VOTING", "areContentsTheSame: $areTheSame")
+            return areTheSame
         }
     }
 
@@ -61,8 +65,9 @@ class UsernameRequestGroupAdapter: ListAdapter<UsernameRequestGroupView, Usernam
         val item = currentList[position]
         holder.bind(item)
         holder.binding.root.setOnClickListener {
+            Log.i("VOTING", currentList.joinToString("; ") { it.username })
             item.isExpanded = !item.isExpanded
-            notifyItemChanged(position)
+            notifyItemChanged(currentList.indexOf(item))
         }
     }
 }

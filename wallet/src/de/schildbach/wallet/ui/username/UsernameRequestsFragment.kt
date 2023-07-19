@@ -20,12 +20,15 @@ package de.schildbach.wallet.ui.username
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
+import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupAdapter
+import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameRequestsBinding
 import kotlinx.coroutines.delay
@@ -39,17 +42,26 @@ import org.dash.wallet.common.util.safeNavigate
 class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
     private val viewModel: UsernameRequestsViewModel by viewModels()
     private val binding by viewBinding(FragmentUsernameRequestsBinding::bind)
+    private var itemList = listOf<UsernameRequestGroupView>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.toolbar.setOnClickListener {
+            viewModel.prepopulateList()
+        }
+
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
         binding.filterBtn.setOnClickListener {
-//            viewModel.prepopulateList()
             safeNavigate(UsernameRequestsFragmentDirections.usernameRequestsToFilters())
         }
         val adapter = UsernameRequestGroupAdapter()
         binding.requestGroups.adapter = adapter
+
+        binding.search.doOnTextChanged { text, _, _, _ ->
+            binding.clearBtn.isVisible = !text.isNullOrEmpty()
+            adapter.submitList(filterByQuery(itemList, text.toString()))
+        }
 
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
             if (state.showFirstTimeInfo) {
@@ -65,11 +77,25 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
                 }
             }
 
-            adapter.submitList(state.usernameRequests)
             binding.filterSubtitle.text = getString(R.string.n_duplicates, state.usernameRequests.size)
             binding.filterSubtitle.isVisible = state.usernameRequests.isNotEmpty()
             binding.searchPanel.isVisible = state.usernameRequests.isNotEmpty()
             binding.noItemsTxt.isVisible = state.usernameRequests.isEmpty()
+
+            itemList = state.usernameRequests
+            val list = filterByQuery(itemList, binding.search.text.toString())
+            val layoutManager = binding.requestGroups.layoutManager as LinearLayoutManager
+            val scrollPosition = layoutManager.findFirstVisibleItemPosition()
+            adapter.submitList(list)
+            binding.requestGroups.scrollToPosition(scrollPosition)
         }
+    }
+
+    private fun filterByQuery(items: List<UsernameRequestGroupView>, query: String?): List<UsernameRequestGroupView> {
+        if (query.isNullOrEmpty()) {
+            return items
+        }
+
+        return items.filter { it.username.startsWith(query, true) }
     }
 }
