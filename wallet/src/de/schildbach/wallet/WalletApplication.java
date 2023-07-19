@@ -746,6 +746,8 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void resetBlockchain() {
+        // reset the extensions
+        authenticationGroupExtension.reset();
         // implicitly stops blockchain service
         resetBlockchainState();
         Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
@@ -919,6 +921,7 @@ public class WalletApplication extends MultiDexApplication
         }
         // clear data on wallet reset
         transactionMetadataProvider.clear();
+        authenticationGroupExtension.reset();
         // wallet must be null for the OnboardingActivity flow
         log.info("removing wallet from memory during wipe");
         wallet = null;
