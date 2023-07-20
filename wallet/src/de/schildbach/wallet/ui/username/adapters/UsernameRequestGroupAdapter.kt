@@ -102,7 +102,7 @@ class UsernameRequestAdapter(
         }
 
         override fun areContentsTheSame(oldItem: UsernameRequest, newItem: UsernameRequest): Boolean {
-            return oldItem == newItem
+            return oldItem == newItem && oldItem.hasMaximumVotes == newItem.hasMaximumVotes
         }
     }
 
@@ -118,7 +118,7 @@ class UsernameRequestAdapter(
 
     override fun onBindViewHolder(holder: UsernameRequestViewHolder, position: Int) {
         val item = currentList[position]
-        holder.bind(item, position == 0)
+        holder.bind(item)
         holder.binding.root.setOnClickListener {
             clickListener.invoke()
         }
@@ -128,13 +128,13 @@ class UsernameRequestAdapter(
 class UsernameRequestViewHolder(
     val binding: UsernameRequestViewBinding
 ): RecyclerView.ViewHolder(binding.root) {
-    fun bind(option: UsernameRequest, isFirst: Boolean) {
+    fun bind(option: UsernameRequest) {
         binding.dateRegistered.text = DateTimeFormatter.ofPattern("dd MMM yyyy · hh:mm a").format(
             LocalDateTime.ofEpochSecond(option.createdAt, 0, ZoneOffset.UTC)
         )
 
         binding.voteAmount.background = binding.voteAmount.resources.getRoundedBackground(
-            if (isFirst) {
+            if (option.hasMaximumVotes) {
                 R.style.BlueBadgeTheme
             } else {
                 R.style.InactiveBadgeTheme
@@ -143,7 +143,7 @@ class UsernameRequestViewHolder(
 
         binding.voteAmount.setTextColor(
             binding.voteAmount.resources.getColor(
-                if (isFirst) {
+                if (option.hasMaximumVotes) {
                     R.color.white
                 } else {
                     R.color.content_tertiary

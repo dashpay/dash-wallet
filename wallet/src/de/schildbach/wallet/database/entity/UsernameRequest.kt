@@ -18,6 +18,7 @@
 package de.schildbach.wallet.database.entity
 
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "username_requests")
@@ -29,4 +30,7 @@ data class UsernameRequest(
     val identity: String,
     val link: String?,
     val votes: Int
-)
+) {
+    @Ignore
+    var hasMaximumVotes: Boolean = false
+}

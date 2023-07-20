@@ -79,11 +79,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 .map { duplicates ->
                     duplicates.groupBy { it.username }
                         .map { (username, list) ->
-                            UsernameRequestGroupView(
-                                username,
-                                list.sort(filterState.sortByOption),
-                                isExpanded = isExpanded(username)
-                            )
+                            val sortedList = list.sort(filterState.sortByOption)
+                            val max = when (filterState.sortByOption) {
+                                UsernameSortOption.VotesDescending -> sortedList.first().votes
+                                UsernameSortOption.VotesAscending -> sortedList.last().votes
+                                else -> sortedList.maxOf { it.votes }
+                            }
+                            sortedList.forEach { it.hasMaximumVotes = it.votes == max }
+                            UsernameRequestGroupView(username, sortedList, isExpanded = isExpanded(username))
                         }
                 }
         }.onEach { requests -> _uiState.update { it.copy(usernameRequests = requests) } }
@@ -128,15 +131,16 @@ class UsernameRequestsViewModel @Inject constructor(
     private var nameCount = 1
     fun prepopulateList() {
         nameCount++
-        val now = System.nanoTime() / 1000
+        val now = System.currentTimeMillis() / 1000
         val names = listOf("John", "doe", "Sarah", "Jane", "jack", "Jill", "Bob")
+        val from = 1658290321L
 
         viewModelScope.launch {
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     "https://example.com",
                     Random.nextInt(0, 15)
@@ -146,7 +150,7 @@ class UsernameRequestsViewModel @Inject constructor(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
                     Random.nextInt(0, 15)
@@ -156,7 +160,7 @@ class UsernameRequestsViewModel @Inject constructor(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
                     Random.nextInt(0, 15)
@@ -166,7 +170,7 @@ class UsernameRequestsViewModel @Inject constructor(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     "https://example.com",
                     Random.nextInt(0, 15)
@@ -176,7 +180,7 @@ class UsernameRequestsViewModel @Inject constructor(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
                     Random.nextInt(0, 15)
@@ -186,7 +190,7 @@ class UsernameRequestsViewModel @Inject constructor(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
                     Random.nextInt(0, 15)
@@ -196,7 +200,7 @@ class UsernameRequestsViewModel @Inject constructor(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
                     Random.nextInt(0, 15)
