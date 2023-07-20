@@ -22,13 +22,13 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupAdapter
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
+import de.schildbach.wallet.ui.username.utils.votingViewModels
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameRequestsBinding
 import kotlinx.coroutines.delay
@@ -40,7 +40,7 @@ import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
 class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
-    private val viewModel: UsernameRequestsViewModel by viewModels()
+    private val viewModel by votingViewModels<UsernameRequestsViewModel>()
     private val binding by viewBinding(FragmentUsernameRequestsBinding::bind)
     private var itemList = listOf<UsernameRequestGroupView>()
 
