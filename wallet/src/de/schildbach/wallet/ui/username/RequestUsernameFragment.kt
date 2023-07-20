@@ -32,8 +32,12 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         binding.usernameInput.doOnTextChanged { text, _, _, _ ->
             val username = text.toString()
             binding.requestUsernameButton.isEnabled = username.isNotEmpty()
-            binding.usernameRequested.isVisible = username.isNotEmpty()
             binding.inputWrapper.isEndIconVisible = username.isNotEmpty()
+
+            val isUsernameValid =binding.usernameInput.text.contentEquals("test")
+                    ||binding.usernameInput.text.contentEquals("admin")
+            binding.usernameRequested.isVisible = isUsernameValid
+
         }
 
         binding.inputWrapper.endIconMode = TextInputLayout.END_ICON_CUSTOM
@@ -42,6 +46,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         }
 
         binding.requestUsernameButton.setOnClickListener {
+
             // TODO: set navigation to voting fragment
         }
 
