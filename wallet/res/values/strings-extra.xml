@@ -401,7 +401,7 @@
     <string name="masternode_key_type_owner">Owner Keys</string>
     <string name="masternode_key_type_voting">Voting Keys</string>
     <string name="masternode_key_type_operator">Operator Keys</string>
-    <string name="masternode_key_type_platform">HPMN Operator Keys</string>
+    <string name="masternode_key_type_platform">Evolution Node ID Keys</string>
     <string name="masternode_key_type_total">%d keys</string>
     <string name="masternode_key_type_used">%d used</string>
     <string name="masternode_key_pair_index">Keypair %d</string>
