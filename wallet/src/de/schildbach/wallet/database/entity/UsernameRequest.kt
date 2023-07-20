@@ -29,7 +29,8 @@ data class UsernameRequest(
     val createdAt: Long,
     val identity: String,
     val link: String?,
-    val votes: Int
+    val votes: Int,
+    val isApproved: Boolean
 ) {
     @Ignore
     var hasMaximumVotes: Boolean = false

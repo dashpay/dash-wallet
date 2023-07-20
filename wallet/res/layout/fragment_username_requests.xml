@@ -67,7 +67,8 @@
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:clipChildren="false">
 
             <TextView
                 android:id="@+id/subtitle"
@@ -164,7 +165,7 @@
                     android:layout_height="40dp"
                     android:layout_gravity="end|center_vertical"
                     android:background="@android:color/transparent"
-                    android:src="@drawable/ic_clear"
+                    android:src="@drawable/ic_clear_input"
                     android:visibility="gone"
                     tools:visibility="visible" />
             </FrameLayout>

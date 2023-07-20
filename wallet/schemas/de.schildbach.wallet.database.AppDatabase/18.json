@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 18,
-    "identityHash": "edfa5c60f1d5804c0d0e5c9e8bac2864",
+    "identityHash": "2ac5a1c9220876161976f4a3d99405c6",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -918,7 +918,7 @@
       },
       {
         "tableName": "username_requests",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`requestId` TEXT NOT NULL, `username` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `identity` TEXT NOT NULL, `link` TEXT, `votes` INTEGER NOT NULL, PRIMARY KEY(`requestId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`requestId` TEXT NOT NULL, `username` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `identity` TEXT NOT NULL, `link` TEXT, `votes` INTEGER NOT NULL, `isApproved` INTEGER NOT NULL, PRIMARY KEY(`requestId`))",
         "fields": [
           {
             "fieldPath": "requestId",
@@ -955,6 +955,12 @@
             "columnName": "votes",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "isApproved",
+            "columnName": "isApproved",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -970,7 +976,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'edfa5c60f1d5804c0d0e5c9e8bac2864')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2ac5a1c9220876161976f4a3d99405c6')"
     ]
   }
 }

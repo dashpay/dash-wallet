@@ -62,6 +62,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             binding.clearBtn.isVisible = !text.isNullOrEmpty()
             adapter.submitList(filterByQuery(itemList, text.toString()))
         }
+        binding.clearBtn.setOnClickListener { binding.search.text.clear() }
 
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
             if (state.showFirstTimeInfo) {

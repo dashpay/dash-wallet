@@ -79,7 +79,7 @@ class UsernameRequestsViewModel @Inject constructor(
                 .map { duplicates ->
                     duplicates.groupBy { it.username }
                         .map { (username, list) ->
-                            val sortedList = list.sort(filterState.sortByOption)
+                            val sortedList = list.sortAndFilter()
                             val max = when (filterState.sortByOption) {
                                 UsernameSortOption.VotesDescending -> sortedList.first().votes
                                 UsernameSortOption.VotesAscending -> sortedList.last().votes
@@ -113,8 +113,9 @@ class UsernameRequestsViewModel @Inject constructor(
         }
     }
 
-    private fun List<UsernameRequest>.sort(sortByOption: UsernameSortOption): List<UsernameRequest> {
-        return this.sortedWith(
+    private fun List<UsernameRequest>.sortAndFilter(): List<UsernameRequest> {
+        val sortByOption = _filterState.value.sortByOption
+        val sorted = this.sortedWith(
             when (sortByOption) {
                 UsernameSortOption.DateAscending -> compareBy { it.createdAt }
                 UsernameSortOption.DateDescending -> compareByDescending { it.createdAt }
@@ -122,6 +123,12 @@ class UsernameRequestsViewModel @Inject constructor(
                 UsernameSortOption.VotesDescending -> compareByDescending { it.votes }
             }
         )
+
+        return when (_filterState.value.typeOption) {
+            UsernameTypeOption.All -> sorted
+            UsernameTypeOption.Approved -> sorted.filter { it.isApproved }
+            UsernameTypeOption.NotApproved -> sorted.filter { !it.isApproved }
+        }
     }
 
     private fun isExpanded(username: String): Boolean {
@@ -143,7 +150,8 @@ class UsernameRequestsViewModel @Inject constructor(
                     Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     "https://example.com",
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    true
                 )
             )
             usernameRequestDao.insert(
@@ -153,7 +161,8 @@ class UsernameRequestsViewModel @Inject constructor(
                     Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    true
                 )
             )
             usernameRequestDao.insert(
@@ -163,7 +172,8 @@ class UsernameRequestsViewModel @Inject constructor(
                     Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    false
                 )
             )
             usernameRequestDao.insert(
@@ -173,7 +183,8 @@ class UsernameRequestsViewModel @Inject constructor(
                     Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     "https://example.com",
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    false
                 )
             )
             usernameRequestDao.insert(
@@ -183,7 +194,8 @@ class UsernameRequestsViewModel @Inject constructor(
                     Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    false
                 )
             )
             usernameRequestDao.insert(
@@ -193,7 +205,8 @@ class UsernameRequestsViewModel @Inject constructor(
                     Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    false
                 )
             )
             usernameRequestDao.insert(
@@ -203,7 +216,8 @@ class UsernameRequestsViewModel @Inject constructor(
                     Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    false
                 )
             )
         }
