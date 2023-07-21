@@ -28,6 +28,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -75,7 +76,7 @@ class UsernameRequestsViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         _filterState.flatMapLatest { filterState ->
-            usernameRequestDao.observeDuplicates()
+            observeUsernames()
                 .map { duplicates ->
                     duplicates.groupBy { it.username }
                         .map { (username, list) ->
@@ -110,6 +111,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 onlyDuplicates = onlyDuplicates,
                 onlyLinks = onlyLinks
             )
+        }
+    }
+
+    private fun observeUsernames(): Flow<List<UsernameRequest>> {
+        return if (_filterState.value.onlyDuplicates) {
+            usernameRequestDao.observeDuplicates(_filterState.value.onlyLinks)
+        } else {
+            usernameRequestDao.observe(_filterState.value.onlyLinks)
         }
     }
 

@@ -26,17 +26,24 @@ interface UsernameRequestDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(usernameRequest: UsernameRequest)
 
-    @Query("SELECT * FROM username_requests")
-    fun observe(): Flow<List<UsernameRequest>>
+    @Query(
+        """
+        SELECT * FROM username_requests 
+            WHERE (:onlyWithLinks = 0) OR (:onlyWithLinks = 1 AND link IS NOT NULL)
+        ORDER BY username COLLATE NOCASE ASC
+         """
+    )
+    fun observe(onlyWithLinks: Boolean): Flow<List<UsernameRequest>>
 
     @Query(
         """
-        SELECT * FROM username_requests WHERE username IN 
-            (SELECT username FROM username_requests GROUP BY username HAVING COUNT(username) > 1)
+        SELECT * FROM username_requests 
+            WHERE username IN (SELECT username FROM username_requests GROUP BY username HAVING COUNT(username) > 1)
+            AND (:onlyWithLinks = 0) OR (:onlyWithLinks = 1 AND link IS NOT NULL) 
         ORDER BY username COLLATE NOCASE ASC
         """
     )
-    fun observeDuplicates(): Flow<List<UsernameRequest>>
+    fun observeDuplicates(onlyWithLinks: Boolean): Flow<List<UsernameRequest>>
 
     @Query("DELETE FROM username_requests")
     suspend fun clear()
