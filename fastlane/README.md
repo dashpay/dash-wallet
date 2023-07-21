@@ -47,14 +47,6 @@ Promote to production track with 0.2 rollout by default
 
 Increase rollout
 
-### android prepare_changelog
-
-```sh
-[bundle exec] fastlane android prepare_changelog
-```
-
-Prepare changelog
-
 ### android test
 
 ```sh
