@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.username
 
 import android.os.Bundle
 import android.view.View
+import android.view.ViewTreeObserver
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
@@ -58,6 +59,21 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         val adapter = UsernameRequestGroupAdapter()
         binding.requestGroups.adapter = adapter
 
+        binding.search.setOnFocusChangeListener { _, isFocused ->
+            if (isFocused) {
+                binding.mainScroll.viewTreeObserver.addOnGlobalLayoutListener(
+                    object : ViewTreeObserver.OnGlobalLayoutListener {
+                        override fun onGlobalLayout() {
+                            binding.mainScroll.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                            binding.mainScroll.smoothScrollBy(
+                                0,
+                                resources.getDimensionPixelOffset(R.dimen.username_search_focused_scroll)
+                            )
+                        }
+                    }
+                )
+            }
+        }
         binding.search.doOnTextChanged { text, _, _, _ ->
             binding.clearBtn.isVisible = !text.isNullOrEmpty()
             adapter.submitList(filterByQuery(itemList, text.toString()))
