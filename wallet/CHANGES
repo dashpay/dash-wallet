@@ -1,4 +1,12 @@
 Dash Wallet
+v9.0.4
+* Update to dashj 19.0.4
+* Fix fiat amount not matching DASH amount in the system notification
+* Masternode keys fixes
+* Redesign Send flow
+* Redesign some Home screen elements
+* Add ability to open links from system notifications
+
 v9.0.3
 * Update to dashj 19.0.3 (supports Dash Core 19.2)
 * Coinbase: properly handle expired sessions
