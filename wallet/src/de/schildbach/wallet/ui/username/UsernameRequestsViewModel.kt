@@ -44,7 +44,8 @@ import kotlin.math.min
 import kotlin.random.Random
 
 data class UsernameRequestsUIState(
-    val usernameRequests: List<UsernameRequestGroupView> = listOf(),
+    val filteredUsernameRequests: List<UsernameRequestGroupView> = listOf(),
+    val totalDuplicates: Int = 0,
     val showFirstTimeInfo: Boolean = false
 )
 
@@ -75,22 +76,36 @@ class UsernameRequestsViewModel @Inject constructor(
             .onEach { isShown -> _uiState.update { it.copy(showFirstTimeInfo = isShown != true) } }
             .launchIn(viewModelScope)
 
+        // Observe unfiltered duplicates to keep the total count consistent
+        usernameRequestDao.observeDuplicates(false)
+            .onEach { duplicates ->
+                _uiState.update { state ->
+                    state.copy(totalDuplicates = duplicates.groupBy { it.username }.size)
+                }
+            }
+            .launchIn(viewModelScope)
+
+        // Observe filtered duplicates
         _filterState.flatMapLatest { filterState ->
             observeUsernames()
                 .map { duplicates ->
                     duplicates.groupBy { it.username }
                         .map { (username, list) ->
                             val sortedList = list.sortAndFilter()
-                            val max = when (filterState.sortByOption) {
-                                UsernameSortOption.VotesDescending -> sortedList.first().votes
-                                UsernameSortOption.VotesAscending -> sortedList.last().votes
-                                else -> sortedList.maxOf { it.votes }
+
+                            if (sortedList.isNotEmpty()) {
+                                val max = when (filterState.sortByOption) {
+                                    UsernameSortOption.VotesDescending -> sortedList.first().votes
+                                    UsernameSortOption.VotesAscending -> sortedList.last().votes
+                                    else -> sortedList.maxOf { it.votes }
+                                }
+                                sortedList.forEach { it.hasMaximumVotes = it.votes == max }
                             }
-                            sortedList.forEach { it.hasMaximumVotes = it.votes == max }
+
                             UsernameRequestGroupView(username, sortedList, isExpanded = isExpanded(username))
-                        }
+                        }.filterNot { it.requests.isEmpty() }
                 }
-        }.onEach { requests -> _uiState.update { it.copy(usernameRequests = requests) } }
+        }.onEach { requests -> _uiState.update { it.copy(filteredUsernameRequests = requests) } }
             .launchIn(viewModelWorkerScope)
     }
 
@@ -141,7 +156,7 @@ class UsernameRequestsViewModel @Inject constructor(
     }
 
     private fun isExpanded(username: String): Boolean {
-        return _uiState.value.usernameRequests.any { it.username == username && it.isExpanded }
+        return _uiState.value.filteredUsernameRequests.any { it.username == username && it.isExpanded }
     }
 
     private var nameCount = 1

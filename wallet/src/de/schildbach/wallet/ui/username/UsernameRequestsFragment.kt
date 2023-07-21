@@ -94,12 +94,12 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
                 }
             }
 
-            binding.filterSubtitle.text = getString(R.string.n_duplicates, state.usernameRequests.size)
-            binding.filterSubtitle.isVisible = state.usernameRequests.isNotEmpty()
-            binding.searchPanel.isVisible = state.usernameRequests.isNotEmpty()
-            binding.noItemsTxt.isVisible = state.usernameRequests.isEmpty()
+            binding.filterSubtitle.text = getString(R.string.n_duplicates, state.totalDuplicates)
+            binding.filterSubtitle.isVisible = state.filteredUsernameRequests.isNotEmpty()
+            binding.searchPanel.isVisible = state.filteredUsernameRequests.isNotEmpty()
+            binding.noItemsTxt.isVisible = state.filteredUsernameRequests.isEmpty()
 
-            itemList = state.usernameRequests
+            itemList = state.filteredUsernameRequests
             val list = filterByQuery(itemList, binding.search.text.toString())
             val layoutManager = binding.requestGroups.layoutManager as LinearLayoutManager
             val scrollPosition = layoutManager.findFirstVisibleItemPosition()
