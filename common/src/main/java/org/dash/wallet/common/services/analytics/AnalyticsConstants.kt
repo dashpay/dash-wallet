@@ -40,7 +40,12 @@ object AnalyticsConstants {
     }
 
     object MoreMenu {
-        const val BUY_SELL_MORE = "more_buy_sell_dash"
+        const val BUY_SELL = "more_buy_sell_dash"
+        const val EXPLORE = "more_explore"
+        const val SECURITY = "more_security"
+        const val SETTINGS = "more_settings"
+        const val TOOLS = "more_tools"
+        const val CONTACT_SUPPORT = "more_contact_support"
     }
 
     object Security {
