@@ -93,6 +93,13 @@ object AnalyticsConstants {
         const val ENTER_AMOUNT_HIDE_BALANCE = "enter_amount_hide_balance"
     }
 
+    object AddressInput {
+        const val SCAN_QR = "send_inner_scan_qr"
+        const val SHOW_CLIPBOARD = "send_show_content"
+        const val ADDRESS_TAP = "send_show_content_tap_address"
+        const val CONTINUE = "send_b_continue"
+    }
+
     object Home {
         const val NAV_HOME = "bottom_nav_home"
         const val NAV_MORE = "bottom_nav_more"
@@ -255,7 +262,7 @@ object AnalyticsConstants {
         const val BUY_QUOTE_RETRY = "coinbase_buy_quote_b_retry"
         const val BUY_QUOTE_FEE_INFO = "coinbase_buy_quote_b_fee_info"
 
-        const val BUY_SUCCESS_CLOSE = "coinbase_buy_success_b_close"
+        const val BUY_SUCCESS_CLOSE = "coinbase_buy_success"
         const val BUY_ERROR_RETRY = "coinbase_buy_error_b_retry"
         const val BUY_ERROR_CLOSE = "coinbase_buy_error_b_close"
 
@@ -298,7 +305,7 @@ object AnalyticsConstants {
         const val CONVERT_QUOTE_RETRY = "coinbase_convert_preview_b_retry"
         const val CONVERT_QUOTE_FEE_INFO = "coinbase_convert_preview_b_fee_info"
 
-        const val CONVERT_SUCCESS_CLOSE = "coinbase_convert_success_b_close"
+        const val CONVERT_SUCCESS_CLOSE = "coinbase_convert_success"
         const val CONVERT_ERROR_RETRY = "coinbase_convert_error_b_retry"
         const val CONVERT_ERROR_CLOSE = "coinbase_convert_error_b_close"
 

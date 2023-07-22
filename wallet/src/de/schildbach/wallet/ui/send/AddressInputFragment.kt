@@ -43,6 +43,7 @@ import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentAddressInputBinding
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
@@ -95,6 +96,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
         binding.inputWrapper.setEndIconOnClickListener {
             if (binding.addressInput.text.isNullOrEmpty()) {
                 val intent = ScanActivity.getTransitionIntent(activity, binding.inputWrapper)
+                viewModel.logEvent(AnalyticsConstants.AddressInput.SCAN_QR)
                 scanLauncher.launch(intent)
             } else {
                 viewModel.setInput("")
@@ -159,6 +161,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
                 binding.inputWrapper.isErrorEnabled = false
                 binding.errorText.isVisible = false
                 SendCoinsActivity.start(requireContext(), paymentIntent)
+                viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE)
                 requireActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
             } catch (ex: Exception) {
                 binding.inputWrapper.isErrorEnabled = true

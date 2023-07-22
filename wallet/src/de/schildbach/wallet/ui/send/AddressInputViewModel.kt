@@ -25,6 +25,8 @@ import de.schildbach.wallet.payments.parsers.AddressParser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 data class AddressInputUIState(
@@ -36,7 +38,8 @@ data class AddressInputUIState(
 
 @HiltViewModel
 class AddressInputViewModel @Inject constructor(
-    private val clipboardManager: ClipboardManager
+    private val clipboardManager: ClipboardManager,
+    private val analyticsService: AnalyticsService
 ): ViewModel() {
 
     private val _uiState = MutableStateFlow(AddressInputUIState())
@@ -55,10 +58,12 @@ class AddressInputViewModel @Inject constructor(
         val text = getClipboardInput()
         val addressRanges = AddressParser.findAll(text)
         _uiState.value = _uiState.value.copy(clipboardText = text, addressRanges = addressRanges)
+        analyticsService.logEvent(AnalyticsConstants.AddressInput.SHOW_CLIPBOARD, mapOf())
     }
 
     fun setInput(text: String) {
         _uiState.value = _uiState.value.copy(addressInput = text)
+        analyticsService.logEvent(AnalyticsConstants.AddressInput.ADDRESS_TAP, mapOf())
     }
 
     private fun hasClipboardInput(): Boolean {
@@ -89,6 +94,10 @@ class AddressInputViewModel @Inject constructor(
                 else -> null
             } ?: ""
         }
+    }
+
+    fun logEvent(eventName: String) {
+        analyticsService.logEvent(eventName, mapOf())
     }
 
     override fun onCleared() {
