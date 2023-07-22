@@ -430,12 +430,15 @@
     <string name="type">Type</string>
     <string name="only_duplicates">Only duplicates</string>
     <string name="only_links">Only requests with links</string>
+    <string name="only_links_short">With links</string>
+    <string name="date">Date: %s</string>
+    <string name="votes">Votes: %s</string>
 
     <string-array name="usernames_sort_by_options">
-        <item>Date: New to old</item>
-        <item>Date: Old to new</item>
-        <item>Votes: High to low</item>
-        <item>Votes: Low to high</item>
+        <item>New to old</item>
+        <item>Old to new</item>
+        <item>High to low</item>
+        <item>Low to high</item>
     </string-array>
 
     <string-array name="usernames_type_options">

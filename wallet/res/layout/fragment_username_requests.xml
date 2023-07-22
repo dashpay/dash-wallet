@@ -197,4 +197,60 @@
                 app:layout_constraintTop_toBottomOf="@id/search_panel" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <FrameLayout
+        android:id="@+id/applied_filters_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/background_secondary"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:layout_gravity="bottom">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/divider_color" />
+
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="15dp"
+            android:layout_marginVertical="12dp"
+            android:padding="8dp"
+            android:layout_gravity="start"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/FilterIconBackground"
+            android:src="@drawable/ic_transaction_filter"
+            app:tint="@color/white"
+            tools:background="@color/dash_blue"
+            tools:tint="@color/white" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="40dp">
+
+            <TextView
+                style="@style/Overline.Tertiary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/explore_filtered_by"
+                android:gravity="center"
+                android:textAlignment="gravity" />
+
+            <TextView
+                android:id="@+id/filtered_by_txt"
+                style="@style/Overline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textAlignment="gravity"
+                tools:text="California, 5 miles" />
+        </LinearLayout>
+    </FrameLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

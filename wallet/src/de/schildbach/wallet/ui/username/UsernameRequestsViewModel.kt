@@ -54,7 +54,14 @@ data class FiltersUIState(
     val typeOption: UsernameTypeOption = UsernameTypeOption.All,
     val onlyDuplicates: Boolean = true,
     val onlyLinks: Boolean = false
-)
+) {
+    fun isDefault(): Boolean {
+        return sortByOption == UsernameSortOption.DateDescending &&
+            typeOption == UsernameTypeOption.All &&
+            onlyDuplicates &&
+            !onlyLinks
+    }
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel

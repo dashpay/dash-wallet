@@ -72,8 +72,8 @@ class UsernameRequestFilterDialog : OffsetDialogFragment(R.layout.dialog_usernam
     }
 
     private fun setupSortByOptions() {
-        val optionNames = binding.root.resources.getStringArray(R.array.usernames_sort_by_options).map {
-            IconifiedViewItem(it)
+        val optionNames = binding.root.resources.getStringArray(R.array.usernames_sort_by_options).mapIndexed { i, it ->
+            IconifiedViewItem(getString(if (i < 2) R.string.date else R.string.votes, it))
         }
 
         val sortOption = viewModel.filterState.value.sortByOption

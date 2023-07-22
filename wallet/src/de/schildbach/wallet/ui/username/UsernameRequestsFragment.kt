@@ -79,6 +79,9 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             adapter.submitList(filterByQuery(itemList, text.toString()))
         }
         binding.clearBtn.setOnClickListener { binding.search.text.clear() }
+        binding.appliedFiltersPanel.setOnClickListener {
+            safeNavigate(UsernameRequestsFragmentDirections.usernameRequestsToFilters())
+        }
 
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
             if (state.showFirstTimeInfo) {
@@ -106,6 +109,15 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             adapter.submitList(list)
             binding.requestGroups.scrollToPosition(scrollPosition)
         }
+
+        viewModel.filterState.observe(viewLifecycleOwner) { state ->
+            val isDefault = state.isDefault()
+            binding.appliedFiltersPanel.isVisible = !isDefault
+
+            if (!isDefault) {
+                populateAppliedFilters(state)
+            }
+        }
     }
 
     private fun filterByQuery(items: List<UsernameRequestGroupView>, query: String?): List<UsernameRequestGroupView> {
@@ -114,5 +126,29 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         }
 
         return items.filter { it.username.startsWith(query, true) }
+    }
+
+    private fun populateAppliedFilters(state: FiltersUIState) {
+        val sortByOptionNames = binding.root.resources.getStringArray(R.array.usernames_sort_by_options)
+        val typeOptionNames = binding.root.resources.getStringArray(R.array.usernames_type_options)
+        val appliedFilterNames = mutableListOf<String>()
+
+        if (state.sortByOption != UsernameSortOption.DateDescending) {
+            appliedFilterNames.add(sortByOptionNames[state.sortByOption.ordinal])
+        }
+
+        if (state.typeOption != UsernameTypeOption.All) {
+            appliedFilterNames.add(typeOptionNames[state.typeOption.ordinal])
+        }
+
+        if (!state.onlyDuplicates) {
+            appliedFilterNames.add(getString(R.string.all))
+        }
+
+        if (state.onlyLinks) {
+            appliedFilterNames.add(getString(R.string.only_links_short))
+        }
+
+        binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
     }
 }
