@@ -16,7 +16,6 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -26,17 +25,17 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.services.NetworkStateInt
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.integration.coinbase_integration.model.*
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.util.toFormattedStringNoCode
+import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
@@ -44,7 +43,7 @@ import javax.inject.Inject
 @HiltViewModel
 class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
-    val userPreference: Configuration,
+    private val userPreference: Configuration,
     private val config: CoinbaseConfig,
     private val walletDataProvider: WalletDataProvider,
     var exchangeRates: ExchangeRatesProvider,
@@ -67,37 +66,50 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
     val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
-    lateinit var exchangeRate: ExchangeRate
+    var exchangeRate: ExchangeRate? = null
+        private set
 
     init {
         getWithdrawalLimit()
         setDashWalletBalance()
     }
 
-    fun setBaseIdForFaitModelCoinBase(list:List<BaseIdForUSDData>){
+    fun setBaseIdForFaitModelCoinBase(list:List<BaseIdForUSDData>) {
         _baseIdForFaitModelCoinBase.value = list
     }
 
-    fun swapTrade(valueToConvert: Fiat, selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel, dashToCrypt: Boolean) = viewModelScope.launch(Dispatchers.Main) {
+    fun swapTrade(
+        valueToConvert: Fiat,
+        selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel,
+        dashToCrypt: Boolean
+    ) = viewModelScope.launch {
         _showLoading.value = true
 
-        val source_asset =
-            if (dashToCrypt)_baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == Constants.DASH_CURRENCY }?.base_id ?: ""
-            else _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
-        val target_asset = if (dashToCrypt)_baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
-        else
+        val sourceAsset =
+            if (dashToCrypt) {
+                _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == Constants.DASH_CURRENCY }?.base_id ?: ""
+            } else {
+                _baseIdForFaitModelCoinBase.value?.firstOrNull {
+                    it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code
+                }?.base_id ?: ""
+            }
+        val targetAsset = if (dashToCrypt) {
+            _baseIdForFaitModelCoinBase.value?.firstOrNull {
+                it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code
+            }?.base_id ?: ""
+        } else {
             _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == Constants.DASH_CURRENCY }?.base_id ?: ""
+        }
 
         val tradesRequest = TradesRequest(
             valueToConvert.toFormattedStringNoCode(),
             userPreference.exchangeCurrencyCode!!,
-            source_asset = source_asset,
-            target_asset = target_asset
+            source_asset = sourceAsset,
+            target_asset = targetAsset
         )
 
         when (val result = coinBaseRepository.swapTrade(tradesRequest)) {
             is ResponseResource.Success -> {
-
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     _showLoading.value = false
                     swapTradeFailedCallback.call()
@@ -105,13 +117,17 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
                     _showLoading.value = false
 
                     result.value.apply {
-                        this.assetsBaseID = Pair(source_asset, target_asset)
-                        this.inputCurrencyName = if (dashToCrypt)"Dash"
-                        else
-                            selectedCoinBaseAccount.coinBaseUserAccountData.currency?.name ?: ""
-                        this.outputCurrencyName = if (dashToCrypt) selectedCoinBaseAccount.coinBaseUserAccountData.currency?.name ?: ""
-                        else
+                        this.assetsBaseID = Pair(sourceAsset, targetAsset)
+                        this.inputCurrencyName = if (dashToCrypt) {
                             "Dash"
+                        } else {
+                            selectedCoinBaseAccount.coinBaseUserAccountData.currency?.name ?: ""
+                        }
+                        this.outputCurrencyName = if (dashToCrypt) {
+                            selectedCoinBaseAccount.coinBaseUserAccountData.currency?.name ?: ""
+                        } else {
+                            "Dash"
+                        }
                         swapTradeOrder.value = this
                     }
                 }
@@ -127,7 +143,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
                     if (message.isNullOrEmpty()) {
                         swapTradeFailedCallback.call()
                     } else {
-                        swapTradeFailedCallback.value = message!!
+                        swapTradeFailedCallback.value = message
                     }
                 }
             }
@@ -184,25 +200,28 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getCurrencyExchangeRate(currency: String): ExchangeRate {
+    private suspend fun getCurrencyExchangeRate(currency: String): ExchangeRate? {
         return exchangeRates.observeExchangeRate(currency).first()
     }
-
 
     private val withdrawalLimitInDash: Double
         get() {
             return if (userPreference.coinbaseUserWithdrawalLimitAmount.isNullOrEmpty()) {
                 0.0
             } else {
-                val formattedAmount = GenericUtils.formatFiatWithoutComma(userPreference.coinbaseUserWithdrawalLimitAmount)
+                val formattedAmount = GenericUtils.formatFiatWithoutComma(
+                    userPreference.coinbaseUserWithdrawalLimitAmount
+                )
                 val fiatAmount = try {
                     Fiat.parseFiat(userPreference.coinbaseSendLimitCurrency, formattedAmount)
                 } catch (x: Exception) {
                     Fiat.valueOf(userPreference.coinbaseSendLimitCurrency, 0)
                 }
-                val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRate.fiat)
-                val amountInDash = newRate.fiatToCoin(fiatAmount)
-                amountInDash.toPlainString().toDoubleOrZero
+                exchangeRate?.fiat?.let {
+                    val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it)
+                    val amountInDash = newRate.fiatToCoin(fiatAmount)
+                    amountInDash.toPlainString().toDoubleOrZero
+                } ?: 0.0
             }
         }
 

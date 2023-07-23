@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Het saldo is onbeschikbaar tijdens opnieuw spelen.</string>
     <string name="exchange_rates_activity_title">Lokale munteenheid</string>
     <string name="exchange_rates_fragment_empty_text">Er is een probleem opgetreden tijdens het laden van de wisselkoersen.</string>
-    <string name="exchange_rates_fragment_empty_search">De wisselkoers kon niet worden gevonden.</string>
+    <string name="exchange_rate_not_found">De wisselkoers kon niet worden gevonden.</string>
     <string name="exchange_rates_fragment_default">(standaard)</string>
     <string name="exchange_rates_fragment_rate">Tarief</string>
     <string name="exchange_rates_fragment_balance">Saldo</string>

@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">الرصيد غير متاح في حالة إعادة التشغيل.</string>
     <string name="exchange_rates_activity_title">العملة المحلية</string>
     <string name="exchange_rates_fragment_empty_text">تعذر تحميل أسعار الصرف.</string>
-    <string name="exchange_rates_fragment_empty_search">تعذر العثور على سعر الصرف.</string>
+    <string name="exchange_rate_not_found">تعذر العثور على سعر الصرف.</string>
     <string name="exchange_rates_fragment_default">(افتراضي)</string>
     <string name="exchange_rates_fragment_rate">نسبة</string>
     <string name="exchange_rates_fragment_balance">رصيد</string>

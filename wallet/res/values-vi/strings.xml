@@ -18,7 +18,7 @@
     <string name="wallet_balance_fragment_replaying">Tính năng cân bằng tài khoản không thể được thao tác trong quá trình replay.</string>
     <string name="exchange_rates_activity_title">Tiền địa phương</string>
     <string name="exchange_rates_fragment_empty_text">Không thể tải tỉ lệ hoán đổi</string>
-    <string name="exchange_rates_fragment_empty_search">Không thể tìm thấy tỷ giáo giao dịch.</string>
+    <string name="exchange_rate_not_found">Không thể tìm thấy tỷ giáo giao dịch.</string>
     <string name="exchange_rates_fragment_default">(mặc định)</string>
     <string name="exchange_rates_fragment_rate">Tỷ giá</string>
     <string name="exchange_rates_fragment_balance">Số dư</string>

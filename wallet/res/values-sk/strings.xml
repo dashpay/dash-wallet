@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Počas synchronizácie je zostatok nedostupný.</string>
     <string name="exchange_rates_activity_title">Miestna mena</string>
     <string name="exchange_rates_fragment_empty_text">Nepodarilo sa načítať výmenné kurzy.</string>
-    <string name="exchange_rates_fragment_empty_search">Nepodarilo sa nájsť výmenný kurz.</string>
+    <string name="exchange_rate_not_found">Nepodarilo sa nájsť výmenný kurz.</string>
     <string name="exchange_rates_fragment_default">(predvolený)</string>
     <string name="exchange_rates_fragment_rate">Kurz</string>
     <string name="exchange_rates_fragment_balance">Zostatok</string>

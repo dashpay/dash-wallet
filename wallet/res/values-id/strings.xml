@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Saldo tidak tersedia saat pengulangan.</string>
     <string name="exchange_rates_activity_title">Mata uang lokal</string>
     <string name="exchange_rates_fragment_empty_text">Tidak dapat memuat nilai tukar</string>
-    <string name="exchange_rates_fragment_empty_search">Tidak dapat menemukan nilai tukar. </string>
+    <string name="exchange_rate_not_found">Tidak dapat menemukan nilai tukar. </string>
     <string name="exchange_rates_fragment_default">(standar)</string>
     <string name="exchange_rates_fragment_rate">nilai</string>
     <string name="exchange_rates_fragment_balance">Saldo</string>

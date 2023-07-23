@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.blinkAnimator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -175,16 +176,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun handleBalance(binding: FragmentPortalBinding) {
-        this.balanceAnimator = ObjectAnimator.ofFloat(
-            binding.balanceLabel,
-            View.ALPHA.name,
-            0f, 1f
-        ).apply {
-            duration = 500
-            repeatCount = ObjectAnimator.INFINITE
-            repeatMode = ObjectAnimator.REVERSE
-        }
-
+        this.balanceAnimator = binding.balanceLabel.blinkAnimator
         viewModel.isBalanceLoading.observe(viewLifecycleOwner) { isLoading ->
             if (isLoading) {
                 this.balanceAnimator?.start()

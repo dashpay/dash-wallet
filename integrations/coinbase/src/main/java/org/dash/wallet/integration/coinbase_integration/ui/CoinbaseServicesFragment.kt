@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui
 
+import android.animation.ObjectAnimator
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -31,6 +32,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.blinkAnimator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
@@ -46,9 +48,8 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
     private val binding by viewBinding(FragmentIntegrationPortalBinding::bind)
     private val viewModel by viewModels<CoinbaseServicesViewModel>()
     private var loadingDialog: AdaptiveDialog? = null
-    private var currentExchangeRate: org.dash.wallet.common.data.entity.ExchangeRate? = null
     private val sharedViewModel: CoinbaseActivityViewModel by activityViewModels()
-
+    private var balanceAnimator: ObjectAnimator? = null
     @Inject lateinit var analyticsService: AnalyticsService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -119,47 +120,30 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
         binding.balanceDash.setFormat(viewModel.balanceFormat)
         binding.balanceDash.setApplyMarkup(false)
         binding.balanceDash.setAmount(Coin.ZERO)
+        this.balanceAnimator = binding.balanceHeader.blinkAnimator
 
-        viewModel.exchangeRate.observe(
-            viewLifecycleOwner
-        ) { rate ->
-            if (rate != null) {
-                currentExchangeRate = rate
-                if (currentExchangeRate != null) {
-                    var balance = viewModel.latestUserBalance.value
-                    if(viewModel.user.value?.balance?.amount?.isNotEmpty() == true){
-                        balance = viewModel.user.value?.balance?.amount
-                    }
-                    setLocalFaitAmount(balance ?: "0")
-                }
+        binding.root.setOnRefreshListener {
+            viewModel.refreshBalance()
+        }
+
+        viewModel.balanceUIState.observe(viewLifecycleOwner) { state ->
+            binding.balanceDash.setAmount(state.balance)
+            binding.balanceLocal.text = state.balanceFiat?.toFormattedString() ?: ""
+
+            if (state.isBalanceUpdating) {
+                this.balanceAnimator?.start()
+            } else {
+                binding.root.isRefreshing = false
+                this.balanceAnimator?.end()
             }
         }
 
-        viewModel.user.observe(
-            viewLifecycleOwner
-        ) {
-            binding.balanceDash.setAmount(Coin.parseCoin(it.balance?.amount))
-            if (currentExchangeRate != null) {
-                setLocalFaitAmount(it.balance?.amount ?: "0")
-            }
-        }
-
-        viewModel.latestUserBalance.observe(
-            viewLifecycleOwner
-        ) {
-            binding.balanceDash.setAmount(Coin.parseCoin(it))
-            if (currentExchangeRate != null) {
-                setLocalFaitAmount(it ?: "0")
-            }
-        }
-
-        viewModel.showLoading.observe(
-            viewLifecycleOwner
-        ) {
+        viewModel.showLoading.observe(viewLifecycleOwner) {
             if (it) {
                 showProgress(R.string.loading)
-            } else
+            } else {
                 dismissProgress()
+            }
         }
 
         viewModel.userAccountError.observe(viewLifecycleOwner) {
@@ -184,12 +168,8 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ isConnected ->
             setNetworkState(isConnected)
         }
-    }
 
-    private fun setLocalFaitAmount(balance: String) {
-        val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
-        val localValue = exchangeRate.coinToFiat(Coin.parseCoin(balance))
-        binding.balanceLocal.text = localValue.toFormattedString()
+        viewModel.refreshBalance()
     }
 
     private fun showProgress(messageResId: Int) {
@@ -252,5 +232,10 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
         val defaultBrowser = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_BROWSER)
         defaultBrowser.data = Uri.parse(getString(R.string.coinbase_website))
         startActivity(defaultBrowser)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        this.balanceAnimator = null
     }
 }

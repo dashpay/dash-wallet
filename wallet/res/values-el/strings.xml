@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Το υπόλοιπο δεν είναι διαθέσιμο κατά τη διάρκεια της επανάληψης.</string>
     <string name="exchange_rates_activity_title">Τοπικό νόμισμα</string>
     <string name="exchange_rates_fragment_empty_text">Δεν ήταν δυνατή η φόρτωση των ισοτιμιών.</string>
-    <string name="exchange_rates_fragment_empty_search">Δε βρέθηκε η ισοτιμία.</string>
+    <string name="exchange_rate_not_found">Δε βρέθηκε η ισοτιμία.</string>
     <string name="exchange_rates_fragment_default">(προεπιλογή)</string>
     <string name="exchange_rates_fragment_rate">Ισοτιμία</string>
     <string name="exchange_rates_fragment_balance">Υπόλοιπο</string>

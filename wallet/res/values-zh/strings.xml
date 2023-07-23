@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">重放过程中无法显示余额.</string>
     <string name="exchange_rates_activity_title">本地货币</string>
     <string name="exchange_rates_fragment_empty_text">无法加载汇率.</string>
-    <string name="exchange_rates_fragment_empty_search">汇率未找到.</string>
+    <string name="exchange_rate_not_found">汇率未找到.</string>
     <string name="exchange_rates_fragment_default">(默认)</string>
     <string name="exchange_rates_fragment_rate">比率</string>
     <string name="exchange_rates_fragment_balance">余额</string>

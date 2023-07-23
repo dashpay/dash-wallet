@@ -80,7 +80,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
 
         viewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
-            selectedCurrencyCodeExchangeRate = ExchangeRate(Coin.COIN, it.fiat)
+            selectedCurrencyCodeExchangeRate = it?.let { ExchangeRate(Coin.COIN, it.fiat) }
         }
 
         viewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) {

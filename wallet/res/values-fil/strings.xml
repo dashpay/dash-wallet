@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Ang balance ay hindi available habang nirere-play.</string>
     <string name="exchange_rates_activity_title">Lokal na pananalapi</string>
     <string name="exchange_rates_fragment_empty_text">Hindi nag-load ang halaga ng palitan.</string>
-    <string name="exchange_rates_fragment_empty_search">Hindi makita ang halaga ng palitan</string>
+    <string name="exchange_rate_not_found">Hindi makita ang halaga ng palitan</string>
     <string name="exchange_rates_fragment_default">(default)</string>
     <string name="exchange_rates_fragment_rate">Halaga</string>
     <string name="exchange_rates_fragment_balance">Balanse</string>

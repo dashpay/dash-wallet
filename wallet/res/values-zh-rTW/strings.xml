@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">重播中餘額無法展示</string>
     <string name="exchange_rates_activity_title">本地貨幣</string>
     <string name="exchange_rates_fragment_empty_text">無法讀取匯率</string>
-    <string name="exchange_rates_fragment_empty_search">無法找到匯率</string>
+    <string name="exchange_rate_not_found">無法找到匯率</string>
     <string name="exchange_rates_fragment_default">(預設)</string>
     <string name="exchange_rates_fragment_rate">匯率</string>
     <string name="exchange_rates_fragment_balance">餘額</string>

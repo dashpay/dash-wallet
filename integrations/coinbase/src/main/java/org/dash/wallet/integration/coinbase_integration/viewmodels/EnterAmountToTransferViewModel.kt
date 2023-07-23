@@ -26,9 +26,9 @@ import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
-import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.*
@@ -89,8 +89,8 @@ class EnterAmountToTransferViewModel @Inject constructor(
     val dashBalanceInWalletState: StateFlow<Coin>
         get() = _dashBalanceInWallet
 
-    private val _localCurrencyExchangeRate = MutableLiveData<ExchangeRate>()
-    val localCurrencyExchangeRate: LiveData<ExchangeRate>
+    private val _localCurrencyExchangeRate = MutableLiveData<ExchangeRate?>()
+    val localCurrencyExchangeRate: LiveData<ExchangeRate?>
         get() = _localCurrencyExchangeRate
 
     private val _enteredConvertDashAmount = MutableLiveData<Pair<Fiat, Coin>>()

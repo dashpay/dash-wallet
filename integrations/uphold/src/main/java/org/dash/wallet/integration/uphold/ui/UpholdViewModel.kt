@@ -88,7 +88,7 @@ class UpholdViewModel @Inject constructor(
         exchangeRatesProvider
             .observeExchangeRate(globalConfig.exchangeCurrencyCode!!)
             .onEach { rate ->
-                exchangeRate = ExchangeRate(Coin.COIN, rate.fiat)
+                exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
                 val fiatBalance = exchangeRate?.coinToFiat(_uiState.value.balance)
                 _uiState.update { it.copy(fiatBalance = fiatBalance) }
             }

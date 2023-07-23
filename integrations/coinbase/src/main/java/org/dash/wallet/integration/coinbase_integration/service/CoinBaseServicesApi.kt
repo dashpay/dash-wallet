@@ -36,7 +36,7 @@ interface CoinBaseServicesApi {
 
     @GET("v2/payment-methods")
     suspend fun getActivePaymentMethods(
-        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE
     ): PaymentMethodsResponse?
 
     @POST("v2/accounts/{account_id}/buys")
@@ -64,7 +64,7 @@ interface CoinBaseServicesApi {
     @GET(CoinbaseConstants.BASE_IDS_REQUEST_URL)
     suspend fun getBaseIdForUSDModel(
         @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
-        @Query("base") baseCurrency: String,
+        @Query("base") baseCurrency: String
     ): BaseIdForUSDModel?
 
     @POST("v2/trades")
@@ -76,7 +76,7 @@ interface CoinBaseServicesApi {
     @POST("v2/trades/{trade_id}/commit")
     suspend fun commitSwapTrade(
         @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
-        @Path("trade_id") tradeId: String,
+        @Path("trade_id") tradeId: String
     ): SwapTradeResponse?
 
     @GET("/v2/user/auth")
@@ -87,7 +87,7 @@ interface CoinBaseServicesApi {
     @GET("v2/accounts/{account_id}/addresses")
     suspend fun getUserAccountAddress(
         @Path("account_id") accountId: String,
-        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE
     ): CoinBaseAccountAddressResponse
 
     @POST("v2/accounts/{account_id}/addresses")

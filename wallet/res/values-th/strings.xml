@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">ยอดคงเหลือไม่เพียงพอที่สามารถเล่นใหม่ได้</string>
     <string name="exchange_rates_activity_title">สกุลเงินท้องถิ่น</string>
     <string name="exchange_rates_fragment_empty_text">ไม่สามารถโหลดอัตราแลกเปลี่ยนได้</string>
-    <string name="exchange_rates_fragment_empty_search">ไม่พบอัตราแลกเปลี่ยน</string>
+    <string name="exchange_rate_not_found">ไม่พบอัตราแลกเปลี่ยน</string>
     <string name="exchange_rates_fragment_default">(ค่าเริ่มต้น)</string>
     <string name="exchange_rates_fragment_rate">อัตราแลกเปลี่ยน</string>
     <string name="exchange_rates_fragment_balance">ยอดคงเหลือ</string>

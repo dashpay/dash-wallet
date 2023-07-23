@@ -105,11 +105,9 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             binding.transferView.inputInDash = it
         }
 
-        enterAmountToTransferViewModel.localCurrencyExchangeRate.observe(viewLifecycleOwner){ rate ->
-            binding.transferView.exchangeRate = ExchangeRate(Coin.COIN, rate.fiat)
+        enterAmountToTransferViewModel.localCurrencyExchangeRate.observe(viewLifecycleOwner) { rate ->
+            binding.transferView.exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
         }
-
-
 
         enterAmountToTransferViewModel.onContinueTransferEvent.observe(viewLifecycleOwner){
             dashValue = it.second

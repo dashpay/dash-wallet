@@ -105,11 +105,13 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) { rate ->
-            binding.toolbarSubtitle.text = getString(
-                R.string.exchange_rate_template,
-                Coin.COIN.toPlainString(),
-                rate.fiat.toFormattedString()
-            )
+            rate?.let {
+                binding.toolbarSubtitle.text = getString(
+                    R.string.exchange_rate_template,
+                    Coin.COIN.toPlainString(),
+                    rate.fiat.toFormattedString()
+                )
+            }
         }
 
         convertViewModel.dashToCrypto.value?.let {
@@ -199,7 +201,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
-            binding.convertView.exchangeRate = ExchangeRate(Coin.COIN, it.fiat)
+            binding.convertView.exchangeRate = it?.let { ExchangeRate(Coin.COIN, it.fiat) }
             setConvertViewInput()
         }
 
@@ -268,6 +270,11 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     }
 
     private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {
+        if (request.fiatAmount == null && request.amount != null) {
+            showSwapValueErrorView(SwapValueErrorType.ExchangeRateMissing)
+            return
+        }
+
         val swapValueErrorType = convertViewModel.checkEnteredAmountValue(checkSendingConditions)
         if (swapValueErrorType == SwapValueErrorType.NOError) {
             if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
@@ -312,6 +319,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             SwapValueErrorType.MoreThanMax -> setMaxAmountError()
             SwapValueErrorType.NotEnoughBalance -> setNoEnoughBalanceError()
             SwapValueErrorType.SendingConditionsUnmet -> showMinimumBalanceWarning()
+            SwapValueErrorType.ExchangeRateMissing -> showExchangeRateMissing()
             else -> { }
         }
     }
@@ -338,12 +346,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
                     val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
                     val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
-
-                    binding.limitDesc.text = "${
-                    getString(
-                        R.string.entered_amount_is_too_high
-                    )
-                    } $fiatAmount"
+                    binding.limitDesc.text = "${getString(R.string.entered_amount_is_too_high)} $fiatAmount"
                 }
             }
         } else {
@@ -368,6 +371,10 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
     }
 
+    private fun showExchangeRateMissing() {
+        binding.limitDesc.text = getString(R.string.exchange_rate_not_found)
+    }
+
     private fun setConvertViewInput() {
         convertViewModel.selectedCryptoCurrencyAccount.value?.let {
             val accountData = it.coinBaseUserAccountData
@@ -378,16 +385,16 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 null
             }
 
-            convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
-                binding.convertView.input = ServiceWallet(
-                    it.coinBaseUserAccountData.currency?.name ?: "",
-                    getString(R.string.coinbase),
-                    it.coinBaseUserAccountData.balance?.amount ?: "",
-                    it.coinBaseUserAccountData.balance?.currency ?: "",
-                    it.getCoinBaseExchangeRateConversion(rate).first,
-                    iconUrl
-                )
-            }
+            binding.convertView.input = ServiceWallet(
+                it.coinBaseUserAccountData.currency?.name ?: "",
+                getString(R.string.coinbase),
+                it.coinBaseUserAccountData.balance?.amount ?: "",
+                it.coinBaseUserAccountData.balance?.currency ?: "",
+                convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
+                    it.getCoinBaseExchangeRateConversion(rate).first
+                } ?: "",
+                iconUrl
+            )
             setConvertViewTopMargin(convertViewModel.selectedCryptoCurrencyAccount.value == null)
         }
     }

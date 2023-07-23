@@ -66,7 +66,7 @@ dependencies {
     api 'com.squareup.retrofit2:converter-gson:2.6.1'
 
     // Android Arch
-    implementation "androidx.core:core-ktx:1.5.0"
+    implementation "androidx.core:core-ktx:$jetpackVersion"
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
     implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
@@ -85,6 +85,7 @@ dependencies {
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"

@@ -32,6 +32,7 @@ buildscript {
         recyclerViewVersion = "1.2.1"
         glideVersion = '4.12.0'
         zxingVersion = '3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
+        swipeRefreshLayoutVersion = '1.1.0'
 
         // Tests
         junitVersion = '4.13.2'

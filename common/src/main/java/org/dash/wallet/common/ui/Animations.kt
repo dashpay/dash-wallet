@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui
 
+import android.animation.ObjectAnimator
 import android.animation.TimeInterpolator
 import android.view.View
 import kotlin.math.exp
@@ -36,3 +37,15 @@ fun View.wiggle() {
         .setDuration(300)
         .start()
 }
+
+val View.blinkAnimator
+    get() = ObjectAnimator.ofFloat(
+        this,
+        View.ALPHA.name,
+        0f,
+        1f
+    ).apply {
+        duration = 500
+        repeatCount = ObjectAnimator.INFINITE
+        repeatMode = ObjectAnimator.REVERSE
+    }
