@@ -68,16 +68,16 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
 
     private fun continueCoinbase() {
         lifecycleScope.launch {
-            val goodToGo = if (viewModel.shouldShowCoinbaseInfoPopup) {
+            val goodToGo = if (viewModel.shouldShowCoinbaseInfoPopup()) {
                 AdaptiveDialog.custom(
-                    R.layout.dialog_withdrawal_limit_info,
+                    R.layout.dialog_withdrawal_limit_info
                 ).showAsync(requireActivity()) ?: false
             } else {
                 true
             }
 
             if (goodToGo) {
-                viewModel.shouldShowCoinbaseInfoPopup = false
+                viewModel.setCoinbaseInfoPopupShown()
                 coinbaseAuthLauncher.launch(
                     Intent(
                         requireContext(),

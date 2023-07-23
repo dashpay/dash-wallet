@@ -75,7 +75,7 @@ class CoinbaseServicesViewModel @Inject constructor(
         get() = preferences.format.noCode()
 
     init {
-        config.observePreference(CoinbaseConfig.LAST_BALANCE)
+        config.observe(CoinbaseConfig.LAST_BALANCE)
             .map { _balanceUIState.value?.copy(balance = Coin.valueOf(it ?: 0)) }
             .filterNotNull()
             .flatMapLatest { state ->
@@ -96,7 +96,7 @@ class CoinbaseServicesViewModel @Inject constructor(
             try {
                 _balanceUIState.value = _balanceUIState.value?.copy(isUpdating = true)
                 val response = coinBaseRepository.getUserAccount().unwrap()
-                config.setPreference(
+                config.set(
                     CoinbaseConfig.LAST_BALANCE,
                     Coin.parseCoin(response?.balance?.amount ?: "0.0").value
                 )

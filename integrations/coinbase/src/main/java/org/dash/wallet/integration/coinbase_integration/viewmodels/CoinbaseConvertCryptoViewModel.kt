@@ -172,7 +172,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     }
 
     suspend fun getLastBalance(): Coin {
-        return Coin.valueOf(config.getPreference(CoinbaseConfig.LAST_BALANCE) ?: 0)
+        return Coin.valueOf(config.get(CoinbaseConfig.LAST_BALANCE) ?: 0)
     }
 
     private fun isValidCoinBaseAccount(
@@ -204,28 +204,11 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         return exchangeRates.observeExchangeRate(currency).first()
     }
 
-    private val withdrawalLimitInDash: Double
-        get() {
-            return if (userPreference.coinbaseUserWithdrawalLimitAmount.isNullOrEmpty()) {
-                0.0
-            } else {
-                val formattedAmount = GenericUtils.formatFiatWithoutComma(
-                    userPreference.coinbaseUserWithdrawalLimitAmount
-                )
-                val fiatAmount = try {
-                    Fiat.parseFiat(userPreference.coinbaseSendLimitCurrency, formattedAmount)
-                } catch (x: Exception) {
-                    Fiat.valueOf(userPreference.coinbaseSendLimitCurrency, 0)
-                }
-                exchangeRate?.fiat?.let {
-                    val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it)
-                    val amountInDash = newRate.fiatToCoin(fiatAmount)
-                    amountInDash.toPlainString().toDoubleOrZero
-                } ?: 0.0
-            }
-        }
-
-    fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
-        return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
+    suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
+        exchangeRate?.let {
+            val rate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat)
+            val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash(rate)
+            return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
+        } ?: return true
     }
 }

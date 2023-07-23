@@ -133,26 +133,6 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    private val withdrawalLimitInDash: Double
-        get() {
-            return if (config.coinbaseUserWithdrawalLimitAmount.isNullOrEmpty()) {
-                0.0
-            } else {
-                val formattedAmount = GenericUtils.formatFiatWithoutComma(config.coinbaseUserWithdrawalLimitAmount)
-                val fiatAmount = try {
-                    Fiat.parseFiat(config.coinbaseSendLimitCurrency, formattedAmount)
-                } catch (x: Exception) {
-                    Fiat.valueOf(config.coinbaseSendLimitCurrency, 0)
-                }
-
-                exchangeRate?.fiat?.let { fiat ->
-                    val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat)
-                    val amountInDash = newRate.fiatToCoin(fiatAmount)
-                    amountInDash.toPlainString().toDoubleOrZero
-                } ?: 0.0
-            }
-        }
-
     private fun calculateCoinbaseMinAllowedValue(account:CoinbaseToDashExchangeRateUIModel){
         val minFaitValue = CoinbaseConstants.MIN_USD_COINBASE_AMOUNT.toBigDecimal() / account.currencyToUSDExchangeRate.toBigDecimal()
 
@@ -187,11 +167,15 @@ class TransferDashViewModel @Inject constructor(
     }
 
 
-    private fun isInputGreaterThanCoinbaseWithdrawalLimit(amountInDash: Coin): Boolean {
-        return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
+    suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
+        exchangeRate?.let {
+            val rate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat)
+            val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash(rate)
+            return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
+        } ?: return true
     }
 
-    fun checkEnteredAmountValue(amountInDash: Coin): SwapValueErrorType {
+    suspend fun checkEnteredAmountValue(amountInDash: Coin): SwapValueErrorType {
         return when {
                 (amountInDash == minAllowedSwapDashCoin || amountInDash.isGreaterThan(minAllowedSwapDashCoin)) &&
                         maxForDashCoinBaseAccount.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.NotEnoughBalance
@@ -199,7 +183,7 @@ class TransferDashViewModel @Inject constructor(
                 amountInDash.isGreaterThan(maxForDashCoinBaseAccount) -> SwapValueErrorType.MoreThanMax.apply {
                     amount = userAccountOnCoinbaseState.value?.coinBaseUserAccountData?.balance?.amount
                 }
-                isInputGreaterThanCoinbaseWithdrawalLimit(amountInDash)-> {
+            isInputGreaterThanLimit(amountInDash)-> {
                     SwapValueErrorType.UnAuthorizedValue
                 }
                 else -> SwapValueErrorType.NOError

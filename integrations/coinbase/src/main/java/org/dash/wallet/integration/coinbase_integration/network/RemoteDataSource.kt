@@ -38,12 +38,11 @@ import kotlin.time.toJavaDuration
 
 class RemoteDataSource @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val userPreferences: Configuration,
     private val config: CoinbaseConfig
 ) {
 
     fun <Api> buildApi(api: Class<Api>): Api {
-        val authenticator = TokenAuthenticator(buildTokenApi(), userPreferences, config)
+        val authenticator = TokenAuthenticator(buildTokenApi(), config)
         return Retrofit.Builder()
             .baseUrl(CoinbaseConstants.BASE_URL)
             .client(getOkHttpClient(authenticator))
@@ -63,7 +62,7 @@ class RemoteDataSource @Inject constructor(
 
     private fun getOkHttpClient(authenticator: Authenticator? = null): OkHttpClient {
         return OkHttpClient.Builder()
-            .addInterceptor(HeadersInterceptor(userPreferences))
+            .addInterceptor(HeadersInterceptor(config))
             .addInterceptor(CustomCacheInterceptor(context, config))
             .connectTimeout(20.seconds.toJavaDuration())
             .callTimeout(20.seconds.toJavaDuration())

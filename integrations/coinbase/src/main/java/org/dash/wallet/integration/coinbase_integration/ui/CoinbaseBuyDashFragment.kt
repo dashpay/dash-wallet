@@ -29,7 +29,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -46,7 +46,6 @@ import org.dash.wallet.integration.coinbase_integration.databinding.KeyboardHead
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseBuyDashViewModel
 
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
     private val binding by viewBinding(FragmentCoinbaseBuyDashBinding::bind)
     private val viewModel by viewModels<CoinbaseBuyDashViewModel>()
@@ -92,14 +91,16 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
         }
 
         amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
-            binding.authLimitBanner.root.isVisible = viewModel.isInputGreaterThanLimit(pair.first)
-            if (!binding.authLimitBanner.root.isVisible) {
-                val dashToFiat = amountViewModel.dashToFiatDirection.value ?: true
+            lifecycleScope.launch {
+                binding.authLimitBanner.root.isVisible = viewModel.isInputGreaterThanLimit(pair.first)
+                if (!binding.authLimitBanner.root.isVisible) {
+                    val dashToFiat = amountViewModel.dashToFiatDirection.value ?: true
 
-                val dashAmount = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-                    .noCode().minDecimals(6).optionalDecimals().format( pair.first)
+                    val dashAmount = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+                        .noCode().minDecimals(6).optionalDecimals().format( pair.first)
 
-                viewModel.onContinueClicked(dashToFiat, pair.second, dashAmount, binding.paymentMethodPicker.selectedMethodIndex)
+                    viewModel.onContinueClicked(dashToFiat, dashAmount, binding.paymentMethodPicker.selectedMethodIndex)
+                }
             }
         }
 

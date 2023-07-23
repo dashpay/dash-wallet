@@ -3,6 +3,7 @@ package org.dash.wallet.integration.coinbase_integration.model
 import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
 import kotlinx.parcelize.Parcelize
+
 @Parcelize
 data class UserAuthorizationInfoResponse(
     val `data`: Data
@@ -12,16 +13,16 @@ data class UserAuthorizationInfoResponse(
 data class Data(
     val method: String,
     @SerializedName("oauth_meta")
-    val oauth_meta: OauthMeta,
+    val oauthMeta: OauthMeta,
     val scopes: List<String>
 ): Parcelable
 
 @Parcelize
 data class OauthMeta(
     @SerializedName("send_limit_amount")
-    val send_limit_amount: String,
+    val sendLimitAmount: String,
     @SerializedName("send_limit_currency")
-    val send_limit_currency: String,
+    val sendLimitCurrency: String,
     @SerializedName("send_limit_period")
-    val send_limit_period: String
+    val sendLimitPeriod: String
 ): Parcelable

@@ -44,15 +44,15 @@ object CoinBaseModule {
     fun provideRemoteDataSource(
         userPreferences: Configuration,
         config: CoinbaseConfig,
-        @ApplicationContext context: Context)
-    : RemoteDataSource {
-        return RemoteDataSource(context, userPreferences, config)
+        @ApplicationContext context: Context
+    ): RemoteDataSource {
+        return RemoteDataSource(context, config)
     }
 
     @Singleton
     @Provides
     fun provideAuthApi(
-        remoteDataSource: RemoteDataSource,
+        remoteDataSource: RemoteDataSource
     ): CoinBaseAuthApi {
         return remoteDataSource.buildApi(CoinBaseAuthApi::class.java)
     }
@@ -60,7 +60,7 @@ object CoinBaseModule {
     @Singleton
     @Provides
     fun provideUserApi(
-        remoteDataSource: RemoteDataSource,
+        remoteDataSource: RemoteDataSource
     ): CoinBaseServicesApi {
         return remoteDataSource.buildApi(CoinBaseServicesApi::class.java)
     }

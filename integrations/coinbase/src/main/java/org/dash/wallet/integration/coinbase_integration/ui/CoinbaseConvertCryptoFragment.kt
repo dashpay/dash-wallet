@@ -276,26 +276,27 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         val swapValueErrorType = convertViewModel.checkEnteredAmountValue(checkSendingConditions)
-        if (swapValueErrorType == SwapValueErrorType.NOError) {
-            if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
-                lifecycleScope.launch {
+
+        lifecycleScope.launch {
+            if (swapValueErrorType == SwapValueErrorType.NOError) {
+                if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
                     if (viewModel.getLastBalance() < (request.amount ?: Coin.ZERO)) {
                         showNoAssetsError()
                     }
-                }
-            } else {
-                if (request.amount != null && viewModel.isInputGreaterThanLimit(request.amount)) {
-                    showSwapValueErrorView(SwapValueErrorType.UnAuthorizedValue)
                 } else {
-                    selectedCoinBaseAccount?.let {
-                        request.fiatAmount?.let { fait ->
-                            viewModel.swapTrade(fait, it, request.dashToCrypto)
+                    if (request.amount != null && viewModel.isInputGreaterThanLimit(request.amount)) {
+                        showSwapValueErrorView(SwapValueErrorType.UnAuthorizedValue)
+                    } else {
+                        selectedCoinBaseAccount?.let {
+                            request.fiatAmount?.let { fait ->
+                                viewModel.swapTrade(fait, it, request.dashToCrypto)
+                            }
                         }
                     }
                 }
+            } else {
+                showSwapValueErrorView(swapValueErrorType)
             }
-        } else {
-            showSwapValueErrorView(swapValueErrorType)
         }
     }
 
