@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integration.uphold.ui
 
+import android.animation.ObjectAnimator
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -34,6 +35,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.blinkAnimator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
@@ -53,6 +55,7 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
 
     private val binding by viewBinding(FragmentIntegrationPortalBinding::bind)
     private val viewModel by viewModels<UpholdViewModel>()
+    private var balanceAnimator: ObjectAnimator? = null
 
     private val authResultReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -122,6 +125,12 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
         }
 
         binding.disconnectBtn.setOnClickListener { confirmLogout() }
+        binding.root.setOnRefreshListener {
+            lifecycleScope.launch {
+                viewModel.refreshBalance()
+            }
+        }
+        this.balanceAnimator = binding.balanceHeader.blinkAnimator
 
         viewModel.uiState.observe(viewLifecycleOwner) { uiState ->
             binding.balanceDash.setAmount(uiState.balance)
@@ -134,6 +143,13 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
             } else if (binding.connectedGroup.isVisible) {
                 // The screen thinks it's still connected. Show the dialog and change the state.
                 showNotLoggedInDialog()
+            }
+
+            if (uiState.isBalanceUpdating) {
+                this.balanceAnimator?.start()
+            } else {
+                binding.root.isRefreshing = false
+                this.balanceAnimator?.end()
             }
 
             uiState.errorCode?.let {
@@ -247,5 +263,10 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
     override fun onDestroyView() {
         super.onDestroyView()
         LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(authResultReceiver)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        this.balanceAnimator = null
     }
 }

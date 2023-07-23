@@ -55,6 +55,7 @@ import javax.inject.Inject
 data class UpholdPortalUIState(
     val balance: Coin = Coin.ZERO,
     val fiatBalance: Fiat? = null,
+    val isBalanceUpdating: Boolean = false,
     val isUserLoggedIn: Boolean = false,
     val errorCode: Int? = null
 )
@@ -103,22 +104,23 @@ class UpholdViewModel @Inject constructor(
 
     suspend fun refreshBalance() {
         try {
+            _uiState.update { it.copy(isBalanceUpdating = true) }
             val balance = upholdClient.getDashBalance()
             globalConfig.lastUpholdBalance = balance.toString()
             val coin = balance.toCoin()
             val fiatBalance = exchangeRate?.coinToFiat(coin)
-            _uiState.update { it.copy(balance = coin, fiatBalance = fiatBalance) }
+            _uiState.update { it.copy(balance = coin, fiatBalance = fiatBalance, isBalanceUpdating = false) }
         } catch (ex: Exception) {
             log.error("Error refreshing balance: ${ex.message}")
 
             if (ex is UpholdException) {
                 if (ex.code == 401) {
-                    _uiState.update { it.copy(isUserLoggedIn = false) }
+                    _uiState.update { it.copy(isUserLoggedIn = false, isBalanceUpdating = false) }
                 } else {
-                    _uiState.update { it.copy(errorCode = ex.code) }
+                    _uiState.update { it.copy(errorCode = ex.code, isBalanceUpdating = false) }
                 }
             } else {
-                _uiState.update { it.copy(errorCode = -1) }
+                _uiState.update { it.copy(errorCode = -1, isBalanceUpdating = false) }
             }
         }
     }
