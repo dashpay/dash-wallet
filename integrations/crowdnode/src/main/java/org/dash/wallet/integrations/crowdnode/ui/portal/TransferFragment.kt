@@ -18,7 +18,6 @@
 package org.dash.wallet.integrations.crowdnode.ui.portal
 
 import android.animation.ObjectAnimator
-import android.animation.TimeInterpolator
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -38,6 +37,7 @@ import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.blinkAnimator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
@@ -59,8 +59,6 @@ import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.StakingDialog
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.WithdrawalLimitsInfoDialog
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
-import kotlin.math.exp
-import kotlin.math.sin
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -150,10 +148,14 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         }
 
         amountViewModel.amount.observe(viewLifecycleOwner) { amount ->
-            val maxValue = if (args.withdraw) viewModel.crowdNodeBalance else viewModel.dashBalance
+            val maxValue = if (args.withdraw) {
+                viewModel.crowdNodeBalance.value?.balance
+            } else {
+                viewModel.dashBalance.value
+            } ?: Coin.ZERO
 
             binding.balanceText.setTextAppearance(
-                if (amount > (maxValue.value ?: Coin.ZERO)) {
+                if (amount > maxValue) {
                     R.style.Caption_Red
                 } else {
                     R.style.Caption_Secondary
@@ -173,27 +175,17 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         binding.sourceIcon.setImageResource(R.drawable.ic_crowdnode_logo)
         binding.sourceLabel.text = getString(R.string.from_crowdnode)
 
-        viewModel.crowdNodeBalance.observe(viewLifecycleOwner) {
+        viewModel.crowdNodeBalance.observe(viewLifecycleOwner) { state ->
             updateAvailableBalance()
-        }
 
-        this.balanceAnimator = ObjectAnimator.ofFloat(
-            binding.balanceText,
-            View.ALPHA.name,
-            0f, 0.5f
-        ).apply {
-            duration = 500
-            repeatCount = ObjectAnimator.INFINITE
-            repeatMode = ObjectAnimator.REVERSE
-        }
-
-        viewModel.isBalanceLoading.observe(viewLifecycleOwner) { isLoading ->
-            if (isLoading) {
+            if (state.isUpdating) {
                 this.balanceAnimator?.start()
             } else {
                 this.balanceAnimator?.end()
             }
         }
+
+        this.balanceAnimator = binding.balanceText.blinkAnimator
     }
 
     private fun setupDeposit() {
@@ -288,7 +280,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
     private fun updateAvailableBalance() {
         val balance = if (args.withdraw) {
-            viewModel.crowdNodeBalance.value
+            viewModel.crowdNodeBalance.value?.balance
         } else {
             viewModel.dashBalance.value
         } ?: Coin.ZERO

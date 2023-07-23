@@ -27,7 +27,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.SingleLiveEvent
@@ -36,16 +35,11 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.BalanceUIState
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
-
-data class BalanceUIState(
-    val balance: Coin = Coin.ZERO,
-    val balanceFiat: Fiat? = null,
-    val isBalanceUpdating: Boolean = false
-)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -100,7 +94,7 @@ class CoinbaseServicesViewModel @Inject constructor(
     fun refreshBalance() {
         viewModelScope.launch {
             try {
-                _balanceUIState.value = _balanceUIState.value?.copy(isBalanceUpdating = true)
+                _balanceUIState.value = _balanceUIState.value?.copy(isUpdating = true)
                 val response = coinBaseRepository.getUserAccount().unwrap()
                 config.setPreference(
                     CoinbaseConfig.LAST_BALANCE,
@@ -109,7 +103,7 @@ class CoinbaseServicesViewModel @Inject constructor(
             } catch (ex: Exception) {
                 log.error("Error refreshing Coinbase balance", ex)
             } finally {
-                _balanceUIState.value = _balanceUIState.value?.copy(isBalanceUpdating = false)
+                _balanceUIState.value = _balanceUIState.value?.copy(isUpdating = false)
             }
         }
     }

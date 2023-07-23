@@ -28,7 +28,6 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -130,7 +129,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
             binding.balanceDash.setAmount(state.balance)
             binding.balanceLocal.text = state.balanceFiat?.toFormattedString() ?: ""
 
-            if (state.isBalanceUpdating) {
+            if (state.isUpdating) {
                 this.balanceAnimator?.start()
             } else {
                 binding.root.isRefreshing = false
