@@ -27,7 +27,10 @@ wallet/.cxx
 wallet/cpp
 vendor/
 fastlane/report.xml
+fastlane/metadata
 google-services.json
 output-metadata.json
 service.properties
 wallet/assets/explore/*.db
+app-distribution-key.json
+*.keystore
