@@ -1,3 +1,9 @@
+Dash Wallet
+===========
+Dash Wallet is a single coin wallet app for the Dash cryptocurrency. 
+This repo contains the source code for the android platform.  iOS is supported 
+at the [dashwallet-ios](https://github.com/dashpay/dashwallet-ios) repo on Github.
+
 Technical details
 =================
 
@@ -101,6 +107,11 @@ connection is established.
 
 ### BUILDING THE PRODUCTION VERSION
 
+These files must exist to result in a fully functional build:
+* `wallet/google-services.json` - supports analytics, crash-lytics, google cloud services, etc
+* `services.properties` - contains the keys for Uphold and Coinbase (see below)
+* `local.properties` - contains the support email and Google Map API keys (see below)
+
 At this point I'd like to remind that you continue on your own risk. According to the license,
 there is basically no warranty and liability. It's your responsibility to audit the source code
 for security issues and build, install and run the application in a secure way.
@@ -109,13 +120,12 @@ The production version uses Mainnet, is built non-debuggable, space-optimized wi
 wallet file is protected against access from non-root users. In the code repository, it is build with
 the 'prod' flavor.
 
-
 	# each time
 	cd dash-wallet
 	git pull
     gradle clean build assembleProdRelease
 
-The resulting production release version will be at:  wallet/build/outputs/apk/dash-wallet-prod-release-unsigned.apk
+The resulting production release version will be at:  `wallet/build/outputs/apk/wallet-prod-release.apk`
 
 BUILDING ALL FLAVORS
 
@@ -128,6 +138,33 @@ BUILDING ALL FLAVORS
     gradle clean build assemble_testNet3Debug
     
 All flavors (debug and release) will be at:  wallet/build/outputs/apk
+
+### BUILDING THE PRODUCTION VERSION WITH FASTLANE
+Place these files in `./deploy`
+* `app-distribution-key.json` - Firebase app distribution key
+* `dash-wallet.keystore` - the production signing key
+
+## Build the production version of the app
+The APK is placed here: `wallet/build/outputs/apk/wallet-prod-release.apk`
+```sh
+    fastlane build storepass:[keystore password] keypass:[key password]
+```
+## Upload existing wallet-prod-release.apk file to the internal test track.
+```shell
+    fastlane upload
+```
+## Build, followed by Upload
+```shell
+    fastlane publish storepass:[keystore password] keypass:[key password]
+```
+## Promote to production with 50% rollout (20% by default if no args)
+```shell
+    fastlane promote rollout:0.5
+```
+## Increase rollout to 70%
+```shell
+    fastlane increase rollout:0.7
+```
 
 ### CONFIGURATION FOR UPHOLD AND COINBASE
 
@@ -157,6 +194,11 @@ two variables:
 This allows `local.properties` to specify a support email for debug builds and a different support 
 email for release/production builds. 
 
+### CONFIGURATION FOR GOOGLE MAPS
+
+`local.properties` should also have a value for `GOOGLE_PLAY_API_KEY` to support Google Maps in the
+Explore features of Dash Wallet.
+
 ### SETTING UP FOR DEVELOPMENT
 
 You should be able to import the project into Android Studio, as it uses Gradle for building.
@@ -164,14 +206,13 @@ You should be able to import the project into Android Studio, as it uses Gradle 
 
 ### TRANSLATIONS
 
-The source language is English. Translations for all other languages [happen on Transifex](https://www.transifex.com/dash/dash-wallet/).
+The source language is English. Translations for all other languages [happen on Transifex](https://app.transifex.com/dash/dash-mobile-wallets/).
+The source text and translations are shared as much as possible with the iOS app.
 
 The English resources are pushed to Transifex. Changes are pulled and committed to the git
 repository from time to time. It can be done by manually downloading the files, but using the `tx`
-command line client is more convenient:
-
-    # first time only
-    sudo apt install transifex-client
+command line client is more convenient.  See [Transifex Client](https://developers.transifex.com/docs/cli)
+for help for usage and installation.
 
 If strings resources are added or changed, the source language files need to be pushed to
 Transifex. This step will probably only be executed by the maintainer of the project, as special
@@ -216,7 +257,7 @@ Instructions for preparing an NFC tag with your address:
 
 ### DASHJ
 
-Dash Wallet uses dashj for Dash specific logic.  This project is forked from [bitcoinj](https://bitcoinj.github.io/)
+Dash Wallet uses [dashj](https://github.com/dashpay/dashj) for Dash specific logic.  This project is forked from [bitcoinj](https://bitcoinj.github.io/)
 
 
 ### EXCHANGE RATES
