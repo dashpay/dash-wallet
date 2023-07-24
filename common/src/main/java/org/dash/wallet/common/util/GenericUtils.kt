@@ -24,6 +24,8 @@ import android.os.LocaleList
 import android.text.TextUtils
 import org.dash.wallet.common.data.CurrencyInfo
 import java.math.RoundingMode
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
 import java.util.*
 
@@ -129,16 +131,17 @@ object GenericUtils {
      * @param fiatValue
      * @return
      */
-    fun formatFiatWithoutComma(fiatValue: String): String? {
-        val fiatValueContainsCommaWithDecimal = fiatValue.contains(",") && fiatValue.contains(".")
-        return if (fiatValueContainsCommaWithDecimal) {
-            fiatValue.replace(
-                ",".toRegex(),
-                ""
-            )
-        } else {
-            fiatValue.replace(",".toRegex(), ".")
+    fun formatFiatWithoutComma(fiatValue: String): String {
+        val numericValue = try {
+            NumberFormat.getInstance(getDeviceLocale()).parse(fiatValue)!!.toDouble()
+        } catch (e: NumberFormatException) {
+            throw IllegalArgumentException("Invalid numeric format: $fiatValue")
         }
+
+        val decimalFormat = DecimalFormat.getInstance(Locale.US) as DecimalFormat
+        decimalFormat.applyPattern("#.##########")
+
+        return decimalFormat.format(numericValue)
     }
 
     fun getLocalCurrencySymbol(currencyCode: String?): String? {

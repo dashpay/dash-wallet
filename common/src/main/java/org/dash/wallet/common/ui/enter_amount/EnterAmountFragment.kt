@@ -84,6 +84,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
     private val viewModel: EnterAmountViewModel by activityViewModels()
     @Inject lateinit var authManager: AuthenticationManager
     private val decimalSeparator = DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
+
     var maxSelected: Boolean = false
         private set
     var didAuthorize: Boolean = false
