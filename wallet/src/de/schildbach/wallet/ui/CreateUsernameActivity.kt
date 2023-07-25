@@ -108,7 +108,6 @@ class CreateUsernameActivity : InteractionAwareActivity() {
         val username = intent?.extras?.getString(EXTRA_USERNAME)
         val invite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
         val fromOnboardng = intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)
-        val showVotingFlow = true
 
         lifecycleScope.launchWhenCreated {
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_create_user_name_fragment) as NavHostFragment
@@ -123,19 +122,20 @@ class CreateUsernameActivity : InteractionAwareActivity() {
                 fromOnboardng = fromOnboardng
             )
 
-            if (!dashPayViewModel.isDashPayInfoShown()) {
-                navGraph.setStartDestination(R.id.welcomeToDashPayFragment)
-            } else {
-                if (showVotingFlow) {
-                    navGraph.setStartDestination(R.id.requestUsernameFragment)
+            if (dashPayViewModel.isVotingFlowEnabled) {
+                if (!dashPayViewModel.isDashPayInfoShown()) {
+                    navGraph.setStartDestination(R.id.welcomeToDashPayFragment)
                 } else {
+                    navGraph.setStartDestination(R.id.requestUsernameFragment)
+                }
+            } else {
                     bundle.putParcelable(
                         CreateUsernameFragment.CREATE_USER_NAME_ARGS,
                         dashPayViewModel.createUsernameArgs
                     )
                     navGraph.setStartDestination(R.id.createUsernameFragment)
                 }
-            }
+
 
             navController.graph = navGraph
             navController.setGraph(navController.graph, bundle)

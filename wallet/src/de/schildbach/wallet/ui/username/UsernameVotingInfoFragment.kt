@@ -26,13 +26,9 @@ class UsernameVotingInfoFragment : Fragment(R.layout.fragment_username_voting_in
         }
 
         binding.usernameVotingInfoContinueBtn.setOnClickListener {
-            dashPayViewModel.createUsernameArgs?.let { args ->
-                safeNavigate(
-                    UsernameVotingInfoFragmentDirections.usernameVotingInfoFragmentToCreateUsernameFragment(
-                        args
-                    )
-                )
-            }
+            safeNavigate(
+                UsernameVotingInfoFragmentDirections.usernameVotingInfoFragmentToRequestUsernameFragment()
+            )
         }
 
         lifecycleScope.launchWhenStarted {
