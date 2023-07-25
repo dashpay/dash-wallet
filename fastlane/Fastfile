@@ -166,7 +166,7 @@ platform :android do
     key_file = "#{ENV['PWD']}/.deploy/gc-storage-service-account.json"
     bucket_name = "dash-wallet-firebase.appspot.com"
     file_name = "explore/explore.db"
-    if flavor == "prod"
+    if flavor == "prod" || flavor.nil?
       puts "Downloading the production database"
     else
       file_name = "explore/explore-testnet.db"
