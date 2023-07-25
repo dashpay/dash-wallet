@@ -58,7 +58,7 @@ data class FiltersUIState(
     fun isDefault(): Boolean {
         return sortByOption == UsernameSortOption.DateDescending &&
             typeOption == UsernameTypeOption.All &&
-            onlyDuplicates &&
+            !onlyDuplicates &&
             !onlyLinks
     }
 }

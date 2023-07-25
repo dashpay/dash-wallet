@@ -36,6 +36,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 
@@ -44,10 +45,12 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
     private val viewModel by votingViewModels<UsernameRequestsViewModel>()
     private val binding by viewBinding(FragmentUsernameRequestsBinding::bind)
     private var itemList = listOf<UsernameRequestGroupView>()
+    private lateinit var keyboardUtil: KeyboardUtil
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val binding = this.binding
         binding.toolbar.setOnClickListener {
             viewModel.prepopulateList()
         }
@@ -81,6 +84,11 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         binding.clearBtn.setOnClickListener { binding.search.text.clear() }
         binding.appliedFiltersPanel.setOnClickListener {
             safeNavigate(UsernameRequestsFragmentDirections.usernameRequestsToFilters())
+        }
+
+        keyboardUtil = KeyboardUtil(requireActivity().window, binding.root)
+        keyboardUtil.setOnKeyboardShownChanged { isShown ->
+            binding.appliedFiltersPanel.isVisible = !isShown
         }
 
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
@@ -141,8 +149,8 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             appliedFilterNames.add(typeOptionNames[state.typeOption.ordinal])
         }
 
-        if (!state.onlyDuplicates) {
-            appliedFilterNames.add(getString(R.string.all))
+        if (state.onlyDuplicates) {
+            appliedFilterNames.add(getString(R.string.only_duplicates))
         }
 
         if (state.onlyLinks) {
@@ -152,3 +160,5 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
     }
 }
+
+

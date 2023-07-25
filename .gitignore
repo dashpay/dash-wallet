@@ -31,3 +31,5 @@ google-services.json
 output-metadata.json
 service.properties
 wallet/assets/explore/*.db
+.deploy/*.json
+*.keystore

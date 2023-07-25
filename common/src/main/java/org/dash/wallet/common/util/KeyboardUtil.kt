@@ -24,7 +24,7 @@ import android.view.ViewTreeObserver
 import android.view.Window
 import android.view.inputmethod.InputMethodManager
 
-class KeyboardUtil {
+class KeyboardUtil(window: Window, private val rootView: View) {
     companion object {
         fun showSoftKeyboard(context: Context?, view: View?) {
             if (context == null || view == null) {
@@ -55,17 +55,13 @@ class KeyboardUtil {
         }
     }
 
-    private var rootView: View? = null
     private var decorView: View? = null
     private var defaultPadding: Int = 0
+    private var onKeyboardShownChanged: ((Boolean) -> Unit)? = null
+    private var adjustKeyboard: Boolean = false
 
     private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener {
-        val root = rootView
-        val decor = decorView
-
-        if (root == null || decor == null) {
-            return@OnGlobalLayoutListener
-        }
+        val decor = decorView ?: return@OnGlobalLayoutListener
 
         val rect = Rect()
         decor.getWindowVisibleDisplayFrame(rect)
@@ -74,20 +70,36 @@ class KeyboardUtil {
         val diff = displayHeight - rect.bottom
 
         if (diff > 100) { // assume the keyboard is showing
-            root.setPadding(0, 0, 0, diff + defaultPadding)
+            onKeyboardShownChanged?.invoke(true)
+
+            if (adjustKeyboard) {
+                rootView.setPadding(0, 0, 0, diff + defaultPadding)
+            }
         } else {
-            root.setPadding(0, 0, 0, defaultPadding)
+            onKeyboardShownChanged?.invoke(false)
+
+            if (adjustKeyboard) {
+                rootView.setPadding(0, 0, 0, defaultPadding)
+            }
         }
     }
 
-    fun enableAdjustLayout(window: Window, rootView: View) {
+    init {
         this.decorView = window.decorView
-        this.rootView = rootView
-        this.defaultPadding = rootView.paddingBottom
-        decorView!!.viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
+        decorView?.viewTreeObserver?.addOnGlobalLayoutListener(layoutListener)
+    }
+
+    fun enableAdjustLayout() {
+        requireNotNull(decorView)
+        defaultPadding = rootView.paddingBottom
+        adjustKeyboard = true
     }
 
     fun disableAdjustLayout() {
-        decorView?.viewTreeObserver?.removeOnGlobalLayoutListener(layoutListener)
+        adjustKeyboard = false
+    }
+
+    fun setOnKeyboardShownChanged(listener: (Boolean) -> Unit) {
+        onKeyboardShownChanged = listener
     }
 }
