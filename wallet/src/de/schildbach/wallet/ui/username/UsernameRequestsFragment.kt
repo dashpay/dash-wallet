@@ -88,7 +88,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
         keyboardUtil = KeyboardUtil(requireActivity().window, binding.root)
         keyboardUtil.setOnKeyboardShownChanged { isShown ->
-            binding.appliedFiltersPanel.isVisible = !isShown
+            binding.appliedFiltersPanel.isVisible = !viewModel.filterState.value.isDefault() && !isShown
         }
 
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
@@ -105,7 +105,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
                 }
             }
 
-            binding.filterSubtitle.text = getString(R.string.n_duplicates, state.totalDuplicates)
+            binding.filterSubtitle.text = getString(R.string.n_usernames, state.filteredUsernameRequests.size)
             binding.filterSubtitle.isVisible = state.filteredUsernameRequests.isNotEmpty()
             binding.searchPanel.isVisible = state.filteredUsernameRequests.isNotEmpty()
             binding.noItemsTxt.isVisible = state.filteredUsernameRequests.isEmpty()
@@ -120,7 +120,9 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
         viewModel.filterState.observe(viewLifecycleOwner) { state ->
             val isDefault = state.isDefault()
-            binding.appliedFiltersPanel.isVisible = !isDefault
+            binding.appliedFiltersPanel.isVisible = !isDefault && !keyboardUtil.isKeyboardShown
+            val typeOptionNames = binding.root.resources.getStringArray(R.array.usernames_type_options)
+            binding.filterTitle.text = typeOptionNames[state.typeOption.ordinal]
 
             if (!isDefault) {
                 populateAppliedFilters(state)
@@ -138,15 +140,10 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
     private fun populateAppliedFilters(state: FiltersUIState) {
         val sortByOptionNames = binding.root.resources.getStringArray(R.array.usernames_sort_by_options)
-        val typeOptionNames = binding.root.resources.getStringArray(R.array.usernames_type_options)
         val appliedFilterNames = mutableListOf<String>()
 
         if (state.sortByOption != UsernameSortOption.DateDescending) {
             appliedFilterNames.add(sortByOptionNames[state.sortByOption.ordinal])
-        }
-
-        if (state.typeOption != UsernameTypeOption.All) {
-            appliedFilterNames.add(typeOptionNames[state.typeOption.ordinal])
         }
 
         if (state.onlyDuplicates) {

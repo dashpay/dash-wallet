@@ -60,6 +60,14 @@ class KeyboardUtil(window: Window, private val rootView: View) {
     private var onKeyboardShownChanged: ((Boolean) -> Unit)? = null
     private var adjustKeyboard: Boolean = false
 
+    var isKeyboardShown: Boolean = false
+        private set(value) {
+            if (field != value) {
+                field = value
+                onKeyboardShownChanged?.invoke(value)
+            }
+        }
+
     private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener {
         val decor = decorView ?: return@OnGlobalLayoutListener
 
@@ -70,13 +78,13 @@ class KeyboardUtil(window: Window, private val rootView: View) {
         val diff = displayHeight - rect.bottom
 
         if (diff > 100) { // assume the keyboard is showing
-            onKeyboardShownChanged?.invoke(true)
+            isKeyboardShown = true
 
             if (adjustKeyboard) {
                 rootView.setPadding(0, 0, 0, diff + defaultPadding)
             }
         } else {
-            onKeyboardShownChanged?.invoke(false)
+            isKeyboardShown = false
 
             if (adjustKeyboard) {
                 rootView.setPadding(0, 0, 0, defaultPadding)

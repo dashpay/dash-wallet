@@ -424,7 +424,7 @@
     <string name="voting_duplicates_only_title">Vote only on duplicates</string>
     <string name="voting_duplicates_only_message">You can review all requests but you only need to vote on duplicates</string>
     <string name="all">All</string>
-    <string name="n_duplicates">%d duplicates</string>
+    <string name="n_usernames">%d usernames</string>
     <string name="n_requests">%d requests</string>
     <string name="search_by_username">Search by username</string>
     <string name="type">Type</string>

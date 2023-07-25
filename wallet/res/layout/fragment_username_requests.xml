@@ -64,6 +64,7 @@
         android:id="@+id/main_scroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:paddingBottom="28dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <androidx.constraintlayout.widget.ConstraintLayout

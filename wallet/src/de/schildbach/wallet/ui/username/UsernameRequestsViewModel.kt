@@ -45,7 +45,6 @@ import kotlin.random.Random
 
 data class UsernameRequestsUIState(
     val filteredUsernameRequests: List<UsernameRequestGroupView> = listOf(),
-    val totalDuplicates: Int = 0,
     val showFirstTimeInfo: Boolean = false
 )
 
@@ -56,8 +55,8 @@ data class FiltersUIState(
     val onlyLinks: Boolean = false
 ) {
     fun isDefault(): Boolean {
+        // typeOption isn't included because we show it in the header
         return sortByOption == UsernameSortOption.DateDescending &&
-            typeOption == UsernameTypeOption.All &&
             !onlyDuplicates &&
             !onlyLinks
     }
@@ -83,16 +82,6 @@ class UsernameRequestsViewModel @Inject constructor(
             .onEach { isShown -> _uiState.update { it.copy(showFirstTimeInfo = isShown != true) } }
             .launchIn(viewModelScope)
 
-        // Observe unfiltered duplicates to keep the total count consistent
-        usernameRequestDao.observeDuplicates(false)
-            .onEach { duplicates ->
-                _uiState.update { state ->
-                    state.copy(totalDuplicates = duplicates.groupBy { it.username }.size)
-                }
-            }
-            .launchIn(viewModelScope)
-
-        // Observe filtered duplicates
         _filterState.flatMapLatest { filterState ->
             observeUsernames()
                 .map { duplicates ->
