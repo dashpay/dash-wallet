@@ -118,8 +118,6 @@ object AnalyticsConstants {
     }
 
     object Explore {
-        const val WHERE_TO_SPEND = "explore__where_to_spend"
-        const val PORTAL_ATM = "explore__atms"
         const val LEARN_MORE = "explore_info_learn_more"
         const val CONTINUE = "explore_info_continue"
         const val ONLINE_MERCHANTS = "explore_online_merchants"

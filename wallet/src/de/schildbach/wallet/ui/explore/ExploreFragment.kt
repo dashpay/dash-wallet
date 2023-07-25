@@ -62,12 +62,10 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         }
 
         binding.merchantsBtn.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Explore.WHERE_TO_SPEND)
             safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.Merchants))
         }
 
         binding.atmsBtn.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Explore.PORTAL_ATM)
             safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.ATMs))
         }
 
