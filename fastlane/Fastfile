@@ -96,6 +96,8 @@ platform :android do
 
   desc "Build apk"
   lane :build do |options|
+    explore_db(options)
+
 	[
 		"#{ENV['PWD']}/service.properties", 
 		"#{ENV['PWD']}/local.properties", 
@@ -146,5 +148,47 @@ platform :android do
 			print_command: false
 		)
 	end
+  end
+
+  desc "Download explore.db"
+  lane :explore_db do |options|
+    assets_path = "#{ENV['PWD']}/wallet/assets/"
+    target_file_name = "explore/explore.db"
+    target_file_path = "#{assets_path}#{target_file_name}"
+
+    begin
+      File.delete(target_file_path)
+    rescue Errno::ENOENT
+    end
+
+    flavor=options[:flavor]
+    project_id = "dash-wallet-firebase"
+    key_file = "#{ENV['PWD']}/.deploy/gc-storage-service-account.json"
+    bucket_name = "dash-wallet-firebase.appspot.com"
+    file_name = "explore/explore.db"
+    if flavor == "prod" || flavor.nil?
+      puts "Downloading the production database"
+    else
+      file_name = "explore/explore-testnet.db"
+      puts "Downloading the test database"
+    end
+
+    require "google/cloud/storage"
+
+    # Explicitly use service account credentials by specifying the private key
+    # file.
+    storage = Google::Cloud::Storage.new project: project_id, keyfile: key_file
+
+    # Make an authenticated API request
+    storage.buckets.each do |bucket|
+      puts bucket.name
+    end
+
+    bucket = storage.bucket bucket_name, skip_lookup: true
+    file = bucket.file file_name
+    timestamp = file.updated_at.strftime("%Q")
+    file.download target_file_path
+
+    puts "Downloaded #{file.name} to #{target_file_path}"
   end
 end

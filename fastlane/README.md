@@ -79,6 +79,14 @@ Submit apk to Firebase Distribution
 
 Build apk
 
+### android explore_db
+
+```sh
+[bundle exec] fastlane android explore_db
+```
+
+Download explore.db
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.
