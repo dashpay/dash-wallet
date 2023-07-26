@@ -33,13 +33,21 @@ enum class UsernameSortOption {
     DateDescending,
     DateAscending,
     VotesDescending,
-    VotesAscending
+    VotesAscending;
+
+    companion object {
+        val defaultOption = DateDescending
+    }
 }
 
 enum class UsernameTypeOption {
     All,
     Approved,
-    NotApproved
+    NotApproved;
+
+    companion object {
+        val defaultOption = NotApproved
+    }
 }
 
 @AndroidEntryPoint
@@ -118,7 +126,9 @@ class UsernameRequestFilterDialog : OffsetDialogFragment(R.layout.dialog_usernam
     private fun checkResetButton() {
         var isEnabled = false
 
-        if (sortByOptionsAdapter.selectedIndex != 0 || typeOptionsAdapter.selectedIndex != 0) {
+        if (sortByOptionsAdapter.selectedIndex != UsernameSortOption.defaultOption.ordinal ||
+            typeOptionsAdapter.selectedIndex != UsernameTypeOption.defaultOption.ordinal
+        ) {
             isEnabled = true
         }
 
@@ -134,8 +144,8 @@ class UsernameRequestFilterDialog : OffsetDialogFragment(R.layout.dialog_usernam
     }
 
     private fun resetFilters() {
-        sortByOptionsAdapter.selectedIndex = 0
-        typeOptionsAdapter.selectedIndex = 0
+        sortByOptionsAdapter.selectedIndex = UsernameSortOption.defaultOption.ordinal
+        typeOptionsAdapter.selectedIndex = UsernameTypeOption.defaultOption.ordinal
         binding.onlyDuplicatesCheckbox.isChecked = true
         binding.onlyLinksCheckbox.isChecked = false
         binding.resetFiltersBtn.isEnabled = false

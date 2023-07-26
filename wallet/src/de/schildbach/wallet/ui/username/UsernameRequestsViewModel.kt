@@ -49,8 +49,8 @@ data class UsernameRequestsUIState(
 )
 
 data class FiltersUIState(
-    val sortByOption: UsernameSortOption = UsernameSortOption.DateDescending,
-    val typeOption: UsernameTypeOption = UsernameTypeOption.All,
+    val sortByOption: UsernameSortOption = UsernameSortOption.defaultOption,
+    val typeOption: UsernameTypeOption = UsernameTypeOption.defaultOption,
     val onlyDuplicates: Boolean = true,
     val onlyLinks: Boolean = false
 ) {
