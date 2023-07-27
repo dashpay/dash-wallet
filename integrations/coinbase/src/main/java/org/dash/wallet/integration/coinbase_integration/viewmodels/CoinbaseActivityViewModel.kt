@@ -25,10 +25,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseIdForFaitDataUIState
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.PaymentMethodsUiState
@@ -61,7 +61,7 @@ class CoinbaseActivityViewModel @Inject constructor(
     val coinbaseLogOutCallback = SingleLiveEvent<Boolean>()
     init {
         viewModelScope.launch {
-            config.observePreference(CoinbaseConfig.LOGOUT_COINBASE)
+            config.observe(CoinbaseConfig.LOGOUT_COINBASE)
                 .collect {
                     if (it == true) {
                         config.clearAll()
@@ -102,7 +102,7 @@ class CoinbaseActivityViewModel @Inject constructor(
             }
 
             is ResponseResource.Failure -> {
-                runBlocking { config.setPreference(CoinbaseConfig.UPDATE_BASE_IDS, true) }
+                runBlocking { config.set(CoinbaseConfig.UPDATE_BASE_IDS, true) }
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(false)
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.Error(true)
             }

@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Saldo indisponível durante a reavaliação.</string>
     <string name="exchange_rates_activity_title">Moeda Local</string>
     <string name="exchange_rates_fragment_empty_text">Não foi possível carregar as cotações.</string>
-    <string name="exchange_rates_fragment_empty_search">Não foi possível encontrar a taxa de câmbio.</string>
+    <string name="exchange_rate_not_found">Não foi possível encontrar a taxa de câmbio.</string>
     <string name="exchange_rates_fragment_default">(padrão)</string>
     <string name="exchange_rates_fragment_rate">Taxa</string>
     <string name="exchange_rates_fragment_balance">Saldo</string>

@@ -31,14 +31,15 @@ import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.BalanceUIState
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
@@ -109,13 +110,9 @@ class CrowdNodeViewModel @Inject constructor(
     val exchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
 
-    private val _crowdNodeBalance: MutableLiveData<Coin> = MutableLiveData()
-    val crowdNodeBalance: LiveData<Coin>
+    private val _crowdNodeBalance: MutableLiveData<BalanceUIState> = MutableLiveData(BalanceUIState())
+    val crowdNodeBalance: LiveData<BalanceUIState>
         get() = _crowdNodeBalance
-
-    private val _isBalanceLoading: MutableLiveData<Boolean> = MutableLiveData()
-    val isBalanceLoading: LiveData<Boolean>
-        get() = _isBalanceLoading
 
     val dashFormat: MonetaryFormat
         get() = globalConfig.format.noCode()
@@ -125,7 +122,7 @@ class CrowdNodeViewModel @Inject constructor(
 
     val shouldShowFirstDepositBanner: Boolean
         get() = !crowdNodeApi.hasAnyDeposits() &&
-                (crowdNodeBalance.value?.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT) ?: true)
+            (crowdNodeBalance.value?.balance?.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT) ?: true)
 
     init {
         walletDataProvider.observeBalance()
@@ -145,23 +142,25 @@ class CrowdNodeViewModel @Inject constructor(
             .onEach {
                 when (it.status) {
                     Status.LOADING -> {
-                        _isBalanceLoading.postValue(true)
-                        _crowdNodeBalance.postValue(it.data ?: Coin.ZERO)
+                        _crowdNodeBalance.postValue(
+                            _crowdNodeBalance.value?.copy(balance = it.data ?: Coin.ZERO, isUpdating = true)
+                        )
                     }
                     Status.SUCCESS -> {
-                        _isBalanceLoading.postValue(false)
-                        _crowdNodeBalance.postValue(it.data ?: Coin.ZERO)
+                        _crowdNodeBalance.postValue(
+                            _crowdNodeBalance.value?.copy(balance = it.data ?: Coin.ZERO, isUpdating = false)
+                        )
                     }
                     Status.ERROR -> {
-                        _isBalanceLoading.postValue(false)
+                        _crowdNodeBalance.postValue(_crowdNodeBalance.value?.copy(isUpdating = false))
                         networkError.call()
                     }
-                    else -> _isBalanceLoading.postValue(false)
+                    else -> _crowdNodeBalance.postValue(_crowdNodeBalance.value?.copy(isUpdating = false))
                 }
             }
             .launchIn(viewModelScope)
     }
-    
+
     fun backupPassphrase() {
         navigationCallback.postValue(NavigationRequest.BackupPassphrase)
     }
@@ -184,6 +183,10 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.refreshBalance()
     }
 
+    fun refreshBalance() {
+        crowdNodeApi.refreshBalance()
+    }
+
     fun signUp() {
         crowdNodeApi.persistentSignUp(_accountAddress.value!!)
     }
@@ -192,9 +195,11 @@ class CrowdNodeViewModel @Inject constructor(
         val address = _accountAddress.value!!
         val apiLinkUrl = CrowdNodeConstants.getApiLinkUrl(address)
         crowdNodeApi.trackLinkingAccount(address)
-        onlineAccountRequest.postValue(mapOf(
-            URL_ARG to apiLinkUrl
-        ))
+        onlineAccountRequest.postValue(
+            mapOf(
+                URL_ARG to apiLinkUrl
+            )
+        )
     }
 
     fun cancelLinkingOnlineAccount() {
@@ -250,7 +255,7 @@ class CrowdNodeViewModel @Inject constructor(
 
     suspend fun getShouldShowConfirmationDialog(): Boolean {
         return crowdNodeApi.onlineAccountStatus.value == OnlineAccountStatus.Confirming &&
-               !(config.get(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN) ?: false)
+            !(config.get(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN) ?: false)
     }
 
     fun setConfirmationDialogShown(isShown: Boolean) {
@@ -261,7 +266,7 @@ class CrowdNodeViewModel @Inject constructor(
 
     suspend fun getShouldShowOnlineInfo(): Boolean {
         return signUpStatus != SignUpStatus.LinkedOnline &&
-                !(config.get(CrowdNodeConfig.ONLINE_INFO_SHOWN) ?: false)
+            !(config.get(CrowdNodeConfig.ONLINE_INFO_SHOWN) ?: false)
     }
 
     fun setOnlineInfoShown(isShown: Boolean) {
@@ -323,18 +328,22 @@ class CrowdNodeViewModel @Inject constructor(
 
     fun initiateOnlineSignUp() {
         val signupUrl = CrowdNodeConstants.getProfileUrl(networkParameters)
-        onlineAccountRequest.postValue(mapOf(
-            URL_ARG to signupUrl,
-            EMAIL_ARG to emailForAccount
-        ))
+        onlineAccountRequest.postValue(
+            mapOf(
+                URL_ARG to signupUrl,
+                EMAIL_ARG to emailForAccount
+            )
+        )
     }
 
     fun getAccountUrl(): String {
-        return CrowdNodeConstants.getFundsOpenUrl(if (signUpStatus == SignUpStatus.LinkedOnline) {
-            primaryDashAddress!!
-        } else {
-            _accountAddress.value!!
-        })
+        return CrowdNodeConstants.getFundsOpenUrl(
+            if (signUpStatus == SignUpStatus.LinkedOnline) {
+                primaryDashAddress!!
+            } else {
+                _accountAddress.value!!
+            }
+        )
     }
 
     fun finishSignUpToOnlineAccount() {

@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Saldo nie jest dostępne w trakcie odtwarzania.</string>
     <string name="exchange_rates_activity_title">Lokalna Waluta</string>
     <string name="exchange_rates_fragment_empty_text">Załadowanie kursów wymiany walut nie powiodło się</string>
-    <string name="exchange_rates_fragment_empty_search">Kurs nie został znaleziony</string>
+    <string name="exchange_rate_not_found">Kurs nie został znaleziony</string>
     <string name="exchange_rates_fragment_default">(domyślnie)</string>
     <string name="exchange_rates_fragment_rate">Kurs</string>
     <string name="exchange_rates_fragment_balance">Saldo</string>

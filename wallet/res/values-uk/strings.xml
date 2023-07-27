@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Під час відтворення баланс недоступний.</string>
     <string name="exchange_rates_activity_title">Локальна валюта</string>
     <string name="exchange_rates_fragment_empty_text">Не вдалося завантажити курси валют.</string>
-    <string name="exchange_rates_fragment_empty_search">Не вдалося знайти обмінний курс.</string>
+    <string name="exchange_rate_not_found">Не вдалося знайти обмінний курс.</string>
     <string name="exchange_rates_fragment_default">(за замовчуванням)</string>
     <string name="exchange_rates_fragment_rate">Курс</string>
     <string name="exchange_rates_fragment_balance">Баланс</string>

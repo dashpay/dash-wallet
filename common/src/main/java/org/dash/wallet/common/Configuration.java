@@ -35,7 +35,6 @@ import com.google.common.base.Strings;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.data.CurrencyInfo;
-import org.dash.wallet.common.util.GenericUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,14 +83,6 @@ public class Configuration {
 
     public static final String PREFS_KEY_LAST_UPHOLD_BALANCE = "last_uphold_balance";
 
-    // Coinbase
-
-    public static final String PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN = "last_coinbase_access_token";
-    public static final String PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN = "last_coinbase_refresh_token";
-    public static final String PREFS_KEY_COINBASE_USER_ACCOUNT_ID = "coinbase_account_id";
-    public static final String PREFS_KEY_COINBASE_AUTH_INFO_SHOWN = "coinbase_auth_info_shown";
-    public static final String PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT = "withdrawal_limit";
-    public static final String PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY = "send_limit_currency";
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     public static final int PREFS_DEFAULT_BTC_PRECISION = 8;
     public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
@@ -467,57 +458,6 @@ public class Configuration {
 
     public void setTaxCategoryInstallTime(long time) {
         prefs.edit().putLong(PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME, time).apply();
-    }
-
-    // Coinbase
-    // TODO: put new preferences in the CoinbaseConfig and migrate these.
-    public void setLastCoinBaseAccessToken(String token) {
-        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, token).apply();
-    }
-
-    @NonNull
-    public String getLastCoinbaseAccessToken() {
-        return prefs.getString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, "");
-    }
-
-    public void setLastCoinBaseRefreshToken(String token) {
-        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, token).apply();
-    }
-
-    public String getLastCoinbaseRefreshToken() {
-        return prefs.getString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, null);
-    }
-
-    public Boolean getHasCoinbaseAuthInfoBeenShown() {
-        return prefs.getBoolean(PREFS_KEY_COINBASE_AUTH_INFO_SHOWN, false);
-    }
-
-    public void setHasCoinbaseAuthInfoBeenShown(boolean isShown) {
-        prefs.edit().putBoolean(PREFS_KEY_COINBASE_AUTH_INFO_SHOWN, isShown).apply();
-    }
-
-    public void setCoinBaseUserAccountId(String accountId) {
-        prefs.edit().putString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, accountId).apply();
-    }
-
-    public String getCoinbaseUserAccountId(){
-        return prefs.getString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, null);
-    }
-
-    public void setCoinbaseUserWithdrawalLimitAmount(String amount){
-        prefs.edit().putString(PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT, amount).apply();
-    }
-
-    public String getCoinbaseUserWithdrawalLimitAmount() {
-        return prefs.getString(PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT, null);
-    }
-
-    public void setCoinbaseSendLimitCurrency(String currency){
-        prefs.edit().putString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, currency).apply();
-    }
-
-    public String getCoinbaseSendLimitCurrency() {
-        return prefs.getString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, GenericUtils.INSTANCE.getLocaleCurrencyCode());
     }
 
     // CrowdNode

@@ -17,39 +17,30 @@
 
 package de.schildbach.wallet.ui.buy_sell
 
-import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
-import org.dash.wallet.integration.uphold.api.UpholdClient
+import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
 class IntegrationOverviewViewModel @Inject constructor(
-    private val config: Configuration,
+    private val config: CoinbaseConfig,
     private val coinBaseRepository: CoinBaseRepositoryInt,
-    private val upholdClient: UpholdClient,
     private val analyticsService: AnalyticsService
 ): ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(IntegrationOverviewViewModel::class.java)
     }
 
-    var shouldShowCoinbaseInfoPopup: Boolean
-        get() = !config.hasCoinbaseAuthInfoBeenShown
-        set(value) {
-            config.hasCoinbaseAuthInfoBeenShown = !value
-        }
-
     suspend fun loginToCoinbase(code: String): Boolean {
         when (val response = coinBaseRepository.completeCoinbaseAuthentication(code)) {
             is ResponseResource.Success -> {
                 if (response.value) {
-                     return true
+                    return true
                 }
             }
 
@@ -59,6 +50,14 @@ class IntegrationOverviewViewModel @Inject constructor(
         }
 
         return false
+    }
+
+    suspend fun shouldShowCoinbaseInfoPopup(): Boolean {
+        return config.get(CoinbaseConfig.AUTH_INFO_SHOWN) != true
+    }
+
+    suspend fun setCoinbaseInfoPopupShown() {
+        config.set(CoinbaseConfig.AUTH_INFO_SHOWN, true)
     }
 
     fun logEvent(eventName: String) {

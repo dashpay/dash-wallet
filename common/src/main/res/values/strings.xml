@@ -91,6 +91,7 @@
     <string name="payment_request_problem_title">Payment was not acknowledged</string>
     <string name="payment_protocol_default_error_title">Payment error</string>
     <string name="payment_request_problem_message">Your payment could not be processed by the server, please inquire with the merchant</string>
+    <string name="exchange_rate_not_found">Could not find exchange rate.</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Receive directly into Dash Wallet</string>

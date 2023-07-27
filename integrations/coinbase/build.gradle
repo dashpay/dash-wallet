@@ -79,8 +79,7 @@ dependencies {
     implementation "io.coil-kt:coil:$coilVersion"
     implementation 'me.grantland:autofittextview:0.2.1'
     implementation "androidx.browser:browser:$browserVersion"
-
-    implementation 'com.scottyab:secure-preferences-lib:0.1.7'
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
 
     // Logging
     implementation "org.slf4j:slf4j-api:$slf4jVersion"

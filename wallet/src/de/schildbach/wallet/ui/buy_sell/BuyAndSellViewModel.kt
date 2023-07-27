@@ -129,7 +129,7 @@ class BuyAndSellViewModel @Inject constructor(
                 updateUpholdBalance()
             }
 
-            if (coinBaseRepository.isUserConnected()) {
+            if (coinBaseRepository.isAuthenticated) {
                 updateCoinbaseBalance()
             }
         }
@@ -197,7 +197,7 @@ class BuyAndSellViewModel @Inject constructor(
             when (val response = coinBaseRepository.getUserAccount()) {
                 is ResponseResource.Success -> {
                     response.value?.balance?.amount?.let {
-                        coinbaseConfig.setPreference(CoinbaseConfig.LAST_BALANCE, Coin.parseCoin(it).value)
+                        coinbaseConfig.set(CoinbaseConfig.LAST_BALANCE, Coin.parseCoin(it).value)
                     }
                     showRowBalance(ServiceType.COINBASE, response.value?.balance?.amount ?: coinbaseBalanceString())
                 }
@@ -236,7 +236,7 @@ class BuyAndSellViewModel @Inject constructor(
 
     fun logEnterCoinbase() {
         analytics.logEvent(
-            if (coinBaseRepository.isUserConnected()) {
+            if (coinBaseRepository.isAuthenticated) {
                 AnalyticsConstants.Coinbase.ENTER_CONNECTED
             } else {
                 AnalyticsConstants.Coinbase.ENTER_DISCONNECTED
@@ -258,5 +258,5 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
     private suspend fun coinbaseBalanceString(): String =
-        Coin.valueOf(coinbaseConfig.getPreference(CoinbaseConfig.LAST_BALANCE) ?: 0).toPlainString()
+        Coin.valueOf(coinbaseConfig.get(CoinbaseConfig.LAST_BALANCE) ?: 0).toPlainString()
 }

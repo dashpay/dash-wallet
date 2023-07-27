@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Le solde n\'est pas disponible pendant la relecture.</string>
     <string name="exchange_rates_activity_title">Monnaie locale</string>
     <string name="exchange_rates_fragment_empty_text">Impossible de charger les taux de change.</string>
-    <string name="exchange_rates_fragment_empty_search">Taux de change introuvables.</string>
+    <string name="exchange_rate_not_found">Taux de change introuvables.</string>
     <string name="exchange_rates_fragment_default">(par défaut)</string>
     <string name="exchange_rates_fragment_rate">Taux</string>
     <string name="exchange_rates_fragment_balance">Solde</string>

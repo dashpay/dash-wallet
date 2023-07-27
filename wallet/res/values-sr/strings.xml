@@ -18,7 +18,7 @@
     <string name="wallet_balance_fragment_replaying">Stanje nije dostupno tokom napada duplog trošenja.</string>
     <string name="exchange_rates_activity_title">Lokalna valuta</string>
     <string name="exchange_rates_fragment_empty_text">Ne može da se učita kursna lista.</string>
-    <string name="exchange_rates_fragment_empty_search">Ne može da se pronadje kurs za razmenu.</string>
+    <string name="exchange_rate_not_found">Ne može da se pronadje kurs za razmenu.</string>
     <string name="exchange_rates_fragment_default">(podrazumevano)</string>
     <string name="exchange_rates_fragment_rate">Kurs</string>
     <string name="exchange_rates_fragment_balance">Stanje</string>

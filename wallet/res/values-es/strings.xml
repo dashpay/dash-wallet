@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Saldo no disponible durante la reevaluación.</string>
     <string name="exchange_rates_activity_title">Moneda local</string>
     <string name="exchange_rates_fragment_empty_text">No se pueden cargar las tasas de cambio.</string>
-    <string name="exchange_rates_fragment_empty_search">No se encuentra la tasa de cambio.</string>
+    <string name="exchange_rate_not_found">No se encuentra la tasa de cambio.</string>
     <string name="exchange_rates_fragment_default">(predeterminado)</string>
     <string name="exchange_rates_fragment_rate">Tasa</string>
     <string name="exchange_rates_fragment_balance">Saldo</string>

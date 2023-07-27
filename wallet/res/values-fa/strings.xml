@@ -20,7 +20,7 @@
     <string name="wallet_balance_fragment_replaying">امکان نمایش موجودی حساب طی فرآیند اعتبارسنجی تراکنش‌ها در بلاک چین وجود ندارد.</string>
     <string name="exchange_rates_activity_title">واحد پول محلی</string>
     <string name="exchange_rates_fragment_empty_text">امکان دریافت نر‌خ‌های تبدیل وجود ندارد.</string>
-    <string name="exchange_rates_fragment_empty_search"> نرخ‌های تبدیل پیدا نشد.</string>
+    <string name="exchange_rate_not_found"> نرخ‌های تبدیل پیدا نشد.</string>
     <string name="exchange_rates_fragment_default">(پیش‌فرض)</string>
     <string name="exchange_rates_fragment_rate">نرخ</string>
     <string name="exchange_rates_fragment_balance">موجودی</string>

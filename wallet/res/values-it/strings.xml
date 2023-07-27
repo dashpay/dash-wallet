@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Il conto non è disponibile durante il riavvio.</string>
     <string name="exchange_rates_activity_title">Moneta Locale</string>
     <string name="exchange_rates_fragment_empty_text">Impossibile caricare tassi di cambio.</string>
-    <string name="exchange_rates_fragment_empty_search">Impossibile trovare il tasso di cambio.</string>
+    <string name="exchange_rate_not_found">Impossibile trovare il tasso di cambio.</string>
     <string name="exchange_rates_fragment_default">(predefinito)</string>
     <string name="exchange_rates_fragment_rate">Tasso</string>
     <string name="exchange_rates_fragment_balance">Saldo</string>

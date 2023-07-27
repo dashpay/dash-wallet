@@ -18,7 +18,7 @@
     <string name="wallet_balance_fragment_replaying">Soldul nu este disponibil în timpul Replay-ului.</string>
     <string name="exchange_rates_activity_title">Monedă Locală</string>
     <string name="exchange_rates_fragment_empty_text">Nu s-au putut încărca ratele de schimb.</string>
-    <string name="exchange_rates_fragment_empty_search">Nu se poate găsi cursul de schimb.</string>
+    <string name="exchange_rate_not_found">Nu se poate găsi cursul de schimb.</string>
     <string name="exchange_rates_fragment_default">(default)</string>
     <string name="exchange_rates_fragment_rate">Rată</string>
     <string name="exchange_rates_fragment_balance">Sold</string>

@@ -17,7 +17,7 @@
     <string name="wallet_balance_fragment_too_much">Stanje na vašem računu je visoko. Zaradi varnostnih razlogov priporočamo, da prestavite nekaj kovancev v drugo denarnico.</string>
     <string name="wallet_balance_fragment_replaying">Pregled stanja med ponastavitvijo ni mogoč.</string>
     <string name="exchange_rates_fragment_empty_text">Nimam dostopa do menjalnih tečajev</string>
-    <string name="exchange_rates_fragment_empty_search">Ne najdem menjalnih tečajev.</string>
+    <string name="exchange_rate_not_found">Ne najdem menjalnih tečajev.</string>
     <string name="exchange_rates_fragment_default">(privzeto)</string>
     <string name="exchange_rates_fragment_rate">Oceni</string>
     <string name="exchange_rates_fragment_balance">Stanje</string>

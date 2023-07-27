@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Tekrar süresince bakiye kullanılamaz</string>
     <string name="exchange_rates_activity_title">Yerel para birimi</string>
     <string name="exchange_rates_fragment_empty_text">Döviz kurları yüklenemedi.</string>
-    <string name="exchange_rates_fragment_empty_search">Döviz kuru bulunamadı.</string>
+    <string name="exchange_rate_not_found">Döviz kuru bulunamadı.</string>
     <string name="exchange_rates_fragment_default">(varsayılan)</string>
     <string name="exchange_rates_fragment_rate">Oran</string>
     <string name="exchange_rates_fragment_balance">Bakiye</string>

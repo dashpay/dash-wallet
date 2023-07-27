@@ -16,7 +16,7 @@
     <string name="wallet_balance_fragment_too_much">Tämä määrä on melko suuri kannettavaksi taskussasi. Siirrä se johonkin turvallisempaan paikkaan.</string>
     <string name="wallet_balance_fragment_replaying">Saldo ei ole saatavilla uusinnan aikaan.</string>
     <string name="exchange_rates_fragment_empty_text">Kurssien arvoja ei saatu ladattua.</string>
-    <string name="exchange_rates_fragment_empty_search">Rahanvaihtokurssia ei löytynyt.</string>
+    <string name="exchange_rate_not_found">Rahanvaihtokurssia ei löytynyt.</string>
     <string name="exchange_rates_fragment_default">(oletus)</string>
     <string name="exchange_rates_fragment_source">Hinta paikasta %s</string>
     <string name="exchange_rates_options_search">Etsi rahanvaihtokurssi</string>

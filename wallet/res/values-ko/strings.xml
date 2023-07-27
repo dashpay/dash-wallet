@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">초기화 중에는 잔액을 사용할 수 없습니다.</string>
     <string name="exchange_rates_activity_title">로컬 통화</string>
     <string name="exchange_rates_fragment_empty_text">환율 정보를 불러오지 못했습니다.</string>
-    <string name="exchange_rates_fragment_empty_search">환율 정보를 찾지 못했습니다.</string>
+    <string name="exchange_rate_not_found">환율 정보를 찾지 못했습니다.</string>
     <string name="exchange_rates_fragment_default">(기본값)</string>
     <string name="exchange_rates_fragment_rate">요금</string>
     <string name="exchange_rates_fragment_balance">잔액</string>

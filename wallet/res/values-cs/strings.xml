@@ -19,7 +19,7 @@
     <string name="wallet_balance_fragment_replaying">Bilance je nedostupná během přehrávání.</string>
     <string name="exchange_rates_activity_title">Místní Měna</string>
     <string name="exchange_rates_fragment_empty_text">Nepodařilo se nahrát směnné kurzy.</string>
-    <string name="exchange_rates_fragment_empty_search">Nelze najít směnný kurz.</string>
+    <string name="exchange_rate_not_found">Nelze najít směnný kurz.</string>
     <string name="exchange_rates_fragment_default">(výchozí)</string>
     <string name="exchange_rates_fragment_rate">Kurz</string>
     <string name="exchange_rates_fragment_balance">Bilance</string>
