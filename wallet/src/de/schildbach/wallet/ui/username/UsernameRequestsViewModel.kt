@@ -26,10 +26,13 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -41,10 +44,25 @@ import kotlin.math.min
 import kotlin.random.Random
 
 data class UsernameRequestsUIState(
-    val usernameRequests: List<UsernameRequestGroupView> = listOf(),
+    val filteredUsernameRequests: List<UsernameRequestGroupView> = listOf(),
     val showFirstTimeInfo: Boolean = false
 )
 
+data class FiltersUIState(
+    val sortByOption: UsernameSortOption = UsernameSortOption.defaultOption,
+    val typeOption: UsernameTypeOption = UsernameTypeOption.defaultOption,
+    val onlyDuplicates: Boolean = true,
+    val onlyLinks: Boolean = false
+) {
+    fun isDefault(): Boolean {
+        // typeOption isn't included because we show it in the header
+        return sortByOption == UsernameSortOption.DateDescending &&
+            !onlyDuplicates &&
+            !onlyLinks
+    }
+}
+
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class UsernameRequestsViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
@@ -52,6 +70,9 @@ class UsernameRequestsViewModel @Inject constructor(
 ): ViewModel() {
     private val _uiState = MutableStateFlow(UsernameRequestsUIState())
     val uiState: StateFlow<UsernameRequestsUIState> = _uiState.asStateFlow()
+
+    private val _filterState = MutableStateFlow(FiltersUIState())
+    val filterState: StateFlow<FiltersUIState> = _filterState.asStateFlow()
 
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
@@ -61,20 +82,26 @@ class UsernameRequestsViewModel @Inject constructor(
             .onEach { isShown -> _uiState.update { it.copy(showFirstTimeInfo = isShown != true) } }
             .launchIn(viewModelScope)
 
-        usernameRequestDao.observeDuplicates()
-            .map { duplicates ->
-                duplicates.groupBy { it.username }
-                    .map { (username, list) ->
-                        UsernameRequestGroupView(
-                            username,
-                            list.sortedByDescending { it.votes },
-                            isExpanded = _uiState.value.usernameRequests.find {
-                                it.username == username
-                            }?.isExpanded ?: false
-                        )
-                    }
-            }
-            .onEach { requests -> _uiState.update { it.copy(usernameRequests = requests) } }
+        _filterState.flatMapLatest { filterState ->
+            observeUsernames()
+                .map { duplicates ->
+                    duplicates.groupBy { it.username }
+                        .map { (username, list) ->
+                            val sortedList = list.sortAndFilter()
+
+                            if (sortedList.isNotEmpty()) {
+                                val max = when (filterState.sortByOption) {
+                                    UsernameSortOption.VotesDescending -> sortedList.first().votes
+                                    UsernameSortOption.VotesAscending -> sortedList.last().votes
+                                    else -> sortedList.maxOf { it.votes }
+                                }
+                                sortedList.forEach { it.hasMaximumVotes = it.votes == max }
+                            }
+
+                            UsernameRequestGroupView(username, sortedList, isExpanded = isExpanded(username))
+                        }.filterNot { it.requests.isEmpty() }
+                }
+        }.onEach { requests -> _uiState.update { it.copy(filteredUsernameRequests = requests) } }
             .launchIn(viewModelWorkerScope)
     }
 
@@ -82,81 +109,135 @@ class UsernameRequestsViewModel @Inject constructor(
         dashPayConfig.set(DashPayConfig.VOTING_INFO_SHOWN, true)
     }
 
+    fun applyFilters(
+        sortByOption: UsernameSortOption,
+        typeOption: UsernameTypeOption,
+        onlyDuplicates: Boolean,
+        onlyLinks: Boolean
+    ) {
+        _filterState.update {
+            it.copy(
+                sortByOption = sortByOption,
+                typeOption = typeOption,
+                onlyDuplicates = onlyDuplicates,
+                onlyLinks = onlyLinks
+            )
+        }
+    }
+
+    private fun observeUsernames(): Flow<List<UsernameRequest>> {
+        return if (_filterState.value.onlyDuplicates) {
+            usernameRequestDao.observeDuplicates(_filterState.value.onlyLinks)
+        } else {
+            usernameRequestDao.observe(_filterState.value.onlyLinks)
+        }
+    }
+
+    private fun List<UsernameRequest>.sortAndFilter(): List<UsernameRequest> {
+        val sortByOption = _filterState.value.sortByOption
+        val sorted = this.sortedWith(
+            when (sortByOption) {
+                UsernameSortOption.DateAscending -> compareBy { it.createdAt }
+                UsernameSortOption.DateDescending -> compareByDescending { it.createdAt }
+                UsernameSortOption.VotesAscending -> compareBy { it.votes }
+                UsernameSortOption.VotesDescending -> compareByDescending { it.votes }
+            }
+        )
+
+        return when (_filterState.value.typeOption) {
+            UsernameTypeOption.All -> sorted
+            UsernameTypeOption.Approved -> sorted.filter { it.isApproved }
+            UsernameTypeOption.NotApproved -> sorted.filter { !it.isApproved }
+        }
+    }
+
+    private fun isExpanded(username: String): Boolean {
+        return _uiState.value.filteredUsernameRequests.any { it.username == username && it.isExpanded }
+    }
+
     private var nameCount = 1
     fun prepopulateList() {
         nameCount++
-        val now = System.nanoTime() / 1000
+        val now = System.currentTimeMillis() / 1000
         val names = listOf("John", "doe", "Sarah", "Jane", "jack", "Jill", "Bob")
+        val from = 1658290321L
 
         viewModelScope.launch {
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     "https://example.com",
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    true
                 )
             )
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    true
                 )
             )
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    false
                 )
             )
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     "https://example.com",
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    false
                 )
             )
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    false
                 )
             )
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    false
                 )
             )
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(1689230321, now),
+                    Random.nextLong(from, now),
                     "dslfsdkfsjs",
                     null,
-                    Random.nextInt(0, 15)
+                    Random.nextInt(0, 15),
+                    false
                 )
             )
         }

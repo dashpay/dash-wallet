@@ -15,23 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.database.entity
+package de.schildbach.wallet.ui.username.utils
 
-import androidx.room.Entity
-import androidx.room.Ignore
-import androidx.room.PrimaryKey
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModel
+import androidx.navigation.navGraphViewModels
+import de.schildbach.wallet_test.R
 
-@Entity(tableName = "username_requests")
-data class UsernameRequest(
-    @PrimaryKey
-    val requestId: String,
-    val username: String,
-    val createdAt: Long,
-    val identity: String,
-    val link: String?,
-    val votes: Int,
-    val isApproved: Boolean
-) {
-    @Ignore
-    var hasMaximumVotes: Boolean = false
+inline fun <reified VM : ViewModel> Fragment.votingViewModels(): Lazy<VM> {
+    return navGraphViewModels(R.id.nav_voting) { defaultViewModelProviderFactory }
 }

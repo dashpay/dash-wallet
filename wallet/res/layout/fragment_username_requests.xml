@@ -24,7 +24,7 @@
     tools:context="de.schildbach.wallet.ui.username.UsernameRequestsFragment">
 
     <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appBarLayout"
+        android:id="@+id/app_bar_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
@@ -61,13 +61,16 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/main_scroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:paddingBottom="28dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:clipChildren="false">
 
             <TextView
                 android:id="@+id/subtitle"
@@ -164,7 +167,7 @@
                     android:layout_height="40dp"
                     android:layout_gravity="end|center_vertical"
                     android:background="@android:color/transparent"
-                    android:src="@drawable/ic_clear"
+                    android:src="@drawable/ic_clear_input"
                     android:visibility="gone"
                     tools:visibility="visible" />
             </FrameLayout>
@@ -195,4 +198,60 @@
                 app:layout_constraintTop_toBottomOf="@id/search_panel" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <FrameLayout
+        android:id="@+id/applied_filters_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/background_secondary"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:layout_gravity="bottom">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/divider_color" />
+
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="15dp"
+            android:layout_marginVertical="12dp"
+            android:padding="8dp"
+            android:layout_gravity="start"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/FilterIconBackground"
+            android:src="@drawable/ic_transaction_filter"
+            app:tint="@color/white"
+            tools:background="@color/dash_blue"
+            tools:tint="@color/white" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="40dp">
+
+            <TextView
+                style="@style/Overline.Tertiary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/explore_filtered_by"
+                android:gravity="center"
+                android:textAlignment="gravity" />
+
+            <TextView
+                android:id="@+id/filtered_by_txt"
+                style="@style/Overline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textAlignment="gravity"
+                tools:text="California, 5 miles" />
+        </LinearLayout>
+    </FrameLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
