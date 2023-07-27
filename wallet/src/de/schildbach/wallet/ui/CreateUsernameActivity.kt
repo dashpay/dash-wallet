@@ -122,12 +122,20 @@ class CreateUsernameActivity : InteractionAwareActivity() {
                 fromOnboardng = fromOnboardng
             )
 
-            if (!dashPayViewModel.isDashPayInfoShown()) {
-                navGraph.setStartDestination(R.id.welcomeToDashPayFragment)
+            if (dashPayViewModel.isVotingFlowEnabled) {
+                if (!dashPayViewModel.isDashPayInfoShown()) {
+                    navGraph.setStartDestination(R.id.welcomeToDashPayFragment)
+                } else {
+                    navGraph.setStartDestination(R.id.requestUsernameFragment)
+                }
             } else {
-                bundle.putParcelable(CreateUsernameFragment.CREATE_USER_NAME_ARGS, dashPayViewModel.createUsernameArgs)
-                navGraph.setStartDestination(R.id.createUsernameFragment)
-            }
+                    bundle.putParcelable(
+                        CreateUsernameFragment.CREATE_USER_NAME_ARGS,
+                        dashPayViewModel.createUsernameArgs
+                    )
+                    navGraph.setStartDestination(R.id.createUsernameFragment)
+                }
+
 
             navController.graph = navGraph
             navController.setGraph(navController.graph, bundle)
