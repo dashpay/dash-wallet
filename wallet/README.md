@@ -143,6 +143,7 @@ All flavors (debug and release) will be at:  wallet/build/outputs/apk
 Place these files in `./deploy`
 * `app-distribution-key.json` - Firebase app distribution key
 * `dash-wallet.keystore` - the production signing key
+* `gc-storage-service-account.json` - Google Cloud Storage key
 
 ## Build the production version of the app
 The APK is placed here: `wallet/build/outputs/apk/wallet-prod-release.apk`
