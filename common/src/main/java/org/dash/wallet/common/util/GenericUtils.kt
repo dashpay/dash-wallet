@@ -25,7 +25,6 @@ import android.text.TextUtils
 import org.dash.wallet.common.data.CurrencyInfo
 import java.math.RoundingMode
 import java.text.DecimalFormat
-import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
 import java.util.*
 

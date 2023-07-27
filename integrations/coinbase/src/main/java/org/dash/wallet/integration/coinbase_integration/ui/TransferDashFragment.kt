@@ -263,12 +263,12 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
             lifecycleScope.launch {
                 val details = transferDashViewModel.estimateNetworkFee(dashValue, emptyWallet = isEmptyWallet)
-                details?.amountToSend?.toPlainString()?.let { amountStr ->
+                details?.amountToSend?.let { amount ->
                     hideBanners()
                     val isTransactionConfirmed = confirmTransactionLauncher.showTransactionDetailsPreview(
                         requireActivity(),
                         address,
-                        amountStr,
+                        amount,
                         exchangeRate,
                         details.fee,
                         details.totalAmount

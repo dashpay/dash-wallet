@@ -208,7 +208,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         }
 
         binding.amountView.dashToFiat = true
-        binding.amountView.input = (viewModel.maxAmount.value ?: Coin.ZERO).toPlainString()
+        binding.amountView.setMonetaryInput(viewModel.maxAmount.value ?: Coin.ZERO)
         maxSelected = true
     }
 

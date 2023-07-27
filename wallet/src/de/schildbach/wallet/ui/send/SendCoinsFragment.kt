@@ -250,13 +250,12 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
         val rate = enterAmountViewModel.selectedExchangeRate.value
         val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
-        val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
         val fee = txFee?.toPlainString() ?: ""
 
         val confirmed = ConfirmTransactionDialog.showDialogAsync(
             requireActivity(),
             address,
-            amountStr,
+            amount ?: Coin.ZERO,
             exchangeRate,
             fee,
             total ?: ""

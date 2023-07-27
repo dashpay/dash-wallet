@@ -43,6 +43,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.util.openCustomTab
+import org.dash.wallet.common.util.toCoin
 import org.dash.wallet.integration.uphold.R
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
 import org.dash.wallet.integration.uphold.data.UpholdConstants
@@ -146,7 +147,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
             object : OnTransferListener {
                 override fun onConfirm(transaction: UpholdTransaction) {
                     val address: String = receiveAddress.toBase58()
-                    val amountStr = transaction.origin.base.toPlainString()
+                    val amount = transaction.origin.base.toCoin()
 
                     // if the exchange rate is not available, then show "Not Available"
                     val exchangeRate = enterAmountViewModel.selectedExchangeRate.value?.let {
@@ -159,7 +160,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
                         val toContinue = confirmTransactionLauncher.showTransactionDetailsPreview(
                             this@UpholdTransferActivity,
                             address,
-                            amountStr,
+                            amount,
                             exchangeRate,
                             fee,
                             total

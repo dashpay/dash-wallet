@@ -17,13 +17,14 @@
 package org.dash.wallet.common.services
 
 import androidx.fragment.app.FragmentActivity
+import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 
 interface ConfirmTransactionService {
     suspend fun showTransactionDetailsPreview(
         activity: FragmentActivity,
         address: String,
-        amount: String,
+        amount: Coin,
         exchangeRate: ExchangeRate?,
         fee: String,
         total: String,

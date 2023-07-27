@@ -30,6 +30,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Monetary
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
@@ -45,7 +46,7 @@ import java.util.*
 class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs) {
     private val binding = AmountViewBinding.inflate(LayoutInflater.from(context), this)
     val dashFormat: MonetaryFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-        .noCode().minDecimals(6).optionalDecimals()
+        .noCode().minDecimals(8).optionalDecimals()
     val fiatFormat: MonetaryFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals()
 
@@ -150,6 +151,14 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
 
     fun setOnAmountChanged(listener: (Coin) -> Unit) {
         onAmountChanged = listener
+    }
+
+    fun setMonetaryInput(input: Monetary) {
+        this.input = if (input is Coin) {
+            dashFormat.format(input)
+        } else {
+            fiatFormat.format(input)
+        }.toString()
     }
 
     private fun updateCurrency() {

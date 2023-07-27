@@ -24,6 +24,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogConfirmTransactionBinding
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -48,7 +49,7 @@ class ConfirmTransactionDialog(
 
         private fun setBundle(
             address: String,
-            amount: String,
+            amount: Coin,
             exchangeRate: ExchangeRate?,
             fee: String,
             total: String,
@@ -58,7 +59,7 @@ class ConfirmTransactionDialog(
         ): Bundle {
             return Bundle().apply {
                 putString(ARG_ADDRESS, address)
-                putString(ARG_AMOUNT, amount)
+                putSerializable(ARG_AMOUNT, amount)
                 putSerializable(ARG_EXCHANGE_RATE, exchangeRate)
                 putString(ARG_FEE, fee)
                 putString(ARG_TOTAL, total)
@@ -80,11 +81,11 @@ class ConfirmTransactionDialog(
         suspend fun showDialogAsync(
             activity: FragmentActivity,
             address: String,
-            amount: String,
+            amount: Coin,
             exchangeRate: ExchangeRate?,
             fee: String,
             total: String
-        ) = suspendCancellableCoroutine<Boolean> { coroutine ->
+        ) = suspendCancellableCoroutine { coroutine ->
             val confirmTransactionDialog = ConfirmTransactionDialog {
                 if (coroutine.isActive) {
                     coroutine.resume(it)
@@ -113,7 +114,7 @@ class ConfirmTransactionDialog(
         requireArguments().apply {
             val exchangeRate = getSerializable(ARG_EXCHANGE_RATE) as? ExchangeRate
 
-            binding.amountView.input = getString(ARG_AMOUNT) ?: ""
+            binding.amountView.setMonetaryInput(getSerializable(ARG_AMOUNT) as? Coin ?: Coin.ZERO)
             binding.amountView.exchangeRate = exchangeRate
             binding.transactionFee.text = getString(ARG_FEE)
             binding.totalAmount.text = getString(ARG_TOTAL)
