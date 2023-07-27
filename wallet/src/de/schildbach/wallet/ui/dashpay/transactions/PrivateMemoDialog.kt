@@ -28,9 +28,9 @@ import de.schildbach.wallet_test.databinding.DialogPrivateMemoBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.KeyboardUtil
 
 @AndroidEntryPoint
 class PrivateMemoDialog: OffsetDialogFragment(R.layout.dialog_private_memo) {
@@ -39,7 +39,7 @@ class PrivateMemoDialog: OffsetDialogFragment(R.layout.dialog_private_memo) {
     }
 
     override val forceExpand: Boolean = true
-    private val keyboardUtil = KeyboardUtil()
+    private lateinit var keyboardUtil: KeyboardUtil
 
     private val binding by viewBinding(DialogPrivateMemoBinding::bind)
     private val viewModel: PrivateMemoViewModel by viewModels()
@@ -47,9 +47,10 @@ class PrivateMemoDialog: OffsetDialogFragment(R.layout.dialog_private_memo) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        keyboardUtil = KeyboardUtil(requireActivity().window, binding.root)
         lifecycleScope.launchWhenCreated {
             delay(250) // Wait for the dialog animation to finish before raising keyboard
-            keyboardUtil.enableAdjustLayout(requireActivity().window, binding.root)
+            keyboardUtil.enableAdjustLayout()
             KeyboardUtil.showSoftKeyboard(requireContext(), binding.memoInput)
         }
 

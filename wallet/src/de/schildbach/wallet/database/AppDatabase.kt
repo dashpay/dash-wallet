@@ -32,12 +32,14 @@ import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
 import de.schildbach.wallet.database.entity.TransactionMetadataDocument
+import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.dashpay.UserAlert
 import org.dash.wallet.common.data.RoomConverters
 import org.dash.wallet.common.data.entity.AddressMetadata
@@ -63,7 +65,8 @@ import org.dash.wallet.common.data.entity.GiftCard
         UserAlert::class,
         Invitation::class,
         TransactionMetadataCacheItem::class,
-        TransactionMetadataDocument::class
+        TransactionMetadataDocument::class,
+        UsernameRequest::class
     ],
     version = 18 // if increasing version, we need migrations to preserve tx/addr metadata
 )
@@ -82,4 +85,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionMetadataCacheDao(): TransactionMetadataChangeCacheDao
     abstract fun transactionMetadataDocumentDao(): TransactionMetadataDocumentDao
     abstract fun userAlertDao(): UserAlertDao
+    abstract fun usernameRequestDao(): UsernameRequestDao
 }

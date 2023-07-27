@@ -26,6 +26,7 @@
     <string name="dash_address">Dash Address</string>
     <string name="username">Username</string>
     <string name="balance">Balance:</string>
+    <string name="nothing_here">Nothing here</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>

@@ -423,6 +423,29 @@
     <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before users will be able to create it.</string>
     <string name="voting_duplicates_only_title">Vote only on duplicates</string>
     <string name="voting_duplicates_only_message">You can review all requests but you only need to vote on duplicates</string>
+    <string name="all">All</string>
+    <string name="n_usernames">%d usernames</string>
+    <string name="n_requests">%d requests</string>
+    <string name="search_by_username">Search by username</string>
+    <string name="type">Type</string>
+    <string name="only_duplicates">Only duplicates</string>
+    <string name="only_links">Only requests with links</string>
+    <string name="only_links_short">With links</string>
+    <string name="date">Date: %s</string>
+    <string name="votes">Votes: %s</string>
+
+    <string-array name="usernames_sort_by_options">
+        <item>New to old</item>
+        <item>Old to new</item>
+        <item>High to low</item>
+        <item>Low to high</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>All</item>
+        <item>I have approved</item>
+        <item>I have not approved</item>
+    </string-array>
     <string name="request_your_username">Request your username</string>
     <string name="request_your_hint">Once the voting ends you can create any username you want as long as it hasn’t already been created</string>
     <string name="request_username">Request Username</string>

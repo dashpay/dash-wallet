@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.database
 
+import androidx.room.PrimaryKey
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
@@ -64,6 +65,8 @@ class AppDatabaseMigrations {
             }
         }
 
+        // TODO: this migration might not be needed.
+        // Room might be able to run them automatically when it sees new @Entity classes.
         val migration17To18 = object : Migration(17, 18) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
@@ -82,6 +85,12 @@ class AppDatabaseMigrations {
                         "`customIconUrl` TEXT, `giftCardNumber` TEXT, `giftCardPin` TEXT, `merchantName` TEXT, " +
                         "`originalPrice` REAL, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, " +
                         "PRIMARY KEY(`id`, `txId`))"
+                )
+
+                database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS username_requests (`requestId` TEXT PRIMARY KEY," +
+                        "`username` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `identity` TEXT NOT NULL," +
+                        "`link` TEXT, `votes` INTEGER NOT NULL, `isApproved` INTEGER NOT NULL);"
                 )
             }
         }

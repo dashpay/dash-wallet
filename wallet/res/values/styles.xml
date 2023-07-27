@@ -222,4 +222,22 @@
         <item name="cornerRadius">22dp</item>
         <item name="roundButtonRadius">22dp</item>
     </style>
+
+    <style name="InactiveBadgeTheme">
+        <item name="backgroundColor">@android:color/transparent</item>
+        <item name="strokeColor">@color/dash_black_0.1</item>
+        <item name="cornerRadius">10dp</item>
+    </style>
+
+    <style name="BlueBadgeTheme">
+        <item name="backgroundColor">@color/dash_blue</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">10dp</item>
+    </style>
+
+    <style name="LightBlueBadgeTheme">
+        <item name="backgroundColor">@color/dash_blue_0.05</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">10dp</item>
+    </style>
 </resources>
