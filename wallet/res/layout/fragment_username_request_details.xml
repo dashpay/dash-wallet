@@ -116,13 +116,26 @@
         </LinearLayout>
     </LinearLayout>
 
-    <Button
+    <FrameLayout
         android:id="@+id/vote_button"
         style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="15dp"
         android:layout_marginBottom="15dp"
-        android:text="@string/vote_to_approve"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <TextView
+            android:id="@+id/vote_button_text"
+            style="@style/Body2.Medium.White"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:textAlignment="gravity"
+            android:textSize="15sp"
+            android:text="@string/vote_to_approve" />
+    </FrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

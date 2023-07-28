@@ -9,6 +9,7 @@ import androidx.navigation.fragment.navArgs
 import de.schildbach.wallet.ui.username.utils.votingViewModels
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameRequestDetailsBinding
+import org.dash.wallet.common.ui.getRoundedRippleBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 
@@ -38,6 +39,21 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
             } else {
                 binding.link.text = it.link
             }
+
+            binding.voteButton.background = resources.getRoundedRippleBackground(
+                if (it.isApproved) R.style.PrimaryButtonTheme_Large_Red else R.style.PrimaryButtonTheme_Large_Blue
+            )
+
+            binding.voteButtonText.setTextColor(
+                resources.getColor(
+                    if (it.isApproved) R.color.system_red else R.color.dash_white,
+                    null
+                )
+            )
+
+            binding.voteButtonText.text = getString(
+                if (it.isApproved) R.string.cancel_approval else R.string.vote_to_approve
+            )
         }
 
         viewModel.selectUsernameRequest(args.requestId)

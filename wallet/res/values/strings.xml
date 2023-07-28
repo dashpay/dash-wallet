@@ -459,4 +459,5 @@
     <string name="identity">Identity</string>
     <string name="link">Link</string>
     <string name="link_not_provided">Not provided</string>
+    <string name="cancel_approval">Cancel Approval</string>
 </resources>
