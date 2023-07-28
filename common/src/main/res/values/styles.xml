@@ -1245,9 +1245,11 @@
         <item name="trackThickness">15dp</item>
     </style>
 
-    <style name="ImageButtonGrayTheme">
+    <style name="GrayPanelBackground">
         <item name="backgroundColor">@color/dash_black_0.05</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">12dp</item>
     </style>
+
+    <style name="ImageButtonGrayTheme" parent="GrayPanelBackground"/>
 </resources>

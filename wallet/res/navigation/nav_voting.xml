@@ -28,8 +28,15 @@
         tools:layout="@layout/fragment_username_requests">
 
         <action
-            android:id="@+id/usernameRequests_to_filters"
+            android:id="@+id/requests_to_filters"
             app:destination="@id/usernameRequestFilterDialog"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/requests_to_details"
+            app:destination="@id/usernameRequestDetailsFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
@@ -40,4 +47,15 @@
         android:name="de.schildbach.wallet.ui.username.UsernameRequestFilterDialog"
         android:label="UsernameRequestFilterDialog"
         tools:layout="@layout/dialog_username_request_filters" />
+
+    <fragment
+        android:id="@+id/usernameRequestDetailsFragment"
+        android:name="de.schildbach.wallet.ui.username.UsernameRequestDetailsFragment"
+        android:label="UsernameRequestsFragment"
+        tools:layout="@layout/fragment_username_request_details">
+
+        <argument
+            android:name="requestId"
+            app:argType="string" />
+    </fragment>
 </navigation>

@@ -32,12 +32,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Base58
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.min
@@ -74,6 +77,16 @@ class UsernameRequestsViewModel @Inject constructor(
     private val _filterState = MutableStateFlow(FiltersUIState())
     val filterState: StateFlow<FiltersUIState> = _filterState.asStateFlow()
 
+    private val _selectedUsernameRequestId = MutableStateFlow<String?>(null)
+    val selectedUsernameRequest: Flow<UsernameRequest> = _selectedUsernameRequestId
+        .filterNotNull()
+        .distinctUntilChanged()
+        .flatMapLatest { id ->
+            usernameRequestDao.observeRequest(id)
+                .filterNotNull()
+                .distinctUntilChanged()
+        }
+
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
@@ -82,22 +95,12 @@ class UsernameRequestsViewModel @Inject constructor(
             .onEach { isShown -> _uiState.update { it.copy(showFirstTimeInfo = isShown != true) } }
             .launchIn(viewModelScope)
 
-        _filterState.flatMapLatest { filterState ->
+        _filterState.flatMapLatest {
             observeUsernames()
                 .map { duplicates ->
                     duplicates.groupBy { it.username }
                         .map { (username, list) ->
                             val sortedList = list.sortAndFilter()
-
-                            if (sortedList.isNotEmpty()) {
-                                val max = when (filterState.sortByOption) {
-                                    UsernameSortOption.VotesDescending -> sortedList.first().votes
-                                    UsernameSortOption.VotesAscending -> sortedList.last().votes
-                                    else -> sortedList.maxOf { it.votes }
-                                }
-                                sortedList.forEach { it.hasMaximumVotes = it.votes == max }
-                            }
-
                             UsernameRequestGroupView(username, sortedList, isExpanded = isExpanded(username))
                         }.filterNot { it.requests.isEmpty() }
                 }
@@ -125,11 +128,15 @@ class UsernameRequestsViewModel @Inject constructor(
         }
     }
 
+    fun selectUsernameRequest(requestId: String) {
+        _selectedUsernameRequestId.value = requestId
+    }
+
     private fun observeUsernames(): Flow<List<UsernameRequest>> {
         return if (_filterState.value.onlyDuplicates) {
             usernameRequestDao.observeDuplicates(_filterState.value.onlyLinks)
         } else {
-            usernameRequestDao.observe(_filterState.value.onlyLinks)
+            usernameRequestDao.observeAll(_filterState.value.onlyLinks)
         }
     }
 
@@ -168,8 +175,9 @@ class UsernameRequestsViewModel @Inject constructor(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(from, now),
-                    "dslfsdkfsjs",
-                    "https://example.com",
+                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    "https://www.figma.com/file/hh5juOSdGnNNPijJG1NGTi/DashPay%E3%83%BBIn-" +
+                        "process%E3%83%BBAndroid?type=design&node-id=752-11735&mode=design&t=zasn6AKlSwb5NuYS-0",
                     Random.nextInt(0, 15),
                     true
                 )
@@ -179,7 +187,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(from, now),
-                    "dslfsdkfsjs",
+                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
                     true
@@ -190,7 +198,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(from, now),
-                    "dslfsdkfsjs",
+                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
                     false
@@ -201,8 +209,8 @@ class UsernameRequestsViewModel @Inject constructor(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(from, now),
-                    "dslfsdkfsjs",
-                    "https://example.com",
+                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    "https://twitter.com/ProductHunt/",
                     Random.nextInt(0, 15),
                     false
                 )
@@ -212,7 +220,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(from, now),
-                    "dslfsdkfsjs",
+                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
                     false
@@ -223,7 +231,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(from, now),
-                    "dslfsdkfsjs",
+                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
                     false
@@ -234,7 +242,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     UUID.randomUUID().toString(),
                     names[Random.nextInt(0, min(names.size, nameCount))],
                     Random.nextLong(from, now),
-                    "dslfsdkfsjs",
+                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
                     false
