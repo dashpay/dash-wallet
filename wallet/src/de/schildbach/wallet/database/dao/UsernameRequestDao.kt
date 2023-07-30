@@ -33,7 +33,10 @@ interface UsernameRequestDao {
         ORDER BY username COLLATE NOCASE ASC
          """
     )
-    fun observe(onlyWithLinks: Boolean): Flow<List<UsernameRequest>>
+    fun observeAll(onlyWithLinks: Boolean): Flow<List<UsernameRequest>>
+
+    @Query("SELECT * FROM username_requests WHERE requestId = :requestId")
+    fun observeRequest(requestId: String): Flow<UsernameRequest?>
 
     @Query(
         """

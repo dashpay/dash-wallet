@@ -16,7 +16,6 @@
  */
 package de.schildbach.wallet.ui.username.adapters
 
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
@@ -34,7 +33,9 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-class UsernameRequestGroupAdapter: ListAdapter<UsernameRequestGroupView, UsernameRequestGroupViewHolder>(
+class UsernameRequestGroupAdapter(
+    private val usernameClickListener: (UsernameRequest) -> Unit
+): ListAdapter<UsernameRequestGroupView, UsernameRequestGroupViewHolder>(
     DiffCallback()
 ) {
     class DiffCallback : DiffUtil.ItemCallback<UsernameRequestGroupView>() {
@@ -59,10 +60,11 @@ class UsernameRequestGroupAdapter: ListAdapter<UsernameRequestGroupView, Usernam
 
     override fun onBindViewHolder(holder: UsernameRequestGroupViewHolder, position: Int) {
         val item = currentList[position]
-        holder.bind(item)
+        holder.bind(item, usernameClickListener)
         holder.binding.root.setOnClickListener {
-            item.isExpanded = !item.isExpanded
-            notifyItemChanged(currentList.indexOf(item))
+            val index = currentList.indexOfFirst { it.username == item.username }
+            currentList[index].isExpanded = !currentList[index].isExpanded
+            notifyItemChanged(index)
         }
     }
 }
@@ -70,14 +72,16 @@ class UsernameRequestGroupAdapter: ListAdapter<UsernameRequestGroupView, Usernam
 class UsernameRequestGroupViewHolder(
     val binding: UsernameRequestGroupViewBinding
 ): RecyclerView.ViewHolder(binding.root) {
-    fun bind(option: UsernameRequestGroupView) {
+    fun bind(option: UsernameRequestGroupView, usernameClickListener: (UsernameRequest) -> Unit) {
         binding.username.text = option.username
         binding.requestsAmount.text = binding.root.resources.getString(R.string.n_requests, option.requests.size)
         binding.requestsList.isVisible = option.isExpanded
         binding.chevron.rotation = if (option.isExpanded) 90f else 270f
 
         if (option.isExpanded) {
-            val adapter = UsernameRequestAdapter { Log.i("VOTING", "Username click") }
+            val adapter = UsernameRequestAdapter {
+                usernameClickListener.invoke(it)
+            }
             binding.requestsList.adapter = adapter
             val divider = ContextCompat.getDrawable(binding.root.context, R.drawable.list_divider)!!
             val decorator = ListDividerDecorator(
@@ -93,7 +97,7 @@ class UsernameRequestGroupViewHolder(
 }
 
 class UsernameRequestAdapter(
-    private val clickListener: () -> Unit
+    private val clickListener: (UsernameRequest) -> Unit
 ) : ListAdapter<UsernameRequest, UsernameRequestViewHolder>(DiffCallback()) {
 
     class DiffCallback : DiffUtil.ItemCallback<UsernameRequest>() {
@@ -102,7 +106,7 @@ class UsernameRequestAdapter(
         }
 
         override fun areContentsTheSame(oldItem: UsernameRequest, newItem: UsernameRequest): Boolean {
-            return oldItem == newItem && oldItem.hasMaximumVotes == newItem.hasMaximumVotes
+            return oldItem == newItem
         }
     }
 
@@ -120,7 +124,7 @@ class UsernameRequestAdapter(
         val item = currentList[position]
         holder.bind(item)
         holder.binding.root.setOnClickListener {
-            clickListener.invoke()
+            clickListener.invoke(item)
         }
     }
 }
@@ -128,13 +132,13 @@ class UsernameRequestAdapter(
 class UsernameRequestViewHolder(
     val binding: UsernameRequestViewBinding
 ): RecyclerView.ViewHolder(binding.root) {
-    fun bind(option: UsernameRequest) {
+    fun bind(request: UsernameRequest) {
         binding.dateRegistered.text = DateTimeFormatter.ofPattern("dd MMM yyyy · hh:mm a").format(
-            LocalDateTime.ofEpochSecond(option.createdAt, 0, ZoneOffset.UTC)
+            LocalDateTime.ofEpochSecond(request.createdAt, 0, ZoneOffset.UTC)
         )
 
         binding.voteAmount.background = binding.voteAmount.resources.getRoundedBackground(
-            if (option.hasMaximumVotes) {
+            if (request.isApproved) {
                 R.style.BlueBadgeTheme
             } else {
                 R.style.InactiveBadgeTheme
@@ -143,7 +147,7 @@ class UsernameRequestViewHolder(
 
         binding.voteAmount.setTextColor(
             binding.voteAmount.resources.getColor(
-                if (option.hasMaximumVotes) {
+                if (request.isApproved) {
                     R.color.white
                 } else {
                     R.color.content_tertiary
@@ -152,7 +156,7 @@ class UsernameRequestViewHolder(
             )
         )
 
-        binding.voteAmount.text = option.votes.toString()
-        binding.linkBadge.isVisible = !option.link.isNullOrEmpty()
+        binding.voteAmount.text = request.votes.toString()
+        binding.linkBadge.isVisible = !request.link.isNullOrEmpty()
     }
 }
