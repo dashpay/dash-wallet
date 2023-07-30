@@ -129,15 +129,14 @@ object GenericUtils {
      * @param fiatValue
      * @return
      */
-    fun formatFiatWithoutComma(fiatValue: String): String? {
-        val fiatValueContainsCommaWithDecimal = fiatValue.contains(",") && fiatValue.contains(".")
+    fun formatFiatWithoutComma(fiatValue: String): String {
+        val fiatValueContainsCommaWithDecimal = fiatValue.contains(".") && fiatValue.contains(",")
+
         return if (fiatValueContainsCommaWithDecimal) {
-            fiatValue.replace(
-                ",".toRegex(),
-                ""
-            )
+            fiatValue.replace(",", "")
         } else {
-            fiatValue.replace(",".toRegex(), ".")
+            fiatValue.replace(",", ".")
+                .replace("٫", ".")
         }
     }
 

@@ -29,7 +29,7 @@
         android:layout_marginVertical="7dp"
         android:background="@drawable/rounded_background"
         android:theme="@style/DragIndicatorBackground"
-        tools:background="@color/gray_100" />
+        tools:background="@color/light_gray" />
 
     <TextView
         style="@style/Subtitle2"
