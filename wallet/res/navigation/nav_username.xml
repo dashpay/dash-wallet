@@ -21,12 +21,6 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
 
-<!--        <action-->
-<!--            android:id="@+id/create_username_to_welcomeToDashPayFragment"-->
-<!--            app:destination="@id/welcomeToDashPayFragment"-->
-<!--            app:enterAnim="@anim/slide_in_right"-->
-<!--            app:exitAnim="@anim/activity_stay"-->
-<!--            app:popExitAnim="@anim/slide_out_left" />-->
     </fragment>
 
     <fragment
@@ -43,7 +37,7 @@
 
     <fragment
         android:id="@+id/welcomeToDashPayFragment"
-        android:name="de.schildbach.wallet.ui.username.WelcomeToDashPayFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.WelcomeToDashPayFragment"
         tools:layout="@layout/fragment_welcome_to_dashpay">
         <action
             android:id="@+id/welcomeToDashPayFragment_to_UsernameVotingInfoFragment"
@@ -55,7 +49,7 @@
 
     <fragment
         android:id="@+id/usernameVotingInfoFragment"
-        android:name="de.schildbach.wallet.ui.username.UsernameVotingInfoFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.UsernameVotingInfoFragment"
         tools:layout="@layout/fragment_username_voting_info">
 
         <action
@@ -69,8 +63,27 @@
 
     <fragment
         android:id="@+id/requestUsernameFragment"
-        android:name="de.schildbach.wallet.ui.username.RequestUsernameFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.RequestUsernameFragment"
         tools:layout="@layout/fragment_request_username">
+        <action
+            android:id="@+id/requestUsernameFragment_to_verifyIdentityFragment"
+            app:destination="@id/verifyIdentityFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            app:popUpTo="@id/requestUsernameFragment" />
+
+    </fragment>
+
+
+    <fragment
+        android:id="@+id/verifyIdentityFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.VerifyIdentityFragment"
+        tools:layout="@layout/fragment_verfiy_identity">
+
+        <argument
+            android:name="username"
+            app:argType="string" />
 
     </fragment>
 </navigation>

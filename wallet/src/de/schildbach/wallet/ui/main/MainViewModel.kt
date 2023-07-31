@@ -25,6 +25,7 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
@@ -35,14 +36,13 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirectionFilter
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
-import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -51,12 +51,11 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -65,11 +64,11 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
-import org.slf4j.LoggerFactory
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
+import org.slf4j.LoggerFactory
 import java.util.HashMap
 import javax.inject.Inject
 
@@ -165,9 +164,9 @@ class MainViewModel @Inject constructor(
     val stakingAPY: LiveData<Double>
         get() = _stakingAPY
 
-   // DashPay
+    // DashPay
 
-   private val isPlatformAvailableData = liveData(Dispatchers.IO) {
+    private val isPlatformAvailableData = liveData(Dispatchers.IO) {
         val status = if (Constants.SUPPORTS_PLATFORM) {
             platformRepo.isPlatformAvailable()
         } else {
@@ -361,8 +360,11 @@ class MainViewModel @Inject constructor(
             val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
 
             if (platformRepo.hasIdentity) {
-                val contacts = platformRepo.searchContacts("",
-                    UsernameSortOrderBy.LAST_ACTIVITY, false)
+                val contacts = platformRepo.searchContacts(
+                    "",
+                    UsernameSortOrderBy.LAST_ACTIVITY,
+                    false
+                )
                 contacts.data?.forEach { result ->
                     contactsByIdentity[result.dashPayProfile.userId] = result.dashPayProfile
                 }
@@ -371,30 +373,30 @@ class MainViewModel @Inject constructor(
             val transactionViews = walletData.wrapAllTransactions(
                 FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
             ).filter { it.passesFilter(filter, metadata) }
-             .sortedWith(TransactionWrapperComparator())
-             .map {
-                 var contact: DashPayProfile? = null
-                 val tx = it.transactions.first()
-                 val isInternal = tx.isEntirelySelf(wallet)
+                .sortedWith(TransactionWrapperComparator())
+                .map {
+                    var contact: DashPayProfile? = null
+                    val tx = it.transactions.first()
+                    val isInternal = tx.isEntirelySelf(wallet)
 
-                 if (it.transactions.size == 1) {
-                     if (!isInternal && platformRepo.hasIdentity) {
-                         val contactId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
+                    if (it.transactions.size == 1) {
+                        if (!isInternal && platformRepo.hasIdentity) {
+                            val contactId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
 
-                         if (contactId != null) {
-                             contact = contactsByIdentity[contactId]
-                         }
-                     }
-                 }
+                            if (contactId != null) {
+                                contact = contactsByIdentity[contactId]
+                            }
+                        }
+                    }
 
-                 TransactionRowView.fromTransactionWrapper(
-                     it,
-                     walletData.transactionBag,
-                     Constants.CONTEXT,
-                     contact,
-                     metadata[it.transactions.first().txId]
-                 )
-             }
+                    TransactionRowView.fromTransactionWrapper(
+                        it,
+                        walletData.transactionBag,
+                        Constants.CONTEXT,
+                        contact,
+                        metadata[it.transactions.first().txId]
+                    )
+                }
 
             _transactions.postValue(transactionViews)
         }
@@ -440,7 +442,6 @@ class MainViewModel @Inject constructor(
     private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
         return metadata[transactions.first().txId]?.service == ServiceName.DashDirect
     }
-
 
     // DashPay
 
@@ -488,8 +489,8 @@ class MainViewModel @Inject constructor(
     suspend fun getInviteHistory() = invitationsDao.loadAll()
 
     private fun combineLatestData(): Boolean {
-        val isPlatformAvailable = isPlatformAvailableData.value ?: false
-        val isSynced = _isBlockchainSynced.value ?: false
+        val isPlatformAvailable = true // isPlatformAvailableData.value ?: false
+        val isSynced = true // _isBlockchainSynced.value ?: false
         val noIdentityCreatedOrInProgress = (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
         val canAffordIdentityCreation = walletData.canAffordIdentityCreation()
         return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress && canAffordIdentityCreation

@@ -15,10 +15,16 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Transformations
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.*
+import de.schildbach.wallet.data.UsernameSearch
+import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
@@ -70,7 +76,7 @@ open class DashPayViewModel @Inject constructor(
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String?>()
 
-    val  isVotingFlowEnabled: Boolean = false
+    val isVotingFlowEnabled: Boolean = true
 
     val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope, userAlertDao)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformSyncService)
@@ -312,6 +318,7 @@ open class DashPayViewModel @Inject constructor(
 
     suspend fun setLastNotificationTime(time: Long) =
         dashPayConfig.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, time)
+
 
     private inner class UserSearch(
         val text: String,
