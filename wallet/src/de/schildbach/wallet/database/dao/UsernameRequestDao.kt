@@ -29,6 +29,9 @@ interface UsernameRequestDao {
     @Update
     suspend fun update(usernameRequest: UsernameRequest)
 
+    @Query("UPDATE username_requests SET votes = votes + :votesAmount, isApproved = 1 WHERE requestId IN (:requestIds)")
+    suspend fun voteForRequests(requestIds: List<String>, votesAmount: Int)
+
     @Query("SELECT * FROM username_requests WHERE requestId = :requestId")
     suspend fun getRequest(requestId: String): UsernameRequest?
 

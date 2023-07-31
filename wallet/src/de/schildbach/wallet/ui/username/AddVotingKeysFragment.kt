@@ -15,8 +15,7 @@ import org.dash.wallet.common.util.safeNavigate
 
 class AddVotingKeysFragment : Fragment(R.layout.fragment_add_voting_keys) {
     private val binding by viewBinding(FragmentAddVotingKeysBinding::bind)
-    private val viewModel by votingViewModels<VotingKeyViewModel>()
-    private val usernameViewModel by votingViewModels<UsernameRequestsViewModel>()
+    private val viewModel by votingViewModels<UsernameRequestsViewModel>()
     private val args by navArgs<AddVotingKeysFragmentArgs>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -27,7 +26,7 @@ class AddVotingKeysFragment : Fragment(R.layout.fragment_add_voting_keys) {
         }
 
         binding.submitButton.setOnClickListener {
-            usernameViewModel.vote(args.requestId, viewModel.keysAmount)
+            viewModel.vote(args.requestId)
             findNavController().popBackStack(R.id.usernameRequestsFragment, false)
         }
 

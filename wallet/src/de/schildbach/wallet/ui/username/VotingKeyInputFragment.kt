@@ -38,7 +38,7 @@ import org.dash.wallet.common.util.safeNavigate
 @AndroidEntryPoint
 class VotingKeyInputFragment : Fragment(R.layout.fragment_voting_key_input) {
     private val binding by viewBinding(FragmentVotingKeyInputBinding::bind)
-    private val viewModel by votingViewModels<VotingKeyViewModel>()
+    private val viewModel by votingViewModels<UsernameRequestsViewModel>()
     private val args by navArgs<VotingKeyInputFragmentArgs>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

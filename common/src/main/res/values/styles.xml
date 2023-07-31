@@ -809,6 +809,10 @@
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
+    <style name="Button.Primary.Large.Grey">
+        <item name="android:theme">@style/PrimaryButtonTheme.Large.Grey</item>
+    </style>
+
     <style name="PrimaryButtonTheme.Large.Red">
         <item name="backgroundColor">@color/system_red_0.1</item>
         <item name="strokeColor">@android:color/transparent</item>
@@ -820,6 +824,13 @@
         <item name="backgroundColor">@color/light_blue</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="strokeWidth">0dp</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.Large.Grey">
+        <item name="backgroundColor">@color/dash_black_0.05</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="titleTextColor">@color/content_primary</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
     <style name="PrimaryButtonTheme.Large.White">

@@ -88,6 +88,10 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             safeNavigate(UsernameRequestsFragmentDirections.requestsToFilters())
         }
 
+        binding.quickVoteButton.setOnClickListener {
+            QuickVoteDialogFragment().show(requireActivity())
+        }
+
         keyboardUtil = KeyboardUtil(requireActivity().window, binding.root)
         keyboardUtil.setOnKeyboardShownChanged { isShown ->
             binding.appliedFiltersPanel.isVisible = !viewModel.filterState.value.isDefault() && !isShown
@@ -95,29 +99,11 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
             if (state.showFirstTimeInfo) {
-                lifecycleScope.launch {
-                    delay(200)
-                    AdaptiveDialog.create(
-                        R.drawable.ic_user_list,
-                        getString(R.string.voting_duplicates_only_title),
-                        getString(R.string.voting_duplicates_only_message),
-                        getString(R.string.button_ok)
-                    ).showAsync(requireActivity())
-                    viewModel.setFirstTimeInfoShown()
-                }
+                showFirstTimeInfo()
             }
 
-            binding.filterSubtitle.text = getString(R.string.n_usernames, state.filteredUsernameRequests.size)
-            binding.filterSubtitle.isVisible = state.filteredUsernameRequests.isNotEmpty()
-            binding.searchPanel.isVisible = state.filteredUsernameRequests.isNotEmpty()
-            binding.noItemsTxt.isVisible = state.filteredUsernameRequests.isEmpty()
-
-            itemList = state.filteredUsernameRequests
-            val list = filterByQuery(itemList, binding.search.text.toString())
-            val layoutManager = binding.requestGroups.layoutManager as LinearLayoutManager
-            val scrollPosition = layoutManager.findFirstVisibleItemPosition()
-            adapter.submitList(list)
-            binding.requestGroups.scrollToPosition(scrollPosition)
+            setState(state.filteredUsernameRequests)
+            setList(adapter, state.filteredUsernameRequests)
 
             if (state.voteSubmitted) {
                 showVoteIndicator(binding, false)
@@ -138,6 +124,36 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
                 populateAppliedFilters(state)
             }
         }
+    }
+
+    private fun showFirstTimeInfo() {
+        lifecycleScope.launch {
+            delay(200)
+            AdaptiveDialog.create(
+                R.drawable.ic_user_list,
+                getString(R.string.voting_duplicates_only_title),
+                getString(R.string.voting_duplicates_only_message),
+                getString(R.string.button_ok)
+            ).showAsync(requireActivity())
+            viewModel.setFirstTimeInfoShown()
+        }
+    }
+
+    private fun setState(requests: List<UsernameRequestGroupView>) {
+        binding.filterSubtitle.text = getString(R.string.n_usernames, requests.size)
+        binding.filterSubtitle.isVisible = requests.isNotEmpty()
+        binding.searchPanel.isVisible = requests.isNotEmpty()
+        binding.quickVoteButton.isVisible = requests.isNotEmpty() && viewModel.keysAmount > 0
+        binding.noItemsTxt.isVisible = requests.isEmpty()
+    }
+
+    private fun setList(adapter: UsernameRequestGroupAdapter, requests: List<UsernameRequestGroupView>) {
+        itemList = requests
+        val list = filterByQuery(itemList, binding.search.text.toString())
+        val layoutManager = binding.requestGroups.layoutManager as LinearLayoutManager
+        val scrollPosition = layoutManager.findFirstVisibleItemPosition()
+        adapter.submitList(list)
+        binding.requestGroups.scrollToPosition(scrollPosition)
     }
 
     private fun filterByQuery(items: List<UsernameRequestGroupView>, query: String?): List<UsernameRequestGroupView> {
