@@ -446,12 +446,20 @@
         <item>I have approved</item>
         <item>I have not approved</item>
     </string-array>
+
     <string name="request_your_username">Request your username</string>
     <string name="request_your_hint">Once the voting ends you can create any username you want as long as it hasn’t already been created</string>
     <string name="request_username">Request Username</string>
     <string name="voting">Voting:</string>
     <string name="request_username_min_balance_disclaimer">To request a username on the Dash Network, you need to have more than %s Dash</string>
     <string name="this_username_has_already_been_requested">This username has already been requested, but you can request it too and let the network vote to decide if you can have it</string>
+    <string name="request_details">Request details</string>
+    <string name="request_details_subtitle">Review the posting bellow to verify the ownership of this username</string>
+    <string name="vote_to_approve">Vote to Approve</string>
+    <string name="identity">Identity</string>
+    <string name="link">Link</string>
+    <string name="link_not_provided">Not provided</string>
+    <string name="cancel_approval">Cancel Approval</string>
     <string name="verify_your_identity">Verify your identity to enhance your chances of getting your requested username</string>
     <string name="if_somebody">If somebody else requests the same username as you, we will let the network decide whom to give this username</string>
     <string name="the_link_will_be_visible">The link you send will be visible only to the network owners</string>

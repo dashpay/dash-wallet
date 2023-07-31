@@ -57,9 +57,11 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
         binding.filterBtn.setOnClickListener {
-            safeNavigate(UsernameRequestsFragmentDirections.usernameRequestsToFilters())
+            safeNavigate(UsernameRequestsFragmentDirections.requestsToFilters())
         }
-        val adapter = UsernameRequestGroupAdapter()
+        val adapter = UsernameRequestGroupAdapter {
+            safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(it.requestId))
+        }
         binding.requestGroups.adapter = adapter
 
         binding.search.setOnFocusChangeListener { _, isFocused ->
@@ -83,7 +85,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         }
         binding.clearBtn.setOnClickListener { binding.search.text.clear() }
         binding.appliedFiltersPanel.setOnClickListener {
-            safeNavigate(UsernameRequestsFragmentDirections.usernameRequestsToFilters())
+            safeNavigate(UsernameRequestsFragmentDirections.requestsToFilters())
         }
 
         keyboardUtil = KeyboardUtil(requireActivity().window, binding.root)
@@ -157,5 +159,3 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
     }
 }
-
-

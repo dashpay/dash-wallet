@@ -319,7 +319,6 @@ open class DashPayViewModel @Inject constructor(
     suspend fun setLastNotificationTime(time: Long) =
         dashPayConfig.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, time)
 
-
     private inner class UserSearch(
         val text: String,
         val limit: Int = 100,

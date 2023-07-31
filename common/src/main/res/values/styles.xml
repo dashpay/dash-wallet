@@ -809,6 +809,13 @@
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
+    <style name="PrimaryButtonTheme.Large.Red">
+        <item name="backgroundColor">@color/system_red_0.1</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="titleTextColor">@color/system_red</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
     <style name="PrimaryButtonTheme.Large.TransparentBlue">
         <item name="backgroundColor">@color/light_blue</item>
         <item name="strokeColor">@android:color/transparent</item>
@@ -907,6 +914,10 @@
 
     <style name="Button.Primary.Large.Orange">
         <item name="android:theme">@style/PrimaryButtonTheme.Large.Orange</item>
+    </style>
+
+    <style name="Button.Primary.Large.Red">
+        <item name="android:theme">@style/PrimaryButtonTheme.Large.Red</item>
     </style>
 
     <style name="Button.Primary.Large.Inverted">
@@ -1245,9 +1256,11 @@
         <item name="trackThickness">15dp</item>
     </style>
 
-    <style name="ImageButtonGrayTheme">
+    <style name="GrayPanelBackground">
         <item name="backgroundColor">@color/dash_black_0.05</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">12dp</item>
     </style>
+
+    <style name="ImageButtonGrayTheme" parent="GrayPanelBackground"/>
 </resources>
