@@ -48,7 +48,9 @@ import kotlin.random.Random
 
 data class UsernameRequestsUIState(
     val filteredUsernameRequests: List<UsernameRequestGroupView> = listOf(),
-    val showFirstTimeInfo: Boolean = false
+    val showFirstTimeInfo: Boolean = false,
+    val voteSubmitted: Boolean = false,
+    val voteCancelled: Boolean = false
 )
 
 data class FiltersUIState(
@@ -130,6 +132,28 @@ class UsernameRequestsViewModel @Inject constructor(
 
     fun selectUsernameRequest(requestId: String) {
         _selectedUsernameRequestId.value = requestId
+    }
+
+    fun vote(requestId: String, votesAmount: Int) {
+        viewModelScope.launch {
+            usernameRequestDao.getRequest(requestId)?.let { request ->
+                usernameRequestDao.update(request.copy(votes = request.votes + votesAmount, isApproved = true))
+                _uiState.update { it.copy(voteSubmitted = true) }
+            }
+        }
+    }
+
+    fun revokeVote(requestId: String, votesAmount: Int) {
+        viewModelScope.launch {
+            usernameRequestDao.getRequest(requestId)?.let { request ->
+                usernameRequestDao.update(request.copy(votes = request.votes - votesAmount, isApproved = false))
+                _uiState.update { it.copy(voteCancelled = true) }
+            }
+        }
+    }
+
+    fun voteHandled() {
+        _uiState.update { it.copy(voteSubmitted = false, voteCancelled = false) }
     }
 
     private fun observeUsernames(): Flow<List<UsernameRequest>> {

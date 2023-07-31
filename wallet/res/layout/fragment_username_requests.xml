@@ -254,4 +254,37 @@
                 tools:text="California, 5 miles" />
         </LinearLayout>
     </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/vote_submitted_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/NoNetworkBackground"
+        android:layout_gravity="center_horizontal|bottom"
+        android:paddingVertical="8dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="15dp"
+        android:layout_marginBottom="15dp"
+        android:visibility="gone"
+        tools:background="@color/dash_black_0.9"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/vote_submitted_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_check_circle"
+            android:layout_gravity="center_vertical"/>
+
+        <TextView
+            android:id="@+id/vote_submitted_txt"
+            style="@style/Caption.White"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/vote_submitted"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -118,6 +118,14 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             val scrollPosition = layoutManager.findFirstVisibleItemPosition()
             adapter.submitList(list)
             binding.requestGroups.scrollToPosition(scrollPosition)
+
+            if (state.voteSubmitted) {
+                showVoteIndicator(binding, false)
+            }
+
+            if (state.voteCancelled) {
+                showVoteIndicator(binding, true)
+            }
         }
 
         viewModel.filterState.observe(viewLifecycleOwner) { state ->
@@ -157,5 +165,30 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         }
 
         binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
+    }
+
+    private fun showVoteIndicator(binding: FragmentUsernameRequestsBinding, isCancelled: Boolean) {
+        binding.voteSubmittedTxt.text = getString(if (isCancelled) R.string.vote_cancelled else R.string.vote_submitted)
+        binding.voteSubmittedIcon.isVisible = !isCancelled
+        binding.voteSubmittedIndicator.alpha = 0f
+        binding.voteSubmittedIndicator.isVisible = true
+
+        val animationDuration = 300L
+        binding.voteSubmittedIndicator.animate()
+            .alpha(1f)
+            .setDuration(animationDuration)
+            .setListener(null)
+            .start()
+
+        viewModel.voteHandled()
+        binding.voteSubmittedIndicator.postDelayed({
+            binding.voteSubmittedIndicator.animate()
+                .alpha(0f)
+                .setDuration(animationDuration)
+                .withEndAction {
+                    binding.voteSubmittedIndicator.isVisible = false
+                }
+                .start()
+        }, 3000L)
     }
 }
