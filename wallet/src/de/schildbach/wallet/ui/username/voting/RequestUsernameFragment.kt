@@ -48,7 +48,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
 
         binding.requestUsernameButton.setOnClickListener {
             AdaptiveDialog.create(
-                R.drawable.ic_identity,
+                R.drawable.ic_verify_identity,
                 getString(R.string.verify_your_identity),
                 getString(
                     R.string.if_somebody
