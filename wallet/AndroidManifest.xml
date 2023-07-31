@@ -329,7 +329,7 @@
             android:name="de.schildbach.wallet.ui.CreateUsernameActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"
-            android:windowSoftInputMode="stateAlwaysHidden|adjustResize" />
+            android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <activity
             android:name="de.schildbach.wallet.ui.invite.InviteFriendActivity"

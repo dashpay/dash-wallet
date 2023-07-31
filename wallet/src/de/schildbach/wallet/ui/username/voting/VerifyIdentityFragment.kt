@@ -42,6 +42,11 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
             val username = text.toString()
             val isValidLink = username.isNotEmpty()
             binding.verifyBtn.isEnabled = isValidLink
+            if(!text.isNullOrEmpty()){
+                binding.linkInputLayout.hint = getString(R.string.link)
+            }else{
+                binding.linkInputLayout.hint = getString(R.string.paste_the_link)
+            }
         }
 
         binding.titleBar.setNavigationOnClickListener {
@@ -49,16 +54,12 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
         }
         hideKeyboard()
         binding.verifyBtn.setOnClickListener {
+            //TODO verify identity
         }
-        binding.linkInput.setOnFocusChangeListener { _, _ ->
-            hideKeyboard()
-            binding.linkInput.clearFocus()
-        }
+
     }
 
         private fun hideKeyboard() {
-
             KeyboardUtil.hideKeyboard(requireContext(), view = binding.linkInput)
-
         }
     }
