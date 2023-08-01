@@ -43,7 +43,6 @@ import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integration.uphold.R
-import org.dash.wallet.integration.uphold.api.UpholdClient
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
 import org.dash.wallet.integration.uphold.data.UpholdConstants
 
@@ -85,7 +84,7 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
         binding.toolbarIcon.setImageResource(R.drawable.ic_uphold)
         binding.disconnectedIndicator.isVisible = false
         binding.balanceHeader.text = getString(R.string.uphold_account_dash_balance)
-        binding.additionalInfo.isVisible = false // true TODO: re-enable
+        binding.additionalInfo.isVisible = true
         binding.additionalInfoIcon.setImageResource(R.drawable.logo_topper)
         binding.additionalInfoTxt.text = getString(R.string.uphold_powered_by)
         binding.convertBtn.isVisible = false
@@ -101,17 +100,9 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
         }
 
         binding.buyBtn.setOnClickListener {
-//            val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
-//            viewModel.logEvent(AnalyticsConstants.Topper.ENTER_UPHOLD)
-//            requireActivity().openCustomTab(uri) TODO: re-enable Topper
-
-            val dashCard = UpholdClient.getInstance().currentDashCard
-            if (dashCard != null) {
-                val url = String.format(UpholdConstants.CARD_URL_BASE, dashCard.id)
-                requireActivity().openCustomTab(url)
-            } else {
-                showErrorAlert(-1)
-            }
+            val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
+            viewModel.logEvent(AnalyticsConstants.Topper.ENTER_UPHOLD)
+            requireActivity().openCustomTab(uri)
         }
         binding.transferBtn.setOnClickListener {
             if (!viewModel.uiState.value.balance.isZero) {
@@ -239,21 +230,11 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
     private fun setConnectedState(isConnected: Boolean) {
         binding.connectedGroup.isVisible = isConnected
         binding.linkAccountBtn.isVisible = !isConnected
-//        binding.additionalInfo.isVisible = !isConnected // TODO: re-enable
+        binding.additionalInfo.isVisible = !isConnected
         binding.transferBtn.isEnabled = isConnected
         binding.transferIcon.setRoundedBackground(
             if (isConnected) {
                 R.style.TransferDashCircle
-            } else {
-                R.style.DisabledCircle
-            }
-        )
-
-        // TODO: remove when re-enabled
-        binding.buyBtn.isEnabled = isConnected
-        binding.buyIcon.setRoundedBackground(
-            if (isConnected) {
-                R.style.BuyDashCircle
             } else {
                 R.style.DisabledCircle
             }
