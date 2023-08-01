@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary"
+    android:background="@color/background_secondary"
     tools:context="de.schildbach.wallet.ui.username.UsernameRequestDetailsFragment">
 
     <androidx.appcompat.widget.Toolbar
@@ -129,7 +129,7 @@
 
         <TextView
             android:id="@+id/vote_button_text"
-            style="@style/Body2.Medium.White"
+            style="@style/Subtitle2.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"

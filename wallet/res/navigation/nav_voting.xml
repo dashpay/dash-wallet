@@ -57,5 +57,57 @@
         <argument
             android:name="requestId"
             app:argType="string" />
+
+        <action
+            android:id="@+id/details_to_votingKeyInput"
+            app:destination="@id/votingKeyInputFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/details_to_addKeys"
+            app:destination="@id/addVotingKeysFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/votingKeyInputFragment"
+        android:name="de.schildbach.wallet.ui.username.VotingKeyInputFragment"
+        android:label="VotingKeyInputFragment"
+        tools:layout="@layout/fragment_voting_key_input">
+
+        <argument
+            android:name="requestId"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/votingKeyInput_to_addKeys"
+            app:popUpTo="@id/usernameRequestDetailsFragment"
+            app:popUpToInclusive="false"
+            app:destination="@id/addVotingKeysFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/addVotingKeysFragment"
+        android:name="de.schildbach.wallet.ui.username.AddVotingKeysFragment"
+        android:label="AddVotingKeysFragment"
+        tools:layout="@layout/fragment_add_voting_keys">
+
+        <argument
+            android:name="requestId"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/addKeys_to_votingKeyInput"
+            app:destination="@id/votingKeyInputFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 </navigation>

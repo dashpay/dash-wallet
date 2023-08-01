@@ -51,12 +51,24 @@
 
             <androidx.appcompat.widget.Toolbar
                 android:id="@+id/toolbar"
-                app:layout_collapseMode="pin"
-                app:contentInsetEnd="80dp"
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
+                app:layout_collapseMode="pin"
+                app:contentInsetEnd="10dp"
                 app:navigationIcon="@drawable/ic_arrow_back_primary"
-                app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
+                app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+
+                <TextView
+                    android:id="@+id/quick_vote_button"
+                    style="@style/Subtitle2.Blue"
+                    android:paddingVertical="4dp"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="13sp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:text="@string/quick_vote" />
+            </androidx.appcompat.widget.Toolbar>
         </com.google.android.material.appbar.CollapsingToolbarLayout>
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -254,4 +266,37 @@
                 tools:text="California, 5 miles" />
         </LinearLayout>
     </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/vote_submitted_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/NoNetworkBackground"
+        android:layout_gravity="center_horizontal|bottom"
+        android:paddingVertical="8dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="15dp"
+        android:layout_marginBottom="15dp"
+        android:visibility="gone"
+        tools:background="@color/dash_black_0.9"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/vote_submitted_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_check_circle"
+            android:layout_gravity="center_vertical"/>
+
+        <TextView
+            android:id="@+id/vote_submitted_txt"
+            style="@style/Caption.White"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/vote_submitted"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

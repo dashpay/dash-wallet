@@ -460,4 +460,17 @@
     <string name="link">Link</string>
     <string name="link_not_provided">Not provided</string>
     <string name="cancel_approval">Cancel Approval</string>
+    <string name="voting_key_title">Enter your voting key</string>
+    <string name="voting_key_hint">Masternode Voting Key</string>
+    <string name="voting_key_input_error">You have entered an invalid key</string>
+    <string name="voting_key_add">Add your voting keys</string>
+    <string name="voting_key_add_subtitle">The IP address(es) below are associated with this wallet</string>
+    <string name="masternode_ip">Masternode IP address</string>
+    <string name="multiple_votes_cast">%d votes will be cast as you have multiple voting keys stored in the wallet</string>
+    <string name="add_masternode_key">Add Masternode Voting Key</string>
+    <string name="vote_submitted">Your vote was submitted</string>
+    <string name="vote_cancelled">Your vote was cancelled</string>
+    <string name="quick_vote">Quick Voting</string>
+    <string name="quick_vote_subtitle">By tapping the "Vote for All" button, you will automatically vote for all of the filtered usernames (%d) that were submitted first</string>
+    <string name="vote_for_all">Vote for All</string>
 </resources>

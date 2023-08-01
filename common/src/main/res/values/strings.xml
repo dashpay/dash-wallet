@@ -63,6 +63,7 @@
     <string name="share_address">Share Address</string>
     <string name="verify">Verify</string>
     <string name="receive_enter_amount_button">Specify Amount</string>
+    <string name="submit">Submit</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>

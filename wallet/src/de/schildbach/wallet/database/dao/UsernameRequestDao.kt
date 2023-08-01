@@ -26,6 +26,18 @@ interface UsernameRequestDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(usernameRequest: UsernameRequest)
 
+    @Update
+    suspend fun update(usernameRequest: UsernameRequest)
+
+    @Query("UPDATE username_requests SET votes = votes + :votesAmount, isApproved = 1 WHERE requestId IN (:requestIds)")
+    suspend fun voteForRequests(requestIds: List<String>, votesAmount: Int)
+
+    @Query("SELECT * FROM username_requests WHERE requestId = :requestId")
+    suspend fun getRequest(requestId: String): UsernameRequest?
+
+    @Query("SELECT * FROM username_requests WHERE requestId = :requestId")
+    fun observeRequest(requestId: String): Flow<UsernameRequest?>
+
     @Query(
         """
         SELECT * FROM username_requests 
@@ -34,9 +46,6 @@ interface UsernameRequestDao {
          """
     )
     fun observeAll(onlyWithLinks: Boolean): Flow<List<UsernameRequest>>
-
-    @Query("SELECT * FROM username_requests WHERE requestId = :requestId")
-    fun observeRequest(requestId: String): Flow<UsernameRequest?>
 
     @Query(
         """

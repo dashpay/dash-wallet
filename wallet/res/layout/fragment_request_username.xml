@@ -79,7 +79,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="15dp"
             android:background="@drawable/rounded_background"
-            android:theme="@style/DashAddressBackground"
+            android:theme="@style/SecondaryBackground"
             android:hint="@string/username">
 
             <EditText
@@ -107,9 +107,8 @@
 
     <Button
         android:id="@+id/request_username_button"
-        style="@style/Button.Primary.Blue"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
         android:layout_marginHorizontal="15dp"
         android:layout_marginBottom="25dp"
         android:enabled="false"

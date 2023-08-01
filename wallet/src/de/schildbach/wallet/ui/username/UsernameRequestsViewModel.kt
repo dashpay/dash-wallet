@@ -48,7 +48,9 @@ import kotlin.random.Random
 
 data class UsernameRequestsUIState(
     val filteredUsernameRequests: List<UsernameRequestGroupView> = listOf(),
-    val showFirstTimeInfo: Boolean = false
+    val showFirstTimeInfo: Boolean = false,
+    val voteSubmitted: Boolean = false,
+    val voteCancelled: Boolean = false
 )
 
 data class FiltersUIState(
@@ -71,6 +73,9 @@ class UsernameRequestsViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
     private val usernameRequestDao: UsernameRequestDao
 ): ViewModel() {
+    private val workerJob = SupervisorJob()
+    private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
+
     private val _uiState = MutableStateFlow(UsernameRequestsUIState())
     val uiState: StateFlow<UsernameRequestsUIState> = _uiState.asStateFlow()
 
@@ -87,8 +92,19 @@ class UsernameRequestsViewModel @Inject constructor(
                 .distinctUntilChanged()
         }
 
-    private val workerJob = SupervisorJob()
-    private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
+    private val validKeys = listOf(
+        "kn2GwaSZkoY8qg6i2dPCpDtDoBCftJWMzZXtHDDJ1w7PjFYfq",
+        "n6YtJ7pdDYPTa57imEHEp8zinq1oNGUdwZQdnGk1MMpCWBHEq",
+        "maEiRZeKXNLZovNqoS3HkmZJGmACbro7s3eC8GenExLF7QMQs"
+    )
+
+    private val _addedKeys = MutableStateFlow(listOf<String>())
+    val masternodeIPs: Flow<List<String>> = _addedKeys.map {
+        List(it.size) { i -> "323.232.23.$i" }
+    }
+
+    val keysAmount: Int
+        get() = _addedKeys.value.size
 
     init {
         dashPayConfig.observe(DashPayConfig.VOTING_INFO_SHOWN)
@@ -130,6 +146,66 @@ class UsernameRequestsViewModel @Inject constructor(
 
     fun selectUsernameRequest(requestId: String) {
         _selectedUsernameRequestId.value = requestId
+    }
+
+    fun vote(requestId: String) {
+        if (keysAmount == 0) {
+            return
+        }
+
+        viewModelScope.launch {
+            usernameRequestDao.getRequest(requestId)?.let { request ->
+                usernameRequestDao.update(request.copy(votes = request.votes + keysAmount, isApproved = true))
+                _uiState.update { it.copy(voteSubmitted = true) }
+            }
+        }
+    }
+
+    fun revokeVote(requestId: String) {
+        if (keysAmount == 0) {
+            return
+        }
+
+        viewModelScope.launch {
+            usernameRequestDao.getRequest(requestId)?.let { request ->
+                usernameRequestDao.update(request.copy(votes = request.votes - keysAmount, isApproved = false))
+                _uiState.update { it.copy(voteCancelled = true) }
+            }
+        }
+    }
+
+    fun voteForAll() {
+        if (keysAmount == 0) {
+            return
+        }
+
+        viewModelScope.launch {
+            val filteredRequests = _uiState.value.filteredUsernameRequests
+            val requestIds = filteredRequests.flatMap {
+                it.requests
+            }.filterNot {
+                it.isApproved
+            }.map {
+                it.requestId
+            }
+            usernameRequestDao.voteForRequests(
+                requestIds,
+                keysAmount
+            )
+            _uiState.update { it.copy(voteSubmitted = true) }
+        }
+    }
+
+    fun voteHandled() {
+        _uiState.update { it.copy(voteSubmitted = false, voteCancelled = false) }
+    }
+
+    fun verifyKey(key: String): Boolean {
+        return validKeys.contains(key)
+    }
+
+    fun addKey(key: String) {
+        _addedKeys.value = _addedKeys.value + key
     }
 
     private fun observeUsernames(): Flow<List<UsernameRequest>> {
