@@ -39,8 +39,14 @@ class ProfilePictureDisplay {
         }
 
         @JvmStatic
-        fun display(avatarView: ImageView, avatarUrlStr: String, avatarHash: ByteArray?, username: String,
-                    disableTransition: Boolean, listener: OnResourceReadyListener?) {
+        fun display(
+            avatarView: ImageView,
+            avatarUrlStr: String,
+            avatarHash: ByteArray?,
+            username: String,
+            disableTransition: Boolean,
+            listener: OnResourceReadyListener?
+        ) {
             val fontSize = calcFontSize(avatarView)
             if (avatarUrlStr.isNotEmpty()) {
                 val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
@@ -51,13 +57,23 @@ class ProfilePictureDisplay {
                 Glide.with(context)
                     .load(baseAvatarUrl)
                     .listener(object : RequestListener<Drawable> {
-                        override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
+                        override fun onLoadFailed(
+                            e: GlideException?,
+                            model: Any?,
+                            target: Target<Drawable>?,
+                            isFirstResource: Boolean
+                        ): Boolean {
                             listener?.onResourceReady(null)
                             return false
                         }
 
-                        override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?,
-                                                     dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                        override fun onResourceReady(
+                            resource: Drawable?,
+                            model: Any?,
+                            target: Target<Drawable>?,
+                            dataSource: DataSource?,
+                            isFirstResource: Boolean
+                        ): Boolean {
                             ProfilePictureHelper.avatarHashAndFingerprint(
                                 context,
                                 baseAvatarUrl,
@@ -85,7 +101,12 @@ class ProfilePictureDisplay {
             displayDefault(avatarView, username, calcFontSize(avatarView), listener)
         }
 
-        private fun displayDefault(avatarView: ImageView, username: String, fontSize: Int, listener: OnResourceReadyListener?) {
+        private fun displayDefault(
+            avatarView: ImageView,
+            username: String,
+            fontSize: Int,
+            listener: OnResourceReadyListener?
+        ) {
             val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
             avatarView.setImageDrawable(defaultAvatar)
             listener?.onResourceReady(defaultAvatar)
@@ -105,12 +126,14 @@ class ProfilePictureDisplay {
         private fun removeParameter(uri: Uri, key: String): Uri {
             val newUriBuilder = uri.buildUpon().clearQuery()
             for (param in uri.queryParameterNames) {
-                newUriBuilder.appendQueryParameter(param,
+                newUriBuilder.appendQueryParameter(
+                    param,
                     if (param == key) {
                         continue
                     } else {
                         uri.getQueryParameter(param)
-                    })
+                    }
+                )
             }
             return newUriBuilder.build()
         }
