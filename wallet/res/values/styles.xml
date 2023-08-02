@@ -240,4 +240,22 @@
         <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">10dp</item>
     </style>
+
+    <style name="ProfilePictureBorder">
+        <item name="backgroundColor">@android:color/transparent</item>
+        <item name="strokeColor">@color/dash_white_0.25</item>
+        <item name="cornerRadius">15dp</item>
+    </style>
+
+    <style name="NotificationIndicator">
+        <item name="backgroundColor">@color/system_red</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">4.5dp</item>
+    </style>
+
+    <style name="NotificationIndicatorBg">
+        <item name="backgroundColor">@color/blue_background_color</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">5.5dp</item>
+    </style>
 </resources>
