@@ -38,6 +38,8 @@ import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
+import de.schildbach.wallet.ui.dashpay.NotificationsActivity
+import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.scan.ScanActivity
@@ -56,6 +58,7 @@ import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
@@ -106,6 +109,18 @@ class WalletFragment : Fragment(R.layout.home_content) {
         })
 
         binding.homeToolbar.setOnClickListener { scrollToTop() }
+        binding.notificationBell.setOnClickListener {
+            startActivity(
+                NotificationsActivity.createIntent(
+                    requireContext(),
+                    NotificationsActivity.MODE_NOTIFICATIONS
+                )
+            )
+        }
+        binding.dashpayUserAvatar.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.UsersContacts.PROFILE_EDIT_HOME)
+            startActivity(Intent(requireContext(), EditProfileActivity::class.java))
+        }
 
         viewModel.transactions.observe(viewLifecycleOwner) { refreshShortcutBar() }
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
@@ -127,6 +142,13 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 configuration.setHasDisplayedTaxCategoryExplainer()
             }
         }
+
+        viewModel.dashPayProfile.observe(viewLifecycleOwner) { profile ->
+            ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile, true)
+            setNotificationIndicator()
+        }
+
+        viewModel.notificationCountData.observe(viewLifecycleOwner) { setNotificationIndicator() }
     }
 
     fun scrollToTop() {
@@ -253,7 +275,12 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     private fun handleSelectContact() {
         viewModel.logEvent(AnalyticsConstants.UsersContacts.SHORTCUT_SEND_TO_CONTACT)
-        safeNavigate(WalletFragmentDirections.homeToContacts(ShowNavBar = false, mode = ContactsScreenMode.SELECT_CONTACT))
+        safeNavigate(
+            WalletFragmentDirections.homeToContacts(
+                ShowNavBar = false,
+                mode = ContactsScreenMode.SELECT_CONTACT
+            )
+        )
     }
 
     private fun handlePayToAddress() {
@@ -334,5 +361,16 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 error(null, cannotClassifyCustomMessageResId, input)
             }
         }.parse()
+    }
+
+    private fun setNotificationIndicator() {
+        binding.notificationBell.isVisible = viewModel.hasIdentity
+        binding.notificationBell.setImageResource(
+            if (viewModel.notificationCount > 0) {
+                R.drawable.ic_new_notifications
+            } else {
+                R.drawable.ic_notification_bell
+            }
+        )
     }
 }

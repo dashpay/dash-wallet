@@ -39,6 +39,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
+import androidx.core.view.isVisible
 import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.ObjectKey
@@ -58,8 +59,7 @@ import de.schildbach.wallet.ui.dashpay.utils.display
 import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_edit_profile.*
-import kotlinx.android.synthetic.main.upload_policy_dialog.*
+import de.schildbach.wallet_test.databinding.ActivityEditProfileBinding
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.avatar.ProfilePictureTransformation
@@ -72,7 +72,7 @@ import java.io.InputStream
 import java.math.BigInteger
 
 @AndroidEntryPoint
-class EditProfileActivity : BaseMenuActivity() {
+class EditProfileActivity : LockScreenActivity() {
 
     companion object {
         const val REQUEST_CODE_URI = 0
@@ -86,6 +86,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
     }
 
+    private lateinit var binding: ActivityEditProfileBinding
     private val editProfileViewModel: EditProfileViewModel by viewModels()
     private val selectProfilePictureSharedViewModel: SelectProfilePictureSharedViewModel by viewModels()
     private val externalUrlSharedViewModel: ExternalUrlProfilePictureViewModel by viewModels()
@@ -101,35 +102,34 @@ class EditProfileActivity : BaseMenuActivity() {
     private var initialDisplayName = ""
     private var initialAboutMe = ""
 
-    override fun getLayoutId(): Int {
-        return R.layout.activity_edit_profile
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
 
-        setTitle(R.string.edit_profile)
+        binding = ActivityEditProfileBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
+        binding.appbarGeneral.toolbar.setTitle(R.string.edit_profile)
+        binding.appbarGeneral.toolbar.setNavigationOnClickListener { finish() }
 
         initViewModel()
 
-        display_name.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
-            display_name_char_count.visibility = if (hasFocus) View.VISIBLE else View.INVISIBLE
+        binding.displayName.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
+            binding.displayNameCharCount.isVisible = hasFocus
         }
         val redTextColor = ContextCompat.getColor(this, R.color.dash_red)
         val mediumGrayTextColor = ContextCompat.getColor(this, R.color.medium_gray)
-        display_name.addTextChangedListener(object : TextWatcher {
+        binding.displayName.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 showSaveReminderDialog = initialDisplayName != s?.toString()
                 setEditingState(true)
                 imitateUserInteraction()
                 val charCount = s?.trim()?.length ?: 0
-                display_name_char_count.text = getString(R.string.char_count, charCount,
-                        Constants.DISPLAY_NAME_MAX_LENGTH)
+                binding.displayNameCharCount.text = getString(R.string.char_count, charCount,
+                    Constants.DISPLAY_NAME_MAX_LENGTH)
                 if (charCount > Constants.DISPLAY_NAME_MAX_LENGTH) {
-                    display_name_char_count.setTextColor(redTextColor)
+                    binding.displayNameCharCount.setTextColor(redTextColor)
                 } else {
-                    display_name_char_count.setTextColor(mediumGrayTextColor)
+                    binding.displayNameCharCount.setTextColor(mediumGrayTextColor)
                 }
                 updateSaveBtnState()
             }
@@ -143,19 +143,19 @@ class EditProfileActivity : BaseMenuActivity() {
             }
         })
 
-        about_me.addTextChangedListener(object : TextWatcher {
+        binding.aboutMe.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 showSaveReminderDialog = initialAboutMe != s?.toString()
                 setEditingState(true)
                 imitateUserInteraction()
-                aboutMeCharCount.visibility = View.VISIBLE
+                binding.aboutMeCharCount.visibility = View.VISIBLE
                 val charCount = s?.trim()?.length ?: 0
-                aboutMeCharCount.text = getString(R.string.char_count, charCount,
-                        Constants.ABOUT_ME_MAX_LENGTH)
+                binding.aboutMeCharCount.text = getString(R.string.char_count, charCount,
+                    Constants.ABOUT_ME_MAX_LENGTH)
                 if (charCount > Constants.ABOUT_ME_MAX_LENGTH) {
-                    aboutMeCharCount.setTextColor(redTextColor)
+                    binding.aboutMeCharCount.setTextColor(redTextColor)
                 } else {
-                    aboutMeCharCount.setTextColor(mediumGrayTextColor)
+                    binding.aboutMeCharCount.setTextColor(mediumGrayTextColor)
                 }
                 updateSaveBtnState()
             }
@@ -169,11 +169,11 @@ class EditProfileActivity : BaseMenuActivity() {
             }
 
         })
-        save.setOnClickListener {
+        binding.save.setOnClickListener {
             save()
         }
 
-        profile_edit_icon.setOnClickListener {
+        binding.profileEditIcon.setOnClickListener {
             selectImage()
         }
 
@@ -220,7 +220,7 @@ class EditProfileActivity : BaseMenuActivity() {
     private fun pictureFromUrl() {
         if (editProfileViewModel.createTmpPictureFile()) {
             val initialUrl = externalUrlSharedViewModel.externalUrl?.toString()
-                    ?: editProfileViewModel.dashPayProfile.value?.avatarUrl
+                ?: editProfileViewModel.dashPayProfile.value?.avatarUrl
             ExternalUrlProfilePictureDialog.newInstance(initialUrl).show(supportFragmentManager, "")
         } else {
             Toast.makeText(this, "Unable to create temporary file", Toast.LENGTH_LONG).show()
@@ -245,7 +245,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 setEditingState(true)
             } else {
                 val username = editProfileViewModel.dashPayProfile.value!!.username
-                ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
+                ProfilePictureDisplay.displayDefault(binding.dashpayUserAvatar, username)
             }
             profilePictureChanged = true
         }
@@ -259,12 +259,12 @@ class EditProfileActivity : BaseMenuActivity() {
                 }
                 Status.SUCCESS -> {
                     ProfilePictureHelper.avatarHashAndFingerprint(this, it.data!!.toUri(), null,
-                            object: ProfilePictureHelper.OnResourceReadyListener {
-                                override fun onResourceReady(avatarHash: Sha256Hash?, avatarFingerprint: BigInteger?) {
-                                    editProfileViewModel.avatarHash = avatarHash
-                                    editProfileViewModel.avatarFingerprint = avatarFingerprint
-                                }
+                        object: ProfilePictureHelper.OnResourceReadyListener {
+                            override fun onResourceReady(avatarHash: Sha256Hash?, avatarFingerprint: BigInteger?) {
+                                editProfileViewModel.avatarHash = avatarHash
+                                editProfileViewModel.avatarFingerprint = avatarFingerprint
                             }
+                        }
                     )
                     showUploadedProfilePicture(it.data)
                 }
@@ -316,13 +316,13 @@ class EditProfileActivity : BaseMenuActivity() {
         if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
             uploadProfilePictureStateDialog!!.dismiss()
         }
-        Glide.with(this).load(url).circleCrop().into(dashpayUserAvatar)
+        Glide.with(this).load(url).circleCrop().into(binding.dashpayUserAvatar)
         showSaveReminderDialog = true
     }
 
     private fun showUploadErrorDialog(error: UpdateProfileError) {
         if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog != null &&
-                uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
+            uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
             uploadProfilePictureStateDialog!!.showError(error)
             return
         } else if (uploadProfilePictureStateDialog != null) {
@@ -333,13 +333,13 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     fun updateSaveBtnState() {
-        save.isEnabled = !(display_name.text.length > Constants.DISPLAY_NAME_MAX_LENGTH || about_me.text.length > Constants.ABOUT_ME_MAX_LENGTH)
+        binding.save.isEnabled = !(binding.displayName.text.length > Constants.DISPLAY_NAME_MAX_LENGTH || binding.aboutMe.text.length > Constants.ABOUT_ME_MAX_LENGTH)
     }
 
     fun save() {
         showSaveReminderDialog = false
-        val displayName = display_name.text.toString().trim()
-        val publicMessage = about_me.text.toString().trim()
+        val displayName = binding.displayName.text.toString().trim()
+        val publicMessage = binding.aboutMe.text.toString().trim()
 
         val avatarUrl = if (profilePictureChanged) {
             if (externalUrlSharedViewModel.externalUrl != null) {
@@ -352,17 +352,17 @@ class EditProfileActivity : BaseMenuActivity() {
         }
 
         editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl ?: "")
-        save.isEnabled = false
+        binding.save.isEnabled = false
         finish()
     }
 
     private fun showProfileInfo(profile: DashPayProfile) {
         if (!isEditing) {
-            ProfilePictureDisplay.display(dashpayUserAvatar, profile)
+            ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile)
             initialAboutMe = profile.publicMessage
             initialDisplayName = profile.displayName
-            about_me.setText(profile.publicMessage)
-            display_name.setText(profile.displayName)
+            binding.aboutMe.setText(profile.publicMessage)
+            binding.displayName.setText(profile.displayName)
             editProfileViewModel.avatarHash = profile.avatarHash?.let { Sha256Hash.wrap(it) }
             editProfileViewModel.avatarFingerprint = profile.avatarFingerprint?.let { BigInteger(it) }
         }
@@ -390,7 +390,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun selectImage() {
         SelectProfilePictureDialog.createDialog()
-                .show(supportFragmentManager, "selectPictureDialog")
+            .show(supportFragmentManager, "selectPictureDialog")
     }
 
     private fun choosePicture() {
@@ -528,11 +528,11 @@ class EditProfileActivity : BaseMenuActivity() {
 
             val file = editProfileViewModel.tmpPictureFile
             val imgUri = getFileUri(file)
-            Glide.with(dashpayUserAvatar).load(imgUri)
-                    .signature(ObjectKey(file.lastModified()))
-                    .placeholder(defaultAvatar)
-                    .transform(ProfilePictureTransformation.create(zoomedRect))
-                    .into(dashpayUserAvatar)
+            Glide.with(binding.dashpayUserAvatar).load(imgUri)
+                .signature(ObjectKey(file.lastModified()))
+                .placeholder(defaultAvatar)
+                .transform(ProfilePictureTransformation.create(zoomedRect))
+                .into(binding.dashpayUserAvatar)
             showSaveReminderDialog = true
         }
     }
@@ -595,11 +595,11 @@ class EditProfileActivity : BaseMenuActivity() {
             startActivityForResult(googleSignInClient.signInIntent, REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN)
         } else {
             googleSignInClient.revokeAccess()
-                    .addOnSuccessListener { startActivityForResult(googleSignInClient.signInIntent, REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN) }
-                    .addOnFailureListener { e: java.lang.Exception? ->
-                        log.error("could not revoke access to drive: ", e)
-                        applyGdriveAccessDenied()
-                    }
+                .addOnSuccessListener { startActivityForResult(googleSignInClient.signInIntent, REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN) }
+                .addOnFailureListener { e: java.lang.Exception? ->
+                    log.error("could not revoke access to drive: ", e)
+                    applyGdriveAccessDenied()
+                }
         }
     }
 
@@ -611,7 +611,7 @@ class EditProfileActivity : BaseMenuActivity() {
         try {
             log.info("gdrive: attempting to sign in to a google account")
             val account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
-                    ?: throw RuntimeException("empty account")
+                ?: throw RuntimeException("empty account")
             applyGdriveAccessGranted(account)
         } catch (e: Exception) {
             log.error("Google Drive sign-in failed, could not get account: ", e)

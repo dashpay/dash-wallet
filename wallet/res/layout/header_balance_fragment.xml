@@ -1,91 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/dash_blue"
     tools:background="@color/blue_background_color"
     tools:context="de.schildbach.wallet.ui.main.HeaderBalanceFragment">
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/avatar_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <ImageView
-            android:id="@+id/dashpay_user_avatar"
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_margin="8dp"
-            android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:visibility="visible" />
-
-        <ImageButton
-            android:id="@+id/notification_bell"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/transparent_button_background"
-            app:layout_constraintBottom_toBottomOf="@id/dashpay_user_avatar"
-            app:layout_constraintEnd_toEndOf="@id/horizontal_guideline"
-            app:layout_constraintStart_toStartOf="@id/horizontal_guideline"
-            app:srcCompat="@drawable/ic_notification_bell" />
-
-        <TextView
-            android:id="@+id/notifications"
-            style="@style/Overline.Blue"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/notifications_button"
-            android:paddingStart="13dp"
-            android:paddingTop="5dp"
-            android:paddingEnd="13dp"
-            android:paddingBottom="5dp"
-            app:layout_constraintBottom_toBottomOf="@id/dashpay_user_avatar"
-            app:layout_constraintEnd_toEndOf="@id/horizontal_guideline"
-            app:layout_constraintStart_toStartOf="@id/horizontal_guideline"
-            tools:text="12" />
-
-        <androidx.constraintlayout.widget.Guideline
-            android:id="@+id/horizontal_guideline"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            app:layout_constraintGuide_percent="0.60" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <TextView
         android:id="@+id/syncing_indicator"
         style="@style/Overline.White"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:text="@string/syncing_balance"
         android:alpha="0.5"
         android:gravity="center"
-        android:text="@string/syncing_balance"
         android:textAlignment="gravity"
         android:visibility="invisible"
-        app:layout_constraintTop_toBottomOf="@id/avatar_container"
+        app:layout_constraintTop_toTopOf="parent"
         tools:visibility="visible" />
 
     <ImageView
         android:id="@+id/dash_icon"
         android:layout_width="20dp"
         android:layout_height="20dp"
-        android:layout_marginTop="4dp"
         android:layout_marginEnd="4dp"
+        android:layout_marginTop="4dp"
         android:src="@drawable/ic_dash_d_white"
+        app:layout_constraintTop_toTopOf="@id/wallet_balance_dash"
         app:layout_constraintBottom_toBottomOf="@id/wallet_balance_dash"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/wallet_balance_dash"
         app:layout_constraintHorizontal_chainStyle="packed"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/wallet_balance_dash"
         tools:ignore="ContentDescription" />
 
     <org.dash.wallet.common.ui.CurrencyTextView
@@ -95,10 +42,10 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="-2dp"
         android:ellipsize="end"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/dash_icon"
         app:layout_constraintTop_toBottomOf="@id/syncing_indicator"
-        tools:text="0" />
+        app:layout_constraintStart_toEndOf="@id/dash_icon"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:text="0"/>
 
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/wallet_balance_local"
@@ -106,17 +53,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="-2dp"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/wallet_balance_dash"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/wallet_balance_dash" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <FrameLayout
         android:id="@+id/hide_balance_hint"
         android:layout_width="wrap_content"
         android:layout_height="18dp"
         android:layout_marginTop="5dp"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/wallet_balance_local">
 
         <TextView
@@ -124,9 +71,9 @@
             style="@style/Overline.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:alpha="0.5"
             android:text="@string/home_balance_hide_hint"
             android:visibility="gone"
+            android:alpha="0.5"
             tools:visibility="visible" />
     </FrameLayout>
 
@@ -141,11 +88,11 @@
         android:layout_width="44dp"
         android:layout_height="44dp"
         android:background="@drawable/rounded_ripple_background"
+        android:theme="@style/RevealBalanceBackground"
         android:padding="9dp"
         android:src="@drawable/ic_show_balance"
-        android:theme="@style/RevealBalanceBackground"
-        app:layout_constraintBottom_toBottomOf="@id/hide_balance_hint"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/syncing_indicator" />
+        app:layout_constraintEnd_toEndOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

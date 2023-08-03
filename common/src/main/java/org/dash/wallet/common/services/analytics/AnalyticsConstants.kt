@@ -140,6 +140,7 @@ object AnalyticsConstants {
         const val NOTIFICATIONS_ACCEPT_REQUEST = "notifications_accept_contact_request"
         const val NOTIFICATIONS_CONTACT_DETAILS = "notifications_contact_details"
         const val PROFILE_EDIT_MORE = "profile_edit_from_more"
+        const val PROFILE_EDIT_HOME = "profile_edit_from_home"
         const val PROFILE_CHANGE_NAME = "profile_change_display_name"
         const val PROFILE_NAME_LENGTH = "profile_display_name_length"
         const val PROFILE_CHANGE_ABOUT_ME = "profile_change_about_me"

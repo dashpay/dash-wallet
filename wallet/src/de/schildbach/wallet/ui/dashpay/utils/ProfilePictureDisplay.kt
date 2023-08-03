@@ -22,11 +22,21 @@ import android.widget.ImageView
 import de.schildbach.wallet.database.entity.DashPayProfile
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
-fun ProfilePictureDisplay.Companion.display(avatarView: ImageView, dashPayProfile: DashPayProfile?, hideIfProfileNull: Boolean = false) {
+fun ProfilePictureDisplay.Companion.display(
+    avatarView: ImageView,
+    dashPayProfile: DashPayProfile?,
+    hideIfProfileNull: Boolean = false
+) {
     display(avatarView, dashPayProfile, hideIfProfileNull, false, null)
 }
 
-fun ProfilePictureDisplay.Companion.display(avatarView: ImageView, dashPayProfile: DashPayProfile?, hideIfProfileNull: Boolean = false, disableTransition: Boolean, listener: ProfilePictureDisplay.OnResourceReadyListener?) {
+fun ProfilePictureDisplay.Companion.display(
+    avatarView: ImageView,
+    dashPayProfile: DashPayProfile?,
+    hideIfProfileNull: Boolean = false,
+    disableTransition: Boolean,
+    listener: ProfilePictureDisplay.OnResourceReadyListener?
+) {
     if (dashPayProfile != null) {
         avatarView.visibility = View.VISIBLE
         display(

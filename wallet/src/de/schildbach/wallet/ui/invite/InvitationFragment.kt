@@ -51,7 +51,11 @@ abstract class InvitationFragment(fragmentResId: Int) : Fragment(fragmentResId) 
             setText(shortLink)
             if (shareImage) {
                 setType(Constants.Invitation.MIMETYPE_WITH_IMAGE)
-                val fileUri: Uri = FileProvider.getUriForFile(requireContext(), "${BuildConfig.APPLICATION_ID}.file_attachment", viewModel.invitationPreviewImageFile!!)
+                val fileUri: Uri = FileProvider.getUriForFile(
+                    requireContext(),
+                    "${BuildConfig.APPLICATION_ID}.file_attachment",
+                    viewModel.invitationPreviewImageFile!!
+                )
                 setStream(fileUri)
             } else {
                 setType(Constants.Invitation.MIMETYPE)
@@ -62,19 +66,26 @@ abstract class InvitationFragment(fragmentResId: Int) : Fragment(fragmentResId) 
     }
 
     protected fun setupInvitationPreviewTemplate(profile: DashPayProfile) {
-        val profilePictureEnvelope: InvitePreviewEnvelopeView = invitation_bitmap_template.findViewById(R.id.bitmap_template_profile_picture_envelope)
+        val profilePictureEnvelope: InvitePreviewEnvelopeView = invitation_bitmap_template.findViewById(
+            R.id.bitmap_template_profile_picture_envelope
+        )
         val messageHtml = getString(R.string.invitation_preview_message, "<b>${profile.nameLabel}</b>")
         val message = HtmlCompat.fromHtml(messageHtml, HtmlCompat.FROM_HTML_MODE_COMPACT)
         val messageView = invitation_bitmap_template.findViewById<TextView>(R.id.bitmap_template_message)
         messageView.text = message
-        ProfilePictureDisplay.display(profilePictureEnvelope.avatarView, profile, false, disableTransition = true,
-                listener = object : ProfilePictureDisplay.OnResourceReadyListener {
-                    override fun onResourceReady(resource: Drawable?) {
-                        invitation_bitmap_template.post {
-                            viewModel.saveInviteBitmap(invitation_bitmap_template)
-                        }
+        ProfilePictureDisplay.display(
+            profilePictureEnvelope.avatarView,
+            profile,
+            false,
+            disableTransition = true,
+            listener = object : ProfilePictureDisplay.OnResourceReadyListener {
+                override fun onResourceReady(resource: Drawable?) {
+                    invitation_bitmap_template.post {
+                        viewModel.saveInviteBitmap(invitation_bitmap_template)
                     }
-                })
+                }
+            }
+        )
     }
 
     protected fun showPreviewDialog() {
