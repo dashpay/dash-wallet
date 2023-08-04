@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui.username
+package de.schildbach.wallet.ui.username.voting
 
 import android.os.Bundle
 import android.view.View
@@ -6,7 +6,6 @@ import androidx.fragment.app.Fragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentWelcomeToDashpayBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 

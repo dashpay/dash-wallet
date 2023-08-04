@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui.username
+package de.schildbach.wallet.ui.username.voting
 
 import android.os.Bundle
 import android.view.View
@@ -14,8 +14,10 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
 import kotlinx.coroutines.delay
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
+import org.dash.wallet.common.util.safeNavigate
 
 class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
     private val binding by viewBinding(FragmentRequestUsernameBinding::bind)
@@ -33,7 +35,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             val username = text.toString()
             binding.requestUsernameButton.isEnabled = username.isNotEmpty()
             binding.inputWrapper.isEndIconVisible = username.isNotEmpty()
-
+            // TODO: Replace with api to verify username
             val isUsernameValid = binding.usernameInput.text.contentEquals("test") ||
                 binding.usernameInput.text.contentEquals("admin")
             binding.usernameRequested.isVisible = isUsernameValid
@@ -45,7 +47,27 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         }
 
         binding.requestUsernameButton.setOnClickListener {
-            // TODO: set navigation to voting fragment
+            AdaptiveDialog.create(
+                R.drawable.ic_verify_identity,
+                getString(R.string.verify_your_identity),
+                getString(
+                    R.string.if_somebody
+                ),
+                getString(
+                    R.string.skip
+                ),
+                getString(
+                    R.string.verify
+                )
+            ).show(requireActivity()) {
+                if (it == true) {
+                    safeNavigate(
+                        RequestUsernameFragmentDirections.requestUsernameFragmentToVerifyIdentityFragment(
+                            binding.usernameInput.text.toString()
+                        )
+                    )
+                }
+            }
         }
 
         lifecycleScope.launchWhenCreated {
