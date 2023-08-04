@@ -26,13 +26,9 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.ui.dashpay.NotificationsActivity
-import de.schildbach.wallet.ui.dashpay.NotificationsActivity.Companion.createIntent
-import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HeaderBalanceFragmentBinding
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 
@@ -50,16 +46,6 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         binding.walletBalanceLocal.setInsignificantRelativeSize(1f)
         binding.walletBalanceLocal.setStrikeThru(!Constants.IS_PROD_BUILD)
         requireView().setOnClickListener { viewModel.triggerHideBalance() }
-
-        binding.notifications.setOnClickListener {
-            startActivity(createIntent(requireContext(), NotificationsActivity.MODE_NOTIFICATIONS))
-        }
-        binding.notificationBell.setOnClickListener {
-            startActivity(createIntent(requireContext(), NotificationsActivity.MODE_NOTIFICATIONS))
-        }
-        binding.dashpayUserAvatar.setOnClickListener {
-            startActivity(createIntent(requireContext(), NotificationsActivity.MODE_NOTIFICATIONS))
-        }
 
         viewModel.exchangeRate.observe(viewLifecycleOwner) { updateBalance() }
         viewModel.balance.observe(viewLifecycleOwner) { updateBalance() }
@@ -82,14 +68,6 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         viewModel.showTapToHideHint.observe(viewLifecycleOwner) { showHint ->
             binding.hideBalanceHintText.isVisible = showHint ?: true
         }
-
-        viewModel.dashPayProfile.observe(viewLifecycleOwner) { profile ->
-            ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile, true)
-            setNotificationCount()
-        }
-
-        viewModel.notificationCountData.observe(viewLifecycleOwner) { setNotificationCount() }
-        setNotificationCount()
     }
 
     private fun updateBalance() {
@@ -117,23 +95,6 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
             alphaAnimation.repeatCount = Animation.INFINITE
             alphaAnimation.repeatMode = Animation.REVERSE
             binding.syncingIndicator.startAnimation(alphaAnimation)
-        }
-    }
-
-    private fun setNotificationCount() {
-        val notificationCount = viewModel.notificationCount
-
-        if (!viewModel.hasIdentity) {
-            binding.notifications.isVisible = false
-            binding.notificationBell.isVisible = false
-        } else if (notificationCount > 0) {
-            binding.notifications.text = notificationCount.toString()
-            binding.notifications.isVisible = true
-            binding.notificationBell.isVisible = false
-            viewModel.reportContactRequestTime()
-        } else if (notificationCount == 0) {
-            binding.notifications.isVisible = false
-            binding.notificationBell.isVisible = true
         }
     }
 }
