@@ -21,7 +21,7 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
     private val binding by viewBinding(FragmentVerfiyIdentityBinding::bind)
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
     private val viewModel by viewModels<VerifyIdentityViewModel>()
-
+    private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -42,9 +42,9 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
             val username = text.toString()
             val isValidLink = username.isNotEmpty()
             binding.verifyBtn.isEnabled = isValidLink
-            if(!text.isNullOrEmpty()){
+            if (!text.isNullOrEmpty()) {
                 binding.linkInputLayout.hint = getString(R.string.link)
-            }else{
+            } else {
                 binding.linkInputLayout.hint = getString(R.string.paste_the_link)
             }
         }
@@ -54,12 +54,12 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
         }
         hideKeyboard()
         binding.verifyBtn.setOnClickListener {
-            //TODO verify identity
-        }
-
-    }
-
-        private fun hideKeyboard() {
-            KeyboardUtil.hideKeyboard(requireContext(), view = binding.linkInput)
+            requestUserNameViewModel.verfiy()
+            findNavController().popBackStack()
         }
     }
+
+    private fun hideKeyboard() {
+        KeyboardUtil.hideKeyboard(requireContext(), view = binding.linkInput)
+    }
+}

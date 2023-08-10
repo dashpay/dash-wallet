@@ -176,6 +176,42 @@
                 android:paddingTop="20dp">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/requested_username_container"
+                    style="@style/MenuRow">
+
+                    <ImageView
+                        android:id="@+id/requested_username_icon"
+                        style="@style/MenuRowIcon"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_avatar_blue" />
+
+                    <TextView
+                        android:id="@+id/requested_username_title"
+                        style="@style/MenuRowTitle"
+                        app:layout_constraintStart_toEndOf="@+id/requested_username_icon"
+                        app:layout_constraintTop_toTopOf="@+id/requested_username_icon"
+                        tools:text="@string/menu_invite_title" />
+
+                    <TextView
+                        android:id="@+id/requested_username_subtitle"
+                        style="@style/MenuRowSubTitle"
+                        android:text="@string/requested_voting_duration"
+                        app:layout_constraintStart_toStartOf="@+id/requested_username_title"
+                        app:layout_constraintTop_toBottomOf="@+id/requested_username_title" />
+
+                    <ImageView
+                        android:id="@+id/requested_username_arrow"
+                        style="@style/MenuRowArrow"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_menu_row_arrow" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/invite"
                     style="@style/MenuRow">
 

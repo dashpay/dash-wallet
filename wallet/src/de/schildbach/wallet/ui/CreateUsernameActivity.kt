@@ -31,6 +31,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
 import de.schildbach.wallet.ui.username.CreateUsernameActions
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import de.schildbach.wallet.ui.username.CreateUsernameFragment
+import de.schildbach.wallet.ui.username.voting.RequestUserNameViewModel
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
@@ -41,6 +42,7 @@ class CreateUsernameActivity : InteractionAwareActivity() {
     private val dashPayViewModel: DashPayViewModel by viewModels()
 
     val confirmTransactionSharedViewModel: PlatformPaymentConfirmDialog.SharedViewModel by viewModels()
+    private val  requestUserNameViewModel: RequestUserNameViewModel by viewModels()
     companion object {
         private val log = LoggerFactory.getLogger(CreateUsernameActivity::class.java)
 
