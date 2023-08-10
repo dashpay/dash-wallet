@@ -34,7 +34,11 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.PackageInfoProvider
-import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.CreateUsernameActivity
+import de.schildbach.wallet.ui.EditProfileActivity
+import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.ReportIssueDialogBuilder
+import de.schildbach.wallet.ui.SettingsActivity
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
@@ -157,6 +161,19 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         initViewModel()
+
+        lifecycleScope.launchWhenResumed {
+            mainActivityViewModel.getRequestedUsername().also { username ->
+                if (username.isNotEmpty()) {
+                    binding.joinDashpayContainer.visibility = View.GONE
+                    binding.requestedUsernameContainer.visibility = View.VISIBLE
+                    binding.requestedUsernameTitle.text = username
+                } else {
+                    binding.joinDashpayContainer.visibility = View.VISIBLE
+                    binding.requestedUsernameContainer.visibility = View.GONE
+                }
+            }
+        }
     }
 
     private fun startBuyAndSellActivity() {
@@ -177,6 +194,13 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     private fun initViewModel() {
+        // observe our profile
+        editProfileViewModel.dashPayProfile.observe(viewLifecycleOwner) { dashPayProfile ->
+            if (dashPayProfile != null) {
+                showProfileSection(dashPayProfile)
+            }
+        }
+
         // observe our profile
         editProfileViewModel.dashPayProfile.observe(viewLifecycleOwner) { dashPayProfile ->
             if (dashPayProfile != null) {

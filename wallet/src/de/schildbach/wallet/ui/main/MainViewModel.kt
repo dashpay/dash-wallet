@@ -486,6 +486,8 @@ class MainViewModel @Inject constructor(
         return platformRepo.loadProfileByUserId(profileId)
     }
 
+    suspend fun getRequestedUsername(): String =
+        dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME) ?: ""
     suspend fun getInviteHistory() = invitationsDao.loadAll()
 
     private fun combineLatestData(): Boolean {
