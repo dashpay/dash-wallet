@@ -149,6 +149,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     suspend fun init() {
+        authenticationGroupExtension = walletApplication.wallet?.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
         blockchainIdentityDataDao.load()?.let {
             blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet!!)
             platformRepoInstance.initializeStateRepository()
@@ -216,6 +217,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             dashPayProfileDao.loadAll().forEach {
                 platform.stateRepository.addValidIdentity(it.userIdentifier)
             }
+
+            platform.stateRepository.storeIdentity(blockchainIdentity.identity!!)
         }
     }
 
@@ -576,10 +579,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val wallet = walletApplication.wallet as WalletEx
             // this will initialize any missing key chains
             wallet.initializeCoinJoin(keyParameter)
-            val authenticationGroupExtension = AuthenticationGroupExtension(wallet)
-            authenticationGroupExtension.addEncryptedKeyChains(wallet.params, seed, keyParameter, keyChainTypes)
 
-            wallet.addOrGetExistingExtension(authenticationGroupExtension)
+            var authenticationGroupExtension = AuthenticationGroupExtension(wallet)
+            authenticationGroupExtension = wallet.addOrGetExistingExtension(authenticationGroupExtension) as AuthenticationGroupExtension
+            authenticationGroupExtension.addEncryptedKeyChains(wallet.params, seed, keyParameter, keyChainTypes)
             this@PlatformRepo.authenticationGroupExtension = authenticationGroupExtension
         }
     }
@@ -1019,12 +1022,17 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey) ?: return null
 
         return try {
-            val identityBytes = platform.client.getIdentityByFirstPublicKey(firstIdentityKey.pubKeyHash, true)
-            if (identityBytes != null && identityBytes.isNotEmpty()) {
-                platform.dpp.identity.createFromBuffer(identityBytes)
+            platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
+            /*if (identity != null) {
+                identity
             } else {
-                null
-            }
+                val identityBytes = platform.client.getIdentityByFirstPublicKey(firstIdentityKey.pubKeyHash, true)
+                if (identityBytes != null && identityBytes.isNotEmpty()) {
+                    platform.dpp.identity.createFromBuffer(identityBytes)
+                } else {
+                    null
+                }
+            }*/
         } catch (e: MaxRetriesReachedException) {
             null
         } catch (e: NoAvailableAddressesForRetryException) {

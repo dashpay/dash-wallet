@@ -194,7 +194,7 @@ class PlatformSynchronizationService @Inject constructor(
     override suspend fun updateContactRequests() {
 
         // if there is no wallet or identity, then skip the remaining steps of the update
-        if (platformRepo.hasIdentity || walletApplication.wallet == null) {
+        if (!platformRepo.hasIdentity || walletApplication.wallet == null) {
             return
         }
 
