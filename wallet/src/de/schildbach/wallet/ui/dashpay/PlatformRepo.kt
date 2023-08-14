@@ -1023,16 +1023,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         return try {
             platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
-            /*if (identity != null) {
-                identity
-            } else {
-                val identityBytes = platform.client.getIdentityByFirstPublicKey(firstIdentityKey.pubKeyHash, true)
-                if (identityBytes != null && identityBytes.isNotEmpty()) {
-                    platform.dpp.identity.createFromBuffer(identityBytes)
-                } else {
-                    null
-                }
-            }*/
         } catch (e: MaxRetriesReachedException) {
             null
         } catch (e: NoAvailableAddressesForRetryException) {
