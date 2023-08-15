@@ -54,7 +54,7 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
         }
         hideKeyboard()
         binding.verifyBtn.setOnClickListener {
-            requestUserNameViewModel.verfiy()
+            requestUserNameViewModel.verify()
             findNavController().popBackStack()
         }
     }

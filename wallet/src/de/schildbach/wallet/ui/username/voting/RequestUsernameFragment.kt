@@ -130,8 +130,6 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         dialog.show(requireActivity()) {
             if (it == true) {
                 requestUserNameViewModel.submit()
-            } else {
-                dialog.dismiss()
             }
         }
     }

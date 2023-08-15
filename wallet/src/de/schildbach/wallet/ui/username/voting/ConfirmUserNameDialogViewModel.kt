@@ -16,8 +16,6 @@
 
 package de.schildbach.wallet.ui.username.voting
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,11 +54,6 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ConfirmUserNameUIState())
     val uiState: StateFlow<ConfirmUserNameUIState> = _uiState.asStateFlow()
-
-    private val _exchangeRate = MutableLiveData<ExchangeRate>()
-    val exchangeRate: LiveData<ExchangeRate>
-        get() = _exchangeRate
-
     private val amount by lazy {
         Coin.valueOf(Constants.DASH_PAY_FEE.value)
     }
@@ -74,12 +67,14 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
                 exchangeRatesProvider.observeExchangeRate(code)
                     .filterNotNull()
             }
-            .onEach(_exchangeRate::postValue)
+            .onEach {
+                updateFees(it)
+            }
             .launchIn(viewModelScope)
     }
 
 
-    fun updateFees(exchangeRateData: ExchangeRate) {
+    private fun updateFees(exchangeRateData: ExchangeRate) {
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
 
         val exchangeRate = exchangeRateData.run {

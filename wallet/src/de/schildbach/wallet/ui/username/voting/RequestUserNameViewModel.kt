@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.ui.username.voting
 
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,12 +23,8 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.services.NetworkStateInt
 import javax.inject.Inject
 
 
@@ -41,22 +36,25 @@ data class RequestUserNameUIState(
 
 @HiltViewModel
 class RequestUserNameViewModel @Inject constructor(
-    private val networkState: NetworkStateInt,
     val dashPayConfig: DashPayConfig
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
 
     var username: String? = null
-    private val _isNetworkAvailable = MutableLiveData<Boolean>()
 
-    init {
-        networkState.isConnected.filterNotNull()
-            .onEach(_isNetworkAvailable::postValue)
-            .launchIn(viewModelScope)
-    }
     fun submit() {
+        // Reset ui state for retry if needed
+        // resetUiForRetrySubmit()
+
         // TODO("Change to submit USERNAME")
+        // if call success
+        updateUiForApiSuccess()
+        // else if call failed
+       // updateUiForApiError()
+    }
+
+    private fun resetUiForRetrySubmit() {
         _uiState.update {
             it.copy(
                 usernameVerified = false,
@@ -64,31 +62,31 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameSubmittedError = false
             )
         }
+    }
+    private fun updateUiForApiSuccess() {
+        viewModelScope.launch {
+            username?.let { name ->
+                dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, name)
+            }
+        }
 
-        if (_isNetworkAvailable.value == true) {
-            viewModelScope.launch {
-                username?.let { name ->
-                    dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, name)
-                }
-            }
-
-            _uiState.update {
-                it.copy(
-                    usernameSubmittedSuccess = true,
-                    usernameSubmittedError = false
-                )
-            }
-        } else {
-            _uiState.update {
-                it.copy(
-                    usernameSubmittedSuccess = false,
-                    usernameSubmittedError = true
-                )
-            }
+        _uiState.update {
+            it.copy(
+                usernameSubmittedSuccess = true,
+                usernameSubmittedError = false
+            )
+        }
+    }
+    private fun updateUiForApiError() {
+        _uiState.update { it ->
+            it.copy(
+                usernameSubmittedSuccess = false,
+                usernameSubmittedError = true
+            )
         }
     }
 
-    fun verfiy() {
+    fun verify() {
         _uiState.update {
             it.copy(
                 usernameVerified = true

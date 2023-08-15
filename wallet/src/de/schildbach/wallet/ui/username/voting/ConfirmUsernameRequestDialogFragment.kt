@@ -39,13 +39,10 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
 
         binding.confirmBtn.setOnClickListener {
             requestUserNameViewModel.submit()
-
             dismiss()
         }
 
         binding.dismissBtn.setOnClickListener { dismiss() }
-
-        viewModel.exchangeRate.observe(viewLifecycleOwner) { viewModel.updateFees(it) }
 
         viewModel.uiState.observe(viewLifecycleOwner) {
             binding.dashAmountView.text = it.amountStr
