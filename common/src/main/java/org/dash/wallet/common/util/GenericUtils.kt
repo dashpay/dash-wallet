@@ -17,12 +17,8 @@
 
 package org.dash.wallet.common.util
 
-import android.content.Context
-import android.net.ConnectivityManager
 import android.os.Build
 import android.os.LocaleList
-import android.text.TextUtils
-import org.dash.wallet.common.data.CurrencyInfo
 import java.math.RoundingMode
 import java.text.NumberFormat
 import java.util.*
@@ -48,56 +44,6 @@ object GenericUtils {
         }
     }
 
-    fun isInternetConnected(context: Context): Boolean {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        return cm.activeNetworkInfo != null && cm.activeNetworkInfo!!.isConnected
-    }
-
-    /**
-     * Function which returns a concatenation of the currency code or currency symbol
-     * For currencies used by multiple countries, we set a locale with any country using the currency
-     * If the currentCurrencySymbol equals the currency code, we just use the currency code, otherwise we
-     * get the symbol
-     * @param currencyCode
-     * @return
-     */
-    fun setCurrentCurrencySymbolWithCode(currencyCode: String): String? {
-        var currentLocale = Locale("", "")
-        var currentCurrencySymbol: String? = ""
-        when (currencyCode.lowercase()) {
-            "eur" -> currentLocale = Locale.FRANCE
-            "xof" -> currentLocale = Locale("fr", "CM")
-            "xaf" -> currentLocale = Locale("fr", "SN")
-            "cfp" -> currentLocale = Locale("fr", "NC")
-            "hkd" -> currentLocale = Locale("en", "HK")
-            "bnd" -> currentLocale = Locale("ms", "BN")
-            "aud" -> currentLocale = Locale("en", "AU")
-            "gbp" -> currentLocale = Locale.UK
-            "inr" -> currentLocale = Locale("en", "IN")
-            "nzd" -> currentLocale = Locale("en", "NZ")
-            "ils" -> currentLocale = Locale("iw", "IL")
-            "jod" -> currentLocale = Locale("ar", "JO")
-            "rub" -> currentLocale = Locale("ru", "RU")
-            "zar" -> currentLocale = Locale("en", "ZA")
-            "chf" -> currentLocale = Locale("fr", "CH")
-            "try" -> currentLocale = Locale("tr", "TR")
-            "usd" -> currentLocale = Locale.US
-        }
-        currentCurrencySymbol =
-            if (TextUtils.isEmpty(currentLocale.language)) {
-                currencySymbol(currencyCode.lowercase())
-            } else {
-                Currency.getInstance(
-                    currentLocale
-                ).symbol
-            }
-        return String.format(
-            getDeviceLocale(),
-            "%s",
-            if (currencyCode.equals(currentCurrencySymbol, ignoreCase = true)) currencyCode else currentCurrencySymbol
-        )
-    }
-
     fun getDeviceLocale(): Locale {
         val countryCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             LocaleList.getDefault()[0].country
@@ -107,20 +53,6 @@ object GenericUtils {
         val deviceLocaleLanguage = Locale.getDefault().language
 
         return Locale(deviceLocaleLanguage, countryCode)
-    }
-
-    /**
-     * Keep numericals, minus, dot, comma
-     */
-    private fun stripLettersFromString(st: String): String {
-        return st.replace("[^\\d,.-]".toRegex(), "")
-    }
-
-    /**
-     * Remove currency symbols and codes from the string
-     */
-    private fun stripCurrencyFromString(st: String, symbol: String, code: String): String {
-        return stripLettersFromString(st.replace(symbol.toRegex(), "").replace(code.toRegex(), ""))
     }
 
     /**
@@ -150,17 +82,6 @@ object GenericUtils {
     fun getCoinIcon(code: String): String {
         return "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/" +
             code.lowercase(Locale.getDefault()) + ".png"
-    }
-
-    fun getLocaleCurrencyCode(): String? {
-        val currency = Currency.getInstance(getDeviceLocale())
-        var newCurrencyCode = currency.currencyCode
-        if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
-            newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode)
-        }
-        newCurrencyCode = CurrencyInfo.getOtherName(newCurrencyCode)
-
-        return newCurrencyCode
     }
 
     /**

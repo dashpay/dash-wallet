@@ -107,6 +107,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
             //Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
+
+        viewModel.getCurrencyChangeDetected().observe(this, currencies ->
+            WalletActivityExt.INSTANCE.showFiatCurrencyChangeDetectedDialog(
+            this,
+                viewModel,
+                currencies.component1(),
+                currencies.component2()
+            )
+        );
     }
 
     @Override
@@ -126,7 +135,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         WalletActivityExt.INSTANCE.checkTimeSkew(this, viewModel);
         WalletActivityExt.INSTANCE.checkLowStorageAlert(this);
         checkWalletEncryptionDialog();
-        detectUserCountry();
+        viewModel.detectUserCountry();
     }
 
     @Override
@@ -344,159 +353,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     public void onNewKeyChainEncrypted() {
 
-    }
-
-    /**
-     * Get ISO 3166-1 alpha-2 country code for this device (or null if not available)
-     * If available, call {@link #showFiatCurrencyChangeDetectedDialog(String, String)}
-     * passing the country code.
-     */
-    private void detectUserCountry() {
-        if (configuration.getExchangeCurrencyCodeDetected()) {
-            return;
-        }
-        try {
-            final TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-            final String simCountry = tm.getSimCountryIso();
-
-            log.info("Detecting currency based on device, mobile network or locale:");
-            if (simCountry != null && simCountry.length() == 2) { // SIM country code is available
-                log.info("Device Sim Country: " + simCountry);
-                updateCurrencyExchange(simCountry.toUpperCase());
-            } else if (tm.getPhoneType() != TelephonyManager.PHONE_TYPE_CDMA) { // device is not 3G (would be unreliable)
-                String networkCountry = tm.getNetworkCountryIso();
-                log.info("Network Country: " + simCountry);
-                if (networkCountry != null && networkCountry.length() == 2) { // network country code is available
-                    updateCurrencyExchange(networkCountry.toUpperCase());
-                } else {
-                    //Couldn't obtain country code - Use Default
-                    if (configuration.getExchangeCurrencyCode() == null)
-                        setDefaultCurrency();
-                }
-            } else {
-                //No cellular network - Wifi Only
-                if (configuration.getExchangeCurrencyCode() == null)
-                    setDefaultCurrency();
-            }
-        } catch (Exception e) {
-            //fail safe
-            log.info("NMA-243:  Exception thrown obtaining Locale information: ", e);
-            if (configuration.getExchangeCurrencyCode() == null)
-                setDefaultCurrency();
-        }
-    }
-
-    private void setDefaultCurrency() {
-        String countryCode = getCurrentCountry();
-        log.info("Setting default currency:");
-
-        try {
-            log.info("Local Country: " + countryCode);
-            Locale l = new Locale("", countryCode);
-            Currency currency = Currency.getInstance(l);
-            String newCurrencyCode = currency.getCurrencyCode();
-            if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
-                log.info("found obsolete currency: " + newCurrencyCode);
-                newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
-            }
-
-            // check to see if we use a different currency code for exchange rates
-            newCurrencyCode = CurrencyInfo.getOtherName(newCurrencyCode);
-
-            log.info("Setting Local Currency: " + newCurrencyCode);
-            configuration.setExchangeCurrencyCode(newCurrencyCode);
-
-            //Fallback to default
-            if (configuration.getExchangeCurrencyCode() == null) {
-                setDefaultExchangeCurrencyCode();
-            }
-        } catch (IllegalArgumentException x) {
-            log.info("Cannot obtain currency for " + countryCode + ": ", x);
-            setDefaultExchangeCurrencyCode();
-        }
-    }
-
-    private void setDefaultExchangeCurrencyCode() {
-        log.info("Using default Country: US");
-        log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY);
-        configuration.setExchangeCurrencyCode(Constants.DEFAULT_EXCHANGE_CURRENCY);
-    }
-
-    private String getCurrentCountry() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            return LocaleList.getDefault().get(0).getCountry();
-        } else {
-            return Locale.getDefault().getCountry();
-        }
-    }
-
-    /**
-     * Check whether app was ever updated or if it is an installation that was never updated.
-     * Show dialog to update if it's being updated or change it automatically.
-     *
-     * @param countryCode countryCode ISO 3166-1 alpha-2 country code.
-     */
-    private void updateCurrencyExchange(String countryCode) {
-        log.info("Updating currency exchange rate based on country: " + countryCode);
-        Locale l = new Locale("", countryCode);
-        Currency currency = Currency.getInstance(l);
-        String newCurrencyCode = currency.getCurrencyCode();
-        String currentCurrencyCode = configuration.getExchangeCurrencyCode();
-        if (currentCurrencyCode == null) {
-            currentCurrencyCode = Constants.DEFAULT_EXCHANGE_CURRENCY;
-        }
-
-        if (!currentCurrencyCode.equalsIgnoreCase(newCurrencyCode)) {
-            if (configuration.wasUpgraded()) {
-                showFiatCurrencyChangeDetectedDialog(currentCurrencyCode, newCurrencyCode);
-            } else {
-                if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
-                    log.info("found obsolete currency: " + newCurrencyCode);
-                    newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
-                }
-                // check to see if we use a different currency code for exchange rates
-                newCurrencyCode = CurrencyInfo.getOtherName(newCurrencyCode);
-
-                log.info("Setting Local Currency: " + newCurrencyCode);
-                configuration.setExchangeCurrencyCodeDetected(true);
-                configuration.setExchangeCurrencyCode(newCurrencyCode);
-            }
-        }
-
-        //Fallback to default
-        if (configuration.getExchangeCurrencyCode() == null) {
-            setDefaultExchangeCurrencyCode();
-        }
-    }
-
-    /**
-     * Show a Dialog and if user confirms it, set the default fiat currency exchange rate using
-     * the country code to generate a Locale and get the currency code from it.
-     *
-     * @param newCurrencyCode currency code.
-     */
-    private void showFiatCurrencyChangeDetectedDialog(final String currentCurrencyCode,
-                                                      final String newCurrencyCode) {
-        baseAlertDialogBuilder.setMessage(getString(R.string.change_exchange_currency_code_message,
-                newCurrencyCode, currentCurrencyCode));
-        baseAlertDialogBuilder.setPositiveText(getString(R.string.change_to, newCurrencyCode));
-        baseAlertDialogBuilder.setPositiveAction(
-                () -> {
-                    configuration.setExchangeCurrencyCodeDetected(true);
-                    configuration.setExchangeCurrencyCode(newCurrencyCode);
-                    WalletBalanceWidgetProvider.updateWidgets(WalletActivity.this, walletData.getWallet());
-                    return Unit.INSTANCE;
-                }
-        );
-        baseAlertDialogBuilder.setNegativeText(getString(R.string.leave_as, currentCurrencyCode));
-        baseAlertDialogBuilder.setNegativeAction(
-                () -> {
-                    configuration.setExchangeCurrencyCodeDetected(true);
-                    return Unit.INSTANCE;
-                }
-        );
-        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-        alertDialog.show();
     }
 
     private final Function0<Unit> neutralActionListener = () -> {

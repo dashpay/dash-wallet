@@ -100,9 +100,11 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
         }
 
         binding.buyBtn.setOnClickListener {
-            val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
-            viewModel.logEvent(AnalyticsConstants.Topper.ENTER_UPHOLD)
-            requireActivity().openCustomTab(uri)
+            lifecycleScope.launch {
+                val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
+                viewModel.logEvent(AnalyticsConstants.Topper.ENTER_UPHOLD)
+                requireActivity().openCustomTab(uri)
+            }
         }
         binding.transferBtn.setOnClickListener {
             if (!viewModel.uiState.value.balance.isZero) {

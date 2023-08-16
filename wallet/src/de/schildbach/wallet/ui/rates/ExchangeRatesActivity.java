@@ -35,10 +35,10 @@ public class ExchangeRatesActivity extends AbstractBindServiceActivity {
         setContentView(R.layout.exchange_rates_content);
 
         if(savedInstanceState == null) {
-            String currencyCode = getIntent().getStringExtra(ExchangeRatesFragment.ARG_CURRENCY_CODE);
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.container, ExchangeRatesFragment.newInstance(currencyCode))
-                    .commitNow();
+//            String currencyCode = getIntent().getStringExtra(ExchangeRatesFragment.ARG_CURRENCY_CODE);
+//            getSupportFragmentManager().beginTransaction()
+//                    .replace(R.id.container, ExchangeRatesFragment.newInstance(currencyCode))
+//                    .commitNow();
         }
     }
 

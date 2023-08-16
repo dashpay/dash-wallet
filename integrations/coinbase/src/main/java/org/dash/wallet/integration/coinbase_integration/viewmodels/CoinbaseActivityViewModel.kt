@@ -24,9 +24,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
@@ -39,7 +39,7 @@ import javax.inject.Inject
 @HiltViewModel
 class CoinbaseActivityViewModel @Inject constructor(
     private val config: CoinbaseConfig,
-    private val userPreference: Configuration,
+    private val walletUIConfig: WalletUIConfig,
     private val coinBaseRepository: CoinBaseRepositoryInt
 ) : ViewModel() {
 
@@ -90,9 +90,9 @@ class CoinbaseActivityViewModel @Inject constructor(
         _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(true)
 
         when (
-            val response = userPreference.exchangeCurrencyCode?.let {
-                coinBaseRepository.getBaseIdForUSDModel(it)
-            }
+            val response = coinBaseRepository.getBaseIdForUSDModel(
+                walletUIConfig.getExchangeCurrencyCode()
+            )
         ) {
             is ResponseResource.Success -> {
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(false)

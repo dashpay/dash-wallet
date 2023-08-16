@@ -400,7 +400,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private fun setMinAmountErrorMessage() {
         binding.dashWalletLimitBanner.text = "${getString(
             R.string.entered_amount_is_too_low
-        )} ${transferDashViewModel.minFaitAmount.toFormattedString()}"
+        )} ${transferDashViewModel.minFiatAmount.toFormattedString()}"
     }
 
     @SuppressLint("SetTextI18n")

@@ -21,9 +21,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.securepreferences.SecurePreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -34,6 +37,7 @@ import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -60,11 +64,13 @@ data class UpholdPortalUIState(
     val errorCode: Int? = null
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class UpholdViewModel @Inject constructor(
     private val upholdClient: UpholdClient,
     private val analytics: AnalyticsService,
     private val globalConfig: Configuration,
+    private val walletUIConfig: WalletUIConfig,
     private val topperClient: TopperClient,
     private val walletData: WalletDataProvider,
     exchangeRatesProvider: ExchangeRatesProvider
@@ -86,8 +92,9 @@ class UpholdViewModel @Inject constructor(
             _uiState.update { it.copy(balance = Coin.parseCoin(balance)) }
         }
 
-        exchangeRatesProvider
-            .observeExchangeRate(globalConfig.exchangeCurrencyCode!!)
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
             .onEach { rate ->
                 exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
                 val fiatBalance = exchangeRate?.coinToFiat(_uiState.value.balance)
@@ -177,9 +184,9 @@ class UpholdViewModel @Inject constructor(
         return String.format(UpholdConstants.INITIAL_URL, upholdClient.encryptionKey)
     }
 
-    fun topperBuyUrl(walletName: String): String {
+    suspend fun topperBuyUrl(walletName: String): String {
         return topperClient.getOnRampUrl(
-            globalConfig.exchangeCurrencyCode!!,
+            walletUIConfig.getExchangeCurrencyCode(),
             walletData.freshReceiveAddress(),
             walletName
         )

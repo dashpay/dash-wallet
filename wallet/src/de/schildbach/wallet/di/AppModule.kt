@@ -20,6 +20,7 @@ package de.schildbach.wallet.di
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.ConnectivityManager
+import android.telephony.TelephonyManager
 import androidx.preference.PreferenceManager
 import dagger.Binds
 import dagger.Module
@@ -74,6 +75,10 @@ abstract class AppModule {
         @Provides
         fun provideConnectivityManager(@ApplicationContext context: Context): ConnectivityManager =
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        @Provides
+        fun provideTelephonyService(@ApplicationContext context: Context): TelephonyManager =
+            context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 
         @Singleton
         @Provides

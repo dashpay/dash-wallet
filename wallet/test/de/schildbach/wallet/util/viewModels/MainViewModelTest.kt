@@ -21,7 +21,6 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.SavedStateHandle
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
@@ -38,6 +37,7 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -87,7 +87,8 @@ class MainViewModelTest {
     }
 
     private val uiConfigMock = mockk<WalletUIConfig> {
-        every { observePreference(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
+        every { observe(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
+        every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns MutableStateFlow("USD")
     }
 
     @get:Rule
@@ -98,7 +99,6 @@ class MainViewModelTest {
 
     @Before
     fun setup() {
-        every { configMock.exchangeCurrencyCode } returns "USD"
         every { configMock.format } returns MonetaryFormat()
         every { configMock.registerOnSharedPreferenceChangeListener(any()) } just runs
 

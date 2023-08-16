@@ -60,7 +60,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.data.entity.ExchangeRate;
+import org.dash.wallet.common.services.ExchangeRatesProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
@@ -86,10 +86,8 @@ import de.schildbach.wallet.payments.DecodePrivateKeyTask;
 import de.schildbach.wallet.data.FeeCategory;
 import de.schildbach.wallet.payments.RequestWalletBalanceTask;
 import de.schildbach.wallet.payments.SendCoinsOfflineTask;
-import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity;
-import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -123,7 +121,6 @@ public class SweepWalletFragment extends Fragment {
     private CurrencyTextView balanceView;
     private DialogFragment decryptDialog;
     private Button viewGo;
-    private ExchangeRate currentExchangeRate;
 
     private String password = "";
 
@@ -132,6 +129,8 @@ public class SweepWalletFragment extends Fragment {
     private static final int REQUEST_CODE_SCAN = 0;
 
     private DialogFragment loadingDialog;
+
+    private SweepWalletViewModel viewModel;
 
     private enum State {
         INTRO,
@@ -226,14 +225,7 @@ public class SweepWalletFragment extends Fragment {
             }
         });
 
-        ExchangeRatesViewModel exchangeRatesViewModel = new ViewModelProvider(this)
-                .get(ExchangeRatesViewModel.class);
-        String code = config.getExchangeCurrencyCode();
-        exchangeRatesViewModel.getRate(code).observe(getViewLifecycleOwner(), exchangeRate -> {
-            if (exchangeRate != null) {
-                currentExchangeRate = exchangeRate;
-            }
-        });
+        viewModel = new ViewModelProvider(this).get(SweepWalletViewModel.class);
 
         return view;
     }
@@ -580,9 +572,9 @@ public class SweepWalletFragment extends Fragment {
 
         sendRequest.feePerKb = fees.get(FeeCategory.ECONOMIC);
 
-        if (currentExchangeRate != null) {
+        if (viewModel.getCurrentExchangeRate() != null) {
             sendRequest.exchangeRate = new org.bitcoinj.utils.ExchangeRate(
-                    Coin.COIN, currentExchangeRate.getFiat());
+                    Coin.COIN, viewModel.getCurrentExchangeRate().getFiat());
             log.info("Using exchange rate: " + sendRequest.exchangeRate.coinToFiat(Coin.COIN).toFriendlyString());
         }
 

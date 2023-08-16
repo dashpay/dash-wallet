@@ -21,23 +21,25 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.util.Constants
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class EnterAmountViewModel @Inject constructor(
-    var exchangeRates: ExchangeRatesProvider,
-    var configuration: Configuration
+    val exchangeRates: ExchangeRatesProvider,
+    private val walletUIConfig: WalletUIConfig
 ) : ViewModel() {
-    private val _selectedCurrencyCode = MutableStateFlow(configuration.exchangeCurrencyCode)
+    private val _selectedCurrencyCode = MutableStateFlow(Constants.DEFAULT_EXCHANGE_CURRENCY)
     var selectedCurrencyCode: String
-        get() = _selectedCurrencyCode.value!!
+        get() = _selectedCurrencyCode.value
         set(value) {
             _selectedCurrencyCode.value = value
         }
@@ -96,11 +98,13 @@ class EnterAmountViewModel @Inject constructor(
     init {
         _selectedCurrencyCode
             .filterNotNull()
-            .flatMapLatest { code ->
-                exchangeRates.observeExchangeRate(code)
-            }
+            .flatMapLatest(exchangeRates::observeExchangeRate)
             .onEach(_selectedExchangeRate::postValue)
             .launchIn(viewModelScope)
+
+        viewModelScope.launch {
+            selectedCurrencyCode = walletUIConfig.getExchangeCurrencyCode()
+        }
     }
 
     fun setMaxAmount(coin: Coin) {
@@ -110,5 +114,9 @@ class EnterAmountViewModel @Inject constructor(
     fun setMinAmount(coin: Coin, isIncludedMin: Boolean = false) {
         _minAmount.value = coin
         _minIsIncluded = isIncludedMin
+    }
+
+    suspend fun getSelectedCurrencyCode(): String {
+        return walletUIConfig.getExchangeCurrencyCode()
     }
 }

@@ -81,6 +81,7 @@ import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.services.NotificationService;
 import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
@@ -142,6 +143,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     @Inject WalletApplication application;
     @Inject Configuration config;
+    @Inject WalletUIConfig walletUIConfig;
     @Inject NotificationService notificationService;
     @Inject CrowdNodeBlockchainApi crowdNodeBlockchainApi;
     @Inject CrowdNodeConfig crowdNodeConfig;
@@ -247,7 +249,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
                 try {
                     final org.dash.wallet.common.data.entity.ExchangeRate exchangeRate =
-                            exchangeRatesDao.getRateSync(config.getExchangeCurrencyCode());
+                            exchangeRatesDao.getRateSync(walletUIConfig.getExchangeCurrencyCodeBlocking());
                     if (exchangeRate != null) {
                         log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate + " tx: " + tx.getTxId().toString());
                         tx.setExchangeRate(new ExchangeRate(Coin.COIN, exchangeRate.getFiat()));
