@@ -16,22 +16,20 @@
  */
 package de.schildbach.wallet.ui.dashpay.notification
 
-import android.view.LayoutInflater
-import android.view.ViewGroup
 import de.schildbach.wallet.data.NotificationItem
-import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.notification_header_row.view.*
+import de.schildbach.wallet_test.databinding.NotificationHeaderRowBinding
 
-class HeaderViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-        NotificationViewHolder(R.layout.notification_header_row, inflater, parent) {
+@Deprecated("this may no longer be needed")
+class HeaderViewHolder(val binding: NotificationHeaderRowBinding) :
+        NotificationViewHolder(binding.root) {
 
     override fun bind(notificationItem: NotificationItem, vararg args: Any) {
         bind(args[0] as Int)
     }
 
     private fun bind(textResId: Int) {
-        itemView.apply {
-            title.text = context.getString(textResId)
+        binding.apply {
+            title.text = itemView.context.getString(textResId)
         }
     }
 }

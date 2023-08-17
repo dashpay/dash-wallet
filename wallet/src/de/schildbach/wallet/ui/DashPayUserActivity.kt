@@ -25,14 +25,11 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsAdapter
-import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
-import de.schildbach.wallet.ui.dashpay.notification.UserAlertViewHolder
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -43,27 +40,35 @@ import de.schildbach.wallet_test.databinding.ActivityDashpayUserBinding
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import javax.inject.Inject
 
 @AndroidEntryPoint
-class DashPayUserActivity : LockScreenActivity(),
-        NotificationsAdapter.OnItemClickListener,
-        ContactViewHolder.OnContactActionClickListener, UserAlertViewHolder.OnUserAlertDismissListener {
+class DashPayUserActivity : LockScreenActivity() {
 
     private val viewModel: DashPayUserActivityViewModel by viewModels()
     private val dashPayViewModel: DashPayViewModel by viewModels()
     private lateinit var binding: ActivityDashpayUserBinding
+    @Inject lateinit var walletDataProvider: WalletDataProvider
 
     private val showContactHistoryDisclaimer by lazy {
         intent.getBooleanExtra(EXTRA_SHOW_CONTACT_HISTORY_DISCLAIMER, false)
     }
     private val notificationsAdapter: NotificationsAdapter by lazy {
         NotificationsAdapter(this,
-                WalletApplication.getInstance().wallet!!, false, this,
-                this, this, true, showContactHistoryDisclaimer)
+            walletDataProvider.wallet!!,
+            false,
+            { searchResult, position -> onAcceptRequest(searchResult, position) },
+            { searchResult, position -> onIgnoreRequest(searchResult, position) },
+            { onUserAlertDismiss(it) },
+            { onItemClicked(it) },
+            true,
+            showContactHistoryDisclaimer
+        )
     }
 
     companion object {
@@ -272,7 +277,7 @@ class DashPayUserActivity : LockScreenActivity(),
         }.parse()
     }
 
-    override fun onItemClicked(view: View, notificationItem: NotificationItem) {
+    fun onItemClicked(notificationItem: NotificationItem) {
         when (notificationItem) {
             is NotificationItemContact -> {
 
@@ -284,11 +289,11 @@ class DashPayUserActivity : LockScreenActivity(),
         }
     }
 
-    override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+    fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         // do nothing
     }
 
-    override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+    fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         //do nothing if an item is clicked for now
     }
 
@@ -301,7 +306,7 @@ class DashPayUserActivity : LockScreenActivity(),
         notificationsAdapter.results = results
     }
 
-    override fun onUserAlertDismiss(alertId: Int) {
+    fun onUserAlertDismiss(alertId: Int) {
         Toast.makeText(this, "Dismiss", Toast.LENGTH_SHORT).show()
     }
 }

@@ -16,13 +16,12 @@
  */
 package de.schildbach.wallet.ui.dashpay.notification
 
-import android.view.LayoutInflater
-import android.view.ViewGroup
+import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.NotificationItem
 
-open class NotificationViewHolder(resId: Int, inflater: LayoutInflater, parent: ViewGroup) :
-        RecyclerView.ViewHolder(inflater.inflate(resId, parent, false)) {
+open class NotificationViewHolder(itemView: View) :
+        RecyclerView.ViewHolder(itemView) {
 
     open fun bind(notificationItem: NotificationItem, vararg args: Any) {
 

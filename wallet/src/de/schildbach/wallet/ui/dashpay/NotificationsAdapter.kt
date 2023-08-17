@@ -26,15 +26,22 @@ import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.notification.*
 import de.schildbach.wallet.util.PlatformUtils
+import de.schildbach.wallet_test.databinding.NotificationAlertItemBinding
+import de.schildbach.wallet_test.databinding.NotificationContactRequestReceivedRowBinding
+import de.schildbach.wallet_test.databinding.NotificationHeaderRowBinding
+import de.schildbach.wallet_test.databinding.NotificationImageRowBinding
+import de.schildbach.wallet_test.databinding.NotificationTransactionRowBinding
+import de.schildbach.wallet_test.databinding.ProfileActivityHeaderRowBinding
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
 import java.util.*
 
 class NotificationsAdapter(val context: Context, val wallet: Wallet, private val showAvatars: Boolean = false,
-                           private val onContactActionClickListener: ContactViewHolder.OnContactActionClickListener,
-                           private val onUserAlertDismissListener: UserAlertViewHolder.OnUserAlertDismissListener,
-                           private val itemClickListener: OnItemClickListener,
+                           private val acceptRequest: (usernameSearchResult: UsernameSearchResult, position: Int) -> Unit,
+                           private val ignoreRequest: (usernameSearchResult: UsernameSearchResult, position: Int) -> Unit,
+                           private val onUserAlertDismissListener: (Int) -> Unit,
+                           private val onItemClicked: ((NotificationItem) -> Unit)?,
                            private val fromProfile: Boolean = false,
                            private val fromStrangerQr: Boolean = false)
 
@@ -77,16 +84,17 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     private val transactionCache: HashMap<Sha256Hash, TransactionViewHolder.TransactionCacheEntry> = HashMap()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NotificationViewHolder {
+        val inflater = LayoutInflater.from(parent.context)
         return when (viewType) {
             NOTIFICATION_HEADER -> if (fromProfile) {
-                ProfileActivityHeaderHolder(LayoutInflater.from(parent.context), parent, this, fromStrangerQr)
+                ProfileActivityHeaderHolder(ProfileActivityHeaderRowBinding.inflate(inflater, parent, false), this, fromStrangerQr)
             } else {
-                HeaderViewHolder(LayoutInflater.from(parent.context), parent)
+                HeaderViewHolder(NotificationHeaderRowBinding.inflate(inflater, parent, false))
             }
-            NOTIFICATION_EMPTY -> ImageViewHolder(LayoutInflater.from(parent.context), parent)
-            NOTIFICATION_CONTACT -> ContactViewHolder(LayoutInflater.from(parent.context), parent)
-            NOTIFICATION_PAYMENT -> TransactionViewHolder(LayoutInflater.from(parent.context), parent)
-            NOTIFICATION_ALERT -> UserAlertViewHolder(LayoutInflater.from(parent.context), parent)
+            NOTIFICATION_EMPTY -> ImageViewHolder(NotificationImageRowBinding.inflate(inflater, parent, false))
+            NOTIFICATION_CONTACT -> ContactViewHolder(NotificationContactRequestReceivedRowBinding.inflate(inflater, parent, false))
+            NOTIFICATION_PAYMENT -> TransactionViewHolder(NotificationTransactionRowBinding.inflate(inflater, parent, false))
+            NOTIFICATION_ALERT -> UserAlertViewHolder(NotificationAlertItemBinding.inflate(inflater, parent, false))
             else -> throw IllegalArgumentException("Invalid viewType $viewType")
         }
     }
@@ -112,10 +120,10 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
             NOTIFICATION_CONTACT -> {
                 val item = notificationItem as NotificationItemContact
                 val contactId = item.usernameSearchResult.dashPayProfile.userId
-                var recentlyModified = recentlyModifiedContacts?.contains(contactId) == true
+                val recentlyModified = recentlyModifiedContacts?.contains(contactId) == true
                 val sendContactRequestWorkState = sendContactRequestWorkStateMap[contactId]
                 (holder as ContactViewHolder).bind(item, sendContactRequestWorkState,
-                        notificationViewItem.isNew, recentlyModified, showAvatars, onContactActionClickListener)
+                        notificationViewItem.isNew, position == 0, recentlyModified, showAvatars, acceptRequest, ignoreRequest)
             }
             NOTIFICATION_PAYMENT -> {
                 holder.bind(notificationItem, transactionCache, wallet)
@@ -127,9 +135,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
             else -> throw IllegalArgumentException("Invalid viewType ${getItemViewType(position)}")
         }
         holder.itemView.setOnClickListener {
-            itemClickListener.run {
-                onItemClicked(it, notificationItem)
-            }
+            onItemClicked?.invoke(notificationItem)
         }
     }
 
@@ -159,6 +165,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
         }
     }
 
+    @Deprecated("use function instead")
     interface OnItemClickListener {
         fun onItemClicked(view: View, notificationItem: NotificationItem)
     }

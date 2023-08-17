@@ -356,12 +356,6 @@
             android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.dashpay.NotificationsActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"
-            android:windowSoftInputMode="stateHidden|adjustResize" />
-
-        <activity
             android:name="de.schildbach.wallet.ui.DashPayUserActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />

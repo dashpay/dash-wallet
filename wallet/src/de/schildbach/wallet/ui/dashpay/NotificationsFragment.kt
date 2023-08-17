@@ -16,39 +16,40 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.text.format.DateUtils
-import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
-import androidx.activity.viewModels
 import androidx.core.widget.doAfterTextChanged
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
-import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
-import de.schildbach.wallet.ui.dashpay.notification.UserAlertViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.NotificationsViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.ActivityNotificationsBinding
+import de.schildbach.wallet_test.databinding.FragmentNotificationsBinding
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
 import java.util.*
+import javax.inject.Inject
 import kotlin.collections.ArrayList
 import kotlin.math.max
 
 @AndroidEntryPoint
-class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemClickListener,
-    ContactViewHolder.OnContactActionClickListener, UserAlertViewHolder.OnUserAlertDismissListener {
+class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
 
     companion object {
         private val log = LoggerFactory.getLogger(NotificationsAdapter::class.java)
@@ -58,17 +59,11 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
         const val MODE_NOTIFICATIONS = 0x02
         const val MODE_NOTIFICATIONS_GLOBAL_FOOTER = 0x04
         const val MODE_NOTIFICATIONS_SEARCH = 0x01
-
-        @JvmStatic
-        fun createIntent(context: Context, mode: Int = MODE_NOTIFICATIONS): Intent {
-            val intent = Intent(context, NotificationsActivity::class.java)
-            intent.putExtra(EXTRA_MODE, mode)
-            return intent
-        }
     }
 
-    private val dashPayViewModel: DashPayViewModel by viewModels()
-    private lateinit var binding: ActivityNotificationsBinding
+    private val dashPayViewModel: DashPayViewModel by activityViewModels()
+    private val viewModel: NotificationsViewModel by activityViewModels()
+    private val binding by viewBinding(FragmentNotificationsBinding::bind)
     private var handler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
     private lateinit var notificationsAdapter: NotificationsAdapter
@@ -77,35 +72,36 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
     private var mode = MODE_NOTIFICATIONS
     private var lastSeenNotificationTime = 0L
     private var isBlockchainSynced = true
-    var userAlertItem: NotificationItemUserAlert? = null
+    private var userAlertItem: NotificationItemUserAlert? = null
+    @Inject lateinit var walletDataProvider: WalletDataProvider
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         lifecycleScope.launch {
-            lastSeenNotificationTime = dashPayViewModel.getLastNotificationTime()
+            lastSeenNotificationTime = viewModel.getLastNotificationTime()
         }
 
-        notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet!!,
-                true, this, this, this)
-
-        if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
-            mode = intent!!.extras!!.getInt(EXTRA_MODE)
+        binding.toolbar.setNavigationOnClickListener {
+            findNavController().popBackStack()
         }
 
-        binding = ActivityNotificationsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        notificationsAdapter = NotificationsAdapter(
+            requireContext(),
+            walletDataProvider.wallet!!,
+            true,
+            { u, position -> onAcceptRequest(u, position) },
+            { u, position -> onIgnoreRequest(u, position) },
+            { onUserAlertDismiss(it) },
+            { onItemClicked(it) }
+        )
 
-        val toolbar = binding.appBarGeneral.toolbar
-        setSupportActionBar(toolbar)
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
+        if (arguments != null && requireArguments().containsKey(EXTRA_MODE)) {
+            mode = requireArguments().getInt(EXTRA_MODE)
         }
 
-        binding.notifications.apply {
-            contactsRv.layoutManager = LinearLayoutManager(this@NotificationsActivity)
+        binding.apply {
+            contactsRv.layoutManager = LinearLayoutManager(requireContext())
             contactsRv.adapter = notificationsAdapter
 
             initViewModel()
@@ -114,7 +110,7 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
                 search.doAfterTextChanged {
                     it?.let {
                         query = it.toString()
-                        searchContacts()
+                        searchNotifications()
                     }
                 }
                 search.visibility = View.VISIBLE
@@ -123,10 +119,9 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
                 search.visibility = View.GONE
                 icon.visibility = View.GONE
             }
-            setTitle(R.string.notifications_title)
         }
 
-        searchContacts()
+        searchNotifications()
         dashPayViewModel.updateDashPayState()
 
         if (mode == MODE_NOTIFICATIONS) {
@@ -135,7 +130,7 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
     }
 
     private fun initViewModel() {
-        dashPayViewModel.notificationsLiveData.observe(this) {
+        viewModel.notificationsLiveData.observe(viewLifecycleOwner) {
             if (Status.SUCCESS == it.status) {
                 if (it.data != null) {
                     val results = arrayListOf<NotificationItem>()
@@ -147,14 +142,13 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
                 }
             }
         }
-        dashPayViewModel.sendContactRequestState.observe(this) {
-            imitateUserInteraction()
+        dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner) {
             notificationsAdapter.sendContactRequestWorkStateMap = it
         }
-        dashPayViewModel.recentlyModifiedContactsLiveData.observe(this) {
+        dashPayViewModel.recentlyModifiedContactsLiveData.observe(viewLifecycleOwner) {
             notificationsAdapter.recentlyModifiedContacts = it
         }
-        dashPayViewModel.blockchainStateData.observe(this) {
+        dashPayViewModel.blockchainStateData.observe(viewLifecycleOwner) {
             if (it != null) {
                 isBlockchainSynced = it.percentageSync == 100
                 showHideAlert()
@@ -167,7 +161,7 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
         val results = ArrayList<NotificationsAdapter.NotificationViewItem>()
 
         // get the last seen date from the configuration
-        val newDate = dashPayViewModel.getLastNotificationTime()
+        val newDate = viewModel.getLastNotificationTime()
 
 
         // find the most recent notification timestamp
@@ -192,15 +186,15 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
             }
         }
 
-        results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_new))
-        if (newItems.isEmpty()) {
-            results.add(NotificationsAdapter.ImageViewItem(2, R.string.notifications_none_new, R.drawable.ic_notification_new_empty))
-        } else {
+        //results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_new))
+        //if (newItems.isEmpty()) {
+        //    results.add(NotificationsAdapter.ImageViewItem(2, R.string.notifications_none_new, R.drawable.ic_notification_new_empty))
+        //} else {
             newItems.forEach { r -> results.add(NotificationsAdapter.NotificationViewItem(r, true)) }
-        }
+        //}
 
-        supportActionBar!!.title = getString(R.string.notifications_title_with_count, newItems.size)
-        results.add(NotificationsAdapter.HeaderViewItem(3, R.string.notifications_earlier))
+        //binding.title.text = getString(R.string.notifications_title_with_count, newItems.size)
+        //results.add(NotificationsAdapter.HeaderViewItem(3, R.string.notifications_earlier))
 
         // process contacts
         val earlierItems = data.filter { r -> r.getDate() < newDate }
@@ -227,85 +221,78 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
         }
     }
 
-    private fun searchContacts() {
+    private fun searchNotifications() {
         if (this::searchContactsRunnable.isInitialized) {
             handler.removeCallbacks(searchContactsRunnable)
         }
 
         searchContactsRunnable = Runnable {
-            dashPayViewModel.searchNotifications(query)
+            viewModel.searchNotifications(query)
         }
         handler.postDelayed(searchContactsRunnable, 500)
     }
 
-    override fun onItemClicked(view: View, notificationItem: NotificationItem) {
+    fun onItemClicked(notificationItem: NotificationItem) {
 
         when (notificationItem) {
             is NotificationItemContact -> {
                 dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.NOTIFICATIONS_CONTACT_DETAILS)
                 val usernameSearchResult = notificationItem.usernameSearchResult
-                startActivityForResult(DashPayUserActivity.createIntent(this, usernameSearchResult), DashPayUserActivity.REQUEST_CODE_DEFAULT)
+                startActivityForResult(DashPayUserActivity.createIntent(requireContext(), usernameSearchResult), DashPayUserActivity.REQUEST_CODE_DEFAULT)
             }
             is NotificationItemPayment -> {
                 val tx = notificationItem.tx!!
-                Toast.makeText(this, "payment $tx", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "payment $tx", Toast.LENGTH_LONG).show()
             }
             is NotificationItemUserAlert -> {
                 lifecycleScope.launch {
                     val inviteHistory = dashPayViewModel.getInviteHistory()
                     userAlertItem = null
-                    dashPayViewModel.dismissUserAlert(R.string.invitation_notification_text)
+                    viewModel.dismissUserAlert(R.string.invitation_notification_text)
 
                     if (inviteHistory.isEmpty()) {
-                        InviteFriendActivity.startOrError(this@NotificationsActivity)
+                        InviteFriendActivity.startOrError(requireActivity())
                     } else {
-                        startActivity(InvitesHistoryActivity.createIntent(this@NotificationsActivity))
+                        startActivity(InvitesHistoryActivity.createIntent(requireActivity()))
                     }
                 }
             }
         }
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressed()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
     override fun onDestroy() {
-        lifecycleScope.launch {
-            dashPayViewModel.setLastNotificationTime(
+        log.info("not frag destroyed")
+        GlobalScope.launch {
+            log.info("set last notification time")
+
+            viewModel.setLastNotificationTime(
                 max(
                     lastSeenNotificationTime,
-                    dashPayViewModel.getLastNotificationTime()
+                    viewModel.getLastNotificationTime()
                 ) + DateUtils.SECOND_IN_MILLIS
             )
         }
         super.onDestroy()
     }
 
-    override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+    fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.NOTIFICATIONS_ACCEPT_REQUEST)
         dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
     }
 
-    override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
-
+    fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        // this Ignmore Request function is not currently implemented
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
-            searchContacts()
+            searchNotifications()
         }
     }
 
-    override fun onUserAlertDismiss(alertId: Int) {
+    fun onUserAlertDismiss(alertId: Int) {
         userAlertItem = null
-        dashPayViewModel.dismissUserAlert(alertId)
+        viewModel.dismissUserAlert(alertId)
     }
 }
