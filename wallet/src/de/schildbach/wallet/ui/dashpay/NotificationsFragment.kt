@@ -157,16 +157,13 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
     }
 
     private suspend fun processResults(data: ArrayList<NotificationItem>) {
-
         val results = ArrayList<NotificationsAdapter.NotificationViewItem>()
 
         // get the last seen date from the configuration
         val newDate = viewModel.getLastNotificationTime()
 
-
         // find the most recent notification timestamp
         var lastNotificationTime = 0L
-
         data.forEach {
             lastNotificationTime = max(lastNotificationTime, it.getDate())
             if (it is NotificationItemUserAlert) {
@@ -174,31 +171,20 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
             }
         }
 
-        //Remove User Alert from list to add it before the "New" header
+        // remove User Alert from list to add it before the "New" header
         userAlertItem?.apply { data.remove(this) }
-
-        val newItems = data.filter { r -> r.getDate() >= newDate }.toMutableList()
-        log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
-
         userAlertItem?.apply {
             if (isBlockchainSynced) {
                 results.add(NotificationsAdapter.NotificationViewItem(this))
             }
         }
+        // process new notifications
+        val newItems = data.filter { r -> r.getDate() >= newDate }
+        log.info("New contacts at ${Date(newDate)} = ${newItems.size}")
+        newItems.forEach { r -> results.add(NotificationsAdapter.NotificationViewItem(r, true)) }
 
-        //results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_new))
-        //if (newItems.isEmpty()) {
-        //    results.add(NotificationsAdapter.ImageViewItem(2, R.string.notifications_none_new, R.drawable.ic_notification_new_empty))
-        //} else {
-            newItems.forEach { r -> results.add(NotificationsAdapter.NotificationViewItem(r, true)) }
-        //}
-
-        //binding.title.text = getString(R.string.notifications_title_with_count, newItems.size)
-        //results.add(NotificationsAdapter.HeaderViewItem(3, R.string.notifications_earlier))
-
-        // process contacts
+        // process older notifications
         val earlierItems = data.filter { r -> r.getDate() < newDate }
-
         earlierItems.forEach { r -> results.add(NotificationsAdapter.NotificationViewItem(r)) }
 
         notificationsAdapter.results = results
