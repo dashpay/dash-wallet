@@ -46,10 +46,6 @@
             app:destination="@id/showNotificationsFragment">
 
             <argument
-                android:name="ShowNavBar"
-                android:defaultValue="false" />
-
-            <argument
                 android:name="mode"
                 android:defaultValue="2" />
         </action>
@@ -344,7 +340,7 @@
         tools:layout="@layout/fragment_notifications">
 
         <argument
-            android:name="extra"
+            android:name="mode"
             app:argType="integer"
             android:defaultValue="2" />
     </fragment>

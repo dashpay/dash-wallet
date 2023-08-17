@@ -17,7 +17,12 @@
 package de.schildbach.wallet.ui.dashpay.notification
 
 import android.graphics.drawable.AnimationDrawable
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
+import android.util.TypedValue
 import android.view.View
+import androidx.core.content.ContextCompat
 import androidx.core.text.HtmlCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
@@ -30,6 +35,7 @@ import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.NotificationContactRequestReceivedRowBinding
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+
 
 open class ContactViewHolder(val binding: NotificationContactRequestReceivedRowBinding) :
         NotificationViewHolder(binding.root) {
@@ -44,9 +50,7 @@ open class ContactViewHolder(val binding: NotificationContactRequestReceivedRowB
         binding.apply {
             itemView.setBackgroundResource(
                 when {
-                    isNew && isFirst -> R.drawable.selectable_top_round_corners_light_blue
                     isNew -> R.drawable.selectable_background_light_blue
-                    isFirst -> R.drawable.selectable_top_round_corners_dark
                     else -> R.drawable.selectable_background_dark
                 }
             )
