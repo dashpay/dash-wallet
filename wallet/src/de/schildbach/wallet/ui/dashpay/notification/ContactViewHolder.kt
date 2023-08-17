@@ -45,7 +45,7 @@ open class ContactViewHolder(val binding: NotificationContactRequestReceivedRowB
             itemView.setBackgroundResource(
                 when {
                     isNew && isFirst -> R.drawable.selectable_top_round_corners_light_blue_08
-                    isNew -> R.drawable.selectable_background_light_blue_08
+                    isNew -> R.drawable.selectable_background_light_blue
                     isFirst -> R.drawable.selectable_top_round_corners_dark
                     else -> R.drawable.selectable_background_dark
                 }
