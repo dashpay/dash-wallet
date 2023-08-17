@@ -17,10 +17,9 @@
 package de.schildbach.wallet.ui.dashpay.notification
 
 import android.graphics.drawable.AnimationDrawable
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.text.HtmlCompat
+import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
 import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -29,32 +28,44 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.notification_contact_request_received_row.view.*
+import de.schildbach.wallet_test.databinding.NotificationContactRequestReceivedRowBinding
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
-open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-        NotificationViewHolder(R.layout.notification_contact_request_received_row, inflater, parent) {
+open class ContactViewHolder(val binding: NotificationContactRequestReceivedRowBinding) :
+        NotificationViewHolder(binding.root) {
 
-    fun bind(notificationItem: NotificationItemContact, state: Resource<WorkInfo>?, isNew: Boolean,
+    fun bind(notificationItem: NotificationItemContact, state: Resource<WorkInfo>?, isNew: Boolean, isFirst: Boolean,
              recentlyModified: Boolean, showAvatar: Boolean,
-             onActionClickListener: OnContactActionClickListener? = null) {
+             acceptRequest: ((UsernameSearchResult, Int) -> Unit)?,
+             ignoreRequest: ((UsernameSearchResult, Int) -> Unit)?) {
 
         val usernameSearchResult = notificationItem.usernameSearchResult
 
-        itemView.apply {
-            setBackgroundResource(if (isNew) R.drawable.selectable_round_corners_white else R.drawable.selectable_round_corners)
+        binding.apply {
+            itemView.setBackgroundResource(
+                when {
+                    isNew && isFirst -> R.drawable.selectable_top_round_corners_light_blue_08
+                    isNew -> R.drawable.selectable_background_light_blue_08
+                    isFirst -> R.drawable.selectable_top_round_corners_dark
+                    else -> R.drawable.selectable_background_dark
+                }
+            )
+            val layoutParams = itemView.layoutParams as RecyclerView.LayoutParams
+            if (isFirst) {
+                layoutParams.bottomMargin = 0
+            } else {
+                layoutParams.topMargin = 0
+                layoutParams.bottomMargin = 0
+            }
+
+
             date.text = WalletUtils.formatDate(usernameSearchResult.date)
 
             val dashPayProfile = usernameSearchResult.dashPayProfile
-            val name = if (dashPayProfile.displayName.isEmpty()) {
-                dashPayProfile.username
-            } else {
-                dashPayProfile.displayName
-            }
 
             val displayNameResId = when (usernameSearchResult.type) {
                 UsernameSearchResult.Type.CONTACT_ESTABLISHED -> {
-                    contact_added.setImageResource(R.drawable.ic_contact_added)
+                    contactAdded.setImageResource(R.drawable.ic_contact_added)
                     val sentDate = usernameSearchResult.toContactRequest!!.timestamp
                     val receivedDate = usernameSearchResult.fromContactRequest!!.timestamp
                     if (sentDate > receivedDate) {
@@ -64,11 +75,11 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
                     }
                 }
                 UsernameSearchResult.Type.REQUEST_RECEIVED -> {
-                    contact_added.setImageResource(R.drawable.ic_add_contact)
+                    contactAdded.setImageResource(R.drawable.ic_add_contact)
                     R.string.notifications_you_received
                 }
                 UsernameSearchResult.Type.REQUEST_SENT -> {
-                    contact_added.setImageResource(R.drawable.ic_add_contact)
+                    contactAdded.setImageResource(R.drawable.ic_add_contact)
                     R.string.notifications_you_sent
                 }
                 UsernameSearchResult.Type.NO_RELATIONSHIP -> {
@@ -77,14 +88,14 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
             }
 
             if (isNew) {
-                display_name.maxLines = 2
+                displayName.maxLines = 2
             } else {
-                display_name.maxLines = 3
+                displayName.maxLines = 3
             }
 
             @Suppress("DEPRECATION")
-            val displayNameText = context.getString(displayNameResId, "<b>$name</b>")
-            display_name.text = HtmlCompat.fromHtml(displayNameText, HtmlCompat.FROM_HTML_MODE_COMPACT)
+            val displayNameText = itemView.context.getString(displayNameResId, "<b>${dashPayProfile.username}</b>")
+            displayName.text = HtmlCompat.fromHtml(displayNameText, HtmlCompat.FROM_HTML_MODE_COMPACT)
 
             ProfilePictureDisplay.display(avatar, dashPayProfile)
             avatar.visibility = if (showAvatar) View.VISIBLE else View.GONE
@@ -92,41 +103,32 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
             if (usernameSearchResult.isPendingRequest && !notificationItem.isInvitationOfEstablished) {
                 if (state != null && state.status == Status.LOADING) {
                     //Loading
-                    accept_contact_request.visibility = View.GONE
-                    ignore_contact_request.visibility = View.GONE
-                    contact_added.visibility = View.GONE
-                    pending_work_icon.visibility = View.VISIBLE
-                    (pending_work_icon.drawable as AnimationDrawable).start()
+                    acceptContactRequest.visibility = View.GONE
+                    ignoreContactRequest.visibility = View.GONE
+                    contactAdded.visibility = View.GONE
+                    pendingWorkIcon.visibility = View.VISIBLE
+                    (pendingWorkIcon.drawable as AnimationDrawable).start()
                 } else {
                     //Pending
-                    accept_contact_request.visibility = View.VISIBLE
-                    ignore_contact_request.visibility = View.VISIBLE
-                    contact_added.visibility = View.GONE
-                    pending_work_icon.visibility = View.GONE
+                    acceptContactRequest.visibility = View.VISIBLE
+                    ignoreContactRequest.visibility = View.GONE // this feature is not implemented
+                    contactAdded.visibility = View.GONE
+                    pendingWorkIcon.visibility = View.GONE
                 }
             } else {
                 //Added - Success
                 buttons.visibility = if (isNew || recentlyModified) View.VISIBLE else View.GONE
-                accept_contact_request.visibility = View.GONE
-                ignore_contact_request.visibility = View.GONE
-                contact_added.visibility = View.VISIBLE
-                pending_work_icon.visibility = View.GONE
+                acceptContactRequest.visibility = View.GONE
+                ignoreContactRequest.visibility = View.GONE
+                contactAdded.visibility = View.VISIBLE
+                pendingWorkIcon.visibility = View.GONE
             }
-            accept_contact_request.setOnClickListener {
-                onActionClickListener?.run {
-                    onAcceptRequest(usernameSearchResult, adapterPosition)
-                }
+            acceptContactRequest.setOnClickListener {
+                acceptRequest?.invoke(usernameSearchResult, bindingAdapterPosition)
             }
-            ignore_contact_request.setOnClickListener {
-                onActionClickListener?.run {
-                    onIgnoreRequest(usernameSearchResult, adapterPosition)
-                }
+            ignoreContactRequest.setOnClickListener {
+                ignoreRequest?.invoke(usernameSearchResult, bindingAdapterPosition)
             }
         }
-    }
-
-    interface OnContactActionClickListener {
-        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
-        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
     }
 }

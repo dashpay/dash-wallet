@@ -6,6 +6,7 @@
     android:layout_height="wrap_content"
     android:layout_marginTop="3dp"
     android:layout_marginBottom="3dp"
+    android:layout_marginHorizontal="3dp"
     android:background="@drawable/selectable_round_corners_white"
     android:paddingTop="8dp"
     android:paddingBottom="8dp">
@@ -38,14 +39,14 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="2"
-            tools:text="John Doe" />
+            tools:text="John Doe has sent you a contact request" />
 
         <TextView
             android:id="@+id/date"
             style="@style/Overline.Secondary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            tools:text="johndoe_01" />
+            tools:text="26 May 2023, 9:45" />
 
     </LinearLayout>
 
@@ -60,7 +61,7 @@
 
         <Button
             android:id="@+id/accept_contact_request"
-            style="@style/Button.Primary.Small.Blue"
+            style="@style/Button.Primary.ExtraSmall.Blue"
             android:paddingHorizontal="0dp"
             android:layout_width="67dp"
             android:layout_height="30dp"
