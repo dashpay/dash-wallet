@@ -247,17 +247,7 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
     }
 
     override fun onDestroy() {
-        log.info("not frag destroyed")
-        GlobalScope.launch {
-            log.info("set last notification time")
-
-            viewModel.setLastNotificationTime(
-                max(
-                    lastSeenNotificationTime,
-                    viewModel.getLastNotificationTime()
-                ) + DateUtils.SECOND_IN_MILLIS
-            )
-        }
+        viewModel.setLastNotificationTime(lastSeenNotificationTime)
         super.onDestroy()
     }
 

@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.dashpay.notification
 
+import android.text.format.DateUtils
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
@@ -31,6 +32,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.max
 
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
@@ -59,7 +61,10 @@ class NotificationsViewModel @Inject constructor(
     suspend fun getLastNotificationTime(): Long =
         dashPayConfig.get(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME) ?: 0
 
-    suspend fun setLastNotificationTime(time: Long) =
-        dashPayConfig.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, time)
-
+    fun setLastNotificationTime(time: Long) {
+        viewModelScope.launch {
+            val updatedTime = max(time, getLastNotificationTime()) + DateUtils.SECOND_IN_MILLIS
+            dashPayConfig.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, updatedTime)
+        }
+    }
 }
