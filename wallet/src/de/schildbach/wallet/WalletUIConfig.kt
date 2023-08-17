@@ -19,7 +19,10 @@ package de.schildbach.wallet
 
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -37,6 +40,7 @@ open class WalletUIConfig @Inject constructor(private val context: Context) {
     companion object {
         val AUTO_HIDE_BALANCE = booleanPreferencesKey("hide_balance")
         val SHOW_TAP_TO_HIDE_HINT = booleanPreferencesKey("show_tap_to_hide_balance_hint")
+        val VOTE_DASH_PAY_ENABLED = booleanPreferencesKey("VOTE_DASH_PAY_ENABLED")
     }
 
     private val Context.dataStore by preferencesDataStore("wallet_ui", produceMigrations = {

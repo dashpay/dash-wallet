@@ -19,15 +19,22 @@ package de.schildbach.wallet.ui
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import androidx.core.os.bundleOf
+import androidx.activity.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.AboutActivity
 import de.schildbach.wallet.ui.rates.ExchangeRatesActivity
-import de.schildbach.wallet.ui.rates.ExchangeRatesFragment.*
+import de.schildbach.wallet.ui.rates.ExchangeRatesFragment.ARG_CURRENCY_CODE
+import de.schildbach.wallet.ui.rates.ExchangeRatesFragment.ARG_SHOW_AS_DIALOG
+import de.schildbach.wallet.ui.rates.ExchangeRatesFragment.BUNDLE_EXCHANGE_RATE
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_settings.*
+import kotlinx.android.synthetic.main.activity_settings.about
+import kotlinx.android.synthetic.main.activity_settings.local_currency
+import kotlinx.android.synthetic.main.activity_settings.local_currency_symbol
+import kotlinx.android.synthetic.main.activity_settings.notifications
+import kotlinx.android.synthetic.main.activity_settings.rescan_blockchain
+import kotlinx.android.synthetic.main.activity_settings.voting_dash_pay_switch
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -42,6 +49,7 @@ class SettingsActivity : BaseMenuActivity() {
     companion object Constants {
         private const val RC_DEFAULT_FIAT_CURRENCY_SELECTED: Int = 100
     }
+    private val viewModel: SettingsViewModel by viewModels()
 
     private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
     @Inject
@@ -70,6 +78,16 @@ class SettingsActivity : BaseMenuActivity() {
 
         rescan_blockchain.setOnClickListener { resetBlockchain() }
         notifications.setOnClickListener { systemActions.openNotificationSettings() }
+
+
+
+        viewModel.voteDashPayIsEnabled.observe(this) {
+            voting_dash_pay_switch.isChecked = it ?: false
+        }
+
+       voting_dash_pay_switch.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setVoteDashPay(isChecked)
+        }
     }
 
     override fun onStart() {
@@ -100,7 +118,7 @@ class SettingsActivity : BaseMenuActivity() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if(resultCode == Activity.RESULT_OK && requestCode == RC_DEFAULT_FIAT_CURRENCY_SELECTED){
+        if (resultCode == Activity.RESULT_OK && requestCode == RC_DEFAULT_FIAT_CURRENCY_SELECTED) {
             val exchangeRate: ExchangeRate? = data?.getParcelableExtra(BUNDLE_EXCHANGE_RATE)
             local_currency_symbol.text = exchangeRate?.currencyCode ?: configuration.exchangeCurrencyCode
             configuration.exchangeCurrencyCodeDetected = true
