@@ -122,7 +122,7 @@ class CreateUsernameActivity : InteractionAwareActivity() {
                 fromOnboardng = fromOnboardng
             )
 
-            if (dashPayViewModel.isVotingFlowEnabled) {
+            if (dashPayViewModel.isVotingFlowEnabled()) {
                 if (!dashPayViewModel.isDashPayInfoShown()) {
                     navGraph.setStartDestination(R.id.welcomeToDashPayFragment)
                 } else {
