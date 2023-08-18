@@ -160,11 +160,7 @@
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/address_book_activity_title"
             android:theme="@style/LockScreenActivity.Child.Theme" />
-        <activity
-            android:name="de.schildbach.wallet.ui.rates.ExchangeRatesActivity"
-            android:configChanges="keyboard|keyboardHidden"
-            android:label="@string/exchange_rates_activity_title"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
+
         <activity
             android:name="de.schildbach.wallet.ui.NetworkMonitorActivity"
             android:configChanges="keyboard|keyboardHidden"
