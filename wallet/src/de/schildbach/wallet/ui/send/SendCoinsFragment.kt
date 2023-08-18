@@ -74,10 +74,12 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             enterAmountFragment?.didAuthorize = value
         }
 
+    private val requirePinForBalance by lazy {
+        (requireActivity() as LockScreenActivity).keepUnlocked
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        val requirePinForBalance = (requireActivity() as LockScreenActivity).keepUnlocked
 
         binding.titleBar.setNavigationOnClickListener {
             requireActivity().finish()
@@ -150,7 +152,11 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         } else if (dryRunException != null) {
             errorMessage = when (dryRunException) {
                 is Wallet.DustySendRequested -> getString(R.string.send_coins_error_dusty_send)
-                is InsufficientMoneyException -> getString(R.string.send_coins_error_insufficient_money)
+                is InsufficientMoneyException -> if (!requirePinForBalance || userAuthorizedDuring) {
+                    getString(R.string.send_coins_error_insufficient_money)
+                } else {
+                    ""
+                }
                 is Wallet.CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
                 else -> dryRunException.toString()
             }
