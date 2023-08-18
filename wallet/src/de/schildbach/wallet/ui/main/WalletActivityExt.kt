@@ -147,7 +147,8 @@ object WalletActivityExt {
         ).show(this) { result: Boolean? ->
             if (result != null && result) {
                 viewModel.setExchangeCurrencyCodeDetected(newCurrencyCode)
-                WalletBalanceWidgetProvider.updateWidgets(this, walletData.wallet)
+                val balance = walletData.getWalletBalance()
+                WalletBalanceWidgetProvider.updateWidgets(this, balance)
             } else {
                 viewModel.setExchangeCurrencyCodeDetected(null)
             }

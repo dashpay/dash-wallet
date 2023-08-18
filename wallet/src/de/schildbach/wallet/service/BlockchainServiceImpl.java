@@ -1245,7 +1245,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private void updateAppWidget() {
-        WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, application.getWallet());
+        Coin balance = application.getWallet().getBalance(Wallet.BalanceType.ESTIMATED);
+        WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, balance);
     }
 
     public void forceForeground() {

@@ -20,6 +20,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.more.AboutActivity
 import de.schildbach.wallet_test.R
@@ -104,6 +105,8 @@ class SettingsActivity : LockScreenActivity() {
     private fun setSelectedCurrency(code: String) {
         lifecycleScope.launch {
             walletUIConfig.set(WalletUIConfig.SELECTED_CURRENCY, code)
+            val balance = walletData.getWalletBalance()
+            WalletBalanceWidgetProvider.updateWidgets(this@SettingsActivity, balance)
         }
     }
 }

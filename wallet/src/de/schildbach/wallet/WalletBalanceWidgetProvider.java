@@ -33,7 +33,6 @@ import android.widget.RemoteViews;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.WalletUIConfig;
@@ -90,13 +89,12 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    public static void updateWidgets(final Context context, final Wallet wallet) {
+    public static void updateWidgets(final Context context, final Coin balance) {
         final AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
         final ComponentName providerName = new ComponentName(context, WalletBalanceWidgetProvider.class);
         try {
             final int[] appWidgetIds = appWidgetManager.getAppWidgetIds(providerName);
             if (appWidgetIds.length > 0) {
-                final Coin balance = wallet.getBalance(BalanceType.ESTIMATED);
                 updateWidgets(context, appWidgetManager, appWidgetIds, balance);
             }
         } catch (final RuntimeException x) {// system server dead?

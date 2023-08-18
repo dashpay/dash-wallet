@@ -182,8 +182,6 @@ class MainViewModel @Inject constructor(
             }
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
-
-        // WalletBalanceWidgetProvider.updateWidgets(mAppContext, mWallet) TODO
     }
 
     fun logEvent(event: String) {
