@@ -47,7 +47,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:hint="@string/wallet_address"
+        android:hint="@string/recipient_address"
         android:layout_marginHorizontal="11dp"
         android:theme="@style/SecondaryBackground"
         android:translationZ="10dp"
