@@ -135,7 +135,7 @@ class MainViewModelTest {
             MainViewModel(
                 analyticsService, configMock, uiConfigMock,
                 exchangeRatesMock, walletDataMock, savedStateMock, transactionMetadataMock,
-                blockchainStateMock, mockk()
+                blockchainStateMock, mockk(), mockk()
             )
         )
 
@@ -154,7 +154,7 @@ class MainViewModelTest {
             MainViewModel(
                 analyticsService, configMock, uiConfigMock,
                 exchangeRatesMock, walletDataMock, savedStateMock, transactionMetadataMock,
-                blockchainStateMock, mockk()
+                blockchainStateMock, mockk(), mockk()
             )
         )
 
