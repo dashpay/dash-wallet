@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.safeApiCall
@@ -42,7 +41,6 @@ import javax.inject.Inject
 class CoinBaseRepository @Inject constructor(
     private val servicesApi: CoinBaseServicesApi,
     private val authApi: CoinBaseAuthApi,
-    private val userPreferences: Configuration,
     private val config: CoinbaseConfig,
     private val walletUIConfig: WalletUIConfig,
     private val placeBuyOrderMapper: PlaceBuyOrderMapper,
