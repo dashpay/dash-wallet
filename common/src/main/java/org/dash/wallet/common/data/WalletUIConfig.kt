@@ -23,6 +23,7 @@ import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,7 +34,8 @@ import javax.inject.Singleton
 // For other settings, use Configuration or another datastore class.
 open class WalletUIConfig @Inject constructor(
     context: Context,
-    walletDataProvider: WalletDataProvider
+    walletDataProvider: WalletDataProvider,
+    exchangeRates: ExchangeRatesProvider
 ): BaseConfig(
     context,
     PREFERENCES_NAME,
@@ -50,7 +52,8 @@ open class WalletUIConfig @Inject constructor(
         ),
         ExchangeCurrencyMigration(
             context = context,
-            sharedPreferencesName = context.packageName + "_preferences"
+            sharedPreferencesName = context.packageName + "_preferences",
+            exchangeRates = exchangeRates
         )
     )
 ) {
@@ -73,8 +76,13 @@ open class WalletUIConfig @Inject constructor(
 
 class ExchangeCurrencyMigration(
     private val context: Context,
-    private val sharedPreferencesName: String
+    private val sharedPreferencesName: String,
+    private val exchangeRates: ExchangeRatesProvider
 ) : DataMigration<Preferences> {
+
+    companion object {
+        private val log = org.slf4j.LoggerFactory.getLogger(WalletUIConfig::class.java)
+    }
 
     private val migration = SharedPreferencesMigration(
         context = context,
@@ -89,13 +97,19 @@ class ExchangeCurrencyMigration(
     }
 
     override suspend fun migrate(currentData: Preferences): Preferences {
-        // previous versions of the app (prior to 7.3.3) may have stored an obsolete
-        // currency code in the preferences.  Let's change to the most up to date.
-        val sharedPreferences = context.getSharedPreferences(sharedPreferencesName, Context.MODE_PRIVATE)
-        val currentValue = sharedPreferences.getString(WalletUIConfig.SELECTED_CURRENCY.name, null)
-        currentValue?.let {
-            val fixedValue = CurrencyInfo.getUpdatedCurrency(currentValue)
-            sharedPreferences.edit().putString(WalletUIConfig.SELECTED_CURRENCY.name, fixedValue).apply()
+        try {
+            // previous versions of the app (prior to 7.3.3) may have stored an obsolete
+            // currency code in the preferences.  Let's change to the most up to date.
+            val sharedPreferences = context.getSharedPreferences(sharedPreferencesName, Context.MODE_PRIVATE)
+            val currentValue = sharedPreferences.getString(WalletUIConfig.SELECTED_CURRENCY.name, null)
+            currentValue?.let {
+                val fixedValue = CurrencyInfo.getUpdatedCurrency(currentValue)
+                sharedPreferences.edit().putString(WalletUIConfig.SELECTED_CURRENCY.name, fixedValue).apply()
+            }
+            // The database might have obsolete currencies as well
+            exchangeRates.cleanupObsoleteCurrencies()
+        } catch (ex: Exception) {
+            log.error("Error migrating obsolete currencies", ex)
         }
 
         // Continue migration normally

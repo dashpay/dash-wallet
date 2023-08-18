@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,14 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.services
+package de.schildbach.wallet.rates
 
-import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.data.entity.ExchangeRate
 
-interface ExchangeRatesProvider {
-    fun observeExchangeRates(): Flow<List<ExchangeRate>>
-    fun observeExchangeRate(currencyCode: String): Flow<ExchangeRate?>
-    suspend fun getExchangeRate(currencyCode: String): ExchangeRate?
-    suspend fun cleanupObsoleteCurrencies()
+interface ExchangeRatesClient {
+    @get:Throws(Exception::class)
+    val rates: List<ExchangeRate>
 }

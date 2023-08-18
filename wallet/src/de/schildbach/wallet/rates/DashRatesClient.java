@@ -1,10 +1,9 @@
 package de.schildbach.wallet.rates;
 
-import androidx.annotation.Nullable;
-
 import com.squareup.moshi.Moshi;
 
 import org.dash.wallet.common.data.entity.ExchangeRate;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -36,7 +35,7 @@ public class DashRatesClient extends RetrofitClient implements ExchangeRatesClie
     }
 
     @Override
-    @Nullable
+    @NotNull
     public List<ExchangeRate> getRates() throws Exception {
         List<ExchangeRate> rates = dashRatesService.getRates().execute().body();
         if (rates == null || rates.isEmpty()) {
