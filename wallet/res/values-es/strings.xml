@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">Saldo no disponible durante la reevaluación.</string>
     <string name="exchange_rates_activity_title">Moneda local</string>
     <string name="exchange_rates_fragment_empty_text">No se pueden cargar las tasas de cambio.</string>
-    <string name="exchange_rate_not_found">No se encuentra la tasa de cambio.</string>
     <string name="exchange_rates_fragment_default">(predeterminado)</string>
     <string name="exchange_rates_fragment_rate">Tasa</string>
     <string name="exchange_rates_fragment_balance">Saldo</string>
@@ -166,7 +165,6 @@
     <string name="transaction_row_status_error_other">Desconocido</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">sobre %s a las%s</string>
-    <string name="rate_not_available">No disponible</string>
     <string name="transaction_row_status_masternode_registration">Registro de masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Actualizar Masternodo</string>
     <string name="transaction_row_status_masternode_update_service">Actualizar Masternodo</string>
@@ -373,10 +371,21 @@
     <string name="payment_protocol_insufficient_funds_error_title">Fondos insuficientes</string>
     <string name="payment_protocol_insufficient_funds_error_message">No tienes fondos suficientes para completar esta transacción.</string>
 
-
-    <string name="buy_and_sell_subtitle">Seleccione un servicio para comprar y vender Dash.</string>
+    <string name="buy_and_sell_subtitle">Selecciona un servicio para comprar, vender, convertir y transferir Dash</string>
     <string name="select_a_service">Seleccionar un servicio</string>
     <string name="activity_buy_and_sell_dash_filter">Filtrar</string>
     <string name="clear_filter">Borrar filtro</string>
+    <string name="select_currency">Selecciona el tipo de moneda</string>
     <string name="reason">Razón</string>
+    <string name="link_account">Vincula tu cuenta</string>
+    <string name="buy_no_account_needed">Compra Dash. No se necesita una cuenta</string>
+    <string name="your_coinbase_session_has_expired">Tu sesión de Coinbase ha expirado</string>
+    <string name="please_log_in_to_your_coinbase_account">Inicia sesión en tu cuenta de Coinbase</string>
+    <string name="log_in">Iniciar sesión</string>
+
+    <string name="recipient_address">Dirección de billetera</string>
+    <string name="show_clipboard">Mostrar contenido en el portapapeles</string>
+    <string name="tap_to_paste">Toca la dirección del portapapeles para pegarla.</string>
+    <string name="not_dash_address">No es una dirección de Dash válida o una solicitud de URL</string>
+    <string name="send_to_address">Enviar a Dirección</string>
 </resources>

@@ -18,6 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Odkryj Dash</string>
     <string name="explore_title">Odkryj</string>
+    <string name="explore_subtitle">Rób zakupy z łatwością w ponad 155 000 sklepach i stronach internetowych.</string>
     <string name="explore_merchants_title">Gdzie Kupować?</string>
     <string name="explore_merchants_subtitle">Znajdź sprzedawcę, który przyjmuje płatności w Dash. </string>
     <string name="explore_atms_title">Bankomaty</string>

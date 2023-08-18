@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">Во время воспроизведения баланс недоступен.</string>
     <string name="exchange_rates_activity_title">Местная валюта</string>
     <string name="exchange_rates_fragment_empty_text">Не удалось загрузить курсы валют.</string>
-    <string name="exchange_rate_not_found">Не удалось найти обменный курс.</string>
     <string name="exchange_rates_fragment_default">(по умолчанию)</string>
     <string name="exchange_rates_fragment_rate">Курс</string>
     <string name="exchange_rates_fragment_balance">Баланс</string>
@@ -166,7 +165,6 @@
     <string name="transaction_row_status_error_other">Неизвестный</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">На %s в %s</string>
-    <string name="rate_not_available">Недоступно</string>
     <string name="transaction_row_status_masternode_registration">Регистрация мастерноды</string>
     <string name="transaction_row_status_masternode_update_registrar">Обновление masternode</string>
     <string name="transaction_row_status_masternode_update_service">Обновление masternode</string>
@@ -373,10 +371,21 @@
     <string name="payment_protocol_insufficient_funds_error_title">Недостаточно средств</string>
     <string name="payment_protocol_insufficient_funds_error_message">У вас недостаточно средств для завершения этой транзакции</string>
 
-
-    <string name="buy_and_sell_subtitle">Выбрать сервис для покупки и продажи Dash.</string>
+    <string name="buy_and_sell_subtitle">Выберите сервис, чтобы купить, продать, обменять и перевести Dash</string>
     <string name="select_a_service">Выберите сервис</string>
     <string name="activity_buy_and_sell_dash_filter">Фильтр</string>
     <string name="clear_filter">Очистить фильтр</string>
+    <string name="select_currency">Выберите валюту</string>
     <string name="reason">Причина</string>
+    <string name="link_account">Привязать аккаунт</string>
+    <string name="buy_no_account_needed">Купить Dash · Без учётной записи</string>
+    <string name="your_coinbase_session_has_expired">Время сессии Coinbase истекло</string>
+    <string name="please_log_in_to_your_coinbase_account">Пожалуйста, войдите в свой аккаунт Coinbase</string>
+    <string name="log_in">Войти</string>
+
+    <string name="recipient_address">Адрес получателя</string>
+    <string name="show_clipboard">Показать содержимое буфера обмена</string>
+    <string name="tap_to_paste">Чтобы вставить адрес из буфера обмена, нажмите на него</string>
+    <string name="not_dash_address">Некорректный адрес Dash или URL запрос</string>
+    <string name="send_to_address">Отправить на адрес</string>
 </resources>

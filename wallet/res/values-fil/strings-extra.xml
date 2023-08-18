@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">I-scan para magpadala</string>
     <string name="scan_to_pay_error_dialog_message">Hindi wastong Dash Address or hiling na URL sa clipboard:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Hindi wastong Dash Address or hiling na URL sa clipboard.</string>
-    <string name="pay_to_confirm_address">Ito ba ang Dash address na gusto mong padalhan ng bayad?</string>
 
     <string name="receive_title">Tumanggap</string>
     <string name="receive_enter_amount_message">Tukuyin ang halaga na matatanggap</string>
@@ -321,8 +320,6 @@
     <string name="security_high">Mataas</string>
     <string name="security_very_high">Napakataas</string>
     <string name="max">Max</string>
-
-    <string name="enter_amount_available">magagamit</string>
 
     <string name="skip">laktawan</string>
     <string name="get_started">Magsimula</string>

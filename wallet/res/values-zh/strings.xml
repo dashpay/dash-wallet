@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">重放过程中无法显示余额.</string>
     <string name="exchange_rates_activity_title">本地货币</string>
     <string name="exchange_rates_fragment_empty_text">无法加载汇率.</string>
-    <string name="exchange_rate_not_found">汇率未找到.</string>
     <string name="exchange_rates_fragment_default">(默认)</string>
     <string name="exchange_rates_fragment_rate">比率</string>
     <string name="exchange_rates_fragment_balance">余额</string>
@@ -166,7 +165,6 @@
     <string name="transaction_row_status_error_other">未知</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">在 %s 于 %s</string>
-    <string name="rate_not_available">不可用</string>
     <string name="transaction_row_status_masternode_registration">主节点注册</string>
     <string name="transaction_row_status_masternode_update_registrar">主节点升级</string>
     <string name="transaction_row_status_masternode_update_service">主节点升级</string>
@@ -373,10 +371,21 @@
     <string name="payment_protocol_insufficient_funds_error_title">资金不足</string>
     <string name="payment_protocol_insufficient_funds_error_message">您没有足够的资金来完成此次交易</string>
 
-
-    <string name="buy_and_sell_subtitle">选择一项服务来买卖 Dash.</string>
+    <string name="buy_and_sell_subtitle">请选择购买、出售、转换和转移Dash的服务</string>
     <string name="select_a_service">选择服务</string>
     <string name="activity_buy_and_sell_dash_filter">过滤</string>
     <string name="clear_filter">清除过滤</string>
+    <string name="select_currency">选择货币</string>
     <string name="reason">理由</string>
+    <string name="link_account">关联您的账户</string>
+    <string name="buy_no_account_needed">购买Dash · 无需账户</string>
+    <string name="your_coinbase_session_has_expired">您的Coinbase对话已过期</string>
+    <string name="please_log_in_to_your_coinbase_account">请登录您的 Coinbase 账户</string>
+    <string name="log_in">登录</string>
+
+    <string name="recipient_address">钱包地址</string>
+    <string name="show_clipboard">显示剪切板中的内容</string>
+    <string name="tap_to_paste">点击剪切板中的地址进行粘贴</string>
+    <string name="not_dash_address">不是有效的Dash地址或 URL 请求</string>
+    <string name="send_to_address">发送至地址</string>
 </resources>

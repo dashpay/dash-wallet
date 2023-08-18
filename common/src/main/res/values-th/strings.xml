@@ -75,6 +75,7 @@
     <string name="select_currency">เลือกสกุลเงิน</string>
     <string name="send_coins_error_dusty_send">จำนวนเงินน้อยเกินไปที่จะส่ง</string>
     <string name="send_coins_error_insufficient_money">ยอดเงินไม่เพียงพอ</string>
+    <string name="no_connection">ไม่มีการเชื่อมต่ออินเทอร์เน็ต</string>
     <string name="rate_not_available">ไม่สามารถใช้ได้</string>
 
     <string name="empty_wallet_warning_title">ดูเหมือนว่าคุณกำลังล้างกระเป๋าเงินของคุณ</string>

@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Escanear para Enviar</string>
     <string name="scan_to_pay_error_dialog_message">Não contém um endereço ou link de de Dash válido na área de transferência:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Não contém um endereço ou link de de Dash válido na área de transferência.</string>
-    <string name="pay_to_confirm_address">Este é o endereço Dash para o qual você deseja enviar o pagamento?</string>
 
     <string name="receive_title">Receber</string>
     <string name="receive_enter_amount_message">Especifique o valor a ser recebido</string>
@@ -324,8 +323,6 @@
     <string name="security_high">Alto</string>
     <string name="security_very_high">Muito Alto</string>
     <string name="max">Máximo</string>
-
-    <string name="enter_amount_available">disponível</string>
 
     <string name="skip">pular</string>
     <string name="get_started">Começar</string>

@@ -2,13 +2,18 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="topper">Topper</string>
     <string name="uphold_link_title">Uphold hesabınızı bağlayın</string>
+    <string name="uphold_powered_by">Topper tarafından desteklenmektedir</string>
+    <string name="topper_powered_by">Uphold tarafından desteklenmektedir</string>
     <string name="uphold_transfer_details">Uphold\'dan Dash Cüzdanınıza</string>
     <string name="uphold_buy_dash_activity_title">Uphold ile Dash Al/Sat</string>
     <string name="uphold_buy_dash_with_uphold">Uphold hesabı ile Dash al</string>
     <string name="uphold_buy_dash_button">Dash Al</string>
     <string name="uphold_transfer_to_this_wallet_button">Uphold\'dan aktar</string>
     <string name="uphold_link_account">Uphold Hesabını Bağla</string>
+    <string name="uphold_account_dash_balance">Uphold’daki Dash bakiyeniz</string>
+    <string name="uphold_transfer_to_this_wallet">Uphold’dan Dash Cüzdanına</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Ücret talep edilen tutardan düşülecek.</string>
     <string name="uphold_withdrawal_instructions">Aktarılacak tutarı girin</string>
     <string name="uphold_withdrawal_success_title">Başarılı</string>
@@ -17,10 +22,12 @@
     <string name="uphold_transfer">Aktarım</string>
     <string name="uphold_see_on_uphold">Uphold\'da gör</string>
     <string name="uphold_logout_title">Uphold\'dan çıkış yap</string>
+    <string name="uphold_disconnect">Uphold Hesabının Bağlantısını Kes</string>
     <string name="uphold_logout">Çıkış Yap</string>
     <string name="uphold_logout_explanation_text">Aynı zamanda tarayıcınızda Uphold internet sitesinden çıkış yapmanız gerekecek</string>
     <string name="uphold_go_to_website">İnternet sitesine git</string>
     <string name="uphold_error">Uphold Hatası</string>
+    <string name="uphold_error_not_logged_in">Dash Cüzdanı artık Uphold hesabınıza bağlı değil.</string>
     <string name="uphold_error_not_available">Uphold hizmeti şuan kullanım dışı. Lütfen daha sonra tekrar deneyin.</string>
     <string name="uphold_error_report_issue">Lütfen bu sorunu ana menüden "Sorun Bildir" i kullanarak Dash Wallet destek ekibine bildirin.</string>
 

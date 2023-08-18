@@ -58,7 +58,6 @@
     <string name="scan_to_pay_error_dialog_title">Poslat skenováním</string>
     <string name="scan_to_pay_error_dialog_message">Ve schránce pro kopírování není platná Dash adresa nebo URL požadavek:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Ve schránce pro kopírování není platná Dash adresa nebo URL požadavek.</string>
-    <string name="pay_to_confirm_address">Je to Dash adresa, na kterou chcete platbu poslat?</string>
 
     <string name="receive_title">Přijmout</string>
     <string name="receive_enter_amount_message">Určte částku, kterou chcete obdržet</string>
@@ -296,8 +295,6 @@
     <string name="security_high">Vysoká</string>
     <string name="security_very_high">Vělmi vysoká</string>
     <string name="max">Max</string>
-
-    <string name="enter_amount_available">k dispozici</string>
 
     <string name="skip">přeskočit</string>
     <string name="get_started">Jdu na to</string>

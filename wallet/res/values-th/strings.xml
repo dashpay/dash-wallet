@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">ยอดคงเหลือไม่เพียงพอที่สามารถเล่นใหม่ได้</string>
     <string name="exchange_rates_activity_title">สกุลเงินท้องถิ่น</string>
     <string name="exchange_rates_fragment_empty_text">ไม่สามารถโหลดอัตราแลกเปลี่ยนได้</string>
-    <string name="exchange_rate_not_found">ไม่พบอัตราแลกเปลี่ยน</string>
     <string name="exchange_rates_fragment_default">(ค่าเริ่มต้น)</string>
     <string name="exchange_rates_fragment_rate">อัตราแลกเปลี่ยน</string>
     <string name="exchange_rates_fragment_balance">ยอดคงเหลือ</string>
@@ -166,7 +165,6 @@
     <string name="transaction_row_status_error_other">ซึ่งเป็นไม่เป็นที่รู้จัก</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">บน %s ที่ %s</string>
-    <string name="rate_not_available">ที่ไม่สามารถใช้ประโยชน์ได้</string>
     <string name="transaction_row_status_masternode_registration">การลงทะเบียน Masternode </string>
     <string name="transaction_row_status_masternode_update_registrar">อัพเดต Masternode</string>
     <string name="transaction_row_status_masternode_update_service">อัพเดต Masternode</string>
@@ -373,10 +371,21 @@
     <string name="payment_protocol_insufficient_funds_error_title">กองทุนไม่เพียงพอ</string>
     <string name="payment_protocol_insufficient_funds_error_message">คุณมีเงินทุนไม่เพียงพอที่จะดำเนินการทางธุรกรรมได้สำเร็จ</string>
 
-
-    <string name="buy_and_sell_subtitle">เลือกบริการที่จะซื้อและขาย Dash</string>
+    <string name="buy_and_sell_subtitle">เลือกบริการที่จะซื้อ ขาย แปลงและโอน Dash</string>
     <string name="select_a_service">เลือกบริการ</string>
     <string name="activity_buy_and_sell_dash_filter">กรอง</string>
     <string name="clear_filter">ล้างตัวกรอง</string>
+    <string name="select_currency">เลือกสกุลเงิน</string>
     <string name="reason">เหตุผล</string>
+    <string name="link_account">เชื่อมโยงบัญชีของคุณ</string>
+    <string name="buy_no_account_needed">ซื้อ Dash · ไม่ต้องใช้บัญชี</string>
+    <string name="your_coinbase_session_has_expired">เซสชั่น Coinbase ของคุณหมดอายุแล้ว</string>
+    <string name="please_log_in_to_your_coinbase_account">กรุณาเข้าสู่ระบบบัญชี Coinbase ของคุณ</string>
+    <string name="log_in">เข้าสู่ระบบ</string>
+
+    <string name="recipient_address">ที่อยู่กระเป๋าเงิน</string>
+    <string name="show_clipboard">แสดงเนื้อหาในคลิปบอร์ด</string>
+    <string name="tap_to_paste">แตะที่อยู่จากคลิปบอร์ดเพื่อวาง</string>
+    <string name="not_dash_address">ไม่ใช่ที่อยู่ Dash หรือคำขอ URL ที่ถูกต้อง</string>
+    <string name="send_to_address">ส่งไปยังที่อยู่</string>
 </resources>

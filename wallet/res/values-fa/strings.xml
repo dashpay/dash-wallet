@@ -20,7 +20,6 @@
     <string name="wallet_balance_fragment_replaying">امکان نمایش موجودی حساب طی فرآیند اعتبارسنجی تراکنش‌ها در بلاک چین وجود ندارد.</string>
     <string name="exchange_rates_activity_title">واحد پول محلی</string>
     <string name="exchange_rates_fragment_empty_text">امکان دریافت نر‌خ‌های تبدیل وجود ندارد.</string>
-    <string name="exchange_rate_not_found"> نرخ‌های تبدیل پیدا نشد.</string>
     <string name="exchange_rates_fragment_default">(پیش‌فرض)</string>
     <string name="exchange_rates_fragment_rate">نرخ</string>
     <string name="exchange_rates_fragment_balance">موجودی</string>
@@ -167,7 +166,6 @@
     <string name="transaction_row_status_error_other">ناشناخته</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">در تاریخ %s ساعت %s</string>
-    <string name="rate_not_available">در دسترس نیست</string>
     <string name="transaction_row_status_masternode_registration">ثبت مسترند</string>
     <string name="transaction_row_status_masternode_update_registrar">به‌روزرسانی مسترند</string>
     <string name="transaction_row_status_masternode_update_service">به‌روزرسانی مسترند</string>
@@ -374,10 +372,21 @@
     <string name="payment_protocol_insufficient_funds_error_title">موجودی ناکافی</string>
     <string name="payment_protocol_insufficient_funds_error_message">موجودی‌تان برای انجام این تراکنش، کافی نیست</string>
 
-
-    <string name="buy_and_sell_subtitle">انتخاب یک سرویس برای خرید و فروش دش</string>
+    <string name="buy_and_sell_subtitle">یک سرویس را برای خرید، فروش، تبدیل یا انتقال دش انتخاب کنید</string>
     <string name="select_a_service">یک خدمت را انتخاب کنید</string>
     <string name="activity_buy_and_sell_dash_filter">فیلتر</string>
     <string name="clear_filter">حذف فیلتر</string>
+    <string name="select_currency">واحد پول‌تان را انتخاب کنید</string>
     <string name="reason">دلیل</string>
+    <string name="link_account">به حساب‌تان متصل کنید</string>
+    <string name="buy_no_account_needed">دش بخرید - بدون نیاز به حساب</string>
+    <string name="your_coinbase_session_has_expired">حساب کوینبیس‌ شما منقضی شده است</string>
+    <string name="please_log_in_to_your_coinbase_account">لطفا وارد حساب کوینبیس‌تان شوید</string>
+    <string name="log_in">ورود</string>
+
+    <string name="recipient_address">نشانی کیف پول</string>
+    <string name="show_clipboard">نشان دادن اطلاعات در کلیپ‌برد</string>
+    <string name="tap_to_paste">روی نشانی موجود در کلیپ‌برد لمس کنید تا چسبانده شود</string>
+    <string name="not_dash_address">نشانی دش و یا نشانی وب درخواستی معتبر نیست</string>
+    <string name="send_to_address">ارسال به نشانی</string>
 </resources>

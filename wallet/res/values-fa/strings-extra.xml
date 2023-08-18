@@ -62,7 +62,6 @@
 درخواست در کلیپ‌برد: \n\n %s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">نشانی دش یا نشانی اینترنتی نامعتبر
 درخواست در کلیپ‌برد</string>
-    <string name="pay_to_confirm_address">مطمئن هستید این همان آدرسی است که می‌خواهید دش برایش ارسال کنید؟ </string>
 
     <string name="receive_title">دریافت</string>
     <string name="receive_enter_amount_message">مبلغ مورد نظر برای دریافت را مشخص کنید</string>
@@ -323,8 +322,6 @@
     <string name="security_high">بالا</string>
     <string name="security_very_high">بسیار بالا</string>
     <string name="max">حداکثر</string>
-
-    <string name="enter_amount_available">موجود</string>
 
     <string name="skip">رد کردن</string>
     <string name="get_started">شروع</string>

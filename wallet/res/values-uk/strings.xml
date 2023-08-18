@@ -275,7 +275,7 @@
     <string name="preferences_initiate_reset_dialog_positive">Повторне сканування</string>
     <string name="preferences_extended_public_key_title">Показати xpub</string>
     <string name="preferences_extended_public_key_summary">Перегляньте розширений відкритий ключ свого гаманця, щоб його можна було імпортувати в інші програми та служби. Будьте обережні: це призведе до розкриття вашої грошової конфіденційності цій програмі.</string>
-    <string name="bitmap_fragment_share">Поділитися...</string>
+    <string name="bitmap_fragment_share">Поділитися…</string>
     <string name="extended_public_key_fragment_title">Розширений публічний ключ</string>
     <string name="extended_public_key_fragment_share">Поділитися xpub…</string>
     <string name="report_issue_dialog_title_issue">Повідомити про проблему</string>

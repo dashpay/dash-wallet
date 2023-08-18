@@ -2,13 +2,18 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="topper">Topper</string>
     <string name="uphold_link_title">ربط حساب Uphold الخاص بك</string>
+    <string name="uphold_powered_by">يتم العمل بواسطة Topper</string>
+    <string name="topper_powered_by">يتم العمل بواسطة Uphold</string>
     <string name="uphold_transfer_details">من Uphold إلى محفظة داش</string>
     <string name="uphold_buy_dash_activity_title">شراء/بيع داش مع Uphold</string>
     <string name="uphold_buy_dash_with_uphold">شراء داش من حساب Uphold</string>
     <string name="uphold_buy_dash_button">شراء داش</string>
     <string name="uphold_transfer_to_this_wallet_button">نقل من Uphold</string>
     <string name="uphold_link_account">اربط حساب Uphold</string>
+    <string name="uphold_account_dash_balance">رصيد داش على Uphold </string>
+    <string name="uphold_transfer_to_this_wallet">من Uphold الى محفظة داش</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">سيتم خصم الرسوم من الرصيد المطلوب.</string>
     <string name="uphold_withdrawal_instructions">أدخل المبلغ المراد تحويله</string>
     <string name="uphold_withdrawal_success_title">نجاح</string>
@@ -17,10 +22,12 @@
     <string name="uphold_transfer">نقل</string>
     <string name="uphold_see_on_uphold">مشاهدة في Uphold</string>
     <string name="uphold_logout_title">تسجيل الخروج من Uphold</string>
+    <string name="uphold_disconnect">الغاء اتصال حساب Uphold </string>
     <string name="uphold_logout">تسجيل الخروج</string>
     <string name="uphold_logout_explanation_text">ستحتاج أيضًا إلى تسجيل الخروج من موقع Uphold باستخدام متصفحك</string>
     <string name="uphold_go_to_website">اذهب الى الموقع</string>
     <string name="uphold_error">خطأ Uphold</string>
+    <string name="uphold_error_not_logged_in">محفظة داش غير متصلة ب Uphold بعد الآن </string>
     <string name="uphold_error_not_available">خدمة Uphold غير متوفرة. الرجاء معاودة المحاولة في وقت لاحق.</string>
     <string name="uphold_error_report_issue">يرجى الإبلاغ عن هذه المشكلة إلى فريق دعم Dash Wallet باستخدام \"الابلاغ عن مشكلة\" من القائمة الرئيسية.</string>
 

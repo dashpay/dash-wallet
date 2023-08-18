@@ -52,6 +52,7 @@
     <string name="scan_to_pay_error_dialog_title">Сканиране за изпращане</string>
     <string name="scan_to_pay_error_dialog_message">Не валиден Dash адреса или URL заявка в клипборда:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Не валиден Dash адреса или URL заявка в клипборда.</string>
+
     <string name="receive_title">Получаване</string>
     <string name="receive_enter_amount_message">Посочете  сумата за получаване</string>
 
@@ -256,8 +257,6 @@
     <string name="security_high">Високо</string>
     <string name="security_very_high">Много високо</string>
     <string name="max">Максимум</string>
-
-    <string name="enter_amount_available">налично</string>
 
     <string name="skip">пропусни</string>
     <string name="get_started">Първи стъпки</string>

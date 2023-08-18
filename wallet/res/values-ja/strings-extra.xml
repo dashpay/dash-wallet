@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">スキャンして送金する</string>
     <string name="scan_to_pay_error_dialog_message">クリップボードのDashアドレスやURLリクエストは無効です:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">クリップボードのDashアドレスやURLリクエストは無効です</string>
-    <string name="pay_to_confirm_address">支払先のDashアドレスはこちらでしょうか。</string>
 
     <string name="receive_title">入金</string>
     <string name="receive_enter_amount_message">受け取る金額を指定してください</string>
@@ -322,8 +321,6 @@
     <string name="security_high">高</string>
     <string name="security_very_high"> 非常に高い</string>
     <string name="max">最大</string>
-
-    <string name="enter_amount_available">ご利用できます</string>
 
     <string name="skip">スキップする</string>
     <string name="get_started">始める</string>

@@ -68,6 +68,7 @@
     <string name="learn_more">Daha fazla bilgi edin</string>
     <string name="something_wrong_title">Bir şeyler yanlış gitti!</string>
     <string name="retry_later_message">Lütfen biraz sonra tekrar deneyin veya yardım almak için destek merkezimizle iletişime geçin.</string>
+    <string name="between_dash_wallet_and_coinbase">Coinbase ve Dash Cüzdanı arasında</string>
     <string name="conversion_preview">Dönüşüm Önizleme</string>
     <string name="you_send">Göndereceğiniz</string>
     <string name="from_your_coinbase_account">Coinbase hesabınızdan</string>
@@ -114,4 +115,5 @@
     <string name="transfer_dash_failed_msg">Bu cihazdaki Dash Cüzdanınaa aktarılırken bir sorun oluştu.</string>
     <string name="insufficient_money_to_transfer">Cüzdandaki jeton miktarı transfer edilemeyecek kadar az.</string>
     <string name="amount_to_transfer">%s %s %s alacaksınız</string>
+    <string name="amount_to_transfer_dash">%s Alacaksınız</string>
     </resources>

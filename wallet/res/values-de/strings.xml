@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">Guthaben ist während des Replays nicht verfügbar.</string>
     <string name="exchange_rates_activity_title">Lokale Währung</string>
     <string name="exchange_rates_fragment_empty_text">Kann Wechselkurse nicht laden.</string>
-    <string name="exchange_rate_not_found">Kann Wechselkurs nicht finden.</string>
     <string name="exchange_rates_fragment_default">(Standard)</string>
     <string name="exchange_rates_fragment_rate">Kurs</string>
     <string name="exchange_rates_fragment_balance">Guthaben</string>
@@ -167,7 +166,6 @@
     <string name="transaction_row_status_error_other">Unbekannt</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Auf %s bei %s</string>
-    <string name="rate_not_available">Nicht verfügbar</string>
     <string name="transaction_row_status_masternode_registration">Masternode-Registrierung</string>
     <string name="transaction_row_status_masternode_update_registrar">Masternode-Update</string>
     <string name="transaction_row_status_masternode_update_service">Masternode-Update</string>
@@ -374,10 +372,21 @@
     <string name="payment_protocol_insufficient_funds_error_title">Guthaben nicht ausreichend</string>
     <string name="payment_protocol_insufficient_funds_error_message">Dein Guthaben reicht nicht aus, um diese Transaktion zu tätigen</string>
 
-
-    <string name="buy_and_sell_subtitle">Wähle einen Anbieter zum Kaufen und Verkaufen von Dash.</string>
+    <string name="buy_and_sell_subtitle">Wähle einen Dienstleister für den Kauf, Verkauf und Transfer von Dash.</string>
     <string name="select_a_service">Dienst auswählen</string>
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Filter leeren</string>
+    <string name="select_currency">Währung auswählen</string>
     <string name="reason">Ursache</string>
+    <string name="link_account">Konto verknüpfen</string>
+    <string name="buy_no_account_needed">Dash kaufen. Es wird kein Konto benötigt.</string>
+    <string name="your_coinbase_session_has_expired">Deine Coinbase Session ist abgelaufen.</string>
+    <string name="please_log_in_to_your_coinbase_account">Bitte logge dich in deinen Coinbase Account ein.</string>
+    <string name="log_in">Einloggen</string>
+
+    <string name="recipient_address">Adresse der Wallet</string>
+    <string name="show_clipboard">Inhalt der Zwischenablage anzeigen</string>
+    <string name="tap_to_paste">Tippe auf die Adresse in der Zwischenablage, um sie einzufügen.</string>
+    <string name="not_dash_address">Keine gültige Dash Adresse oder URL-Anfrage</string>
+    <string name="send_to_address">An Adresse senden</string>
 </resources>

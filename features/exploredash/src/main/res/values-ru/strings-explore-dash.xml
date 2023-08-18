@@ -18,6 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Исследовать Dash</string>
     <string name="explore_title">Исследовать</string>
+    <string name="explore_subtitle">Совершайте покупки используя DASH в более чем 155 000 магазинах и онлайн</string>
     <string name="explore_merchants_title">Где потратить?</string>
     <string name="explore_merchants_subtitle">Найдите места где принимают DASH в качестве оплаты.</string>
     <string name="explore_atms_title">Банкоматы</string>

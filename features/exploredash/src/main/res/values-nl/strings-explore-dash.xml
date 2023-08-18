@@ -18,6 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Verken Dash</string>
     <string name="explore_title">Verken</string>
+    <string name="explore_subtitle">Winkel eenvoudig met je DASH bij meer dan 155.000 locaties en online acceptanten</string>
     <string name="explore_merchants_title">Waar uit te geven?</string>
     <string name="explore_merchants_subtitle">Vind acceptanten die Dash als aannemen.</string>
     <string name="explore_atms_title">Geldautomaten</string>

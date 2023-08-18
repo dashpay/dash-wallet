@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Scan om te verzenden</string>
     <string name="scan_to_pay_error_dialog_message">Geen geldig Dash adres of URL verzoek op klembord:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Geen geldig Dash adres of URL verzoek op klembord.</string>
-    <string name="pay_to_confirm_address">Is dit het Dash adres waarnaar je de betaling wilt sturen?</string>
 
     <string name="receive_title">Ontvangen</string>
     <string name="receive_enter_amount_message">Specificeer het te ontvangen bedrag</string>
@@ -321,8 +320,6 @@
     <string name="security_high">Hoog</string>
     <string name="security_very_high">Heel hoog</string>
     <string name="max">Max</string>
-
-    <string name="enter_amount_available">beschikbaar</string>
 
     <string name="skip">Overslaan</string>
     <string name="get_started">Ga aan de slag</string>

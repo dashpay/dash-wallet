@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">掃描發送</string>
     <string name="scan_to_pay_error_dialog_message">在剪貼板中不是有效的達世幣位址或URL請求:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">在剪貼板中不是有效的達世幣位址或URL請求。</string>
-    <string name="pay_to_confirm_address">這是您要發送付款的達世幣位址嗎?</string>
 
     <string name="receive_title">接收</string>
     <string name="receive_enter_amount_message">指定收款金額</string>
@@ -318,8 +317,6 @@
     <string name="security_high">高</string>
     <string name="security_very_high">非常高</string>
     <string name="max">最大值</string>
-
-    <string name="enter_amount_available">可用的</string>
 
     <string name="skip">略過</string>
     <string name="get_started">開始使用</string>

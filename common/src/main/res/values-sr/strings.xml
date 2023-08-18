@@ -1,7 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Generic titles/messages -->
     <string name="loading">Učitavanje...</string>
     <string name="loading_error">Došlo je do greške. Molimo vas pokušajte kasnije.</string>
     <string name="dash_available">%1$s raspoloživo</string>
+    <string name="buy_dash">Kupi Dash</string>
+    <string name="error">Greška</string>
+    <string name="request_coins_share_dialog_title">Podeli zahtev za Dash...</string>
+    <!-- Generic buttons -->
+    <string name="button_dismiss">Odbaci</string>
     <string name="button_retry">Pokušaj opet</string>
-</resources>
+    <string name="button_copy_address">Kopiraj adresu</string>
+    <string name="button_share">Podeli</string>
+    <string name="dash">Dash</string>
+    <string name="send_coins_error_dusty_send">Iznos je suviše mali da bi bio poslat</string>
+    </resources>

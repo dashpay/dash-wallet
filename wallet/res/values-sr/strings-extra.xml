@@ -1,71 +1,104 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Ova InstantSend uplata još uvek nije preneta.</string>
-	<string name="transaction_row_message_sent_to_single_peer">Ova uplata je poslata.</string>
-	<string name="wallet_options_disconnect">Prekid veze</string>
 
-	<string name="network_monitor_masternodes_title">Master čvorovi</string>
-	<string name="export_keys_dialog_title_to_seed">Pogledajte frazu za oporavak</string>
-	<string name="import_keys_dialog_title_from_seed">Vraćanje iz fraze za oporavak</string>
-	<string name="backup_to_seed_wallet_dialog_message">Ovo je vaša fraza za oporavak. Molimo vas da je zapišete.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">NEMOJTE nikome dozvoliti da vidi vašu frazu za oporavak jer će moći da iskoriste vaš Dash.</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Vaš novčanik je zaštićen PIN-om za kupovinu. Unesite vaš PIN i pritisnite Prikaži da biste videli vašu frazu za oporavak.</string>
+    <string name="dialog_confirm_confirm">Potvrdi</string>
+    <string name="dialog_confirm_fee">Mrežna provizija</string>
+    <string name="dialog_confirm_total">Ukupno</string>
+
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_scan_to_pay">Skeniraj</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_address">Pošalji</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_import_key">Uvezi privatni ključ</string>
+    <!-- Lock Screen: Text above the PIN Entry area -->
+    <string name="lock_enter_pin">Unesite PIN</string>
+    <string name="pay_title">Pošalji</string>
+    <string name="settings_title">Podešavanja</string>
+    <string name="recover_wallet_title">Obnovi Novčanik</string>
+    <string name="payments_tab_pay_label">Pošalji</string>
+    <string name="options_paste_from_clipboard_title">Nalepi iz privremenog skladišta</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Ova uplata još uvek nije preneta.</string>
+    <string name="transaction_row_message_sent_to_single_peer">Ova uplata je poslata.</string>
+
+    <string name="wallet_options_disconnect">Prekid veze</string>
+
+    <string name="network_monitor_masternodes_title">Master čvorovi</string>
+    <string name="import_keys_dialog_title_from_seed">Vraćanje iz fraze za oporavak</string>
+    <string name="backup_to_seed_wallet_dialog_message">Ovo je vaša fraza za oporavak. Molimo vas da je zapišete.</string>
+    <string name="backup_wallet_to_seed_dialog_warning">NEMOJTE nikome dozvoliti da vidi vašu frazu za oporavak jer će moći da iskoriste vaš Dash.</string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">Vaš novčanik je zaštićen PIN-om za kupovinu. Unesite vaš PIN i pritisnite Prikaži da biste videli vašu frazu za oporavak.</string>
     <string name="import_keys_from_seed_dialog_message">Unesite vašu frazu za oporavak ovde.</string>
-	<string name="import_export_keys_dialog_password_phrase">Fraza za oporavak se unosi ovde.</string>
-	<string name="preferences_report_issue_summary">Sakupite informacije o vašem problemu i pošaljite vaš izveštaj developerima putem email-a.</string>
-	<string name="navigation_configuration">Konfiguracija</string>
-    <string name="button_copy_address">Kopiraj adresu</string>
-	<string name="request_coins_clipboard_address_msg">Dash adresa je kopirana u privremeno skladište </string>
-	<string name="backup_wallet_to_seed_show_recovery_phrase">Prikaži</string>
-	<string name="restore_wallet_from_invalid_seed_warning_message">%s je neispravna reč</string>
+    <string name="import_export_keys_dialog_password_phrase">Fraza za oporavak se unosi ovde.</string>
+    <string name="preferences_report_issue_summary">Sakupite informacije o vašem problemu i pošaljite vaš izveštaj developerima putem email-a.</string>
+    <string name="navigation_configuration">Konfiguracija</string>
+    <string name="request_coins_clipboard_address_msg">Dash adresa je kopirana u privremeno skladište </string>
+    <string name="backup_wallet_to_seed_show_recovery_phrase">Prikaži</string>
+    <string name="send_coins_options_fee_category_zero">Bez Provizije</string>
+    <string name="send_coins_fragment_hint_fee_zero">Provizija neće biti plaćena. Koristite "bez provizije" ukoliko vam vreme potvrde nije bitno.</string>
 
-	<string name="send_coins_options_fee_category_zero">Bez Provizije</string>
-	<string name="send_coins_fragment_hint_fee_zero">Provizija neće biti plaćena. Koristite \"bez provizije\" ukoliko vam vreme potvrde nije bitno.</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikacija %s želi da dobije vaš Master Public Key. Ovo može da se iskoristi za praćenje stanja vašeg novčanika ali se ne može iskoristiti za prebacivanje vašeg Dash-a. </string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_address_request_dialog_msg">Aplikacija %s traži adresu kako bi mogla da vam izvrši uplatu. Da li dozvoljavate to?</string>
 
-	<string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikacija %s želi da dobije vaš Master Public Key. Ovo može da se iskoristi za praćenje stanja vašeg novčanika ali se ne može iskoristiti za prebacivanje vašeg Dash-a. </string>
-	<string name="wallet_uri_handler_address_request_dialog_msg">Aplikacija %s traži adresu kako bi mogla da vam izvrši uplatu. Da li dozvoljavate to?</string>
+    <string name="wallet_lock_unlock">Otključaj</string>
+    <string name="wallet_lock_unlock_wallet">Otključaj novčanik</string>
+    <string name="wallet_lock_unlock_to_see_txs_title">Novčanik je zaključan.</string>
+    <string name="wallet_lock_unlock_to_see_txs_txt">Kako biste otključali novčanik i imali uvid u istoriju transakcija, dodirnite ikonu za otključavanje koja se nalazi iznad.</string>
+    <string name="wallet_lock_unlock_dialog_title">Otključajte vaš novčanik</string>
+    <string name="wallet_lock_unlock_dialog_message">Vaš novčanik je zaštićen PIN-om za potrošnju. Unesite vaš PIN i pritisnite Otključaj da nastavite dalje.</string>
+    <string name="wallet_lock_reset_wallet_message">Da li ste sigurni? Vaš novčanik će biti obrisan i sav vaš Dash će biti izgubljen.\n\nJedini način da povratite vaš Dash je sa rezervnom kopijom ili frazom za obnovu.</string>
 
-	<string name="wallet_lock_unlock">Otključaj</string>
-	<string name="wallet_lock_unlock_wallet">Otključaj novčanik</string>
-	<string name="wallet_lock_unlock_to_see_txs_title">Novčanik je zaključan.</string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">Kako biste otključali novčanik i imali uvid u istoriju transakcija, dodirnite ikonu za otključavanje koja se nalazi iznad.</string>
-	<string name="wallet_lock_unlock_dialog_title">Otključajte vaš novčanik</string>
-	<string name="wallet_lock_unlock_dialog_message">Vaš novčanik je zaštićen PIN-om za potrošnju. Unesite vaš PIN i pritisnite Otključaj da nastavite dalje.</string>
-	<string name="wallet_lock_reset_wallet_title">Resetuj novčanik</string>
-	<string name="wallet_lock_reset_wallet_message">Da li ste sigurni? Svi sačuvani podaci će biti obrisani i novčanik će moći da se oporavi samo uz pomoć backup fajla ili semena \"seed\" za oporavak.</string>
+    <string name="wallet_lock_wallet_disabled">Novčanik je onesposobljen</string>
+    <string name="wallet_lock_try_again">Pokušajte ponovo za %1$d %2$s</string>
+    <string name="wallet_lock_reset">Resetuj</string>
+    <string name="wallet_lock_wrong_pin">Pogrešan PIN! %s</string>
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d pokušaj preostaje</item>
+        <item quantity="few">%d pokušaja preostaje</item>
+        <item quantity="other">%d pokušaja preostaje</item>
+    </plurals>
 
-	<string name="wallet_lock_wallet_disabled">Novčanik je onesposobljen</string>
-	<string name="wallet_lock_try_again">Pokušajte ponovo za %1$d %2$s</string>
-	<string name="wallet_lock_reset">Resetuj</string>
-	<string name="wallet_lock_wrong_pin">Pogrešan PIN! %s</string>
+    <plurals name="minute">
+        <item quantity="one">minut</item>
+        <item quantity="few">minuta</item>
+        <item quantity="other">minuta</item>
+    </plurals>
 
-	<plurals name="wallet_lock_attempts_remaining">
-		<item quantity="one">%d pokušaj preostaje</item>
-		<item quantity="few">%d pokušaja preostaje</item>
-		<item quantity="other">%d pokušaja preostaje</item>
-	</plurals>
+    <plurals name="hour">
+        <item quantity="one">sat</item>
+        <item quantity="few">sati</item>
+        <item quantity="other">sati</item>
+    </plurals>
 
-	<plurals name="minute">
-		<item quantity="one">minut</item>
-		<item quantity="few">minuta</item>
-		<item quantity="other">minuta</item>
-	</plurals>
-	
-	<plurals name="hour">
-		<item quantity="one">sat</item>
-		<item quantity="few">sati</item>
-		<item quantity="other">sati</item>
-	</plurals>
-
-	<string name="encrypt_new_key_chain_upgrade_button">Nadogradnja</string>
-	<string name="encrypt_new_key_chain_dialog_title">Nadogradite vaš novčanik</string>
-	<string name="encrypt_new_key_chain_dialog_message">Vaš novčnik će biti nadogradjen kako bi podržavao uvoz i eksportovanje iz više aplikacija.</string>
-	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Morate uneti vaš PIN da bi se proces nadogranje završio.</string>
-	<string name="pin_code_required_dialog_message">Ova aplikacija sada zahteva PIN kako bi mogla da izvrši plaćanja i ima uvid u preostali iznos i transakcije.</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Nadogradnja</string>
+    <string name="encrypt_new_key_chain_dialog_title">Nadogradite vaš novčanik</string>
+    <string name="encrypt_new_key_chain_dialog_message">Vaš novčnik će biti nadogradjen kako bi podržavao uvoz i eksportovanje iz više aplikacija.</string>
+    <string name="encrypt_new_key_chain_enter_pin_dialog_message">Morate uneti vaš PIN da bi se proces nadogranje završio.</string>
+    <string name="pin_code_required_dialog_message">Ova aplikacija sada zahteva PIN kako bi mogla da izvrši plaćanja i ima uvid u preostali iznos i transakcije.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">Zapisao/la sam frazu za oporavak</string>
-	
-	<string name="change_exchange_currency_code_message">Vaša lokalna valuta je %1$s, ali vaša podrazumevana valuta u ovoj aplikaciji je %2$s. Da li želite da je promenite u %1$s ili da je ostavite kao %2$s?</string>
-	<string name="change_to">Promeni u %s</string>
-	<string name="leave_as">Ostavi kao %s</string>
 
-</resources>
+    <string name="change_exchange_currency_code_message">Vaša lokalna valuta je %1$s, ali vaša podrazumevana valuta u ovoj aplikaciji je %2$s. Da li želite da je promenite u %1$s ili da je ostavite kao %2$s?</string>
+    <string name="change_to">Promeni u %s</string>
+    <string name="leave_as">Ostavi kao %s</string>
+
+    <string name="remind_later">Podseti me posle</string>
+    <string name="backup_now">Napravi rezervnu kopiju</string>
+
+    <string name="notification_transactions_channel_name">Transakcije</string>
+    <string name="view_seed_done">Gotovo</string>
+    <string name="transaction_result_tax_category_loading">Učitavanje...</string>
+    <string name="menu_settings_title">Podešavanja</string>
+    <string name="menu_local_currency">Lokalna valuta</string>
+    <string name="tools_import_private_key">Uvezi privatni ključ</string>
+    <string name="tools_show_xpub">Prošireni Javni Ključ</string>
+
+    <string name="confirm">Potvrdi</string>
+
+    <string name="received_transactions">Primljeno</string>
+    <string name="sent_transactions">Poslato</string>
+    <string name="masternode_key_address">Adresa</string>
+    <string name="masternode_key_ip_address_unknown">Nepoznato</string>
+    </resources>

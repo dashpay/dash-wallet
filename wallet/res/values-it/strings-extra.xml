@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Scansiona per inviare</string>
     <string name="scan_to_pay_error_dialog_message">Indirizzo Dash o richiesta URL non validi nel clipboard:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Indirizzo Dash o richiesta URL non validi nel clipboard</string>
-    <string name="pay_to_confirm_address">È questo l\'indirizzo Dash a cui vuoi inviare il pagamento?</string>
 
     <string name="receive_title">Ricevi</string>
     <string name="receive_enter_amount_message">Specificare l\'importo da ricevere</string>
@@ -324,8 +323,6 @@
     <string name="security_high">Alto</string>
     <string name="security_very_high">Molto Alto</string>
     <string name="max">Massimo</string>
-
-    <string name="enter_amount_available">disponibile</string>
 
     <string name="skip">salta</string>
     <string name="get_started">Iniziare</string>

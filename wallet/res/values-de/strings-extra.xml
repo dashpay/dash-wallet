@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Zum Senden scannen</string>
     <string name="scan_to_pay_error_dialog_message">Keine gültige Dash-Adresse oder URL-Anfrage im Zwischenspeicher:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Keine gültige Dash-Adresse oder URL-Anfrage im Zwischenspeicher.</string>
-    <string name="pay_to_confirm_address">Handelt es sich hierbei um die Dash-Adresse, an die die Zahlung erfolgen soll?</string>
 
     <string name="receive_title">Empfangen</string>
     <string name="receive_enter_amount_message">Zu empfangenen Betrag festsetzen</string>
@@ -321,8 +320,6 @@
     <string name="security_high">Hoch</string>
     <string name="security_very_high">Sehr hoch</string>
     <string name="max">Max</string>
-
-    <string name="enter_amount_available">verfügbar</string>
 
     <string name="skip">Überspringen</string>
     <string name="get_started">Beginnen</string>

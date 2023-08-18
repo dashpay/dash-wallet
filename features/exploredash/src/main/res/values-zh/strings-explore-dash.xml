@@ -18,6 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">探索Dash</string>
     <string name="explore_title">探索</string>
+    <string name="explore_subtitle">使用您的Dash在超过155,000个地点和在线商户轻松购物</string>
     <string name="explore_merchants_title">在哪里消费?</string>
     <string name="explore_merchants_subtitle">查找接受Dash支付方式的商户.</string>
     <string name="explore_atms_title">自动提款机</string>

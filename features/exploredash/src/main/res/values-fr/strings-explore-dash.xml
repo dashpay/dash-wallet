@@ -18,6 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Explorez Dash</string>
     <string name="explore_title">Explorer</string>
+    <string name="explore_subtitle">Dépensez facilement vos dashs dans plus de 155 000 magasins et vendeurs en ligne</string>
     <string name="explore_merchants_title">Où dépenser ?</string>
     <string name="explore_merchants_subtitle">Trouvez des vendeurs qui acceptent les paiements avec Dash.</string>
     <string name="explore_atms_title">Distributeurs d\'espèces</string>

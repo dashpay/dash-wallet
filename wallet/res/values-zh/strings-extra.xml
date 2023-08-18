@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">扫描发送</string>
     <string name="scan_to_pay_error_dialog_message">剪切板没有包含有效的Dash地址或链接:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">剪切板没有包含有效的Dash地址或链接</string>
-    <string name="pay_to_confirm_address">这是您想要发送付款的Dash地址吗?</string>
 
     <string name="receive_title">接收</string>
     <string name="receive_enter_amount_message">指定收款数额</string>
@@ -319,8 +318,6 @@
     <string name="security_very_high">非常高</string>
     <string name="max">最大</string>
 
-    <string name="enter_amount_available">可用</string>
-
     <string name="skip">跳过</string>
     <string name="get_started">开始使用</string>
     <string name="welcome_screen_title_1_new_install">欢迎</string>
@@ -399,7 +396,17 @@
     <string name="masternode_key_type_operator">运营者私钥</string>
     <string name="masternode_key_type_platform">HPMN运行者公钥</string>
     <string name="masternode_key_type_total">%d 密钥</string>
+    <string name="masternode_key_type_used">%d 已使用</string>
+    <string name="masternode_key_pair_index">密钥对 %d</string>
     <string name="masternode_key_address">地址</string>
+    <string name="masternode_key_id">密钥 Id</string>
+    <string name="masternode_key_public">公钥</string>
+    <string name="masternode_key_public_legacy">公钥 (继承)</string>
+    <string name="masternode_key_private_hex">私钥</string>
+    <string name="masternode_key_private_wif">私钥 WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
     <string name="masternode_key_ip_address_unknown">未知</string>
+    <string name="masternode_key_not_used">未使用</string>
     <string name="masternode_key_revoked">已撤销</string>
-    </resources>
+    <string name="masternode_key_private_public_base64">私钥 / 公钥 (base64)</string>
+</resources>

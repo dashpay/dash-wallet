@@ -18,7 +18,6 @@
     <string name="wallet_balance_fragment_replaying">Tính năng cân bằng tài khoản không thể được thao tác trong quá trình replay.</string>
     <string name="exchange_rates_activity_title">Tiền địa phương</string>
     <string name="exchange_rates_fragment_empty_text">Không thể tải tỉ lệ hoán đổi</string>
-    <string name="exchange_rate_not_found">Không thể tìm thấy tỷ giáo giao dịch.</string>
     <string name="exchange_rates_fragment_default">(mặc định)</string>
     <string name="exchange_rates_fragment_rate">Tỷ giá</string>
     <string name="exchange_rates_fragment_balance">Số dư</string>
@@ -165,7 +164,6 @@
     <string name="transaction_row_status_error_other">Không biết</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Vào%slúc %s</string>
-    <string name="rate_not_available">Không sẵn sàng</string>
     <string name="transaction_row_status_masternode_registration">Đăng ký Masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Cập nhật Masternode</string>
     <string name="transaction_row_status_masternode_update_service">Cập nhật Masternode</string>
@@ -360,6 +358,6 @@
     <string name="payment_protocol_insufficient_funds_error_title">Không đủ tiền</string>
     <string name="payment_protocol_insufficient_funds_error_message">Bạn không có đủ kinh phí để hoàn tất giao dịch này</string>
 
-
     <string name="activity_buy_and_sell_dash_filter">Lọc</string>
-    </resources>
+    <string name="send_to_address">Gửi đến địa chỉ</string>
+</resources>
