@@ -103,7 +103,12 @@ class ExchangeCurrencyMigration(
             val sharedPreferences = context.getSharedPreferences(sharedPreferencesName, Context.MODE_PRIVATE)
             val currentValue = sharedPreferences.getString(WalletUIConfig.SELECTED_CURRENCY.name, null)
             currentValue?.let {
-                val fixedValue = CurrencyInfo.getUpdatedCurrency(CurrencyInfo.getOtherName(currentValue))
+                val otherName = CurrencyInfo.getOtherName(currentValue)
+                val fixedValue = if (CurrencyInfo.hasObsoleteCurrency(otherName)) {
+                    CurrencyInfo.getUpdatedCurrency(otherName)
+                } else {
+                    otherName
+                }
                 sharedPreferences.edit().putString(WalletUIConfig.SELECTED_CURRENCY.name, fixedValue).apply()
             }
             // The database might have obsolete currencies as well
