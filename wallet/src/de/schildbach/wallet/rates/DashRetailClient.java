@@ -22,7 +22,7 @@ public class DashRetailClient extends RetrofitClient implements ExchangeRatesCli
 
     public static DashRetailClient getInstance() {
         if (instance == null) {
-            instance = new DashRetailClient("https://rates2.dashretail.org/");
+            instance = new DashRetailClient("https://rates.ctx.com/"); // Former https://rates2.dashretail.org/
         }
         return instance;
     }
@@ -58,7 +58,7 @@ public class DashRetailClient extends RetrofitClient implements ExchangeRatesCli
     }
 
     private interface DashRetailService {
-        @GET("rates?source=dashretail")
+        @GET("rates?source=ctx")
         Call<List<DashRetailRate>> getRates();
     }
 }
