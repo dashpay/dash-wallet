@@ -60,12 +60,10 @@ open class DashPayViewModel @Inject constructor(
     private val blockchainState: BlockchainStateDao,
     dashPayProfileDao: DashPayProfileDao,
     blockchainIdentityDataDao: BlockchainIdentityDataDao,
-    private val userAlert: UserAlertDao,
     private val invitations: InvitationsDao,
     val platformSyncService: PlatformSyncService,
     private val platformBroadcastService: PlatformBroadcastService,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
-    private val userAlertDao: UserAlertDao,
     private val dashPayConfig: DashPayConfig
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
@@ -78,13 +76,6 @@ open class DashPayViewModel @Inject constructor(
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String?>()
 
-    val notificationsLiveData = NotificationsLiveData(
-        walletApplication,
-        platformRepo,
-        platformSyncService,
-        viewModelScope,
-        userAlertDao
-    )
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformSyncService)
     val frequentContactsLiveData = FrequentContactsLiveData(
         walletApplication,
@@ -213,10 +204,6 @@ open class DashPayViewModel @Inject constructor(
         contactsLiveData.value = UsernameSearch(text, orderBy)
     }
 
-    fun searchNotifications(text: String) {
-        notificationsLiveData.query = text
-    }
-
     fun usernameDoneAndDismiss() {
         viewModelScope.launch(Dispatchers.IO) {
             platformRepo.doneAndDismiss()
@@ -318,23 +305,10 @@ open class DashPayViewModel @Inject constructor(
         return msg
     }
 
-    fun dismissUserAlert(alertId: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            userAlert.dismiss(alertId)
-            notificationsLiveData.onContactsUpdated()
-        }
-    }
-
     suspend fun getInviteHistory() = invitations.loadAll()
 
     fun contactRequestsTo(userId: String): LiveData<List<DashPayContactRequest>> =
         dashPayContactRequestDao.observeToOthers(userId).distinctUntilChanged().asLiveData()
-
-    suspend fun getLastNotificationTime(): Long =
-        dashPayConfig.get(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME) ?: 0
-
-    suspend fun setLastNotificationTime(time: Long) =
-        dashPayConfig.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, time)
 
     private inner class UserSearch(
         val text: String,

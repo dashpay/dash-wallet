@@ -16,31 +16,24 @@
  */
 package de.schildbach.wallet.ui.dashpay.notification
 
-import android.view.LayoutInflater
-import android.view.ViewGroup
 import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.NotificationItemUserAlert
-import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.notification_alert_item.view.*
+import de.schildbach.wallet_test.databinding.NotificationAlertItemBinding
 
-class UserAlertViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-        NotificationViewHolder(R.layout.notification_alert_item, inflater, parent) {
+class UserAlertViewHolder(val binding: NotificationAlertItemBinding) :
+        NotificationViewHolder(binding.root) {
 
     override fun bind(notificationItem: NotificationItem, vararg args: Any) {
-        bind(notificationItem as NotificationItemUserAlert, args[0] as OnUserAlertDismissListener?)
+        bind(notificationItem as NotificationItemUserAlert, args[0] as (Int) -> Unit)
     }
 
-    private fun bind(notificationItem: NotificationItemUserAlert, onUserAlertDismissListener: OnUserAlertDismissListener?) {
-        itemView.apply {
-            this.text.setText(notificationItem.stringResId)
-            this.icon.setImageResource(notificationItem.iconResId)
-            this.close_btn.setOnClickListener {
-                onUserAlertDismissListener?.onUserAlertDismiss(notificationItem.stringResId)
+    private fun bind(notificationItem: NotificationItemUserAlert, onUserAlertDismiss: (alertId: Int) -> Unit) {
+        binding.apply {
+            text.setText(notificationItem.stringResId)
+            icon.setImageResource(notificationItem.iconResId)
+            closeBtn.setOnClickListener {
+                onUserAlertDismiss.invoke(notificationItem.stringResId)
             }
         }
-    }
-
-    interface OnUserAlertDismissListener {
-        fun onUserAlertDismiss(alertId: Int)
     }
 }

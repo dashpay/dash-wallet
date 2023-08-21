@@ -16,9 +16,7 @@
  */
 package de.schildbach.wallet.ui.dashpay.notification
 
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
@@ -30,6 +28,7 @@ import de.schildbach.wallet.data.NotificationItemPayment
 import de.schildbach.wallet.ui.transactions.TxResourceMapper
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.NotificationTransactionRowBinding
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
@@ -42,8 +41,8 @@ import org.dash.wallet.common.ui.CurrencyTextView
 import org.dash.wallet.common.util.GenericUtils
 import java.util.*
 
-class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-        NotificationViewHolder(R.layout.notification_transaction_row, inflater, parent) {
+class TransactionViewHolder(val binding: NotificationTransactionRowBinding) :
+        NotificationViewHolder(binding.root) {
 
     data class TransactionCacheEntry(val value: Coin, val sent: Boolean, val self: Boolean,
                                      val showFee: Boolean, val address: Address?,

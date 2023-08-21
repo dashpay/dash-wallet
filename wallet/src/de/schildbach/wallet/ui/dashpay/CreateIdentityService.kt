@@ -656,6 +656,7 @@ class CreateIdentityService : LifecycleService() {
         blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, null, true)
 
         val authExtension = walletApplication.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
+        //authExtension.setWallet(walletApplication.wallet!!) // why is the wallet not set?  we didn't deserialize it probably!
         val cftxs = authExtension.creditFundingTransactions
 
         val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { it.creditBurnIdentityIdentifier.bytes!!.contentEquals(identity) }

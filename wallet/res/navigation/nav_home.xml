@@ -40,6 +40,15 @@
         <action
             android:id="@+id/home_to_contacts"
             app:destination="@id/contactsFragment" />
+
+        <action
+            android:id="@+id/home_to_notifications"
+            app:destination="@id/showNotificationsFragment">
+
+            <argument
+                android:name="mode"
+                android:defaultValue="2" />
+        </action>
     </fragment>
 
     <fragment
@@ -322,6 +331,18 @@
             android:name="standalone"
             app:argType="boolean"
             android:defaultValue="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/showNotificationsFragment"
+        android:name="de.schildbach.wallet.ui.dashpay.NotificationsFragment"
+        android:label="ShowSeed"
+        tools:layout="@layout/fragment_notifications">
+
+        <argument
+            android:name="mode"
+            app:argType="integer"
+            android:defaultValue="2" />
     </fragment>
 
     <include app:graph="@navigation/nav_explore" />
