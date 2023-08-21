@@ -317,7 +317,7 @@ class CreateIdentityService : LifecycleService() {
 
         if (blockchainIdentityData.creationState <= CreationState.UPGRADING_WALLET) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.UPGRADING_WALLET)
-            val seed = platformRepo.getWalletSeed() ?: throw IllegalStateException("cannot obtain wallet seed")
+            val seed = wallet.keyChainSeed ?: throw IllegalStateException("cannot obtain wallet seed")
             platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
         }
 
@@ -472,7 +472,7 @@ class CreateIdentityService : LifecycleService() {
 
         if (blockchainIdentityData.creationState <= CreationState.UPGRADING_WALLET) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.UPGRADING_WALLET)
-            val seed = platformRepo.getWalletSeed() ?: throw IllegalStateException("cannot obtain wallet seed")
+            val seed = wallet.keyChainSeed ?: throw IllegalStateException("cannot obtain wallet seed")
             platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
         }
 
@@ -682,7 +682,7 @@ class CreateIdentityService : LifecycleService() {
 
         val wallet = walletApplication.wallet!!
         val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
-        val seed = platformRepo.getWalletSeed() ?: throw IllegalStateException("cannot obtain wallet seed")
+        val seed = wallet.keyChainSeed ?: throw IllegalStateException("cannot obtain wallet seed")
 
         // create the Blockchain Identity object
         val blockchainIdentity = BlockchainIdentity(platformRepo.platform, 0, wallet, authExtension)

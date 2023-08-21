@@ -33,6 +33,7 @@ import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.coinjoin.CoinJoinClientManager
 import org.bitcoinj.coinjoin.CoinJoinClientOptions
 import org.bitcoinj.coinjoin.PoolMessage
+import org.bitcoinj.coinjoin.PoolState
 import org.bitcoinj.coinjoin.PoolStatus
 import org.bitcoinj.coinjoin.callbacks.RequestDecryptedKey
 import org.bitcoinj.coinjoin.callbacks.RequestKeyParameter
@@ -40,10 +41,10 @@ import org.bitcoinj.coinjoin.listeners.MixingCompleteListener
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener
 import org.bitcoinj.coinjoin.progress.MixingProgressTracker
 import org.bitcoinj.coinjoin.utils.CoinJoinManager
-import org.bitcoinj.coinjoin.utils.ProTxToOutpoint
 import org.bitcoinj.core.AbstractBlockChain
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
+import org.bitcoinj.core.MasternodeAddress
 import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
@@ -210,9 +211,12 @@ class CoinJoinMixingService @Inject constructor(
             wallet: WalletEx?,
             sessionId: Int,
             denomination: Int,
+            state: PoolState?,
             message: PoolMessage?,
+            address: MasternodeAddress?,
+            joined: Boolean
         ) {
-            super.onSessionComplete(wallet, sessionId, denomination, message)
+            super.onSessionComplete(wallet, sessionId, denomination, state, message, address, joined)
             // TODO: _progressFlow.emit(progress)
             log.info("Session {} complete. {}% mixed -- {}", sessionId, progress, message)
         }

@@ -50,8 +50,8 @@ dependencies {
     implementation "androidx.biometric:biometric:1.1.0"
 
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation 'org.dashj.platform:dashpay:0.24-SNAPSHOT'
-    implementation 'org.dashj.platform:platform-core:0.24-SNAPSHOT'
+    implementation 'org.dashj.platform:dashpay:0.24-MOCK-SNAPSHOT'
+    implementation 'org.dashj.platform:platform-core:0.24-MOCK-SNAPSHOT'
     implementation 'org.dashj.platform:dpp:0.24-SNAPSHOT'
     implementation 'org.dashj.platform:dapi-client:0.24-SNAPSHOT'
     implementation 'org.dashj:dashj-merk:0.22-SNAPSHOT'
