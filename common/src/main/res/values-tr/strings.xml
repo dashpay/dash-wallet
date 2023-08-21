@@ -75,6 +75,7 @@
     <string name="select_currency">Para Birimini Seçin</string>
     <string name="send_coins_error_dusty_send">Bu miktar göndermek için çok düşüktür</string>
     <string name="send_coins_error_insufficient_money">Yetersiz bakiye</string>
+    <string name="no_connection">İnternet yok</string>
     <string name="rate_not_available">Mevcut değil</string>
 
     <string name="empty_wallet_warning_title">Dash Cüzdanınızı boşaltıyor gibisiniz</string>

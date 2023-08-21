@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">Bilance je nedostupná během přehrávání.</string>
     <string name="exchange_rates_activity_title">Místní Měna</string>
     <string name="exchange_rates_fragment_empty_text">Nepodařilo se nahrát směnné kurzy.</string>
-    <string name="exchange_rate_not_found">Nelze najít směnný kurz.</string>
     <string name="exchange_rates_fragment_default">(výchozí)</string>
     <string name="exchange_rates_fragment_rate">Kurz</string>
     <string name="exchange_rates_fragment_balance">Bilance</string>
@@ -166,7 +165,6 @@
     <string name="transaction_row_status_error_other">Neznámý</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">%s v %s</string>
-    <string name="rate_not_available">Není dostupný</string>
     <string name="transaction_row_status_masternode_registration">Registrace masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Aktualizace masternode</string>
     <string name="transaction_row_status_masternode_update_service">Aktualizace masternode</string>
@@ -371,8 +369,9 @@
     <string name="payment_protocol_insufficient_funds_error_title">Nedostatečný zůstatek</string>
     <string name="payment_protocol_insufficient_funds_error_message">Nemáte dostatečné prostředky pro uskutečnění této transakce</string>
 
-
     <string name="select_a_service">Vybrat službu</string>
     <string name="activity_buy_and_sell_dash_filter">Filtr</string>
     <string name="clear_filter">Zrušit filtr</string>
+    <string name="select_currency">Vybrat měnu</string>
+    <string name="send_to_address">Odeslat na adresu</string>
 </resources>

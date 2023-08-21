@@ -18,6 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Dash\'i Keşfet</string>
     <string name="explore_title">Keşfet</string>
+    <string name="explore_subtitle">155.000\'den fazla yerde ve çevrimiçi satıcıda DASH\'inizle kolayca alışveriş yapın</string>
     <string name="explore_merchants_title">Nerede Harcamalı?</string>
     <string name="explore_merchants_subtitle">Dash\'i ödeme olarak kabul eden satıcıları bulun.</string>
     <string name="explore_atms_title">ATMler</string>

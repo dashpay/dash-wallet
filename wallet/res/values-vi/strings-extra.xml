@@ -53,6 +53,7 @@
     <string name="scan_to_pay_error_dialog_title">Quét để gửi</string>
     <string name="scan_to_pay_error_dialog_message">Không phải một địa chỉ Dash hoặc URL yêu cầu trong bộ nhớ đệm:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Không phải một địa chỉ Dash hoặc URL yêu cầu trong bộ nhớ đệm.</string>
+
     <string name="receive_title">Nhận</string>
     <string name="receive_enter_amount_message">Hãy xác định rõ số lượng cần nhận</string>
 
@@ -258,8 +259,6 @@
     <string name="security_high">Cao</string>
     <string name="security_very_high">Rất cao</string>
     <string name="max">Tối đa</string>
-
-    <string name="enter_amount_available">Hiện có</string>
 
     <string name="skip">bỏ qua</string>
     <string name="get_started">Bắt đầu</string>

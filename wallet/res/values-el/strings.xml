@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">Το υπόλοιπο δεν είναι διαθέσιμο κατά τη διάρκεια της επανάληψης.</string>
     <string name="exchange_rates_activity_title">Τοπικό νόμισμα</string>
     <string name="exchange_rates_fragment_empty_text">Δεν ήταν δυνατή η φόρτωση των ισοτιμιών.</string>
-    <string name="exchange_rate_not_found">Δε βρέθηκε η ισοτιμία.</string>
     <string name="exchange_rates_fragment_default">(προεπιλογή)</string>
     <string name="exchange_rates_fragment_rate">Ισοτιμία</string>
     <string name="exchange_rates_fragment_balance">Υπόλοιπο</string>
@@ -166,7 +165,6 @@
     <string name="transaction_row_status_error_other">Άγνωστο</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Σε %s στο %s</string>
-    <string name="rate_not_available">Μη διαθέσιμο</string>
     <string name="transaction_row_status_masternode_registration">Εγγραφή Masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Ανανέωση Masternode</string>
     <string name="transaction_row_status_masternode_update_service">Ανανέωση Masternode</string>
@@ -373,10 +371,21 @@
     <string name="payment_protocol_insufficient_funds_error_title">Ανεπαρκή Χρήματα</string>
     <string name="payment_protocol_insufficient_funds_error_message">Δεν έχετε αρκετά χρήματα για να ολοκληρώσετε αυτή την συναλλαγή</string>
 
-
-    <string name="buy_and_sell_subtitle"> Επιλέξτε μια υπηρεσία για να αγοράσετε και να πουλήσετε Dash.</string>
+    <string name="buy_and_sell_subtitle">Επιλέξτε μια υπηρεσία για αγορά, πώληση, μετατροπή και μεταφορά Dash</string>
     <string name="select_a_service">Επιλέξτε μια Υπηρεσία</string>
     <string name="activity_buy_and_sell_dash_filter">Φίλτρο</string>
     <string name="clear_filter">Καθαρισμός Φίλτρου</string>
+    <string name="select_currency">Επιλέξτε Νόμισμα</string>
     <string name="reason">Λόγος</string>
+    <string name="link_account">Σύνδεση του λογαριασμού σας</string>
+    <string name="buy_no_account_needed">Αγοράστε Dash - Δεν απαιτείται λογαριασμός</string>
+    <string name="your_coinbase_session_has_expired">Η συνεδρία σας στην Coinbase έχει λήξει</string>
+    <string name="please_log_in_to_your_coinbase_account">Συνδεθείτε στο λογαριασμό σας στην Coinbase</string>
+    <string name="log_in">Είσοδος</string>
+
+    <string name="recipient_address">Διεύθυνση πορτοφόλιού</string>
+    <string name="show_clipboard">Εμφάνιση περιεχομένου στο πρόχειρο</string>
+    <string name="tap_to_paste">Πατήστε τη διεύθυνση από το πρόχειρο για να την επικολλήσετε</string>
+    <string name="not_dash_address">Δεν είναι μια έγκυρη διεύθυνση Dash ή URL</string>
+    <string name="send_to_address">Αποστολή στη διεύθυνση</string>
 </resources>

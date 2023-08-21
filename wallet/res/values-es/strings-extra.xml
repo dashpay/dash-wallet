@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Escanear para Enviar</string>
     <string name="scan_to_pay_error_dialog_message">Dirección de Dash o solicitud de URL no válida en el portapapeles:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Dirección de Dash o solicitud de URL no válida en el portapapeles</string>
-    <string name="pay_to_confirm_address">¿Es esta la dirección de Dash a la que deseas enviar el pago?</string>
 
     <string name="receive_title">Recibir</string>
     <string name="receive_enter_amount_message">Especificar la cantidad a recibir</string>
@@ -324,8 +323,6 @@
     <string name="security_high">Alto</string>
     <string name="security_very_high">Muy Alto</string>
     <string name="max">Máximo</string>
-
-    <string name="enter_amount_available">disponible</string>
 
     <string name="skip">salta</string>
     <string name="get_started">Comenza</string>

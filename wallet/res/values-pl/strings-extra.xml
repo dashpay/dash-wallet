@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Skanuj by Wysłać</string>
     <string name="scan_to_pay_error_dialog_message">Niepoprawny adres Dash lub URL zażądany w schowku:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Niepoprawny adres Dash lub URL zażądany w schowku.</string>
-    <string name="pay_to_confirm_address">Chcesz wysłać płatność na ten adres DASH?</string>
 
     <string name="receive_title">Odbierz</string>
     <string name="receive_enter_amount_message">Podaj kwotę do otrzymania</string>
@@ -327,8 +326,6 @@
     <string name="security_high">Wysoki</string>
     <string name="security_very_high">Bardzo Wysoki</string>
     <string name="max">Max</string>
-
-    <string name="enter_amount_available">dostępne</string>
 
     <string name="skip">pomiń</string>
     <string name="get_started">Zacznij</string>

@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Scanner pour envoyer</string>
     <string name="scan_to_pay_error_dialog_message">Adresse Dash invalide, ou URL de requête dans le presse-papiers invalide :\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Le presse-papiers ne contient pas d\'adresse Dash valide ni d\'URL de requête valide.</string>
-    <string name="pay_to_confirm_address">Est-ce l\'adresse Dash à laquelle vous voulez envoyer un paiement ?</string>
 
     <string name="receive_title">Recevoir</string>
     <string name="receive_enter_amount_message">Indiquez le montant à recevoir</string>
@@ -324,8 +323,6 @@
     <string name="security_high">Élevé</string>
     <string name="security_very_high">Très élevé</string>
     <string name="max">Maximum</string>
-
-    <string name="enter_amount_available">disponible</string>
 
     <string name="skip">ignorer</string>
     <string name="get_started">Commencer</string>

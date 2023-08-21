@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">Saldo indisponível durante a reavaliação.</string>
     <string name="exchange_rates_activity_title">Moeda Local</string>
     <string name="exchange_rates_fragment_empty_text">Não foi possível carregar as cotações.</string>
-    <string name="exchange_rate_not_found">Não foi possível encontrar a taxa de câmbio.</string>
     <string name="exchange_rates_fragment_default">(padrão)</string>
     <string name="exchange_rates_fragment_rate">Taxa</string>
     <string name="exchange_rates_fragment_balance">Saldo</string>
@@ -166,7 +165,6 @@
     <string name="transaction_row_status_error_other">Desconhecido</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Em %s às %s</string>
-    <string name="rate_not_available">Não disponível</string>
     <string name="transaction_row_status_masternode_registration">Registro de Masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Atualização de Masternode</string>
     <string name="transaction_row_status_masternode_update_service">Atualização de Masternode</string>
@@ -373,10 +371,21 @@
     <string name="payment_protocol_insufficient_funds_error_title">Saldo Insuficiente</string>
     <string name="payment_protocol_insufficient_funds_error_message">Você não tem fundos suficientes para completar esta transação</string>
 
-
-    <string name="buy_and_sell_subtitle">Selecione um serviço para comprar e vender Dash.</string>
+    <string name="buy_and_sell_subtitle">Selecione um serviço para comprar, vender, converter e transferir Dash</string>
     <string name="select_a_service">Selecione um serviço</string>
     <string name="activity_buy_and_sell_dash_filter">Filtro</string>
     <string name="clear_filter">Limpar Filtro</string>
+    <string name="select_currency">Selecione a moeda</string>
     <string name="reason">Razão</string>
+    <string name="link_account">Conectar sua conta</string>
+    <string name="buy_no_account_needed">Compre Dash · Não é necessário ter uma conta</string>
+    <string name="your_coinbase_session_has_expired">Sua sessão na Coinbase expirou</string>
+    <string name="please_log_in_to_your_coinbase_account">Por favor, faça login em sua conta Coinbase</string>
+    <string name="log_in">Entrar</string>
+
+    <string name="recipient_address">Endereço da carteira</string>
+    <string name="show_clipboard">Exibir conteúdo na área de transferência </string>
+    <string name="tap_to_paste">Toque no endereço da área de transferência para colá-lo</string>
+    <string name="not_dash_address">Endereço Dash inválido ou solicitação de URL inválida</string>
+    <string name="send_to_address">Enviar para Endereço</string>
 </resources>

@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">สแกนเพื่อส่ง</string>
     <string name="scan_to_pay_error_dialog_message">ที่อยู่ของ Dash ไม่ถูกต้อง หรือคำขอ URL ในคลิปบอร์ด:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">ที่อยู่ของ Dash ไม่ถูกต้อง หรือคำขอ URL ในคลิปบอร์ด</string>
-    <string name="pay_to_confirm_address">นี่คือที่อยู่ Dash ที่คุณต้องการส่งการชำระเงินหรือไม่?</string>
 
     <string name="receive_title">ได้รับ</string>
     <string name="receive_enter_amount_message">ระบุจำนวนที่ได้รับ</string>
@@ -318,8 +317,6 @@
     <string name="security_high">สูง</string>
     <string name="security_very_high">สูงมาก</string>
     <string name="max">สูงสุด</string>
-
-    <string name="enter_amount_available">ที่สามารถใช้ได้</string>
 
     <string name="skip">ข้าม</string>
     <string name="get_started">เริ่มต้น</string>

@@ -18,6 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Explorar Dash</string>
     <string name="explore_title">Explorar</string>
+    <string name="explore_subtitle">Compre facilmente com seu DASH em mais de 155.000 locais e comércios online</string>
     <string name="explore_merchants_title">Onde gastar?</string>
     <string name="explore_merchants_subtitle">Encontre comércios que aceitam Dash como pagamento.</string>
     <string name="explore_atms_title">Caixas Eletrônicos</string>

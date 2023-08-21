@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Σαρώστε για να στείλετε</string>
     <string name="scan_to_pay_error_dialog_message">Δεν είναι μια έγκυρη διεύθυνση Dash ή ένα URL που αιτήθηκε στο πρόχειρο:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Δεν είναι μια έγκυρη διεύθυνση Dash ή ένα URL που αιτήθηκε στο πρόχειρο</string>
-    <string name="pay_to_confirm_address">Αυτή είναι η διεύθυνση Dash στην οποία θέλετε να στείλετε την πληρωμή;</string>
 
     <string name="receive_title">Λήψη</string>
     <string name="receive_enter_amount_message">Καθορίστε το ποσό που θα παραληφθεί</string>
@@ -321,8 +320,6 @@
     <string name="security_high">Υψηλά</string>
     <string name="security_very_high">Πολύ Υψηλά</string>
     <string name="max">Μέγιστο</string>
-
-    <string name="enter_amount_available">διαθέσιμο</string>
 
     <string name="skip">παράλειψη</string>
     <string name="get_started">Ξεκινήστε</string>

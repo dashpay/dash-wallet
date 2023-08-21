@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">전송을 위해 스캔합니다</string>
     <string name="scan_to_pay_error_dialog_message">클립보드의 대시 주소 혹은 URL 전송이 유효하지 않습니다:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">클립보드의 대시 주소 혹은 URL 전송이 유효하지 않습니다.</string>
-    <string name="pay_to_confirm_address">이 대시 주소로 송금하시겠습니까?</string>
 
     <string name="receive_title">받기</string>
     <string name="receive_enter_amount_message">받을 금액 특정하기</string>
@@ -318,8 +317,6 @@
     <string name="security_high">높음</string>
     <string name="security_very_high">매우 높음</string>
     <string name="max">최대</string>
-
-    <string name="enter_amount_available">가능</string>
 
     <string name="skip">건너뛰기</string>
     <string name="get_started">시작하기</string>

@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">مسح للإرسال</string>
     <string name="scan_to_pay_error_dialog_message">عنوان داش أو عنوان URL غير صالح في الحافظة:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">عنوان داش أو عنوان URL غير صالح في الحافظة.</string>
-    <string name="pay_to_confirm_address">هل هذا هو عنوان داش الذي تريد إرسال الدفعة إليه؟</string>
 
     <string name="receive_title">إستقبال</string>
     <string name="receive_enter_amount_message">حدد المبلغ المراد استلامه</string>
@@ -333,8 +332,6 @@
     <string name="security_high">مرتفع</string>
     <string name="security_very_high">مرتفع جداً</string>
     <string name="max">الحد الأقصى</string>
-
-    <string name="enter_amount_available">متاح</string>
 
     <string name="skip">تخطي</string>
     <string name="get_started">البدء</string>

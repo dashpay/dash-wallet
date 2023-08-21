@@ -68,6 +68,7 @@
     <string name="learn_more">เรียนรู้เพิ่มเติม</string>
     <string name="something_wrong_title">บางอย่างผิดพลาด!</string>
     <string name="retry_later_message">โปรดลองอีกครั้งในภายหลังหรือติดต่อฝ่ายสนับสนุนของเราเพื่อขอความช่วยเหลือ</string>
+    <string name="between_dash_wallet_and_coinbase">ระหว่าง Dash Wallet และ Coinbase</string>
     <string name="conversion_preview">ตัวอย่างการแปลง</string>
     <string name="you_send">คุณส่ง</string>
     <string name="from_your_coinbase_account">จากบัญชี Coinbase ของคุณ</string>
@@ -114,4 +115,5 @@
     <string name="transfer_dash_failed_msg">มีปัญหาในการโอน Dash ไปยังกระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
     <string name="insufficient_money_to_transfer">จำนวนเหรียญในกระเป๋าเงินนั้นน้อยเกินในการโอน</string>
     <string name="amount_to_transfer">คุณจะได้รับ %s %s %s</string>
+    <string name="amount_to_transfer_dash">คุณจะได้รับ %s</string>
     </resources>

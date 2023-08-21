@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Göndermek için Tara</string>
     <string name="scan_to_pay_error_dialog_message">Panodaki Dash Adresi veya URL isteği geçerli değil:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Panodaki Dash Adresi veya URL isteği geçerli değil.</string>
-    <string name="pay_to_confirm_address">Bu, ödeme göndermek istediğiniz Dash adresi mi?</string>
 
     <string name="receive_title">Al</string>
     <string name="receive_enter_amount_message">Alınacak tutarı belirtin</string>
@@ -321,8 +320,6 @@
     <string name="security_high">Yüksek</string>
     <string name="security_very_high">Çok Yüksek</string>
     <string name="max">Maksimum</string>
-
-    <string name="enter_amount_available">mevcut</string>
 
     <string name="skip">atla</string>
     <string name="get_started">Başla</string>

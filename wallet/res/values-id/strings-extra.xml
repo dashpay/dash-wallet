@@ -58,7 +58,6 @@
     <string name="scan_to_pay_error_dialog_title">Pindai untuk mengirim</string>
     <string name="scan_to_pay_error_dialog_message">Bukan Alamat Dash atau permintaan URL di clipboard yang valid:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Bukan Alamat Dash atau permintaan URL di clipboard yang valid.</string>
-    <string name="pay_to_confirm_address">Apakah ini alamat Dash yang ingin Anda kirimi pembayaran?</string>
 
     <string name="receive_title">Terima</string>
     <string name="receive_enter_amount_message">Tentukan jumlah yang akan diterima</string>
@@ -305,8 +304,6 @@
     <string name="security_high">Tinggi</string>
     <string name="security_very_high">Sangat tinggi</string>
     <string name="max">Max</string>
-
-    <string name="enter_amount_available">tersedia</string>
 
     <string name="skip">lewati</string>
     <string name="get_started">Memulai</string>

@@ -18,7 +18,6 @@
     <string name="wallet_balance_fragment_replaying">Балансът е недостъпен по време на проиграването.</string>
     <string name="exchange_rates_activity_title">Местна валута</string>
     <string name="exchange_rates_fragment_empty_text">Не може да зареди обеменните курсове.</string>
-    <string name="exchange_rate_not_found">Не може да намери обменните курсове.</string>
     <string name="exchange_rates_fragment_default">(по подразбиране)</string>
     <string name="exchange_rates_fragment_rate">Курс</string>
     <string name="exchange_rates_fragment_balance">Баланс</string>
@@ -165,7 +164,6 @@
     <string name="transaction_row_status_error_other">Непознат</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">На %s от %s</string>
-    <string name="rate_not_available">Не е налично</string>
     <string name="transaction_row_status_masternode_registration">Masternode регистрирация</string>
     <string name="transaction_row_status_masternode_update_registrar">Masternode обновяване</string>
     <string name="transaction_row_status_masternode_update_service">Masternode обновяване</string>
@@ -360,6 +358,6 @@
     <string name="payment_protocol_insufficient_funds_error_title">Недостатъчни средства</string>
     <string name="payment_protocol_insufficient_funds_error_message">Нямате достатъчно средства за да извършите тази транзакция</string>
 
-
     <string name="activity_buy_and_sell_dash_filter">Филтър</string>
-    </resources>
+    <string name="send_to_address">Изпрати до адрес</string>
+</resources>

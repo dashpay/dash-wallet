@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Skenovať a poslať</string>
     <string name="scan_to_pay_error_dialog_message">V schránke nie je platná Dash adresa, alebo URL požiadavka:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">V schránke nie je platná Dash adresa, alebo URL požiadavka.</string>
-    <string name="pay_to_confirm_address">Je toto Dash adresa, na ktorú chcete poslať platbu?</string>
 
     <string name="receive_title">Prijať</string>
     <string name="receive_enter_amount_message">Zadajte čiastku, ktorú chcete prijať</string>
@@ -327,8 +326,6 @@
     <string name="security_high">Vysoká</string>
     <string name="security_very_high">Veľmi vysoká</string>
     <string name="max">Max</string>
-
-    <string name="enter_amount_available">dostupné</string>
 
     <string name="skip">preskočiť</string>
     <string name="get_started">Začať</string>

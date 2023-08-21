@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">الرصيد غير متاح في حالة إعادة التشغيل.</string>
     <string name="exchange_rates_activity_title">العملة المحلية</string>
     <string name="exchange_rates_fragment_empty_text">تعذر تحميل أسعار الصرف.</string>
-    <string name="exchange_rate_not_found">تعذر العثور على سعر الصرف.</string>
     <string name="exchange_rates_fragment_default">(افتراضي)</string>
     <string name="exchange_rates_fragment_rate">نسبة</string>
     <string name="exchange_rates_fragment_balance">رصيد</string>
@@ -167,7 +166,6 @@
     <string name="transaction_row_status_error_other">مجهول</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">على%s في%s</string>
-    <string name="rate_not_available">غير متاح</string>
     <string name="transaction_row_status_masternode_registration">تسجيل ماسترنود</string>
     <string name="transaction_row_status_masternode_update_registrar">تحديث ماسترنود</string>
     <string name="transaction_row_status_masternode_update_service">تحديث ماسترنود</string>
@@ -374,10 +372,21 @@
     <string name="payment_protocol_insufficient_funds_error_title">رصيد غير كاف</string>
     <string name="payment_protocol_insufficient_funds_error_message">ليس لديك رصيد كافي لإتمام هذه المعاملة</string>
 
-
-    <string name="buy_and_sell_subtitle">حدد خدمة لبيع وشراء داش.</string>
+    <string name="buy_and_sell_subtitle">اختر خدمة لشراء، بيع، تحويل، ارسال داش </string>
     <string name="select_a_service">اختر خدمة</string>
     <string name="activity_buy_and_sell_dash_filter">منقي</string>
     <string name="clear_filter">ازل فلتر البحث</string>
+    <string name="select_currency">اختر العملة</string>
     <string name="reason">سبب</string>
+    <string name="link_account">قم بايصال حسابك</string>
+    <string name="buy_no_account_needed">قم بشراء داش - لا حساب لازم</string>
+    <string name="your_coinbase_session_has_expired">تم انتهاء صلاحية جلسة اتصالك بكوين اكس </string>
+    <string name="please_log_in_to_your_coinbase_account">الرجاء تسجيل الدخول الى حساب كوين اكس </string>
+    <string name="log_in">تسجيل الدخول </string>
+
+    <string name="recipient_address">عنوان المحفظة </string>
+    <string name="show_clipboard">اظهر المحتوى في لوحة الملاحظات </string>
+    <string name="tap_to_paste">اضغط على العنوان من لوحة الملاحظات للصقه</string>
+    <string name="not_dash_address">ليس عنوان داش صالح او الاتصال عبر الرابط غير صالح</string>
+    <string name="send_to_address">إرسال إلى عنوان</string>
 </resources>
