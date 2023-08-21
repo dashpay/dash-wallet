@@ -187,13 +187,6 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 showProfileSection(dashPayProfile)
             }
         }
-
-        // observe our profile
-        editProfileViewModel.dashPayProfile.observe(viewLifecycleOwner) { dashPayProfile ->
-            if (dashPayProfile != null) {
-                showProfileSection(dashPayProfile)
-            }
-        }
         // track the status of broadcast changes to our profile
         editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner) { state ->
             if (state != null) {
