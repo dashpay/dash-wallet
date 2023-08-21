@@ -88,6 +88,10 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         private set
     var didAuthorize: Boolean = false
 
+    private val requirePinForBalance by lazy {
+        requireArguments().getBoolean(ARG_REQUIRE_PIN_MAX_BUTTON)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -132,8 +136,12 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
             }
         }
 
-        viewModel.canContinue.observe(viewLifecycleOwner) {
-            binding.continueBtn.isEnabled = it
+        viewModel.canContinue.observe(viewLifecycleOwner) { canContinue ->
+            binding.continueBtn.isEnabled = if (!didAuthorize && requirePinForBalance) {
+                viewModel.amount.value?.isPositive ?: false
+            } else {
+                canContinue
+            }
         }
     }
 
@@ -203,7 +211,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
     }
 
     private suspend fun onMaxAmountButtonClick() {
-        if (!didAuthorize && requireArguments().getBoolean(ARG_REQUIRE_PIN_MAX_BUTTON)) {
+        if (!didAuthorize && requirePinForBalance) {
             authManager.authenticate(requireActivity(), false) ?: return
             didAuthorize = true
         }
