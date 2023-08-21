@@ -396,6 +396,7 @@ public class WalletApplication extends MultiDexApplication
             authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
             authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
             authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
+            authenticationGroupExtension.setWallet(wallet);
         }
         WalletEx walletEx = (WalletEx) wallet;
         if (walletEx.getCoinJoin() != null) {

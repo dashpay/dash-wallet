@@ -16,22 +16,19 @@
  */
 package de.schildbach.wallet.ui.dashpay.notification
 
-import android.view.LayoutInflater
-import android.view.ViewGroup
 import de.schildbach.wallet.data.NotificationItem
-import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.notification_image_row.view.*
-
-class ImageViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-        NotificationViewHolder(R.layout.notification_image_row, inflater, parent) {
+import de.schildbach.wallet_test.databinding.NotificationImageRowBinding
+@Deprecated("this may no longer be needed")
+class ImageViewHolder(val binding: NotificationImageRowBinding) :
+        NotificationViewHolder(binding.root) {
 
     override fun bind(notificationItem: NotificationItem, vararg args: Any) {
         bind(args[0] as Int, args[1] as Int)
     }
 
     private fun bind(textResId: Int, imageResId: Int) {
-        itemView.apply {
-            description.text = context.getString(textResId)
+        binding.apply {
+            description.text = itemView.context.getString(textResId)
             image.setImageResource(imageResId)
         }
     }

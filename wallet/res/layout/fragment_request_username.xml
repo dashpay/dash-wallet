@@ -108,6 +108,7 @@
     <Button
         android:id="@+id/request_username_button"
         style="@style/Button.Primary.Large.Blue"
+        android:layout_height="wrap_content"
         android:layout_width="match_parent"
         android:layout_height="46dp"
         android:layout_marginHorizontal="15dp"

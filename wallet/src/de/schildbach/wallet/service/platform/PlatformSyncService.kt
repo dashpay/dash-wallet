@@ -73,6 +73,7 @@ import org.slf4j.LoggerFactory
 import java.util.HashMap
 import java.util.HashSet
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.random.Random
@@ -194,7 +195,7 @@ class PlatformSynchronizationService @Inject constructor(
     override suspend fun updateContactRequests() {
 
         // if there is no wallet or identity, then skip the remaining steps of the update
-        if (platformRepo.hasIdentity || walletApplication.wallet == null) {
+        if (!platformRepo.hasIdentity || walletApplication.wallet == null) {
             return
         }
 
@@ -1018,7 +1019,7 @@ class PlatformSynchronizationService @Inject constructor(
         log.info("PreDownloadBlocks: complete")
         if (config.areNotificationsDisabled()) {
             // this will enable notifications, since platform information has been synced
-            config.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, System.currentTimeMillis())
+            config.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, System.currentTimeMillis() - TimeUnit.DAYS.toMillis(7))
         }
         preDownloadBlocksFuture?.set(true)
         preDownloadBlocks.set(false)

@@ -23,6 +23,7 @@ import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
@@ -30,7 +31,6 @@ import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
-import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
@@ -53,17 +53,16 @@ import javax.inject.Inject
 @HiltViewModel
 open class DashPayViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
+    private val walletUIConfig: WalletUIConfig,
     private val analytics: AnalyticsService,
     private val platformRepo: PlatformRepo,
     private val blockchainState: BlockchainStateDao,
     dashPayProfileDao: DashPayProfileDao,
     blockchainIdentityDataDao: BlockchainIdentityDataDao,
-    private val userAlert: UserAlertDao,
     private val invitations: InvitationsDao,
     val platformSyncService: PlatformSyncService,
     private val platformBroadcastService: PlatformBroadcastService,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
-    private val userAlertDao: UserAlertDao,
     private val dashPayConfig: DashPayConfig
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
@@ -76,11 +75,13 @@ open class DashPayViewModel @Inject constructor(
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String?>()
 
-    val isVotingFlowEnabled: Boolean = false
-
-    val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope, userAlertDao)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformSyncService)
-    val frequentContactsLiveData = FrequentContactsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
+    val frequentContactsLiveData = FrequentContactsLiveData(
+        walletApplication,
+        platformRepo,
+        platformSyncService,
+        viewModelScope
+    )
     val blockchainStateData = blockchainState.load()
 
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
@@ -98,6 +99,8 @@ open class DashPayViewModel @Inject constructor(
 
     private var timerUsernameSearch: AnalyticsTimer? = null
 
+    suspend fun isVotingFlowEnabled(): Boolean =
+        walletUIConfig.getPreference(WalletUIConfig.VOTE_DASH_PAY_ENABLED) ?: false
     suspend fun isDashPayInfoShown(): Boolean =
         dashPayConfig.get(DashPayConfig.HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN) ?: false
 
@@ -149,7 +152,11 @@ open class DashPayViewModel @Inject constructor(
         liveData(context = searchUsernamesJob + Dispatchers.IO) {
             emit(Resource.loading(null))
             try {
-                val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_SEARCH_QUERY)
+                val timerIsLock = AnalyticsTimer(
+                    analytics,
+                    log,
+                    AnalyticsConstants.Process.PROCESS_USERNAME_SEARCH_QUERY
+                )
                 var result = platformRepo.searchUsernames(search.text, false, search.limit)
                 result = result.filter { !search.excludeIds.contains(it.dashPayProfile.userId) }
                 if (result.isNotEmpty()) {
@@ -194,10 +201,6 @@ open class DashPayViewModel @Inject constructor(
 
     fun searchContacts(text: String, orderBy: UsernameSortOrderBy) {
         contactsLiveData.value = UsernameSearch(text, orderBy)
-    }
-
-    fun searchNotifications(text: String) {
-        notificationsLiveData.query = text
     }
 
     fun usernameDoneAndDismiss() {
@@ -301,27 +304,14 @@ open class DashPayViewModel @Inject constructor(
         return msg
     }
 
-    fun dismissUserAlert(alertId: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            userAlert.dismiss(alertId)
-            notificationsLiveData.onContactsUpdated()
-        }
-    }
-
     suspend fun getInviteHistory() = invitations.loadAll()
 
     fun contactRequestsTo(userId: String): LiveData<List<DashPayContactRequest>> =
         dashPayContactRequestDao.observeToOthers(userId).distinctUntilChanged().asLiveData()
 
-    suspend fun getLastNotificationTime(): Long =
-        dashPayConfig.get(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME) ?: 0
-
-    suspend fun setLastNotificationTime(time: Long) =
-        dashPayConfig.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, time)
-
     private inner class UserSearch(
         val text: String,
         val limit: Int = 100,
-        val excludeIds: ArrayList<String> = arrayListOf(),
+        val excludeIds: ArrayList<String> = arrayListOf()
     )
 }

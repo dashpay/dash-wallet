@@ -38,7 +38,7 @@ import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
-import de.schildbach.wallet.ui.dashpay.NotificationsActivity
+import de.schildbach.wallet.ui.dashpay.NotificationsFragment
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
@@ -110,11 +110,12 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
         binding.homeToolbar.setOnClickListener { scrollToTop() }
         binding.notificationBell.setOnClickListener {
-            startActivity(
-                NotificationsActivity.createIntent(
-                    requireContext(),
-                    NotificationsActivity.MODE_NOTIFICATIONS
-                )
+            findNavController().navigate(
+                R.id.showNotificationsFragment,
+                bundleOf("mode" to NotificationsFragment.MODE_NOTIFICATIONS),
+                NavOptions.Builder()
+                    .setEnterAnim(R.anim.slide_in_right)
+                    .build(),
             )
         }
         binding.dashpayUserAvatar.setOnClickListener {
