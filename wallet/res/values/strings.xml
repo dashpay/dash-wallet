@@ -482,4 +482,5 @@
     <string name="quick_vote">Quick Voting</string>
     <string name="quick_vote_subtitle">By tapping the "Vote for All" button, you will automatically vote for all of the filtered usernames (%d) that were submitted first</string>
     <string name="vote_for_all">Vote for All</string>
+    <string name="voting_dash_pay">Voting Dash Pay</string>
 </resources>
