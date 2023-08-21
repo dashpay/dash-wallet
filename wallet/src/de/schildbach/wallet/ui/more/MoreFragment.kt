@@ -161,19 +161,6 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         initViewModel()
-
-        lifecycleScope.launchWhenResumed {
-            mainActivityViewModel.getRequestedUsername().also { username ->
-                if (username.isNotEmpty()) {
-                    binding.joinDashpayContainer.visibility = View.GONE
-                    binding.requestedUsernameContainer.visibility = View.VISIBLE
-                    binding.requestedUsernameTitle.text = username
-                } else {
-                    binding.joinDashpayContainer.visibility = View.VISIBLE
-                    binding.requestedUsernameContainer.visibility = View.GONE
-                }
-            }
-        }
     }
 
     private fun startBuyAndSellActivity() {
@@ -256,19 +243,23 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) {
-            binding.joinDashpayContainer.isVisible = it
+            binding.dashpayContainer.isVisible = it
         }
+
+
+
 
         createInviteViewModel.isAbleToPerformInviteAction.observe(viewLifecycleOwner) {
             showInviteSection(it)
         }
     }
 
+
     private fun showInviteSection(showInviteSection: Boolean) {
         this.showInviteSection = showInviteSection
 
-        //show the invite section only after the profile section is visible
-        //to avoid flickering
+        // show the invite section only after the profile section is visible
+        // to avoid flickering
         if (binding.editUpdateSwitcher.isVisible) {
             binding.invite.isVisible = showInviteSection
         }
@@ -291,7 +282,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             editProfileViewModel.logEvent(AnalyticsConstants.UsersContacts.PROFILE_EDIT_MORE)
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
-        //if the invite section is not visible, show/hide it
+        // if the invite section is not visible, show/hide it
         if (!binding.invite.isVisible) {
             binding.invite.isVisible = showInviteSection
         }
@@ -301,5 +292,17 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         super.onResume()
         // Developer Mode Feature
         binding.invite.isVisible = showInviteSection
+        lifecycleScope.launchWhenResumed {
+            mainActivityViewModel.getRequestedUsername().also { username ->
+                if (username.isNotEmpty()) {
+                    binding.joinDashpayContainer.visibility = View.GONE
+                    binding.requestedUsernameContainer.visibility = View.VISIBLE
+                    binding.requestedUsernameTitle.text = username
+                } else {
+                    binding.joinDashpayContainer.visibility = View.VISIBLE
+                    binding.requestedUsernameContainer.visibility = View.GONE
+                }
+            }
+        }
     }
 }
