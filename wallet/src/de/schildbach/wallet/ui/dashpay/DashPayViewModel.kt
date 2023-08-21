@@ -76,9 +76,6 @@ open class DashPayViewModel @Inject constructor(
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String?>()
 
-    val isVotingFlowEnabled: Boolean = true
-
-    val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope, userAlertDao)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformSyncService)
     val frequentContactsLiveData = FrequentContactsLiveData(
         walletApplication,
