@@ -96,15 +96,18 @@ class EnterAmountViewModel @Inject constructor(
         }
 
     init {
+        // User picked a currency on the Enter Amount screen
         _selectedCurrencyCode
             .filterNotNull()
             .flatMapLatest(exchangeRates::observeExchangeRate)
             .onEach(_selectedExchangeRate::postValue)
             .launchIn(viewModelScope)
 
-        viewModelScope.launch {
-            selectedCurrencyCode = walletUIConfig.getExchangeCurrencyCode()
-        }
+        // User changed the currency in Settings
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .onEach { _selectedCurrencyCode.value = it }
+            .launchIn(viewModelScope)
     }
 
     fun setMaxAmount(coin: Coin) {
@@ -118,5 +121,11 @@ class EnterAmountViewModel @Inject constructor(
 
     suspend fun getSelectedCurrencyCode(): String {
         return walletUIConfig.getExchangeCurrencyCode()
+    }
+
+    fun resetCurrency() {
+        viewModelScope.launch {
+            _selectedCurrencyCode.value = walletUIConfig.getExchangeCurrencyCode()
+        }
     }
 }
