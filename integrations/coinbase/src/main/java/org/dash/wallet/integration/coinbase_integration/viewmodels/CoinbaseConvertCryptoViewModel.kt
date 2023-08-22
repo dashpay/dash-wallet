@@ -102,7 +102,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
         val tradesRequest = TradesRequest(
             valueToConvert.toFormattedStringNoCode(),
-            walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY) ?: Constants.USD_CURRENCY,
+            walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY) ?: Constants.DEFAULT_EXCHANGE_CURRENCY,
             source_asset = sourceAsset,
             target_asset = targetAsset
         )
