@@ -61,6 +61,7 @@ dependencies {
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "com.google.android.material:material:$materialVersion"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
+    implementation "androidx.datastore:datastore-preferences:$datastoreVersion"
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"

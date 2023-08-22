@@ -22,9 +22,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import de.schildbach.wallet.data.ServiceStatus
 import de.schildbach.wallet.data.ServiceType
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -33,6 +36,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -49,6 +53,7 @@ import javax.inject.Inject
 /**
  * @author Eric Britten
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class BuyAndSellViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
@@ -59,7 +64,8 @@ class BuyAndSellViewModel @Inject constructor(
     private val topperClient: TopperClient,
     private val networkState: NetworkStateInt,
     exchangeRates: ExchangeRatesProvider,
-    private val walletData: WalletDataProvider
+    private val walletData: WalletDataProvider,
+    private val walletUIConfig: WalletUIConfig
 ): ViewModel() {
 
     companion object {
@@ -85,7 +91,9 @@ class BuyAndSellViewModel @Inject constructor(
             topperClient.hasValidCredentials
 
     init {
-        exchangeRates.observeExchangeRate(config.exchangeCurrencyCode!!)
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .flatMapLatest(exchangeRates::observeExchangeRate)
             .onEach { exchangeRate ->
                 currentExchangeRate = exchangeRate
 
@@ -245,9 +253,9 @@ class BuyAndSellViewModel @Inject constructor(
         )
     }
 
-    fun topperBuyUrl(walletName: String): String {
+    suspend fun topperBuyUrl(walletName: String): String {
         return topperClient.getOnRampUrl(
-            config.exchangeCurrencyCode!!,
+            walletUIConfig.getExchangeCurrencyCode(),
             walletData.freshReceiveAddress(),
             walletName
         )

@@ -22,6 +22,7 @@ import android.content.ClipboardManager
 import android.content.Intent
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
@@ -33,6 +34,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
@@ -54,6 +56,7 @@ enum class NavigationRequest {
     BackupPassphrase, RestoreWallet, BuyDash, SendReport
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class CrowdNodeViewModel @Inject constructor(
     private val globalConfig: Configuration,
@@ -64,7 +67,8 @@ class CrowdNodeViewModel @Inject constructor(
     exchangeRatesProvider: ExchangeRatesProvider,
     val analytics: AnalyticsService,
     private val blockchainStateProvider: BlockchainStateProvider,
-    private val systemActions: SystemActionsService
+    private val systemActions: SystemActionsService,
+    walletUIConfig: WalletUIConfig
 ) : ViewModel() {
     companion object {
         const val URL_ARG = "url"
@@ -133,8 +137,9 @@ class CrowdNodeViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        exchangeRatesProvider
-            .observeExchangeRate(globalConfig.exchangeCurrencyCode!!)
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
 

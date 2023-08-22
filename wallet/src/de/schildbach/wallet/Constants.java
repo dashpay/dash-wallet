@@ -173,9 +173,6 @@ public final class Constants {
     /** User-agent to use for network access. */
     public static final String USER_AGENT = "Dash Wallet";
 
-    /** Default currency to use if all default mechanisms fail. */
-    public static final String DEFAULT_EXCHANGE_CURRENCY = "USD";
-
     /** Recipient e-mail address for reports. */
     public static final String REPORT_EMAIL = BuildConfig.SUPPORT_EMAIL;
 

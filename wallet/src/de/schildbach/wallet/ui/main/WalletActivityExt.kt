@@ -31,6 +31,7 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI.onNavDestinationSelected
 import androidx.navigation.ui.NavigationUI.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -119,6 +120,38 @@ object WalletActivityExt {
             }
             // Other actions, e.g. Dialog action
             else -> {}
+        }
+    }
+
+    /**
+     * Show a Dialog and if user confirms it, set the default fiat currency exchange rate using
+     * the country code to generate a Locale and get the currency code from it.
+     *
+     * @param newCurrencyCode currency code.
+     */
+    fun WalletActivity.showFiatCurrencyChangeDetectedDialog(
+        viewModel: MainViewModel,
+        currentCurrencyCode: String,
+        newCurrencyCode: String
+    ) {
+        AdaptiveDialog.create(
+            R.drawable.ic_warning,
+            getString(R.string.menu_local_currency),
+            getString(
+                R.string.change_exchange_currency_code_message,
+                newCurrencyCode,
+                currentCurrencyCode
+            ),
+            getString(R.string.leave_as, currentCurrencyCode),
+            getString(R.string.change_to, newCurrencyCode)
+        ).show(this) { result: Boolean? ->
+            if (result != null && result) {
+                viewModel.setExchangeCurrencyCodeDetected(newCurrencyCode)
+                val balance = walletData.getWalletBalance()
+                WalletBalanceWidgetProvider.updateWidgets(this, balance)
+            } else {
+                viewModel.setExchangeCurrencyCodeDetected(null)
+            }
         }
     }
 

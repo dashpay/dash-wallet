@@ -264,7 +264,7 @@ Dash Wallet uses [dashj](https://github.com/dashpay/dashj) for Dash specific log
 ### EXCHANGE RATES
 
 Dash Wallet has four sources for exchange rates
-- Source 1: Dash Retail - https://rates2.dashretail.org/rates?source=dashretail
+- Source 1: CTX - https://rates.ctx.com/rates?source=ctx (former Dash Retail)
 - Source 2: *Currently disabled* - Spark
 - Source 3: *Currently disabled* - BitcoinAverage (BTC/all), CryptoCompare(DASH/BTC), DashCasa(DASH/VES)
 - Source 4: BitPay (BTC/all), Dash Central(DASH/BTC), Poloniex (DASH/BTC), Local Bitcoins (BTC/VES)

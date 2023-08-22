@@ -1,11 +1,10 @@
 package de.schildbach.wallet.rates;
 
-import androidx.annotation.Nullable;
-
 import com.squareup.moshi.Moshi;
 
 import de.schildbach.wallet.adapter.BigDecimalAdapter;
 import org.dash.wallet.common.data.entity.ExchangeRate;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +22,7 @@ public class DashRetailClient extends RetrofitClient implements ExchangeRatesCli
 
     public static DashRetailClient getInstance() {
         if (instance == null) {
-            instance = new DashRetailClient("https://rates2.dashretail.org/");
+            instance = new DashRetailClient("https://rates.ctx.com/"); // Former https://rates2.dashretail.org/
         }
         return instance;
     }
@@ -38,7 +37,7 @@ public class DashRetailClient extends RetrofitClient implements ExchangeRatesCli
         service = retrofit.create(DashRetailService.class);
     }
 
-    @Nullable
+    @NotNull
     @Override
     public List<ExchangeRate> getRates() throws Exception {
         Response<List<DashRetailRate>> response = service.getRates().execute();
@@ -59,8 +58,8 @@ public class DashRetailClient extends RetrofitClient implements ExchangeRatesCli
     }
 
     private interface DashRetailService {
-        @GET("rates?source=dashretail")
+        @GET("rates?source=ctx")
         Call<List<DashRetailRate>> getRates();
     }
-
 }
+

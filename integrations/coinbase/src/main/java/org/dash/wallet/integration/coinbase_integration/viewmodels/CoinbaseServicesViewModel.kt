@@ -30,6 +30,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.unwrap
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
@@ -48,6 +49,7 @@ class CoinbaseServicesViewModel @Inject constructor(
     val exchangeRatesProvider: ExchangeRatesProvider,
     private val preferences: Configuration,
     private val config: CoinbaseConfig,
+    private val walletUIConfig: WalletUIConfig,
     networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
@@ -79,7 +81,9 @@ class CoinbaseServicesViewModel @Inject constructor(
             .map { _balanceUIState.value?.copy(balance = Coin.valueOf(it ?: 0)) }
             .filterNotNull()
             .flatMapLatest { state ->
-                exchangeRatesProvider.observeExchangeRate(preferences.exchangeCurrencyCode!!)
+                walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+                    .filterNotNull()
+                    .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
                     .map { exchangeRate ->
                         val fiatBalance = exchangeRate?.let {
                             val rate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRate.fiat)

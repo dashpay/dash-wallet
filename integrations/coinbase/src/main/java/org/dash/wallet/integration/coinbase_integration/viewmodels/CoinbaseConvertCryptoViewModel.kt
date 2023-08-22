@@ -23,17 +23,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFormattedStringNoCode
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
@@ -43,8 +42,8 @@ import javax.inject.Inject
 @HiltViewModel
 class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
-    private val userPreference: Configuration,
     private val config: CoinbaseConfig,
+    private val walletUIConfig: WalletUIConfig,
     private val walletDataProvider: WalletDataProvider,
     var exchangeRates: ExchangeRatesProvider,
     networkState: NetworkStateInt,
@@ -103,7 +102,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
         val tradesRequest = TradesRequest(
             valueToConvert.toFormattedStringNoCode(),
-            userPreference.exchangeCurrencyCode!!,
+            walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY) ?: Constants.DEFAULT_EXCHANGE_CURRENCY,
             source_asset = sourceAsset,
             target_asset = targetAsset
         )
@@ -154,7 +153,9 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SELECT_COIN, mapOf())
 
         return when (
-            val response = coinBaseRepository.getUserAccounts(userPreference.exchangeCurrencyCode!!)
+            val response = coinBaseRepository.getUserAccounts(
+                walletUIConfig.getExchangeCurrencyCode()
+            )
         ) {
             is ResponseResource.Success -> response.value
             else -> listOf()

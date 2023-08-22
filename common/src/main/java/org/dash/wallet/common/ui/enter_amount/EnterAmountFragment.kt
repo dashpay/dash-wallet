@@ -101,8 +101,8 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         binding.amountView.showResultContainer = args.getBoolean(ARG_SHOW_AMOUNT_RESULT_CONTAINER)
         binding.currencyOptions.isVisible = args.getBoolean(ARG_CURRENCY_OPTIONS_PICKER_VISIBLE)
 
-        args.getString(ARG_CURRENCY_CODE)?.let { rateCurrencyCode ->
-            viewModel.selectedCurrencyCode = rateCurrencyCode
+        args.getString(ARG_CURRENCY_CODE)?.let {
+            viewModel.selectedCurrencyCode = it
         }
 
         val dashToFiat = args.getBoolean(ARG_DASH_TO_FIAT)
@@ -192,10 +192,12 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         }
 
         binding.amountView.setOnCurrencyToggleClicked {
-            ExchangeRatesDialog(viewModel.selectedCurrencyCode) { rate, _, dialog ->
-                viewModel.selectedCurrencyCode = rate.currencyCode
-                dialog.dismiss()
-            }.show(requireActivity())
+            lifecycleScope.launch {
+                ExchangeRatesDialog(viewModel.getSelectedCurrencyCode()) { rate, _, dialog ->
+                    viewModel.selectedCurrencyCode = rate.currencyCode
+                    dialog.dismiss()
+                }.show(requireActivity())
+            }
         }
 
         binding.amountView.setOnDashToFiatChanged { isDashToFiat ->

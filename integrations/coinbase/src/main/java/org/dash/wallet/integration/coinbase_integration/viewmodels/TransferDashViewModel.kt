@@ -29,6 +29,7 @@ import org.dash.wallet.integration.coinbase_integration.model.CoinbaseTransactio
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
 import org.dash.wallet.integration.coinbase_integration.model.TransactionType
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.*
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
@@ -48,7 +49,8 @@ class TransferDashViewModel @Inject constructor(
     var exchangeRates: ExchangeRatesProvider,
     networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService,
-    private val transactionMetadataProvider: TransactionMetadataProvider
+    private val transactionMetadataProvider: TransactionMetadataProvider,
+    private val walletUIConfig: WalletUIConfig
 ) : ViewModel() {
 
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
@@ -60,7 +62,7 @@ class TransferDashViewModel @Inject constructor(
         get() = _dashBalanceInWalletState
 
 
-    private var withdrawalLimitCurrency = MutableStateFlow(config.exchangeCurrencyCode)
+    private var withdrawalLimitCurrency = MutableStateFlow<String?>(null)
     private var exchangeRate: ExchangeRate? = null
 
     val onAddressCreationFailedCallback = SingleLiveEvent<Unit>()
@@ -90,7 +92,7 @@ class TransferDashViewModel @Inject constructor(
     val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
     var minAllowedSwapDashCoin: Coin = Coin.ZERO
-    var minFaitAmount:Fiat = Fiat.valueOf(config.exchangeCurrencyCode, 0)
+    var minFiatAmount = Fiat.valueOf(Constants.USD_CURRENCY, 0)
 
     private var maxForDashCoinBaseAccount: Coin = Coin.ZERO
 
@@ -99,6 +101,11 @@ class TransferDashViewModel @Inject constructor(
         getUserAccountAddress()
         walletDataProvider.observeBalance()
             .onEach(_dashBalanceInWalletState::postValue)
+            .launchIn(viewModelScope)
+
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .onEach { minFiatAmount = Fiat.valueOf(it, minFiatAmount.value) }
             .launchIn(viewModelScope)
 
         withdrawalLimitCurrency
@@ -150,10 +157,10 @@ class TransferDashViewModel @Inject constructor(
         minAllowedSwapDashCoin = coin
 
         val formattedAmount = GenericUtils.formatFiatWithoutComma(minFaitValue.toString())
-        minFaitAmount = try {
-            Fiat.parseFiat(config.exchangeCurrencyCode, formattedAmount)
+        minFiatAmount = try {
+            Fiat.parseFiat(minFiatAmount.currencyCode, formattedAmount)
         } catch (x: Exception) {
-            Fiat.valueOf(config.exchangeCurrencyCode, 0)
+            Fiat.valueOf(minFiatAmount.currencyCode, 0)
         }
     }
 

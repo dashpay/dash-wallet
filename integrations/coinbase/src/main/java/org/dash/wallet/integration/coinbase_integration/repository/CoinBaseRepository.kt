@@ -23,8 +23,8 @@ import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.safeApiCall
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
@@ -41,8 +41,8 @@ import javax.inject.Inject
 class CoinBaseRepository @Inject constructor(
     private val servicesApi: CoinBaseServicesApi,
     private val authApi: CoinBaseAuthApi,
-    private val userPreferences: Configuration,
     private val config: CoinbaseConfig,
+    private val walletUIConfig: WalletUIConfig,
     private val placeBuyOrderMapper: PlaceBuyOrderMapper,
     private val swapTradeMapper: SwapTradeMapper,
     private val commitBuyOrderMapper: CommitBuyOrderMapper,
@@ -198,7 +198,9 @@ class CoinBaseRepository @Inject constructor(
         val userAccountData = userAccountInfo.firstOrNull {
             it.balance?.currency?.equals(Constants.DASH_CURRENCY) ?: false
         }
-        val exchangeRates = userPreferences.exchangeCurrencyCode?.let { servicesApi.getExchangeRates(it)?.data }
+
+        val currencyCode = walletUIConfig.getExchangeCurrencyCode()
+        val exchangeRates = servicesApi.getExchangeRates(currencyCode)?.data
 
         return@safeApiCall userAccountData?.let {
             val currencyToDashExchangeRate = exchangeRates?.rates?.get(Constants.DASH_CURRENCY).orEmpty()

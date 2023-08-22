@@ -2,15 +2,15 @@ package de.schildbach.wallet.rates
 
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.data.CurrencyInfo
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.slf4j.LoggerFactory
 import java.util.*
-import java.util.concurrent.Executor
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -25,7 +25,6 @@ class ExchangeRatesRepository @Inject constructor(
         private val UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30)
     }
 
-    private val executor: Executor
     private val exchangeRatesClients: Deque<ExchangeRatesClient> = ArrayDeque()
 
     private var lastUpdated: Long = 0
@@ -34,9 +33,9 @@ class ExchangeRatesRepository @Inject constructor(
     @JvmField
     var hasError = MutableLiveData<Boolean>()
     private var isRefreshing = false
+    private val refreshScope = CoroutineScope(Dispatchers.IO)
 
     init {
-        executor = Executors.newSingleThreadExecutor()
         populateExchangeRatesStack()
     }
 
@@ -52,20 +51,26 @@ class ExchangeRatesRepository @Inject constructor(
         if (!shouldRefresh()) {
             return
         }
+
         if (exchangeRatesClients.isEmpty()) {
             populateExchangeRatesStack()
         }
+
         if (!forceRefresh && isRefreshing) {
             return
         }
+
         isRefreshing = true
         val exchangeRatesClient = exchangeRatesClients.pop()
         isLoading.postValue(true)
-        executor.execute {
-            val rates: List<ExchangeRate>?
+
+        refreshScope.launch {
             try {
-                rates = exchangeRatesClient.rates
-                if (rates != null && rates.isNotEmpty()) {
+                val rates = exchangeRatesClient.rates.filterNot {
+                    CurrencyInfo.hasObsoleteCurrency(it.currencyCode)
+                }
+
+                if (rates.isNotEmpty()) {
                     exchangeRatesDao.insertAll(rates)
                     lastUpdated = System.currentTimeMillis()
                     populateExchangeRatesStack()
@@ -90,7 +95,7 @@ class ExchangeRatesRepository @Inject constructor(
         }
     }
 
-    private fun handleRefreshError() {
+    private suspend fun handleRefreshError() {
         isRefreshing = false
         if (exchangeRatesDao.count() == 0) {
             hasError.postValue(true)
@@ -103,10 +108,11 @@ class ExchangeRatesRepository @Inject constructor(
     }
 
     // This will return null if not found
-    override suspend fun getExchangeRate(currencyCode: String): ExchangeRate? {
-        return withContext(Dispatchers.IO) {
-            exchangeRatesDao.getExchangeRateForCurrency(currencyCode)
-        }
+    override suspend fun getExchangeRate(currencyCode: String): ExchangeRate? =
+        exchangeRatesDao.getExchangeRateForCurrency(currencyCode)
+
+    override suspend fun cleanupObsoleteCurrencies() {
+        exchangeRatesDao.delete(CurrencyInfo.obsoleteCurrencyMap.keys)
     }
 
     override fun observeExchangeRates(): Flow<List<ExchangeRate>> {

@@ -21,6 +21,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
+import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.Configuration
@@ -40,7 +41,6 @@ import org.junit.Test
 class CoinBaseRepositoryTest {
     @MockK lateinit var coinBaseServicesApi: CoinBaseServicesApi
     @MockK lateinit var coinBaseAuthApi: CoinBaseAuthApi
-    @MockK lateinit var configuration: Configuration
     @MockK lateinit var config: CoinbaseConfig
     @MockK lateinit var placeBuyOrderMapper: PlaceBuyOrderMapper
     @MockK lateinit var swapTradeMapper: SwapTradeMapper
@@ -59,8 +59,8 @@ class CoinBaseRepositoryTest {
         coinBaseRepository = CoinBaseRepository(
             coinBaseServicesApi,
             coinBaseAuthApi,
-            configuration,
             config,
+            mockk(),
             placeBuyOrderMapper,
             swapTradeMapper,
             commitBuyOrderMapper,

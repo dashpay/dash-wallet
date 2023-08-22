@@ -34,7 +34,6 @@ import com.google.common.base.Strings;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.dash.wallet.common.data.CurrencyInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,8 +49,6 @@ public class Configuration {
     private final Resources res;
 
     public static final String PREFS_KEY_CONNECTIVITY_NOTIFICATION = "connectivity_notification";
-    public static final String PREFS_KEY_EXCHANGE_CURRENCY = "exchange_currency";
-    public static final String PREFS_KEY_EXCHANGE_CURRENCY_DETECTED = "exchange_currency_detected";
     public static final String PREFS_KEY_TRUSTED_PEER = "trusted_peer";
     public static final String PREFS_KEY_TRUSTED_PEER_ONLY = "trusted_peer_only";
     public static final String PREFS_KEY_BLOCK_EXPLORER = "block_explorer";
@@ -250,26 +247,6 @@ public class Configuration {
 
     public void resetBackupSeedReminderTimer() {
         prefs.edit().putLong(PREFS_KEY_LAST_BACKUP_SEED_TIME, -1).apply();
-    }
-
-    @Nullable
-    public String getExchangeCurrencyCode() {
-        String currencyCode = prefs.getString(PREFS_KEY_EXCHANGE_CURRENCY, null);
-        // previous versions of the app (prior to 7.3.3) may have stored an obsolete
-        // currency code in the preferences.  Let's change to the most up to date.
-        return CurrencyInfo.getOtherName(currencyCode);
-    }
-
-    public void setExchangeCurrencyCode(final String exchangeCurrencyCode) {
-        prefs.edit().putString(PREFS_KEY_EXCHANGE_CURRENCY, exchangeCurrencyCode).apply();
-    }
-
-    public boolean getExchangeCurrencyCodeDetected() {
-        return prefs.getBoolean(PREFS_KEY_EXCHANGE_CURRENCY_DETECTED, false);
-    }
-
-    public void setExchangeCurrencyCodeDetected(boolean detected) {
-        prefs.edit().putBoolean(PREFS_KEY_EXCHANGE_CURRENCY_DETECTED, detected).apply();
     }
 
     /**

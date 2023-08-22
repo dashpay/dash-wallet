@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,17 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.ui.exchange_rates
+package de.schildbach.wallet.rates
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
-import dagger.hilt.android.lifecycle.HiltViewModel
-import org.dash.wallet.common.services.ExchangeRatesProvider
-import javax.inject.Inject
+import org.dash.wallet.common.data.entity.ExchangeRate
 
-@HiltViewModel
-class ExchangeRatesViewModel @Inject constructor(
-    exchangeRatesRepo: ExchangeRatesProvider
-) : ViewModel() {
-    val exchangeRates = exchangeRatesRepo.observeExchangeRates().asLiveData()
+interface ExchangeRatesClient {
+    @get:Throws(Exception::class)
+    val rates: List<ExchangeRate>
 }

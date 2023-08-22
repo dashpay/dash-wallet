@@ -1,8 +1,7 @@
 package de.schildbach.wallet.rates;
 
-import androidx.annotation.Nullable;
-
 import org.dash.wallet.common.data.entity.ExchangeRate;
+import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -29,7 +28,7 @@ public class DashRatesSecondFallback implements ExchangeRatesClient {
 
     }
 
-    @Nullable
+    @NotNull
     @Override
     public List<ExchangeRate> getRates() throws Exception {
         List<BitPayRate> rates = BitPayClient.getInstance().getRates().body().getRates();
@@ -68,5 +67,5 @@ public class DashRatesSecondFallback implements ExchangeRatesClient {
 
         return exchangeRates;
     }
-
 }
+

@@ -27,6 +27,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -44,13 +45,14 @@ import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import javax.inject.Inject
 
-@ExperimentalCoroutinesApi
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class EnterAmountToTransferViewModel @Inject constructor(
     var exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
     walletDataProvider: WalletDataProvider,
-    var blockchainStateProvider: BlockchainStateProvider
+    blockchainStateProvider: BlockchainStateProvider,
+    walletUIConfig: WalletUIConfig
 ) : ViewModel() {
 
     var coinbaseExchangeRate: CoinbaseToDashExchangeRateUIModel? = null
@@ -74,13 +76,6 @@ class EnterAmountToTransferViewModel @Inject constructor(
             }
         }
 
-    private val _localCurrencyCode = MutableStateFlow(configuration.exchangeCurrencyCode!!)
-    var localCurrencyCode: String
-        get() = _localCurrencyCode.value
-        set(value) {
-            _localCurrencyCode.value = value
-        }
-
     private val _isTransferFromWalletToCoinbase = MutableStateFlow(false)
     val transferDirectionState: LiveData<Boolean>
         get() = _isTransferFromWalletToCoinbase.asLiveData()
@@ -88,6 +83,9 @@ class EnterAmountToTransferViewModel @Inject constructor(
     private val _dashBalanceInWallet = MutableStateFlow(walletDataProvider.getWalletBalance())
     val dashBalanceInWalletState: StateFlow<Coin>
         get() = _dashBalanceInWallet
+
+    var localCurrencyCode: String = Constants.USD_CURRENCY
+        private set
 
     private val _localCurrencyExchangeRate = MutableLiveData<ExchangeRate?>()
     val localCurrencyExchangeRate: LiveData<ExchangeRate?>
@@ -111,9 +109,11 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
     init {
         setDashWalletBalance()
-        _localCurrencyCode.flatMapLatest { code ->
-            exchangeRates.observeExchangeRate(code)
-        }.onEach(_localCurrencyExchangeRate::postValue)
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .onEach { localCurrencyCode = it }
+            .flatMapLatest(exchangeRates::observeExchangeRate)
+            .onEach(_localCurrencyExchangeRate::postValue)
             .launchIn(viewModelScope)
 
         blockchainStateProvider.observeState()

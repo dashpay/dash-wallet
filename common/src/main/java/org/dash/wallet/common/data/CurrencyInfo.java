@@ -40,7 +40,7 @@ public class CurrencyInfo {
         in the exchange rates list, but must get the name of BYR
         from the device.
      */
-    private static final HashMap<String, String> obsoleteCurrencyMap;
+    public static final HashMap<String, String> obsoleteCurrencyMap;
 
     /*
         These currencies are listed in the price data, but are not
@@ -64,6 +64,7 @@ public class CurrencyInfo {
         obsoleteCurrencyMap = new HashMap<>();
         obsoleteCurrencyMap.put("BYR", "BYN"); // Belarus Ruble, changed in 2016
         obsoleteCurrencyMap.put("MRO", "MRU"); // Mauritania Ouguiya, changed in 2018
+        obsoleteCurrencyMap.put("ZMK", "ZMW"); // Zambian Kwacha, changed in 2013
 
         otherCurrencyMap = new HashMap<>();
         otherCurrencyMap.put("GGP", R.string.currency_GGP);

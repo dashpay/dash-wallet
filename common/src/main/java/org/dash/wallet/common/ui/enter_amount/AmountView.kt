@@ -64,7 +64,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             updateAmount()
         }
 
-    var fiatAmount: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
+    var fiatAmount: Fiat = Fiat.valueOf(Constants.DEFAULT_EXCHANGE_CURRENCY, 0)
         private set
 
     var dashAmount: Coin = Coin.ZERO

@@ -37,7 +37,10 @@ import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
@@ -48,11 +51,13 @@ import org.bitcoinj.wallet.KeyChain.KeyPurpose
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class PaymentProtocolViewModel @Inject constructor(
     walletData: WalletDataProvider,
@@ -60,7 +65,8 @@ class PaymentProtocolViewModel @Inject constructor(
     exchangeRates: ExchangeRatesProvider,
     private val walletApplication: WalletApplication,
     private val packageInfoProvider: PackageInfoProvider,
-    private val sendCoinsTaskRunner: SendCoinsTaskRunner
+    private val sendCoinsTaskRunner: SendCoinsTaskRunner,
+    walletUIConfig: WalletUIConfig
 ) : SendCoinsBaseViewModel(walletData, configuration) {
 
     companion object {
@@ -92,7 +98,9 @@ class PaymentProtocolViewModel @Inject constructor(
         }
 
     init {
-        exchangeRates.observeExchangeRate(configuration.exchangeCurrencyCode!!)
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .flatMapConcat(exchangeRates::observeExchangeRate)
             .distinctUntilChanged()
             .onEach(_exchangeRateData::postValue)
             .launchIn(viewModelScope)

@@ -16,36 +16,38 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.more.AboutActivity
-import de.schildbach.wallet.ui.rates.ExchangeRatesActivity
-import de.schildbach.wallet.ui.rates.ExchangeRatesFragment.*
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySettingsBinding
-import org.dash.wallet.common.data.entity.ExchangeRate
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class SettingsActivity : LockScreenActivity() {
-    companion object Constants {
-        private const val RC_DEFAULT_FIAT_CURRENCY_SELECTED: Int = 100
-    }
-
     private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
     private lateinit var binding: ActivitySettingsBinding
     @Inject
     lateinit var analytics: AnalyticsService
     @Inject
     lateinit var systemActions: SystemActionsService
+    @Inject
+    lateinit var walletUIConfig: WalletUIConfig
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,20 +62,23 @@ class SettingsActivity : LockScreenActivity() {
             startActivity(Intent(this, AboutActivity::class.java))
         }
         binding.localCurrency.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY, mapOf())
-            val intent = Intent(this, ExchangeRatesActivity::class.java)
-            intent.putExtra(ARG_SHOW_AS_DIALOG, false)
-            intent.putExtra(ARG_CURRENCY_CODE, configuration.exchangeCurrencyCode)
-            startActivityForResult(intent, RC_DEFAULT_FIAT_CURRENCY_SELECTED)
+            lifecycleScope.launch {
+                analytics.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY, mapOf())
+                val currentOption = walletUIConfig.getExchangeCurrencyCode()
+                ExchangeRatesDialog(currentOption) { rate, _, dialog ->
+                    setSelectedCurrency(rate.currencyCode)
+                    dialog.dismiss()
+                }.show(this@SettingsActivity)
+            }
         }
 
         binding.rescanBlockchain.setOnClickListener { resetBlockchain() }
         binding.notifications.setOnClickListener { systemActions.openNotificationSettings() }
-    }
 
-    override fun onStart() {
-        super.onStart()
-        binding.localCurrencySymbol.text = configuration.exchangeCurrencyCode
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .onEach { binding.localCurrencySymbol.text = it }
+            .launchIn(lifecycleScope)
     }
 
     private fun resetBlockchain() {
@@ -97,12 +102,11 @@ class SettingsActivity : LockScreenActivity() {
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (resultCode == Activity.RESULT_OK && requestCode == RC_DEFAULT_FIAT_CURRENCY_SELECTED) {
-            val exchangeRate: ExchangeRate? = data?.getParcelableExtra(BUNDLE_EXCHANGE_RATE)
-            binding.localCurrencySymbol.text = exchangeRate?.currencyCode ?: configuration.exchangeCurrencyCode
-        } else {
-            super.onActivityResult(requestCode, resultCode, data)
+    private fun setSelectedCurrency(code: String) {
+        lifecycleScope.launch {
+            walletUIConfig.set(WalletUIConfig.SELECTED_CURRENCY, code)
+            val balance = walletData.getWalletBalance()
+            WalletBalanceWidgetProvider.updateWidgets(this@SettingsActivity, balance)
         }
     }
 }

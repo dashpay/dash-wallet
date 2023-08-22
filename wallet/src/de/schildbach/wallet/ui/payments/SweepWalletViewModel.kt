@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,47 +14,37 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.integration.coinbase_integration.ui.dialogs.crypto_wallets
 
-import androidx.lifecycle.*
+package de.schildbach.wallet.ui.payments
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
-class CryptoWalletsDialogViewModel @Inject constructor(
-    private val exchangeRatesProvider: ExchangeRatesProvider,
-    val config: Configuration,
+class SweepWalletViewModel @Inject constructor(
+    exchangeRates: ExchangeRatesProvider,
     walletUIConfig: WalletUIConfig
-) : ViewModel() {
-
-    private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
-    val exchangeRate: LiveData<ExchangeRate>
-        get() = _exchangeRate
-
-    private val _dataList = MutableLiveData<List<CoinBaseUserAccountDataUIModel>>()
-    val dataList: LiveData<List<CoinBaseUserAccountDataUIModel>>
-        get() = _dataList
+): ViewModel() {
+    var currentExchangeRate: ExchangeRate? = null
+        private set
 
     init {
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
-            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
-            .onEach(_exchangeRate::postValue)
+            .flatMapLatest(exchangeRates::observeExchangeRate)
+            .onEach { currentExchangeRate = it }
             .launchIn(viewModelScope)
-    }
-
-    fun submitList(list: List<CoinBaseUserAccountDataUIModel>) {
-        _dataList.postValue(list)
     }
 }

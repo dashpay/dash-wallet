@@ -30,7 +30,7 @@ interface ExchangeRatesDao {
     fun observeAll(): Flow<List<ExchangeRate>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertAll(exchangeRates: List<ExchangeRate>)
+    suspend fun insertAll(exchangeRates: List<ExchangeRate>)
 
     @Query("SELECT * FROM exchange_rates WHERE currencyCode = :currencyCode LIMIT 1")
     fun observeRate(currencyCode: String): Flow<ExchangeRate>
@@ -38,9 +38,12 @@ interface ExchangeRatesDao {
     @Query("SELECT * FROM exchange_rates WHERE currencyCode = :currencyCode LIMIT 1")
     fun getRateSync(currencyCode: String?): ExchangeRate?
 
-    @Query("SELECT count(*) FROM exchange_rates")
-    fun count(): Int
-
     @Query("SELECT * FROM exchange_rates WHERE currencyCode = :currencyCode LIMIT 1")
     suspend fun getExchangeRateForCurrency(currencyCode: String?): ExchangeRate?
+
+    @Query("SELECT count(*) FROM exchange_rates")
+    suspend fun count(): Int
+
+    @Query("DELETE FROM exchange_rates WHERE currencyCode IN (:currencyCodes)")
+    suspend fun delete(currencyCodes: Collection<String>)
 }
