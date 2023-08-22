@@ -273,10 +273,10 @@ class SendCoinsTaskRunner @Inject constructor(
         }
     }
 
-    private fun getCoinSelector(coinJoin: Boolean) = if (!coinJoin) {
-        UnmixedZeroConfCoinSelector(walletData.wallet)
-    } else {
+    private fun getCoinSelector(coinJoin: Boolean) = if (coinJoin) {
         CoinJoinCoinSelector(walletData.wallet)
+    } else {
+        UnmixedZeroConfCoinSelector(walletData.wallet)
     }
 
     @Throws(LeftoverBalanceException::class)
