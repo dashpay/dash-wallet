@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.bitcoinj.coinjoin.CoinJoin
 import org.bitcoinj.coinjoin.CoinJoinClientManager
 import org.bitcoinj.coinjoin.CoinJoinClientOptions
 import org.bitcoinj.coinjoin.PoolMessage
@@ -244,9 +245,10 @@ class CoinJoinMixingService @Inject constructor(
         requestKeyParameter: RequestKeyParameter,
         requestDecryptedKey: RequestDecryptedKey,
     ) {
-        CoinJoinClientOptions.setSessions(4)
+        CoinJoinClientOptions.setSessions(8)
         CoinJoinClientOptions.setAmount(amount)
-        CoinJoinClientOptions.setMultiSessionEnabled(false)
+        CoinJoinClientOptions.setMultiSessionEnabled(true)
+        CoinJoinClientOptions.removeDenomination(CoinJoin.getSmallestDenomination())
 
         when (mode) {
             CoinJoinMode.BASIC -> CoinJoinClientOptions.setAmount(Coin.ZERO)
