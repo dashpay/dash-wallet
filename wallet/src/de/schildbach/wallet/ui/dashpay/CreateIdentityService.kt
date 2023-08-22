@@ -256,6 +256,7 @@ class CreateIdentityService : LifecycleService() {
 
     private suspend fun createIdentity(username: String?, retryWithNewUserName: Boolean) {
         log.info("username registration starting")
+        org.bitcoinj.core.Context.propagate(walletApplication.wallet!!.context)
         val timerEntireProcess = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE)
         val timerStep1 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_1)
 
