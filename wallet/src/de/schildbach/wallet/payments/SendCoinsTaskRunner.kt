@@ -33,6 +33,8 @@ import okio.BufferedSink
 import okio.IOException
 import org.bitcoin.protocols.payments.Protos
 import org.bitcoin.protocols.payments.Protos.Payment
+import org.bitcoinj.coinjoin.CoinJoinCoinSelector
+import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IKey
 import org.bitcoinj.crypto.KeyCrypterException
@@ -231,11 +233,12 @@ class SendCoinsTaskRunner @Inject constructor(
         mayEditAmount: Boolean,
         paymentIntent: PaymentIntent,
         signInputs: Boolean,
-        forceEnsureMinRequiredFee: Boolean
+        forceEnsureMinRequiredFee: Boolean,
+        coinJoin: Boolean = false
     ): SendRequest {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         val sendRequest = paymentIntent.toSendRequest()
-        sendRequest.coinSelector = ZeroConfCoinSelector.get()
+        sendRequest.coinSelector = getCoinSelector(coinJoin)
         sendRequest.useInstantSend = false
         sendRequest.feePerKb = Constants.ECONOMIC_FEE
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
@@ -253,20 +256,27 @@ class SendCoinsTaskRunner @Inject constructor(
         amount: Coin,
         coinSelector: CoinSelector? = null,
         emptyWallet: Boolean = false,
-        forceMinFee: Boolean = true
+        forceMinFee: Boolean = true,
+        coinJoin: Boolean = false
     ): SendRequest {
         return SendRequest.to(address, amount).apply {
             this.feePerKb = Constants.ECONOMIC_FEE
             this.ensureMinRequiredFee = forceMinFee
             this.emptyWallet = emptyWallet
 
-            val selector = coinSelector ?: ZeroConfCoinSelector.get()
+            val selector = coinSelector ?: getCoinSelector(coinJoin)
             this.coinSelector = selector
 
             if (selector is ByAddressCoinSelector) {
                 changeAddress = selector.address
             }
         }
+    }
+
+    private fun getCoinSelector(coinJoin: Boolean) = if (!coinJoin) {
+        UnmixedZeroConfCoinSelector(walletData.wallet)
+    } else {
+        CoinJoinCoinSelector(walletData.wallet)
     }
 
     @Throws(LeftoverBalanceException::class)
