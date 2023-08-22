@@ -73,6 +73,13 @@
             app:popExitAnim="@anim/slide_out_left"
             app:popUpTo="@id/requestUsernameFragment" />
 
+        <action
+            android:id="@+id/requests_to_confirmUsernameRequestDialog"
+            app:destination="@id/confirmUsernameRequestDialog"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
     </fragment>
 
 
@@ -85,5 +92,19 @@
             android:name="username"
             app:argType="string" />
 
+        <action
+            android:id="@+id/verifyIdentityFragment_to_confirmUsernameRequestDialog"
+            app:destination="@id/confirmUsernameRequestDialog"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
+
+
+
+    <dialog
+        android:id="@+id/confirmUsernameRequestDialog"
+        android:name="de.schildbach.wallet.ui.username.voting.ConfirmUsernameRequestDialogFragment"
+        android:label="ConfirmUsernameRequestDialogFragment"
+        tools:layout="@layout/dialog_confirm_username_request" />
 </navigation>

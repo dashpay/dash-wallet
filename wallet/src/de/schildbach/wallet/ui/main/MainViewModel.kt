@@ -21,12 +21,18 @@ import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletUIConfig
-import de.schildbach.wallet.data.*
+import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
@@ -40,12 +46,26 @@ import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
-import de.schildbach.wallet.ui.dashpay.*
+import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
+import de.schildbach.wallet.ui.dashpay.NotificationCountLiveData
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.transactions.TransactionRowView
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
@@ -69,8 +89,8 @@ import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.slf4j.LoggerFactory
-import java.util.HashMap
 import javax.inject.Inject
+import kotlin.collections.set
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
@@ -213,6 +233,9 @@ class MainViewModel @Inject constructor(
 
     init {
         transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
+        viewModelScope.launch {
+            dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, "")
+        }
 
         _transactionsDirection
             .flatMapLatest { direction ->
@@ -486,6 +509,8 @@ class MainViewModel @Inject constructor(
         return platformRepo.loadProfileByUserId(profileId)
     }
 
+    suspend fun getRequestedUsername(): String =
+        dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME) ?: ""
     suspend fun getInviteHistory() = invitationsDao.loadAll()
 
     private fun combineLatestData(): Boolean {

@@ -34,7 +34,11 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.PackageInfoProvider
-import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.CreateUsernameActivity
+import de.schildbach.wallet.ui.EditProfileActivity
+import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.ReportIssueDialogBuilder
+import de.schildbach.wallet.ui.SettingsActivity
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
@@ -232,19 +236,23 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) {
-            binding.joinDashpayContainer.isVisible = it
+            binding.dashpayContainer.isVisible = it
         }
+
+
+
 
         createInviteViewModel.isAbleToPerformInviteAction.observe(viewLifecycleOwner) {
             showInviteSection(it)
         }
     }
 
+
     private fun showInviteSection(showInviteSection: Boolean) {
         this.showInviteSection = showInviteSection
 
-        //show the invite section only after the profile section is visible
-        //to avoid flickering
+        // show the invite section only after the profile section is visible
+        // to avoid flickering
         if (binding.editUpdateSwitcher.isVisible) {
             binding.invite.isVisible = showInviteSection
         }
@@ -267,7 +275,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             editProfileViewModel.logEvent(AnalyticsConstants.UsersContacts.PROFILE_EDIT_MORE)
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
-        //if the invite section is not visible, show/hide it
+        // if the invite section is not visible, show/hide it
         if (!binding.invite.isVisible) {
             binding.invite.isVisible = showInviteSection
         }
@@ -277,5 +285,17 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         super.onResume()
         // Developer Mode Feature
         binding.invite.isVisible = showInviteSection
+        lifecycleScope.launchWhenResumed {
+            mainActivityViewModel.getRequestedUsername().also { username ->
+                if (username.isNotEmpty()) {
+                    binding.joinDashpayContainer.visibility = View.GONE
+                    binding.requestedUsernameContainer.visibility = View.VISIBLE
+                    binding.requestedUsernameTitle.text = username
+                } else {
+                    binding.joinDashpayContainer.visibility = View.VISIBLE
+                    binding.requestedUsernameContainer.visibility = View.GONE
+                }
+            }
+        }
     }
 }

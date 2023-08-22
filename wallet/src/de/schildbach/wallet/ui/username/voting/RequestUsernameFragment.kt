@@ -8,6 +8,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputLayout
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
@@ -17,13 +18,16 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 
+
+@AndroidEntryPoint
 class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
     private val binding by viewBinding(FragmentRequestUsernameBinding::bind)
 
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
-
+    private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -60,11 +64,16 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                     R.string.verify
                 )
             ).show(requireActivity()) {
+                requestUserNameViewModel.username = binding.usernameInput.text.toString()
                 if (it == true) {
                     safeNavigate(
                         RequestUsernameFragmentDirections.requestUsernameFragmentToVerifyIdentityFragment(
                             binding.usernameInput.text.toString()
                         )
+                    )
+                } else {
+                    safeNavigate(
+                        RequestUsernameFragmentDirections.requestsToConfirmUsernameRequestDialog()
                     )
                 }
             }
@@ -75,12 +84,29 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             showKeyboard()
         }
 
-        showKeyboard()
 
         binding.balanceRequirementDisclaimer.text = getString(
             R.string.dashpay_min_balance_disclaimer,
             MonetaryFormat.BTC.format(Constants.DASH_PAY_FEE)
         )
+
+        requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
+            if (it.usernameSubmittedSuccess) {
+                requireActivity().finish()
+            }
+
+            if (it.usernameSubmittedError) {
+                showErrorDialog()
+            }
+
+            if (it.usernameVerified) {
+                binding.usernameInput.isFocusable = (false)
+                hideKeyboard()
+                safeNavigate(
+                    RequestUsernameFragmentDirections.requestsToConfirmUsernameRequestDialog()
+                )
+            }
+        }
     }
 
     private fun showKeyboard() {
@@ -90,5 +116,21 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
 
     private fun hideKeyboard() {
         KeyboardUtil.hideKeyboard(requireContext(), binding.usernameInput)
+    }
+
+    private fun showErrorDialog() {
+        val dialog = AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.something_wrong_title),
+            getString(R.string.there_was_a_network_error),
+            getString(R.string.close),
+            getString(R.string.try_again)
+
+        )
+        dialog.show(requireActivity()) {
+            if (it == true) {
+                requestUserNameViewModel.submit()
+            }
+        }
     }
 }
