@@ -1,4 +1,11 @@
 Dash Wallet
+v9.0.5
+* Update to dashj 19.0.5
+* Update translations for the new Send flow
+* Fix stuck currency code on the Receive screen
+* Fix overflowing labels on the Home and Advanced Security screens
+* Fix leaking balance info on the Quick Receive screen
+
 v9.0.4
 * Update to dashj 19.0.4
 * Fix fiat amount not matching DASH amount in the system notification
