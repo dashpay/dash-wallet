@@ -5,6 +5,8 @@ v9.0.5
 * Fix stuck currency code on the Receive screen
 * Fix overflowing labels on the Home and Advanced Security screens
 * Fix leaking balance info on the Quick Receive screen
+* Update transaction error handling based on removal of BIP61 in Dash Core 19
+* Fix explore DB file name for prod flavor (was same as testnet for 9.0.4)
 
 v9.0.4
 * Update to dashj 19.0.4
