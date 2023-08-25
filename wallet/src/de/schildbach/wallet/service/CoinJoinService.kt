@@ -104,8 +104,8 @@ class CoinJoinMixingService @Inject constructor(
         const val DEFAULT_ROUNDS = 1
         const val DEFAULT_SESSIONS = 8
         // these are not for production
-        val FAST_MIXING_DASHPAY_FEE = Coin.parseCoin("0.2")
-        val FAST_MIXING_DENOMINATIONS_REMOVE = listOf(Denomination.HUNDREDTH, Denomination.THOUSANDTH)
+        val FAST_MIXING_DASHPAY_FEE = Coin.parseCoin("0.15")
+        val FAST_MIXING_DENOMINATIONS_REMOVE = listOf<Denomination>(Denomination.THOUSANDTH)
     }
 
     private val coinJoinManager: CoinJoinManager?

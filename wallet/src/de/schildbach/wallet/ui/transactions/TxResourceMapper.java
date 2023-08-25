@@ -117,10 +117,10 @@ public class TxResourceMapper {
                                 // <case1>, see CCoinJoinClientSession.makeCollateralAmounts
                                 makeCollateral = (nAmount0.equals(CoinJoin.getMaxCollateralAmount()) && !CoinJoin.isDenominatedAmount(nAmount1) && nAmount1.isGreaterThanOrEqualTo(CoinJoin.getCollateralAmount())) ||
                                                  (nAmount1.equals(CoinJoin.getMaxCollateralAmount()) && !CoinJoin.isDenominatedAmount(nAmount0) && nAmount0.isGreaterThanOrEqualTo(CoinJoin.getCollateralAmount())) ||
-                                        // <case2>, see CCoinJoinClientSession::MakeCollateralAmounts
+                                        // <case2>, see CCoinJoinClientSession.makeCollateralAmounts
                                         (nAmount0 == nAmount1 && CoinJoin.isCollateralAmount(nAmount0));
                             } else if (tx.getOutputs().size() == 1) {
-                                // <case3>, see CCoinJoinClientSession::MakeCollateralAmounts
+                                // <case3>, see CCoinJoinClientSession.makeCollateralAmounts
                                 makeCollateral = CoinJoin.isCollateralAmount(tx.getOutput(0).getValue());
                             }
                             if (makeCollateral) {
