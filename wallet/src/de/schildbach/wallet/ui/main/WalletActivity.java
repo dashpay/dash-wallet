@@ -17,9 +17,11 @@
 
 package de.schildbach.wallet.ui.main;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.os.Build;
@@ -28,7 +30,10 @@ import android.os.Handler;
 import android.os.LocaleList;
 import android.telephony.TelephonyManager;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.common.collect.ImmutableList;
@@ -368,16 +373,27 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
     }
 
-    private void explainPushNotifications() {
-        AdaptiveDialog dialog = AdaptiveDialog.create(
-                R.drawable.ic_info_blue,
-                getString(R.string.notification_explainer_title),
-                getString(R.string.notification_explainer_message),
-                "",
-                getString(R.string.button_okay)
-        );
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                // do nothing
+            });
 
-        dialog.show(this, result -> Unit.INSTANCE);
+    private void explainPushNotifications() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+        } else {
+            AdaptiveDialog dialog = AdaptiveDialog.create(
+                    R.drawable.ic_info_blue,
+                    getString(R.string.notification_explainer_title),
+                    getString(R.string.notification_explainer_message),
+                    "",
+                    getString(R.string.button_okay)
+            );
+
+            dialog.show(this, result -> Unit.INSTANCE);
+        }
+        // only show either the permissions dialog (Android >= 13) or the explainer (Android <= 12) once
         configuration.setShowNotificationsExplainer(false);
     }
 }
