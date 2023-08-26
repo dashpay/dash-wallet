@@ -43,10 +43,14 @@ platform :android do
 		rollout='0.2'
 	end
 
+    versions = google_play_track_version_codes(track: "internal")
+    version_code = versions[0]
+
 	supply(
 		track: 'internal',
 		track_promote_to: "production",
-		rollout: rollout
+		rollout: rollout,
+		version_code: version_code
 	)
   end
 
