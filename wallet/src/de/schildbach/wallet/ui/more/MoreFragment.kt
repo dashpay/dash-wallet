@@ -160,6 +160,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             safeNavigate(MoreFragmentDirections.moreToUsernameVoting())
         }
 
+        binding.requestedUsernameContainer.setOnClickListener {
+            startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+        }
+
         initViewModel()
     }
 

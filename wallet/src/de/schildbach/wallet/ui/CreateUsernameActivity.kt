@@ -42,7 +42,7 @@ class CreateUsernameActivity : InteractionAwareActivity() {
     private val dashPayViewModel: DashPayViewModel by viewModels()
 
     val confirmTransactionSharedViewModel: PlatformPaymentConfirmDialog.SharedViewModel by viewModels()
-    private val  requestUserNameViewModel: RequestUserNameViewModel by viewModels()
+    private val requestUserNameViewModel: RequestUserNameViewModel by viewModels()
     companion object {
         private val log = LoggerFactory.getLogger(CreateUsernameActivity::class.java)
 
@@ -125,10 +125,14 @@ class CreateUsernameActivity : InteractionAwareActivity() {
             )
 
             if (dashPayViewModel.isVotingFlowEnabled()) {
-                if (!dashPayViewModel.isDashPayInfoShown()) {
-                    navGraph.setStartDestination(R.id.welcomeToDashPayFragment)
+                if (requestUserNameViewModel.isUserNameRequested()) {
+                    navGraph.setStartDestination(R.id.votingRequestDetailsFragment)
                 } else {
-                    navGraph.setStartDestination(R.id.requestUsernameFragment)
+                    if (!dashPayViewModel.isDashPayInfoShown()) {
+                        navGraph.setStartDestination(R.id.welcomeToDashPayFragment)
+                    } else {
+                        navGraph.setStartDestination(R.id.requestUsernameFragment)
+                    }
                 }
             } else {
                     bundle.putParcelable(

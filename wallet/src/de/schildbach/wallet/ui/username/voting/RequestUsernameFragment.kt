@@ -64,7 +64,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                     R.string.verify
                 )
             ).show(requireActivity()) {
-                requestUserNameViewModel.username = binding.usernameInput.text.toString()
+                requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
                 if (it == true) {
                     safeNavigate(
                         RequestUsernameFragmentDirections.requestUsernameFragmentToVerifyIdentityFragment(

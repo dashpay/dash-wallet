@@ -41,7 +41,10 @@ class RequestUserNameViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
 
-    var username: String? = null
+    var requestedUserName: String? = null
+    var requestedUserNameLink: String? = null
+    suspend fun isUserNameRequested(): Boolean =
+        dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME).isNullOrEmpty().not()
 
     fun submit() {
         // Reset ui state for retry if needed
@@ -65,8 +68,11 @@ class RequestUserNameViewModel @Inject constructor(
     }
     private fun updateUiForApiSuccess() {
         viewModelScope.launch {
-            username?.let { name ->
+            requestedUserName?.let { name ->
                 dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, name)
+            }
+            requestedUserNameLink?.let { link ->
+                dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME_LINK, link)
             }
         }
 
@@ -91,6 +97,12 @@ class RequestUserNameViewModel @Inject constructor(
             it.copy(
                 usernameVerified = true
             )
+        }
+    }
+
+    fun cancelRequest() {
+        viewModelScope.launch {
+            dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, "")
         }
     }
 }
