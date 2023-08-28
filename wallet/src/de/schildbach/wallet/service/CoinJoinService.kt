@@ -17,8 +17,9 @@
 
 package de.schildbach.wallet.service
 
-import de.schildbach.wallet.Constants
+import com.google.common.collect.Comparators.max
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -32,6 +33,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.coinjoin.CoinJoinClientManager
 import org.bitcoinj.coinjoin.CoinJoinClientOptions
+import org.bitcoinj.coinjoin.Denomination
 import org.bitcoinj.coinjoin.PoolMessage
 import org.bitcoinj.coinjoin.PoolState
 import org.bitcoinj.coinjoin.PoolStatus
@@ -67,10 +69,11 @@ interface CoinJoinService {
     fun needsToMix(amount: Coin): Boolean
     fun getMode(): CoinJoinMode
     fun setMode(mode: CoinJoinMode)
-    fun configureMixing(
+    suspend fun configureMixing(
         amount: Coin,
         requestKeyParameter: RequestKeyParameter,
         requestDecryptedKey: RequestDecryptedKey,
+        restoreFromConfig: Boolean
     )
 
     suspend fun prepareAndStartMixing()
@@ -92,10 +95,17 @@ class CoinJoinMixingService @Inject constructor(
     val walletDataProvider: WalletDataProvider,
     val walletApplication: WalletApplication,
     val blockchainStateProvider: BlockchainStateProvider,
+    private val config: CoinJoinConfig
 ) : CoinJoinService {
 
     companion object {
         val log: Logger = LoggerFactory.getLogger(CoinJoinMixingService::class.java)
+        const val DEFAULT_MULTISESSION = true
+        const val DEFAULT_ROUNDS = 1
+        const val DEFAULT_SESSIONS = 8
+        // these are not for production
+        val FAST_MIXING_DASHPAY_FEE = Coin.parseCoin("0.15")
+        val FAST_MIXING_DENOMINATIONS_REMOVE = listOf<Denomination>(Denomination.THOUSANDTH)
     }
 
     private val coinJoinManager: CoinJoinManager?
@@ -120,10 +130,15 @@ class CoinJoinMixingService @Inject constructor(
     // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
     private val mixingMutex = Mutex(locked = true)
     private var exception: Throwable? = null
-    override suspend fun waitForMixing() = mixingMutex.withLock {}
+    override suspend fun waitForMixing() {
+        log.info("Waiting for mixing to complete by watching lock...")
+        mixingMutex.withLock {}
+        log.info("Mixing complete according to released lock")
+    }
     override suspend fun waitForMixingWithException() {
         waitForMixing()
         exception?.let {
+            log.error("Mixing error: {}", it.message, it)
             throw it
         }
     }
@@ -239,21 +254,43 @@ class CoinJoinMixingService @Inject constructor(
         this.mode = mode
     }
 
-    override fun configureMixing(
+    override suspend fun configureMixing(
         amount: Coin,
         requestKeyParameter: RequestKeyParameter,
         requestDecryptedKey: RequestDecryptedKey,
+        restoreFromConfig: Boolean
     ) {
-        CoinJoinClientOptions.setSessions(4)
-        CoinJoinClientOptions.setAmount(amount)
-        CoinJoinClientOptions.setMultiSessionEnabled(false)
+        if (restoreFromConfig) {
+            // read from data store
+            val amountToMix = config.get(CoinJoinConfig.COINJOIN_AMOUNT)
+            val rounds = config.get(CoinJoinConfig.COINJOIN_ROUNDS)
+            val sessions = config.get(CoinJoinConfig.COINJOIN_SESSIONS)
+            val isMultiSession = config.get(CoinJoinConfig.COINJOIN_MULTISESSION)
+            // set client options
+            CoinJoinClientOptions.setRounds(rounds ?: DEFAULT_ROUNDS)
+            CoinJoinClientOptions.setSessions(sessions ?: DEFAULT_SESSIONS)
+            CoinJoinClientOptions.setAmount(amountToMix?.let { Coin.valueOf(amountToMix) } ?: amount)
+            CoinJoinClientOptions.setMultiSessionEnabled(isMultiSession ?: DEFAULT_MULTISESSION)
+        } else {
+            CoinJoinClientOptions.setSessions(DEFAULT_SESSIONS)
+            CoinJoinClientOptions.setAmount(max(FAST_MIXING_DASHPAY_FEE, amount))
+            CoinJoinClientOptions.setMultiSessionEnabled(DEFAULT_MULTISESSION)
 
-        when (mode) {
-            CoinJoinMode.BASIC -> CoinJoinClientOptions.setAmount(Coin.ZERO)
-            CoinJoinMode.INTERMEDIATE -> CoinJoinClientOptions.setRounds(1)
-            CoinJoinMode.ADVANCED -> CoinJoinClientOptions.setRounds(2)
+            when (mode) {
+                CoinJoinMode.BASIC -> CoinJoinClientOptions.setAmount(Coin.ZERO)
+                CoinJoinMode.INTERMEDIATE -> CoinJoinClientOptions.setRounds(1)
+                CoinJoinMode.ADVANCED -> CoinJoinClientOptions.setRounds(2)
+            }
+            // save to data store
+            config.set(CoinJoinConfig.COINJOIN_AMOUNT, CoinJoinClientOptions.getAmount().value)
+            config.set(CoinJoinConfig.COINJOIN_ROUNDS, CoinJoinClientOptions.getRounds())
+            config.set(CoinJoinConfig.COINJOIN_SESSIONS, CoinJoinClientOptions.getSessions())
+            config.set(CoinJoinConfig.COINJOIN_MULTISESSION, CoinJoinClientOptions.isMultiSessionEnabled())
+
         }
-
+        FAST_MIXING_DENOMINATIONS_REMOVE.forEach {
+            CoinJoinClientOptions.removeDenomination(it)
+        }
         // TODO: have CoinJoinClientOptions.toString instead do this
         log.info("mixing configuration:  { rounds: ${CoinJoinClientOptions.getRounds()}, sessions: ${CoinJoinClientOptions.getSessions()}, amount: ${amount.toFriendlyString()}}")
         coinJoinManager?.run {
@@ -276,6 +313,8 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun prepareMixing() {
+        log.info("Mixing preparation began")
+        clear()
         CoinJoinClientOptions.setEnabled(true)
         val wallet = walletDataProvider.wallet!!
         addMixingCompleteListener(mixingProgressTracker)
@@ -377,4 +416,12 @@ class CoinJoinMixingService @Inject constructor(
     // TODO: private val _progressFlow = MutableStateFlow(0.00)
     // TODO: override suspend fun getMixingProgress(): Flow<Double + other data> = _progressFlow
     // TODO: suspend fun setProgress(progress: Double) = _progressFlow.emit(progress)
+
+    /** clear previous state */
+    private suspend fun clear() {
+        exception = null
+        mixingStatus = MixingStatus.NOT_STARTED
+        if (!mixingMutex.isLocked)
+            mixingMutex.lock()
+    }
 }
