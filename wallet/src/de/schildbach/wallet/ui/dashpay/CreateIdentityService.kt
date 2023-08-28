@@ -256,9 +256,9 @@ class CreateIdentityService : LifecycleService() {
 
     private suspend fun createIdentity(username: String?, retryWithNewUserName: Boolean) {
         log.info("username registration starting")
+        org.bitcoinj.core.Context.propagate(walletApplication.wallet!!.context)
         val timerEntireProcess = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE)
         val timerStep1 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_1)
-
 
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
 
@@ -276,6 +276,7 @@ class CreateIdentityService : LifecycleService() {
                 if (username != null && blockchainIdentityData.username != username && !retryWithNewUserName) {
                     throw IllegalStateException()
                 }
+
             }
             (username != null) -> {
                 blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, username, null, false)
@@ -336,11 +337,12 @@ class CreateIdentityService : LifecycleService() {
             coinJoinService.configureMixing(
                 Constants.DASH_PAY_FEE,
                 { encryptionKey },
-                { it.decrypt(encryptionKey) })
-
+                { it.decrypt(encryptionKey) },
+                restoreFromConfig = username == null
+            )
             coinJoinService.prepareAndStartMixing()
 
-            coinJoinService.waitForMixing()
+            coinJoinService.waitForMixingWithException()
         }
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CREATING) {
@@ -350,7 +352,7 @@ class CreateIdentityService : LifecycleService() {
             //
             // check to see if the funding transaction exists
             if (blockchainIdentity.creditFundingTransaction == null) {
-                platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey, coinJoinService.getMode()  != CoinJoinMode.BASIC)
+                platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey, coinJoinService.getMode() != CoinJoinMode.BASIC)
             }
         }
 
