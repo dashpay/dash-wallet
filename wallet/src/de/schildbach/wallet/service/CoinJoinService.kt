@@ -282,12 +282,11 @@ class CoinJoinMixingService @Inject constructor(
                 CoinJoinMode.ADVANCED -> CoinJoinClientOptions.setRounds(2)
             }
             // save to data store
-            coroutineScope.launch {
-                config.set(CoinJoinConfig.COINJOIN_AMOUNT, CoinJoinClientOptions.getAmount().value)
-                config.set(CoinJoinConfig.COINJOIN_ROUNDS, CoinJoinClientOptions.getRounds())
-                config.set(CoinJoinConfig.COINJOIN_SESSIONS, CoinJoinClientOptions.getSessions())
-                config.set(CoinJoinConfig.COINJOIN_MULTISESSION, CoinJoinClientOptions.isMultiSessionEnabled())
-            }
+            config.set(CoinJoinConfig.COINJOIN_AMOUNT, CoinJoinClientOptions.getAmount().value)
+            config.set(CoinJoinConfig.COINJOIN_ROUNDS, CoinJoinClientOptions.getRounds())
+            config.set(CoinJoinConfig.COINJOIN_SESSIONS, CoinJoinClientOptions.getSessions())
+            config.set(CoinJoinConfig.COINJOIN_MULTISESSION, CoinJoinClientOptions.isMultiSessionEnabled())
+
         }
         FAST_MIXING_DENOMINATIONS_REMOVE.forEach {
             CoinJoinClientOptions.removeDenomination(it)
