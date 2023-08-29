@@ -127,7 +127,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void onStart() {
         super.onStart();
 
-        if (!getLockScreenDisplayed() && configuration.getShowNotificationsExplainer()) {
+        if (!getLockScreenDisplayed() && (configuration.getShowNotificationsExplainer() || walletApplication.myPackageReplaced)) {
             explainPushNotifications();
         }
     }
@@ -368,7 +368,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     public void onLockScreenDeactivated() {
-        if (configuration.getShowNotificationsExplainer()) {
+        if (configuration.getShowNotificationsExplainer() || walletApplication.myPackageReplaced) {
             explainPushNotifications();
         }
     }
@@ -378,11 +378,17 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 // do nothing
             });
 
+    /**
+     * Android 13 - Show system dialog to get notification permission from user, if not granted
+     *              ask again with each app upgrade if not granted.  This logic is handled by
+     *              {@link #onLockScreenDeactivated} and {@link #onStart}.
+     * Android 12 and below - show a explainer dialog once only.
+     */
     private void explainPushNotifications() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
-        } else {
+        } else if (configuration.getShowNotificationsExplainer()) {
             AdaptiveDialog dialog = AdaptiveDialog.create(
                     R.drawable.ic_info_blue,
                     getString(R.string.notification_explainer_title),
