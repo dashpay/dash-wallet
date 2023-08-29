@@ -127,7 +127,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     public void onStart() {
         super.onStart();
 
-        if (!getLockScreenDisplayed() && (configuration.getShowNotificationsExplainer() || walletApplication.myPackageReplaced)) {
+        if (!getLockScreenDisplayed() && configuration.getShowNotificationsExplainer()) {
             explainPushNotifications();
         }
     }
@@ -368,7 +368,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     public void onLockScreenDeactivated() {
-        if (configuration.getShowNotificationsExplainer() || walletApplication.myPackageReplaced) {
+        if (configuration.getShowNotificationsExplainer()) {
             explainPushNotifications();
         }
     }

@@ -71,6 +71,8 @@ public class BootstrapReceiver extends BroadcastReceiver {
     protected WalletDataProvider walletDataProvider;
     @Inject
     protected WalletApplication application;
+    @Inject
+    protected Configuration configuration;
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
@@ -100,7 +102,11 @@ public class BootstrapReceiver extends BroadcastReceiver {
 
             // if the app hasn't been used for a while and contains coins, maybe show reminder
             maybeShowInactivityNotification();
-            application.myPackageReplaced = packageReplaced;
+            application.myPackageReplaced = true;
+
+            // reset the notification explainer flag
+            if (packageReplaced)
+                configuration.setShowNotificationsExplainer(true);
         } else if (ACTION_DISMISS.equals(action)) {
             dismissNotification(context);
         } else if (ACTION_DISMISS_FOREVER.equals(action)) {
