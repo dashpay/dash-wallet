@@ -28,11 +28,29 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentVotingRequestDetailsBinding
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 
 class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_details) {
     private val binding by viewBinding(FragmentVotingRequestDetailsBinding::bind)
     private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
+    override fun onResume() {
+        super.onResume()
+        // Developer Mode Feature
+
+        lifecycleScope.launchWhenResumed {
+            binding.username.text =
+                requestUserNameViewModel.dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME)
+
+            requestUserNameViewModel.requestedUserNameLink.observe(viewLifecycleOwner) {
+                it?.let { link ->
+                    binding.link.text = link
+                    binding.link.isVisible = link.isEmpty().not()
+                    binding.verfiyNowLayout.isVisible = link.isEmpty()
+                }
+            }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -42,22 +60,13 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
         }
         // TODO Mock identity
         binding.identity.text = "90f95ff7bc2438a748dc8470255b888b2a9ea6837bf518d018dc3d6cddf698"
-
-        lifecycleScope.launchWhenCreated {
-            binding.username.text =
-                requestUserNameViewModel.dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME)
-
-            val link = requestUserNameViewModel.dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME_LINK)
-
-            binding.link.isVisible = link.isNullOrEmpty().not()
-            binding.verfiyNowLayout.isVisible = link.isNullOrEmpty()
-
-            binding.link.text = link
-        }
+        binding.votingRange.text = "1 Mar – 15 Mar"
+        binding.votesNumber.text = getString(R.string.votes, "10")
 
         binding.verfiyNow.setOnClickListener {
             safeNavigate(
-                VotingRequestDetailsFragmentDirections.votingRequestDetailsFragmentToConfirmUsernameRequestDialog()
+                VotingRequestDetailsFragmentDirections
+                    .votingRequestDetailsFragmentToVerifyIdentityFragment(username = binding.username.text.toString())
             )
         }
 

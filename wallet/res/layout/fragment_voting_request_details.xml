@@ -99,6 +99,7 @@
                 app:srcCompat="@drawable/ic_thumb_up_fill" />
 
             <TextView
+                android:id="@+id/votes_number"
                 style="@style/Caption.SemiBold"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
