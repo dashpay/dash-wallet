@@ -44,11 +44,16 @@ class WalletObserver(private val wallet: Wallet) {
         }
     }
 
-    fun observeTransactions(observeTxConfidence: Boolean, vararg filters: TransactionFilter): Flow<Transaction> = callbackFlow {
-        Context.propagate(wallet.context)
+    fun observeTransactions(
+        observeTxConfidence: Boolean,
+        vararg filters: TransactionFilter
+    ): Flow<Transaction> = callbackFlow {
+        Threading.USER_THREAD.execute {
+            Context.propagate(wallet.context)
 
-        if (Looper.myLooper() == null) {
-            Looper.prepare()
+            if (Looper.myLooper() == null) {
+                Looper.prepare()
+            }
         }
 
         val coinsSentListener = WalletCoinsSentEventListener { _, tx: Transaction?, _, _ ->
