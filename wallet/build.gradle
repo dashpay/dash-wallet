@@ -183,12 +183,12 @@ if (file("../local.properties").exists()) {
 }
 
 android {
-    compileSdkVersion 31
     android.ndkVersion '21.3.6528147'
 
     defaultConfig {
+        compileSdk 33
         minSdkVersion 23
-        targetSdkVersion 31
+        targetSdkVersion 33
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 90050
         versionName project.hasProperty('versionName') ? project.property('versionName') : "9.0.5"
         multiDexEnabled true
