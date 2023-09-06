@@ -21,9 +21,9 @@ import android.text.format.DateUtils
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsLiveData
@@ -39,7 +39,7 @@ class NotificationsViewModel @Inject constructor(
     walletApplication: WalletApplication,
     platformRepo: PlatformRepo,
     dashPayProfileDao: DashPayProfileDao,
-    blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val userAlert: UserAlertDao,
     platformSyncService: PlatformSyncService,
     private val userAlertDao: UserAlertDao,

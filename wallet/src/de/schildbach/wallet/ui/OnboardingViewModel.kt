@@ -40,7 +40,8 @@ import javax.inject.Inject
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     application: Application,
-    val analytics: AnalyticsService
+    val analytics: AnalyticsService,
+    val platformRepo: PlatformRepo
 ) : AndroidViewModel(application) {
 
     private val log = LoggerFactory.getLogger(OnboardingViewModel::class.java)
@@ -52,10 +53,6 @@ class OnboardingViewModel @Inject constructor(
     internal val finishCreateNewWalletAction = SingleLiveEvent<Unit>()
     internal val finishUnecryptedWalletUpgradeAction = SingleLiveEvent<Unit>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
-
-    val platformRepo by lazy {
-        PlatformRepo.getInstance()
-    }
 
     fun createNewWallet(onboardingInvite: InvitationLinkData?) {
         walletApplication.initEnvironmentIfNeeded()

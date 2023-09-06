@@ -29,7 +29,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.OnboardingActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
-import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.getInstance
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -41,10 +41,12 @@ import org.dashj.platform.dpp.errors.concensus.basic.identity.IdentityAssetLockT
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofSignatureException
 import org.dashj.platform.dpp.errors.concensus.fee.BalanceIsNotEnoughException
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 class InviteHandler(val activity: FragmentActivity, private val analytics: AnalyticsService) {
 
     private lateinit var inviteLoadingDialog: FancyAlertDialog
+    @Inject lateinit var platformRepo: PlatformRepo
 
     companion object {
         private val log = LoggerFactory.getLogger(InviteHandler::class.java)
@@ -211,7 +213,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
                 exception is IdentityAssetLockTransactionOutPointAlreadyExistsException -> {
                     showInviteAlreadyClaimedDialog(blockchainIdentityData.invite!!)
                     // now erase the blockchain data
-                    getInstance().clearBlockchainIdentityData()
+                    platformRepo.clearBlockchainIdentityData()
                     return true
                 }
 
@@ -219,13 +221,13 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
                     handle(loading(blockchainIdentityData.invite, 0))
                     handle(error(exception.message!!, blockchainIdentityData.invite))
                     // now erase the blockchain data
-                    getInstance().clearBlockchainIdentityData()
+                    platformRepo.clearBlockchainIdentityData()
                     return true
                 }
                 exception is BalanceIsNotEnoughException -> {
                     showInsufficientFundsDialog()
                     // now erase the blockchain data
-                    getInstance().clearBlockchainIdentityData()
+                    platformRepo.clearBlockchainIdentityData()
                     return true
                 }
             }

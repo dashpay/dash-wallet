@@ -27,12 +27,12 @@ import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
 import com.google.zxing.BarcodeFormat
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -103,6 +103,7 @@ interface PlatformSyncService {
 }
 
 class PlatformSynchronizationService @Inject constructor(
+    val platform: PlatformService,
     val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
     val config: DashPayConfig,
@@ -110,7 +111,7 @@ class PlatformSynchronizationService @Inject constructor(
     val transactionMetadataProvider: TransactionMetadataProvider,
     val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
     val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
-    private val blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    private val blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val dashPayProfileDao: DashPayProfileDao,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
     private val invitationsDao: InvitationsDao
@@ -125,8 +126,6 @@ class PlatformSynchronizationService @Inject constructor(
         val CUTOFF_MIN = if (BuildConfig.DEBUG) 3.minutes else 3.hours
         val CUTOFF_MAX = if (BuildConfig.DEBUG) 6.minutes else 6.hours
     }
-
-    val platform = platformRepo.platform
 
     private lateinit var platformSyncJob: Job
     private val updatingContacts = AtomicBoolean(false)
@@ -250,7 +249,7 @@ class PlatformSynchronizationService @Inject constructor(
             updateSyncStatus(PreBlockStage.FixMissingProfiles)
 
             // Get all out our contact requests
-            val toContactDocuments = platformRepo.contactRequests.get(
+            val toContactDocuments = platform.contactRequests.get(
                 userId,
                 toUserId = false,
                 afterTime = lastContactRequestTime,
@@ -277,7 +276,7 @@ class PlatformSynchronizationService @Inject constructor(
             }
             updateSyncStatus(PreBlockStage.GetReceivedRequests)
             // Get all contact requests where toUserId == userId, the users who have added me
-            val fromContactDocuments = platformRepo.contactRequests.get(
+            val fromContactDocuments = platform.contactRequests.get(
                 userId,
                 toUserId = true,
                 afterTime = lastContactRequestTime,
@@ -519,7 +518,7 @@ class PlatformSynchronizationService @Inject constructor(
         try {
             if (userIdList.isNotEmpty()) {
                 val identifierList = userIdList.map { Identifier.from(it) }
-                val profileDocuments = platformRepo.profiles.getList(
+                val profileDocuments = platform.profiles.getList(
                     identifierList,
                     lastContactRequestTime
                 )
@@ -600,7 +599,7 @@ class PlatformSynchronizationService @Inject constructor(
                 toContactMap[it.toUserId] = it
 
                 // check to see if wallet has this contact request's keys
-                val added = checkAndAddSentRequest(userId, it.toContactRequest(platform))
+                val added = checkAndAddSentRequest(userId, it.toContactRequest(platform.platform))
                 if (added) {
                     log.warn(
                         "check database integrity: added sent $it to wallet since it was missing.  " +
@@ -617,7 +616,7 @@ class PlatformSynchronizationService @Inject constructor(
                 fromContactMap[it.userId] = it
 
                 // check to see if wallet has this contact request's keys
-                val added = checkAndAddReceivedRequest(userId, it.toContactRequest(platform))
+                val added = checkAndAddReceivedRequest(userId, it.toContactRequest(platform.platform))
                 if (added) {
                     log.warn("check database integrity: added received $it to wallet since it was missing")
                     addedContactRequests = true

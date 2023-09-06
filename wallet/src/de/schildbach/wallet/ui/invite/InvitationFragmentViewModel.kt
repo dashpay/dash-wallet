@@ -24,9 +24,9 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
@@ -51,7 +51,7 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val platformRepo: PlatformRepo,
     private val invitationDao: InvitationsDao,
-    blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     private val log = LoggerFactory.getLogger(InvitationFragmentViewModel::class.java)
