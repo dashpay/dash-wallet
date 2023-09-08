@@ -6,7 +6,7 @@ if [[ -z "$version_code" ]]; then
   exit 1
 fi
 
-echo -e "# Fill in the changelog for version $version_code\n# en-US\n\n# es-ES\n\n# de-DE\n\n# ko-KR\n\n# fr-FR" > changelog.txt
+echo -e "# Fill in the changelog for version $version_code\n# en-US\n\n# es-ES\n\n# ru-RU\n\n# de-DE\n\n# fr-FR\n\n# pt-BR\n\n# pl-PL\n\n# it-IT" > changelog.txt
 nano changelog.txt
 
 current_lang=""
