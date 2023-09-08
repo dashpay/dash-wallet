@@ -1,4 +1,9 @@
 Dash Wallet
+v9.0.6
+* Update to dashj 19.0.6
+* Fix stuck Crowdnode Signup
+* Fix Unknown Transaction bug
+
 v9.0.5
 * Update to dashj 19.0.5
 * Update translations for the new Send flow
