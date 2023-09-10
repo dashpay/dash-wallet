@@ -47,7 +47,8 @@ class RequestUserNameViewModel @Inject constructor(
     var requestedUserName: String? = null
     suspend fun isUserNameRequested(): Boolean =
         dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME).isNullOrEmpty().not()
-
+    suspend fun isUserHaveCancelledRequest(): Boolean =
+        dashPayConfig.get(DashPayConfig.CANCELED_REQUESTED_USERNAME_LINK)?:false
 
     init {
         viewModelScope.launch {
@@ -120,6 +121,7 @@ class RequestUserNameViewModel @Inject constructor(
         viewModelScope.launch {
             dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, "")
             dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME_LINK, "")
+            dashPayConfig.set(DashPayConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
         }
     }
 }

@@ -55,6 +55,7 @@ open class DashPayConfig @Inject constructor(
         val VOTING_INFO_SHOWN = booleanPreferencesKey("voting_info_shown")
         val REQUESTED_USERNAME = stringPreferencesKey("requested_username")
         val REQUESTED_USERNAME_LINK = stringPreferencesKey("requested_username_link")
+        val CANCELED_REQUESTED_USERNAME_LINK = booleanPreferencesKey("cancelled_requested_username_link")
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {

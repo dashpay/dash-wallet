@@ -16,6 +16,8 @@
  */
 package de.schildbach.wallet.ui.username.voting
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
@@ -31,6 +33,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 
+
 class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_details) {
     private val binding by viewBinding(FragmentVotingRequestDetailsBinding::bind)
     private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
@@ -45,7 +48,7 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
             requestUserNameViewModel.requestedUserNameLink.observe(viewLifecycleOwner) {
                 it?.let { link ->
                     binding.link.text = link
-                    binding.link.isVisible = link.isEmpty().not()
+                    binding.linkLayout.isVisible = link.isEmpty().not()
                     binding.verfiyNowLayout.isVisible = link.isEmpty()
                 }
             }
@@ -68,6 +71,14 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
                 VotingRequestDetailsFragmentDirections
                     .votingRequestDetailsFragmentToVerifyIdentityFragment(username = binding.username.text.toString())
             )
+        }
+
+
+        binding.linkLayout.setOnClickListener {
+            requestUserNameViewModel.requestedUserNameLink.value?.let {
+                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
+                this.requireContext().startActivity(browserIntent)
+            }
         }
 
         binding.ivInfo.setOnClickListener {
