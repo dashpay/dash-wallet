@@ -73,11 +73,5 @@ class MayaPortalFragment : Fragment(R.layout.fragment_integration_portal) {
         binding.convertBtn.setOnClickListener {
             // TODO: add handler code here
         }
-
-        binding.root.setOnRefreshListener {
-            lifecycleScope.launch {
-                // viewModel.refreshBalance()
-            }
-        }
     }
 }
