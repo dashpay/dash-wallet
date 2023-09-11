@@ -160,6 +160,10 @@ class BuyAndSellViewModel @Inject constructor(
                 hasValidCredentials = coinBaseRepository.hasValidCredentials
                 isAuthenticated = coinBaseRepository.isAuthenticated
             }
+            ServiceType.MAYA -> {
+                hasValidCredentials = true
+                isAuthenticated = false
+            }
         }
 
         if (!hasValidCredentials) {

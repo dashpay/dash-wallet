@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <style name="CrowdNodeLogoBackground">
+        <item name="backgroundColor">@color/background_secondary</item>
+        <item name="strokeColor">@color/background_secondary</item>
+        <item name="cornerRadius">50dp</item>
+    </style>
+
+    <style name="TextHighlightBlueTheme">
+        <item name="backgroundColor">@color/text_highlight_blue_bg</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="YellowTextHighlight">
+        <item name="backgroundColor">@color/warning_yellow</item>
+        <item name="strokeColor">@color/light_core_yellow</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
+    <style name="DashAddressBackground">
+        <item name="backgroundColor">@color/ultra_light_gray</item>
+        <item name="strokeColor">@color/ultra_light_gray</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
+    <style name="QuaternaryBackgroundTheme">
+        <item name="backgroundColor">@color/quaternary_background</item>
+        <item name="strokeColor">@color/quaternary_background</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="DashQRLogo" parent="SecondaryBackground">
+        <item name="cornerRadius">35dp</item>
+    </style>
+</resources>

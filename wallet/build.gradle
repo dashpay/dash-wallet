@@ -27,6 +27,7 @@ dependencies {
     implementation project(path: ':integrations:uphold')
     implementation project(path: ":integrations:coinbase")
     implementation project(path: ":integrations:crowdnode")
+    implementation project(path: ":integrations:maya")
 
     implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')

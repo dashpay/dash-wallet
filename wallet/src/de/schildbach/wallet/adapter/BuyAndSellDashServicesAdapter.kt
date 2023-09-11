@@ -116,6 +116,9 @@ class BuyAndSellDashServicesAdapter(
                 if (data.serviceType == ServiceType.TOPPER) {
                     binding.serviceSubtitle.text = binding.root.context.getString(R.string.buy_no_account_needed)
                     binding.additionalInfo.isVisible = true
+                } else if (data.serviceType == ServiceType.MAYA) {
+                    binding.additionalInfo.isVisible = false
+                    binding.serviceSubtitle.text = binding.root.context.getString(R.string.convert_no_account_needed)
                 } else {
                     binding.serviceSubtitle.text = binding.root.context.getString(R.string.link_account)
                     binding.additionalInfo.isVisible = false

@@ -35,7 +35,8 @@ enum class ServiceType(
 ) {
     TOPPER(R.string.topper, R.drawable.logo_topper),
     UPHOLD(R.string.uphold_account, R.drawable.ic_uphold),
-    COINBASE(R.string.coinbase, R.drawable.ic_coinbase)
+    COINBASE(R.string.coinbase, R.drawable.ic_coinbase),
+    MAYA(R.string.maya_service_name, R.drawable.ic_maya_logo)
 }
 
 @Parcelize
@@ -49,7 +50,8 @@ data class BuyAndSellDashServicesModel(
         fun getBuyAndSellDashServicesList() = listOf(
 //            BuyAndSellDashServicesModel(ServiceType.TOPPER, ServiceStatus.IDLE), TODO: re-enable
             BuyAndSellDashServicesModel(ServiceType.UPHOLD, ServiceStatus.IDLE),
-            BuyAndSellDashServicesModel(ServiceType.COINBASE, ServiceStatus.IDLE)
+            BuyAndSellDashServicesModel(ServiceType.COINBASE, ServiceStatus.IDLE),
+            BuyAndSellDashServicesModel(ServiceType.MAYA, ServiceStatus.IDLE)
         )
     }
 

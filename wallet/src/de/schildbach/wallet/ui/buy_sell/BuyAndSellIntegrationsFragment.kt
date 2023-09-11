@@ -57,6 +57,7 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
                 ServiceType.TOPPER -> onTopperItemClicked()
                 ServiceType.UPHOLD -> onUpholdItemClicked()
                 ServiceType.COINBASE -> onCoinbaseItemClicked()
+                ServiceType.MAYA -> onMayaItemClicked()
             }
         }
     }
@@ -119,6 +120,10 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         } else {
             safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToOverview(ServiceType.COINBASE))
         }
+    }
+
+    private fun onMayaItemClicked() {
+        safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToMaya())
     }
 
     override fun onResume() {

@@ -1,0 +1,55 @@
+<!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="46dp"
+    android:height="52dp"
+    android:viewportWidth="46"
+    android:viewportHeight="52">
+  <path
+      android:pathData="M22.9998,11.019m-10.6191,0a10.6191,10.6191 0,1 1,21.2382 0a10.6191,10.6191 0,1 1,-21.2382 0"
+      android:fillColor="#58595B"/>
+  <path
+      android:pathData="M37.8672,29.2991m-6.6834,0a6.6834,6.6834 0,1 1,13.3668 0a6.6834,6.6834 0,1 1,-13.3668 0"
+      android:strokeWidth="1.5"
+      android:fillColor="#178FE1"
+      android:strokeColor="@color/background_secondary"/>
+  <path
+      android:pathData="M8.1328,29.2991m-6.6834,0a6.6834,6.6834 0,1 1,13.3668 0a6.6834,6.6834 0,1 1,-13.3668 0"
+      android:strokeWidth="1.5"
+      android:fillColor="#178FE1"
+      android:strokeColor="@color/background_secondary"/>
+  <path
+      android:pathData="M22.998,29.2991m-6.6834,0a6.6834,6.6834 0,1 1,13.3668 0a6.6834,6.6834 0,1 1,-13.3668 0"
+      android:strokeWidth="1.5"
+      android:fillColor="#178FE1"
+      android:strokeColor="@color/background_secondary"/>
+  <path
+      android:pathData="M29.9023,35.6702m-6.6834,0a6.6834,6.6834 0,1 1,13.3668 0a6.6834,6.6834 0,1 1,-13.3668 0"
+      android:strokeWidth="1.5"
+      android:fillColor="#178FE1"
+      android:strokeColor="@color/background_secondary"/>
+  <path
+      android:pathData="M16.0977,35.6702m-6.6834,0a6.6834,6.6834 0,1 1,13.3668 0a6.6834,6.6834 0,1 1,-13.3668 0"
+      android:strokeWidth="1.5"
+      android:fillColor="#178FE1"
+      android:strokeColor="@color/background_secondary"/>
+  <path
+      android:pathData="M22.998,44.1668m-6.6834,0a6.6834,6.6834 0,1 1,13.3668 0a6.6834,6.6834 0,1 1,-13.3668 0"
+      android:strokeWidth="1.5"
+      android:fillColor="#178FE1"
+      android:strokeColor="@color/background_secondary"/>
+</vector>

@@ -120,8 +120,8 @@
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/balance_local"
             style="@style/Body2.Secondary"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="2dp"
+            android:layout_height="14dp"
             android:layout_gravity="center_horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
