@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="maya_service_name">Maya</string>
-    <string name="maya_account_requirements">No account required</string>
     <string name="maya_portal_convert_title">Convert Dash</string>
     <string name="maya_portal_convert_subtitle">From Dash Wallet to any crypto</string>
 
