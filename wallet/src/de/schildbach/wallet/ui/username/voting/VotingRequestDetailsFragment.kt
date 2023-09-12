@@ -76,8 +76,23 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
 
         binding.linkLayout.setOnClickListener {
             requestUserNameViewModel.requestedUserNameLink.value?.let {
-                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
-                this.requireContext().startActivity(browserIntent)
+                val browserIntent =
+                    Intent()
+                        .setAction(Intent.ACTION_VIEW)
+                        .setData(Uri.parse(it))
+
+                if (browserIntent.resolveActivity(requireActivity().packageManager) != null) {
+                    this.requireContext().startActivity(browserIntent)
+                }else{
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.error),
+                        getString(R.string.invalid_link),
+                        getString(android.R.string.ok),
+                        ""
+                    ).show(requireActivity())
+                }
+
             }
         }
 

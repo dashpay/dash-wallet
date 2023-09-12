@@ -496,4 +496,5 @@
     <string name="if_you_tap_cancel">If you tap “Cancel Request”, you will still have a chance to request another username without paying again</string>
     <string name="do_you_really_want_to_cancel">Do you really want to cancel the username request?</string>
     <string name="if_you_tap_cancel_request">If you tap “Cancel Request”, you will still have a chance to request another username without paying again</string>
+    <string name="invalid_link">Invalid link</string>
 </resources>
