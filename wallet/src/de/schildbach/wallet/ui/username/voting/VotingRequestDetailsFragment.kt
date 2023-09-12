@@ -86,7 +86,7 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
                 }else{
                     AdaptiveDialog.create(
                         R.drawable.ic_error,
-                        getString(R.string.error),
+                        getString(R.string.cant_open),
                         getString(R.string.invalid_link),
                         getString(android.R.string.ok),
                         ""
