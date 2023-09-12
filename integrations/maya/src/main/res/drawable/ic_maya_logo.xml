@@ -1,55 +1,22 @@
-<!--
-  ~ Copyright 2022 Dash Core Group.
-  ~
-  ~ This program is free software: you can redistribute it and/or modify
-  ~ it under the terms of the GNU General Public License as published by
-  ~ the Free Software Foundation, either version 3 of the License, or
-  ~ (at your option) any later version.
-  ~
-  ~ This program is distributed in the hope that it will be useful,
-  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
-  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  ~ GNU General Public License for more details.
-  ~
-  ~ You should have received a copy of the GNU General Public License
-  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="46dp"
-    android:height="52dp"
-    android:viewportWidth="46"
-    android:viewportHeight="52">
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="34dp"
+    android:height="34dp"
+    android:viewportWidth="34"
+    android:viewportHeight="34">
   <path
-      android:pathData="M22.9998,11.019m-10.6191,0a10.6191,10.6191 0,1 1,21.2382 0a10.6191,10.6191 0,1 1,-21.2382 0"
-      android:fillColor="#58595B"/>
-  <path
-      android:pathData="M37.8672,29.2991m-6.6834,0a6.6834,6.6834 0,1 1,13.3668 0a6.6834,6.6834 0,1 1,-13.3668 0"
-      android:strokeWidth="1.5"
-      android:fillColor="#178FE1"
-      android:strokeColor="@color/background_secondary"/>
-  <path
-      android:pathData="M8.1328,29.2991m-6.6834,0a6.6834,6.6834 0,1 1,13.3668 0a6.6834,6.6834 0,1 1,-13.3668 0"
-      android:strokeWidth="1.5"
-      android:fillColor="#178FE1"
-      android:strokeColor="@color/background_secondary"/>
-  <path
-      android:pathData="M22.998,29.2991m-6.6834,0a6.6834,6.6834 0,1 1,13.3668 0a6.6834,6.6834 0,1 1,-13.3668 0"
-      android:strokeWidth="1.5"
-      android:fillColor="#178FE1"
-      android:strokeColor="@color/background_secondary"/>
-  <path
-      android:pathData="M29.9023,35.6702m-6.6834,0a6.6834,6.6834 0,1 1,13.3668 0a6.6834,6.6834 0,1 1,-13.3668 0"
-      android:strokeWidth="1.5"
-      android:fillColor="#178FE1"
-      android:strokeColor="@color/background_secondary"/>
-  <path
-      android:pathData="M16.0977,35.6702m-6.6834,0a6.6834,6.6834 0,1 1,13.3668 0a6.6834,6.6834 0,1 1,-13.3668 0"
-      android:strokeWidth="1.5"
-      android:fillColor="#178FE1"
-      android:strokeColor="@color/background_secondary"/>
-  <path
-      android:pathData="M22.998,44.1668m-6.6834,0a6.6834,6.6834 0,1 1,13.3668 0a6.6834,6.6834 0,1 1,-13.3668 0"
-      android:strokeWidth="1.5"
-      android:fillColor="#178FE1"
-      android:strokeColor="@color/background_secondary"/>
+      android:pathData="M25.703,10.251C24.272,10.331 22.889,10.652 21.594,11.206C20.571,11.643 19.603,12.224 18.718,12.933C18.101,13.426 17.544,13.964 17.063,14.53C17.041,14.556 17.021,14.581 17,14.606C16.979,14.581 16.959,14.556 16.937,14.53C16.456,13.964 15.899,13.427 15.282,12.933C14.396,12.224 13.428,11.643 12.405,11.206C11.111,10.652 9.728,10.331 8.296,10.251C7.962,10.233 7.62,10.227 7.281,10.234C6.95,10.241 6.685,10.512 6.685,10.842V16.473H2V22.375H7.902V17.731C8.596,17.811 9.212,18.01 9.769,18.339C10.2,18.594 10.617,18.952 11.043,19.434C11.246,19.663 11.432,19.907 11.63,20.165C11.811,20.402 11.998,20.646 12.202,20.882C12.225,20.91 12.248,20.936 12.273,20.962L12.305,20.998L12.755,20.597L12.309,21.009C13.833,22.663 15.295,23.584 16.652,23.745C16.784,23.761 16.916,23.769 17.05,23.769C18.507,23.769 20.068,22.838 21.696,20.997L21.73,20.959C21.753,20.934 21.776,20.908 21.798,20.883C22.001,20.647 22.188,20.402 22.369,20.166C22.567,19.908 22.754,19.663 22.957,19.434C23.383,18.952 23.8,18.594 24.23,18.339C24.788,18.01 25.404,17.811 26.098,17.731V22.375H32V16.473H27.315V10.842C27.315,10.512 27.05,10.241 26.72,10.234C26.625,10.232 26.53,10.231 26.435,10.231C26.19,10.231 25.944,10.238 25.703,10.251ZM22.04,17.747C20.694,17.721 19.253,17.025 17.983,15.788C17.947,15.753 17.865,15.668 17.779,15.577C17.848,15.489 17.918,15.403 17.989,15.319C18.421,14.811 18.922,14.328 19.478,13.883C20.278,13.243 21.15,12.719 22.073,12.325C23.237,11.828 24.481,11.538 25.771,11.466C25.879,11.46 25.988,11.456 26.098,11.452V16.473V16.507C25.181,16.595 24.347,16.858 23.612,17.292C23.423,17.403 23.237,17.529 23.054,17.67C22.917,17.691 22.782,17.708 22.652,17.72C22.547,17.73 22.442,17.738 22.336,17.743C22.266,17.747 22.197,17.748 22.128,17.748C22.098,17.748 22.069,17.748 22.04,17.747ZM16.796,22.537C15.752,22.413 14.512,21.602 13.211,20.192L13.214,20.19L13.124,20.089C12.943,19.879 12.775,19.659 12.596,19.426C12.395,19.162 12.186,18.889 11.955,18.628C11.443,18.049 10.93,17.611 10.388,17.292C9.653,16.858 8.819,16.595 7.902,16.507V16.473V11.452C8.012,11.456 8.12,11.46 8.228,11.466C9.519,11.538 10.763,11.828 11.927,12.325C12.849,12.719 13.722,13.243 14.522,13.883C15.078,14.328 15.579,14.811 16.011,15.319C16.137,15.468 16.257,15.622 16.384,15.785L16.474,15.899C16.605,16.144 16.86,16.393 17.135,16.661C18.553,18.042 20.19,18.849 21.771,18.953C21.644,19.111 21.522,19.271 21.403,19.427C21.225,19.659 21.057,19.879 20.875,20.09L20.785,20.191C19.415,21.74 18.129,22.552 17.045,22.552C16.961,22.552 16.878,22.547 16.796,22.537ZM27.315,17.69H30.783V21.158H27.315V17.69ZM3.217,17.69H6.685V21.158H3.217V17.69Z">
+    <aapt:attr name="android:fillColor">
+      <gradient
+          android:startX="10.672"
+          android:startY="26.776"
+          android:endX="24.784"
+          android:endY="10.047"
+          android:type="linear">
+        <item android:offset="0" android:color="#FF54F4FC"/>
+        <item android:offset="1" android:color="#FF72FFA6"/>
+      </gradient>
+    </aapt:attr>
+  </path>
 </vector>
+
