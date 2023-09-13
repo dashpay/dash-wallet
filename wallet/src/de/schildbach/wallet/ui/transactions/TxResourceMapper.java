@@ -28,7 +28,6 @@ import org.bitcoinj.core.Context;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.wallet.AuthenticationKeyChainGroup;
 import org.bitcoinj.wallet.Wallet;
