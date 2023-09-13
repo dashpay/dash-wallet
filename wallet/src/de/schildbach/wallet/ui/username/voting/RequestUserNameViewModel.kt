@@ -41,7 +41,21 @@ class RequestUserNameViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
 
-    var username: String? = null
+    private val _requestedUserNameLink = MutableStateFlow<String?>(null)
+    val requestedUserNameLink: StateFlow<String?> = _requestedUserNameLink.asStateFlow()
+
+    var requestedUserName: String? = null
+    suspend fun isUserNameRequested(): Boolean =
+        dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME).isNullOrEmpty().not()
+    suspend fun isUserHaveCancelledRequest(): Boolean =
+        dashPayConfig.get(DashPayConfig.CANCELED_REQUESTED_USERNAME_LINK)?:false
+
+    init {
+        viewModelScope.launch {
+            _requestedUserNameLink.value =
+                dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME_LINK)
+        }
+    }
 
     fun submit() {
         // Reset ui state for retry if needed
@@ -63,10 +77,16 @@ class RequestUserNameViewModel @Inject constructor(
             )
         }
     }
+    fun setRequestedUserNameLink(link: String) {
+        _requestedUserNameLink.value = link
+    }
     private fun updateUiForApiSuccess() {
         viewModelScope.launch {
-            username?.let { name ->
+            requestedUserName?.let { name ->
                 dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, name)
+            }
+            _requestedUserNameLink.value.let { link ->
+                dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME_LINK, link ?: "")
             }
         }
 
@@ -87,10 +107,21 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun verify() {
-        _uiState.update {
-            it.copy(
-                usernameVerified = true
-            )
+        viewModelScope.launch {
+            dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
+            _uiState.update {
+                it.copy(
+                    usernameVerified = true
+                )
+            }
+        }
+    }
+
+    fun cancelRequest() {
+        viewModelScope.launch {
+            dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, "")
+            dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME_LINK, "")
+            dashPayConfig.set(DashPayConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
         }
     }
 }

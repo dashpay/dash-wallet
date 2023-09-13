@@ -14,6 +14,7 @@ import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -64,7 +65,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                     R.string.verify
                 )
             ).show(requireActivity()) {
-                requestUserNameViewModel.username = binding.usernameInput.text.toString()
+                requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
                 if (it == true) {
                     safeNavigate(
                         RequestUsernameFragmentDirections.requestUsernameFragmentToVerifyIdentityFragment(
@@ -72,9 +73,9 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                         )
                     )
                 } else {
-                    safeNavigate(
-                        RequestUsernameFragmentDirections.requestsToConfirmUsernameRequestDialog()
-                    )
+                        lifecycleScope.launch {
+                            checkViewConfirmDialog()
+                        }
                 }
             }
         }
@@ -102,10 +103,18 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             if (it.usernameVerified) {
                 binding.usernameInput.isFocusable = (false)
                 hideKeyboard()
-                safeNavigate(
-                    RequestUsernameFragmentDirections.requestsToConfirmUsernameRequestDialog()
-                )
+                checkViewConfirmDialog()
             }
+        }
+    }
+
+    private suspend fun checkViewConfirmDialog() {
+        if (requestUserNameViewModel.isUserHaveCancelledRequest()) {
+            requestUserNameViewModel.submit()
+        } else {
+            safeNavigate(
+                RequestUsernameFragmentDirections.requestsToConfirmUsernameRequestDialog()
+            )
         }
     }
 

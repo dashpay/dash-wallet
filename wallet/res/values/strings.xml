@@ -489,4 +489,13 @@
     <string name="voting_dash_pay">Voting Dash Pay</string>
     <string name="there_was_a_network_error">There was a network error, you can try again at no extra cost</string>
     <string name="requested_voting_duration">Requested · Voting: 1 Mar – 15 Mar</string>
+    <string name="cancel_request">Cancel Request</string>
+    <string name="after_the_voting">After the voting ends we will notify you about its results</string>
+    <string name="none">None</string>
+    <string name="verify_now">Verify Now</string>
+    <string name="if_you_tap_cancel">If you tap “Cancel Request”, you will still have a chance to request another username without paying again</string>
+    <string name="do_you_really_want_to_cancel">Do you really want to cancel the username request?</string>
+    <string name="if_you_tap_cancel_request">If you tap “Cancel Request”, you will still have a chance to request another username without paying again</string>
+    <string name="cant_open">Can’t open</string>
+    <string name="invalid_link">The link is invalid</string>
 </resources>

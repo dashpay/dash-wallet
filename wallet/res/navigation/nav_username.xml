@@ -82,6 +82,24 @@
 
     </fragment>
 
+    <fragment
+        android:id="@+id/votingRequestDetailsFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.VotingRequestDetailsFragment"
+        tools:layout="@layout/fragment_voting_request_details">
+        <action
+            android:id="@+id/votingRequestDetailsFragment_to_verifyIdentityFragment"
+            app:destination="@id/verifyIdentityFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            app:popUpTo="@id/requestUsernameFragment" />
+        <action
+            android:id="@+id/votingRequestDetailsFragment_to_usernameVotingInfoFragment"
+            app:destination="@id/usernameVotingInfoFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
 
     <fragment
         android:id="@+id/verifyIdentityFragment"

@@ -233,9 +233,6 @@ class MainViewModel @Inject constructor(
 
     init {
         transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
-        viewModelScope.launch {
-            dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, "")
-        }
 
         _transactionsDirection
             .flatMapLatest { direction ->
