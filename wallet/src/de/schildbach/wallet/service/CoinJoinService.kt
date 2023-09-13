@@ -169,6 +169,7 @@ class CoinJoinMixingService @Inject constructor(
         try {
             setBlockchain(blockChain)
             log.info("coinjoin-updateState: $mixingStatus, $networkStatus, ${blockChain != null}")
+            val previousNetworkStatus = this.networkStatus
             this.networkStatus = networkStatus
             this.mixingStatus = mixingStatus
             when {
@@ -179,18 +180,18 @@ class CoinJoinMixingService @Inject constructor(
                     startMixing()
                 }
 
-                this.mixingStatus == MixingStatus.MIXING && mixingStatus == MixingStatus.FINISHED -> {
+                mixingStatus == MixingStatus.FINISHED -> {
                     // finish mixing
                     stopMixing()
                     setMixingComplete()
                 }
 
-                mixingStatus == MixingStatus.MIXING && this.networkStatus == NetworkStatus.CONNECTED && networkStatus == NetworkStatus.NOT_AVAILABLE -> {
+                mixingStatus == MixingStatus.MIXING && previousNetworkStatus == NetworkStatus.CONNECTED && networkStatus == NetworkStatus.NOT_AVAILABLE -> {
                     // pause mixing
                     stopMixing()
                 }
 
-                mixingStatus == MixingStatus.PAUSED && this.networkStatus == NetworkStatus.CONNECTING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet -> {
+                mixingStatus == MixingStatus.PAUSED && previousNetworkStatus == NetworkStatus.CONNECTING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet -> {
                     // resume mixing
                     prepareMixing()
                     startMixing()
