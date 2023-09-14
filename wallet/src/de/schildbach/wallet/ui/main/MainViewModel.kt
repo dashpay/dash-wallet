@@ -511,11 +511,10 @@ class MainViewModel @Inject constructor(
     suspend fun getInviteHistory() = invitationsDao.loadAll()
 
     private fun combineLatestData(): Boolean {
-        //TODO REVERT
-        val isPlatformAvailable = true // isPlatformAvailableData.value ?: false
-        val isSynced = true // _isBlockchainSynced.value ?: false
+        val isPlatformAvailable = isPlatformAvailableData.value ?: false
+        val isSynced = _isBlockchainSynced.value ?: false
         val noIdentityCreatedOrInProgress = (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
-        val canAffordIdentityCreation = true// walletData.canAffordIdentityCreation()
+        val canAffordIdentityCreation = walletData.canAffordIdentityCreation()
         return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress && canAffordIdentityCreation
     }
 
