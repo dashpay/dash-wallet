@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.WalletDataProvider
 import javax.inject.Inject
 
 
@@ -36,7 +37,8 @@ data class RequestUserNameUIState(
 
 @HiltViewModel
 class RequestUserNameViewModel @Inject constructor(
-    val dashPayConfig: DashPayConfig
+    val dashPayConfig: DashPayConfig,
+    val walletData: WalletDataProvider,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
@@ -50,7 +52,11 @@ class RequestUserNameViewModel @Inject constructor(
     suspend fun isUserHaveCancelledRequest(): Boolean =
         dashPayConfig.get(DashPayConfig.CANCELED_REQUESTED_USERNAME_LINK)?:false
 
+
+    fun canAffordIdentityCreation(): Boolean =
+        walletData.canAffordIdentityCreation()
     init {
+
         viewModelScope.launch {
             _requestedUserNameLink.value =
                 dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME_LINK)

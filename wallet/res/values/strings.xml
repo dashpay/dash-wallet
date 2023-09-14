@@ -455,7 +455,6 @@
     <string name="request_your_hint">Once the voting ends you can create any username you want as long as it hasn’t already been created</string>
     <string name="request_username">Request Username</string>
     <string name="voting">Voting:</string>
-    <string name="request_username_min_balance_disclaimer">To request a username on the Dash Network, you need to have more than %s Dash</string>
     <string name="this_username_has_already_been_requested">This username has already been requested, but you can request it too and let the network vote to decide if you can have it</string>
     <string name="request_details">Request details</string>
     <string name="request_details_subtitle">Review the posting bellow to verify the ownership of this username</string>
@@ -498,4 +497,6 @@
     <string name="if_you_tap_cancel_request">If you tap “Cancel Request”, you will still have a chance to request another username without paying again</string>
     <string name="cant_open">Can’t open</string>
     <string name="invalid_link">The link is invalid</string>
+    <string name="welcome_request_username_min_balance_disclaimer">You should have more than %s Dash to create a username</string>
+    <string name="request_username_min_balance_disclaimer">To request a username on the Dash Network, you need to have more than %s Dash</string>
 </resources>
