@@ -316,4 +316,8 @@ object AnalyticsConstants {
         const val TRANSFER_ERROR_RETRY = "coinbase_transfer_error_b_retry"
         const val TRANSFER_ERROR_CLOSE = "coinbase_transfer_error_b_close"
     }
+
+    object Maya {
+
+    }
 }
