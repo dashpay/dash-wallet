@@ -1,3 +1,20 @@
+/*
+ * Copyright 2023 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.dash.wallet.integrations.maya.ui
 
 import android.os.Bundle
@@ -55,6 +72,7 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
         binding.contentList.addItemDecoration(decorator)
         binding.contentList.adapter = adapter
 
+        // using this allows for translation of cryptocurrency names
         defaultItemMap = mapOf(
             "BTC.BTC" to IconifiedViewItem(
                 requireContext().getString(R.string.cryptocurrency_bitcoin_code),
@@ -93,22 +111,47 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                 itemList = it.filter { pool -> pool.asset != "DASH.DASH" }
                     .map { pool ->
                         if (defaultItemMap.containsKey(pool.asset)) {
-                            val item = defaultItemMap[pool.asset]!!.copy(
-                                iconUrl = "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/" +
-                                    "${pool.currencyCode.lowercase()}.png",
+                            defaultItemMap[pool.asset]!!.copy(
+                                iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
                                 iconSelectMode = IconSelectMode.None,
                                 additionalInfo = GenericUtils.formatFiatWithoutComma(
                                     viewModel.formatFiat(pool.assetPriceFiat)
                                 )
                             )
-                            println(item.iconUrl + " " + item.iconUrl)
-                            item
                         } else {
-                            IconifiedViewItem(pool.currencyCode, pool.asset)
+                            IconifiedViewItem(pool.currencyCode, pool.asset,
+                                iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
+                                iconSelectMode = IconSelectMode.None,
+                                additionalInfo = GenericUtils.formatFiatWithoutComma(
+                                    viewModel.formatFiat(pool.assetPriceFiat)
+                                )
+                            )
                         }
                     }.sortedBy { it.title }
                 adapter.submitList(itemList)
             }
+        }
+
+        viewModel.uiState.observe(viewLifecycleOwner) { uiState ->
+            uiState.errorCode?.let {
+                showErrorAlert(it)
+            }
+        }
+    }
+
+    private fun showErrorAlert(code: Int) {
+        var messageId = R.string.loading_error
+
+        if (code == 400 || code == 408 || code >= 500) messageId = R.string.maya_error_not_available
+        if (code == 403 || code >= 400) messageId = R.string.maya_error_report_issue
+
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.maya_error),
+            getString(messageId),
+            getString(android.R.string.ok)
+        ).show(requireActivity()) {
+            viewModel.errorHandled()
         }
     }
 

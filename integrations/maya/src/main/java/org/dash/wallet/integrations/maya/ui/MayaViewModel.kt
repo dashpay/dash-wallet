@@ -27,14 +27,12 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
-import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.MayaApi
-import org.dash.wallet.integrations.maya.data.CryptoCurrencyItem
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.slf4j.LoggerFactory
@@ -64,8 +62,6 @@ class MayaViewModel @Inject constructor(
 
     val networkError = SingleLiveEvent<Unit>()
 
-    private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
-
     private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
     private var fiatExchangeRate: Fiat? = null
 
@@ -80,23 +76,15 @@ class MayaViewModel @Inject constructor(
     val poolList = MutableStateFlow<List<PoolInfo>>(listOf())
 
     init {
+        // TODO: is this really needed? we don't support DASH swaps
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
             .onEach { rate ->
                 dashExchangeRate = rate?.let { org.bitcoinj.utils.ExchangeRate(Coin.COIN, rate.fiat) }
-                // val fiatBalance = exchangeRate?.coinToFiat(_uiState.value.balance)
                 _uiState.update { it.copy() }
             }
             .launchIn(viewModelScope)
-
-//        mayaApi.observePoolList()
-//            .filterNotNull()
-//            .onEach {
-//                log.info("Pool List: {}", it)
-//                poolList.value = it
-//            }
-//            .launchIn(viewModelScope)
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
@@ -123,10 +111,17 @@ class MayaViewModel @Inject constructor(
 
         val fiatBalance = fiatFormat.format(fiatAmount).toString()
 
-        return if (fiatAmount!!.isCurrencyFirst()) {
+        return if (fiatAmount.isCurrencyFirst()) {
             "$localCurrencySymbol $fiatBalance"
         } else {
             "$fiatBalance $localCurrencySymbol"
         }
+    }
+    fun errorHandled() {
+        _uiState.update { it.copy(errorCode = null) }
+    }
+
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, mapOf())
     }
 }

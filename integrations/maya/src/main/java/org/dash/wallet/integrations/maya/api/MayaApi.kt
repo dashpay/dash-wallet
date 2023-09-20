@@ -1,8 +1,23 @@
+/*
+ * Copyright 2023 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.dash.wallet.integrations.maya.api
 
-import android.content.Context
 import android.content.Intent
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -15,16 +30,13 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.integrations.maya.MayaWebApi
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.utils.MayaConfig
-import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -38,7 +50,8 @@ interface MayaApi {
 
     suspend fun swap()
     suspend fun reset()
-    //fun observePoolList(): Flow<List<PoolInfo>>
+
+    // fun observePoolList(): Flow<List<PoolInfo>>
     fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>>
 }
 
@@ -49,18 +62,12 @@ class MayaApiAggregator @Inject constructor(
     private val notificationService: NotificationService,
     private val analyticsService: AnalyticsService,
     private val config: MayaConfig,
-    private val globalConfig: Configuration,
     private val securityFunctions: AuthenticationManager,
-    private val transactionMetadataProvider: TransactionMetadataProvider,
-    @ApplicationContext private val appContext: Context
+    private val transactionMetadataProvider: TransactionMetadataProvider
 ): MayaApi {
     companion object {
         private val log = LoggerFactory.getLogger(MayaApiAggregator::class.java)
         private val UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30)
-        private const val CONFIRMED_STATUS = "confirmed"
-        private const val VALID_STATUS = "valid"
-        private const val MESSAGE_RECEIVED_STATUS = "received"
-        private const val MESSAGE_FAILED_STATUS = "failed"
     }
 
     private val params = walletDataProvider.networkParameters
@@ -162,7 +169,7 @@ class MayaApiAggregator @Inject constructor(
 //    }
 
     override fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>> {
-       log.info("observePoolList(${fiatExchangeRate.toFriendlyString()})")
+        log.info("observePoolList(${fiatExchangeRate.toFriendlyString()})")
         if (shouldRefresh()) {
             refreshRates(fiatExchangeRate)
         }

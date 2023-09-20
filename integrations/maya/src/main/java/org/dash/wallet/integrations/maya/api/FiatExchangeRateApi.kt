@@ -1,3 +1,20 @@
+/*
+ * Copyright 2023 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.dash.wallet.integrations.maya.api
 
 import kotlinx.coroutines.CoroutineScope
@@ -14,7 +31,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 class FiatExchangeRateApiAggregator @Inject constructor(
-    val exchangeRateApi: ExchangeRateApi
+    private val exchangeRateApi: ExchangeRateApi
 ) {
     companion object {
         val log: Logger = LoggerFactory.getLogger(FiatExchangeRateApiAggregator::class.java)
@@ -33,12 +50,11 @@ class FiatExchangeRateApiAggregator @Inject constructor(
 
 interface FiatExchangeRateProvider {
     val fiatExchangeRate: Flow<ExchangeRate>
-    fun observeFiatRates(): Flow<List<ExchangeRate>>
     fun observeFiatRate(currencyCode: String): Flow<ExchangeRate?>
 }
 
 class FiatExchangeRateAggregatedProvider @Inject constructor(
-    val fiatExchangeRateApi: FiatExchangeRateApiAggregator
+    private val fiatExchangeRateApi: FiatExchangeRateApiAggregator
 ) : FiatExchangeRateProvider {
     companion object {
         private val log = LoggerFactory.getLogger(FiatExchangeRateApiAggregator::class.java)
@@ -50,9 +66,6 @@ class FiatExchangeRateAggregatedProvider @Inject constructor(
     )
     private var poolListLastUpdated: Long = 0
     override val fiatExchangeRate = MutableStateFlow(ExchangeRate(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, "1.0"))
-    override fun observeFiatRates(): Flow<List<ExchangeRate>> {
-        TODO("Not yet implemented")
-    }
 
     override fun observeFiatRate(currencyCode: String): Flow<ExchangeRate?> {
         if (shouldRefresh()) {
@@ -77,7 +90,7 @@ class FiatExchangeRateAggregatedProvider @Inject constructor(
         return poolListLastUpdated == 0L || now - poolListLastUpdated > UPDATE_FREQ_MS
     }
 
-    suspend fun updateExchangeRates(currencyCode: String) {
+    private suspend fun updateExchangeRates(currencyCode: String) {
         fiatExchangeRateApi.getRate(currencyCode)?.let { rate ->
             fiatExchangeRate.value = rate
         }
