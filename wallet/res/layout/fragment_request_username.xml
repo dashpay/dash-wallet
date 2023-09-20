@@ -118,7 +118,7 @@
 
     <TextView
         android:id="@+id/balance_requirement_disclaimer"
-        style="@style/Overline.Secondary"
+        style="@style/Overline"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginBottom="12dp"

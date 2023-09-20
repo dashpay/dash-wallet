@@ -15,13 +15,11 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
-
 
 @AndroidEntryPoint
 class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
@@ -38,7 +36,9 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
 
         binding.usernameInput.doOnTextChanged { text, _, _, _ ->
             val username = text.toString()
-            binding.requestUsernameButton.isEnabled = username.isNotEmpty()
+            binding.requestUsernameButton.isEnabled = username.isNotEmpty() &&
+                requestUserNameViewModel.canAffordIdentityCreation()
+
             binding.inputWrapper.isEndIconVisible = username.isNotEmpty()
             // TODO: Replace with api to verify username
             val isUsernameValid = binding.usernameInput.text.contentEquals("test") ||
@@ -73,9 +73,9 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                         )
                     )
                 } else {
-                        lifecycleScope.launch {
-                            checkViewConfirmDialog()
-                        }
+                    lifecycleScope.launch {
+                        checkViewConfirmDialog()
+                    }
                 }
             }
         }
@@ -85,11 +85,12 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             showKeyboard()
         }
 
-
         binding.balanceRequirementDisclaimer.text = getString(
-            R.string.dashpay_min_balance_disclaimer,
-            MonetaryFormat.BTC.format(Constants.DASH_PAY_FEE)
+            R.string.request_username_min_balance_disclaimer,
+            Constants.DASH_PAY_FEE.toPlainString()
         )
+
+        binding.balanceRequirementDisclaimer.isVisible = !requestUserNameViewModel.canAffordIdentityCreation()
 
         requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
             if (it.usernameSubmittedSuccess) {

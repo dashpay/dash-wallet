@@ -184,4 +184,19 @@
         android:layout_marginHorizontal="15dp"
         android:text="@string/button_ok"
         />
+
+    <TextView
+        android:id="@+id/balance_requirement_disclaimer"
+        style="@style/Overline"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:text="@string/welcome_request_username_min_balance_disclaimer"
+        android:visibility="gone"
+        android:gravity="center_horizontal"
+        android:textAlignment="gravity"
+        app:layout_constraintBottom_toTopOf="@id/username_voting_info_continue_btn"
+        app:layout_constraintEnd_toEndOf="@id/username_voting_info_continue_btn"
+        app:layout_constraintStart_toStartOf="@id/username_voting_info_continue_btn"
+        tools:visibility="visible" />
 </androidx.constraintlayout.widget.ConstraintLayout>
