@@ -21,44 +21,112 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.isCurrencyFirst
+import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
+import org.dash.wallet.integrations.maya.api.MayaApi
+import org.dash.wallet.integrations.maya.data.CryptoCurrencyItem
+import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.utils.MayaConfig
+import org.slf4j.LoggerFactory
+import java.util.Locale
 import javax.inject.Inject
+
+data class MayaPortalUIState(
+    val errorCode: Int? = null
+)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class MayaViewModel @Inject constructor(
     private val globalConfig: Configuration,
     private val config: MayaConfig,
+    private val mayaApi: MayaApi,
+    private val fiatExchangeRateProvider: FiatExchangeRateProvider,
     exchangeRatesProvider: ExchangeRatesProvider,
     val analytics: AnalyticsService,
     walletUIConfig: WalletUIConfig
 ) : ViewModel() {
+    companion object {
+        val log = LoggerFactory.getLogger(MayaViewModel::class.java)
+    }
 
-    val balanceFormat: MonetaryFormat
-        get() = globalConfig.format.noCode()
+    val fiatFormat = MonetaryFormat().minDecimals(2).withLocale(Locale.getDefault()).noCode()
 
     val networkError = SingleLiveEvent<Unit>()
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
-    val exchangeRate: LiveData<ExchangeRate>
-        get() = _exchangeRate
+
+    private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
+    private var fiatExchangeRate: Fiat? = null
+
+    // val currencyList = MutableStateFlow<List<CryptoCurrencyItem>>(listOf<CryptoCurrencyItem>())
+
+    private val _uiState = MutableStateFlow(MayaPortalUIState())
+    val uiState: StateFlow<MayaPortalUIState> = _uiState.asStateFlow()
 
     val dashFormat: MonetaryFormat
         get() = globalConfig.format.noCode()
+
+    val poolList = MutableStateFlow<List<PoolInfo>>(listOf())
 
     init {
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
-            .onEach(_exchangeRate::postValue)
+            .onEach { rate ->
+                dashExchangeRate = rate?.let { org.bitcoinj.utils.ExchangeRate(Coin.COIN, rate.fiat) }
+                // val fiatBalance = exchangeRate?.coinToFiat(_uiState.value.balance)
+                _uiState.update { it.copy() }
+            }
             .launchIn(viewModelScope)
+
+//        mayaApi.observePoolList()
+//            .filterNotNull()
+//            .onEach {
+//                log.info("Pool List: {}", it)
+//                poolList.value = it
+//            }
+//            .launchIn(viewModelScope)
+
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .flatMapLatest(fiatExchangeRateProvider::observeFiatRate)
+            .onEach {
+                it?.let { fiatRate -> fiatExchangeRate = fiatRate.fiat }
+                log.info("exchange rate: $it")
+            }
+            .flatMapLatest { mayaApi.observePoolList(it!!.fiat) }
+            .onEach {
+                log.info("exchange rate in view model: {}", fiatExchangeRate?.toFriendlyString())
+                log.info("Pool List: {}", it)
+                log.info("Pool List: {}", it.map { pool -> pool.assetPriceFiat })
+                it.forEach { pool ->
+                    pool.setAssetPrice(fiatExchangeRate!!)
+                }
+                poolList.value = it
+            }
+            .launchIn(viewModelScope)
+    }
+
+    fun formatFiat(fiatAmount: Fiat): String {
+        val localCurrencySymbol = GenericUtils.getLocalCurrencySymbol(fiatAmount.currencyCode)
+
+        val fiatBalance = fiatFormat.format(fiatAmount).toString()
+
+        return if (fiatAmount!!.isCurrencyFirst()) {
+            "$localCurrencySymbol $fiatBalance"
+        } else {
+            "$fiatBalance $localCurrencySymbol"
+        }
     }
 }

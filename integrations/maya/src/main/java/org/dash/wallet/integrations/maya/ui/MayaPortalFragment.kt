@@ -23,12 +23,11 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
 
 @AndroidEntryPoint
@@ -42,7 +41,7 @@ class MayaPortalFragment : Fragment(R.layout.fragment_integration_portal) {
         super.onCreate(savedInstanceState)
 
         binding.balanceDash.isVisible = false
-        binding.balanceDash.setFormat(viewModel.balanceFormat)
+        binding.balanceDash.setFormat(viewModel.fiatFormat)
         binding.balanceDash.setApplyMarkup(false)
 
         binding.toolbarTitle.text = getString(R.string.maya_service_name)
@@ -72,6 +71,7 @@ class MayaPortalFragment : Fragment(R.layout.fragment_integration_portal) {
 
         binding.convertBtn.setOnClickListener {
             // TODO: add handler code here
+            safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
         }
     }
 }
