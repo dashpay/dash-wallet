@@ -34,5 +34,4 @@ interface ExchangeRateApi {
         @Query("base") baseCurrencyCode: String,
         @Query("symbols") resultCurrencyCode: String
     ): Response<ExchangeRateResponse>
-
 }

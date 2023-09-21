@@ -113,7 +113,9 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                                 )
                             )
                         } else {
-                            IconifiedViewItem(pool.currencyCode, pool.asset,
+                            IconifiedViewItem(
+                                pool.currencyCode,
+                                pool.asset,
                                 iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
                                 iconSelectMode = IconSelectMode.None,
                                 additionalInfo = GenericUtils.formatFiatWithoutComma(

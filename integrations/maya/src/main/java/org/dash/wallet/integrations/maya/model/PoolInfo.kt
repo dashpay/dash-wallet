@@ -39,7 +39,7 @@ data class PoolInfo(
 ) {
     var assetPriceFiat: Fiat = Fiat.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 0)
 
-    fun getAssetPriceUSD() : Fiat {
+    fun getAssetPriceUSD(): Fiat {
         return Fiat.parseFiatInexact("USD", assetPriceUSD)
     }
 

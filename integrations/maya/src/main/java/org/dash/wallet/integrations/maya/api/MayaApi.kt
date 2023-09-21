@@ -64,7 +64,7 @@ class MayaApiAggregator @Inject constructor(
     private val config: MayaConfig,
     private val securityFunctions: AuthenticationManager,
     private val transactionMetadataProvider: TransactionMetadataProvider
-): MayaApi {
+) : MayaApi {
     companion object {
         private val log = LoggerFactory.getLogger(MayaApiAggregator::class.java)
         private val UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30)
