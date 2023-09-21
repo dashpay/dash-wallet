@@ -24,6 +24,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -43,15 +44,14 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 interface MayaApi {
-    val poolInfoList: MutableStateFlow<List<PoolInfo>>
-    val apiError: MutableStateFlow<Exception?>
+    val poolInfoList: StateFlow<List<PoolInfo>>
+    val apiError: StateFlow<Exception?>
     var notificationIntent: Intent?
     var showNotificationOnResult: Boolean
 
     suspend fun swap()
     suspend fun reset()
 
-    // fun observePoolList(): Flow<List<PoolInfo>>
     fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>>
 }
 
@@ -160,13 +160,6 @@ class MayaApiAggregator @Inject constructor(
             )
         }
     }
-
-//    override fun observePoolList(): Flow<List<PoolInfo>> {
-//        if (shouldRefresh()) {
-//            refreshRates(Fiat.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 100000000))
-//        }
-//        return poolInfoList
-//    }
 
     override fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>> {
         log.info("observePoolList(${fiatExchangeRate.toFriendlyString()})")

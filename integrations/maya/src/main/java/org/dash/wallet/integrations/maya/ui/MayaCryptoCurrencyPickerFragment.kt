@@ -77,32 +77,26 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
             "BTC.BTC" to IconifiedViewItem(
                 requireContext().getString(R.string.cryptocurrency_bitcoin_code),
                 requireContext().getString(R.string.cryptocurrency_bitcoin_network)
-                // R.drawable.ic_btc_logo
             ),
             "ETH.ETH" to IconifiedViewItem(
                 requireContext().getString(R.string.cryptocurrency_ethereum_code),
                 requireContext().getString(R.string.cryptocurrency_ethereum_network)
-                // R.drawable.ic_eth_logo
             ),
             "DASH.DASH" to IconifiedViewItem(
                 requireContext().getString(R.string.cryptocurrency_dash_code),
                 requireContext().getString(R.string.cryptocurrency_dash_network)
-                // R.drawable.ic_dash_d_circle
             ),
             "ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48" to IconifiedViewItem(
                 requireContext().getString(R.string.cryptocurrency_usdcoin_code),
                 requireContext().getString(R.string.cryptocurrency_usdcoin_network)
-                // R.drawable.blue_circle
             ),
             "ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7" to IconifiedViewItem(
                 requireContext().getString(R.string.cryptocurrency_tether_code),
                 requireContext().getString(R.string.cryptocurrency_tether_network)
-                // R.drawable.blue_circle
             ),
             "THOR.RUNE" to IconifiedViewItem(
                 requireContext().getString(R.string.cryptocurrency_rune_code),
                 requireContext().getString(R.string.cryptocurrency_rune_network)
-                // R.drawable.ic_dash_d_circle
             )
         )
 

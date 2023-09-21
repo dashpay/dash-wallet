@@ -88,6 +88,7 @@ class MayaViewModel @Inject constructor(
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
+            .onEach { log.info("selected currency: {}", it) }
             .flatMapLatest(fiatExchangeRateProvider::observeFiatRate)
             .onEach {
                 it?.let { fiatRate -> fiatExchangeRate = fiatRate.fiat }

@@ -25,12 +25,12 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.integrations.maya.api.MayaEndpoint
 import org.dash.wallet.integrations.maya.api.ExchangeRateApi
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateAggregatedProvider
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.MayaApi
 import org.dash.wallet.integrations.maya.api.MayaApiAggregator
+import org.dash.wallet.integrations.maya.api.MayaEndpoint
 import org.dash.wallet.integrations.maya.api.RemoteDataSource
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import javax.inject.Singleton
@@ -38,9 +38,7 @@ import kotlin.time.ExperimentalTime
 
 @Module
 @InstallIn(SingletonComponent::class)
-@ExperimentalCoroutinesApi
-@ExperimentalTime
-@FlowPreview
+@OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class, FlowPreview::class)
 abstract class MayaModule {
     companion object {
         @Provides
