@@ -15,21 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.maya.utils
+package org.dash.wallet.integrations.maya.api
 
-import org.bitcoinj.core.NetworkParameters
+import javax.inject.Inject
 
-object MayaConstants {
-    const val DEFAULT_EXCHANGE_CURRENCY = "USD"
-
-    private const val MAINNET_BASE_URL = "https://midgard.mayachain.info/v2/"
-
-    /**
-     * https://exchangerate.host/#/docs
-     */
-    const val EXCHANGERATE_BASE_URL = "https://api.exchangerate.host/"
-
-    fun getBaseUrl(params: NetworkParameters): String {
-        return MAINNET_BASE_URL
+class MayaBlockchainApi @Inject constructor() {
+    suspend fun swap() {
     }
 }

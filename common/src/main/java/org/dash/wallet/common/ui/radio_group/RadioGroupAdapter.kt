@@ -83,7 +83,7 @@ class RadioGroupAdapter(
     }
 }
 
-class RadioButtonViewHolder(
+open class RadioButtonViewHolder(
     val binding: RadiobuttonRowBinding,
     private val isCheckMark: Boolean
 ) : RecyclerView.ViewHolder(binding.root) {

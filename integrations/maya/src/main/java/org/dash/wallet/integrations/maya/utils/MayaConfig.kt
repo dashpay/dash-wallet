@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.maya.utils
 
 import android.content.Context
+import androidx.datastore.preferences.core.stringPreferencesKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import javax.inject.Inject
@@ -30,5 +31,7 @@ open class MayaConfig @Inject constructor(
 ) : BaseConfig(context, PREFERENCES_NAME, walletDataProvider) {
     companion object {
         const val PREFERENCES_NAME = "maya"
+
+        val BACKGROUND_ERROR = stringPreferencesKey("error")
     }
 }

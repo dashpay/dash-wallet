@@ -15,21 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.maya.utils
+package org.dash.wallet.integrations.maya.api
 
-import org.bitcoinj.core.NetworkParameters
+import org.dash.wallet.integrations.maya.model.ExchangeRateResponse
+import retrofit2.Response
+import retrofit2.http.GET
+import retrofit2.http.Query
 
-object MayaConstants {
-    const val DEFAULT_EXCHANGE_CURRENCY = "USD"
+/**
+ * https://exchangerate.host/#/docs
+ */
+interface ExchangeRateApi {
+    @GET("latest")
+    suspend fun getRates(@Query("base") baseCurrencyCode: String): Response<ExchangeRateResponse>
 
-    private const val MAINNET_BASE_URL = "https://midgard.mayachain.info/v2/"
-
-    /**
-     * https://exchangerate.host/#/docs
-     */
-    const val EXCHANGERATE_BASE_URL = "https://api.exchangerate.host/"
-
-    fun getBaseUrl(params: NetworkParameters): String {
-        return MAINNET_BASE_URL
-    }
+    @GET("latest")
+    suspend fun getRate(
+        @Query("base") baseCurrencyCode: String,
+        @Query("symbols") resultCurrencyCode: String
+    ): Response<ExchangeRateResponse>
 }

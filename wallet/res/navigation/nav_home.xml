@@ -215,7 +215,7 @@
 
         <action
             android:id="@+id/buySell_to_maya"
-            app:destination="@id/mayaPortalFragment"
+            app:destination="@id/nav_maya"
             app:enterAnim="@anim/slide_in_bottom"
             app:popEnterAnim="@anim/activity_stay"
             app:exitAnim="@anim/activity_stay"
@@ -238,12 +238,6 @@
         android:id="@+id/upholdPortalFragment"
         android:name="org.dash.wallet.integration.uphold.ui.UpholdPortalFragment"
         android:label="upholdPortalFragment"
-        tools:layout="@layout/fragment_integration_portal" />
-
-    <fragment
-        android:id="@+id/mayaPortalFragment"
-        android:name="org.dash.wallet.integrations.maya.ui.MayaPortalFragment"
-        android:label="mayaPortalFragment"
         tools:layout="@layout/fragment_integration_portal" />
 
     <fragment
@@ -285,4 +279,5 @@
         tools:layout="@layout/fragment_address_input" />
 
     <include app:graph="@navigation/nav_explore" />
+    <include app:graph="@navigation/nav_maya" />
 </navigation>
