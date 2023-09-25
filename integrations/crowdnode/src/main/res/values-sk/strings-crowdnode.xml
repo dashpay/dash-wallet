@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Ak chcete začať stávkovať, vytvorte si účet na CrowdNode alebo sa pripojte k existujúcemu účtu.</string>
     <string name="crowdnode_account">Účet CrowdNode</string>
     <string name="new_account">Nový CrowdNode účet</string>
-    <string name="account_create">Vytvoriť účet</string>
     <string name="accept_terms_response">Prijmite podmienky</string>
     <string name="accept_terms">Prijať podmienky</string>
     <string name="welcome_response">Účet vytvorený</string>

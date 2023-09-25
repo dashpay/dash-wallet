@@ -367,7 +367,6 @@
     <string name="activity_security_hide_balance">Awtimatikong Pagtago ng Balanse</string>
     <string name="reset_to_default">I-reset sa Default</string>
 
-    <string name="payment_protocol_default_error_title">May mali sa bayad</string>
     <string name="payment_protocol_insufficient_funds_error_title">Hindi sapat na pondo</string>
     <string name="payment_protocol_insufficient_funds_error_message">Wala ka nang sapat na pondo para makompleto ang transaksyong ito</string>
 
@@ -375,7 +374,6 @@
     <string name="select_a_service">Pumili ng isang Serbisyo</string>
     <string name="activity_buy_and_sell_dash_filter">Salain</string>
     <string name="clear_filter">I-clear ang Filter</string>
-    <string name="select_currency">Piliin ang Pera</string>
     <string name="reason">Dahilan</string>
     <string name="link_account">I-link ang iyong account</string>
     <string name="buy_no_account_needed">Bumili ng Dash · Walang kinakailangang account</string>
@@ -383,7 +381,6 @@
     <string name="please_log_in_to_your_coinbase_account">Mangyaring mag-log in sa iyong Coinbase account</string>
     <string name="log_in">Mag log in</string>
 
-    <string name="recipient_address">address ng pitaka</string>
     <string name="show_clipboard">Ipakita ang nilalaman sa clipboard</string>
     <string name="tap_to_paste">I-tap ang address mula sa clipboard para i-paste ito</string>
     <string name="not_dash_address">Hindi wastong Dash Address o kahilingan sa URL</string>

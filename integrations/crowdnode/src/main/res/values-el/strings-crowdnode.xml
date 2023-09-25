@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Για να ξεκινήσετε το staking, δημιουργήστε έναν λογαριασμό στο CrowdNode ή συνδεθείτε σε έναν ήδη υπάρχοντα.</string>
     <string name="crowdnode_account">Λογαριασμός CrowdNode</string>
     <string name="new_account">Νέος λογαριασμός CrowdNode</string>
-    <string name="account_create">Δημιουργία λογαριασμού</string>
     <string name="accept_terms_response">Παρακαλούμε αποδεχτείτε τους όρους</string>
     <string name="accept_terms">Αποδοχή όρων</string>
     <string name="welcome_response">Ο λογαριασμός δημιουργήθηκε</string>

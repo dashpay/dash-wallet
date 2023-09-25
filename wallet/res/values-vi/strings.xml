@@ -354,7 +354,6 @@
     <string name="activity_security_hide_balance">Tự ẩn số dư</string>
     <string name="reset_to_default">Thiết lập lại về giá trị ngầm định</string>
 
-    <string name="payment_protocol_default_error_title">Giao dịch bị lỗi</string>
     <string name="payment_protocol_insufficient_funds_error_title">Không đủ tiền</string>
     <string name="payment_protocol_insufficient_funds_error_message">Bạn không có đủ kinh phí để hoàn tất giao dịch này</string>
 

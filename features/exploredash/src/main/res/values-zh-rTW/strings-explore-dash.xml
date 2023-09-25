@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">瀏覽達世幣</string>
     <string name="explore_title">瀏覽</string>
-    <string name="explore_subtitle">使用您的達世幣在超過 155,000 個地點和在線商家輕鬆購物</string>
+    <string name="explore_subtitle">尋找接受達世幣的商家、可以在哪裡購買以及如何透過它賺取收入。</string>
     <string name="explore_merchants_title">在哪裡消費?</string>
     <string name="explore_merchants_subtitle">查找接受達世幣作為付款的商家。</string>
     <string name="explore_atms_title">自動提款機</string>
@@ -74,6 +74,7 @@
     <string name="explore_payment_method">付款方法</string>
     <string name="explore_payment_dash">達世幣</string>
     <string name="explore_payment_gift_card">禮物卡</string>
+    <string name="explore_filter_gift_cards">禮物卡</string>
     <string name="explore_radius">半徑</string>
     <string name="explore_location">位置</string>
     <string name="explore_current_location">當前位置</string>
@@ -149,10 +150,12 @@
     <string name="redeem_gift_card_text">在幾秒鐘內在線或在收銀台兌換您的禮品卡。</string>
 
     <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">同步中... 結果可能不完整。</string>
-    <string name="sync_in_progress_error">同步中...出現錯誤。</string>
-    <string name="sync_in_progress_canceled">同步已取消...稍後將進行另一次嘗試。</string>
+    <string name="sync_in_progress_not_complete">同步中...  結果可能不完整。</string>
+    <string name="sync_in_progress_error">同步中... 出現錯誤。</string>
+    <string name="sync_in_progress_canceled">同步已取消... 稍後將進行另一次嘗試。</string>
 
     <string name="sync_in_progress_file_not_found">構建錯誤 : 找不到數據庫!</string>
-    <string name="sync_in_progress_network_error">同步中斷...網絡離線或無法訪問</string>
-</resources>
+    <string name="sync_in_progress_network_error">同步中斷... 網絡離線或無法訪問</string>
+
+
+    </resources>

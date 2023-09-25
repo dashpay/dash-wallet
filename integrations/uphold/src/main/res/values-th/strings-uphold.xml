@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="uphold_account">Uphold</string>
+    <string name="uphold_account">Uphold  </string>
     <string name="topper">Topper</string>
     <string name="uphold_link_title">เชื่อมต่อบัญชี Uphold ของคุณ</string>
     <string name="uphold_powered_by">ขับเคลื่อนโดย Topper</string>

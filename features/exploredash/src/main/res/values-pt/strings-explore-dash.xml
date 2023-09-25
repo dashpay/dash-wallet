@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Explorar Dash</string>
     <string name="explore_title">Explorar</string>
-    <string name="explore_subtitle">Compre facilmente com seu DASH em mais de 155.000 locais e comércios online</string>
+    <string name="explore_subtitle">Encontre comerciantes que aceitem Dash, descubra onde comprar e como gerar renda com ele. </string>
     <string name="explore_merchants_title">Onde gastar?</string>
     <string name="explore_merchants_subtitle">Encontre comércios que aceitam Dash como pagamento.</string>
     <string name="explore_atms_title">Caixas Eletrônicos</string>
@@ -78,6 +78,7 @@
     <string name="explore_payment_method">Método de Pagamento</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Vale-presente</string>
+    <string name="explore_filter_gift_cards">Vales-presente</string>
     <string name="explore_radius">Raio</string>
     <string name="explore_location">Localização</string>
     <string name="explore_current_location">Localização atual</string>
@@ -163,4 +164,6 @@
 
     <string name="sync_in_progress_file_not_found">Erro de compilação: banco de dados não encontrado!</string>
     <string name="sync_in_progress_network_error">Sincronização interrompida... A rede está offline ou inacessível</string>
-</resources>
+
+
+    </resources>

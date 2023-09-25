@@ -320,8 +320,6 @@
     <string name="payment_request_unable_to_send">Nelze odeslat</string>
     <string name="payment_request_please_try_again">Zkuste to ještě jednou</string>
     <string name="payment_request_try_again">Zkusit znovu</string>
-    <string name="payment_request_problem_title">Platba nebyla potvrzena</string>
-    <string name="payment_request_problem_message">Vaše platba nemohla být serverem zpracována, informujte se prosím u obchodníka.</string>
     <string name="payment_request_expired_title">Platební požadavek vypršel</string>
     <string name="payment_request_close">Zavřít</string>
     <string name="payment_request_skip">Přeskočit</string>

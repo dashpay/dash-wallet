@@ -345,8 +345,6 @@
     <string name="payment_request_unable_to_send">Hindi maipadala</string>
     <string name="payment_request_please_try_again">Subukan muli</string>
     <string name="payment_request_try_again">Subukan muli</string>
-    <string name="payment_request_problem_title">Ang pagbabayad ay hindi kinilala</string>
-    <string name="payment_request_problem_message">Ang iyong pagbabayad ay hindi maproseso ng server, mangyaring magtanong sa merchant</string>
     <string name="payment_request_expired_title">Ang hiling sa pagbayad ay nag-expire na</string>
     <string name="payment_request_close">Sarado</string>
     <string name="payment_request_skip">Laktawan</string>
@@ -397,7 +395,6 @@
     <string name="masternode_key_type_owner">Susi ng may-ari</string>
     <string name="masternode_key_type_voting">Mga susi ng pagboto</string>
     <string name="masternode_key_type_operator">Operator na mga Susi</string>
-    <string name="masternode_key_type_platform">Mga Susi ng Operator ng HPMN</string>
     <string name="masternode_key_type_total">%d mga susi</string>
     <string name="masternode_key_type_used">%d ginamit</string>
     <string name="masternode_key_pair_index">Keypair %d</string>

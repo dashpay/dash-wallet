@@ -367,7 +367,6 @@
     <string name="activity_security_hide_balance">自動隱藏結餘</string>
     <string name="reset_to_default">重置為預設值</string>
 
-    <string name="payment_protocol_default_error_title">付款錯誤</string>
     <string name="payment_protocol_insufficient_funds_error_title">餘額不足</string>
     <string name="payment_protocol_insufficient_funds_error_message">您沒有足夠的資金來完成此交易</string>
 
@@ -375,7 +374,6 @@
     <string name="select_a_service">選擇服務</string>
     <string name="activity_buy_and_sell_dash_filter">篩選</string>
     <string name="clear_filter">清除篩選</string>
-    <string name="select_currency">選擇貨幣</string>
     <string name="reason">理由</string>
     <string name="link_account">連結您的帳戶</string>
     <string name="buy_no_account_needed">購買達世幣 · 無需賬戶</string>
@@ -383,7 +381,7 @@
     <string name="please_log_in_to_your_coinbase_account">請登錄您的 Coinbase 賬戶</string>
     <string name="log_in">登入</string>
 
-    <string name="recipient_address">錢包位址</string>
+    <string name="recipient_address">收款者位址</string>
     <string name="show_clipboard">顯示剪貼板中的內容</string>
     <string name="tap_to_paste">點擊剪貼板中的地址進行粘貼</string>
     <string name="not_dash_address">不是有效的達世幣位址或 URL 請求</string>
