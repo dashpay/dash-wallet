@@ -41,6 +41,7 @@ interface PlatformBroadcastService {
 }
 
 class PlatformDocumentBroadcastService @Inject constructor(
+    val platform: PlatformService,
     val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
     val walletDataProvider: WalletDataProvider,
@@ -49,9 +50,6 @@ class PlatformDocumentBroadcastService @Inject constructor(
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformDocumentBroadcastService::class.java)
     }
-
-    val platform = platformRepo.platform
-    val contactRequests = platformRepo.contactRequests
     
     @Throws(Exception::class)
     override suspend fun sendContactRequest(toUserId: String): DashPayContactRequest {
@@ -74,7 +72,7 @@ class PlatformDocumentBroadcastService @Inject constructor(
 
         // Create Contact Request
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
-        val cr = contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
+        val cr = platform.contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
         timer.logTiming()
         log.info("contact request sent")
 

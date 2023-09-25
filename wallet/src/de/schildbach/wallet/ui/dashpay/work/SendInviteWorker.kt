@@ -35,6 +35,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.net.URLEncoder
@@ -50,7 +51,9 @@ private val log = LoggerFactory.getLogger(SendInviteWorker::class.java)
 class SendInviteWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
-    val analytics: AnalyticsService)
+    val analytics: AnalyticsService,
+    val platformRepo: PlatformRepo,
+    val walletDataProvider: WalletDataProvider)
     : BaseWorker(context, parameters) {
 
     companion object {
@@ -75,8 +78,7 @@ class SendInviteWorker @AssistedInject constructor(
             get() = data.getString(KEY_SHORT_DYNAMIC_LINK)!!
     }
 
-    private val platformRepo = PlatformRepo.getInstance()
-    private val wallet = platformRepo.walletApplication.wallet!!
+    private val wallet = walletDataProvider.wallet!!
 
     override suspend fun doWorkWithBaseProgress(): Result {
         val password = inputData.getString(KEY_PASSWORD)

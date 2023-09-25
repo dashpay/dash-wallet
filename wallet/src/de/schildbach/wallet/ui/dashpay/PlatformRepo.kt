@@ -20,10 +20,8 @@ import android.os.HandlerThread
 import android.os.Process
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
-import com.google.common.util.concurrent.SettableFuture
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors.fromApplication
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -34,26 +32,22 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.platform.PlatformService
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import org.bitcoinj.coinjoin.CoinJoinClientManager
-import org.bitcoinj.coinjoin.CoinJoinClientOptions
-import org.bitcoinj.coinjoin.PoolStatus
-import org.bitcoinj.coinjoin.listeners.MixingCompleteListener
-import org.bitcoinj.coinjoin.utils.ProTxToOutpoint
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.AuthenticationKeyChain
-import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
@@ -73,19 +67,25 @@ import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofException
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
-import org.dashj.platform.dpp.identity.IdentityPublicKey
 import org.dashj.platform.dpp.toHex
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
-import org.dashj.platform.sdk.platform.Platform
 import org.dashj.platform.sdk.platform.multicall.MulticallQuery
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeoutException
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-class PlatformRepo private constructor(val walletApplication: WalletApplication) {
+@Singleton
+class PlatformRepo @Inject constructor(
+    val walletApplication: WalletApplication,
+    val blockchainIdentityDataDao: BlockchainIdentityConfig,
+    val appDatabase: AppDatabase,
+    val platform: PlatformService
+) {
 
     @EntryPoint
     @InstallIn(SingletonComponent::class)
@@ -95,22 +95,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     companion object {
         private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
-
-        private val platformRepoInstance = PlatformRepo(WalletApplication.getInstance())
-
-        @JvmStatic
-        @Deprecated("Inject instead")
-        fun getInstance(): PlatformRepo {
-            return platformRepoInstance
-        }
     }
 
     var onIdentityResolved: ((Identity?) -> Unit)? = {}
     private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
-
-    val platform = Platform(Constants.NETWORK_PARAMETERS)
-    val profiles = Profiles(platform)
-    val contactRequests = ContactRequests(platform)
 
     lateinit var blockchainIdentity: BlockchainIdentity
         private set
@@ -121,9 +109,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     var authenticationGroupExtension: AuthenticationGroupExtension? = null
         private set
 
-    private val entryPoint = fromApplication(walletApplication, PlatformRepoEntryPoint::class.java)
-    private val appDatabase = entryPoint.provideAppDatabase()
-    private val blockchainIdentityDataDao = appDatabase.blockchainIdentityDataDao()
     private val dashPayProfileDao = appDatabase.dashPayProfileDao()
     private val dashPayContactRequestDao = appDatabase.dashPayContactRequestDao()
     private val invitationsDao = appDatabase.invitationsDao()
@@ -152,7 +137,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         authenticationGroupExtension = walletApplication.wallet?.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
         blockchainIdentityDataDao.load()?.let {
             blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet!!)
-            platformRepoInstance.initializeStateRepository()
+            initializeStateRepository()
         }
     }
 
@@ -222,31 +207,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    /**
-     * Calls Platform.check() three times asynchronously
-     *
-     * @return true if platform is available
-     */
-    suspend fun isPlatformAvailable(): Resource<Boolean> {
-        return withContext(Dispatchers.IO) {
-            var success = 0
-            val checks = arrayListOf<Deferred<Boolean>>()
-            for (i in 0 until 3) {
-                checks.add(async { platform.check() })
-            }
-
-            for (check in checks) {
-                success += if (check.await()) 1 else 0
-            }
-
-            return@withContext if (success >= 2) {
-                Resource.success(true)
-            } else {
-                Resource.error("Platform is not available")
-            }
-        }
-    }
-
     fun getUsername(username: String): Resource<Document> {
         return try {
             val nameDocument = platform.names.get(username)
@@ -308,7 +268,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
 
         val profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
-            val profileDocuments = profiles.getList(userIds)
+            val profileDocuments = platform.profiles.getList(userIds)
             profileDocuments.associateBy({ it.ownerId }, { it })
         } else {
             log.warn("search usernames: userIdList is empty, though nameDocuments has ${nameDocuments.size} items")
@@ -500,7 +460,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     suspend fun getNotificationCount(date: Long): Int {
         var count = 0
-        if (!platformRepoInstance.isUsernameRegistered()) {
+        if (!isUsernameRegistered()) {
             return 0
         }
 
@@ -744,7 +704,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val blockchainIdentity = if (creditFundingTransaction != null) {
             // the blockchain is synced past the point when the credit funding tx was found
             BlockchainIdentity(
-                platform,
+                platform.platform,
                 creditFundingTransaction,
                 wallet,
                 authenticationGroupExtension!!,
@@ -752,7 +712,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             )
         } else {
             // the blockchain is not synced
-            val blockchainIdentity = BlockchainIdentity(platform, 0, wallet, authenticationGroupExtension!!)
+            val blockchainIdentity = BlockchainIdentity(platform.platform, 0, wallet, authenticationGroupExtension!!)
             if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.IDENTITY_REGISTERED) {
                 blockchainIdentity.apply {
                     uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
@@ -781,12 +741,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
 
             creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
-            activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0
-            totalKeyCount = blockchainIdentityData.totalKeyCount ?: 0
-            keysCreated = blockchainIdentityData.keysCreated ?: 0
-            currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
-            currentMainKeyType = blockchainIdentityData.currentMainKeyType
-                    ?: IdentityPublicKey.Type.ECDSA_SECP256K1
+            //activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0
+            //totalKeyCount = blockchainIdentityData.totalKeyCount ?: 0
+            //keysCreated = blockchainIdentityData.keysCreated ?: 0
+            //currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
+            //currentMainKeyType = blockchainIdentityData.currentMainKeyType
+            //        ?: IdentityPublicKey.Type.ECDSA_SECP256K1
         }
     }
 
@@ -806,11 +766,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
             }
             creditBalance = blockchainIdentity.creditBalance
-            activeKeyCount = blockchainIdentity.activeKeyCount
-            totalKeyCount = blockchainIdentity.totalKeyCount
-            keysCreated = blockchainIdentity.keysCreated
-            currentMainKeyIndex = blockchainIdentity.currentMainKeyIndex
-            currentMainKeyType = blockchainIdentity.currentMainKeyType
+            //activeKeyCount = blockchainIdentity.activeKeyCount
+            //totalKeyCount = blockchainIdentity.totalKeyCount
+            //keysCreated = blockchainIdentity.keysCreated
+            //currentMainKeyIndex = blockchainIdentity.currentMainKeyIndex
+            //currentMainKeyType = blockchainIdentity.currentMainKeyType
         }
         updateBlockchainIdentityData(blockchainIdentityData)
     }
@@ -853,12 +813,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      */
     suspend fun updateDashPayProfile(userId: String): Boolean {
         try {
-            var profileDocument = profiles.get(userId)
+            var profileDocument = platform.profiles.get(userId)
             if (profileDocument == null) {
                 val identity = platform.identities.get(userId)
                 if (identity != null) {
                     profileDocument =
-                        profiles.createProfileDocument("", "", "", null, null, identity)
+                        platform.profiles.createProfileDocument("", "", "", null, null, identity)
                 } else {
                     // there is no existing identity, so do nothing
                     return false

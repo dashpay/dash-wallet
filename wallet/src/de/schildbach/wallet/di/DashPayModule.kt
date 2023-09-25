@@ -17,28 +17,33 @@
 
 package de.schildbach.wallet.di
 
+import android.content.Context
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.CoinJoinMixingService
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformDocumentBroadcastService
+import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.PlatformServiceImplementation
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.PlatformSynchronizationService
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class DashPayModule {
     companion object {
-        @Provides
-        @Singleton
-        fun providePlatformRepo(): PlatformRepo = PlatformRepo.getInstance()
+
     }
+
+    @Singleton // only want one of PlatformSyncService created
+    @Binds
+    abstract fun bindsPlatformService(platformService: PlatformServiceImplementation): PlatformService
 
     @Singleton // only want one of PlatformSyncService created
     @Binds
@@ -50,4 +55,8 @@ abstract class DashPayModule {
     @Binds
     @Singleton
     abstract fun bindsCoinJoinService(coinJoinMixingService: CoinJoinMixingService): CoinJoinService
+
+    //@Binds
+    //@Singleton
+    //abstract fun bindsBlockchainIdentityConfig(blockchainIdentityConfig: BlockchainIdentityConfig): BlockchainIdentityConfig
 }

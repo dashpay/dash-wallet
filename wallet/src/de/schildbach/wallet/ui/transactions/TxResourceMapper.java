@@ -22,13 +22,12 @@ import android.text.format.DateUtils;
 import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 
-import org.bitcoinj.coinjoin.CoinJoin;
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.wallet.AuthenticationKeyChainGroup;
 import org.bitcoinj.wallet.Wallet;
@@ -40,15 +39,6 @@ import de.schildbach.wallet_test.R;
 
 public class TxResourceMapper {
 
-    private boolean isCoinJoinMixingFee(Transaction tx) {
-        Coin inputsValue = tx.getInputSum();
-        Coin outputsValue = tx.getOutputSum();
-        Coin netValue = inputsValue.subtract(outputsValue);
-        return tx.getInputs().size() == 1 && tx.getOutputs().size() == 1
-                && CoinJoin.isCollateralAmount(inputsValue)
-                && CoinJoin.isCollateralAmount(outputsValue)
-                && CoinJoin.isCollateralAmount(netValue);
-    }
     /**
      *
      * @param tx the transaction in question
@@ -79,6 +69,7 @@ public class TxResourceMapper {
                     if (wallet instanceof Wallet) {
                         dashPayWallet = (Wallet) wallet;
                     }
+                    CoinJoinTransactionType coinJoinType = CoinJoinTransactionType.fromTx(tx, wallet);
 
                     if (dashPayWallet != null && CreditFundingTransaction.isCreditFundingTransaction(tx)) {
                         AuthenticationGroupExtension authExtension =
@@ -100,42 +91,27 @@ public class TxResourceMapper {
                                typeId = R.string.transaction_row_status_sent;
                                break;
                         }
-                    } else if(tx.getInputs().size() == tx.getOutputs().size() && tx.getValue(wallet).equals(Coin.ZERO)) {
+                    } else if(coinJoinType == CoinJoinTransactionType.Mixing) {
                         typeId = R.string.transaction_row_status_coinjoin_mixing;
                     } else if (confidence.hasErrors())
                         typeId = R.string.transaction_row_status_error_sending;
                     else if (TransactionUtils.INSTANCE.isEntirelySelf(tx, wallet)) {
                         // internal transactions could be CoinJoin related transactions
-
-                        if (isCoinJoinMixingFee(tx)) {
-                            typeId = R.string.transaction_row_status_coinjoin_mixing_fee;
-                        } else {
-                            boolean makeCollateral = false;
-                            if (tx.getOutputs().size() == 2) {
-                                Coin nAmount0 = tx.getOutput(0).getValue();
-                                Coin nAmount1 = tx.getOutput(1).getValue();
-                                // <case1>, see CCoinJoinClientSession.makeCollateralAmounts
-                                makeCollateral = (nAmount0.equals(CoinJoin.getMaxCollateralAmount()) && !CoinJoin.isDenominatedAmount(nAmount1) && nAmount1.isGreaterThanOrEqualTo(CoinJoin.getCollateralAmount())) ||
-                                                 (nAmount1.equals(CoinJoin.getMaxCollateralAmount()) && !CoinJoin.isDenominatedAmount(nAmount0) && nAmount0.isGreaterThanOrEqualTo(CoinJoin.getCollateralAmount())) ||
-                                        // <case2>, see CCoinJoinClientSession.makeCollateralAmounts
-                                        (nAmount0 == nAmount1 && CoinJoin.isCollateralAmount(nAmount0));
-                            } else if (tx.getOutputs().size() == 1) {
-                                // <case3>, see CCoinJoinClientSession.makeCollateralAmounts
-                                makeCollateral = CoinJoin.isCollateralAmount(tx.getOutput(0).getValue());
-                            }
-                            if (makeCollateral) {
+                        switch (coinJoinType) {
+                            case CreateDenomination:
+                                typeId = R.string.transaction_row_status_coinjoin_create_denominations;
+                                break;
+                            case MakeCollateralInputs:
                                 typeId = R.string.transaction_row_status_coinjoin_make_collateral;
-                            } else {
-                                for (TransactionOutput output : tx.getOutputs()) {
-                                    if (CoinJoin.isDenominatedAmount(output.getValue())) {
-                                        typeId = R.string.transaction_row_status_coinjoin_create_denominations;
-                                        break; // Done, it's definitely a tx creating mixing denoms, no need to look any further
-                                    }
-                                }
-                            }
-                            if (typeId == 0)
-                                typeId = R.string.transaction_row_status_sent_internally;
+                                break;
+                            case MixingFee:
+                                typeId = R.string.transaction_row_status_coinjoin_mixing_fee;
+                                break;
                         }
+                        // if not any other type of internal transaction, then mark as "Internal"
+                        if (typeId == 0)
+                            typeId = R.string.transaction_row_status_sent_internally;
+
                     } else if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING ||
                             (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING &&
                                 (confidence.numBroadcastPeers() >= 1 || confidence.getIXType() == TransactionConfidence.IXType.IX_LOCKED ||

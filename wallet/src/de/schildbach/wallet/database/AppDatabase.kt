@@ -78,6 +78,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun addressMetadataDao(): AddressMetadataDao
     abstract fun iconBitmapDao(): IconBitmapDao
     abstract fun giftCardDao(): GiftCardDao
+    @Deprecated("Use BlockchainIdentityConfig instead")
     abstract fun blockchainIdentityDataDao(): BlockchainIdentityDataDao
     abstract fun dashPayProfileDao(): DashPayProfileDao
     abstract fun dashPayContactRequestDao(): DashPayContactRequestDao

@@ -10,7 +10,7 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.launchIn
@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.onEach
 
 class CreateIdentityNotification(
     val service: LifecycleService,
-    private val blockchainIdentityDataDao: BlockchainIdentityDataDao
+    private val blockchainIdentityDataDao: BlockchainIdentityConfig
 ) {
 
     private val notificationManager by lazy { service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager }

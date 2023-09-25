@@ -26,11 +26,11 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.data.UsernameSortOrderBy
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
@@ -58,7 +58,7 @@ open class DashPayViewModel @Inject constructor(
     private val platformRepo: PlatformRepo,
     private val blockchainState: BlockchainStateDao,
     dashPayProfileDao: DashPayProfileDao,
-    blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val invitations: InvitationsDao,
     val platformSyncService: PlatformSyncService,
     private val platformBroadcastService: PlatformBroadcastService,

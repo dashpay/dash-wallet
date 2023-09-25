@@ -33,16 +33,17 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.data.UsernameSortOrderBy
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
@@ -103,8 +104,9 @@ class MainViewModel @Inject constructor(
     val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
     val platformRepo: PlatformRepo,
+    val platformService: PlatformService,
     val platformSyncService: PlatformSyncService,
-    blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val savedStateHandle: SavedStateHandle,
     private val metadataProvider: TransactionMetadataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
@@ -188,7 +190,7 @@ class MainViewModel @Inject constructor(
 
     private val isPlatformAvailableData = liveData(Dispatchers.IO) {
         val status = if (Constants.SUPPORTS_PLATFORM) {
-            platformRepo.isPlatformAvailable()
+            platformService.isPlatformAvailable()
         } else {
             Resource.success(false)
         }

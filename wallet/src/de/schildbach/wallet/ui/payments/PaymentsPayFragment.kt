@@ -38,7 +38,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.scan.ScanActivity
@@ -67,7 +67,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     private var frequentContactsAdapter: FrequentContactsAdapter = FrequentContactsAdapter()
     private val dashPayViewModel by viewModels<DashPayViewModel>()
     @Inject lateinit var analytics: AnalyticsService
-    @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityDataDao
+    @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityConfig
     private val binding by viewBinding(FragmentPaymentsPayBinding::bind)
 
     private val onWindowFocusChangeListener = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->

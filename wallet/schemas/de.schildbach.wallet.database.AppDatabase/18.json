@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 18,
-    "identityHash": "2ac5a1c9220876161976f4a3d99405c6",
+    "identityHash": "6c4e5cd593e321402dbc34046d75534a",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -319,7 +319,7 @@
       },
       {
         "tableName": "blockchain_identity",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`creationState` INTEGER NOT NULL, `creationStateErrorMessage` TEXT, `username` TEXT, `userId` TEXT, `restoring` INTEGER NOT NULL, `identity` BLOB, `creditFundingTxId` BLOB, `usingInvite` INTEGER NOT NULL, `invite` TEXT, `preorderSalt` BLOB, `registrationStatus` INTEGER, `usernameStatus` INTEGER, `creditBalance` INTEGER, `activeKeyCount` INTEGER, `totalKeyCount` INTEGER, `keysCreated` INTEGER, `currentMainKeyIndex` INTEGER, `currentMainKeyType` INTEGER, `id` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`creationState` INTEGER NOT NULL, `creationStateErrorMessage` TEXT, `username` TEXT, `userId` TEXT, `restoring` INTEGER NOT NULL, `identity` BLOB, `creditFundingTxId` BLOB, `usingInvite` INTEGER NOT NULL, `invite` TEXT, `preorderSalt` BLOB, `registrationStatus` INTEGER, `usernameStatus` INTEGER, `privacyMode` TEXT, `creditBalance` INTEGER, `activeKeyCount` INTEGER, `totalKeyCount` INTEGER, `keysCreated` INTEGER, `currentMainKeyIndex` INTEGER, `currentMainKeyType` INTEGER, `id` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "creationState",
@@ -391,6 +391,12 @@
             "fieldPath": "usernameStatus",
             "columnName": "usernameStatus",
             "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "privacyMode",
+            "columnName": "privacyMode",
+            "affinity": "TEXT",
             "notNull": false
           },
           {
@@ -976,7 +982,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2ac5a1c9220876161976f4a3d99405c6')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6c4e5cd593e321402dbc34046d75534a')"
     ]
   }
 }

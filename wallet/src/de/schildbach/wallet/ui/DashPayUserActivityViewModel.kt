@@ -43,14 +43,15 @@ import javax.inject.Inject
 class DashPayUserActivityViewModel @Inject constructor(
     application: Application,
     val platformSyncService: PlatformSyncService,
-    private val analytics: AnalyticsService
+    private val analytics: AnalyticsService,
+    val platformRepo: PlatformRepo
 ) : AndroidViewModel(application) {
 
     companion object {
         val log = LoggerFactory.getLogger(DashPayUserActivityViewModel::class.java)
     }
 
-    private val platformRepo = PlatformRepo.getInstance()
+    //private val platformRepo = PlatformRepo.getInstance()
     private val walletApplication = application as WalletApplication
     val transactionsLiveData = TransactionsLiveData()
 

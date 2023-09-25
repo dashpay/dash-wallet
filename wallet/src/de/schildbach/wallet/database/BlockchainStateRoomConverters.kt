@@ -123,11 +123,13 @@ class BlockchainStateRoomConverters {
         return identity?.toBuffer()
     }
 
+    @Deprecated("this is not available")
     @TypeConverter
     fun toIdentity(data: ByteArray?): Identity? {
         return data?.run {
             return try {
-                PlatformRepo.getInstance().platform.dpp.identity.createFromBuffer(data)
+                null
+                //PlatformRepo.getInstance().platform.dpp.identity.createFromBuffer(data)
             } catch (e: Exception) {
                 null
             }

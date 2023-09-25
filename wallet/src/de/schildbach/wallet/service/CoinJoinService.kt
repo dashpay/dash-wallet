@@ -129,6 +129,7 @@ class CoinJoinMixingService @Inject constructor(
 
     // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
     private val mixingMutex = Mutex(locked = true)
+    private val updateMutex = Mutex(locked = false)
     private var exception: Throwable? = null
     override suspend fun waitForMixing() {
         log.info("Waiting for mixing to complete by watching lock...")
@@ -163,34 +164,46 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateState(mixingStatus: MixingStatus, networkStatus: NetworkStatus, blockChain: AbstractBlockChain?) {
-        setBlockchain(blockChain)
-
-        when {
-            networkStatus == NetworkStatus.UNKNOWN -> return
-            mixingStatus == MixingStatus.MIXING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet -> {
-                // start mixing
-                prepareMixing()
-                startMixing()
-            }
-            this.mixingStatus == MixingStatus.MIXING && mixingStatus == MixingStatus.FINISHED -> {
-                // finish mixing
-                stopMixing()
-                setMixingComplete()
-            }
-            mixingStatus == MixingStatus.MIXING && this.networkStatus == NetworkStatus.CONNECTED && networkStatus == NetworkStatus.NOT_AVAILABLE -> {
-                // pause mixing
-                stopMixing()
-            }
-            mixingStatus == MixingStatus.PAUSED && this.networkStatus == NetworkStatus.CONNECTING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet -> {
-                // resume mixing
-                prepareMixing()
-                startMixing()
-            }
-            mixingStatus == MixingStatus.ERROR -> setMixingComplete()
-        }
+        updateMutex.lock()
         log.info("coinjoin-updateState: $mixingStatus, $networkStatus, ${blockChain != null}")
-        this.networkStatus = networkStatus
-        this.mixingStatus = mixingStatus
+        try {
+            setBlockchain(blockChain)
+            log.info("coinjoin-updateState: $mixingStatus, $networkStatus, ${blockChain != null}")
+            val previousNetworkStatus = this.networkStatus
+            this.networkStatus = networkStatus
+            this.mixingStatus = mixingStatus
+            when {
+                networkStatus == NetworkStatus.UNKNOWN -> return
+                mixingStatus == MixingStatus.MIXING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet -> {
+                    // start mixing
+                    prepareMixing()
+                    startMixing()
+                }
+
+                mixingStatus == MixingStatus.FINISHED -> {
+                    // finish mixing
+                    stopMixing()
+                    setMixingComplete()
+                }
+
+                mixingStatus == MixingStatus.MIXING && previousNetworkStatus == NetworkStatus.CONNECTED && networkStatus == NetworkStatus.NOT_AVAILABLE -> {
+                    // pause mixing
+                    stopMixing()
+                }
+
+                mixingStatus == MixingStatus.PAUSED && previousNetworkStatus == NetworkStatus.CONNECTING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet -> {
+                    // resume mixing
+                    prepareMixing()
+                    startMixing()
+                }
+
+                mixingStatus == MixingStatus.ERROR -> setMixingComplete()
+            }
+
+        } finally {
+            updateMutex.unlock()
+            log.info("updateMutex is unlocked")
+        }
     }
 
     private suspend fun updateBlockChain(blockChain: AbstractBlockChain) {
@@ -278,8 +291,8 @@ class CoinJoinMixingService @Inject constructor(
 
             when (mode) {
                 CoinJoinMode.BASIC -> CoinJoinClientOptions.setAmount(Coin.ZERO)
-                CoinJoinMode.INTERMEDIATE -> CoinJoinClientOptions.setRounds(1)
-                CoinJoinMode.ADVANCED -> CoinJoinClientOptions.setRounds(2)
+                CoinJoinMode.INTERMEDIATE -> CoinJoinClientOptions.setRounds(DEFAULT_ROUNDS)
+                CoinJoinMode.ADVANCED -> CoinJoinClientOptions.setRounds(DEFAULT_ROUNDS * 2)
             }
             // save to data store
             config.set(CoinJoinConfig.COINJOIN_AMOUNT, CoinJoinClientOptions.getAmount().value)
@@ -300,14 +313,20 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     override suspend fun prepareAndStartMixing() {
+        log.info("coinjoin: prepare and start mixing...")
         // do we need to mix?
         val wallet = walletDataProvider.wallet!! as WalletEx
+        Context.propagate(wallet.context)
         // the mixed balance must meet the getAmount() requirement and all denominated coins must be mixed
-        if (wallet.coinJoinBalance.isGreaterThanOrEqualTo(CoinJoinClientOptions.getAmount()) &&
-            wallet.coinJoinBalance.equals(wallet.denominatedBalance)
+        val mixedAmount = wallet.coinJoinBalance
+        val denominatedAmount = wallet.denominatedBalance
+        if (mixedAmount.isGreaterThanOrEqualTo(CoinJoinClientOptions.getAmount()) &&
+            mixedAmount.equals(denominatedAmount)
         ) {
+            log.info("coinjoin: mixing is complete $mixedAmount/$denominatedAmount of ${CoinJoinClientOptions.getAmount()}")
             setMixingComplete()
         } else {
+            log.info("coinjoin: start the mixing process...")
             updateMixingStatus(MixingStatus.MIXING)
         }
     }

@@ -9,8 +9,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -130,10 +130,10 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private val walletApplication by lazy { application as WalletApplication }
-    private val platformRepo by lazy { PlatformRepo.getInstance() }
+    @Inject lateinit var platformRepo: PlatformRepo// by lazy { PlatformRepo.getInstance() }
     @Inject lateinit var platformSyncService: PlatformSyncService
     @Inject lateinit var userAlertDao: UserAlertDao
-    @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityDataDao
+    @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityConfig
     @Inject lateinit var securityFunctions: SecurityFunctions
     @Inject lateinit var coinJoinService: CoinJoinService
     private lateinit var securityGuard: SecurityGuard
@@ -352,7 +352,7 @@ class CreateIdentityService : LifecycleService() {
             //
             // check to see if the funding transaction exists
             if (blockchainIdentity.creditFundingTransaction == null) {
-                platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey, coinJoinService.getMode() != CoinJoinMode.BASIC)
+                platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey, blockchainIdentityData.privacyMode != CoinJoinMode.BASIC)
             }
         }
 
@@ -621,7 +621,7 @@ class CreateIdentityService : LifecycleService() {
 
         addInviteUserAlert(walletApplication.wallet!!)
 
-        PlatformRepo.getInstance().init()
+        platformRepo.init()
 
         timerStep3.logTiming()
         // aaaand we're done :)
@@ -688,7 +688,7 @@ class CreateIdentityService : LifecycleService() {
         val seed = wallet.keyChainSeed ?: throw IllegalStateException("cannot obtain wallet seed")
 
         // create the Blockchain Identity object
-        val blockchainIdentity = BlockchainIdentity(platformRepo.platform, 0, wallet, authExtension)
+        val blockchainIdentity = BlockchainIdentity(platformRepo.platform.platform, 0, wallet, authExtension)
         // this process should have been done already, otherwise the credit funding transaction
         // will not have the credit burn keys associated with it
         platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
@@ -745,7 +745,7 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
 
         platformSyncService.updateSyncStatus(PreBlockStage.RecoveryComplete)
-        PlatformRepo.getInstance().init()
+        platformRepo.init()
     }
 
     /**

@@ -48,6 +48,7 @@ class UpdateProfileWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
     val analytics: AnalyticsService,
+    val platformRepo: PlatformRepo,
     val platformBroadcastService: PlatformBroadcastService)
     : BaseWorker(context, parameters) {
 
@@ -64,8 +65,6 @@ class UpdateProfileWorker @AssistedInject constructor(
         const val KEY_LOCAL_AVATAR_URL_TO_UPLOAD = "UpdateProfileRequestWorker.AVATAR_URL_TO_UPLOAD"
         const val KEY_UPLOAD_SERVICE = "UpdateProfileRequestWorker.UPLOAD_SERVICE"
     }
-
-    private val platformRepo = PlatformRepo.getInstance()
 
     override suspend fun doWorkWithBaseProgress(): Result {
         val displayName = inputData.getString(KEY_DISPLAY_NAME) ?: ""

@@ -44,7 +44,7 @@ open class NotificationsLiveData(
             val results = arrayListOf<NotificationItem>()
 
             val userAlert = userAlertDao.load(0L)
-            if (userAlert != null && PlatformRepo.getInstance().shouldShowAlert()) {
+            if (userAlert != null && platformRepo.shouldShowAlert()) {
                 results.add(NotificationItemUserAlert(userAlert.stringResId, userAlert.iconResId))
             }
 

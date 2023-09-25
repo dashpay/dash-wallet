@@ -52,8 +52,6 @@ class SendContactRequestWorker @AssistedInject constructor(
         }
     }
 
-    private val platformRepo = PlatformRepo.getInstance()
-
     override suspend fun doWorkWithBaseProgress(): Result {
         val password = inputData.getString(KEY_PASSWORD)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
