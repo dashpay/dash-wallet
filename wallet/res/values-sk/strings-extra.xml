@@ -351,8 +351,6 @@
     <string name="payment_request_unable_to_send">Nedá sa poslať</string>
     <string name="payment_request_please_try_again">Prosím skúste znova</string>
     <string name="payment_request_try_again">Skúsiť znova</string>
-    <string name="payment_request_problem_title">Platba nebola uznaná</string>
-    <string name="payment_request_problem_message">Vaša platba nemohla byť spracovaná serverom, prosím informujte sa u obchodníka</string>
     <string name="payment_request_expired_title">Žiadosť o platbu vypršala</string>
     <string name="payment_request_close">Zatvoriť</string>
     <string name="payment_request_skip">Preskočiť</string>
@@ -403,7 +401,6 @@
     <string name="masternode_key_type_owner">Kľúče vlastníka</string>
     <string name="masternode_key_type_voting">Hlasovacie kľúče</string>
     <string name="masternode_key_type_operator">Kľúče operátora</string>
-    <string name="masternode_key_type_platform">Kľúče operátora HPMN</string>
     <string name="masternode_key_type_total">%d kľúče</string>
     <string name="masternode_key_type_used">%d použité</string>
     <string name="masternode_key_pair_index">Kľúčový pár %d</string>

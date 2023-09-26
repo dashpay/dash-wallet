@@ -282,7 +282,6 @@
     <string name="payment_request_unable_to_send">Не може да се изпрати</string>
     <string name="payment_request_please_try_again">Моля опитай отново</string>
     <string name="payment_request_try_again">Опитай отново</string>
-    <string name="payment_request_problem_title">Плащането не бе потвърдено</string>
     <string name="payment_request_expired_title">Искането за плащане е изтекло</string>
     <string name="payment_request_close">Затвори</string>
     <string name="payment_request_skip">Пропусни</string>

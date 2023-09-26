@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">کاوش در دش</string>
     <string name="explore_title">کاوش</string>
-    <string name="explore_subtitle">با دش به راحتی از بیش از ۱۵۵،۰۰۰ فروشگاه فیزیکی و آنلاین خرید کنید</string>
+    <string name="explore_subtitle">پدیرندگانی را بیابید که دش قبول می‌کنند، محل خرید و نیز کسب درآمد با دش</string>
     <string name="explore_merchants_title">کجا خرج کنیم؟ </string>
     <string name="explore_merchants_subtitle">یافتن فروشندگانی که دش را می‌پذیرند</string>
     <string name="explore_atms_title">خودپردازها</string>
@@ -76,6 +76,7 @@
     <string name="explore_payment_method">روش پرداخت</string>
     <string name="explore_payment_dash">دش</string>
     <string name="explore_payment_gift_card">کارت هدیه</string>
+    <string name="explore_filter_gift_cards">کارت هدیه</string>
     <string name="explore_radius">شعاع</string>
     <string name="explore_location">موقعیت</string>
     <string name="explore_current_location">موقعیت کنونی</string>
@@ -159,4 +160,6 @@
 
     <string name="sync_in_progress_file_not_found">خطای ساختاری: دیتابیس یافت نشد!</string>
     <string name="sync_in_progress_network_error">اخلال در فرآیند همزمان‌سازی...شبکه آفلاین است یا در دسترس نیست. </string>
-</resources>
+
+
+    </resources>

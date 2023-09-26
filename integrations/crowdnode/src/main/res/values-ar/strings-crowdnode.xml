@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">لبدء التخزين ، أنشئ حسابًا على CrowdNode أو اتصل بحساب موجود.</string>
     <string name="crowdnode_account">حساب CrowdNode </string>
     <string name="new_account">حساب CrowdNode جديد</string>
-    <string name="account_create">إنشاء حساب</string>
     <string name="accept_terms_response">الرجاء قبول الشروط</string>
     <string name="accept_terms">قبول الشروط</string>
     <string name="welcome_response">تم إنشاء الحساب</string>

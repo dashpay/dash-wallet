@@ -284,7 +284,6 @@
     <string name="payment_request_unable_to_send">Không thể gửi</string>
     <string name="payment_request_please_try_again">Hãy thử lại</string>
     <string name="payment_request_try_again">Hãy thử lại</string>
-    <string name="payment_request_problem_title">Giao dịch không được thừa nhận</string>
     <string name="payment_request_expired_title">Yêu cầu giao dịch đã hết hạn</string>
     <string name="payment_request_close">Đóng</string>
     <string name="payment_request_skip">Bỏ qua</string>

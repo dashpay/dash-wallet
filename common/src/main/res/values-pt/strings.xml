@@ -58,6 +58,7 @@
     <string name="share_address">Compartilhar Endereço</string>
     <string name="verify">Verificar</string>
     <string name="receive_enter_amount_button">Especificar Valor</string>
+    <string name="account_create">Criar Conta</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Buscar</string>
@@ -75,12 +76,19 @@
     <string name="select_currency">Selecione a moeda</string>
     <string name="send_coins_error_dusty_send">O valor é muito baixo para ser enviado</string>
     <string name="send_coins_error_insufficient_money">Fundos insuficientes</string>
+    <string name="syncing">Sincronizando</string>
     <string name="no_connection">Sem conexão com a internet</string>
     <string name="rate_not_available">Não disponível</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">Parece que você está esvaziando sua Carteira Dash</string>
     <string name="empty_wallet_crowdnode_warning">Por favor, observe que você não poderá retirar seus fundos do CrowdNode para esta carteira até que aumente seu saldo para 0,0003 Dash.</string>
-    <string name="syncing">Sincronizando</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">O pagamento não foi reconhecido</string>
+    <string name="payment_protocol_default_error_title">Erro no pagamento</string>
+    <string name="payment_request_problem_message">Seu pagamento não pôde ser processado pelo servidor, por favor, entre em contato com o comerciante</string>
+    <string name="exchange_rate_not_found">Não foi possível encontrar a taxa de câmbio.</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Receba diretamente na sua Carteira Dash</string>

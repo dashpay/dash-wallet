@@ -367,7 +367,6 @@
     <string name="activity_security_hide_balance">残高を自動的に非表示にする</string>
     <string name="reset_to_default">初期設定にリセットする</string>
 
-    <string name="payment_protocol_default_error_title">支払いエラー</string>
     <string name="payment_protocol_insufficient_funds_error_title">資金不足</string>
     <string name="payment_protocol_insufficient_funds_error_message">この取引を完了するのに十分な資金がありません</string>
 
@@ -375,7 +374,6 @@
     <string name="select_a_service">サービスを選択する</string>
     <string name="activity_buy_and_sell_dash_filter">絞り込み</string>
     <string name="clear_filter">フィルターをクリアする</string>
-    <string name="select_currency">通貨を選択する</string>
     <string name="reason">理由</string>
     <string name="link_account">お客様のアカウントをリンク</string>
     <string name="buy_no_account_needed">Dashを購入 · アカウント不要</string>
@@ -383,7 +381,7 @@
     <string name="please_log_in_to_your_coinbase_account">お客様のCoinbaseアカウントにログインしてください</string>
     <string name="log_in">ログイン</string>
 
-    <string name="recipient_address">ウォレットのアドレス</string>
+    <string name="recipient_address">受取人のアドレス</string>
     <string name="show_clipboard">クリップボードのコンテンツを表示する</string>
     <string name="tap_to_paste">クリップボードからアドレスをタップしてペーストする</string>
     <string name="not_dash_address">無効なDashアドレスやURLリクエスト</string>

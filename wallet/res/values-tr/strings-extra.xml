@@ -345,8 +345,6 @@
     <string name="payment_request_unable_to_send">Gönderilemiyor</string>
     <string name="payment_request_please_try_again">Lütfen tekrar deneyin</string>
     <string name="payment_request_try_again">Tekrar Dene</string>
-    <string name="payment_request_problem_title">Ödeme kabul edilmedi</string>
-    <string name="payment_request_problem_message">Ödemeniz sunucu tarafından işleme konulamadı, lütfen satıcıya danışın</string>
     <string name="payment_request_expired_title">Ödeme Talebinin Süresi Bitti</string>
     <string name="payment_request_close">Kapat</string>
     <string name="payment_request_skip">Atla</string>
@@ -397,7 +395,6 @@
     <string name="masternode_key_type_owner">Sahip Anahtarları</string>
     <string name="masternode_key_type_voting">Oy Verme Anahtarları</string>
     <string name="masternode_key_type_operator">Operatör Anahtarları</string>
-    <string name="masternode_key_type_platform">HPMN Operatör Anahtarları</string>
     <string name="masternode_key_type_total">%d anahtarları</string>
     <string name="masternode_key_type_used">%d kullanıldı</string>
     <string name="masternode_key_pair_index">Tuş Çifti %d</string>

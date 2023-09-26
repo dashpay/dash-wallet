@@ -342,8 +342,6 @@
     <string name="payment_request_unable_to_send">전송할 수 없습니다</string>
     <string name="payment_request_please_try_again">다시 시도하세요</string>
     <string name="payment_request_try_again">다시 시도하세요</string>
-    <string name="payment_request_problem_title">지불이 인식되지 않았습니다</string>
-    <string name="payment_request_problem_message">서버가 귀하의 지불을 처리하지 못했습니다. 판매자에게 문의해주십시오.</string>
     <string name="payment_request_expired_title">지불 요청이 만료되었습니다</string>
     <string name="payment_request_close">닫기</string>
     <string name="payment_request_skip">건너뛰기</string>
@@ -394,7 +392,7 @@
     <string name="masternode_key_type_owner">소유자 키</string>
     <string name="masternode_key_type_voting">투표 키</string>
     <string name="masternode_key_type_operator">운영자 키</string>
-    <string name="masternode_key_type_platform">HPMN 운영자 키</string>
+    <string name="masternode_key_type_platform">에볼루션 노드 ID 키</string>
     <string name="masternode_key_type_total">%d 키</string>
     <string name="masternode_key_type_used">%d 사용됨</string>
     <string name="masternode_key_pair_index">키페어 %d</string>

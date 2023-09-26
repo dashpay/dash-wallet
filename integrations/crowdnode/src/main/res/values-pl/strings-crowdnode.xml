@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Aby otworzyć lokatę, stwórz konto na CrowdNode lub zaloguj się do już istniejącego konta.</string>
     <string name="crowdnode_account">Konto CrowdNode</string>
     <string name="new_account">Nowe Konto CrowdNode</string>
-    <string name="account_create">Stwórz Konto</string>
     <string name="accept_terms_response">Zaakceptuj warunki</string>
     <string name="accept_terms">Zaakceptuj Zasady</string>
     <string name="welcome_response">Konto zostało stworzone</string>

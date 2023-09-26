@@ -58,6 +58,7 @@
     <string name="share_address">Поділитися адресою</string>
     <string name="verify">Підтвердити</string>
     <string name="receive_enter_amount_button">Вкажіть суму</string>
+    <string name="account_create">Створити обліковий запис</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Пошук</string>
@@ -75,12 +76,19 @@
     <string name="select_currency">Вибрати Валюту</string>
     <string name="send_coins_error_dusty_send">Сума надто мала для відправки</string>
     <string name="send_coins_error_insufficient_money">Недостатньо коштів</string>
+    <string name="syncing">Синхронізація</string>
     <string name="no_connection">Немає підключення до Інтернету</string>
     <string name="rate_not_available">Недоступний</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">Схоже ви спустошуєте свій гаманець</string>
     <string name="empty_wallet_crowdnode_warning">Пам\'ятайте, що ви не зможете вивести кошти з CrowdNode на цей гаманець, доки на балансі не буде хоча б 0.0003 Dash.</string>
-    <string name="syncing">Синхронізація</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">Платіж не підтверджено</string>
+    <string name="payment_protocol_default_error_title">Помилка платежу</string>
+    <string name="payment_request_problem_message">Ваш платіж не може бути оброблений сервером, будь ласка, зверніться до продавця</string>
+    <string name="exchange_rate_not_found">Не вдалося знайти обмінний курс.</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Отримуйте безпосередньо в Dash Wallet.</string>

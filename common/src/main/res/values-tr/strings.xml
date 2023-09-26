@@ -58,6 +58,7 @@
     <string name="share_address">Adresi Paylaş</string>
     <string name="verify">Onayla</string>
     <string name="receive_enter_amount_button">Tutarı Belirleyin</string>
+    <string name="account_create">Hesab Oluştur</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Ara</string>
@@ -75,12 +76,19 @@
     <string name="select_currency">Para Birimini Seçin</string>
     <string name="send_coins_error_dusty_send">Bu miktar göndermek için çok düşüktür</string>
     <string name="send_coins_error_insufficient_money">Yetersiz bakiye</string>
+    <string name="syncing">Senkronize ediliyor</string>
     <string name="no_connection">İnternet yok</string>
     <string name="rate_not_available">Mevcut değil</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">Dash Cüzdanınızı boşaltıyor gibisiniz</string>
     <string name="empty_wallet_crowdnode_warning">Bakiyenizi 0.0003 Dash\'in üstüne çıkmadan CrowdNode\'dan bu cüzdana para çekemeyeceğinizi lütfen unutmayın.</string>
-    <string name="syncing">Senkronize ediliyor</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">Ödeme kabul edilmedi</string>
+    <string name="payment_protocol_default_error_title">Ödeme hatası</string>
+    <string name="payment_request_problem_message">Ödemeniz sunucu tarafından işleme konulamadı, lütfen satıcıya danışın</string>
+    <string name="exchange_rate_not_found">Döviz kuru bulunamadı.</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Doğrudan Dash Cüzdan\'a al</string>
