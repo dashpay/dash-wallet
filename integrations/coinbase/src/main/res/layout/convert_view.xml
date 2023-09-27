@@ -19,7 +19,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    tools:context="org.dash.wallet.integration.coinbase_integration.ui.convert_currency.ConvertView"
+    tools:context="org.dash.wallet.integrations.coinbase.ui.convert_currency.ConvertView"
     tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -67,7 +67,7 @@
             app:layout_constraintEnd_toEndOf="@id/from_label"
             app:layout_constraintBottom_toTopOf="@+id/to_label" />
 
-        <org.dash.wallet.integration.coinbase_integration.ui.convert_currency.CryptoConvertItem
+        <org.dash.wallet.integrations.coinbase.ui.convert_currency.CryptoConvertItem
             android:id="@+id/convert_from_btn"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -178,7 +178,7 @@
             app:layout_constraintEnd_toEndOf="@+id/from_label"
             app:layout_constraintTop_toTopOf="@+id/convert_to_btn" />
 
-        <org.dash.wallet.integration.coinbase_integration.ui.convert_currency.CryptoConvertItem
+        <org.dash.wallet.integrations.coinbase.ui.convert_currency.CryptoConvertItem
             android:id="@+id/convert_to_btn"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

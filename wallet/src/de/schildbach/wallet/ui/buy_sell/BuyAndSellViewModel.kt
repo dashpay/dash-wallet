@@ -41,13 +41,13 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
-import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
-import org.dash.wallet.integration.uphold.api.TopperClient
-import org.dash.wallet.integration.uphold.api.UpholdClient
-import org.dash.wallet.integration.uphold.api.getDashBalance
-import org.dash.wallet.integration.uphold.api.hasValidCredentials
-import org.dash.wallet.integration.uphold.api.isAuthenticated
+import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepository
+import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
+import org.dash.wallet.integrations.uphold.api.TopperClient
+import org.dash.wallet.integrations.uphold.api.UpholdClient
+import org.dash.wallet.integrations.uphold.api.getDashBalance
+import org.dash.wallet.integrations.uphold.api.hasValidCredentials
+import org.dash.wallet.integrations.uphold.api.isAuthenticated
 import javax.inject.Inject
 
 /**

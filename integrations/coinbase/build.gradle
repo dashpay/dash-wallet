@@ -41,7 +41,7 @@ android {
             includeAndroidResources = true
         }
     }
-    namespace 'org.dash.wallet.integration.coinbase_integration'
+    namespace 'org.dash.wallet.integrations.coinbase'
 }
 
 kapt {

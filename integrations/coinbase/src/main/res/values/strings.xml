@@ -117,5 +117,7 @@
     <string name="insufficient_money_to_transfer">The amount of coins in the wallet is too small to transfer.</string>
     <string name="amount_to_transfer">You will receive %s %s %s</string>
     <string name="amount_to_transfer_dash">You will receive %s</string>
+    <string name="your_coinbase_session_has_expired">Your Coinbase session has expired</string>
+    <string name="please_log_in_to_your_coinbase_account">Please log in to your Coinbase account</string>
     <string name="coinbase_website" translatable="false">https://www.coinbase.com/</string>
 </resources>

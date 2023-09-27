@@ -44,7 +44,7 @@ import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
-import org.dash.wallet.integration.uphold.api.UpholdClient
+import org.dash.wallet.integrations.uphold.api.UpholdClient
 import javax.inject.Singleton
 
 @Module

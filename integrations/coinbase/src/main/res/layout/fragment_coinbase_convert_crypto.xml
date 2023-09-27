@@ -71,7 +71,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/amount_view_guide" />
 
-    <org.dash.wallet.integration.coinbase_integration.ui.convert_currency.ConvertView
+    <org.dash.wallet.integrations.coinbase.ui.convert_currency.ConvertView
         android:id="@+id/convert_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
