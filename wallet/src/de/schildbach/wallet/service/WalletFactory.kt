@@ -45,7 +45,6 @@ import javax.inject.Inject
 interface WalletFactory {
     // Onboarding
     fun create(params: NetworkParameters): Wallet
-    @Throws(IOException::class)
     fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>): Wallet
     @Throws(IOException::class)
     fun restoreFromFile(params: NetworkParameters, backupUri: Uri, password: String): Pair<Wallet, Boolean>
@@ -248,7 +247,6 @@ class DashWalletFactory @Inject constructor(
         }
     }
 
-    @Throws(IOException::class)
     private fun restoreWalletFromSeed(
         words: List<String>,
         expectedNetworkParameters: NetworkParameters

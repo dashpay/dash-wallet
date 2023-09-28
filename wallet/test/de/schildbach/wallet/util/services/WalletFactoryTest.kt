@@ -9,6 +9,7 @@ import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
+import junit.framework.TestCase.fail
 import org.bitcoinj.core.Context
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.params.TestNet3Params
@@ -37,10 +38,16 @@ class WalletFactoryTest {
     fun restoreFromSeedTest() {
         val walletFactory = DashWalletFactory(application)
 
-        walletFactory.restoreFromSeed(
-            context.params,
-            "innocent two another top giraffe trigger urban top oyster stove gym danger".split(' ')
-        )
+        try {
+            walletFactory.restoreFromSeed(
+                context.params,
+                "innocent two another top giraffe trigger urban top oyster stove gym danger".split(' ')
+            )
+        } catch (e: Exception) {
+            println(e.message)
+            e.printStackTrace()
+            fail(e.message)
+        }
     }
 
     @Test
