@@ -205,7 +205,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
             activity.restoreWallet(walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, words));
 
             log.info("successfully restored wallet from seed: {}", words.size());
-        } catch (final IOException | MnemonicException x) {
+        } catch (MnemonicException x) {
 
             final BaseAlertDialogBuilder restoreWalletFromSeedAlertDialogBuilder = new BaseAlertDialogBuilder(requireContext());
             restoreWalletFromSeedAlertDialogBuilder.setTitle(getString( R.string.import_export_keys_dialog_failure_title));
