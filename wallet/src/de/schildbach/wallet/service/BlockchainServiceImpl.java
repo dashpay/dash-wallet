@@ -176,6 +176,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private Coin notificationAccumulatedAmount = Coin.ZERO;
     private final List<Address> notificationAddresses = new LinkedList<Address>();
     private AtomicInteger transactionsReceived = new AtomicInteger();
+    private AtomicInteger mnListDiffsReceived = new AtomicInteger();
     private long serviceCreatedAt;
     private boolean resetBlockchainOnShutdown = false;
     private boolean deleteWalletFileOnShutdown = false;
@@ -187,6 +188,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private final static int MINIMUM_PEER_COUNT = 16;
 
     private static final int MIN_COLLECT_HISTORY = 2;
+    private static final int IDLE_HEADER_TIMEOUT_MIN = 2;
+    private static final int IDLE_MNLIST_TIMEOUT_MIN = 2;
     private static final int IDLE_BLOCK_TIMEOUT_MIN = 2;
     private static final int IDLE_TRANSACTION_TIMEOUT_MIN = 9;
     private static final int MAX_HISTORY_SIZE = Math.max(IDLE_TRANSACTION_TIMEOUT_MIN, IDLE_BLOCK_TIMEOUT_MIN);
@@ -516,6 +519,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             if(peerGroup != null && peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST) {
                 super.onMasterNodeListDiffDownloaded(stage, mnlistdiff);
                 startPreBlockPercent = syncPercentage;
+                mnListDiffsReceived.incrementAndGet();
                 postOrPostDelayed();
             }
         }
@@ -772,32 +776,42 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private final static class ActivityHistoryEntry {
         public final int numTransactionsReceived;
         public final int numBlocksDownloaded;
+        public final int numHeadersDownloaded;
+        public final int numMnListDiffsDownloaded;
 
-        public ActivityHistoryEntry(final int numTransactionsReceived, final int numBlocksDownloaded) {
+        public ActivityHistoryEntry(final int numTransactionsReceived, final int numBlocksDownloaded,
+                                    final int numHeadersDownloaded, final int numMnListDiffsDownloaded) {
             this.numTransactionsReceived = numTransactionsReceived;
             this.numBlocksDownloaded = numBlocksDownloaded;
+            this.numHeadersDownloaded = numHeadersDownloaded;
+            this.numMnListDiffsDownloaded = numMnListDiffsDownloaded;
         }
 
         @Override
         public String toString() {
-            return numTransactionsReceived + "/" + numBlocksDownloaded;
+            return numTransactionsReceived + "/" + numBlocksDownloaded + "/" + numHeadersDownloaded + "/" + numMnListDiffsDownloaded;
         }
     }
 
     private final BroadcastReceiver tickReceiver = new BroadcastReceiver() {
         private int lastChainHeight = 0;
+        private int lastHeaderHeight = 0;
         private final List<ActivityHistoryEntry> activityHistory = new LinkedList<ActivityHistoryEntry>();
 
         @Override
         public void onReceive(final Context context, final Intent intent) {
             final int chainHeight = blockChain.getBestChainHeight();
+            final int headerHeight = headerChain.getBestChainHeight();
 
-            if (lastChainHeight > 0) {
+            if (lastChainHeight > 0 || lastHeaderHeight > 0) {
                 final int numBlocksDownloaded = chainHeight - lastChainHeight;
                 final int numTransactionsReceived = transactionsReceived.getAndSet(0);
+                // instead of counting headers, count header messages which contain up to 2000 headers
+                final int numHeadersDownloaded = headerHeight - lastHeaderHeight;
+                final int numMnListDiffsDownloaded = mnListDiffsReceived.getAndSet(0);
 
                 // push history
-                activityHistory.add(0, new ActivityHistoryEntry(numTransactionsReceived, numBlocksDownloaded));
+                activityHistory.add(0, new ActivityHistoryEntry(numTransactionsReceived, numBlocksDownloaded, numHeadersDownloaded, numMnListDiffsDownloaded));
 
                 // trim
                 while (activityHistory.size() > MAX_HISTORY_SIZE)
@@ -810,7 +824,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         builder.append(", ");
                     builder.append(entry);
                 }
-                log.info("History of transactions/blocks: " + builder);
+                log.info("History of transactions/blocks/headers/mnlistdiff: " + builder);
 
                 // determine if block and transaction activity is idling
                 boolean isIdle = false;
@@ -821,8 +835,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         final boolean blocksActive = entry.numBlocksDownloaded > 0 && i <= IDLE_BLOCK_TIMEOUT_MIN;
                         final boolean transactionsActive = entry.numTransactionsReceived > 0
                                 && i <= IDLE_TRANSACTION_TIMEOUT_MIN;
+                        final boolean headersActive = entry.numHeadersDownloaded > 0 && i <= IDLE_HEADER_TIMEOUT_MIN;
+                        final boolean mnListDiffsActive = entry.numMnListDiffsDownloaded > 0 && i <= IDLE_MNLIST_TIMEOUT_MIN;
 
-                        if (blocksActive || transactionsActive) {
+                        if (blocksActive || transactionsActive || headersActive || mnListDiffsActive) {
                             isIdle = false;
                             break;
                         }
@@ -837,6 +853,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             }
 
             lastChainHeight = chainHeight;
+            lastHeaderHeight = headerHeight;
         }
     };
 
@@ -1043,7 +1060,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     @Override
     public void onDestroy() {
-        log.debug(".onDestroy()");
+        log.info(".onDestroy()");
 
         WalletApplication.scheduleStartBlockchainService(this);  //disconnect feature
 
