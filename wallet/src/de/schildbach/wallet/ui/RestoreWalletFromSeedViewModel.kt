@@ -42,7 +42,6 @@ import javax.inject.Inject
 class RestoreWalletFromSeedViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val walletFactory: WalletFactory,
-    private val walletManager: WalletService,
     private val configuration: Configuration,
     private val securityFunctions: SecurityFunctions
 ) : ViewModel() {
@@ -78,7 +77,7 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
 
     fun restoreWalletFromSeed(words: List<String>) {
         if (isSeedValid(words)) {
-            val wallet = WalletUtils.restoreWalletFromSeed(normalize(words), Constants.NETWORK_PARAMETERS, walletApplication.getWalletExtensions())
+            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words))
             walletApplication.setWallet(wallet)
             log.info("successfully restored wallet from seed")
             configuration.disarmBackupSeedReminder()

@@ -1,13 +1,18 @@
 package de.schildbach.wallet.service
 
 import android.net.Uri
+import android.text.format.DateUtils
 import com.google.common.base.Charsets
 import com.google.common.base.Preconditions
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.Crypto
 import de.schildbach.wallet.util.Io
+import de.schildbach.wallet.util.Iso8601Format
 import de.schildbach.wallet.util.WalletUtils
+import org.bitcoinj.core.AddressFormatException
+import org.bitcoinj.core.DumpedPrivateKey
+import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.DeterministicKeyChain
@@ -27,6 +32,8 @@ import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.text.ParseException
+import java.util.LinkedList
 import javax.inject.Inject
 
 // RestoreFromFileHelper
@@ -38,7 +45,9 @@ import javax.inject.Inject
 interface WalletFactory {
     // Onboarding
     fun create(params: NetworkParameters): Wallet
+    @Throws(IOException::class)
     fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>): Wallet
+    @Throws(IOException::class)
     fun restoreFromFile(params: NetworkParameters, backupUri: Uri, password: String): Pair<Wallet, Boolean>
 
     // loading from persistent storage
@@ -278,7 +287,7 @@ class DashWalletFactory @Inject constructor(
 
             // create non-HD wallet
             val group = KeyChainGroup.builder(expectedNetworkParameters).build()
-            group.importKeys(WalletUtils.readKeys(keyReader, expectedNetworkParameters))
+            group.importKeys(readKeys(keyReader, expectedNetworkParameters))
             val wallet = Wallet(expectedNetworkParameters, group)
             // this will result in a different HD seed each time
             wallet.upgradeToDeterministic(Script.ScriptType.P2PKH, null)
@@ -322,11 +331,37 @@ class DashWalletFactory @Inject constructor(
         }
     }
 
+    @Throws(IOException::class)
+    private fun readKeys(inputStream: BufferedReader, expectedNetworkParameters: NetworkParameters?): List<ECKey>? {
+        return try {
+            val format = Iso8601Format.newDateTimeFormatT()
+            val keys: MutableList<ECKey> = LinkedList()
+            var charCount: Long = 0
+            while (true) {
+                val line = inputStream.readLine() ?: break
+                // eof
+                charCount += line.length.toLong()
+                if (charCount > Constants.BACKUP_MAX_CHARS) throw IOException("read more than the limit of " + Constants.BACKUP_MAX_CHARS + " characters")
+                if (line.trim { it <= ' ' }.isEmpty() || line[0] == '#') continue  // skip comment
+                val parts = line.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                val key = DumpedPrivateKey.fromBase58(expectedNetworkParameters, parts[0]).key
+                key.creationTimeSeconds =
+                    if (parts.size >= 2) format.parse(parts[1]).time / DateUtils.SECOND_IN_MILLIS else 0
+                keys.add(key)
+            }
+            keys
+        } catch (x: AddressFormatException) {
+            throw IOException("cannot read keys", x)
+        } catch (x: ParseException) {
+            throw IOException("cannot read keys", x)
+        }
+    }
+
     private fun isKeysStream(params: NetworkParameters, inputStream: InputStream?): Boolean {
         var reader: BufferedReader? = null
         return try {
             reader = BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8))
-            WalletUtils.readKeys(reader, params)
+            readKeys(reader, params)
             true
         } catch (x: IOException) {
             false

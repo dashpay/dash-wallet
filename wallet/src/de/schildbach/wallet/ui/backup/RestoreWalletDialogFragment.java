@@ -360,7 +360,7 @@ public class RestoreWalletDialogFragment extends DialogFragment {
     private void maybeFinishActivity() {
     }
 
-    RestoreFromFileHelper.OnRestoreWalletListener listener = new RestoreFromFileHelper.OnRestoreWalletListener() {
+    OnRestoreWalletListener listener = new OnRestoreWalletListener() {
 
         @Override
         public void onRestoreWallet(Wallet wallet) {
@@ -374,7 +374,7 @@ public class RestoreWalletDialogFragment extends DialogFragment {
     };
 
     @SuppressLint("StringFormatInvalid")
-    private static void showRetryDialog(Activity activity, RestoreFromFileHelper.OnRestoreWalletListener listener, String message) {
+    private static void showRetryDialog(Activity activity, OnRestoreWalletListener listener, String message) {
         AdaptiveDialog.create(R.drawable.ic_backup_info,
                 activity.getString(R.string.import_export_keys_dialog_failure_title),
                 activity.getString(R.string.import_keys_dialog_failure, message),
