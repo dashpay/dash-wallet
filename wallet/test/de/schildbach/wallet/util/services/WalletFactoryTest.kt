@@ -37,7 +37,10 @@ class WalletFactoryTest {
     fun restoreFromSeedTest() {
         val walletFactory = DashWalletFactory(application)
 
-        walletFactory.restoreFromSeed(context.params, "my seed is not very long".split(' '))
+        walletFactory.restoreFromSeed(
+            context.params,
+            "innocent two another top giraffe trigger urban top oyster stove gym danger".split(' ')
+        )
     }
 
     @Test
