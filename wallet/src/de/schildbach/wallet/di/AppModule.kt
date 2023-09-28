@@ -119,4 +119,7 @@ abstract class AppModule {
     @Binds
     @Singleton
     abstract fun bindNetworkState(networkState: NetworkState) : NetworkStateInt
+
+    @Binds
+    abstract fun bindWalletFactory(walletFactory: DashWalletFactory) : WalletFactory
 }
