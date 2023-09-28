@@ -16,8 +16,14 @@
 
 package de.schildbach.wallet.ui
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletBalanceWidgetProvider
@@ -74,6 +80,49 @@ class SettingsActivity : LockScreenActivity() {
 
         binding.rescanBlockchain.setOnClickListener { resetBlockchain() }
         binding.notifications.setOnClickListener { systemActions.openNotificationSettings() }
+        binding.batteryOptimization.setOnClickListener {
+            val powerManager = getSystemService(PowerManager::class.java)
+
+            if (ContextCompat.checkSelfPermission(
+                    walletApplication,
+                    Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                ) == PackageManager.PERMISSION_GRANTED &&
+                !powerManager.isIgnoringBatteryOptimizations(walletApplication.packageName)
+            ) {
+                AdaptiveDialog.create(
+                    null,
+                    getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_title),
+                    getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_message),
+                    getString(R.string.permission_deny),
+                    getString(R.string.permission_allow)
+                ).show(this) { allow ->
+                    if (allow == true) {
+                        startActivity(
+                            Intent(
+                                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                Uri.parse("package:$packageName")
+                            )
+                        )
+                    }
+                }
+            } else {
+                // TODO: There will be designs for this dialog
+                AdaptiveDialog.create(
+                    null,
+                    getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_title),
+                    getString(R.string.alert_dialogs_fragment_battery_optimization_off_dialog_message),
+                    getString(R.string.close),
+                    getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_button_change)
+                ).show(this) {
+                    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    if (intent.resolveActivity(packageManager) != null) {
+                        startActivity(intent)
+                    } else {
+                        // Handle case where the intent is not resolvable (e.g., device doesn't have this setting).
+                    }
+                }
+            }
+        }
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
