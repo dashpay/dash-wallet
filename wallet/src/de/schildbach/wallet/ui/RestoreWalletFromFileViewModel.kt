@@ -16,24 +16,32 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Application
 import android.content.Intent
 import android.net.Uri
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.WalletFactory
+import de.schildbach.wallet.service.WalletService
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet_test.R
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.Configuration
 import org.slf4j.LoggerFactory
+import java.io.IOException
+import javax.inject.Inject
 
-class RestoreWalletFromFileViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class RestoreWalletFromFileViewModel @Inject constructor(
+    val walletApplication: WalletApplication,
+    private val walletFactory: WalletFactory,
+    private val configuration: Configuration
+) : ViewModel() {
 
     private val log = LoggerFactory.getLogger(RestoreWalletFromFileViewModel::class.java)
-
-    private val walletApplication = application as WalletApplication
 
     internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val showUpgradeWalletAction = SingleLiveEvent<Wallet>()
@@ -42,20 +50,37 @@ class RestoreWalletFromFileViewModel(application: Application) : AndroidViewMode
 
     val backupUri = MutableLiveData<Uri>()
     val displayName = MutableLiveData<String>()
-    val showSuccessDialog = SingleLiveEvent<Boolean>()
     val showFailureDialog = SingleLiveEvent<String>()
     val restoreWallet = SingleLiveEvent<Wallet>()
     val retryRequest = SingleLiveEvent<Void>()
 
-    fun restoreWalletFromFile(wallet: Wallet, password: String?) {
+    @Throws(IOException::class)
+    fun restoreWalletFromUri(backupUri: Uri, password: String) : Wallet {
+        val (wallet, fromKeys) = walletFactory.restoreFromFile(Constants.NETWORK_PARAMETERS, backupUri, password)
+        if (fromKeys) {
+            // when loading a keys file, a new recovery phrase is created and is different each time
+            // The user will need to backup their passphrase
+            configuration.armBackupReminder()
+            configuration.armBackupSeedReminder()
+        }
+        return wallet
+    }
+
+    fun restoreWallet(wallet: Wallet, password: String?) {
         if (!wallet.hasKeyChain(Constants.BIP44_PATH) && wallet.isEncrypted) {
             showUpgradeWalletAction.call(wallet)
         } else {
             walletApplication.setWallet(wallet)
             log.info("successfully restored wallet from file")
             walletApplication.resetBlockchainState()
-            startActivityAction.call(SetPinActivity.createIntent(getApplication(),
-                    R.string.set_pin_restore_wallet, false, password))
+            startActivityAction.call(
+                SetPinActivity.createIntent(
+                    walletApplication,
+                    R.string.set_pin_restore_wallet,
+                    false,
+                    password
+                )
+            )
         }
     }
 }

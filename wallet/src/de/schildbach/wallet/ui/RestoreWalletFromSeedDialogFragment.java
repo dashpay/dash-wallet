@@ -52,8 +52,10 @@ import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.ui.main.WalletActivity;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.MnemonicCodeExt;
@@ -63,7 +65,10 @@ import kotlin.Unit;
 
 import android.annotation.SuppressLint;
 
+import javax.inject.Inject;
 
+
+@AndroidEntryPoint
 public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
 
     private static final String FRAGMENT_TAG = RestoreWalletFromSeedDialogFragment.class.getName();
@@ -84,6 +89,9 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
     private AppCompatActivity activity;
     WalletApplication application;
     private Wallet wallet;
+
+    @Inject
+    WalletFactory walletFactory;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -194,7 +202,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         final WalletActivity activity = (WalletActivity) this.activity;
         try {
             MnemonicCodeExt.getInstance().check(activity, words);
-            activity.restoreWallet(WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS, application.getWalletExtensions()));
+            activity.restoreWallet(WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS)));
 
             log.info("successfully restored wallet from seed: {}", words.size());
         } catch (final IOException | MnemonicException x) {

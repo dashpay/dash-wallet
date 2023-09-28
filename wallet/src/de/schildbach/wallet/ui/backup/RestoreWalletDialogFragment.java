@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.backup;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import androidx.appcompat.app.AlertDialog;
 import android.app.Dialog;
@@ -35,6 +36,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
@@ -53,6 +55,7 @@ import kotlin.Unit;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,16 +120,11 @@ public class RestoreWalletDialogFragment extends DialogFragment {
         log.info("opening dialog {}", getClass().getName());
 
         viewModel = new ViewModelProvider(activity).get(RestoreWalletFromFileViewModel.class);
-        viewModel.getShowSuccessDialog().observe(this, new Observer<Boolean>() {
-            @Override
-            public void onChanged(final Boolean showEncryptedMessage) {
-                SuccessDialogFragment.showDialog(fragmentManager, showEncryptedMessage);
-            }
-        });
+
         viewModel.getShowFailureDialog().observe(this, new Observer<String>() {
             @Override
             public void onChanged(final String message) {
-                FailureDialogFragment.showDialog(fragmentManager, message, viewModel.getBackupUri().getValue());
+                showRetryDialog(activity, listener, message);
             }
         });
         viewModel.getBackupUri().observe(this, uri -> {
@@ -239,7 +237,9 @@ public class RestoreWalletDialogFragment extends DialogFragment {
         final Uri backupUri = viewModel.getBackupUri().getValue();
         if (backupUri != null) {
             try {
-                final InputStream is = contentResolver.openInputStream(backupUri);
+                Wallet wallet = viewModel.restoreWalletFromUri(backupUri, password);
+                listener.onRestoreWallet(wallet);
+                /*final InputStream is = contentResolver.openInputStream(backupUri);
 
                 if (WalletUtils.isUnencryptedStream(contentResolver.openInputStream(backupUri))) {
                     RestoreFromFileHelper.restoreWalletFromProtobuf(activity,
@@ -253,7 +253,7 @@ public class RestoreWalletDialogFragment extends DialogFragment {
                     RestoreFromFileHelper.restoreWalletFromEncrypted(activity,
                             this.getActivity(), this.getActivity(),
                             backupUri, contentResolver.openInputStream(backupUri), password, listener);
-                }
+                }*/
 
                 log.info("successfully restored wallet from external source");
             } catch (final IOException x) {
@@ -267,95 +267,95 @@ public class RestoreWalletDialogFragment extends DialogFragment {
         }
     }
 
-    public static class SuccessDialogFragment extends DialogFragment {
-        private static final String FRAGMENT_TAG = SuccessDialogFragment.class.getName();
-        private static final String KEY_SHOW_ENCRYPTED_MESSAGE = "show_encrypted_message";
+//    public static class SuccessDialogFragment extends DialogFragment {
+//        private static final String FRAGMENT_TAG = SuccessDialogFragment.class.getName();
+//        private static final String KEY_SHOW_ENCRYPTED_MESSAGE = "show_encrypted_message";
+//
+//        private Activity activity;
+//
+//        public static void showDialog(final FragmentManager fm, final boolean showEncryptedMessage) {
+//            final DialogFragment newFragment = new SuccessDialogFragment();
+//            final Bundle args = new Bundle();
+//            args.putBoolean(KEY_SHOW_ENCRYPTED_MESSAGE, showEncryptedMessage);
+//            newFragment.setArguments(args);
+//            newFragment.show(fm, FRAGMENT_TAG);
+//        }
+//
+//        @Override
+//        public void onAttach(final Context context) {
+//            super.onAttach(context);
+//            this.activity = (Activity) context;
+//        }
+//
+//        @Override
+//        public Dialog onCreateDialog(final Bundle savedInstanceState) {
+//            final boolean showEncryptedMessage = getArguments().getBoolean(KEY_SHOW_ENCRYPTED_MESSAGE);
+//            final StringBuilder message = new StringBuilder();
+//            message.append(getString(R.string.restore_wallet_dialog_success));
+//            message.append("\n\n");
+//            message.append(getString(R.string.restore_wallet_dialog_success_replay));
+//            if (showEncryptedMessage) {
+//                message.append("\n\n");
+//                message.append(getString(R.string.restore_wallet_dialog_success_encrypted));
+//            }
+//
+//            final BaseAlertDialogBuilder restoreWalletSuccessAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
+//            restoreWalletSuccessAlertDialogBuilder.setMessage(message);
+//            restoreWalletSuccessAlertDialogBuilder.setNeutralText(getString(R.string.button_ok));
+//            restoreWalletSuccessAlertDialogBuilder.setNeutralAction(
+//                    () -> {
+//                        WalletApplication.getInstance().resetBlockchain();
+//                        activity.finish();
+//                        return Unit.INSTANCE;
+//                    }
+//            );
+//            return restoreWalletSuccessAlertDialogBuilder.buildAlertDialog();
+//        }
+//    }
 
-        private Activity activity;
-
-        public static void showDialog(final FragmentManager fm, final boolean showEncryptedMessage) {
-            final DialogFragment newFragment = new SuccessDialogFragment();
-            final Bundle args = new Bundle();
-            args.putBoolean(KEY_SHOW_ENCRYPTED_MESSAGE, showEncryptedMessage);
-            newFragment.setArguments(args);
-            newFragment.show(fm, FRAGMENT_TAG);
-        }
-
-        @Override
-        public void onAttach(final Context context) {
-            super.onAttach(context);
-            this.activity = (Activity) context;
-        }
-
-        @Override
-        public Dialog onCreateDialog(final Bundle savedInstanceState) {
-            final boolean showEncryptedMessage = getArguments().getBoolean(KEY_SHOW_ENCRYPTED_MESSAGE);
-            final StringBuilder message = new StringBuilder();
-            message.append(getString(R.string.restore_wallet_dialog_success));
-            message.append("\n\n");
-            message.append(getString(R.string.restore_wallet_dialog_success_replay));
-            if (showEncryptedMessage) {
-                message.append("\n\n");
-                message.append(getString(R.string.restore_wallet_dialog_success_encrypted));
-            }
-
-            final BaseAlertDialogBuilder restoreWalletSuccessAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
-            restoreWalletSuccessAlertDialogBuilder.setMessage(message);
-            restoreWalletSuccessAlertDialogBuilder.setNeutralText(getString(R.string.button_ok));
-            restoreWalletSuccessAlertDialogBuilder.setNeutralAction(
-                    () -> {
-                        WalletApplication.getInstance().resetBlockchain();
-                        activity.finish();
-                        return Unit.INSTANCE;
-                    }
-            );
-            return restoreWalletSuccessAlertDialogBuilder.buildAlertDialog();
-        }
-    }
-
-    public static class FailureDialogFragment extends DialogFragment {
-        private static final String FRAGMENT_TAG = FailureDialogFragment.class.getName();
-        private static final String KEY_EXCEPTION_MESSAGE = "exception_message";
-        private static final String KEY_BACKUP_URI = "backup_uri";
-
-        private Activity activity;
-
-        public static void showDialog(final FragmentManager fm, final String exceptionMessage, final Uri backupUri) {
-            final DialogFragment newFragment = new FailureDialogFragment();
-            final Bundle args = new Bundle();
-            args.putString(KEY_EXCEPTION_MESSAGE, exceptionMessage);
-            args.putParcelable(KEY_BACKUP_URI, checkNotNull(backupUri));
-            newFragment.setArguments(args);
-            newFragment.show(fm, FRAGMENT_TAG);
-        }
-
-        @Override
-        public void onAttach(final Context context) {
-            super.onAttach(context);
-            this.activity = (Activity) context;
-        }
-
-        @Override
-        public Dialog onCreateDialog(final Bundle savedInstanceState) {
-            final String exceptionMessage = getArguments().getString(KEY_EXCEPTION_MESSAGE);
-            final Uri backupUri = checkNotNull((Uri) getArguments().getParcelable(KEY_BACKUP_URI));
-
-            BaseAlertDialogBuilder restoreWalletFailAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
-            restoreWalletFailAlertDialogBuilder.setTitle(getString(R.string.import_export_keys_dialog_failure_title));
-            restoreWalletFailAlertDialogBuilder.setMessage(formatString(requireContext(), R.string.import_keys_dialog_failure, exceptionMessage));
-            restoreWalletFailAlertDialogBuilder.setPositiveText(getString(R.string.button_dismiss));
-            restoreWalletFailAlertDialogBuilder.setNegativeText(getString(R.string.button_retry));
-            restoreWalletFailAlertDialogBuilder.setNegativeAction(
-                    () -> {
-                        RestoreWalletDialogFragment.show(getParentFragmentManager(), backupUri);
-                        return Unit.INSTANCE;
-                    }
-            );
-            restoreWalletFailAlertDialogBuilder.setShowIcon(true);
-
-            return restoreWalletFailAlertDialogBuilder.buildAlertDialog();
-        }
-    }
+//    public static class FailureDialogFragment extends DialogFragment {
+//        private static final String FRAGMENT_TAG = FailureDialogFragment.class.getName();
+//        private static final String KEY_EXCEPTION_MESSAGE = "exception_message";
+//        private static final String KEY_BACKUP_URI = "backup_uri";
+//
+//        private Activity activity;
+//
+//        public static void showDialog(final FragmentManager fm, final String exceptionMessage, final Uri backupUri) {
+//            final DialogFragment newFragment = new FailureDialogFragment();
+//            final Bundle args = new Bundle();
+//            args.putString(KEY_EXCEPTION_MESSAGE, exceptionMessage);
+//            args.putParcelable(KEY_BACKUP_URI, checkNotNull(backupUri));
+//            newFragment.setArguments(args);
+//            newFragment.show(fm, FRAGMENT_TAG);
+//        }
+//
+//        @Override
+//        public void onAttach(final Context context) {
+//            super.onAttach(context);
+//            this.activity = (Activity) context;
+//        }
+//
+//        @Override
+//        public Dialog onCreateDialog(final Bundle savedInstanceState) {
+//            final String exceptionMessage = getArguments().getString(KEY_EXCEPTION_MESSAGE);
+//            final Uri backupUri = checkNotNull((Uri) getArguments().getParcelable(KEY_BACKUP_URI));
+//
+//            BaseAlertDialogBuilder restoreWalletFailAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
+//            restoreWalletFailAlertDialogBuilder.setTitle(getString(R.string.import_export_keys_dialog_failure_title));
+//            restoreWalletFailAlertDialogBuilder.setMessage(formatString(requireContext(), R.string.import_keys_dialog_failure, exceptionMessage));
+//            restoreWalletFailAlertDialogBuilder.setPositiveText(getString(R.string.button_dismiss));
+//            restoreWalletFailAlertDialogBuilder.setNegativeText(getString(R.string.button_retry));
+//            restoreWalletFailAlertDialogBuilder.setNegativeAction(
+//                    () -> {
+//                        RestoreWalletDialogFragment.show(getParentFragmentManager(), backupUri);
+//                        return Unit.INSTANCE;
+//                    }
+//            );
+//            restoreWalletFailAlertDialogBuilder.setShowIcon(true);
+//
+//            return restoreWalletFailAlertDialogBuilder.buildAlertDialog();
+//        }
+//    }
 
     private void maybeFinishActivity() {
     }
@@ -372,4 +372,17 @@ public class RestoreWalletDialogFragment extends DialogFragment {
             viewModel.getRetryRequest().call(null);
         }
     };
+
+    @SuppressLint("StringFormatInvalid")
+    private static void showRetryDialog(Activity activity, RestoreFromFileHelper.OnRestoreWalletListener listener, String message) {
+        AdaptiveDialog.create(R.drawable.ic_backup_info,
+                activity.getString(R.string.import_export_keys_dialog_failure_title),
+                activity.getString(R.string.import_keys_dialog_failure, message),
+                activity.getString(R.string.button_dismiss),
+                activity.getString(R.string.button_retry)
+        ).show((FragmentActivity) activity, retry -> {
+            listener.onRetryRequest();
+            return Unit.INSTANCE;
+        });
+    }
 }
