@@ -22,12 +22,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.LocaleList;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.telephony.TelephonyManager;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -376,6 +379,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 // do nothing
+                requestDisableBatteryOptimisation();
             });
 
     /**
@@ -397,9 +401,31 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     getString(R.string.button_okay)
             );
 
-            dialog.show(this, result -> Unit.INSTANCE);
+            dialog.show(this, result -> {
+                requestDisableBatteryOptimisation();
+                return Unit.INSTANCE;
+            });
         }
         // only show either the permissions dialog (Android >= 13) or the explainer (Android <= 12) once
         configuration.setShowNotificationsExplainer(false);
+    }
+
+    private void requestDisableBatteryOptimisation() {
+        PowerManager powerManager = getSystemService(PowerManager.class);
+        if (ContextCompat.checkSelfPermission(walletApplication, Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) == PackageManager.PERMISSION_GRANTED &&
+                !powerManager.isIgnoringBatteryOptimizations(walletApplication.getPackageName())) {
+            AdaptiveDialog.create(
+                null,
+                getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_title),
+                getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_message),
+                getString(R.string.permission_deny),
+                getString(R.string.permission_allow)
+            ).show(this, (allow) -> {
+                if (allow) {
+                    startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName())));
+                }
+                return Unit.INSTANCE;
+            });
+        }
     }
 }
