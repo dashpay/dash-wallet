@@ -339,16 +339,8 @@ public class WalletApplication extends MultiDexApplication
         // this extension is supposed to be added by WalletFactory
         AuthenticationGroupExtension authenticationGroupExtension = (AuthenticationGroupExtension) wallet.getKeyChainExtensions().get(AuthenticationGroupExtension.EXTENSION_ID);
         if (authenticationGroupExtension != null && authKeyTypes.stream().anyMatch(keyType -> authenticationGroupExtension.getKeyChain(keyType) == null)) {
-            if (wallet.isEncrypted()) {
-                // if the wallet is encrypted, don't add the keys
-//                String password = new SecurityGuard().retrievePassword();
-//                authenticationGroupExtension.addEncryptedKeyChains(
-//                        wallet.getParams(),
-//                        wallet.getKeyChainSeed(),
-//                        wallet.getKeyCrypter().deriveKey(password),
-//                        authKeyTypes
-//                );
-            } else {
+            // if the wallet is encrypted, don't add these keys
+            if (!wallet.isEncrypted()) {
                 authenticationGroupExtension.addKeyChains(
                         wallet.getParams(),
                         wallet.getKeyChainSeed(),
@@ -358,7 +350,6 @@ public class WalletApplication extends MultiDexApplication
                 authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
                 authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
                 authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
-
             }
          }
     }

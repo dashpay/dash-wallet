@@ -76,9 +76,6 @@ class DashWalletFactory @Inject constructor(
                 }
             }
         }
-//        private fun normalize(words: List<String>): List<String> {
-//            return words.map { it.lowercase(Locale.getDefault()) }
-//        }
     }
 
     val contentResolver = walletApplication.contentResolver
