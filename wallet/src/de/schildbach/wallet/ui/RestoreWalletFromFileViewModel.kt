@@ -24,7 +24,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.WalletFactory
-import de.schildbach.wallet.service.WalletService
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet_test.R
 import org.bitcoinj.crypto.MnemonicException

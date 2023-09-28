@@ -25,7 +25,6 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.WalletFactory
-import de.schildbach.wallet.service.WalletService
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet.util.MnemonicCodeExt
 import de.schildbach.wallet_test.R
