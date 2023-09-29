@@ -40,7 +40,9 @@ class WalletFactoryTest {
     fun restoreFromSeedTest() {
         val walletFactory = DashWalletFactory(application)
         var context = Context(MainNetParams.get())
+        println("save to tls: " + context.params)
         context = Context.get()
+        println("from tls:" + context.params)
 
         try {
             walletFactory.restoreFromSeed(
