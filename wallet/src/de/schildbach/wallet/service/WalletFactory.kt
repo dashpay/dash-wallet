@@ -9,7 +9,6 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.Crypto
 import de.schildbach.wallet.util.Io
 import de.schildbach.wallet.util.Iso8601Format
-import de.schildbach.wallet.util.WalletUtils
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.core.ECKey
@@ -249,11 +248,11 @@ class DashWalletFactory @Inject constructor(
 
     private fun restoreWalletFromSeed(
         words: List<String>,
-        expectedNetworkParameters: NetworkParameters
+        params: NetworkParameters
     ): Wallet {
         return try {
             val seed = DeterministicSeed(words, null, "", Constants.EARLIEST_HD_SEED_CREATION_TIME)
-            val group = KeyChainGroup.builder(Constants.NETWORK_PARAMETERS)
+            val group = KeyChainGroup.builder(params)
                 .fromSeed(seed, Script.ScriptType.P2PKH)
                 .addChain(
                     DeterministicKeyChain.builder()
@@ -262,11 +261,11 @@ class DashWalletFactory @Inject constructor(
                         .build()
                 )
                 .build()
-            val wallet = Wallet(Constants.NETWORK_PARAMETERS, group)
+            val wallet = Wallet(params, group)
             // add extensions
             addMissingExtensions(wallet)
 
-            checkWalletValid(wallet, expectedNetworkParameters)
+            checkWalletValid(wallet, params)
             wallet
         } finally {
         }
