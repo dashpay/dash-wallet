@@ -19,25 +19,24 @@ import java.io.IOException
 
 class WalletFactoryTest {
     private val contentResolver = mockk<ContentResolver>()
-    private lateinit var context: Context
     private val application = mockk<WalletApplication>()
 
     @Before
     fun setup() {
         every { application.contentResolver } returns contentResolver
-        context = Context(MainNetParams.get())
     }
 
     @Test
     fun createTest() {
         val walletFactory = DashWalletFactory(application)
-
+        val context = Context(MainNetParams.get())
         walletFactory.create(context.params)
     }
 
     @Test
     fun restoreFromSeedTest() {
         val walletFactory = DashWalletFactory(application)
+        val context = Context(MainNetParams.get())
 
         try {
             walletFactory.restoreFromSeed(
@@ -54,6 +53,7 @@ class WalletFactoryTest {
     @Test
     fun restoreFromEncryptedFileTest() {
         val walletFactory = DashWalletFactory(application)
+        val context = Context(MainNetParams.get())
 
         val withPinUri = mockk<Uri>()
         val withoutPinUri = mockk<Uri>()
@@ -98,7 +98,6 @@ class WalletFactoryTest {
     fun restoreFromKeyFileTest() {
         val walletFactory = DashWalletFactory(application)
         val context = Context(TestNet3Params.get())
-
         val keysUri = mockk<Uri>()
 
         every {
@@ -131,6 +130,7 @@ class WalletFactoryTest {
     @Test(expected = IOException::class)
     fun restoreFromKeyFileTest_wrongNetwork() {
         val walletFactory = DashWalletFactory(application)
+        val context = Context(MainNetParams.get())
         val keysUri = mockk<Uri>()
 
         every {
@@ -161,6 +161,7 @@ class WalletFactoryTest {
     @Test(expected = IOException::class)
     fun restoreFromKeyFileTest_wrongCoin() {
         val walletFactory = DashWalletFactory(application)
+        val context = Context(MainNetParams.get())
         val keysUri = mockk<Uri>()
 
         every {
