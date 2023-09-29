@@ -11,9 +11,12 @@ import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
 import junit.framework.TestCase.fail
 import org.bitcoinj.core.Context
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.params.TestNet3Params
+import org.bitcoinj.utils.BriefLogFormatter
 import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Test
 import java.io.IOException
 
@@ -36,7 +39,8 @@ class WalletFactoryTest {
     @Test
     fun restoreFromSeedTest() {
         val walletFactory = DashWalletFactory(application)
-        val context = Context(MainNetParams.get())
+        var context = Context(MainNetParams.get())
+        context = Context.get()
 
         try {
             walletFactory.restoreFromSeed(
