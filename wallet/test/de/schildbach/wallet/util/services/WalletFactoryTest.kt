@@ -6,6 +6,8 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.DashWalletFactory
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
@@ -15,6 +17,7 @@ import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.BriefLogFormatter
+import org.junit.After
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
@@ -27,7 +30,15 @@ class WalletFactoryTest {
     @Before
     fun setup() {
         every { application.contentResolver } returns contentResolver
+        mockkStatic(Context::class)
     }
+
+    @After
+    fun tearDown() {
+        // Unmock all after tests
+        unmockkAll()
+    }
+
 
     @Test
     fun createTest() {
@@ -39,14 +50,13 @@ class WalletFactoryTest {
     @Test
     fun restoreFromSeedTest() {
         val walletFactory = DashWalletFactory(application)
-        var context = Context(MainNetParams.get())
-        println("save to tls: " + context.params)
-        context = Context.get()
-        println("from tls:" + context.params)
+        val contextMocked = mockk<Context>()
+        every { contextMocked.params } returns MainNetParams.get()
+        every { Context.getOrCreate(any()) } returns contextMocked
 
         try {
             walletFactory.restoreFromSeed(
-                context.params,
+                contextMocked.params,
                 "innocent two another top giraffe trigger urban top oyster stove gym danger".split(' ')
             )
         } catch (e: Exception) {
