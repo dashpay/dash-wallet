@@ -19,12 +19,13 @@ import java.io.IOException
 
 class WalletFactoryTest {
     private val contentResolver = mockk<ContentResolver>()
-    private val context = Context(MainNetParams.get())
+    private lateinit var context: Context
     private val application = mockk<WalletApplication>()
 
     @Before
     fun setup() {
         every { application.contentResolver } returns contentResolver
+        context = Context(MainNetParams.get())
     }
 
     @Test
