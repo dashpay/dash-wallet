@@ -38,7 +38,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
-import de.schildbach.wallet.ui.main.WalletActivity;
+import de.schildbach.wallet.ui.main.MainActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.util.InputParser;
 import de.schildbach.wallet.ui.util.WalletUri;
@@ -93,7 +93,7 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
         if (Intent.ACTION_VIEW.equals(action) && Constants.WALLET_URI_SCHEME.equals(scheme)) {
             if (intentUri.getHost().equalsIgnoreCase("brokers")) {
                 if (intentUri.getPath().contains("uphold")) {
-                    Intent activityIntent = new Intent(this, WalletActivity.class);
+                    Intent activityIntent = new Intent(this, MainActivity.class);
                     activityIntent.putExtra("uri", intentUri);
                     activityIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                     activityIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);

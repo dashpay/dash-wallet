@@ -62,7 +62,7 @@ class SendCoinsViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val configuration: Configuration,
     private val sendCoinsTaskRunner: SendCoinsTaskRunner,
-    private val notificationService: NotificationService
+    private val notificationService: NotificationService,
     private val platformRepo: PlatformRepo,
     private val dashPayContactRequestDao: DashPayContactRequestDao
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
@@ -238,11 +238,6 @@ class SendCoinsViewModel @Inject constructor(
 
     fun logEvent(eventName: String) {
         analytics.logEvent(eventName, mapOf())
-    }
-
-    fun shouldConfirm(): Boolean {
-        return basePaymentIntent.amount != null && basePaymentIntent.amount.isGreaterThan(Coin.ZERO) &&
-            _isBlockchainReplaying.value != true
     }
 
     private fun isPayeePlausible(): Boolean {

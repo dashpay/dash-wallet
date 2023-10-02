@@ -28,7 +28,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.UsernameRequestGroupViewBinding
 import de.schildbach.wallet_test.databinding.UsernameRequestViewBinding
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
-import org.dash.wallet.common.ui.getRoundedBackground
+import org.dash.wallet.common.ui.setRoundedBackground
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -137,7 +137,7 @@ class UsernameRequestViewHolder(
             LocalDateTime.ofEpochSecond(request.createdAt, 0, ZoneOffset.UTC)
         )
 
-        binding.voteAmount.background = binding.voteAmount.resources.getRoundedBackground(
+        binding.voteAmount.setRoundedBackground(
             if (request.isApproved) {
                 R.style.BlueBadgeTheme
             } else {

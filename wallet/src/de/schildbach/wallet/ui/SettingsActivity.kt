@@ -22,7 +22,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletBalanceWidgetProvider
-import de.schildbach.wallet.ui.main.WalletActivity
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.AboutActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySettingsBinding
@@ -83,7 +83,7 @@ class SettingsActivity : LockScreenActivity() {
             .launchIn(lifecycleScope)
 
         viewModel.voteDashPayIsEnabled.observe(this) {
-            voting_dash_pay_switch.isChecked = it ?: false
+            binding.votingDashPaySwitch.isChecked = it ?: false
         }
 
         binding.votingDashPaySwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -105,7 +105,7 @@ class SettingsActivity : LockScreenActivity() {
 
                 walletApplication.resetBlockchain()
                 configuration.updateLastBlockchainResetTime()
-                startActivity(WalletActivity.createIntent(this@SettingsActivity))
+                startActivity(MainActivity.createIntent(this@SettingsActivity))
             } else {
                 analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, mapOf())
             }

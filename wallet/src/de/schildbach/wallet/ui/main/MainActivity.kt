@@ -23,16 +23,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.net.Uri
-import android.nfc.NdefMessage
+}import android.nfc.NdefMessage
 import android.nfc.NfcAdapter
 import android.os.Build
 import android.os.Bundle
-import android.os.LocaleList
 import android.provider.Settings
-import android.telephony.TelephonyManager
 import android.view.MenuItem
 import android.view.WindowManager
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -42,19 +40,20 @@ import androidx.lifecycle.lifecycleScope
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
-import de.schildbach.wallet.ui.backup.RestoreFromFileHelper
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
+import de.schildbach.wallet.ui.main.WalletActivityExt.checkTimeSkew
+import de.schildbach.wallet.ui.main.WalletActivityExt.handleFirebaseAction
 import de.schildbach.wallet.ui.main.WalletActivityExt.setupBottomNavigation
+import de.schildbach.wallet.ui.main.WalletActivityExt.showFiatCurrencyChangeDetectedDialog
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
@@ -62,11 +61,9 @@ import de.schildbach.wallet.util.Nfc
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.data.CurrencyInfo
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -83,17 +80,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     companion object {
         private val log = LoggerFactory.getLogger(MainActivity::class.java)
-
-        const val REQUEST_CODE_SCAN = 0
-        const val REQUEST_CODE_BACKUP_WALLET = 1
-        const val REQUEST_CODE_RESTORE_WALLET = 2
-
-        const val DIALOG_BACKUP_WALLET_PERMISSION = 0
-        const val DIALOG_RESTORE_WALLET_PERMISSION = 1
-        const val DIALOG_RESTORE_WALLET = 2
-        const val DIALOG_TIMESKEW_ALERT = 3
-        const val DIALOG_VERSION_ALERT = 4
-        const val DIALOG_LOW_STORAGE_ALERT = 5
 
         const val EXTRA_RESET_BLOCKCHAIN = "reset_blockchain"
         private const val EXTRA_INVITE = "extra_invite"
@@ -142,6 +128,15 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         if (savedInstanceState == null) {
             //Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false)
+        }
+
+        viewModel.currencyChangeDetected.observe(
+            this
+        ) { currencies: Pair<String?, String?> ->
+            showFiatCurrencyChangeDetectedDialog(
+                viewModel,
+                currencies.component1()!!, currencies.component2()!!
+            )
         }
     }
 
@@ -261,10 +256,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onResume() {
         super.onResume()
-        showBackupWalletDialogIfNeeded()
+        turnOnAutoLogout()
+        checkTimeSkew(viewModel)
         checkLowStorageAlert()
         checkWalletEncryptionDialog()
-        detectUserCountry()
+        viewModel.detectUserCountry()
         viewModel.startBlockchainService()
     }
 
@@ -304,29 +300,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         //TODO: can we remove this?
     }
 
-    override fun onCreateDialog(id: Int, args: Bundle): Dialog? {
-        return if (id == DIALOG_BACKUP_WALLET_PERMISSION) {
-            createBackupWalletPermissionDialog()
-        } else if (id == DIALOG_RESTORE_WALLET_PERMISSION) {
-            createRestoreWalletPermissionDialog()
-        } else if (id == DIALOG_TIMESKEW_ALERT) {
-            createTimeskewAlertDialog(args.getLong("diff_minutes"))
-        } else if (id == DIALOG_VERSION_ALERT) {
-            createVersionAlertDialog()
-        } else throw java.lang.IllegalArgumentException()
-    }
-
-    private fun createBackupWalletPermissionDialog(): Dialog {
-        baseAlertDialogBuilder.title = getString(R.string.backup_wallet_permission_dialog_title)
-        baseAlertDialogBuilder.message = getString(R.string.backup_wallet_permission_dialog_message)
-        baseAlertDialogBuilder.neutralText = getString(R.string.button_dismiss)
-        return baseAlertDialogBuilder.buildAlertDialog()
-    }
-
-    private fun createRestoreWalletPermissionDialog(): Dialog? {
-        return RestoreFromFileHelper.createRestoreWalletPermissionDialog(this)
-    }
-
     private fun showRestoreWalletFromSeedDialog() {
         RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
     }
@@ -348,62 +321,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         baseAlertDialogBuilder.showIcon = true
         alertDialog = baseAlertDialogBuilder.buildAlertDialog()
         alertDialog.show()
-    }
-
-    private fun createTimeskewAlertDialog(diffMinutes: Long): Dialog {
-        val pm = packageManager
-        val settingsIntent = Intent(Settings.ACTION_DATE_SETTINGS)
-
-        baseAlertDialogBuilder.title = getString(R.string.wallet_timeskew_dialog_title)
-        baseAlertDialogBuilder.message = getString(R.string.wallet_timeskew_dialog_msg, diffMinutes)
-        if (pm.resolveActivity(settingsIntent, 0) != null) {
-            baseAlertDialogBuilder.positiveText = getString(R.string.button_settings)
-            baseAlertDialogBuilder.positiveAction = {
-                startActivity(settingsIntent)
-                finish()
-            }
-        }
-        baseAlertDialogBuilder.negativeText = getString(R.string.button_dismiss)
-        baseAlertDialogBuilder.showIcon = true
-        return baseAlertDialogBuilder.buildAlertDialog()
-    }
-
-    private fun createVersionAlertDialog(): Dialog? {
-        val pm = packageManager
-        val marketIntent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse(
-                String.format(
-                    Constants.MARKET_APP_URL,
-                    packageName
-                )
-            )
-        )
-        val binaryIntent = Intent(Intent.ACTION_VIEW, Uri.parse(Constants.BINARY_URL))
-        val message = java.lang.StringBuilder(getString(R.string.wallet_version_dialog_msg))
-        if (Build.VERSION.SDK_INT < Constants.SDK_DEPRECATED_BELOW) message.append("\n\n")
-            .append(getString(R.string.wallet_version_dialog_msg_deprecated))
-        baseAlertDialogBuilder.title = getString(R.string.wallet_version_dialog_title)
-        baseAlertDialogBuilder.message = message
-        if (pm.resolveActivity(marketIntent, 0) != null) {
-            baseAlertDialogBuilder.positiveText =
-                getString(R.string.wallet_version_dialog_button_market)
-            baseAlertDialogBuilder.positiveAction = {
-                startActivity(marketIntent)
-                finish()
-            }
-        }
-        if (pm.resolveActivity(binaryIntent, 0) != null) {
-            baseAlertDialogBuilder.neutralText =
-                getString(R.string.wallet_version_dialog_button_binary)
-            baseAlertDialogBuilder.neutralAction = {
-                startActivity(binaryIntent)
-                finish()
-            }
-        }
-        baseAlertDialogBuilder.negativeText = getString(R.string.button_dismiss)
-        baseAlertDialogBuilder.showIcon = true
-        return baseAlertDialogBuilder.buildAlertDialog()
     }
 
     fun restoreWallet(wallet: Wallet?) {
@@ -433,6 +350,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             }
         }
         val action = intent.action
+        val extras = intent.extras
         if (NfcAdapter.ACTION_NDEF_DISCOVERED == action) {
             val inputType = intent.type
 
@@ -452,18 +370,14 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                     alertDialog.show()
                 }
             }.parse()
-
+        } else if (extras != null && extras.containsKey(WalletActivityExt.NOTIFICATION_ACTION_KEY)) {
+            handleFirebaseAction(extras)
         }
     }
 
     private fun checkAlerts() {
         val packageInfo = packageInfoProvider.packageInfo
-        val versionNameSplit = packageInfo.versionName.indexOf('-')
-        val url = (Constants.VERSION_URL
-            .toString() + if (versionNameSplit >= 0) packageInfo.versionName.substring(versionNameSplit) else "").toHttpUrlOrNull()
-                ?.newBuilder()
-        url?.addEncodedQueryParameter("package", packageInfo.packageName)
-        url?.addQueryParameter("current", Integer.toString(packageInfo.versionCode))
+
         if (CrashReporter.hasSavedCrashTrace()) {
             val stackTrace = StringBuilder()
             try {
@@ -503,7 +417,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 }
 
                 override fun collectWalletDump(): CharSequence? {
-                    return walletApplication.wallet!!.toString(false, true, true, null)
+                    return walletData.wallet!!.toString(false, true, true, null)
                 }
             }.buildAlertDialog()
             if (!isFinishing) {
@@ -524,8 +438,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 Exception("the wallet is not encrypted / OnboardingActivity"),
                 "no other details are available without the user submitting a report"
             )
-            val dialog = AdaptiveDialog.custom(
-                R.layout.dialog_adaptive,
+            val dialog = AdaptiveDialog.create(
                 R.drawable.ic_error,
                 getString(R.string.wallet_encryption_error_title),
                 getString(R.string.wallet_not_encrypted_error_message),
@@ -581,7 +494,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     open fun upgradeWalletKeyChains(path: ImmutableList<ChildNumber?>?, restoreBackup: Boolean) {
-        val wallet = walletApplication.wallet!!
+        val wallet = walletData.wallet!!
         isRestoringBackup = restoreBackup
         if (!wallet.hasKeyChain(path)) {
             if (wallet.isEncrypted()) {
@@ -605,32 +518,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    /**
-     * Show a Dialog and if user confirms it, set the default fiat currency exchange rate using
-     * the country code to generate a Locale and get the currency code from it.
-     *
-     * @param newCurrencyCode currency code.
-     */
-    private fun showFiatCurrencyChangeDetectedDialog(currentCurrencyCode: String,
-                                                     newCurrencyCode: String) {
-        baseAlertDialogBuilder.message = getString(
-            R.string.change_exchange_currency_code_message,
-            newCurrencyCode, currentCurrencyCode
-        )
-        baseAlertDialogBuilder.positiveText = getString(R.string.change_to, newCurrencyCode)
-        baseAlertDialogBuilder.positiveAction = {
-            config.exchangeCurrencyCodeDetected = true
-            config.exchangeCurrencyCode = newCurrencyCode
-            WalletBalanceWidgetProvider.updateWidgets(this@MainActivity, walletApplication.wallet!!)
-        }
-        baseAlertDialogBuilder.negativeText = getString(R.string.leave_as, currentCurrencyCode)
-        baseAlertDialogBuilder.negativeAction = {
-            config.exchangeCurrencyCodeDetected = true
-        }
-        alertDialog = baseAlertDialogBuilder.buildAlertDialog()
-        alertDialog.show()
-    }
-
     private fun showBackupWalletDialogIfNeeded() {
         if (showBackupWalletDialog) {
             BackupWalletDialogFragment.show(this)
@@ -642,152 +529,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         val stickyIntent = registerReceiver(null, IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW))
         if (stickyIntent != null) {
             showLowStorageAlertDialog()
-        }
-    }
-
-    /**
-     * Get ISO 3166-1 alpha-2 country code for this device (or null if not available)
-     * If available, call [.showFiatCurrencyChangeDetectedDialog]
-     * passing the country code.
-     */
-    private fun detectUserCountry() {
-        if (config.exchangeCurrencyCodeDetected) {
-            return
-        }
-        try {
-            val tm = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-            val simCountry = tm.simCountryIso
-            log.info("Detecting currency based on device, mobile network or locale:")
-            if (simCountry != null && simCountry.length == 2) { // SIM country code is available
-                log.info("Device Sim Country: $simCountry")
-                updateCurrencyExchange(simCountry.toUpperCase())
-            } else if (tm.phoneType != TelephonyManager.PHONE_TYPE_CDMA) { // device is not 3G (would be unreliable)
-                val networkCountry = tm.networkCountryIso
-                log.info("Network Country: $simCountry")
-                if (networkCountry != null && networkCountry.length == 2) { // network country code is available
-                    updateCurrencyExchange(networkCountry.toUpperCase())
-                } else {
-                    //Couldn't obtain country code - Use Default
-                    if (config.exchangeCurrencyCode == null) setDefaultCurrency()
-                }
-            } else {
-                //No cellular network - Wifi Only
-                if (config.exchangeCurrencyCode == null) setDefaultCurrency()
-            }
-        } catch (e: java.lang.Exception) {
-            //fail safe
-            log.info("NMA-243:  Exception thrown obtaining Locale information: ", e)
-            if (config.exchangeCurrencyCode == null) setDefaultCurrency()
-        }
-    }
-
-    private fun setDefaultCurrency() {
-        val countryCode: String? = getCurrentCountry()
-        log.info("Setting default currency:")
-        if (countryCode != null) {
-            try {
-                log.info("Local Country: $countryCode")
-                val l = Locale("", countryCode)
-                val currency = Currency.getInstance(l)
-                var newCurrencyCode = currency.currencyCode
-                if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
-                    log.info("found obsolete currency: $newCurrencyCode")
-                    newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode)
-                }
-
-                // check to see if we use a different currency code for exchange rates
-                newCurrencyCode = CurrencyInfo.getOtherName(newCurrencyCode);
-
-                log.info("Setting Local Currency: $newCurrencyCode")
-                config.exchangeCurrencyCode = newCurrencyCode
-
-                //Fallback to default
-                if (config.exchangeCurrencyCode == null) {
-                    setDefaultExchangeCurrencyCode()
-                }
-            } catch (x: IllegalArgumentException) {
-                log.info("Cannot obtain currency for $countryCode: ", x)
-                setDefaultExchangeCurrencyCode()
-            }
-        } else {
-            setDefaultExchangeCurrencyCode()
-        }
-    }
-
-    private fun setDefaultExchangeCurrencyCode() {
-        log.info("Using default Country: US")
-        log.info("Using default currency: " + Constants.DEFAULT_EXCHANGE_CURRENCY)
-        config.exchangeCurrencyCode = Constants.DEFAULT_EXCHANGE_CURRENCY
-    }
-
-    private fun getCurrentCountry(): String? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            LocaleList.getDefault()[0].country
-        } else {
-            Locale.getDefault().country
-        }
-    }
-
-    /**
-     * Check whether app was ever updated or if it is an installation that was never updated.
-     * Show dialog to update if it's being updated or change it automatically.
-     *
-     * @param countryCode countryCode ISO 3166-1 alpha-2 country code.
-     */
-    private fun updateCurrencyExchange(countryCode: String) {
-        log.info("Updating currency exchange rate based on country: $countryCode")
-        val l = Locale("", countryCode)
-        val currency = Currency.getInstance(l)
-        var newCurrencyCode = currency.currencyCode
-        var currentCurrencyCode = config.exchangeCurrencyCode
-        if (currentCurrencyCode == null) {
-            currentCurrencyCode = Constants.DEFAULT_EXCHANGE_CURRENCY
-        }
-        if (!currentCurrencyCode.equals(newCurrencyCode, ignoreCase = true)) {
-            if (config.wasUpgraded()) {
-                showFiatCurrencyChangeDetectedDialog(currentCurrencyCode, newCurrencyCode)
-            } else {
-                if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
-                    log.info("found obsolete currency: $newCurrencyCode")
-                    newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode)
-                }
-
-                // check to see if we use a different currency code for exchange rates
-                newCurrencyCode = CurrencyInfo.getOtherName(newCurrencyCode);
-
-                log.info("Setting Local Currency: $newCurrencyCode")
-                config.exchangeCurrencyCodeDetected = true
-                config.exchangeCurrencyCode = newCurrencyCode
-            }
-        }
-
-        //Fallback to default
-        if (config.exchangeCurrencyCode == null) {
-            setDefaultExchangeCurrencyCode()
-        }
-    }
-
-    fun handleRestoreWallet() {
-        if (ContextCompat.checkSelfPermission(this,
-                        Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) showDialog(
-            DIALOG_RESTORE_WALLET
-        ) else ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                REQUEST_CODE_RESTORE_WALLET
-        )
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_CODE_BACKUP_WALLET) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                showBackupWalletDialog = true
-            } else {
-                showDialog(DIALOG_BACKUP_WALLET_PERMISSION)
-            }
-        } else if (requestCode == REQUEST_CODE_RESTORE_WALLET) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                handleRestoreWallet()
-            } else showDialog(DIALOG_RESTORE_WALLET_PERMISSION)
         }
     }
 
@@ -826,14 +567,33 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
+    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        // do nothing
+    };
+
+    /**
+     * Android 13 - Show system dialog to get notification permission from user, if not granted
+     *              ask again with each app upgrade if not granted.  This logic is handled by
+     *              {@link #onLockScreenDeactivated} and {@link #onStart}.
+     * Android 12 and below - show a explainer dialog once only.
+     */
     private fun explainPushNotifications() {
-        AdaptiveDialog.create(
-            null,
-            getString(R.string.notification_explainer_title),
-            getString(R.string.notification_explainer_message),
-            "",
-            getString(R.string.button_okay)
-        ).show(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else if (configuration.showNotificationsExplainer) {
+            AdaptiveDialog.create(
+                null,
+                getString(R.string.notification_explainer_title),
+                getString(R.string.notification_explainer_message),
+                "",
+                getString(R.string.button_okay)
+            ).show(this)
+        }
         config.showNotificationsExplainer = false
     }
 }

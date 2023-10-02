@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.update
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.GenericUtils
@@ -48,8 +49,8 @@ data class ConfirmUserNameUIState(
 @HiltViewModel
 class ConfirmUserNameDialogViewModel @Inject constructor(
     var configuration: Configuration,
-    private val exchangeRatesProvider: ExchangeRatesProvider
-
+    private val exchangeRatesProvider: ExchangeRatesProvider,
+    private val walletUIConfig: WalletUIConfig
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ConfirmUserNameUIState())
@@ -58,11 +59,10 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
         Coin.valueOf(Constants.DASH_PAY_FEE.value)
     }
 
-    private val currencyCode = MutableStateFlow(configuration.exchangeCurrencyCode)
-
     init {
 
-        currencyCode.filterNotNull()
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
             .flatMapLatest { code ->
                 exchangeRatesProvider.observeExchangeRate(code)
                     .filterNotNull()

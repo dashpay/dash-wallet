@@ -26,7 +26,7 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        app:navigationIcon="@drawable/ic_arrow_back_primary"
+        app:navigationIcon="@drawable/ic_arrow_back"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ScrollView

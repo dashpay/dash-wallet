@@ -79,7 +79,7 @@
     <string name="payments_title">Payments</string>
     <string name="payments_tab_pay_label">Send</string>
     <string name="payments_tab_receive_label">Receive</string>
-    <string name="payments_pay_to_contact_title">Send to</string>
+    <string name="payments_pay_to_contact_title">Send to a Contact</string>
     <string name="payments_pay_to_contact_sub_title">A person in your contacts</string>
     <string name="payments_pay_to_contact_button">Select</string>
     <string name="payments_pay_by_qr_title">Send by</string>

@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui.send
 
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.TextUtils
 import android.view.View
@@ -102,7 +103,14 @@ class ConfirmTransactionDialog(
             amount: String,
             exchangeRate: ExchangeRate?,
             fee: String,
-            total: String
+            total: String,
+            payeeName: String? = null,
+            payeeVerifiedBy: String? = null,
+            buttonText: String? = null,
+            username: String? = null,
+            displayName: String? = null,
+            avatarUrl: String? = null,
+            pendingContactRequest: Boolean = false
         ) = suspendCancellableCoroutine<Boolean> { coroutine ->
             val confirmTransactionDialog = ConfirmTransactionDialog {
                 if (coroutine.isActive) {
@@ -110,7 +118,8 @@ class ConfirmTransactionDialog(
                 }
             }
             try {
-                val bundle = setBundle(address, amount, exchangeRate, fee, total)
+                val bundle = setBundle(address, amount, exchangeRate, fee, total,
+                    payeeName, payeeVerifiedBy, buttonText, username, displayName, avatarUrl, pendingContactRequest)
                 show(confirmTransactionDialog, bundle, activity)
             } catch (e: Exception) {
                 if (coroutine.isActive) {
@@ -173,7 +182,7 @@ class ConfirmTransactionDialog(
                 binding.address.setOnClickListener(forceMarqueeOnClickListener)
                 binding.payeeSecuredBy.setOnClickListener(forceMarqueeOnClickListener)
             } else if (displayNameText != null) {
-                binding.sendtoaddress.visibility = View.GONE
+                binding.address.visibility = View.GONE
                 binding.displayname.text = displayNameText
 
                 ProfilePictureDisplay.display(binding.avatar, avatarUrl!!, null, username!!)
@@ -210,8 +219,7 @@ class ConfirmTransactionDialog(
         activity: FragmentActivity,
         address: String,
         amount: String,
-        amountFiat: String,
-        fiatSymbol: String,
+        exchangeRate: ExchangeRate?,
         fee: String,
         total: String,
         payeeName: String? = null,
@@ -235,7 +243,7 @@ class ConfirmTransactionDialog(
 
             try {
                 val bundle = setBundle(
-                    address, amount, amountFiat, fiatSymbol, fee, total,
+                    address, amount, exchangeRate, fee, total,
                     payeeName, payeeVerifiedBy, buttonText,
                     username, displayName, avatarUrl, pendingContactRequest
                 )

@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@drawable/ic_arrow_back_primary" />
+        app:navigationIcon="@drawable/ic_arrow_back" />
 
     <LinearLayout
         android:layout_width="match_parent"

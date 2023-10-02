@@ -29,7 +29,6 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.integration.android.BitcoinIntegration
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -90,7 +89,13 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             requireActivity().finish()
         }
 
-                    viewModel.initPaymentIntent(args.paymentIntent)
+        lifecycleScope.launch {
+            try {
+                viewModel.initPaymentIntent(args.paymentIntent)
+            } catch (ex: SendException) {
+                Toast.makeText(requireContext(), R.string.error_loading_identity, Toast.LENGTH_LONG).show()
+            }
+        }
 
         if (savedInstanceState == null) {
             val intentAmount = args.paymentIntent.amount

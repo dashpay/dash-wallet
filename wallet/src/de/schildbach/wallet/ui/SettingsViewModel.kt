@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.WalletUIConfig
+import org.dash.wallet.common.data.WalletUIConfig
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -14,11 +14,11 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val walletUIConfig: WalletUIConfig
 ): ViewModel() {
-    val voteDashPayIsEnabled = walletUIConfig.observePreference(WalletUIConfig.VOTE_DASH_PAY_ENABLED).asLiveData()
+    val voteDashPayIsEnabled = walletUIConfig.observe(WalletUIConfig.VOTE_DASH_PAY_ENABLED).asLiveData()
 
     fun setVoteDashPay(isEnabled: Boolean) {
         viewModelScope.launch {
-            walletUIConfig.setPreference(WalletUIConfig.VOTE_DASH_PAY_ENABLED, isEnabled)
+            walletUIConfig.set(WalletUIConfig.VOTE_DASH_PAY_ENABLED, isEnabled)
         }
     }
 }

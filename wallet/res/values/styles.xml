@@ -136,7 +136,7 @@
         <item name="android:layout_marginStart">32dp</item>
         <item name="android:layout_marginTop">43dp</item>
         <item name="android:layout_marginEnd">32dp</item>
-        <item name="android:background">@drawable/blue_button_background</item>
+        <item name="android:background">@drawable/blue_outline_button_bg</item>
         <item name="android:drawableStart">@drawable/ic_add_contact</item>
         <item name="android:paddingStart">26dp</item>
         <item name="android:paddingEnd">26dp</item>

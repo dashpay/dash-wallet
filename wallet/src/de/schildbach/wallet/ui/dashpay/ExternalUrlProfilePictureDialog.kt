@@ -244,8 +244,8 @@ open class ExternalUrlProfilePictureDialog : InteractionAwareDialogFragment() {
                                             sharedViewModel.bitmapCache = resource.bitmap
                                             sharedViewModel.externalUrl = pictureUrl
                                             publicUrlEnterUrl.text = getString(dialogPromptId)
-                                            publicUrlEnterUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.medium_gray))
-                                publicUrlEnterUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.medium_gray))
+                                            publicUrlEnterUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.dash_medium_gray))
+                                publicUrlEnterUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.dash_medium_gray))
                                             sharedViewModel.confirm()
                                             dismiss()
                                         }
