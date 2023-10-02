@@ -24,8 +24,6 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
-import org.dash.wallet.integrations.coinbase.model.PlaceBuyOrderParams
-import org.dash.wallet.integrations.coinbase.model.PlaceBuyOrderUIModel
 import org.dash.wallet.integrations.coinbase.model.SendTransactionToWalletParams
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepository
@@ -41,9 +39,7 @@ class CoinBaseRepositoryTest {
     @MockK lateinit var coinBaseServicesApi: CoinBaseServicesApi
     @MockK lateinit var coinBaseAuthApi: CoinBaseAuthApi
     @MockK lateinit var config: CoinbaseConfig
-    @MockK lateinit var placeBuyOrderMapper: PlaceBuyOrderMapper
     @MockK lateinit var swapTradeMapper: SwapTradeMapper
-    @MockK lateinit var commitBuyOrderMapper: CommitBuyOrderMapper
     @MockK lateinit var coinbaseAddressMapper: CoinbaseAddressMapper
     private lateinit var coinBaseRepository: CoinBaseRepository
     private val accountId = "423095d3-bb89-5cef-b1bc-d1dfe6e13857"
@@ -60,10 +56,9 @@ class CoinBaseRepositoryTest {
             coinBaseAuthApi,
             config,
             mockk(),
-            placeBuyOrderMapper,
             swapTradeMapper,
-            commitBuyOrderMapper,
-            coinbaseAddressMapper
+            coinbaseAddressMapper,
+            mockk()
         )
     }
 
@@ -73,28 +68,7 @@ class CoinBaseRepositoryTest {
         coEvery { coinBaseServicesApi.getActivePaymentMethods() } returns expectedPaymentMethods
         val actualSuccessResponse = runBlocking { coinBaseRepository.getActivePaymentMethods() }
         coVerify { coinBaseServicesApi.getActivePaymentMethods() }
-        assertThat(actualSuccessResponse, `is`(ResponseResource.Success(TestUtils.paymentMethodsData)))
-    }
-
-    @Test
-    fun `when placing a buy order, repository returns success with data`() {
-        val expectedPlaceBuyOrderResponse = TestUtils.placeBuyOrderApiResponse()
-        val expectedPlaceBuyOrderUIModel = PlaceBuyOrderUIModel(
-            "5ccb6a4a-6296-5ca6-8fb5-8e66740925ef",
-            "931aa7a2-6500-505b-bf0b-35f031466711",
-            "0.99",
-            "usd"
-        )
-        val expectedPlaceBuyOrderData = TestUtils.buyOrderData
-        val accountId = "423095d3-bb89-5cef-b1bc-d1dfe6e13857"
-        val params = PlaceBuyOrderParams(
-            "0.5", "usd", "931aa7a2-6500-505b-bf0b-35f031466711",
-            commit = true
-        )
-        coEvery { coinBaseServicesApi.placeBuyOrder(accountId = accountId, placeBuyOrderParams = params) } returns expectedPlaceBuyOrderResponse
-        coEvery { placeBuyOrderMapper.map(expectedPlaceBuyOrderData) } returns expectedPlaceBuyOrderUIModel
-        val actualSuccessResponse = runBlocking { coinBaseRepository.placeBuyOrder(params) }
-        assertThat(actualSuccessResponse, `is`(ResponseResource.Success(expectedPlaceBuyOrderUIModel)))
+        assertThat(actualSuccessResponse, `is`(TestUtils.paymentMethodsData))
     }
 
     @Test
