@@ -21,7 +21,7 @@ import android.os.Bundle
 import android.view.View
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.invitation_preview_view.*
+import de.schildbach.wallet_test.databinding.InvitationPreviewViewBinding
 import org.dash.wallet.common.ui.FancyAlertDialog
 
 open class InvitePreviewDialog : FancyAlertDialog() {
@@ -49,8 +49,9 @@ open class InvitePreviewDialog : FancyAlertDialog() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val binding = InvitationPreviewViewBinding.bind(view)
 
         val profile = requireArguments().getParcelable<DashPayProfile>("profile")
-        profile_picture_envelope.avatarProfile = profile
+        binding.profilePictureEnvelope.avatarProfile = profile
     }
 }

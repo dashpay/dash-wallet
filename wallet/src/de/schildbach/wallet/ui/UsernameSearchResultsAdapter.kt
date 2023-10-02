@@ -24,6 +24,8 @@ import androidx.work.WorkInfo
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.ContactRowBinding
+import de.schildbach.wallet_test.databinding.DashpayContactRowBinding
 
 class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListener: ContactViewHolder.OnContactRequestButtonClickListener) : RecyclerView.Adapter<ContactViewHolder>() {
 
@@ -41,7 +43,8 @@ class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListen
         }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ContactViewHolder {
-        return ContactViewHolder(LayoutInflater.from(parent.context), parent, R.layout.dashpay_contact_row)
+        val binding = DashpayContactRowBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return ContactViewHolder(binding)
     }
 
     override fun getItemCount(): Int {

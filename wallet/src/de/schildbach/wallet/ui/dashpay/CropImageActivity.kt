@@ -33,7 +33,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_crop_image.*
+import de.schildbach.wallet_test.databinding.ActivityCropImageBinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -63,6 +63,8 @@ class CropImageActivity : LockScreenActivity() {
             return data.getParcelableExtra(ZOOMED_RECT)!!
         }
     }
+    
+    private lateinit var binding: ActivityCropImageBinding
 
     private val initZoomedRect by lazy {
         intent.getParcelableExtra<RectF>(ZOOMED_RECT)
@@ -70,7 +72,7 @@ class CropImageActivity : LockScreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_crop_image)
+        binding = ActivityCropImageBinding.inflate(layoutInflater)
 
         val tempFile = intent.getParcelableExtra<Uri>(TEMP_FILE)
         val destinationFile = intent.getParcelableExtra<Uri>(DESTINATION_FILE)
@@ -86,35 +88,35 @@ class CropImageActivity : LockScreenActivity() {
 
                     override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?,
                                                  dataSource: DataSource?, isFirstResource: Boolean): Boolean {
-                        background.setImageDrawable(resource)
-                        circle_crop.setImageDrawable(resource)
-                        circle_crop.maxZoom = 5f
+                        binding.background.setImageDrawable(resource)
+                        binding.circleCrop.setImageDrawable(resource)
+                        binding.circleCrop.maxZoom = 5f
 
                         initZoomedRect?.let { rect ->
-                            circle_crop.post {
+                            binding.circleCrop.post {
                                 val focusX = (rect.left + rect.right) / 2
                                 val focusY = (rect.top + rect.bottom) / 2
                                 val zoomX = 1f / (rect.right - rect.left)
                                 val zoomY = 1f / (rect.bottom - rect.top)
                                 val bitmap = (resource as BitmapDrawable).bitmap
                                 log.info("bitmap: ${bitmap.width}x${bitmap.height}, zoomRect:${rect}, zoomX = $zoomX, zoomY = $zoomY")
-                                circle_crop.setZoom(zoomX, focusX, focusY)
+                                binding.circleCrop.setZoom(zoomX, focusX, focusY)
                             }
                         }
                         return true
                     }
                 })
-                .into(circle_crop as AppCompatImageView)
+                .into(binding.circleCrop as AppCompatImageView)
 
-        select_btn.setOnClickListener {
+        binding.selectBtn.setOnClickListener {
             CoroutineScope(Dispatchers.IO).launch {
-                circle_crop.saveToFile(destinationFile!!)
+                binding.circleCrop.saveToFile(destinationFile!!)
                 withContext(Dispatchers.Main) {
                     finishWithSuccess()
                 }
             }
         }
-        cancel_btn.setOnClickListener {
+        binding.cancelBtn.setOnClickListener {
             setResult(Activity.RESULT_CANCELED)
             finish()
         }
@@ -122,7 +124,7 @@ class CropImageActivity : LockScreenActivity() {
 
     private fun finishWithSuccess() {
         val data = Intent().apply {
-            putExtra(ZOOMED_RECT, circle_crop.zoomedRect)
+            putExtra(ZOOMED_RECT, binding.circleCrop.zoomedRect)
         }
         setResult(Activity.RESULT_OK, data)
         finish()

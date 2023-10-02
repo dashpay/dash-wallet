@@ -16,14 +16,11 @@
 
 package de.schildbach.wallet.ui.invite
 
-import android.view.LayoutInflater
-import android.view.ViewGroup
-import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.InviteHistoryCreateInviteRowBinding
 
-open class CreateInviteViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-        InvitesHistoryViewHolder(R.layout.invite_history_create_invite_row, inflater, parent) {
+open class CreateInviteViewHolder(val binding: InviteHistoryCreateInviteRowBinding) :
+    InvitesHistoryViewHolder(binding.root) {
 
     fun bind(vararg args: Any?) {
-
     }
 }

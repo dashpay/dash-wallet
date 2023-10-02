@@ -21,6 +21,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.ui.util.SingleLiveEvent
+import de.schildbach.wallet_test.databinding.InviteEmptyHistoryRowBinding
+import de.schildbach.wallet_test.databinding.InviteHistoryCreateInviteRowBinding
+import de.schildbach.wallet_test.databinding.InviteHistoryHeaderRowBinding
+import de.schildbach.wallet_test.databinding.InviteHistoryRowBinding
 import java.util.ArrayList
 
 class InvitesAdapter(private val itemClickListener: OnItemClickListener,
@@ -68,11 +72,24 @@ class InvitesAdapter(private val itemClickListener: OnItemClickListener,
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): InvitesHistoryViewHolder {
+            val inflator = LayoutInflater.from(parent.context)
         return when (viewType) {
-            INVITE_HEADER -> InvitesHeaderViewHolder(LayoutInflater.from(parent.context), this, parent)
-            INVITE -> InviteViewHolder(LayoutInflater.from(parent.context), parent)
-            EMPTY_HISTORY -> InviteEmptyViewHolder(LayoutInflater.from(parent.context), parent)
-            INVITE_CREATE -> CreateInviteViewHolder(LayoutInflater.from(parent.context), parent)
+            INVITE_HEADER -> {
+                val binding = InviteHistoryHeaderRowBinding.inflate(inflator, parent, false)
+                InvitesHeaderViewHolder(binding, this)
+            }
+            INVITE -> {
+                val binding = InviteHistoryRowBinding.inflate(inflator, parent, false)
+                InviteViewHolder(binding)
+            }
+            EMPTY_HISTORY -> {
+                val binding = InviteEmptyHistoryRowBinding.inflate(inflator, parent, false)
+                InviteEmptyViewHolder(binding)
+            }
+            INVITE_CREATE -> {
+                val binding = InviteHistoryCreateInviteRowBinding.inflate(inflator, parent, false)
+                CreateInviteViewHolder(binding)
+            }
             else -> throw IllegalArgumentException("Invalid viewType $viewType")
         }
     }

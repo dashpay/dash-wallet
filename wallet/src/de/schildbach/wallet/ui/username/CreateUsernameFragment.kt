@@ -11,6 +11,7 @@ import android.text.TextWatcher
 import android.text.style.StyleSpan
 import android.view.View
 import android.view.animation.AnimationUtils
+import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -31,7 +32,6 @@ import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentCreateUsernameBinding
 import kotlinx.android.parcel.Parcelize
-import kotlinx.android.synthetic.main.users_orbit.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -275,10 +275,10 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
         binding.registrationContent.visibility = View.GONE
         binding.processingIdentity.visibility = View.GONE
         binding.chooseUsernameTitle.visibility = View.GONE
-        placeholder_user_icon.visibility = View.GONE
+        binding.orbitView.findViewById<View>(R.id.placeholder_user_icon).visibility = View.GONE
         binding.identityComplete.visibility = View.VISIBLE
-        dashpay_user_icon.visibility = View.VISIBLE
-        username_1st_letter.text = completeUsername[0].toString()
+        binding.orbitView.findViewById<View>(R.id.dashpay_user_icon).visibility = View.VISIBLE
+        binding.orbitView.findViewById<TextView>(R.id.username_1st_letter).text = completeUsername[0].toString()
 
         val text = getString(R.string.identity_complete_message, completeUsername)
 

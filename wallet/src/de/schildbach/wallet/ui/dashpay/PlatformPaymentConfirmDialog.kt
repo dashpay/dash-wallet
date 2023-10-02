@@ -26,7 +26,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dialog_platform_payment_confirm.*
+import de.schildbach.wallet_test.databinding.DialogPlatformPaymentConfirmBinding
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -57,6 +57,8 @@ class PlatformPaymentConfirmDialog : OffsetDialogFragment(R.layout.dialog_platfo
         }
     }
 
+    lateinit var binding: DialogPlatformPaymentConfirmBinding
+
     private val title by lazy {
         requireArguments().getString(ARG_TITLE)!!
     }
@@ -74,19 +76,20 @@ class PlatformPaymentConfirmDialog : OffsetDialogFragment(R.layout.dialog_platfo
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding = DialogPlatformPaymentConfirmBinding.bind(view)
 
         val amountSpecified = requireArguments().containsKey(ARG_AMOUNT)
-        fee_container.visibility = if (amountSpecified) View.VISIBLE else View.GONE
-        no_fee_placeholder.visibility = if (amountSpecified) View.GONE else View.VISIBLE
+        binding.feeContainer.visibility = if (amountSpecified) View.VISIBLE else View.GONE
+        binding.noFeePlaceholder.visibility = if (amountSpecified) View.GONE else View.VISIBLE
         if (requireArguments().getBoolean(ARG_ISINVITE)) {
-            confirm.text = getString(R.string.invitation_confirm_button_text)
+            binding.confirm.text = getString(R.string.invitation_confirm_button_text)
         }
 
-        agree_check.setOnCheckedChangeListener { _, isChecked ->
-            confirm.isEnabled = isChecked
+        binding.agreeCheck.setOnCheckedChangeListener { _, isChecked ->
+            binding.confirm.isEnabled = isChecked
         }
 
-        confirm.setOnClickListener {
+        binding.confirm.setOnClickListener {
             dismiss()
             sharedViewModel.clickConfirmButtonEvent.value = true
         }
@@ -105,8 +108,8 @@ class PlatformPaymentConfirmDialog : OffsetDialogFragment(R.layout.dialog_platfo
     }
 
     private fun updateView() {
-        title_view.text = title
-        message_view.text = HtmlCompat.fromHtml(message, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        binding.titleView.text = title
+        binding.messageView.text = HtmlCompat.fromHtml(message, HtmlCompat.FROM_HTML_MODE_COMPACT)
 
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
         val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount)
@@ -114,9 +117,9 @@ class PlatformPaymentConfirmDialog : OffsetDialogFragment(R.layout.dialog_platfo
         val fiatAmountStr = if (fiatAmount != null) Constants.LOCAL_FORMAT.format(fiatAmount).toString() else getString(R.string.transaction_row_rate_not_available)
         val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
 
-        dash_amount_view.text = amountStr
-        fiat_symbol_view.text = fiatSymbol
-        fiat_amount_view.text = fiatAmountStr
+        binding.dashAmountView.text = amountStr
+        binding.fiatSymbolView.text = fiatSymbol
+        binding.fiatAmountView.text = fiatAmountStr
     }
 
     class SharedViewModel : SingleActionSharedViewModel()

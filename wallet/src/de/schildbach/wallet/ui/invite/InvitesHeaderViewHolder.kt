@@ -21,12 +21,11 @@ import android.view.ViewGroup
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.invite_history_header_row.view.*
+import de.schildbach.wallet_test.databinding.InviteHistoryHeaderRowBinding
 
-open class InvitesHeaderViewHolder(inflater: LayoutInflater,
-                                   val onFilterListener: OnFilterListener,
-                                   parent: ViewGroup) :
-        InvitesHistoryViewHolder(R.layout.invite_history_header_row, inflater, parent) {
+open class InvitesHeaderViewHolder(val binding: InviteHistoryHeaderRowBinding,
+                                   val onFilterListener: OnFilterListener) :
+        InvitesHistoryViewHolder(binding.root) {
 
 
     interface OnFilterListener {
@@ -40,8 +39,8 @@ open class InvitesHeaderViewHolder(inflater: LayoutInflater,
 
         itemView.apply {
             val array = context.resources.getStringArray(R.array.invite_filter)
-            invite_filter_text.text = array[filter.ordinal]
-            invite_filter.setOnClickListener {
+            binding.inviteFilterText.text = array[filter.ordinal]
+            binding.inviteFilter.setOnClickListener {
                 filterClick.postValue(filter)
             }
         }

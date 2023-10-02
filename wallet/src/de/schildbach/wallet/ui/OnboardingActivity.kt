@@ -40,14 +40,10 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet.security.SecurityGuard
-import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
-import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardingBinding
 import de.schildbach.wallet_test.databinding.ActivityOnboardingPermLockBinding
 import org.dash.wallet.common.Configuration
-import kotlinx.android.synthetic.main.activity_onboarding.*
-import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
 import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -127,7 +123,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 finish()
             }
             binding.wipeWallet.setOnClickListener {
-                ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
+                ResetWalletDialog.newInstance(viewModel.analytics).show(supportFragmentManager, "reset_wallet_dialog")
             }
             return
         }

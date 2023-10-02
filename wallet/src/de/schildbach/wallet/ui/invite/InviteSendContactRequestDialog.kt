@@ -22,7 +22,7 @@ import android.view.View
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.invite_send_contact_request_view.*
+import de.schildbach.wallet_test.databinding.InviteSendContactRequestViewBinding
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
@@ -51,11 +51,12 @@ open class InviteSendContactRequestDialog : FancyAlertDialog() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val binding = InviteSendContactRequestViewBinding.bind(view)
         requireArguments().apply {
             val profile = getParcelable<DashPayProfile>(EXTRA_PROFILE)
-            ProfilePictureDisplay.display(avatar, profile)
+            ProfilePictureDisplay.display(binding.avatar, profile)
             val iconResId = getInt(EXTRA_ICON)
-            icon.setImageResource(iconResId)
+            binding.icon.setImageResource(iconResId)
         }
     }
 }

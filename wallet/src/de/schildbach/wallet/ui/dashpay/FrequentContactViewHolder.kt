@@ -21,23 +21,23 @@ import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.frequent_contact_item.view.*
+import de.schildbach.wallet_test.databinding.FrequentContactItemBinding
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
-class FrequentContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, val itemClickListener: OnContactItemClickListener?) :
-        RecyclerView.ViewHolder(inflater.inflate(R.layout.frequent_contact_item, parent, false)) {
+class FrequentContactViewHolder(val binding: FrequentContactItemBinding, val itemClickListener: OnContactItemClickListener?) :
+        RecyclerView.ViewHolder(binding.root) {
 
     fun bind(usernameSearchResult: UsernameSearchResult) {
         itemView.apply {
 
             val dashPayProfile = usernameSearchResult.dashPayProfile
             if (dashPayProfile.displayName.isEmpty()) {
-                display_name.text = dashPayProfile.username
+                binding.displayName.text = dashPayProfile.username
             } else {
-                display_name.text = dashPayProfile.displayName
+                binding.displayName.text = dashPayProfile.displayName
             }
 
-            ProfilePictureDisplay.display(avatar, dashPayProfile)
+            ProfilePictureDisplay.display(binding.avatar, dashPayProfile)
 
             itemClickListener?.let { l ->
                 setOnClickListener {

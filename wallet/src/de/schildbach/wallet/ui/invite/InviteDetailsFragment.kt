@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
@@ -31,12 +32,8 @@ import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_forgot_pin.toolbar
-import kotlinx.android.synthetic.main.fragment_invite_details.*
-import kotlinx.android.synthetic.main.fragment_invite_details.copy_invitation_link
-import kotlinx.android.synthetic.main.fragment_invite_details.preview_button
-import kotlinx.android.synthetic.main.fragment_invite_details.send_button
-import kotlinx.android.synthetic.main.fragment_invite_details.tag_edit
+import de.schildbach.wallet_test.databinding.FragmentInviteDetailsBinding
+import de.schildbach.wallet_test.databinding.InvitationBitmapTemplateBinding
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
@@ -61,16 +58,20 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             return fragment
         }
     }
+    private lateinit var binding: FragmentInviteDetailsBinding
+    override val invitationBitmapTemplateBinding: InvitationBitmapTemplateBinding
+        get() = binding.invitationBitmapTemplate
 
     var tagModified = false
     var inviteIndex = -1
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        binding = FragmentInviteDetailsBinding.bind(view)
         setHasOptionsMenu(true)
 
-        toolbar.title = requireContext().getString(R.string.menu_invite_title)
+        val toolbar = view.findViewById<Toolbar>(R.id.toolbar)
+        toolbar.title = getString(R.string.menu_invite_title)
         val appCompatActivity = requireActivity() as AppCompatActivity
         appCompatActivity.setSupportActionBar(toolbar)
 
@@ -80,30 +81,30 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             setDisplayShowHomeEnabled(true)
         }
 
-        preview_button.setOnClickListener {
+        binding.previewButton.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_PREVIEW)
             showPreviewDialog()
         }
-        copy_invitation_link.setOnClickListener {
+        binding.copyInvitationLink.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_COPY_LINK)
             copyInvitationLink()
         }
-        send_button.setOnClickListener {
+        binding. sendButton.setOnClickListener {
             shareInvitation(true)
         }
-        send_button.setOnLongClickListener {
+        binding.sendButton.setOnLongClickListener {
             shareInvitation(false)
             true
         }
-        tag_edit.doAfterTextChanged {
+        binding.tagEdit.doAfterTextChanged {
             tagModified = true
-            memo.text = if (tag_edit.text.isNotEmpty()) {
-                tag_edit.text.toString()
+            binding.memo.text = if (binding.tagEdit.text.isNotEmpty()) {
+                binding.tagEdit.text.toString()
             } else {
                 getTagHint()
             }
         }
-        profile_button.setOnClickListener {
+        binding.profileButton.setOnClickListener {
             lifecycleScope.launch {
                 val profile = viewModel.getInvitedUserProfile()
 
@@ -121,8 +122,8 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             }
         }
 
-        pending_view.isVisible = false
-        claimed_view.isVisible = false
+        binding.pendingView.isVisible = false
+        binding.claimedView.isVisible = false
 
         initViewModel()
     }
@@ -134,15 +135,15 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
 
         viewModel.invitationLiveData.observe(viewLifecycleOwner) {
             if (it.memo.isNotEmpty()) {
-                tag_edit.setText(it.memo)
-                memo.text = it.memo
+                binding.tagEdit.setText(it.memo)
+                binding.memo.text = it.memo
             } else {
                 val hint = getTagHint()
-                tag_edit.hint = hint
-                memo.text = hint
+                binding.tagEdit.hint = hint
+                binding.memo.text = hint
             }
 
-            date.text = WalletUtils.formatDate(it.sentAt)
+            binding.date.text = WalletUtils.formatDate(it.sentAt)
             if (it.acceptedAt != 0L) {
                 showClaimed()
             } else {
@@ -161,49 +162,49 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         requireContext().getString(R.string.invitation_created_title) + " " + inviteIndex
 
     private fun showPending(it: Invitation) {
-        send_button.isVisible = it.canSendAgain()
-        pending_view.isVisible = true
-        copy_invitation_link.visibility = send_button.visibility
-        claimed_view.isVisible = false
+        binding.sendButton.isVisible = it.canSendAgain()
+        binding.pendingView.isVisible = true
+        binding.copyInvitationLink.visibility = binding.sendButton.visibility
+        binding.claimedView.isVisible = false
         if (!it.canSendAgain()) {
-            memo.setText(R.string.invitation_invalid_invite_title)
-            pending_view.isVisible = false
+            binding.memo.setText(R.string.invitation_invalid_invite_title)
+            binding.pendingView.isVisible = false
         }
     }
 
     private fun showClaimed() {
         viewModel.invitedUserProfile.observe(viewLifecycleOwner) {
             if (it != null) {
-                icon.setImageResource(R.drawable.ic_claimed_invite)
-                claimed_view.isVisible = true
-                pending_view.isVisible = false
-                preview_button.isVisible = false
-                profile_button.isVisible = true
-                status.setText(R.string.invitation_details_invite_used_by)
-                ProfilePictureDisplay.display(avatarIcon, it)
+                binding.icon.setImageResource(R.drawable.ic_claimed_invite)
+                binding.claimedView.isVisible = true
+                binding.pendingView.isVisible = false
+                binding.previewButton.isVisible = false
+                binding.profileButton.isVisible = true
+                binding.status.setText(R.string.invitation_details_invite_used_by)
+                ProfilePictureDisplay.display(binding.avatarIcon, it)
                 if (it.displayName.isEmpty()) {
-                    display_name.text = it.username
-                    username.text = ""
+                    binding.displayName.text = it.username
+                    binding.username.text = ""
                 } else {
-                    display_name.text = it.displayName
-                    username.text = it.username
+                    binding.displayName.text = it.displayName
+                    binding.username.text = it.username
                 }
             } else {
                 // this means that a username was not registered (yet)
-                status.setText(R.string.invitation_details_invite_without_username)
-                pending_view.isVisible = false
-                profile_button.isVisible = false
-                claimed_view.isVisible = true
+                binding.status.setText(R.string.invitation_details_invite_without_username)
+                binding.pendingView.isVisible = false
+                binding.profileButton.isVisible = false
+                binding.claimedView.isVisible = true
             }
         }
     }
 
     private fun shareInvitation(shareImage: Boolean) {
         // save memo to the database
-        viewModel.saveTag(tag_edit.text.toString())
+        viewModel.saveTag(binding.tagEdit.text.toString())
         viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_SEND_AGAIN)
 
-        if (!tag_edit.text.isNullOrBlank()) {
+        if (!binding.tagEdit.text.isNullOrBlank()) {
             viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_TAG)
         }
 
@@ -218,7 +219,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         return when (item.itemId) {
             R.id.option_close -> {
                 requireActivity().run {
-                    KeyboardUtil.hideKeyboard(this, tag_edit)
+                    KeyboardUtil.hideKeyboard(this, binding.tagEdit)
                     finish()
                 }
                 true
@@ -237,7 +238,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         super.onStop()
         // save memo to the database
         if (tagModified) {
-            viewModel.saveTag(tag_edit.text.toString())
+            viewModel.saveTag(binding.tagEdit.text.toString())
         }
     }
 }
