@@ -51,10 +51,6 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
     private val viewModel by viewModels<EnterTwoFaCodeViewModel>()
     private lateinit var loadingDialog: AdaptiveDialog
 
-    companion object {
-        fun newInstance() = EnterTwoFaCodeFragment()
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         handleBackPress()
@@ -66,7 +62,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
         }
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
 
-        viewModel.loadingState.observe(viewLifecycleOwner){
+        viewModel.loadingState.observe(viewLifecycleOwner) {
             setLoadingState(it)
         }
 
@@ -205,8 +201,10 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
                             CoinBaseResultDialog.Type.CONVERSION_SUCCESS, CoinBaseResultDialog.Type.DEPOSIT_SUCCESS, CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
                                 viewModel.logClose(type)
                                 dismiss()
-                                requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
-                                requireActivity().finish()
+                                // TODO: up to Home?
+                                findNavController().popBackStack(R.id.coinbaseServicesFragment, false)
+//                                requireActivity().setResult(Constants.RESULT_CODE_GO_HOME) TODO
+//                                requireActivity().finish()
                             }
                             else -> {}
                         }

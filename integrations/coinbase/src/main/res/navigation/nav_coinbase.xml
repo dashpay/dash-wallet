@@ -28,19 +28,21 @@
         tools:layout="@layout/fragment_integration_portal">
 
         <action
-            android:id="@+id/services_to_buy_dash"
+            android:id="@+id/services_to_buyDash"
             app:destination="@id/coinbaseBuyDashFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
         <action
-            android:id="@+id/services_to_convert_crypto"
+            android:id="@+id/services_to_convertCrypto"
             app:destination="@id/coinbaseConvertCryptoFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
         <action
-            android:id="@+id/services_to_transfer_dash"
+            android:id="@+id/services_to_transferDash"
             app:destination="@id/transferDashFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
@@ -52,30 +54,22 @@
         android:name="org.dash.wallet.integrations.coinbase.ui.CoinbaseBuyDashFragment"
         android:label="CoinbaseBuyDashFragment"
         tools:layout="@layout/fragment_coinbase_buy_dash">
+
         <action
-            android:id="@+id/buy_dash_to_order_review"
-            app:destination="@id/coinbaseBuyDashOrderReviewFragment"
+            android:id="@+id/buyDash_to_orderReview"
+            app:destination="@id/coinbaseOrderReviewFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
-        
-        <argument
-            android:name="paymentMethods"
-            app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod[]" />
 
     </fragment>
 
     <fragment
-        android:id="@+id/coinbaseBuyDashOrderReviewFragment"
-        android:name="org.dash.wallet.integrations.coinbase.ui.CoinbaseBuyDashOrderReviewFragment"
-        android:label="CoinbaseBuyDashOrderReviewFragment"
-        tools:layout="@layout/fragment_coinbase_buy_dash_order_review">
-        <argument
-            android:name="paymentMethod"
-            app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod" />
-        <argument
-            android:name="placeBuyOrderUIModel"
-            app:argType="org.dash.wallet.integrations.coinbase.model.PlaceBuyOrderUIModel" />
+        android:id="@+id/coinbaseOrderReviewFragment"
+        android:name="org.dash.wallet.integrations.coinbase.ui.CoinbaseOrderReviewFragment"
+        android:label="CoinbaseOrderReviewFragment"
+        tools:layout="@layout/fragment_coinbase_order_review">
+
         <action
             android:id="@+id/orderReviewToFeeInfo"
             app:destination="@id/coinbaseFeeInfoDialog" />

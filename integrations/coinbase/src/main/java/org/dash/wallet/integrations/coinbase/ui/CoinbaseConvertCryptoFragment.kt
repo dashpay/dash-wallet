@@ -170,7 +170,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             lifecycleScope.launch {
                 var list = listOf<CoinBaseUserAccountDataUIModel>()
                 val selectedCurrencyCode = convertViewModel.selectedCryptoCurrencyAccount.value
-                    ?.coinBaseUserAccountData?.currency?.code ?: convertViewModel.selectedLocalCurrencyCode
+                    ?.coinbaseAccount?.currency ?: convertViewModel.selectedLocalCurrencyCode
 
                 cryptoWalletsDialog = CryptoWalletsDialog(selectedCurrencyCode) { index, dialog ->
                     list.getOrNull(index)?.let {
@@ -377,19 +377,19 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
     private fun setConvertViewInput() {
         convertViewModel.selectedCryptoCurrencyAccount.value?.let {
-            val accountData = it.coinBaseUserAccountData
-            val currency = accountData.balance?.currency?.lowercase()
-            val iconUrl = if (!accountData.balance?.currency.isNullOrEmpty() && currency != null) {
+            val accountData = it.coinbaseAccount
+            val currency = accountData.currency.lowercase()
+            val iconUrl = if (accountData.currency.isNotEmpty()) {
                 GenericUtils.getCoinIcon(currency)
             } else {
                 null
             }
 
             binding.convertView.input = ServiceWallet(
-                it.coinBaseUserAccountData.currency?.name ?: "",
+                it.coinbaseAccount.name,
                 getString(R.string.coinbase),
-                it.coinBaseUserAccountData.balance?.amount ?: "",
-                it.coinBaseUserAccountData.balance?.currency ?: "",
+                it.coinbaseAccount.availableBalance.value,
+                it.coinbaseAccount.currency,
                 convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
                     it.getCoinBaseExchangeRateConversion(rate).first
                 } ?: "",

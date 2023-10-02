@@ -120,26 +120,28 @@ class CryptoWalletsDialog(
 
     private fun refreshItems(rate: ExchangeRate?, dataList: List<CoinBaseUserAccountDataUIModel>) {
         itemList = dataList.map {
-            val accountData = it.coinBaseUserAccountData
-            val icon = getFlagFromCurrencyCode(accountData.currency?.code ?: "")
-            val iconUrl = if (icon == null && !accountData.currency?.code.isNullOrEmpty()) {
+            val accountData = it.coinbaseAccount
+            val icon = getFlagFromCurrencyCode(accountData.currency)
+            val iconUrl = if (icon == null && accountData.currency.isNotEmpty()) {
                 "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/" +
-                    "${accountData.currency?.code?.lowercase()}.png"
+                    "${accountData.currency.lowercase()}.png"
             } else {
                 null
             }
 
             val cryptoCurrencyBalance =
-                if (accountData.balance?.amount.isNullOrEmpty() || accountData.balance?.amount?.toDouble() == 0.0) {
+                if (accountData.availableBalance.value.isEmpty() ||
+                    accountData.availableBalance.value.toDouble() == 0.0
+                ) {
                     MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
                         .noCode().minDecimals(2).optionalDecimals().format(Coin.ZERO).toString()
                 } else {
-                    accountData.balance?.amount
+                    accountData.availableBalance.value
                 }
 
             IconifiedViewItem(
-                accountData.currency?.code ?: "",
-                accountData.currency?.name ?: "",
+                accountData.currency,
+                accountData.name,
                 icon,
                 iconUrl,
                 IconSelectMode.None,

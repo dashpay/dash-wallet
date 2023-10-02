@@ -25,8 +25,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integrations.coinbase.CoinbaseAddressMapper
-import org.dash.wallet.integrations.coinbase.CommitBuyOrderMapper
-import org.dash.wallet.integrations.coinbase.PlaceBuyOrderMapper
 import org.dash.wallet.integrations.coinbase.SwapTradeMapper
 import org.dash.wallet.integrations.coinbase.network.RemoteDataSource
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepository
@@ -65,10 +63,6 @@ object CoinBaseModule {
         return remoteDataSource.buildApi(CoinBaseServicesApi::class.java)
     }
 
-    @Provides
-    fun providePlaceBuyOrderMapper(): PlaceBuyOrderMapper = PlaceBuyOrderMapper()
-    @Provides
-    fun provideCommitBuyOrderMapper(): CommitBuyOrderMapper = CommitBuyOrderMapper()
     @Provides
     fun provideSwapTradeMapper(): SwapTradeMapper = SwapTradeMapper()
 

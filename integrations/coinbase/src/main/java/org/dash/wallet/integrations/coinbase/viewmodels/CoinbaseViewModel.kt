@@ -19,7 +19,6 @@ package org.dash.wallet.integrations.coinbase.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,11 +26,14 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.WalletUIConfig
-import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
+import org.dash.wallet.common.services.NetworkStateInt
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integrations.coinbase.ui.convert_currency.model.BaseIdForFiatData
 import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
@@ -40,14 +42,17 @@ import javax.inject.Inject
 
 data class CoinbaseUIState(
     val baseIdForFiatModel: BaseIdForFiatData = BaseIdForFiatData.LoadingState,
-    val isSessionExpired: Boolean = false
+    val isSessionExpired: Boolean = false,
+    val isNetworkAvailable: Boolean = false
 )
 
 @HiltViewModel
 class CoinbaseViewModel @Inject constructor(
     private val config: CoinbaseConfig,
     private val walletUIConfig: WalletUIConfig,
-    private val coinBaseRepository: CoinBaseRepositoryInt
+    private val coinBaseRepository: CoinBaseRepositoryInt,
+    private val analytics: AnalyticsService,
+    networkState: NetworkStateInt
 ) : ViewModel() {
 
     companion object {
@@ -58,15 +63,19 @@ class CoinbaseViewModel @Inject constructor(
     val uiState: StateFlow<CoinbaseUIState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            config.observe(CoinbaseConfig.LAST_REFRESH_TOKEN)
-                .distinctUntilChanged()
-                .filterNotNull()
-                .onEach { token ->
-                    _uiState.value = CoinbaseUIState(isSessionExpired = token.isEmpty())
-                }
-                .launchIn(viewModelScope)
-        }
+        config.observe(CoinbaseConfig.LAST_REFRESH_TOKEN)
+            .distinctUntilChanged()
+            .filterNotNull()
+            .onEach { token ->
+                _uiState.update { it.copy(isSessionExpired = token.isEmpty()) }
+            }
+            .launchIn(viewModelScope)
+
+        networkState.isConnected
+            .onEach { isConnected ->
+                _uiState.update { it.copy(isNetworkAvailable = isConnected) }
+            }
+            .launchIn(viewModelScope)
     }
 
     suspend fun loginToCoinbase(code: String): Boolean {
@@ -85,7 +94,7 @@ class CoinbaseViewModel @Inject constructor(
         return false
     }
     fun getBaseIdForFiatModel() = viewModelScope.launch {
-        _uiState.value = _uiState.value.copy(baseIdForFiatModel = BaseIdForFiatData.LoadingState)
+        _uiState.update { it.copy(baseIdForFiatModel = BaseIdForFiatData.LoadingState) }
 
         when (
             val response = coinBaseRepository.getBaseIdForUSDModel(
@@ -93,60 +102,36 @@ class CoinbaseViewModel @Inject constructor(
             )
         ) {
             is ResponseResource.Success -> {
-                _uiState.value = _uiState.value.copy(
-                    baseIdForFiatModel = if (response.value?.data != null) {
-                        BaseIdForFiatData.Success(response.value?.data!!)
-                    } else {
-                        BaseIdForFiatData.LoadingState
-                    }
-                )
+                _uiState.update {
+                    it.copy(
+                        baseIdForFiatModel = if (response.value?.data != null) {
+                            BaseIdForFiatData.Success(response.value?.data!!)
+                        } else {
+                            BaseIdForFiatData.LoadingState
+                        }
+                    )
+                }
             }
 
             is ResponseResource.Failure -> {
                 runBlocking { config.set(CoinbaseConfig.UPDATE_BASE_IDS, true) }
-                _uiState.value = _uiState.value.copy(baseIdForFiatModel = BaseIdForFiatData.Error)
+                _uiState.update { it.copy(baseIdForFiatModel = BaseIdForFiatData.Error) }
             }
             else -> { }
         }
     }
 
     fun clearWasLoggedOut() {
-        _uiState.value = _uiState.value.copy(isSessionExpired = false)
+        _uiState.update { it.copy(isSessionExpired = false) }
     }
 
-    // TODO:
-    private fun splitNameAndAccount(nameAccount: String?, type: PaymentMethodType): Pair<String, String> {
-        nameAccount?.let {
-            val match = when (type) {
-                PaymentMethodType.BankAccount, PaymentMethodType.Card, PaymentMethodType.PayPal -> {
-                    "(\\d+)?\\s?[a-z]?\\*+".toRegex().find(nameAccount)
-                }
-                PaymentMethodType.Fiat -> {
-                    "\\(.*\\)".toRegex().find(nameAccount)
-                }
-                else -> null
-            }
-
-            return match?.range?.first?.let { index ->
-                val name = nameAccount.substring(0, index).trim(' ', '-', ',', ':')
-                val account = nameAccount.substring(index, nameAccount.length).trim()
-                return Pair(name, account)
-            } ?: Pair(nameAccount, "")
-        }
-
-        return Pair("", "")
+    suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
+        return amountInDash.toPlainString().toDoubleOrZero.compareTo(
+            coinBaseRepository.getWithdrawalLimitInDash()
+        ) > 0
     }
 
-    private fun paymentMethodTypeFromCoinbaseType(type: String): PaymentMethodType {
-        return when (type) {
-            "fiat_account" -> PaymentMethodType.Fiat
-            "secure3d_card", "worldpay_card", "credit_card", "debit_card" -> PaymentMethodType.Card
-            "ach_bank_account", "sepa_bank_account",
-            "ideal_bank_account", "eft_bank_account", "interac" -> PaymentMethodType.BankAccount
-            "bank_wire" -> PaymentMethodType.WireTransfer
-            "paypal_account" -> PaymentMethodType.PayPal
-            "apple_pay" -> PaymentMethodType.ApplePay
-            else -> PaymentMethodType.Unknown
-        }
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, mapOf())
     }
 }

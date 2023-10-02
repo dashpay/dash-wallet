@@ -21,6 +21,18 @@ import android.os.Parcelable
 import com.google.gson.Gson
 import kotlinx.parcelize.Parcelize
 
+enum class CoinbaseErrorType {
+    NONE,
+    BUY_FAILED,
+    USER_ACCOUNT_ERROR,
+    INSUFFICIENT_BALANCE,
+    NO_BANK_ACCOUNT,
+    NO_EXCHANGE_RATE,
+    DEPOSIT_FAILED
+}
+
+class CoinbaseException(val errorType: CoinbaseErrorType, message: String?) : Exception(message)
+
 @Parcelize
 data class CoinbaseErrorResponse(
     val errors: List<Error>? = null

@@ -17,8 +17,6 @@
 package org.dash.wallet.integrations.coinbase
 
 import com.google.gson.GsonBuilder
-import org.dash.wallet.integrations.coinbase.model.BuyOrderResponse
-import org.dash.wallet.integrations.coinbase.model.CoinBaseUserAccountInfo
 import org.dash.wallet.integrations.coinbase.model.PaymentMethodsResponse
 import org.dash.wallet.integrations.coinbase.model.SendTransactionToWalletResponse
 import java.io.BufferedReader
@@ -55,24 +53,12 @@ object TestUtils {
         return gson.fromJson(dataSetAsString, resourceGenerator.type)
     }
 
-    fun getUserAccountApiResponse(): CoinBaseUserAccountInfo {
-        val apiResponse = readFileWithoutNewLineFromResources("user_accounts.json")
-        return generateResource(apiResponse, CoinBaseUserAccountInfo::class.java)
-    }
-
     val paymentMethodsData = getPaymentMethodsApiResponse().data
 
     fun getPaymentMethodsApiResponse(): PaymentMethodsResponse {
         val apiResponse = readFileWithoutNewLineFromResources("payment_methods.json")
         return generateResource(apiResponse, PaymentMethodsResponse::class.java)
     }
-
-    fun placeBuyOrderApiResponse(): BuyOrderResponse {
-        val apiResponse = readFileWithoutNewLineFromResources("place_buy_order.json")
-        return generateResource(apiResponse, BuyOrderResponse::class.java)
-    }
-
-    val buyOrderData = placeBuyOrderApiResponse().data
 
     fun sendFundsToWalletApiResponse(): SendTransactionToWalletResponse {
         val apiResponse = readFileWithoutNewLineFromResources("send_funds_to_wallet.json")

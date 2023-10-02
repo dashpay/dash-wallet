@@ -184,11 +184,10 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         transferDashViewModel.userAccountOnCoinbaseState.observe(viewLifecycleOwner){
             enterAmountToTransferViewModel.coinbaseExchangeRate = it
 
-            val fiatVal = it.coinBaseUserAccountData.balance?.amount?.let { amount ->
-                enterAmountToTransferViewModel.getCoinbaseBalanceInFiatFormat(amount)
-            } ?: CoinbaseConstants.VALUE_ZERO
+            val amount = it.coinbaseAccount.availableBalance.value
+            val fiatVal = enterAmountToTransferViewModel.getCoinbaseBalanceInFiatFormat(amount)
             binding.transferView.balanceOnCoinbase = BaseServiceWallet(
-                it.coinBaseUserAccountData.balance?.amount ?: CoinbaseConstants.VALUE_ZERO,
+                it.coinbaseAccount.availableBalance.value,
                 fiatVal
             )
             // After initial load when coinbase exchange rate loaded
@@ -382,8 +381,10 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                         CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
                             transferDashViewModel.logClose(type)
                             dismiss()
-                            requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
-                            requireActivity().finish()
+                            // TODO Up to Home?
+                            findNavController().popBackStack(R.id.coinbaseServicesFragment, false)
+//                            requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
+//                            requireActivity().finish()
                         }
                         else -> {
                             transferDashViewModel.logRetry()
@@ -411,9 +412,10 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
     @SuppressLint("SetTextI18n")
     private fun setMaxAmountError() {
-        val fiatVal =  transferDashViewModel.userAccountOnCoinbaseState.value?.coinBaseUserAccountData?.balance?.amount?.let { amount ->
-            enterAmountToTransferViewModel.getCoinbaseBalanceInFiatFormat(amount)
-        } ?: CoinbaseConstants.VALUE_ZERO
+        val fiatVal = transferDashViewModel.userAccountOnCoinbaseState.value
+            ?.coinbaseAccount?.availableBalance?.value?.let { amount ->
+                enterAmountToTransferViewModel.getCoinbaseBalanceInFiatFormat(amount)
+            } ?: CoinbaseConstants.VALUE_ZERO
         binding.dashWalletLimitBanner.text = "${getString(R.string.entered_amount_is_too_high)} $fiatVal"
     }
 

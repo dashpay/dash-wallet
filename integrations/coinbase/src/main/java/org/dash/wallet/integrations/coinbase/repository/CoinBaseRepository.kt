@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integrations.coinbase.repository
 
+import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
@@ -26,6 +27,7 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.safeApiCall
+import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integrations.coinbase.*
@@ -38,18 +40,44 @@ import org.dash.wallet.integrations.coinbase.viewmodels.toDoubleOrZero
 import java.math.BigDecimal
 import javax.inject.Inject
 
+interface CoinBaseRepositoryInt {
+    val hasValidCredentials: Boolean
+    val isAuthenticated: Boolean
+
+    suspend fun getUserAccount(): CoinbaseAccount
+    suspend fun getUserAccounts(exchangeCurrencyCode: String): List<CoinBaseUserAccountDataUIModel>
+    suspend fun getFiatAccount(): CoinbaseAccount
+    suspend fun getBaseIdForUSDModel(baseCurrency: String): ResponseResource<BaseIdForUSDModel?>
+    suspend fun getExchangeRates(currencyCode: String): Map<String, String>
+    suspend fun disconnectCoinbaseAccount()
+    suspend fun createAddress(): ResponseResource<String>
+    suspend fun getUserAccountAddress(): ResponseResource<String>
+    suspend fun getActivePaymentMethods(): List<PaymentMethodsData>
+    suspend fun depositToFiatAccount(paymentMethodId: String, amountUSD: String)
+    suspend fun placeBuyOrder(placeBuyOrderParams: PlaceOrderParams): PlaceOrderResponse
+    suspend fun sendFundsToWallet(
+        sendTransactionToWalletParams: SendTransactionToWalletParams,
+        api2FATokenVersion: String?
+    ): ResponseResource<SendTransactionToWalletResponse?>
+    suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel>
+    suspend fun commitSwapTrade(buyOrderId: String): ResponseResource<SwapTradeUIModel>
+    suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean>
+    suspend fun refreshWithdrawalLimit()
+    suspend fun getExchangeRateFromCoinbase(): ResponseResource<CoinbaseToDashExchangeRateUIModel>
+    suspend fun getWithdrawalLimitInDash(): Double
+}
+
 class CoinBaseRepository @Inject constructor(
     private val servicesApi: CoinBaseServicesApi,
     private val authApi: CoinBaseAuthApi,
     private val config: CoinbaseConfig,
     private val walletUIConfig: WalletUIConfig,
-    private val placeBuyOrderMapper: PlaceBuyOrderMapper,
     private val swapTradeMapper: SwapTradeMapper,
-    private val commitBuyOrderMapper: CommitBuyOrderMapper,
-    private val coinbaseAddressMapper: CoinbaseAddressMapper
+    private val coinbaseAddressMapper: CoinbaseAddressMapper,
+    private val exchangeRates: ExchangeRatesProvider
 ) : CoinBaseRepositoryInt {
     private val configScope = CoroutineScope(Dispatchers.IO)
-    private var userAccountInfo: List<CoinBaseUserAccountData> = listOf()
+    private var userAccountInfo: List<CoinbaseAccount> = listOf()
 
     override val hasValidCredentials: Boolean
         get() = CoinBaseClientConstants.CLIENT_ID.isNotEmpty() &&
@@ -64,43 +92,44 @@ class CoinBaseRepository @Inject constructor(
             .launchIn(configScope)
     }
 
-    override suspend fun getUserAccount(): ResponseResource<CoinBaseUserAccountData?> = safeApiCall {
-        val apiResponse = servicesApi.getUserAccounts()
-        userAccountInfo = apiResponse?.data ?: listOf()
+    override suspend fun getUserAccount(): CoinbaseAccount {
+        val accountsResponse = servicesApi.getAccounts()
+        userAccountInfo = accountsResponse.accounts
         val userAccountData = userAccountInfo.firstOrNull {
-            it.balance?.currency?.equals(Constants.DASH_CURRENCY) ?: false
-        } ?: throw IllegalStateException("No user account found")
+            it.currency == Constants.DASH_CURRENCY
+        } ?: throw IllegalStateException("No DASH account found")
 
-        userAccountData.also {
-            config.set(CoinbaseConfig.USER_ACCOUNT_ID, it.id ?: "")
-            config.set(CoinbaseConfig.LAST_BALANCE, Coin.parseCoin(it.balance?.amount ?: "0.0").value)
+        return userAccountData.also {
+            config.set(CoinbaseConfig.USER_ACCOUNT_ID, it.uuid.toString())
+            config.set(CoinbaseConfig.LAST_BALANCE, Coin.parseCoin(it.availableBalance.value).value)
         }
     }
 
-    override suspend fun getUserAccounts(exchangeCurrencyCode: String) = safeApiCall {
+    override suspend fun getUserAccounts(exchangeCurrencyCode: String): List<CoinBaseUserAccountDataUIModel> {
         if (userAccountInfo.isEmpty()) {
             getUserAccount()
         }
 
-        val exchangeRates = servicesApi.getExchangeRates(exchangeCurrencyCode)?.data
+        val exchangeRates = servicesApi.getExchangeRates(exchangeCurrencyCode)?.data // TODO: cache?
         val currencyToDashExchangeRate = exchangeRates?.rates?.get(Constants.DASH_CURRENCY).orEmpty()
         val currencyToUSDExchangeRate = exchangeRates?.rates?.get(Constants.USD_CURRENCY).orEmpty()
 
-        return@safeApiCall userAccountInfo.map {
-            val currencyToCryptoCurrencyExchangeRate = exchangeRates?.rates?.get(it.currency?.code).orEmpty()
-            val cryptoCurrencyToDashExchangeRate = (
-                BigDecimal(currencyToDashExchangeRate) / BigDecimal(
-                    currencyToCryptoCurrencyExchangeRate
-                )
-                ).toString()
-
+        return userAccountInfo.map {
+            val currencyToCryptoCurrencyExchangeRate = exchangeRates?.rates?.get(it.currency).orEmpty()
             CoinBaseUserAccountDataUIModel(
                 it,
-                currencyToCryptoCurrencyExchangeRate,
-                currencyToDashExchangeRate,
-                cryptoCurrencyToDashExchangeRate,
-                currencyToUSDExchangeRate
+                BigDecimal(currencyToCryptoCurrencyExchangeRate),
+                // TODO: below values don't depend on a specific account. Refactor out
+                BigDecimal(currencyToDashExchangeRate),
+                BigDecimal(currencyToUSDExchangeRate)
             )
+        }
+    }
+
+    override suspend fun getFiatAccount(): CoinbaseAccount {
+        return userAccountInfo.first {
+            it.type == CoinbaseConstants.FIAT_ACCOUNT_TYPE &&
+                it.currency == CoinbaseConstants.DEFAULT_CURRENCY_USD // TODO: ?
         }
     }
 
@@ -108,7 +137,9 @@ class CoinBaseRepository @Inject constructor(
         servicesApi.getBaseIdForUSDModel(baseCurrency = baseCurrency)
     }
 
-    override suspend fun getExchangeRates() = safeApiCall { servicesApi.getExchangeRates() }
+    override suspend fun getExchangeRates(currencyCode: String): Map<String, String> {
+        return servicesApi.getExchangeRates(currencyCode)?.data?.rates ?: mapOf()
+    }
 
     override suspend fun disconnectCoinbaseAccount() {
         val accessToken = config.get(CoinbaseConfig.LAST_ACCESS_TOKEN)
@@ -126,33 +157,53 @@ class CoinBaseRepository @Inject constructor(
         swapTradeMapper.map(apiResult?.data)
     }
 
-    override suspend fun getActivePaymentMethods() = safeApiCall {
+    override suspend fun getActivePaymentMethods(): List<PaymentMethodsData> {
         val apiResult = servicesApi.getActivePaymentMethods()
-        apiResult?.data ?: emptyList()
+        return apiResult?.data ?: emptyList()
     }
 
-    override suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams) = safeApiCall {
-        val userAccountId = config.get(CoinbaseConfig.USER_ACCOUNT_ID) ?: ""
-        val apiResult = servicesApi.placeBuyOrder(
-            accountId = userAccountId,
-            placeBuyOrderParams = placeBuyOrderParams
+    override suspend fun depositToFiatAccount(paymentMethodId: String, amountUSD: String) {
+        val result = servicesApi.depositTo(
+            accountId = getFiatAccount().uuid.toString(),
+            request = DepositRequest(
+                amount = amountUSD,
+                currency = CoinbaseConstants.DEFAULT_CURRENCY_USD,
+                paymentMethod = paymentMethodId
+            )
         )
-        placeBuyOrderMapper.map(apiResult?.data)
+
+        if (!result.isSuccessful) {
+            throw CoinbaseException(
+                CoinbaseErrorType.DEPOSIT_FAILED,
+                result.errorBody()?.string()?.let {
+                    CoinbaseErrorResponse.getErrorMessage(it)
+                }?.message ?: ""
+            )
+        } else if (result.body()?.data?.status != "created") {
+            throw CoinbaseException(
+                CoinbaseErrorType.DEPOSIT_FAILED,
+                result.body()?.data?.status
+            )
+        }
+    }
+
+    override suspend fun placeBuyOrder(placeBuyOrderParams: PlaceOrderParams): PlaceOrderResponse {
+        val result = servicesApi.placeBuyOrder(placeBuyOrderParams)
+
+        if (!result.success) {
+            throw CoinbaseException(
+                CoinbaseErrorType.BUY_FAILED,
+                result.errorResponse?.message ?: result.failureReason
+            )
+        }
+
+        return result
     }
 
     override suspend fun getUserAccountAddress(): ResponseResource<String> = safeApiCall {
         val userAccountId = config.get(CoinbaseConfig.USER_ACCOUNT_ID) ?: ""
         val apiResult = servicesApi.getUserAccountAddress(accountId = userAccountId)
         coinbaseAddressMapper.map(apiResult)
-    }
-
-    override suspend fun commitBuyOrder(buyOrderId: String) = safeApiCall {
-        val userAccountId = config.get(CoinbaseConfig.USER_ACCOUNT_ID) ?: ""
-        val commitBuyResult = servicesApi.commitBuyOrder(
-            accountId = userAccountId,
-            buyOrderId = buyOrderId
-        )
-        commitBuyOrderMapper.map(commitBuyResult?.data)
     }
 
     override suspend fun sendFundsToWallet(
@@ -178,16 +229,12 @@ class CoinBaseRepository @Inject constructor(
         !config.get(CoinbaseConfig.LAST_ACCESS_TOKEN).isNullOrEmpty()
     }
 
-    override suspend fun getWithdrawalLimit() = safeApiCall {
+    override suspend fun refreshWithdrawalLimit() {
         val apiResponse = servicesApi.getAuthorizationInformation()
         apiResponse?.data?.oauthMeta?.let { metadata ->
             config.set(CoinbaseConfig.USER_WITHDRAWAL_LIMIT, metadata.sendLimitAmount)
             config.set(CoinbaseConfig.SEND_LIMIT_CURRENCY, metadata.sendLimitCurrency)
         }
-        WithdrawalLimitUIModel(
-            apiResponse?.data?.oauthMeta?.sendLimitAmount,
-            apiResponse?.data?.oauthMeta?.sendLimitCurrency ?: ""
-        )
     }
 
     override suspend fun getExchangeRateFromCoinbase() = safeApiCall {
@@ -196,7 +243,7 @@ class CoinBaseRepository @Inject constructor(
         }
 
         val userAccountData = userAccountInfo.firstOrNull {
-            it.balance?.currency?.equals(Constants.DASH_CURRENCY) ?: false
+            it.currency == Constants.DASH_CURRENCY
         }
 
         val currencyCode = walletUIConfig.getExchangeCurrencyCode()
@@ -207,8 +254,8 @@ class CoinBaseRepository @Inject constructor(
             val currencyToUSDExchangeRate = exchangeRates?.rates?.get(Constants.USD_CURRENCY).orEmpty()
             CoinbaseToDashExchangeRateUIModel(
                 it,
-                currencyToDashExchangeRate,
-                currencyToUSDExchangeRate
+                BigDecimal(currencyToDashExchangeRate),
+                BigDecimal(currencyToUSDExchangeRate)
             )
         } ?: CoinbaseToDashExchangeRateUIModel.EMPTY
     }
@@ -218,9 +265,15 @@ class CoinBaseRepository @Inject constructor(
         servicesApi.createAddress(accountId = userAccountId)?.addresses?.address ?: ""
     }
 
-    override suspend fun getWithdrawalLimitInDash(exchangeRate: ExchangeRate): Double {
+    override suspend fun getWithdrawalLimitInDash(): Double {
         val withdrawalLimit = config.get(CoinbaseConfig.USER_WITHDRAWAL_LIMIT)
-        return if (withdrawalLimit.isNullOrEmpty()) {
+        val withdrawalLimitCurrency = config.get(CoinbaseConfig.SEND_LIMIT_CURRENCY)
+            ?: CoinbaseConstants.DEFAULT_CURRENCY_USD
+        val exchangeRate = exchangeRates.getExchangeRate(withdrawalLimitCurrency)?.let {
+            ExchangeRate(Coin.COIN, it.fiat)
+        }
+
+        return if (withdrawalLimit.isNullOrEmpty() || exchangeRate == null) {
             0.0
         } else {
             val formattedAmount = GenericUtils.formatFiatWithoutComma(withdrawalLimit)
@@ -236,33 +289,3 @@ class CoinBaseRepository @Inject constructor(
     }
 }
 
-interface CoinBaseRepositoryInt {
-    val hasValidCredentials: Boolean
-    val isAuthenticated: Boolean
-
-    suspend fun getUserAccount(): ResponseResource<CoinBaseUserAccountData?>
-    suspend fun getUserAccounts(exchangeCurrencyCode: String): ResponseResource<List<CoinBaseUserAccountDataUIModel>>
-    suspend fun getBaseIdForUSDModel(baseCurrency: String): ResponseResource<BaseIdForUSDModel?>
-    suspend fun getExchangeRates(): ResponseResource<CoinBaseExchangeRates?>
-    suspend fun disconnectCoinbaseAccount()
-    suspend fun createAddress(): ResponseResource<String>
-    suspend fun getUserAccountAddress(): ResponseResource<String>
-    suspend fun getActivePaymentMethods(): ResponseResource<List<PaymentMethodsData>>
-    suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>
-    suspend fun commitBuyOrder(buyOrderId: String): ResponseResource<CommitBuyOrderUIModel>
-    suspend fun sendFundsToWallet(
-        sendTransactionToWalletParams: SendTransactionToWalletParams,
-        api2FATokenVersion: String?
-    ): ResponseResource<SendTransactionToWalletResponse?>
-    suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel>
-    suspend fun commitSwapTrade(buyOrderId: String): ResponseResource<SwapTradeUIModel>
-    suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean>
-    suspend fun getWithdrawalLimit(): ResponseResource<WithdrawalLimitUIModel>
-    suspend fun getExchangeRateFromCoinbase(): ResponseResource<CoinbaseToDashExchangeRateUIModel>
-    suspend fun getWithdrawalLimitInDash(exchangeRate: ExchangeRate): Double
-}
-
-data class WithdrawalLimitUIModel(
-    val amount: String?,
-    val currency: String
-)

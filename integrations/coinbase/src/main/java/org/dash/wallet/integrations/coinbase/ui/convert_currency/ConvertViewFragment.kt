@@ -93,7 +93,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         binding.maxButton.setOnClickListener {
             viewModel.selectedCryptoCurrencyAccount.value?.let { userAccountData ->
                 getMaxAmount()?.let { maxAmount ->
-                    val currency = userAccountData.coinBaseUserAccountData.balance?.currency
+                    val currency = userAccountData.coinbaseAccount.currency
 
                     if (viewModel.selectedPickerCurrencyCode == currency) {
                         applyNewValue(maxAmount, viewModel.selectedPickerCurrencyCode)
@@ -101,10 +101,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         val cleanedValue =
                             if (viewModel.selectedPickerCurrencyCode == viewModel.selectedLocalCurrencyCode) {
                                 maxAmount.toBigDecimal() /
-                                    userAccountData.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
+                                    userAccountData.currencyToCryptoCurrencyExchangeRate
                             } else {
                                 maxAmount.toBigDecimal() *
-                                    userAccountData.cryptoCurrencyToDashExchangeRate.toBigDecimal()
+                                    userAccountData.getCryptoToDashExchangeRate()
                             }.setScale(8, RoundingMode.HALF_UP).toString()
 
                         applyNewValue(cleanedValue, viewModel.selectedPickerCurrencyCode)
@@ -126,7 +126,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             viewModel.selectedCryptoCurrencyAccount.value?.let { account ->
                 val cleanedValue =
                     viewModel.maxForDashWalletAmount.toBigDecimal() /
-                        account.cryptoCurrencyToDashExchangeRate.toBigDecimal()
+                        account.getCryptoToDashExchangeRate()
                 return cleanedValue.setScale(8, RoundingMode.HALF_UP).toString()
             }
         } else { // coinbase -> wallet
@@ -136,7 +136,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
     }
 
     private fun resetViewSelection(it: CoinBaseUserAccountDataUIModel?) {
-        it?.coinBaseUserAccountData?.balance?.currency?.let { currencyCode ->
+        it?.coinbaseAccount?.currency?.let { currencyCode ->
             currencyConversionOptionList = if (viewModel.dashToCrypto.value == true) {
                 listOf(Constants.DASH_CURRENCY, viewModel.selectedLocalCurrencyCode, currencyCode)
             } else {
@@ -164,13 +164,13 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             val cleanedValue = if (viewModel.selectedPickerCurrencyCode !== pickedCurrencyOption &&
                 enteredConvertAmount > BigDecimal.ZERO
             ) {
-                val currency = userAccountData.coinBaseUserAccountData.balance?.currency
+                val currency = userAccountData.coinbaseAccount.currency
                 val convertedValue = when {
                     (currency == viewModel.selectedPickerCurrencyCode) -> {
                         if (pickedCurrencyOption == viewModel.selectedLocalCurrencyCode) {
                             (
                                 valueToBind.toBigDecimal() /
-                                    userAccountData.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
+                                    userAccountData.currencyToCryptoCurrencyExchangeRate
                                 )
                                 .setScale(8, RoundingMode.HALF_UP).toString()
                         } else {
@@ -188,11 +188,8 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         }
                     }
                     (viewModel.selectedLocalCurrencyCode == viewModel.selectedPickerCurrencyCode) -> {
-                        if (pickedCurrencyOption == userAccountData.coinBaseUserAccountData.balance?.currency) {
-                            (
-                                valueToBind.toBigDecimal() *
-                                    userAccountData.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
-                                )
+                        if (pickedCurrencyOption == userAccountData.coinbaseAccount.currency) {
+                            (valueToBind.toBigDecimal() * userAccountData.currencyToCryptoCurrencyExchangeRate)
                                 .setScale(8, RoundingMode.HALF_UP).toString()
                         } else {
                             val bd = viewModel.toDashValue(valueToBind, userAccountData)
@@ -210,17 +207,11 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                     }
 
                     else -> {
-                        if (pickedCurrencyOption == userAccountData.coinBaseUserAccountData.balance?.currency) {
-                            (
-                                valueToBind.toBigDecimal() /
-                                    userAccountData.cryptoCurrencyToDashExchangeRate.toBigDecimal()
-                                )
+                        if (pickedCurrencyOption == userAccountData.coinbaseAccount.currency) {
+                            (valueToBind.toBigDecimal() / userAccountData.getCryptoToDashExchangeRate())
                                 .setScale(8, RoundingMode.HALF_UP).toString()
                         } else {
-                            (
-                                valueToBind.toBigDecimal() /
-                                    userAccountData.currencyToDashExchangeRate.toBigDecimal()
-                                )
+                            (valueToBind.toBigDecimal() / userAccountData.currencyToDashExchangeRate)
                                 .setScale(8, RoundingMode.HALF_UP).toString()
                         }
                     }
@@ -387,11 +378,11 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             viewModel.selectedCryptoCurrencyAccount.value?.let {
                 viewModel.selectedLocalExchangeRate.value?.let {
                     ExchangeRate(Coin.COIN, it.fiat)
-                }?.let { rate ->
+                }?.let { _ ->
                     val dashAmount = when {
                         (
-                            it.coinBaseUserAccountData.balance?.currency == currencyCode &&
-                                it.coinBaseUserAccountData.balance.currency != Constants.DASH_CURRENCY
+                            it.coinbaseAccount.currency == currencyCode &&
+                                it.coinbaseAccount.currency != Constants.DASH_CURRENCY
                             ) -> {
                             val bd =
                                 viewModel.toDashValue(balance, it, true)
@@ -403,7 +394,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         }
                         (
                             viewModel.selectedLocalCurrencyCode == currencyCode &&
-                                it.coinBaseUserAccountData.balance?.currency != Constants.DASH_CURRENCY
+                                it.coinbaseAccount.currency != Constants.DASH_CURRENCY
                             ) -> {
                             // USD
                             val bd =

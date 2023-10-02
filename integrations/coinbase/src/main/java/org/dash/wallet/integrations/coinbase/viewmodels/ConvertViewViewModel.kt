@@ -122,26 +122,19 @@ class ConvertViewViewModel @Inject constructor(
     }
 
     fun setSelectedCryptoCurrency(account: CoinBaseUserAccountDataUIModel) {
-        maxCoinBaseAccountAmount = account.coinBaseUserAccountData.balance?.amount ?: "0"
+        maxCoinBaseAccountAmount = account.coinbaseAccount.availableBalance.value
 
         this._selectedLocalExchangeRate.value = selectedLocalExchangeRate.value?.currencyCode?.let {
-            val cleanedValue =
-                1.toBigDecimal() /
-                    account.currencyToDashExchangeRate.toBigDecimal()
+            val cleanedValue = 1.toBigDecimal() / account.currencyToDashExchangeRate
             val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
-            ExchangeRate(
-                it,
-                bd.toString()
-            )
+            ExchangeRate(it, bd.toString())
         }
         this._selectedCryptoCurrencyAccount.value = account
 
         // To check if the user has different fiat than usd the min is 2 usd
         val minFaitValue = CoinbaseConstants.MIN_USD_COINBASE_AMOUNT.toBigDecimal() /
-            account.currencyToUSDExchangeRate.toBigDecimal()
-
-        val cleanedValue: BigDecimal =
-            minFaitValue * account.currencyToDashExchangeRate.toBigDecimal()
+            account.currencyToUSDExchangeRate
+        val cleanedValue: BigDecimal = minFaitValue * account.currencyToDashExchangeRate
 
         minAllowedSwapAmount = minFaitValue.toString()
         val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
@@ -155,7 +148,7 @@ class ConvertViewViewModel @Inject constructor(
         minAllowedSwapDashCoin = coin
 
         val value =
-            (maxCoinBaseAccountAmount.toBigDecimal() * account.cryptoCurrencyToDashExchangeRate.toBigDecimal())
+            (maxCoinBaseAccountAmount.toBigDecimal() * account.getCryptoToDashExchangeRate())
                 .setScale(8, RoundingMode.HALF_UP)
 
         val maxCoinValue = try {
@@ -171,11 +164,10 @@ class ConvertViewViewModel @Inject constructor(
         _enteredConvertDashAmount.value = value
         if (!value.isZero) {
             _selectedCryptoCurrencyAccount.value?.let {
-                val cryptoCurrency = (value.toBigDecimal() / it.cryptoCurrencyToDashExchangeRate.toBigDecimal())
+                val cryptoCurrency = (value.toBigDecimal() / it.getCryptoToDashExchangeRate())
                     .setScale(8, RoundingMode.HALF_UP).toString()
 
-                _enteredConvertCryptoAmount.value =
-                    Pair(cryptoCurrency, it.coinBaseUserAccountData.currency?.code.toString())
+                _enteredConvertCryptoAmount.value = Pair(cryptoCurrency, it.coinbaseAccount.currency)
             }
         }
 
@@ -254,7 +246,7 @@ class ConvertViewViewModel @Inject constructor(
                 when (currencyInputType) {
                     CurrencyInputType.Crypto -> {
                         val cleanedValue = enteredConvertAmount.toBigDecimal() /
-                            account.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
+                            account.currencyToCryptoCurrencyExchangeRate
                         val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
                         Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
@@ -266,7 +258,7 @@ class ConvertViewViewModel @Inject constructor(
 
                     else -> {
                         val cleanedValue = enteredConvertAmount.toBigDecimal() /
-                            account.currencyToDashExchangeRate.toBigDecimal()
+                            account.currencyToDashExchangeRate
                         val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
                         Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
@@ -292,11 +284,9 @@ class ConvertViewViewModel @Inject constructor(
         fromCrypto: Boolean = false
     ): BigDecimal {
         val convertedValue = if (fromCrypto) {
-            valueToBind.toBigDecimal() *
-                userAccountData.cryptoCurrencyToDashExchangeRate.toBigDecimal()
+            valueToBind.toBigDecimal() * userAccountData.getCryptoToDashExchangeRate()
         } else {
-            valueToBind.toBigDecimal() *
-                userAccountData.currencyToDashExchangeRate.toBigDecimal()
+            valueToBind.toBigDecimal() * userAccountData.getCryptoToDashExchangeRate()
         }.setScale(8, RoundingMode.HALF_UP)
         return convertedValue
     }
@@ -324,7 +314,7 @@ class ConvertViewViewModel @Inject constructor(
     private suspend fun getCurrencyInputType(currencyCode: String): CurrencyInputType {
         val code = currencyCode.lowercase()
         val account = selectedCryptoCurrencyAccount.value
-        val currency = account?.coinBaseUserAccountData?.balance?.currency?.lowercase()
+        val currency = account?.coinbaseAccount?.currency?.lowercase()
 
         return when {
             currency == Constants.DASH_CURRENCY.lowercase() -> CurrencyInputType.Dash

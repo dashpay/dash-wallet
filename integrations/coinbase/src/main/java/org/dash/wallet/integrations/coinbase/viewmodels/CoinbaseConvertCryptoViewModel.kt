@@ -16,10 +16,12 @@
  */
 package org.dash.wallet.integrations.coinbase.viewmodels
 
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
@@ -27,14 +29,18 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
-import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toFormattedStringNoCode
-import org.dash.wallet.integrations.coinbase.model.*
+import org.dash.wallet.integrations.coinbase.model.BaseIdForUSDData
+import org.dash.wallet.integrations.coinbase.model.CoinBaseUserAccountDataUIModel
+import org.dash.wallet.integrations.coinbase.model.CoinbaseErrorResponse
+import org.dash.wallet.integrations.coinbase.model.SwapTradeResponse
+import org.dash.wallet.integrations.coinbase.model.SwapTradeUIModel
+import org.dash.wallet.integrations.coinbase.model.TradesRequest
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
 import javax.inject.Inject
@@ -65,11 +71,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
     val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
-    var exchangeRate: ExchangeRate? = null
-        private set
-
     init {
-        getWithdrawalLimit()
         setDashWalletBalance()
     }
 
@@ -89,12 +91,12 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
                 _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == Constants.DASH_CURRENCY }?.base_id ?: ""
             } else {
                 _baseIdForFaitModelCoinBase.value?.firstOrNull {
-                    it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code
+                    it.base == selectedCoinBaseAccount.coinbaseAccount.currency
                 }?.base_id ?: ""
             }
         val targetAsset = if (dashToCrypt) {
             _baseIdForFaitModelCoinBase.value?.firstOrNull {
-                it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code
+                it.base == selectedCoinBaseAccount.coinbaseAccount.currency
             }?.base_id ?: ""
         } else {
             _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == Constants.DASH_CURRENCY }?.base_id ?: ""
@@ -120,10 +122,10 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
                         this.inputCurrencyName = if (dashToCrypt) {
                             "Dash"
                         } else {
-                            selectedCoinBaseAccount.coinBaseUserAccountData.currency?.name ?: ""
+                            selectedCoinBaseAccount.coinbaseAccount.currency
                         }
                         this.outputCurrencyName = if (dashToCrypt) {
-                            selectedCoinBaseAccount.coinBaseUserAccountData.currency?.name ?: ""
+                            selectedCoinBaseAccount.coinbaseAccount.currency
                         } else {
                             "Dash"
                         }
@@ -149,23 +151,20 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         }
     }
 
-    suspend fun getUserWalletAccounts(dashToCrypt: Boolean): List<CoinBaseUserAccountDataUIModel> {
+    suspend fun getUserWalletAccounts(dashToCrypto: Boolean): List<CoinBaseUserAccountDataUIModel> {
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SELECT_COIN, mapOf())
 
-        return when (
-            val response = coinBaseRepository.getUserAccounts(
-                walletUIConfig.getExchangeCurrencyCode()
-            )
-        ) {
-            is ResponseResource.Success -> response.value
-            else -> listOf()
+        return try {
+            coinBaseRepository.getUserAccounts(walletUIConfig.getExchangeCurrencyCode())
+        } catch (ex: Exception) {
+            listOf()
         }.filter {
-            if (dashToCrypt) {
+            if (dashToCrypto) {
                 isValidCoinBaseAccount(it)
             } else {
-                isValidCoinBaseAccount(it) && it.coinBaseUserAccountData.balance?.amount?.toDouble() != 0.0
+                isValidCoinBaseAccount(it) && it.coinbaseAccount.availableBalance.value.toDouble() != 0.0
             }
-        }.sortedBy { item -> item.coinBaseUserAccountData.currency?.code }
+        }.sortedBy { item -> item.coinbaseAccount.currency }
     }
 
     fun logEvent(eventName: String) {
@@ -176,40 +175,18 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         return Coin.valueOf(config.get(CoinbaseConfig.LAST_BALANCE) ?: 0)
     }
 
-    private fun isValidCoinBaseAccount(
-        it: CoinBaseUserAccountDataUIModel
-    ) = (
-        it.coinBaseUserAccountData.balance?.amount?.toDouble() != null &&
-            !it.coinBaseUserAccountData.balance.amount.toDouble().isNaN() &&
-            it.coinBaseUserAccountData.type != "fiat" &&
-            it.coinBaseUserAccountData.balance.currency != Constants.DASH_CURRENCY
+    private fun isValidCoinBaseAccount(it: CoinBaseUserAccountDataUIModel) = (
+        !it.coinbaseAccount.availableBalance.value.toDouble().isNaN() &&
+            it.coinbaseAccount.type != "fiat" &&
+            it.coinbaseAccount.currency != Constants.DASH_CURRENCY
         )
 
     private fun setDashWalletBalance() {
         _dashWalletBalance.value = walletDataProvider.getWalletBalance()
     }
 
-    private fun getWithdrawalLimit() = viewModelScope.launch(Dispatchers.Main) {
-        when (val response = coinBaseRepository.getWithdrawalLimit()) {
-            is ResponseResource.Success -> {
-                val withdrawalLimit = response.value
-                exchangeRate = getCurrencyExchangeRate(withdrawalLimit.currency)
-            }
-            is ResponseResource.Failure -> {
-                // todo use case when limit is not fetched
-            }
-        }
-    }
-
-    private suspend fun getCurrencyExchangeRate(currency: String): ExchangeRate? {
-        return exchangeRates.observeExchangeRate(currency).first()
-    }
-
     suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
-        exchangeRate?.let {
-            val rate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat)
-            val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash(rate)
-            return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
-        } ?: return true
+        val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash()
+        return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
     }
 }

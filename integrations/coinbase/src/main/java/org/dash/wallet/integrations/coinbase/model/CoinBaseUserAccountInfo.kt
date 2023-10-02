@@ -22,46 +22,8 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.util.toFormattedString
+import java.math.BigDecimal
 import java.math.RoundingMode
-
-@Parcelize
-data class CoinBaseUserAccountInfo(
-    val `data`: List<CoinBaseUserAccountData>? = null,
-    val pagination: Pagination? = null
-) : Parcelable
-
-@Parcelize
-data class CoinBaseUserAccountData(
-    val allow_deposits: Boolean? = null,
-    val allow_withdrawals: Boolean? = null,
-    val balance: CoinBaseBalance? = null,
-    val created_at: String? = null,
-    val currency: CoinBaseCurrency? = null,
-    val id: String? = null,
-    val name: String? = null,
-    val primary: Boolean? = null,
-    val resource: String? = null,
-    val resource_path: String? = null,
-    val type: String? = null,
-    val updated_at: String? = null
-) : Parcelable {
-    companion object {
-        val EMPTY = CoinBaseUserAccountData(
-            allow_deposits = false,
-            allow_withdrawals = false,
-            balance = null,
-            created_at = "",
-            currency = null,
-            id = null,
-            name = null,
-            primary = null,
-            resource = null,
-            resource_path = null,
-            type = null,
-            updated_at = null
-        )
-    }
-}
 
 @Parcelize
 data class Pagination(
@@ -76,41 +38,27 @@ data class Pagination(
 ) : Parcelable
 
 @Parcelize
-data class CoinBaseCurrency(
-    val address_regex: String? = null,
-    val asset_id: String? = null,
-    val code: String? = null,
-    val color: String? = null,
-    val destination_tag_name: String? = null,
-    val destination_tag_regex: String? = null,
-    val exponent: Int? = null,
-    val name: String? = null,
-    val slug: String? = null,
-    val sort_index: Int? = null,
-    val type: String? = null
-) : Parcelable
-
-@Parcelize
-data class CoinBaseBalance(
-    val amount: String? = null,
-    val currency: String? = null
-) : Parcelable
-
-@Parcelize
 data class CoinBaseUserAccountDataUIModel(
-    override val coinBaseUserAccountData: CoinBaseUserAccountData,
-    val currencyToCryptoCurrencyExchangeRate: String,
-    override val currencyToDashExchangeRate: String,
-    val cryptoCurrencyToDashExchangeRate: String,
-    override val currencyToUSDExchangeRate: String
-) : CoinbaseToDashExchangeRateUIModel(coinBaseUserAccountData, currencyToDashExchangeRate, currencyToUSDExchangeRate), Parcelable
+    override val coinbaseAccount: CoinbaseAccount,
+    val currencyToCryptoCurrencyExchangeRate: BigDecimal,
+    override val currencyToDashExchangeRate: BigDecimal,
+    override val currencyToUSDExchangeRate: BigDecimal
+) : CoinbaseToDashExchangeRateUIModel(
+    coinbaseAccount,
+    currencyToDashExchangeRate,
+    currencyToUSDExchangeRate
+) {
+    fun getCryptoToDashExchangeRate(): BigDecimal {
+        return currencyToDashExchangeRate / currencyToCryptoCurrencyExchangeRate
+    }
+}
 
 fun CoinBaseUserAccountDataUIModel.getCoinBaseExchangeRateConversion(
     currentExchangeRate: ExchangeRate
 ): Pair<String, Coin> {
     val cleanedValue =
-        this.coinBaseUserAccountData.balance?.amount?.toBigDecimal()!! /
-            this.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
+        this.coinbaseAccount.availableBalance.value.toBigDecimal() /
+            this.currencyToCryptoCurrencyExchangeRate
     val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
     val currencyRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
@@ -122,11 +70,15 @@ fun CoinBaseUserAccountDataUIModel.getCoinBaseExchangeRateConversion(
 
 @Parcelize
 open class CoinbaseToDashExchangeRateUIModel(
-    open val coinBaseUserAccountData: CoinBaseUserAccountData,
-    open val currencyToDashExchangeRate: String,
-    open val currencyToUSDExchangeRate: String
+    open val coinbaseAccount: CoinbaseAccount,
+    open val currencyToDashExchangeRate: BigDecimal,
+    open val currencyToUSDExchangeRate: BigDecimal
 ): Parcelable {
     companion object {
-        val EMPTY = CoinbaseToDashExchangeRateUIModel(CoinBaseUserAccountData.EMPTY, "", "")
+        val EMPTY = CoinbaseToDashExchangeRateUIModel(
+            CoinbaseAccount.EMPTY,
+            BigDecimal.ZERO,
+            BigDecimal.ZERO
+        )
     }
 }

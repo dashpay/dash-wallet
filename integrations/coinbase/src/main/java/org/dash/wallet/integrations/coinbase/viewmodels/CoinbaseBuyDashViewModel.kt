@@ -16,174 +16,176 @@
  */
 package org.dash.wallet.integrations.coinbase.viewmodels
 
-import androidx.lifecycle.*
+import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
+import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.common.util.toCoin
+import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants
-import org.dash.wallet.integrations.coinbase.model.*
+import org.dash.wallet.integrations.coinbase.model.CoinbaseErrorType
+import org.dash.wallet.integrations.coinbase.model.MarketMarketIoc
+import org.dash.wallet.integrations.coinbase.model.OrderConfiguration
+import org.dash.wallet.integrations.coinbase.model.PlaceOrderParams
+import org.dash.wallet.integrations.coinbase.model.SendTransactionToWalletParams
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
-import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
-import java.lang.NumberFormatException
+import java.math.RoundingMode
+import java.util.UUID
 import javax.inject.Inject
+
+data class CoinbaseBuyUIState(
+    val dashAmount: Coin = Coin.ZERO,
+    val order: Fiat? = null,
+    val fee: Fiat? = null,
+    val paymentMethod: PaymentMethod? = null
+)
 
 @HiltViewModel
 class CoinbaseBuyDashViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
-    private val config: CoinbaseConfig,
     var exchangeRates: ExchangeRatesProvider,
-    networkState: NetworkStateInt,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
-    private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
-    val showLoading: LiveData<Boolean>
-        get() = _showLoading
 
-    private val _activePaymentMethods: MutableLiveData<List<PaymentMethod>> = MutableLiveData()
-    val activePaymentMethods: LiveData<List<PaymentMethod>>
-        get() = _activePaymentMethods
+    private val _uiState = MutableStateFlow(CoinbaseBuyUIState())
+    val uiState: StateFlow<CoinbaseBuyUIState> = _uiState.asStateFlow()
 
-    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
+    suspend fun validateBuyDash(amount: Coin, retryWithDeposit: Boolean): CoinbaseErrorType {
+        previewBuyOrder(amount)
 
-    val placeBuyOrder = SingleLiveEvent<PlaceBuyOrderUIModel>()
-    val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
+        val fiatAmount = uiState.value.order ?: return CoinbaseErrorType.NO_EXCHANGE_RATE
+        val fiatAccount = coinBaseRepository.getFiatAccount()
+        val balance = Fiat.parseFiatInexact(
+            CoinbaseConstants.DEFAULT_CURRENCY_USD,
+            fiatAccount.availableBalance.value
+        )
 
-    var exchangeRate: ExchangeRate? = null
-        private set
+        val paymentMethod: PaymentMethod
 
-    init {
-        getWithdrawalLimit()
-    }
+        if (balance >= fiatAmount) {
+            paymentMethod = PaymentMethod(
+                fiatAccount.uuid.toString(),
+                fiatAccount.name,
+                account = fiatAccount.currency,
+                accountType = fiatAccount.type,
+                paymentMethodType = PaymentMethodType.Fiat,
+                isValid = true
+            )
+        } else if (retryWithDeposit) {
+            val bankAccount = coinBaseRepository.getActivePaymentMethods().firstOrNull {
+                paymentMethodTypeFromCoinbaseType(it.type ?: "") == PaymentMethodType.BankAccount
+            } ?: return CoinbaseErrorType.NO_BANK_ACCOUNT
 
-    fun onContinueClicked(
-        dashToFiat: Boolean,
-        dashAmount: CharSequence,
-        paymentMethodIndex: Int
-    ) {
-        _activePaymentMethods.value?.let {
-            if (paymentMethodIndex < it.size) {
-                val paymentMethod = it[paymentMethodIndex]
-
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_CONTINUE, mapOf())
-                analyticsService.logEvent(
-                    AnalyticsConstants.Coinbase.BUY_PAYMENT_METHOD,
-                    mapOf(
-                        AnalyticsConstants.Parameter.VALUE to paymentMethod.paymentMethodType.name
-                    )
-                )
-                analyticsService.logEvent(
-                    if (dashToFiat) {
-                        AnalyticsConstants.Coinbase.BUY_ENTER_DASH
-                    } else {
-                        AnalyticsConstants.Coinbase.BUY_ENTER_FIAT
-                    },
-                    mapOf()
-                )
-
-                viewModelScope.launch {
-                    placeBuyOrder(
-                        PlaceBuyOrderParams(
-                            dashAmount.toString(),
-                            Constants.DASH_CURRENCY,
-                            paymentMethod.paymentMethodId
-                        )
-                    )
-                }
-            }
+            paymentMethod = PaymentMethod(
+                bankAccount.id ?: "",
+                bankAccount.name ?: "",
+                account = "",
+                accountType = bankAccount.type ?: "",
+                paymentMethodType = PaymentMethodType.BankAccount,
+                isValid = true
+            )
+        } else {
+            return CoinbaseErrorType.INSUFFICIENT_BALANCE
         }
+
+        _uiState.update { it.copy(paymentMethod = paymentMethod) }
+        return CoinbaseErrorType.NONE
     }
 
-    private suspend fun placeBuyOrder(params: PlaceBuyOrderParams) {
-        _showLoading.value = true
-        when (val result = coinBaseRepository.placeBuyOrder(params)) {
-            is ResponseResource.Success -> {
-                if (result.value == BuyOrderResponse.EMPTY_PLACE_BUY) {
-                    _showLoading.value = false
-                    placeBuyOrderFailedCallback.call()
-                } else {
-                    _showLoading.value = false
-                    placeBuyOrder.value = result.value
-                }
-            }
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
+    suspend fun buyDash(dashToFiat: Boolean) {
+        val amount = uiState.value.order ?: return
 
-                val error = result.errorBody
-                if (error.isNullOrEmpty()) {
-                    placeBuyOrderFailedCallback.call()
-                } else {
-                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
-                    if (message.isNullOrEmpty()) {
-                        placeBuyOrderFailedCallback.call()
-                    } else {
-                        placeBuyOrderFailedCallback.value = message
-                    }
-                }
-            }
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_CONTINUE, mapOf())
+        analyticsService.logEvent(
+            if (dashToFiat) {
+                AnalyticsConstants.Coinbase.BUY_ENTER_DASH
+            } else {
+                AnalyticsConstants.Coinbase.BUY_ENTER_FIAT
+            },
+            mapOf()
+        )
+
+        val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode().roundingMode(RoundingMode.UP)
+        val amountStr = format.format(amount).toString()
+
+        if (uiState.value.paymentMethod?.paymentMethodType == PaymentMethodType.BankAccount) {
+            coinBaseRepository.depositToFiatAccount(
+                uiState.value.paymentMethod!!.paymentMethodId,
+                amountStr
+            )
         }
+
+        val params = PlaceOrderParams(
+            UUID.randomUUID(),
+            productId = CoinbaseConstants.DASH_USD_PAIR,
+            side = CoinbaseConstants.TRANSACTION_TYPE_BUY,
+            OrderConfiguration(
+                MarketMarketIoc(amountStr)
+            )
+        )
+
+        coinBaseRepository.placeBuyOrder(params)
     }
 
-    fun setActivePaymentMethods(coinbasePaymentMethods: Array<PaymentMethod>) {
-        _activePaymentMethods.value = coinbasePaymentMethods.toList()
-    }
-
-    private fun getWithdrawalLimit() = viewModelScope.launch(Dispatchers.Main) {
-        when (val response = coinBaseRepository.getWithdrawalLimit()) {
-            is ResponseResource.Success -> {
-                val withdrawalLimit = response.value
-                exchangeRate = getCurrencyExchangeRate(withdrawalLimit.currency)
-            }
-            is ResponseResource.Failure -> {
-                // todo use case when limit is not fetched
-            }
-        }
-    }
-
-    suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
-        return amountInDash.toPlainString().toDoubleOrZero.compareTo(getWithdrawalLimitInDash()) > 0
+    fun getTransferDashParams(): SendTransactionToWalletParams {
+        return SendTransactionToWalletParams(
+            amount = uiState.value.dashAmount.toPlainString(),
+            currency = Constants.DASH_CURRENCY,
+            idem = UUID.randomUUID().toString(),
+            to = walletDataProvider.freshReceiveAddress().toBase58(),
+            type = CoinbaseConstants.TRANSACTION_TYPE_SEND
+        )
     }
 
     fun logEvent(eventName: String) {
         analyticsService.logEvent(eventName, mapOf())
     }
 
-    private suspend fun getWithdrawalLimitInDash(): Double {
-        val withdrawalLimit = config.get(CoinbaseConfig.USER_WITHDRAWAL_LIMIT)
-        return if (withdrawalLimit.isNullOrEmpty()) {
-            0.0
-        } else {
-            val formattedAmount = GenericUtils.formatFiatWithoutComma(withdrawalLimit)
-            val currency = config.get(CoinbaseConfig.SEND_LIMIT_CURRENCY) ?: CoinbaseConstants.DEFAULT_CURRENCY_USD
-            val fiatAmount = try {
-                Fiat.parseFiat(currency, formattedAmount)
-            } catch (x: Exception) {
-                Fiat.valueOf(currency, 0)
+    private suspend fun previewBuyOrder(dashAmount: Coin) {
+        _uiState.update { it.copy(dashAmount = dashAmount) }
+
+        val coinbaseFee = dashAmount.toBigDecimal().multiply(CoinbaseConstants.BUY_FEE.toBigDecimal()).toCoin()
+        val rates = coinBaseRepository.getExchangeRates(CoinbaseConstants.DEFAULT_CURRENCY_USD)
+        var order: Fiat? = null
+        var feeInFiat: Fiat? = null
+
+        rates[Constants.DASH_CURRENCY]?.let { rate ->
+            val dashRate = 1.toBigDecimal().divide(rate.toBigDecimal(), 8, RoundingMode.HALF_UP)
+            val exchangeRate = dashRate?.let {
+                ExchangeRate(Coin.COIN, it.toFiat(CoinbaseConstants.DEFAULT_CURRENCY_USD))
             }
-            if (exchangeRate?.fiat != null) {
-                val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRate?.fiat)
-                val amountInDash = newRate.fiatToCoin(fiatAmount)
-                amountInDash.toPlainString().toDoubleOrZero
-            } else {
-                0.0
-            }
+            order = exchangeRate?.coinToFiat(dashAmount)
+            feeInFiat = exchangeRate?.coinToFiat(coinbaseFee)
         }
+
+        _uiState.update { it.copy(dashAmount = dashAmount, order = order, fee = feeInFiat) }
     }
 
-    private suspend fun getCurrencyExchangeRate(currency: String): ExchangeRate? {
-        return exchangeRates.observeExchangeRate(currency).first()
+    private fun paymentMethodTypeFromCoinbaseType(type: String?): PaymentMethodType {
+        return when (type) {
+            "fiat_account" -> PaymentMethodType.Fiat
+            "secure3d_card", "worldpay_card", "credit_card", "debit_card" -> PaymentMethodType.Card
+            "ach_bank_account", "sepa_bank_account",
+            "ideal_bank_account", "eft_bank_account", "interac" -> PaymentMethodType.BankAccount
+            "bank_wire" -> PaymentMethodType.WireTransfer
+            "paypal_account" -> PaymentMethodType.PayPal
+            "apple_pay" -> PaymentMethodType.ApplePay
+            else -> PaymentMethodType.Unknown
+        }
     }
 }
 

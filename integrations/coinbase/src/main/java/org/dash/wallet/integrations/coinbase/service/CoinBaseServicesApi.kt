@@ -19,19 +19,27 @@ package org.dash.wallet.integrations.coinbase.service
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integrations.coinbase.*
 import org.dash.wallet.integrations.coinbase.model.*
+import retrofit2.Response
 import retrofit2.http.*
 
 interface CoinBaseServicesApi {
+    @GET("api/v3/brokerage/accounts")
+    suspend fun getAccounts(
+        @Query("limit") limit: Int = 250
+    ): AccountsResponse
 
-    @GET("v2/accounts")
-    suspend fun getUserAccounts(
-        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
-        @Query("limit") limit: Int = 300
-    ): CoinBaseUserAccountInfo?
+    @GET("api/v3/brokerage/products")
+    suspend fun getProducts(): ProductsResponse
+
+    @POST("v2/accounts/{account_id}/deposits")
+    suspend fun depositTo(
+        @Path("account_id") accountId: String,
+        @Body request: DepositRequest
+    ): Response<DepositResponse>
 
     @GET("v2/exchange-rates")
     suspend fun getExchangeRates(
-        @Query("currency")currency: String = Constants.DASH_CURRENCY
+        @Query("currency") currency: String = Constants.DASH_CURRENCY
     ): CoinBaseExchangeRates?
 
     @GET("v2/payment-methods")
@@ -39,19 +47,10 @@ interface CoinBaseServicesApi {
         @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE
     ): PaymentMethodsResponse?
 
-    @POST("v2/accounts/{account_id}/buys")
+    @POST("api/v3/brokerage/orders")
     suspend fun placeBuyOrder(
-        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
-        @Path("account_id") accountId: String,
-        @Body placeBuyOrderParams: PlaceBuyOrderParams
-    ): BuyOrderResponse?
-
-    @POST("v2/accounts/{account_id}/buys/{buy_id}/commit")
-    suspend fun commitBuyOrder(
-        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
-        @Path("account_id") accountId: String,
-        @Path("buy_id") buyOrderId: String
-    ): BuyOrderResponse?
+        @Body placeOrderParams: PlaceOrderParams
+    ): PlaceOrderResponse
 
     @POST("v2/accounts/{account_id}/transactions")
     suspend fun sendCoinsToWallet(

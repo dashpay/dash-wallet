@@ -197,26 +197,21 @@ class EnterAmountToTransferViewModel @Inject constructor(
         }
 
     private val maxAmountCoinbaseAccount: String
-        get() {
-            return coinbaseExchangeRate?.let {
-                it.coinBaseUserAccountData.balance?.amount
-            } ?: CoinbaseConstants.VALUE_ZERO
-        }
+        get() = coinbaseExchangeRate?.coinbaseAccount?.availableBalance?.value ?: CoinbaseConstants.VALUE_ZERO
 
     private fun applyCoinbaseExchangeRate(amount: String): String {
         return coinbaseExchangeRate?.let { uiModel ->
             val cleanedValue = amount
                 .replace(',', '.') // TODO: the amount sometimes comes here with a comma as decimal separator.
                 // TODO: it's better to identify the root of this and replace in there to prevent this problem from appearing anywhere else.
-                .toBigDecimal() / uiModel.currencyToDashExchangeRate.toBigDecimal()
+                .toBigDecimal() / uiModel.currencyToDashExchangeRate
             cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
         } ?: CoinbaseConstants.VALUE_ZERO
     }
 
     fun applyExchangeRateToFiat(fiatValue: Fiat): Coin {
         return coinbaseExchangeRate?.let {
-            val cleanedValue =
-                fiatValue.toBigDecimal() * it.currencyToDashExchangeRate.toBigDecimal()
+            val cleanedValue = fiatValue.toBigDecimal() * it.currencyToDashExchangeRate
             val plainValue = cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
             try {
                 Coin.parseCoin(plainValue)
@@ -287,14 +282,14 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
     fun getExchangeRate(): org.bitcoinj.utils.ExchangeRate? {
         return coinbaseExchangeRate?.let {
-            val rate = BigDecimal.ONE.divide(it.currencyToDashExchangeRate.toBigDecimal(), 10, RoundingMode.HALF_UP)
+            val rate = BigDecimal.ONE.divide(it.currencyToDashExchangeRate, 10, RoundingMode.HALF_UP)
             org.bitcoinj.utils.ExchangeRate(rate.toFiat(localCurrencyCode))
         }
     }
 
     private fun scaleValue(valueToScale: String): String {
         return coinbaseExchangeRate?.let {
-            val cleanedValue = valueToScale.toBigDecimal() * it.currencyToDashExchangeRate.toBigDecimal()
+            val cleanedValue = valueToScale.toBigDecimal() * it.currencyToDashExchangeRate
             cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
         } ?: ""
     }

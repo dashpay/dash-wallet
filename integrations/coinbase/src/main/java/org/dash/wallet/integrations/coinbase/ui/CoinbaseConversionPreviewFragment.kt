@@ -96,7 +96,6 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         arguments?.let {
-
             CoinbaseConversionPreviewFragmentArgs.fromBundle(it).swapModel.apply {
                 updateConversionPreviewUI()
                 swapTradeUIModel = this
@@ -155,7 +154,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
             safeNavigate(
                 CoinbaseConversionPreviewFragmentDirections.conversionPreviewToTwoFaCode(
-                    CoinbaseTransactionParams(params, TransactionType.BuySwap,walletName)
+                    CoinbaseTransactionParams(params, TransactionType.BuySwap, walletName)
                 )
             )
         }
@@ -299,8 +298,10 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                         CoinBaseResultDialog.Type.CONVERSION_SUCCESS -> {
                             viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE)
                             dismiss()
-                            requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
-                            requireActivity().finish()
+                            // TODO up to Home?
+                            findNavController().popBackStack(R.id.coinbaseServicesFragment, false)
+//                            requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
+//                            requireActivity().finish()
                         }
                         else -> {}
                     }

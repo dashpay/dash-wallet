@@ -39,6 +39,7 @@ import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integrations.coinbase.R
+import org.dash.wallet.integrations.coinbase.model.CoinbaseErrorType
 import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseViewModel
 import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseServicesViewModel
 import org.dash.wallet.integrations.coinbase.viewmodels.coinbaseViewModels
@@ -48,7 +49,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
     private val binding by viewBinding(FragmentIntegrationPortalBinding::bind)
     private val viewModel by viewModels<CoinbaseServicesViewModel>()
     private val sharedViewModel by coinbaseViewModels<CoinbaseViewModel>()
-    private var loadingDialog: AdaptiveDialog? = null
     private var balanceAnimator: ObjectAnimator? = null
 
     private val coinbaseAuthLauncher = registerForActivityResult(
@@ -83,38 +83,8 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
         }
 
         binding.buyBtn.setOnClickListener {
-            // TODO
-//            sharedViewModel.paymentMethods.observe(viewLifecycleOwner) { uiState ->
-//                // New value received
-//                when (uiState) {
-//                    is PaymentMethodsUiState.Success -> {
-//                        val paymentMethodsArray = uiState.paymentMethodsList.filter { it.isValid }.toTypedArray()
-//
-//                        if (paymentMethodsArray.isEmpty()) {
-//                            if (uiState.paymentMethodsList.isEmpty()) {
-//                                showNoPaymentMethodsError()
-//                            } else {
-//                                showBuyingNotAllowedError()
-//                            }
-//                        } else {
-//                            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_DASH)
-//                            safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(paymentMethodsArray))
-//                        }
-//                    }
-//                    is PaymentMethodsUiState.Error -> {
-//                        if (uiState.isError) {
-//                            showNoPaymentMethodsError()
-//                        }
-//                    }
-//                    is PaymentMethodsUiState.LoadingState ->{
-//                        if (uiState.isLoading) {
-//                            showProgress(R.string.loading)
-//                        } else {
-//                            dismissProgress()
-//                        }
-//                    }
-//                }
-//            }
+            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_DASH)
+            safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash())
         }
 
         binding.convertBtn.setOnClickListener {
@@ -137,6 +107,8 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
         }
 
         sharedViewModel.uiState.observe(viewLifecycleOwner) { state ->
+            setNetworkState(state.isNetworkAvailable)
+
             if (state.isSessionExpired) {
                 sharedViewModel.clearWasLoggedOut()
 
@@ -160,70 +132,41 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
             }
         }
 
-        viewModel.balanceUIState.observe(viewLifecycleOwner) { state ->
-            binding.balanceDash.setAmount(state.balance)
-            binding.balanceLocal.text = state.balanceFiat?.toFormattedString() ?: ""
-
-            if (state.isUpdating) {
-                this.balanceAnimator?.start()
-            } else {
-                binding.root.isRefreshing = false
-                this.balanceAnimator?.end()
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            if (!state.isLoggedIn) {
+                findNavController().popBackStack()
+                return@observe
             }
-        }
 
-        viewModel.showLoading.observe(viewLifecycleOwner) {
-            if (it) {
-                showProgress(R.string.loading)
+            if (state.error == CoinbaseErrorType.USER_ACCOUNT_ERROR) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_error,
+                    getString(R.string.coinbase_dash_wallet_error_title),
+                    getString(R.string.coinbase_dash_wallet_error_message),
+                    getString(R.string.close),
+                    getString(R.string.create_dash_account),
+                ).show(requireActivity()) { createAccount ->
+                    if (createAccount == true) {
+                        viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_CREATE_ACCOUNT)
+                        openCoinbaseWebsite()
+                    }
+                }
+                viewModel.clearError()
             } else {
-                dismissProgress()
-            }
-        }
+                binding.balanceDash.setAmount(state.balance)
+                binding.balanceLocal.text = state.balanceFiat?.toFormattedString() ?: ""
 
-        viewModel.userAccountError.observe(viewLifecycleOwner) {
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.coinbase_dash_wallet_error_title),
-                getString(R.string.coinbase_dash_wallet_error_message),
-                getString(R.string.close),
-                getString(R.string.create_dash_account),
-            ).show(requireActivity()) { createAccount ->
-                if (createAccount == true) {
-                    viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_CREATE_ACCOUNT)
-                    openCoinbaseWebsite()
+                if (state.isBalanceUpdating) {
+                    this.balanceAnimator?.start()
+                } else {
+                    binding.root.isRefreshing = false
+                    this.balanceAnimator?.end()
                 }
             }
         }
 
-        viewModel.coinbaseLogOutCallback.observe(viewLifecycleOwner) {
-            findNavController().popBackStack()
-        }
-
-        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ isConnected ->
-            setNetworkState(isConnected)
-        }
-
         viewModel.refreshBalance()
         sharedViewModel.getBaseIdForFiatModel()
-    }
-
-    private fun showProgress(messageResId: Int) {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
-        loadingDialog = AdaptiveDialog.progress(getString(messageResId))
-        loadingDialog?.show(parentFragmentManager, "progress")
-    }
-
-    private fun dismissProgress() {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
-    }
-
-    override fun onStop() {
-        dismissProgress()
-        super.onStop()
     }
 
     private fun setNetworkState(hasInternet: Boolean) {
@@ -232,35 +175,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
         binding.actionsView.isVisible = hasInternet
         binding.disconnectBtn.isVisible = hasInternet
         binding.disconnectedIndicator.isVisible = !hasInternet
-    }
-
-    private fun showNoPaymentMethodsError() {
-        AdaptiveDialog.create(
-            R.drawable.ic_error,
-            getString(R.string.coinbase_no_payment_methods_error_title),
-            getString(R.string.coinbase_no_payment_methods_error_message),
-            getString(R.string.close),
-            getString(R.string.add_payment_method),
-        ).show(requireActivity()) { addMethod ->
-            if (addMethod == true) {
-                viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ADD_PAYMENT_METHOD)
-                openCoinbaseWebsite()
-            }
-        }
-    }
-
-    private fun showBuyingNotAllowedError() {
-        AdaptiveDialog.create(
-            R.drawable.ic_error,
-            getString(R.string.coinbase_unusable_payment_method_error_title),
-            getString(R.string.coinbase_unusable_payment_method_error_message),
-            getString(R.string.close),
-            getString(R.string.coinbase_open_account),
-        ).show(requireActivity()) { addMethod ->
-            if (addMethod == true) {
-                openCoinbaseWebsite()
-            }
-        }
     }
 
     private fun openCoinbaseWebsite() {

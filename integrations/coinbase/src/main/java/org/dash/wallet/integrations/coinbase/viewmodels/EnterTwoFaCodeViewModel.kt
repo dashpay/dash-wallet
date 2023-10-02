@@ -24,13 +24,13 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.model.CoinbaseErrorResponse
 import org.dash.wallet.integrations.coinbase.model.SendTransactionToWalletParams
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integrations.coinbase.ui.dialogs.CoinBaseResultDialog
 import java.io.IOException
@@ -60,10 +60,11 @@ class EnterTwoFaCodeViewModel @Inject constructor(
     }
 
     fun sendInitialTransactionToSMSTwoFactorAuth(
-        params: SendTransactionToWalletParams? ) =viewModelScope.launch(Dispatchers.Main) {
-         val sendTransactionToWalletParams=  params?.copy(idem = UUID.randomUUID().toString())
-          sendTransactionToWalletParams?.let {
-              coinBaseRepository.sendFundsToWallet(it,null)
+        params: SendTransactionToWalletParams?
+    ) = viewModelScope.launch {
+        val sendTransactionToWalletParams = params?.copy(idem = UUID.randomUUID().toString())
+        sendTransactionToWalletParams?.let {
+            coinBaseRepository.sendFundsToWallet(it, null)
         }
     }
 
@@ -98,8 +99,9 @@ class EnterTwoFaCodeViewModel @Inject constructor(
                         if (result.errorCode == 400 || result.errorCode == 402 || result.errorCode == 429) {
                             error?.let { errorMsg ->
                                 val errorContent = CoinbaseErrorResponse.getErrorMessage(errorMsg)
-                                if (errorContent?.id.equals(CoinbaseConstants.ERROR_ID_INVALID_REQUEST, true)
-                                    && errorContent?.message?.contains(CoinbaseConstants.ERROR_MSG_INVALID_REQUEST) == true){
+                                if (errorContent?.id.equals(CoinbaseConstants.ERROR_ID_INVALID_REQUEST, true) &&
+                                    errorContent?.message?.contains(CoinbaseConstants.ERROR_MSG_INVALID_REQUEST) == true
+                                ) {
                                     twoFaErrorState.call()
                                 } else {
                                     _transactionState.value = TransactionState(false, errorContent?.message)
@@ -155,7 +157,6 @@ class EnterTwoFaCodeViewModel @Inject constructor(
         }
     }
 }
-
 
 data class TransactionState(
     val isTransactionSuccessful: Boolean,

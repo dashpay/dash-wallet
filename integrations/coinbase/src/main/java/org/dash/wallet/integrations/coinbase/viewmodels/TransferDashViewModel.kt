@@ -94,7 +94,6 @@ class TransferDashViewModel @Inject constructor(
     private var maxForDashCoinBaseAccount: Coin = Coin.ZERO
 
     init {
-        getWithdrawalLimitOnCoinbase()
         getUserAccountAddress()
         walletDataProvider.observeBalance()
             .onEach(_dashBalanceInWalletState::postValue)
@@ -114,19 +113,6 @@ class TransferDashViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    private fun getWithdrawalLimitOnCoinbase() = viewModelScope.launch(Dispatchers.Main) {
-        when (val response = coinBaseRepository.getWithdrawalLimit()) {
-            is ResponseResource.Success -> {
-                withdrawalLimitCurrency.value = response.value.currency
-                getUserData()
-            }
-            is ResponseResource.Failure -> {
-                // todo: still lacking the use-case when withdrawal limit could not be fetched
-                _loadingState.value = false
-            }
-        }
-    }
-
     private fun getUserAccountAddress() = viewModelScope.launch(Dispatchers.Main) {
         when (val response = coinBaseRepository.getUserAccountAddress()) {
             is ResponseResource.Success -> {
@@ -138,10 +124,8 @@ class TransferDashViewModel @Inject constructor(
     }
 
     private fun calculateCoinbaseMinAllowedValue(account:CoinbaseToDashExchangeRateUIModel) {
-        val minFaitValue = CoinbaseConstants.MIN_USD_COINBASE_AMOUNT.toBigDecimal() / account.currencyToUSDExchangeRate.toBigDecimal()
-
-        val cleanedValue: BigDecimal =
-            minFaitValue * account.currencyToDashExchangeRate.toBigDecimal()
+        val minFaitValue = CoinbaseConstants.MIN_USD_COINBASE_AMOUNT.toBigDecimal() / account.currencyToUSDExchangeRate
+        val cleanedValue: BigDecimal = minFaitValue * account.currencyToDashExchangeRate
 
         val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
@@ -163,19 +147,16 @@ class TransferDashViewModel @Inject constructor(
 
     private fun calculateCoinbaseMaxAllowedValue(account:CoinbaseToDashExchangeRateUIModel) {
         val maxCoinValue = try {
-            Coin.parseCoin(account.coinBaseUserAccountData.balance?.amount)
+            Coin.parseCoin(account.coinbaseAccount.availableBalance.value)
         } catch (x: Exception) {
             Coin.ZERO
         }
         maxForDashCoinBaseAccount = maxCoinValue
     }
 
-    suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
-        exchangeRate?.let {
-            val rate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat)
-            val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash(rate)
-            return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
-        } ?: return true
+    private suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
+        val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash()
+        return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
     }
 
     suspend fun checkEnteredAmountValue(amountInDash: Coin): SwapValueErrorType {
@@ -184,7 +165,7 @@ class TransferDashViewModel @Inject constructor(
                 maxForDashCoinBaseAccount.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.NotEnoughBalance
             amountInDash.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.LessThanMin
             amountInDash.isGreaterThan(maxForDashCoinBaseAccount) -> SwapValueErrorType.MoreThanMax.apply {
-                amount = userAccountOnCoinbaseState.value?.coinBaseUserAccountData?.balance?.amount
+                amount = userAccountOnCoinbaseState.value?.coinbaseAccount?.availableBalance?.value
             }
             isInputGreaterThanLimit(amountInDash) -> {
                 SwapValueErrorType.UnAuthorizedValue
@@ -352,10 +333,13 @@ class TransferDashViewModel @Inject constructor(
             }
         }
     }
-    val dashAddress: Address
-        get() = Address.fromString(walletDataProvider.networkParameters, (observeCoinbaseAddressState.value ?: observeCoinbaseUserAccountAddress.value ?: "").trim {
-            it <= ' '
-        })
+    private val dashAddress: Address
+        get() = Address.fromString(
+            walletDataProvider.networkParameters,
+            (observeCoinbaseAddressState.value ?: observeCoinbaseUserAccountAddress.value ?: "").trim {
+                it <= ' '
+            }
+        )
 }
 
 sealed class SendDashResponseState {
