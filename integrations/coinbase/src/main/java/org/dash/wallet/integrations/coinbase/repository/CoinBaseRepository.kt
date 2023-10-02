@@ -16,7 +16,6 @@
  */
 package org.dash.wallet.integrations.coinbase.repository
 
-import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
@@ -129,7 +128,7 @@ class CoinBaseRepository @Inject constructor(
     override suspend fun getFiatAccount(): CoinbaseAccount {
         return userAccountInfo.first {
             it.type == CoinbaseConstants.FIAT_ACCOUNT_TYPE &&
-                it.currency == CoinbaseConstants.DEFAULT_CURRENCY_USD // TODO: ?
+                it.currency == CoinbaseConstants.DEFAULT_CURRENCY_USD
         }
     }
 

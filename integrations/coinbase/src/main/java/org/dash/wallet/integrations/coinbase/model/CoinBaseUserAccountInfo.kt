@@ -26,18 +26,6 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 
 @Parcelize
-data class Pagination(
-    val ending_before: String? = null,
-    val limit: Int? = null,
-    val next_starting_after: String? = null,
-    val next_uri: String? = null,
-    val order: String? = null,
-    val previous_ending_before: String? = null,
-    val previous_uri: String? = null,
-    val starting_after: String? = null
-) : Parcelable
-
-@Parcelize
 data class CoinBaseUserAccountDataUIModel(
     override val coinbaseAccount: CoinbaseAccount,
     val currencyToCryptoCurrencyExchangeRate: BigDecimal,

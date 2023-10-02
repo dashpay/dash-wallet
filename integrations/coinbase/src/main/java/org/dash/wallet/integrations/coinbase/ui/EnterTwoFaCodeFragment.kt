@@ -201,10 +201,9 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
                             CoinBaseResultDialog.Type.CONVERSION_SUCCESS, CoinBaseResultDialog.Type.DEPOSIT_SUCCESS, CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
                                 viewModel.logClose(type)
                                 dismiss()
-                                // TODO: up to Home?
-                                findNavController().popBackStack(R.id.coinbaseServicesFragment, false)
-//                                requireActivity().setResult(Constants.RESULT_CODE_GO_HOME) TODO
-//                                requireActivity().finish()
+                                val navController = findNavController()
+                                val home = navController.graph.startDestinationId
+                                navController.popBackStack(home, false)
                             }
                             else -> {}
                         }

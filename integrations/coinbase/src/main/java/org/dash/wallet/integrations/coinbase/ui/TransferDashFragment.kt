@@ -381,10 +381,9 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                         CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
                             transferDashViewModel.logClose(type)
                             dismiss()
-                            // TODO Up to Home?
-                            findNavController().popBackStack(R.id.coinbaseServicesFragment, false)
-//                            requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
-//                            requireActivity().finish()
+                            val navController = findNavController()
+                            val home = navController.graph.startDestinationId
+                            navController.popBackStack(home, false)
                         }
                         else -> {
                             transferDashViewModel.logRetry()

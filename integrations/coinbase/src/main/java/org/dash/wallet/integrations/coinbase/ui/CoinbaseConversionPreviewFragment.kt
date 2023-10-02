@@ -298,10 +298,9 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                         CoinBaseResultDialog.Type.CONVERSION_SUCCESS -> {
                             viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE)
                             dismiss()
-                            // TODO up to Home?
-                            findNavController().popBackStack(R.id.coinbaseServicesFragment, false)
-//                            requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
-//                            requireActivity().finish()
+                            val navController = findNavController()
+                            val home = navController.graph.startDestinationId
+                            navController.popBackStack(home, false)
                         }
                         else -> {}
                     }
