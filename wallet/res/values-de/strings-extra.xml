@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Verifiziere PIN</string>
     <string name="set_pin_message">Die PIN muss bei jedem Verwenden der App zum Entsperren eingegeben werden.</string>
     <string name="set_pin_confirm_pin_incorrect">Falsche PIN</string>
-    
+
     <string name="home_balance_hide_hint">Zum Verbergen des Guthabens tippen</string>
 
     <string name="dialog_confirm_confirm">Bestätigen</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Zum Senden scannen</string>
     <string name="scan_to_pay_error_dialog_message">Keine gültige Dash-Adresse oder URL-Anfrage im Zwischenspeicher:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Keine gültige Dash-Adresse oder URL-Anfrage im Zwischenspeicher.</string>
-    <string name="pay_to_confirm_address">Handelt es sich hierbei um die Dash-Adresse, an die die Zahlung erfolgen soll?</string>
 
     <string name="receive_title">Empfangen</string>
     <string name="receive_enter_amount_message">Zu empfangenen Betrag festsetzen</string>
@@ -322,8 +321,6 @@
     <string name="security_very_high">Sehr hoch</string>
     <string name="max">Max</string>
 
-    <string name="enter_amount_available">verfügbar</string>
-
     <string name="skip">Überspringen</string>
     <string name="get_started">Beginnen</string>
     <string name="welcome_screen_title_1_new_install">Willkommen</string>
@@ -348,8 +345,6 @@
     <string name="payment_request_unable_to_send">Senden nicht möglich</string>
     <string name="payment_request_please_try_again">Bitte erneut versuchen</string>
     <string name="payment_request_try_again">Erneut versuchen</string>
-    <string name="payment_request_problem_title">Zahlung nicht anerkannt</string>
-    <string name="payment_request_problem_message">Deine Zahlung konnte nicht vom Server verarbeitet werden, wende dich bitte an den Händler.</string>
     <string name="payment_request_expired_title">Zahlungsanforderung abgelaufen</string>
     <string name="payment_request_close">Schließen</string>
     <string name="payment_request_skip">Überspringen</string>
@@ -400,7 +395,7 @@
     <string name="masternode_key_type_owner">Besitzer-Schlüssel (Owner Keys)</string>
     <string name="masternode_key_type_voting">Abstimmungs-Schlüssel</string>
     <string name="masternode_key_type_operator">Betreiber-Schlüssel (Operator Keys)</string>
-    <string name="masternode_key_type_platform">HPMN Betreiber-Schlüssel</string>
+    <string name="masternode_key_type_platform">Evolution Node ID Keys</string>
     <string name="masternode_key_type_total">%d Schlüssel</string>
     <string name="masternode_key_type_used">%d verwendet</string>
     <string name="masternode_key_pair_index">Schlüsselpaar %d</string>

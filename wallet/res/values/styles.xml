@@ -223,6 +223,11 @@
         <item name="roundButtonRadius">22dp</item>
     </style>
 
+    <style name="BuySellServiceBackground" parent="SecondaryBackground">
+        <item name="cornerRadius">8dp</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
     <style name="InactiveBadgeTheme">
         <item name="backgroundColor">@android:color/transparent</item>
         <item name="strokeColor">@color/dash_black_0.1</item>

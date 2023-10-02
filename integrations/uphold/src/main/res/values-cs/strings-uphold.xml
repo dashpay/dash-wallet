@@ -7,8 +7,6 @@
     <string name="uphold_buy_dash_button">Koupit Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Převést z Uphold</string>
     <string name="uphold_link_account">Připojit účet Uphold</string>
-    <string name="uphold_account_dash_balance">Zůstatek Dash vašeho účtu Uphold je</string>
-    <string name="uphold_transfer_to_this_wallet">Přesunout Dash z vašeho účtu Uphold do této peněženky</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Poplatek bude odečten z požadované částky.</string>
     <string name="uphold_withdrawal_instructions">Zadejte částku k transakci</string>
     <string name="uphold_withdrawal_success_title">Úspěšně dokončeno</string>
@@ -21,7 +19,6 @@
     <string name="uphold_logout_explanation_text">Je také nutné se odhlásit z webové stránky Uphold pomocí vašeho prohlížeče.</string>
     <string name="uphold_go_to_website">Přejít na Web</string>
     <string name="uphold_error">Uphold chyba</string>
-    <string name="uphold_error_not_logged_in">Peněženka Dash už není propojena s vaším účtem Uphold. Na další stránce stiskněte Připojit účet Uphold.</string>
     <string name="uphold_error_not_available">Služba Uphold není dostupná. Zkuste to prosím později.</string>
     <string name="uphold_error_report_issue">Nahlaste tento problém týmu podpory peněženky Dash pomocí položky ‚Nahlásit problém‘ z hlavní nabídky.</string>
 

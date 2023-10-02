@@ -17,11 +17,12 @@
 
 package org.dash.wallet.integration.uphold.data;
 
-import com.squareup.moshi.Json;
+
+import com.google.gson.annotations.SerializedName;
 
 public class UpholdAccessToken {
 
-    @Json(name = "access_token")
+    @SerializedName("access_token")
     private String accessToken;
 
     public String getAccessToken() {

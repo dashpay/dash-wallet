@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">در حال تائید پین کد</string>
     <string name="set_pin_message">برای هر بار باز کردن قفل اپلیکیشن در مواقع استفاده، به این پین کد نیاز خواهید داشت.</string>
     <string name="set_pin_confirm_pin_incorrect">رمز نادرست بود</string>
-    
+
     <string name="home_balance_hide_hint">مخفی کردن موجودی</string>
 
     <string name="dialog_confirm_confirm">تائید</string>
@@ -62,7 +62,6 @@
 درخواست در کلیپ‌برد: \n\n %s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">نشانی دش یا نشانی اینترنتی نامعتبر
 درخواست در کلیپ‌برد</string>
-    <string name="pay_to_confirm_address">مطمئن هستید این همان آدرسی است که می‌خواهید دش برایش ارسال کنید؟ </string>
 
     <string name="receive_title">دریافت</string>
     <string name="receive_enter_amount_message">مبلغ مورد نظر برای دریافت را مشخص کنید</string>
@@ -324,8 +323,6 @@
     <string name="security_very_high">بسیار بالا</string>
     <string name="max">حداکثر</string>
 
-    <string name="enter_amount_available">موجود</string>
-
     <string name="skip">رد کردن</string>
     <string name="get_started">شروع</string>
     <string name="welcome_screen_title_1_new_install">خوش آمدید</string>
@@ -350,8 +347,6 @@
     <string name="payment_request_unable_to_send">امکان ارسال وجود ندارد</string>
     <string name="payment_request_please_try_again">لطفا دوباره امتحان کنید</string>
     <string name="payment_request_try_again">دوباره امتحان کنید</string>
-    <string name="payment_request_problem_title">پرداخت، پذیرفته نشد</string>
-    <string name="payment_request_problem_message">امکان پردازش پرداخت‌تان توسط سرور وجود ندارد. لطفا با فروشنده تماس بگیرید. </string>
     <string name="payment_request_expired_title">درخواست پرداخت منقضی شد</string>
     <string name="payment_request_close">بستن</string>
     <string name="payment_request_skip">رد کردن</string>
@@ -402,7 +397,7 @@
     <string name="masternode_key_type_owner">کلیدهای مالک</string>
     <string name="masternode_key_type_voting">کلیدهای رای‌دهی</string>
     <string name="masternode_key_type_operator">کلیدهای اپراتور</string>
-    <string name="masternode_key_type_platform">کلیدهای اپراتور اچ‌پی‌ام‌ان</string>
+    <string name="masternode_key_type_platform">کلیدهای شناسه اولوشن نود</string>
     <string name="masternode_key_type_total">%dعدد کلید</string>
     <string name="masternode_key_type_used">%dعدد استفاده شده</string>
     <string name="masternode_key_pair_index">%dعدد جفت‌کلید</string>

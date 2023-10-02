@@ -17,9 +17,6 @@
 
 package de.schildbach.wallet.util.viewModels
 
-import android.content.ClipDescription
-import android.content.ClipboardManager
-import android.os.Looper
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.MutableLiveData
 import androidx.work.WorkManager
@@ -35,6 +32,9 @@ import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.transactions.TxFilterType
 import androidx.datastore.preferences.core.Preferences
+import androidx.lifecycle.SavedStateHandle
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
@@ -51,6 +51,7 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -128,9 +129,10 @@ class MainViewModelTest {
         every { observe<Long>(any()) } returns MutableStateFlow(0L)
         coEvery { areNotificationsDisabled() } returns false
     }
-    
+
     private val uiConfigMock = mockk<WalletUIConfig> {
-        every { observePreference(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
+        every { observe(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
+        every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns MutableStateFlow("USD")
     }
 
     @get:Rule
@@ -141,7 +143,6 @@ class MainViewModelTest {
 
     @Before
     fun setup() {
-        every { configMock.exchangeCurrencyCode } returns "USD"
         every { configMock.format } returns MonetaryFormat()
         every { configMock.registerOnSharedPreferenceChangeListener(any()) } just runs
 
@@ -196,10 +197,9 @@ class MainViewModelTest {
 
         val viewModel = spyk(
             MainViewModel(
-                mockk(), clipboardManagerMock, configMock, uiConfigMock,
-                exchangeRatesMock, walletDataMock, walletApp, mockk(),
-                mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
-                mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
+                analyticsService, clipboardManagerMock, configMock, uiConfigMock,
+                exchangeRatesMock, walletDataMock, savedStateMock, transactionMetadataMock,
+                blockchainStateMock, mockk()
             )
         )
 
@@ -219,10 +219,9 @@ class MainViewModelTest {
 
         val viewModel = spyk(
             MainViewModel(
-                mockk(), clipboardManagerMock, configMock, uiConfigMock,
-                exchangeRatesMock, walletDataMock, walletApp, mockk(),
-                mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
-                mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
+                analyticsService, clipboardManagerMock, configMock, uiConfigMock,
+                exchangeRatesMock, walletDataMock, savedStateMock, transactionMetadataMock,
+                blockchainStateMock, mockk()
             )
         )
 

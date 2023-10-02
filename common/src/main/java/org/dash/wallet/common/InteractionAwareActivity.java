@@ -56,14 +56,6 @@ public class InteractionAwareActivity extends SecureActivity {
         super.onDestroy();
     }
 
-    protected void turnOffAutoLogout() {
-        ((AutoLogoutTimerHandler) getApplication()).stopAutoLogoutTimer();
-    }
-
-    protected void turnOnAutoLogout() {
-        ((AutoLogoutTimerHandler) getApplication()).startAutoLogoutTimer();
-    }
-
     private final BroadcastReceiver forceFinishReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {

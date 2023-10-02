@@ -76,4 +76,9 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
             dialogFragment.show(requireActivity())
         }
     }
+
+    override fun onDestroy() {
+        enterAmountViewModel.resetCurrency()
+        super.onDestroy()
+    }
 }

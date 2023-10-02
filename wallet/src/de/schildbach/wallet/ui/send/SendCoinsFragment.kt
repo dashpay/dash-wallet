@@ -53,7 +53,6 @@ import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -80,28 +79,20 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             enterAmountFragment?.didAuthorize = value
         }
 
+    private val requirePinForBalance by lazy {
+        (requireActivity() as LockScreenActivity).keepUnlocked
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        val requirePinForBalance = (requireActivity() as LockScreenActivity).keepUnlocked
 
         binding.titleBar.setNavigationOnClickListener {
             requireActivity().finish()
         }
 
-        if (savedInstanceState == null) {
-            lifecycleScope.launch {
-                try {
                     viewModel.initPaymentIntent(args.paymentIntent)
 
-                    if (viewModel.shouldConfirm()) {
-                        authenticateOrConfirm()
-                    }
-                } catch (ex: SendException) {
-                    Toast.makeText(requireContext(), R.string.error_loading_identity, Toast.LENGTH_LONG).show()
-                }
-            }
-
+        if (savedInstanceState == null) {
             val intentAmount = args.paymentIntent.amount
             var dashToFiat = viewModel.isDashToFiatPreferred
             // If an amount is specified (in Dash), then set the active currency to Dash
@@ -120,6 +111,10 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 .add(R.id.enter_amount_fragment_placeholder, fragment)
                 .commitNow()
             enterAmountFragment = fragment
+        } else {
+            enterAmountFragment = childFragmentManager.findFragmentById(
+                R.id.enter_amount_fragment_placeholder
+            ) as EnterAmountFragment
         }
 
         binding.paymentHeader.setTitle(getString(R.string.send_coins_fragment_button_send))
@@ -174,7 +169,11 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         } else if (dryRunException != null) {
             errorMessage = when (dryRunException) {
                 is Wallet.DustySendRequested -> getString(R.string.send_coins_error_dusty_send)
-                is InsufficientMoneyException -> getString(R.string.send_coins_error_insufficient_money)
+                is InsufficientMoneyException -> if (!requirePinForBalance || userAuthorizedDuring) {
+                    getString(R.string.send_coins_error_insufficient_money)
+                } else {
+                    ""
+                }
                 is Wallet.CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
                 else -> dryRunException.toString()
             }
@@ -273,19 +272,8 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
 
         val rate = enterAmountViewModel.selectedExchangeRate.value
-
-        // prevent crash if the exchange rate is null
-        val exchangeRate = if (rate != null) ExchangeRate(Coin.COIN, rate.fiat) else null
-        val fiatAmount = exchangeRate?.coinToFiat(amount)
+        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
-
-        // if the exchange rate is not available, then show "Not Available"
-        val amountFiat = if (fiatAmount != null) {
-            Constants.LOCAL_FORMAT.format(fiatAmount).toString()
-        } else {
-            getString(R.string.transaction_row_rate_not_available)
-        }
-        val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
         val fee = txFee?.toPlainString() ?: ""
 
         var dashPayProfile: DashPayProfile? = null
@@ -304,8 +292,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             requireActivity(),
             address,
             amountStr,
-            amountFiat,
-            fiatSymbol,
+            exchangeRate,
             fee,
             total ?: "",
             null,
@@ -363,6 +350,10 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     private fun playSentSound() {
+        if (!viewModel.shouldPlaySounds) {
+            return
+        }
+
         // play sound effect
         val soundResId = resources.getIdentifier(
             SEND_COINS_SOUND,

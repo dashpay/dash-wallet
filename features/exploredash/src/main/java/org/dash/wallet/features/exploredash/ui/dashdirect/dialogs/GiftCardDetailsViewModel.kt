@@ -69,6 +69,7 @@ class GiftCardDetailsViewModel @Inject constructor(
     private var tickerJob: Job? = null
 
     private var exchangeRate: ExchangeRate? = null
+    private var retries = 3
 
     private val _giftCard: MutableLiveData<GiftCard?> = MutableLiveData()
     val giftCard: LiveData<GiftCard?>
@@ -124,7 +125,7 @@ class GiftCardDetailsViewModel @Inject constructor(
 
                 if (giftCard.number == null && giftCard.note != null) {
                     val (orderId, paymentId) = giftCard.note!!.split('+')
-                    tickerJob = TickerFlow(period = 1.seconds, initialDelay = 0.5.seconds)
+                    tickerJob = TickerFlow(period = 1.5.seconds, initialDelay = 1.seconds)
                         .cancellable()
                         .onEach { fetchGiftCardInfo(orderId, paymentId) }
                         .launchIn(viewModelScope)
@@ -161,6 +162,11 @@ class GiftCardDetailsViewModel @Inject constructor(
             } else if (paymentStatus?.errorMessage?.isNotEmpty() == true ||
                 paymentStatus?.data?.errors?.any { !it.isNullOrEmpty() } == true
             ) {
+                if (retries > 0) {
+                    retries--
+                    return
+                }
+
                 cancelTicker()
                 val message = if (!paymentStatus.errorMessage.isNullOrEmpty()) {
                     paymentStatus.errorMessage
@@ -254,5 +260,6 @@ class GiftCardDetailsViewModel @Inject constructor(
     private fun cancelTicker() {
         tickerJob?.cancel()
         tickerJob = null
+        retries = 0
     }
 }

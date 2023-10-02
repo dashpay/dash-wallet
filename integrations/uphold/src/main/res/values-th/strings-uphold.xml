@@ -1,16 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="uphold_account">Uphold</string>
+    <string name="uphold_account">Uphold  </string>
+    <string name="topper">Topper</string>
     <string name="uphold_link_title">เชื่อมต่อบัญชี Uphold ของคุณ</string>
+    <string name="uphold_powered_by">ขับเคลื่อนโดย Topper</string>
+    <string name="topper_powered_by">ขับเคลื่อนโดย Uphold</string>
     <string name="uphold_transfer_details">จาก Uphold ไปสู่กระเป๋าเงิน Dash ของคุณ</string>
     <string name="uphold_buy_dash_activity_title">ซื้อ / ขาย Dash กับ Uphold</string>
     <string name="uphold_buy_dash_with_uphold">ซื้อ Dash ด้วยบัญชี  Uphold</string>
     <string name="uphold_buy_dash_button">ซื้อ Dash </string>
     <string name="uphold_transfer_to_this_wallet_button">โอนจาก Uphold</string>
     <string name="uphold_link_account">เชื่อมบัญชี Uphold</string>
-    <string name="uphold_account_dash_balance">จำนวน Dash ในบัญชี Uphold ของคุณคือ </string>
-    <string name="uphold_transfer_to_this_wallet">โอน Dash จากบัญชี Uphold ของคุณไปยัง wallet นี้</string>
+    <string name="uphold_account_dash_balance">ยอด Dash คงเหลือใน Uphold</string>
+    <string name="uphold_transfer_to_this_wallet">จาก Uphold สู่กระเป๋าเงิน Dash</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">ค่าธรรมเนียมจะถูกหักออกจากจำนวนที่ต้องการ</string>
     <string name="uphold_withdrawal_instructions">ป้อนจำนวนเงินที่ต้องการโอน</string>
     <string name="uphold_withdrawal_success_title">สำเร็จแล้ว</string>
@@ -19,11 +22,12 @@
     <string name="uphold_transfer">โอน</string>
     <string name="uphold_see_on_uphold">ดูที่ Uphold</string>
     <string name="uphold_logout_title">ออกจากระบบ Uphold</string>
+    <string name="uphold_disconnect">ยกเลิกการเชื่อมต่อบัญชี Uphold</string>
     <string name="uphold_logout">ออกจากระบบ</string>
     <string name="uphold_logout_explanation_text">คุณจะต้องออกจากระบบของเว็บไซต์ Uphold โดยใช้เบราว์เซอร์ของคุณ</string>
     <string name="uphold_go_to_website">ไปยังเว็บไซต์</string>
     <string name="uphold_error">เกิดข้อผิดพลาด</string>
-    <string name="uphold_error_not_logged_in">Dash Wallet จะไม่เชื่อมโยงกับบัญชี Uphold ของคุณอีกต่อไป กด Link Uphold account ในหน้าจอถัดไป</string>
+    <string name="uphold_error_not_logged_in">กระเป๋าเงิน Dash ไม่เชื่อมโยงกับบัญชี Uphold ของคุณอีกต่อไป</string>
     <string name="uphold_error_not_available">Uphold ไม่สามารถใช้งานได้ กรุณาลองใหม่อีกครั้งในภายหลัง</string>
     <string name="uphold_error_report_issue">โปรดรายงานปัญหานี้ไปยังทีมสนับสนุน Dash Wallet โดยใช้ "รายงานปัญหา" จากเมนูหลัก</string>
 

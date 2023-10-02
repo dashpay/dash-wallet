@@ -62,8 +62,7 @@ class CrowdNodeWorker @AssistedInject constructor(
                     SIGNUP_CALL -> {
                         val notification = notificationService.buildNotification(
                             appContext.getString(R.string.crowdnode_creating),
-                            true,
-                            crowdNodeApi.notificationIntent
+                            intent = crowdNodeApi.notificationIntent
                         )
                         log.info("calling setForeground")
                         setForeground(ForegroundInfo(operation.hashCode(), notification))

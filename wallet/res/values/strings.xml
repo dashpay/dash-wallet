@@ -20,7 +20,6 @@
     <string name="wallet_balance_fragment_replaying">Balance is unavailable during replay.</string>
     <string name="exchange_rates_activity_title">Local Currency</string>
     <string name="exchange_rates_fragment_empty_text">Could not load exchange rates.</string>
-    <string name="exchange_rates_fragment_empty_search">Could not find exchange rate.</string>
     <string name="exchange_rates_fragment_default">(default)</string>
     <string name="exchange_rates_fragment_rate">Rate</string>
     <string name="exchange_rates_fragment_balance">Balance</string>
@@ -44,13 +43,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Manage apps</string>
     <string name="wallet_timeskew_dialog_title">Check date &amp; time settings</string>
     <string name="wallet_timeskew_dialog_msg">Your device time is off by %d minutes. You probably cannot send or receive Dash due to this problem.\n\nYou should check and if necessary correct your date, time and timezone settings.</string>
-    <string name="wallet_version_dialog_title">A new version is available!</string>
-    <string name="wallet_version_dialog_msg">This version fixes important bugs. For details, see the change log on Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">If you don\'t see an update, this probably means your version of Android isn\'t supported any more.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Download</string>
-    <string name="wallet_old_sdk_dialog_title">Android version is out of date</string>
-    <string name="wallet_old_sdk_dialog_message">Chances are that one of the next releases of Dash Wallet will not support your device any more. In some cases, it can get difficult to spend coins on this device.\n\nUnless you know what you are doing, it is recommended to move out your coins soon.</string>
     <string name="send_coins_activity_title">Send Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Fetching signature from %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Fetching signature failed</string>
@@ -174,7 +166,6 @@
     <string name="transaction_row_status_error_other">Unknown</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">On %s at %s</string>
-    <string name="transaction_row_rate_not_available">Not available</string>
     <string name="transaction_row_status_masternode_registration">Masternode Registration</string>
     <string name="transaction_row_status_masternode_update_registrar">Masternode Update</string>
     <string name="transaction_row_status_masternode_update_service">Masternode Update</string>
@@ -210,8 +201,6 @@
     <string name="restore_wallet_dialog_success_replay">Your wallet was successfully restored. Its balance will be determined next. This will take some time.</string>
     <string name="restore_wallet_dialog_success_encrypted">Warning: Your wallet is protected by a spending PIN. Make sure you still remember it before you receive to this wallet.</string>
     <string name="import_keys_dialog_failure">Wallet could not be restored:\n\n%s\n\nBad password?</string>
-    <string name="backup_wallet_permission_dialog_title">Write permission missing</string>
-    <string name="backup_wallet_permission_dialog_message">In order to backup your wallet to external storage, you need to grant write permission.</string>
     <string name="export_keys_dialog_title">Back up wallet</string>
     <string name="backup_wallet_dialog_message">Your backup will be encrypted with the chosen password and written to external storage.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Your wallet is protected by a spending PIN. Make sure you remember the PIN in addition to the backup password!</string>
@@ -383,16 +372,25 @@
     <string name="activity_security_hide_balance">Autohide Balance</string>
     <string name="reset_to_default">Reset to Default</string>
 
-    <string name="payment_protocol_default_error_title">Payment error</string>
     <string name="payment_protocol_insufficient_funds_error_title">Insufficient Funds</string>
     <string name="payment_protocol_insufficient_funds_error_message">You do not have sufficient funds to complete this transaction</string>
 
-
-    <string name="select_a_service_to_buy_and_sell_dash"> Select a service to buy and sell Dash.</string>
+    <string name="buy_and_sell_subtitle">Select a service to buy, sell, convert and transfer Dash</string>
     <string name="select_a_service">Select a Service</string>
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Clear Filter</string>
     <string name="reason">Reason</string>
+    <string name="link_account">Link your account</string>
+    <string name="buy_no_account_needed">Buy Dash · No account needed</string>
+    <string name="your_coinbase_session_has_expired">Your Coinbase session has expired</string>
+    <string name="please_log_in_to_your_coinbase_account">Please log in to your Coinbase account</string>
+    <string name="log_in">Log In</string>
+
+    <string name="recipient_address">Recipient Address</string>
+    <string name="show_clipboard">Show content in the clipboard</string>
+    <string name="tap_to_paste">Tap the address from the clipboard to paste it</string>
+    <string name="not_dash_address">Not a valid Dash Address or URL request</string>
+    <string name="send_to_address">Send to Address</string>
     <string name="select_privacy_preferences">Select your username privacy preferences</string>
     <string name="please_note_cant_change_this_later">Please note that you will not be able to change this later</string>
     <string name="Basic">Basic</string>

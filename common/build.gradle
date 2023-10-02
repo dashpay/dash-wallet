@@ -5,11 +5,11 @@ apply plugin: 'kotlin-parcelize'
 apply plugin: 'dagger.hilt.android.plugin'
 
 android {
-    compileSdkVersion 31
 
     defaultConfig {
+        compileSdk 33
         minSdkVersion 23
-        targetSdkVersion 31
+        targetSdkVersion 33
         vectorDrawables.useSupportLibrary = true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -62,15 +62,11 @@ dependencies {
     // Retrofit + OkHttp
     api "com.squareup.okhttp3:okhttp:$ok_http_version"
     api "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
-    api 'com.squareup.moshi:moshi:1.11.0'
-    api 'com.squareup.moshi:moshi-kotlin:1.11.0'
     api 'com.squareup.retrofit2:retrofit:2.6.4'
-    api 'com.squareup.retrofit2:converter-moshi:2.6.4'
-    api 'com.squareup.retrofit2:converter-scalars:2.6.4'
     api 'com.squareup.retrofit2:converter-gson:2.6.1'
 
     // Android Arch
-    implementation "androidx.core:core-ktx:1.5.0"
+    implementation "androidx.core:core-ktx:$jetpackVersion"
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
     implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
@@ -89,6 +85,7 @@ dependencies {
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
     implementation 'com.github.amulyakhare:textdrawable:558677ea31'
 
     // DI

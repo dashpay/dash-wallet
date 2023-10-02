@@ -24,6 +24,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.TaskStackBuilder
+import com.bumptech.glide.Glide
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
@@ -37,28 +38,39 @@ class NotificationManagerWrapper @Inject constructor(
         Context.NOTIFICATION_SERVICE
     ) as NotificationManager
 
+    override val isDoNotDisturb: Boolean
+        get() {
+            return notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALARMS ||
+                notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_PRIORITY ||
+                notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE
+        }
+
     override fun showNotification(
         tag: String,
         message: String,
-        isOngoing: Boolean,
-        intent: Intent?
+        title: String?,
+        imageUrl: String?,
+        intent: Intent?,
+        channelId: String?
     ) {
-        val notification = buildNotification(message, isOngoing, intent)
+        val notification = buildNotification(message, title, imageUrl, intent, channelId)
         notificationManager.notify(tag.hashCode(), notification)
     }
 
     override fun buildNotification(
         message: String,
-        isOngoing: Boolean,
-        intent: Intent?
+        title: String?,
+        imageUrl: String?,
+        intent: Intent?,
+        channelId: String?
     ): Notification {
         val appName = appContext.getString(R.string.app_name)
         val notification: NotificationCompat.Builder = NotificationCompat.Builder(
             appContext,
-            if (isOngoing) Constants.NOTIFICATION_CHANNEL_ID_ONGOING else Constants.NOTIFICATION_CHANNEL_ID_GENERIC
+            channelId ?: Constants.NOTIFICATION_CHANNEL_ID_GENERIC
         ).setSmallIcon(R.drawable.ic_dash_d_white_bottom)
             .setTicker(appName)
-            .setContentTitle(appName)
+            .setContentTitle(title ?: appName)
             .setContentText(message)
 
         if (intent != null) {
@@ -68,6 +80,25 @@ class NotificationManagerWrapper @Inject constructor(
             }
 
             notification.setContentIntent(pendingIntent).setAutoCancel(true)
+        }
+
+        if (imageUrl != null) {
+            val futureTarget = Glide.with(appContext)
+                .asBitmap()
+                .load(imageUrl)
+                .submit()
+
+            val bitmap = futureTarget.get()
+
+            notification
+                .setLargeIcon(bitmap)
+                .setStyle(
+                    NotificationCompat.BigPictureStyle()
+                        .bigPicture(bitmap)
+                        .bigLargeIcon(null)
+                )
+
+            Glide.with(appContext).clear(futureTarget)
         }
 
         return notification.build()

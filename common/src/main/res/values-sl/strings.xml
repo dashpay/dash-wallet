@@ -1,7 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="loading">Nalagam...</string>
-    <string name="loading_error">Prišlo je do napake. Poskusite znova.</string>
-    <string name="dash_available">%1$s na voljo</string>
-    <string name="button_retry">Poskusi ponovno</string>
-</resources>
+    <string name="button_copy_address">Kopiraj naslov</string>
+    </resources>

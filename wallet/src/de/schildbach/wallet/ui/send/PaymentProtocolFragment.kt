@@ -79,12 +79,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         }
 
         initObservers()
-
-        if (savedInstanceState == null) {
-            lifecycleScope.launch {
-                viewModel.initPaymentIntent(args.paymentIntent)
-            }
-        }
+        viewModel.initPaymentIntent(args.paymentIntent)
     }
 
     private fun authenticateOrConfirm() {
@@ -157,9 +152,6 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         }
                     }
                 }
-                else -> {
-                    // ignore
-                }
             }
         }
         viewModel.directPaymentAckLiveData.observe(viewLifecycleOwner) { ack ->
@@ -185,9 +177,6 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                     } else {
                         showTransactionResult(ack.data!!.first.tx)
                     }
-                }
-                else -> {
-                    // ignore
                 }
             }
         }

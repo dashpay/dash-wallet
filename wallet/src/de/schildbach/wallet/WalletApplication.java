@@ -451,7 +451,7 @@ public class WalletApplication extends MultiDexApplication
 
         UpholdConstants.CLIENT_ID = BuildConfig.UPHOLD_CLIENT_ID;
         UpholdConstants.CLIENT_SECRET = BuildConfig.UPHOLD_CLIENT_SECRET;
-        UpholdConstants.initialize(Constants.NETWORK_PARAMETERS.getId().contains("test"));
+        UpholdConstants.INSTANCE.initialize(Constants.NETWORK_PARAMETERS.getId().contains("test"));
         UpholdClient.init(getApplicationContext(), authenticationHash);
         LiquidClient.Companion.init(getApplicationContext(), authenticationHash);
     }
@@ -460,7 +460,7 @@ public class WalletApplication extends MultiDexApplication
         platformSyncService.init();
         //PlatformRepo.getInstance().initGlobal();
     }
-    
+
     private void initCoinbase() {
         CoinBaseClientConstants.CLIENT_ID = BuildConfig.COINBASE_CLIENT_ID;
         CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
@@ -819,6 +819,8 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void resetBlockchain() {
+        // reset the extensions
+        authenticationGroupExtension.reset();
         // implicitly stops blockchain service
         resetBlockchainState();
         Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
@@ -1037,7 +1039,9 @@ public class WalletApplication extends MultiDexApplication
 
     @Override
     public void startAutoLogoutTimer() {
-        autoLogout.startTimer();
+        if (!autoLogout.isTimerActive()) {
+            autoLogout.startTimer();
+        }
     }
 
     @Override
@@ -1193,7 +1197,6 @@ public class WalletApplication extends MultiDexApplication
         authenticationGroupExtension = new AuthenticationGroupExtension(Constants.NETWORK_PARAMETERS);
     }
 
-    // TODO: move thes ewallet
     public WalletExtension[] getWalletExtensions() {
         return new WalletExtension[] {authenticationGroupExtension};
     }

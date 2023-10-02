@@ -19,8 +19,8 @@ package org.dash.wallet.common.data
 
 import android.content.Context
 import android.util.Base64
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
-import androidx.datastore.migrations.SharedPreferencesMigration
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -47,7 +47,7 @@ abstract class BaseConfig(
     private val name: String,
     walletDataProvider: WalletDataProvider,
     private val encryptionProvider: EncryptionProvider? = null,
-    migrations: List<SharedPreferencesMigration<Preferences>> = listOf()
+    migrations: List<DataMigration<Preferences>> = listOf()
 ) {
     private val securityKeyAlias = "${name}_security_key"
     private val json = Json { encodeDefaults = true }

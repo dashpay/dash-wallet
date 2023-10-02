@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">สำรวจ Dash</string>
     <string name="explore_title">สำรวจ </string>
-    <string name="explore_subtitle">ซื้อสินค้าด้วย DASH ของคุณได้อย่างง่ายดายที่สถานที่และร้านค้าออนไลน์มากกว่า 155,000 แห่ง</string>
+    <string name="explore_subtitle">ค้นหาร้านค้าที่รับ Dash ซื้อได้ที่ไหนและวิธีสร้างรายได้จาก Dash</string>
     <string name="explore_merchants_title">จะใช้จ่ายที่ไหน?</string>
     <string name="explore_merchants_subtitle">ค้นหาร้าค้าที่ยอมรับการชำระเงินด้วย Dash </string>
     <string name="explore_atms_title">เอทีเอ็ม</string>
@@ -148,11 +148,5 @@
     <string name="buy_gift_card_with_dash_text">ซื้อบัตรของขวัญด้วย Dash</string>
     <string name="redeem_gift_card_text">แลกบัตรของขวัญของคุณทางออนไลน์ภายในไม่กี่วินาทีหรือที่แคชเชียร์</string>
 
-    <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">กำลังดำเนินการซิงค์...ผลลัพธ์อาจไม่สมบูรณ์</string>
-    <string name="sync_in_progress_error">กำลังดำเนินการซิงค์...มีข้อผิดพลาด</string>
-    <string name="sync_in_progress_canceled">การยกเลิกการซิงค์ ... จะพยายามอีกครั้งในภายหลัง</string>
-
     <string name="sync_in_progress_file_not_found">สร้างข้อผิดพลาด: ไม่พบฐานข้อมูล!</string>
-    <string name="sync_in_progress_network_error">การซิงค์ขัดข้อง... เครือข่ายออฟไลน์หรือไม่สามารถเข้าถึงได้</string>
-</resources>
+    </resources>

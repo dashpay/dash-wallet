@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Zweryfikuj PIN</string>
     <string name="set_pin_message">Ten kod PIN będzie wymagany do odblokowania Twojej aplikacji za każdym razem, gdy z niej korzystasz.</string>
     <string name="set_pin_confirm_pin_incorrect">PIN jest niepoprawny</string>
-    
+
     <string name="home_balance_hide_hint">Stuknij by ukryć saldo</string>
 
     <string name="dialog_confirm_confirm">Potwierdź</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Skanuj by Wysłać</string>
     <string name="scan_to_pay_error_dialog_message">Niepoprawny adres Dash lub URL zażądany w schowku:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Niepoprawny adres Dash lub URL zażądany w schowku.</string>
-    <string name="pay_to_confirm_address">Chcesz wysłać płatność na ten adres DASH?</string>
 
     <string name="receive_title">Odbierz</string>
     <string name="receive_enter_amount_message">Podaj kwotę do otrzymania</string>
@@ -328,8 +327,6 @@
     <string name="security_very_high">Bardzo Wysoki</string>
     <string name="max">Max</string>
 
-    <string name="enter_amount_available">dostępne</string>
-
     <string name="skip">pomiń</string>
     <string name="get_started">Zacznij</string>
     <string name="welcome_screen_title_1_new_install">Witaj</string>
@@ -354,8 +351,6 @@
     <string name="payment_request_unable_to_send">Wysłąnie funduszy jest niemożliwe</string>
     <string name="payment_request_please_try_again">Spróbuj jeszcze raz</string>
     <string name="payment_request_try_again">Spróbuj ponownie</string>
-    <string name="payment_request_problem_title">Płatność nie została uznana</string>
-    <string name="payment_request_problem_message">Twoja płatność nie mogła zostać uznana przez serwer, skontaktuj się ze sprzedawcą. </string>
     <string name="payment_request_expired_title">Żądanie płatności przedawniło się</string>
     <string name="payment_request_close">Zamknij</string>
     <string name="payment_request_skip">Pomiń</string>
@@ -406,7 +401,7 @@
     <string name="masternode_key_type_owner">Klucze właściciela</string>
     <string name="masternode_key_type_voting">Klucze głosujące</string>
     <string name="masternode_key_type_operator">Klucze operatora</string>
-    <string name="masternode_key_type_platform">Operator Kluczy do HPMN</string>
+    <string name="masternode_key_type_platform">Klucze Evolution Node ID</string>
     <string name="masternode_key_type_total">%d kluczy</string>
     <string name="masternode_key_type_used">%d użyte</string>
     <string name="masternode_key_pair_index">Para Kluczy %d</string>

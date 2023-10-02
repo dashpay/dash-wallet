@@ -47,6 +47,8 @@ import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
+import java.io.IOException
+import java.lang.Exception
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -134,35 +136,34 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     private suspend fun createSendingRequestFromDashUri(url: String): Sha256Hash? {
         return try {
             viewModel.createSendingRequestFromDashUri(url)
-        } catch (x: InsufficientMoneyException) {
-            hideLoading()
-            log.error("purchaseGiftCard InsufficientMoneyException", x)
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.insufficient_money_title),
-                getString(R.string.insufficient_money_msg),
-                getString(R.string.button_close)
-            ).show(requireActivity())
-            null
-        } catch (ex: DirectPayException) {
-            log.error("purchaseGiftCard DirectPayException", ex)
-            hideLoading()
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.payment_request_problem_title),
-                getString(R.string.payment_request_problem_message),
-                getString(R.string.button_close)
-            ).show(requireActivity())
-            null
         } catch (ex: Exception) {
             log.error("purchaseGiftCard error", ex)
+
             hideLoading()
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.send_coins_error_msg),
-                getString(R.string.gift_card_error),
-                getString(R.string.button_close)
-            ).show(requireActivity())
+            val title: String
+            val message: String
+
+            when (ex) {
+                is InsufficientMoneyException -> {
+                    title = getString(R.string.insufficient_money_title)
+                    message = getString(R.string.insufficient_money_msg)
+                }
+                is DirectPayException -> {
+                    title = getString(R.string.payment_request_problem_title)
+                    message = getString(R.string.payment_request_problem_message)
+                }
+                is IOException -> {
+                    title = getString(R.string.payment_protocol_default_error_title)
+                    message = (ex.message ?: "").ifEmpty { getString(R.string.payment_request_problem_message) }
+                }
+                else -> {
+                    title = getString(R.string.send_coins_error_msg)
+                    message = getString(R.string.gift_card_error)
+                }
+            }
+
+            AdaptiveDialog.create(R.drawable.ic_error, title, message, getString(R.string.button_close))
+                .show(requireActivity())
             null
         }
     }

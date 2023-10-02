@@ -55,6 +55,9 @@ object Constants {
     const val DASH_CURRENCY = "DASH"
     const val USD_CURRENCY = "USD"
 
+    /** Default currency to use if all default mechanisms fail.  */
+    const val DEFAULT_EXCHANGE_CURRENCY = USD_CURRENCY
+
     /** Shared HTTP client, can reuse connections  */
     val HTTP_CLIENT: OkHttpClient = OkHttpClient.Builder()
         .followRedirects(false)

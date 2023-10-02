@@ -52,6 +52,7 @@
     <string name="scan_to_pay_error_dialog_title">Сканиране за изпращане</string>
     <string name="scan_to_pay_error_dialog_message">Не валиден Dash адреса или URL заявка в клипборда:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Не валиден Dash адреса или URL заявка в клипборда.</string>
+
     <string name="receive_title">Получаване</string>
     <string name="receive_enter_amount_message">Посочете  сумата за получаване</string>
 
@@ -257,8 +258,6 @@
     <string name="security_very_high">Много високо</string>
     <string name="max">Максимум</string>
 
-    <string name="enter_amount_available">налично</string>
-
     <string name="skip">пропусни</string>
     <string name="get_started">Първи стъпки</string>
     <string name="welcome_screen_title_1_new_install">Добре дошли</string>
@@ -283,7 +282,6 @@
     <string name="payment_request_unable_to_send">Не може да се изпрати</string>
     <string name="payment_request_please_try_again">Моля опитай отново</string>
     <string name="payment_request_try_again">Опитай отново</string>
-    <string name="payment_request_problem_title">Плащането не бе потвърдено</string>
     <string name="payment_request_expired_title">Искането за плащане е изтекло</string>
     <string name="payment_request_close">Затвори</string>
     <string name="payment_request_skip">Пропусни</string>

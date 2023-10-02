@@ -20,7 +20,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -100,12 +100,12 @@
 
         <activity
             android:name="de.schildbach.wallet.ui.main.MainActivity"
-            android:windowSoftInputMode="adjustResize"
             android:configChanges="keyboard|keyboardHidden"
             android:exported="true"
             android:label="@string/app_name_short"
             android:screenOrientation="portrait"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
+            android:theme="@style/LockScreenActivity.Child.Theme"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity-alias
             android:name="de.schildbach.wallet.MainActivity"
@@ -162,11 +162,7 @@
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/address_book_activity_title"
             android:theme="@style/LockScreenActivity.Child.Theme" />
-        <activity
-            android:name="de.schildbach.wallet.ui.rates.ExchangeRatesActivity"
-            android:configChanges="keyboard|keyboardHidden"
-            android:label="@string/exchange_rates_activity_title"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
+
         <activity
             android:name="de.schildbach.wallet.ui.NetworkMonitorActivity"
             android:configChanges="keyboard|keyboardHidden"
@@ -251,12 +247,6 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdSplashActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
-
-        <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdAccountActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
-
         <activity
             android:name="de.schildbach.wallet.ui.LockScreenActivity"
             android:screenOrientation="portrait"
@@ -316,7 +306,7 @@
             android:theme="@style/LockScreenActivity.Theme" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.send.UpholdTransferActivity"
+            android:name="org.dash.wallet.integration.uphold.ui.UpholdTransferActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
@@ -458,8 +448,8 @@
 
         <activity
             android:name="de.schildbach.wallet.ui.coinbase.CoinbaseActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/LockScreenActivity.Theme" />
+            android:theme="@style/LockScreenActivity.Child.Theme"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name="de.schildbach.wallet.ui.coinbase.CoinBaseWebClientActivity"

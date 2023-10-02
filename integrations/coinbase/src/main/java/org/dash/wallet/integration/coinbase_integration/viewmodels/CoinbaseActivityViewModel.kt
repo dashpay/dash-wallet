@@ -24,46 +24,85 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseIdForFaitDataUIState
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.PaymentMethodsUiState
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseActivityViewModel @Inject constructor(
     private val config: CoinbaseConfig,
-    private val userPreference: Configuration,
+    private val walletUIConfig: WalletUIConfig,
     private val coinBaseRepository: CoinBaseRepositoryInt
 ) : ViewModel() {
 
-    private val _paymentMethodsUiState = MutableLiveData<PaymentMethodsUiState>(PaymentMethodsUiState.LoadingState(true))
+    companion object {
+        private val log = LoggerFactory.getLogger(CoinbaseActivityViewModel::class.java)
+    }
+    private val _paymentMethodsUiState = MutableLiveData<PaymentMethodsUiState>(
+        PaymentMethodsUiState.LoadingState(true)
+    )
     val paymentMethodsUiState: LiveData<PaymentMethodsUiState>
         get() = _paymentMethodsUiState
 
-    private val _baseIdForFaitModelCoinBase = MutableLiveData<BaseIdForFaitDataUIState>(BaseIdForFaitDataUIState.LoadingState(true))
+    private val _baseIdForFaitModelCoinBase = MutableLiveData<BaseIdForFaitDataUIState>(
+        BaseIdForFaitDataUIState.LoadingState(true)
+    )
     val baseIdForFaitModelCoinBase: LiveData<BaseIdForFaitDataUIState>
         get() = _baseIdForFaitModelCoinBase
 
-    fun getBaseIdForFaitModel() = viewModelScope.launch(Dispatchers.Main) {
-        _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(true)
+    val coinbaseLogOutCallback = SingleLiveEvent<Boolean>()
+    init {
+        viewModelScope.launch {
+            config.observe(CoinbaseConfig.LOGOUT_COINBASE)
+                .collect {
+                    if (it == true) {
+                        config.clearAll()
+                    }
+                    coinbaseLogOutCallback.value = it
+                }
+        }
+    }
 
-        when (val response = userPreference.exchangeCurrencyCode?.let {
-            coinBaseRepository.getBaseIdForUSDModel(it)
-        }) {
+    suspend fun loginToCoinbase(code: String): Boolean {
+        when (val response = coinBaseRepository.completeCoinbaseAuthentication(code)) {
             is ResponseResource.Success -> {
-                _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(false)
-                response.value?.data?.let {
-                    _baseIdForFaitModelCoinBase.value =  BaseIdForFaitDataUIState.Success(it)
+                if (response.value) {
+                    return true
                 }
             }
 
             is ResponseResource.Failure -> {
-                runBlocking { config.setPreference(CoinbaseConfig.UPDATE_BASE_IDS, true) }
+                log.error("Coinbase login error ${response.errorCode}: ${response.errorBody ?: "empty"}")
+            }
+        }
+
+        return false
+    }
+    fun getBaseIdForFaitModel() = viewModelScope.launch(Dispatchers.Main) {
+        _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(true)
+
+        when (
+            val response = coinBaseRepository.getBaseIdForUSDModel(
+                walletUIConfig.getExchangeCurrencyCode()
+            )
+        ) {
+            is ResponseResource.Success -> {
+                _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(false)
+                response.value?.data?.let {
+                    _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.Success(it)
+                }
+            }
+
+            is ResponseResource.Failure -> {
+                runBlocking { config.set(CoinbaseConfig.UPDATE_BASE_IDS, true) }
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(false)
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.Error(true)
             }

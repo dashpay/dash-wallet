@@ -1,100 +1,135 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="send_coins_auto_lock_not_feasible">Această tranzacție poate dura câteva minute până la decontare. Completați instantaneu pentru %1$s%2$s?</string>
-	<string name="send_coins_instant_send_not_feasible">Această tranzacție poate dura câteva minute până la decontare. </string>
 
-	<string name="options_paste_from_clipboard_title">Lipește din clipboard</string>
+    <string name="dialog_confirm_confirm">Confirmă</string>
+    <string name="dialog_confirm_fee">Taxă de reţea</string>
+    <string name="dialog_confirm_total">Total</string>
 
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Această plată nu a fost încă decontată.</string>
-	<string name="transaction_row_message_sent_to_single_peer">Această plată a fost trimisă.</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_scan_to_pay">Scanează</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_address">Trimite</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_import_key">Importă Cheia Privată</string>
+    <!-- Lock Screen: Text above the PIN Entry area -->
+    <string name="lock_enter_pin">Introdu codul PIN</string>
+    <string name="pay_title">Trimite</string>
+    <string name="settings_title">Setări</string>
+    <string name="recover_wallet_title">Recuperare Wallet</string>
+    <string name="payments_tab_pay_label">Trimite</string>
+    <string name="send_coins_auto_lock_feasible">Această tranzacție ar trebui să fie decontată instantaneu fără taxe suplimentare</string>
+    <string name="send_coins_auto_lock_not_feasible">Această tranzacție poate dura câteva minute până la decontare. Completați instantaneu pentru %1$s%2$s?</string>
+    <string name="send_coins_instant_send_not_feasible">Această tranzacție poate dura câteva minute până la decontare. </string>
 
-	<string name="regular_transaction_info_message">Această tranzacție nu a fost decontată instantaneu.</string>
+    <string name="options_paste_from_clipboard_title">Lipește din clipboard</string>
 
-	<string name="wallet_options_disconnect">Deconectează</string>
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Această plată nu a fost încă decontată.</string>
+    <string name="transaction_row_message_sent_to_single_peer">Această plată a fost trimisă.</string>
 
-	<string name="network_monitor_masternodes_title">Masternodes</string>
-	<string name="export_keys_dialog_title_to_seed">Vezi fraza de recuperare.</string>
-	<string name="import_keys_dialog_title_from_seed">Restaurează cu fraza de recuperare.</string>
-	<string name="backup_to_seed_wallet_dialog_message">Aceasta este fraza de recuperare. Fii sigur să o notezi.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">NU permite nimănui să vadă fraza de recuperare, altfel vor putea cheltui din contul tău de Dash. </string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Portofelul tău este protejat de un PIN pentru cheltuieli. Introdu codul PIN și apăsă pe Afișează pentru a vedea fraza de recuperare.</string>
+    <string name="regular_transaction_info_message">Această tranzacție nu a fost decontată instantaneu.</string>
+
+    <string name="wallet_options_disconnect">Deconectează</string>
+
+    <string name="network_monitor_masternodes_title">Masternodes</string>
+    <string name="import_keys_dialog_title_from_seed">Restaurează cu fraza de recuperare.</string>
+    <string name="backup_to_seed_wallet_dialog_message">Aceasta este fraza de recuperare. Fii sigur să o notezi.</string>
+    <string name="backup_wallet_to_seed_dialog_warning">NU permite nimănui să vadă fraza de recuperare, altfel vor putea cheltui din contul tău de Dash. </string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">Portofelul tău este protejat de un PIN pentru cheltuieli. Introdu codul PIN și apăsă pe Afișează pentru a vedea fraza de recuperare.</string>
     <string name="import_keys_from_seed_dialog_message">Introdu fraza de recuperare aici. </string>
-	<string name="import_export_keys_dialog_password_phrase">Fraza de recuperare merge aici.</string>
-	<string name="preferences_report_issue_summary">Strânge informații despre problema ta și expediază raportul către dezvoltatori.</string>
-	<string name="navigation_configuration">Configurare</string>
-    <string name="button_copy_address">Copiază adresa</string>
-	<string name="request_coins_clipboard_address_msg">Adresa Dash este copiată în clipboard</string>
-	<string name="backup_wallet_to_seed_show_recovery_phrase">Afișează </string>
-	<string name="restore_wallet_from_invalid_seed_warning_message">%s este un cuvânt nevalid.</string>
+    <string name="import_export_keys_dialog_password_phrase">Fraza de recuperare merge aici.</string>
+    <string name="preferences_report_issue_summary">Strânge informații despre problema ta și expediază raportul către dezvoltatori.</string>
+    <string name="navigation_configuration">Configurare</string>
+    <string name="request_coins_clipboard_address_msg">Adresa Dash este copiată în clipboard</string>
+    <string name="backup_wallet_to_seed_show_recovery_phrase">Afișează </string>
+    <string name="restore_wallet_from_invalid_seed_bad_checksum">Frază de recuperare gresită</string>
+    <string name="send_coins_options_fee_category_zero">Fără taxe</string>
+    <string name="send_coins_fragment_hint_fee_zero">Nici o taxă nu va fi plătită. Utilizați "fără taxe" numai dacă nu vă pasă de timpul de confirmare.</string>
 
-	<string name="send_coins_options_fee_category_zero">Fără taxe</string>
-	<string name="send_coins_fragment_hint_fee_zero">Nici o taxă nu va fi plătită. Utilizați \"fără taxe\" numai dacă nu vă pasă de timpul de confirmare.</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_public_key_request_dialog_msg">Aplicaţia %s ar dori să primească Master Public Key. Aceasta poate fi folosită pentru a ține evidența portofelului tau, dar nu poate fi utilizată pentru a muta Dash.</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_address_request_dialog_msg">Aplicaţia %s solicită o adresă pentru a te putea plăti. Dorești să autorizezi acest lucru?</string>
 
-	<string name="wallet_uri_handler_public_key_request_dialog_msg">Aplicaţia %s ar dori să primească Master Public Key. Aceasta poate fi folosită pentru a ține evidența portofelului tau, dar nu poate fi utilizată pentru a muta Dash.</string>
-	<string name="wallet_uri_handler_address_request_dialog_msg">Aplicaţia %s solicită o adresă pentru a te putea plăti. Dorești să autorizezi acest lucru?</string>
+    <string name="wallet_lock_unlock">Deschide</string>
+    <string name="wallet_lock_unlock_wallet">Deschide portofelul</string>
+    <string name="wallet_lock_unlock_to_see_txs_title">Portofelul este închis. </string>
+    <string name="wallet_lock_unlock_to_see_txs_txt">Atinge pictograma lacăt de mai sus pentru a deschide portofelul și pentru a vedea istoricul tranzacțiilor.</string>
+    <string name="wallet_lock_unlock_dialog_title">Deschide-ți portofelul. </string>
+    <string name="wallet_lock_unlock_dialog_message">Portofelul tău este protejat de un cod PIN pentru cheltuieli. Introdu codul PIN și apasă Deschide pentru a continua.</string>
+    <string name="wallet_lock_reset_wallet_title">Resetează Portofelul</string>
+    <string name="wallet_lock_reset_wallet_message">Esti sigur? Portofelul tău va fi șters și întreaga sumă de Dash va fi pierdută.\n\nSingura modalitate de a recupera suma de Dash este cu un fișier de backup sau cu fraza de recuperare.</string>
 
-	<string name="wallet_lock_unlock">Deschide</string>
-	<string name="wallet_lock_unlock_wallet">Deschide portofelul</string>
-	<string name="wallet_lock_unlock_to_see_txs_title">Portofelul este închis. </string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">Atinge pictograma lacăt de mai sus pentru a deschide portofelul și pentru a vedea istoricul tranzacțiilor.</string>
-	<string name="wallet_lock_unlock_dialog_title">Deschide-ți portofelul. </string>
-	<string name="wallet_lock_unlock_dialog_message">Portofelul tău este protejat de un cod PIN pentru cheltuieli. Introdu codul PIN și apasă Deschide pentru a continua.</string>
-	<string name="wallet_lock_reset_wallet_title">Resetează portofelul</string>
-	<string name="wallet_lock_reset_wallet_message">Esti sigur? Portofelul tău va fi șters și întreaga sumă de Dash va fi pierdută.\n\nSingura modalitate de a recupera suma de Dash este cu un fișier de backup sau cu fraza de recuperare.</string>
+    <string name="wallet_lock_wallet_disabled">Portofelul este dezactivat</string>
+    <string name="wallet_lock_try_again">Încearcă din nou în %1$d %2$s</string>
+    <string name="wallet_lock_reset">Resetează</string>
+    <string name="wallet_lock_wrong_pin">Cod PIN greșit! %s</string>
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d încercare rămasă</item>
+        <item quantity="few">%d încercări rămase</item>
+        <item quantity="other">%d încercări rămase</item>
+    </plurals>
 
-	<string name="wallet_lock_wallet_disabled">Portofelul este dezactivat</string>
-	<string name="wallet_lock_try_again">Încearcă din nou în %1$d %2$s</string>
-	<string name="wallet_lock_reset">Resetează</string>
-	<string name="wallet_lock_wrong_pin">Cod PIN greșit! %s</string>
+    <plurals name="minute">
+        <item quantity="one">minut</item>
+        <item quantity="few">minute</item>
+        <item quantity="other">minute</item>
+    </plurals>
 
-	<plurals name="wallet_lock_attempts_remaining">
-		<item quantity="one">%d încercare rămasă</item>
-		<item quantity="few">%d încercări rămase</item>
-		<item quantity="other">%d încercări rămase</item>
-	</plurals>
-
-	<plurals name="minute">
-		<item quantity="one">minut</item>
-		<item quantity="few">minute</item>
-		<item quantity="other">minute</item>
-	</plurals>
-	
-	<plurals name="hour">
-		<item quantity="one">oră</item>
-		<item quantity="few">ore</item>
-		<item quantity="other">ore</item>
-	</plurals>
+    <plurals name="hour">
+        <item quantity="one">oră</item>
+        <item quantity="few">ore</item>
+        <item quantity="other">ore</item>
+    </plurals>
 
 	<string name="upgrade">Actualizează</string>
-	<string name="encrypt_new_key_chain_dialog_title">Actualizează portofelul</string>
-	<string name="encrypt_new_key_chain_dialog_message">Portofelul tău va fi actualizat pentru a permite importarea și exportul către mai multe aplicații.</string>
-	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Trebuie să introduci codul PIN pentru a termina procesul de actualizare.</string>
-	<string name="pin_code_required_dialog_message">Această aplicație acum necesită un cod PIN pentru a cheltui și a vedea soldul și tranzacțiile.</string>
+    <string name="encrypt_new_key_chain_dialog_title">Actualizează portofelul</string>
+    <string name="encrypt_new_key_chain_dialog_message">Portofelul tău va fi actualizat pentru a permite importarea și exportul către mai multe aplicații.</string>
+    <string name="encrypt_new_key_chain_enter_pin_dialog_message">Trebuie să introduci codul PIN pentru a termina procesul de actualizare.</string>
+    <string name="pin_code_required_dialog_message">Această aplicație acum necesită un cod PIN pentru a cheltui și a vedea soldul și tranzacțiile.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">Am notat fraza de recuperare</string>
-	
-	<string name="change_exchange_currency_code_message">Moneda ta locală este %1$s, dar în această aplicație moneda ta prestabilită este %2$s. Dorești să modifici %1$s sau lași așa cum este %2$s? </string>
-	<string name="change_to">Schimbă în %s</string>
-	<string name="leave_as">Lasă %s</string>
 
-	<string name="remind_later">Amintește-mi mai târziu</string>
-	<string name="backup_now">Backup acum</string>
-	
-	<string name="notification_transactions_channel_name">Tranzacţii</string>
-	<string name="notification_transactions_channel_description">Primeşte alerte despre tranzacțiile primite.</string>
-	<string name="notification_synchronization_channel_name">Sincronizare</string>
-	<string name="notification_synchronization_channel_description">Afișează o notificare atunci când aplicația se sincronizează cu rețeaua.</string>
+    <string name="change_exchange_currency_code_message">Moneda ta locală este %1$s, dar în această aplicație moneda ta prestabilită este %2$s. Dorești să modifici %1$s sau lași așa cum este %2$s? </string>
+    <string name="change_to">Schimbă în %s</string>
+    <string name="leave_as">Lasă %s</string>
 
+    <string name="remind_later">Amintește-mi mai târziu</string>
+    <string name="backup_now">Backup acum</string>
+
+    <string name="notification_transactions_channel_name">Tranzacţii</string>
+    <string name="notification_transactions_channel_description">Primeşte alerte despre tranzacțiile primite.</string>
+    <string name="notification_synchronization_channel_name">Sincronizare</string>
+    <string name="notification_synchronization_channel_description">Afișează o notificare atunci când aplicația se sincronizează cu rețeaua.</string>
     <string name="net_type_indicator" />
 
-	<string name="unlock_with_fingerprint">Foloseşte amprenta pentru a debloca.</string>
-	<string name="unlock_with_fingerprint_error">Amprenta nu a fost recunoscută, te rog incearcă din nou.</string>
-	<string name="unlock_with_fingerprint_error_max_attempts">Ai depășit numărul maxim de încercări. Încearcă din nou mai târziu.</string>
-	<string name="or_unlock_with_fingerprint">Sau utilizează amprenta pentru a debloca.</string>
-	<string name="enable_fingerprint">Activează amprenta</string>
-	<string name="touch_fingerprint_sensor">Atinge senzorul de amprentă digitală.</string>
-	<string name="touch_fingerprint_to_enable">Atingeți senzorul de amprentă digitală pentru a permite deblocarea cu amprentă.</string>
-	<string name="exchange_rate_missing">Această plată este prea veche pentru a obține valoarea fiat.</string>
+    <string name="unlock_with_fingerprint">Foloseşte amprenta pentru a debloca.</string>
+    <string name="unlock_with_fingerprint_error">Amprenta nu a fost recunoscută, te rog incearcă din nou.</string>
+    <string name="unlock_with_fingerprint_error_max_attempts">Ai depășit numărul maxim de încercări. Încearcă din nou mai târziu.</string>
+    <string name="or_unlock_with_fingerprint">Sau utilizează amprenta pentru a debloca.</string>
+    <string name="enable_fingerprint">Activează amprenta</string>
+    <string name="touch_fingerprint_to_enable">Atingeți senzorul de amprentă digitală pentru a permite deblocarea cu amprentă.</string>
+    <string name="exchange_rate_missing">Această plată este prea veche pentru a obține valoarea fiat.</string>
 
-	<string name="preferences_enable_payment_request_summary">Utilizează protocolul de plată pentru plățile inițiate de codul QR</string>
-	<string name="preferences_enable_payment_request_title">BIP70 pentru plată-prin-scanare</string>
-</resources>
+    <string name="preferences_enable_payment_request_summary">Utilizează protocolul de plată pentru plățile inițiate de codul QR</string>
+    <string name="preferences_enable_payment_request_title">BIP70 pentru plată-prin-scanare</string>
+
+    <string name="view_seed_done">Gata</string>
+    <string name="transaction_result_tax_category_loading">Se încarca…</string>
+    <string name="menu_settings_title">Setări</string>
+    <string name="menu_tools_subtitle">Importă cheia privată…</string>
+    <string name="menu_local_currency">Monedă Locală</string>
+    <string name="menu_rescan_blockchain">Scanează din nou blockchain-ul</string>
+    <string name="menu_contact_support_title">Contactează serviciul de asistența</string>
+    <string name="tools_import_private_key">Importă Cheia Privată</string>
+    <string name="tools_show_xpub">Cheie Publică Extinsă</string>
+
+    <string name="about_contact_support">Contactează serviciul de asistența</string>
+    <string name="confirm">Confirmă</string>
+
+    <string name="received_transactions">Primiţi</string>
+    <string name="sent_transactions">Trimis</string>
+    <string name="reset_wallet_text">Resetează Portofelul</string>
+    <string name="masternode_key_type_owner">Cheile Proprietarului</string>
+    <string name="masternode_key_type_voting">Chei de Vot</string>
+    <string name="masternode_key_type_operator">Chei De Operator</string>
+    <string name="masternode_key_address">Adresă</string>
+    </resources>

@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">Во время воспроизведения баланс недоступен.</string>
     <string name="exchange_rates_activity_title">Местная валюта</string>
     <string name="exchange_rates_fragment_empty_text">Не удалось загрузить курсы валют.</string>
-    <string name="exchange_rates_fragment_empty_search">Не удалось найти обменный курс.</string>
     <string name="exchange_rates_fragment_default">(по умолчанию)</string>
     <string name="exchange_rates_fragment_rate">Курс</string>
     <string name="exchange_rates_fragment_balance">Баланс</string>
@@ -43,13 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Управлять приложениями</string>
     <string name="wallet_timeskew_dialog_title">Проверьте настройки даты и времени</string>
     <string name="wallet_timeskew_dialog_msg">Время на Вашем устройстве отличается на %d минут. По этой причине Вы, возможно, не сможете отправлять или получать средства.\\n\\nПроверьте настройки и при необходимости скорректируйте дату, время и часовой пояс.</string>
-    <string name="wallet_version_dialog_title">Доступна новая версия!</string>
-    <string name="wallet_version_dialog_msg">Эта версия исправляет важные ошибки. Детали на Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Если Вы не видите обновления, это означает, что Ваша версия Android больше не поддерживается.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Скачать</string>
-    <string name="wallet_old_sdk_dialog_title">Версия Android устарела</string>
-    <string name="wallet_old_sdk_dialog_message">Велики шансы того, что один из будущих релизов кошелька Dash уже не будет поддерживать это устройство. В ряде случаев возможны затруднения с использованием средств из этого кошелька.\n\nЕсли Вы плохо понимаете связанные с этим риски, рекомендуется уже сейчас вывести Ваши средства отсюда.</string>
     <string name="send_coins_activity_title">Отправить Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Получение подписи %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ошибка при получении подписи</string>
@@ -173,7 +165,6 @@
     <string name="transaction_row_status_error_other">Неизвестный</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">На %s в %s</string>
-    <string name="transaction_row_rate_not_available">Недоступно</string>
     <string name="transaction_row_status_masternode_registration">Регистрация мастерноды</string>
     <string name="transaction_row_status_masternode_update_registrar">Обновление masternode</string>
     <string name="transaction_row_status_masternode_update_service">Обновление masternode</string>
@@ -205,8 +196,6 @@
     <string name="restore_wallet_dialog_success_replay">Ваш кошелёк успешно восстановлен. Сейчас определится его баланс. Это может занять какое-то время.</string>
     <string name="restore_wallet_dialog_success_encrypted">Предупреждение: Ваш кошелёк защищён PIN-кодом. Прежде чем получить средства на этот кошелёк, убедитесь, что Вы его помните.</string>
     <string name="import_keys_dialog_failure">Кошелёк не может быть восстановлен:\n\n%s\n\nПроверьте правильность набора пароля.</string>
-    <string name="backup_wallet_permission_dialog_title">Отсутствуют права на запись</string>
-    <string name="backup_wallet_permission_dialog_message">Для того, чтобы сохранить резервную копию кошелька на внешнем устройстве, Вам нужно предоставить права на запись.</string>
     <string name="export_keys_dialog_title">Резервная копия кошелька</string>
     <string name="backup_wallet_dialog_message">Резервная копия будет зашифрована выбранным паролем и сохранена на внешнем устройстве.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Ваш кошелёк защищен PIN-кодом. Запомните ваш PIN-код и пароль для восстановления резервной копии.</string>
@@ -378,14 +367,23 @@
     <string name="activity_security_hide_balance">Авто-скрытие баланса</string>
     <string name="reset_to_default">Установить по умолчанию</string>
 
-    <string name="payment_protocol_default_error_title">Ошибка оплаты</string>
     <string name="payment_protocol_insufficient_funds_error_title">Недостаточно средств</string>
     <string name="payment_protocol_insufficient_funds_error_message">У вас недостаточно средств для завершения этой транзакции</string>
 
-
-    <string name="select_a_service_to_buy_and_sell_dash">Выбрать сервис для покупки и продажи Dash.</string>
+    <string name="buy_and_sell_subtitle">Выберите сервис, чтобы купить, продать, обменять и перевести Dash</string>
     <string name="select_a_service">Выберите сервис</string>
     <string name="activity_buy_and_sell_dash_filter">Фильтр</string>
     <string name="clear_filter">Очистить фильтр</string>
     <string name="reason">Причина</string>
+    <string name="link_account">Привязать аккаунт</string>
+    <string name="buy_no_account_needed">Купить Dash · Без учётной записи</string>
+    <string name="your_coinbase_session_has_expired">Время сессии Coinbase истекло</string>
+    <string name="please_log_in_to_your_coinbase_account">Пожалуйста, войдите в свой аккаунт Coinbase</string>
+    <string name="log_in">Войти</string>
+
+    <string name="recipient_address">Адрес получателя</string>
+    <string name="show_clipboard">Показать содержимое буфера обмена</string>
+    <string name="tap_to_paste">Чтобы вставить адрес из буфера обмена, нажмите на него</string>
+    <string name="not_dash_address">Некорректный адрес Dash или URL запрос</string>
+    <string name="send_to_address">Отправить на адрес</string>
 </resources>

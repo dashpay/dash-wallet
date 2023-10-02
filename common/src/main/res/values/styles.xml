@@ -823,7 +823,15 @@
     <style name="PrimaryButtonTheme.Large.TransparentBlue">
         <item name="backgroundColor">@color/light_blue</item>
         <item name="strokeColor">@android:color/transparent</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="titleTextColor">@color/content_primary</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.Large.Grey">
+        <item name="backgroundColor">@color/dash_black_0.05</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="titleTextColor">@color/content_primary</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
     <style name="PrimaryButtonTheme.Large.Grey">
@@ -843,11 +851,12 @@
         <item name="backgroundColor">@color/background_secondary</item>
         <item name="strokeColor">@color/background_secondary</item>
         <item name="rippleColor">@color/button_ripple_color</item>
+        <item name="titleTextColor">@color/content_primary</item>
     </style>
 
-    <style name="PrimaryButtonTheme.Large.LightGrey">
-        <item name="backgroundColor">@color/gray_40</item>
-        <item name="strokeColor">@color/gray_40</item>
+    <style name="PrimaryButtonTheme.Large.LightBlue">
+        <item name="backgroundColor">@color/dash_blue_0.08</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="titleTextColor">@color/dash_blue</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
@@ -927,6 +936,10 @@
         <item name="android:theme">@style/PrimaryButtonTheme.Large.Orange</item>
     </style>
 
+    <style name="Button.Primary.Large.Grey">
+        <item name="android:theme">@style/PrimaryButtonTheme.Large.Grey</item>
+    </style>
+
     <style name="Button.Primary.Large.Red">
         <item name="android:theme">@style/PrimaryButtonTheme.Large.Red</item>
     </style>
@@ -935,8 +948,8 @@
         <item name="android:theme">@style/PrimaryButtonTheme.Large.Inverted</item>
     </style>
 
-    <style name="Button.Primary.Large.LightGrey">
-        <item name="android:theme">@style/PrimaryButtonTheme.Large.LightGrey</item>
+    <style name="Button.Primary.Large.LightBlue">
+        <item name="android:theme">@style/PrimaryButtonTheme.Large.LightBlue</item>
     </style>
 
     <style name="Button.Primary.Small">
@@ -1255,7 +1268,7 @@
         <item name="android:layout_width">16dp</item>
         <item name="android:layout_height">16dp</item>
         <item name="android:rotation">180</item>
-        <item name="android:src">@drawable/ic_back_arrow</item>
+        <item name="android:src">@drawable/ic_chevron</item>
         <item name="android:tint">@color/light_gray</item>
     </style>
 
@@ -1273,11 +1286,41 @@
         <item name="cornerRadius">12dp</item>
     </style>
 
-    <style name="ImageButtonGrayTheme" parent="GrayPanelBackground"/>
+    <style name="BuyDashCircle">
+        <item name="cornerRadius">17dp</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="backgroundColor">@color/system_green</item>
+    </style>
+
+    <style name="TransferDashCircle">
+        <item name="cornerRadius">17dp</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="backgroundColor">@color/system_teal</item>
+    </style>
+
+    <style name="ConvertDashCircle">
+        <item name="cornerRadius">17dp</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="backgroundColor">@color/purple</item>
+    </style>
+
+    <style name="DisabledCircle">
+        <item name="cornerRadius">17dp</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="backgroundColor">@color/light_gray</item>
+    </style>
+
+    <style name="TextHighlightGrayTheme">
+        <item name="cornerRadius">5dp</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="backgroundColor">@color/dash_black_0.05</item>
+    </style>
 
     <style name="NoNetworkBackground">
         <item name="cornerRadius">8dp</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="backgroundColor">@color/dash_black_0.9</item>
     </style>
+
+    <style name="ImageButtonGrayTheme" parent="GrayPanelBackground"/>
 </resources>

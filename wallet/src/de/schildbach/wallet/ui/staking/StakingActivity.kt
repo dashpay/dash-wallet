@@ -29,7 +29,6 @@ import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.services.AuthenticationManager
@@ -44,7 +43,6 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class StakingActivity : LockScreenActivity() {
     companion object {
         private val log = LoggerFactory.getLogger(StakingActivity::class.java)

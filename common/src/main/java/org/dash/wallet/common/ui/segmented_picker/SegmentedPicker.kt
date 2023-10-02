@@ -32,7 +32,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.SegmentedPickerBinding
-import org.dash.wallet.common.ui.getRoundedBackground
+import org.dash.wallet.common.ui.setRoundedBackground
 import kotlin.math.max
 import kotlin.math.min
 
@@ -61,7 +61,7 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
         get() = adapter.currentList[pickedOptionIndex]
 
     init {
-        background = resources.getRoundedBackground(R.style.SegmentedPickerBackground)
+        setRoundedBackground(R.style.SegmentedPickerBackground)
         binding.options.layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, false)
 
         doOnLayout {

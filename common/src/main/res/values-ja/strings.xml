@@ -58,6 +58,7 @@
     <string name="share_address">アドレスを共有する</string>
     <string name="verify">検証する</string>
     <string name="receive_enter_amount_button">金額を指定する</string>
+    <string name="account_create">アカウントの作成</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">検索</string>
@@ -75,8 +76,25 @@
     <string name="select_currency">通貨を選択する</string>
     <string name="send_coins_error_dusty_send">送金額が小さすぎます</string>
     <string name="send_coins_error_insufficient_money">資金不足</string>
+    <string name="syncing">同期中</string>
+    <string name="no_connection">インターネット接続がありません</string>
+    <string name="rate_not_available">ご利用できません</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">お客様のDash Walletに資金がありません</string>
     <string name="empty_wallet_crowdnode_warning">残高を0.0003Dashまで増額しないと、CrowdNodeからこのウォレットに出金できませんのでご注意ください。</string>
-    <string name="syncing">同期中</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">お支払いが確認されませんでした</string>
+    <string name="payment_protocol_default_error_title">支払いエラー</string>
+    <string name="payment_request_problem_message">お客様のお支払いがサーバーで処理されませんでしたので、加盟店にお問い合わせください。</string>
+    <string name="exchange_rate_not_found">為替レートが見つかりません。</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">Dashウォレットに直接入金する</string>
+    <string name="convert_crypto">仮想通貨を変換</string>
+    <string name="last_known_balance" >直近の残高</string>
+    <string name="disconnected">切断されました</string>
+    <string name="enter_amount_available">ご利用可能</string>
+    <string name="transaction_row_rate_not_available">ご利用できません</string>
 </resources>

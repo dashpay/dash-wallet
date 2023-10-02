@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.text
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
@@ -24,6 +25,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.TextView
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.content.withStyledAttributes
 import androidx.core.view.updateMarginsRelative
 import androidx.core.widget.doOnTextChanged
 import com.google.android.material.textfield.TextInputLayout
@@ -36,11 +39,19 @@ class InputWrapper(context: Context, attrs: AttributeSet): TextInputLayout(conte
         setBackgroundResource(R.drawable.input)
         isExpandedHintEnabled = false
         defaultHintTextColor = resources.getColorStateList(R.color.content_secondary, null)
-        setHintTextAppearance(R.style.Caption_Secondary)
+        setHintTextAppearance(R.style.Overline_Secondary)
         setCounterTextAppearance(R.style.Overline_Secondary)
         setCounterOverflowTextAppearance(R.style.Overline_Red)
-        setEndIconDrawable(R.drawable.ic_clear_input)
+        initStyle(attrs, R.styleable.TextInputLayout)
         setPadding()
+    }
+
+    @SuppressLint("PrivateResource")
+    private fun initStyle(set: AttributeSet, attrs: IntArray) {
+        context.withStyledAttributes(set, attrs, 0) {
+            val drawable = getDrawable(R.styleable.TextInputLayout_endIconDrawable)
+            endIconDrawable = drawable ?: ResourcesCompat.getDrawable(resources, R.drawable.ic_clear_input, null)
+        }
     }
 
     override fun addView(child: View, index: Int, params: ViewGroup.LayoutParams) {

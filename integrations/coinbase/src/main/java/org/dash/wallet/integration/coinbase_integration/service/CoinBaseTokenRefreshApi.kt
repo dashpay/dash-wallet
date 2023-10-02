@@ -27,7 +27,7 @@ interface CoinBaseTokenRefreshApi {
     suspend fun refreshToken(
         @Field("client_id") clientId: String = CoinBaseClientConstants.CLIENT_ID,
         @Field("grant_type") grant_type: String = "refresh_token",
-        @Field("client_secret") client_secret: String =  CoinBaseClientConstants.CLIENT_SECRET,
+        @Field("client_secret") client_secret: String = CoinBaseClientConstants.CLIENT_SECRET,
         @Field("refresh_token") refreshToken: String?
     ): TokenResponse
 }

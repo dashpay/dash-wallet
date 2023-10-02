@@ -51,7 +51,7 @@ class CustomCacheInterceptor @Inject constructor(
         }
 
         val gson = Gson()
-        val shouldUpdateBaseIds = runBlocking { config.getPreference(CoinbaseConfig.UPDATE_BASE_IDS) ?: true }
+        val shouldUpdateBaseIds = runBlocking { config.get(CoinbaseConfig.UPDATE_BASE_IDS) ?: true }
         val cacheFile = File(CoinbaseConstants.getCacheDir(context), BASE_IDS_FILENAME)
 
         if (shouldUpdateBaseIds || !cacheFile.exists()) {
@@ -64,7 +64,7 @@ class CustomCacheInterceptor @Inject constructor(
                     gson.toJson(baseIds, it)
                 }
                 val cached = readCached(chain.request(), cacheFile)
-                runBlocking { config.setPreference(CoinbaseConfig.UPDATE_BASE_IDS, false) }
+                runBlocking { config.set(CoinbaseConfig.UPDATE_BASE_IDS, false) }
                 return cached
             } catch (ex: Exception) {
                 log.error("Failed to cache baseId", ex)
@@ -78,7 +78,7 @@ class CustomCacheInterceptor @Inject constructor(
 
         if(cacheFile.lastModified() < sixMonthsAgo) {
             // Force update every ~ 6 months
-            runBlocking { config.setPreference(CoinbaseConfig.UPDATE_BASE_IDS, true) }
+            runBlocking { config.set(CoinbaseConfig.UPDATE_BASE_IDS, true) }
         }
 
         return try {
@@ -87,7 +87,7 @@ class CustomCacheInterceptor @Inject constructor(
             log.error("Failed to return cached baseId", ex)
             cacheFile.delete()
             // Retry with no cache
-            runBlocking { config.setPreference(CoinbaseConfig.UPDATE_BASE_IDS, true) }
+            runBlocking { config.set(CoinbaseConfig.UPDATE_BASE_IDS, true) }
             intercept(chain)
         }
     }

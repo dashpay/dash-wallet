@@ -1,73 +1,74 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="transaction_row_message_own_instantx_lock_request_notsent">Instantno plačilo še ni bilo poslano.</string>
-	<string name="wallet_options_disconnect">Odjava</string>
 
-	<string name="network_monitor_masternodes_title">Napredna vozlišča</string>
-	<string name="export_keys_dialog_title_to_seed">Preveri seznam skrivnih besed za obnovo denarnice</string>
-	<string name="import_keys_dialog_title_from_seed">Ustvarite denarnico iz skrivnih besed</string>
-	<string name="backup_to_seed_wallet_dialog_message">To je seznam skrivnih besed za obnovo denarnice. Celoten niz besed v enakem vrstnem redu zapišite na list papirja in ga skrbno shranite.</string>
-	<string name="backup_wallet_to_seed_dialog_warning">POMEMBNO: Nikomur ne pokažite seznama skrivnih besed za obnovo denarnice, saj lahko ostanete brez Dash kovancev!</string>
-	<string name="backup_to_seed_wallet_dialog_enter_pin_message">Vaša denarnica je zaščitena s PIN številko. Vpišite PIN številko in izberite \"Poglej\", če želite preveriti seznam skrivnih besed za obnovo denarnice.</string>
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Instantno plačilo še ni bilo poslano.</string>
+    <string name="wallet_options_disconnect">Odjava</string>
+
+    <string name="network_monitor_masternodes_title">Napredna vozlišča</string>
+    <string name="export_keys_dialog_title_to_seed">Preveri seznam skrivnih besed za obnovo denarnice</string>
+    <string name="import_keys_dialog_title_from_seed">Ustvarite denarnico iz skrivnih besed</string>
+    <string name="backup_to_seed_wallet_dialog_message">To je seznam skrivnih besed za obnovo denarnice. Celoten niz besed v enakem vrstnem redu zapišite na list papirja in ga skrbno shranite.</string>
+    <string name="backup_wallet_to_seed_dialog_warning">POMEMBNO: Nikomur ne pokažite seznama skrivnih besed za obnovo denarnice, saj lahko ostanete brez Dash kovancev!</string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">Vaša denarnica je zaščitena s PIN številko. Vpišite PIN številko in izberite \"Poglej\", če želite preveriti seznam skrivnih besed za obnovo denarnice.</string>
     <string name="import_keys_from_seed_dialog_message">Vpišite vaš seznam skrivnih besed za obnovo denarnice.</string>
-	<string name="import_export_keys_dialog_password_phrase">Seznam skrivnih besed za obnovo denarnice.</string>
-	<string name="preferences_report_issue_summary">Opišite težavo in jo po elektronski pošti sporočite razvijalcem aplikacije.</string>
-	<string name="navigation_configuration">Nastavitve</string>
-    <string name="button_copy_address">Kopiraj naslov</string>
-	<string name="request_coins_clipboard_address_msg">Dash naslov kopiran v odložišče</string>
-	<string name="backup_wallet_to_seed_show_recovery_phrase">Poglej</string>
-	<string name="restore_wallet_from_invalid_seed_warning_message">%s je neveljavna beseda.</string>
+    <string name="import_export_keys_dialog_password_phrase">Seznam skrivnih besed za obnovo denarnice.</string>
+    <string name="preferences_report_issue_summary">Opišite težavo in jo po elektronski pošti sporočite razvijalcem aplikacije.</string>
+    <string name="navigation_configuration">Nastavitve</string>
+    <string name="request_coins_clipboard_address_msg">Dash naslov kopiran v odložišče</string>
+    <string name="backup_wallet_to_seed_show_recovery_phrase">Poglej</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">%s je neveljavna beseda.</string>
+    <string name="send_coins_options_fee_category_zero">Brez provizije</string>
+    <string name="send_coins_fragment_hint_fee_zero">Izvedli boste plačilo brez provizije. Čas transakcije se bo v tem primeru podaljšal.</string>
 
-	<string name="send_coins_options_fee_category_zero">Brez provizije</string>
-	<string name="send_coins_fragment_hint_fee_zero">Izvedli boste plačilo brez provizije. Čas transakcije se bo v tem primeru podaljšal.</string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikacija %s želi dostop do vašega javnega ključa. Ne skrbite, vaši Dash kovanci bodo ostali na varnem. </string>
+    <!-- Deep Links:  Message pops up when another app requests information from this app -->
+    <string name="wallet_uri_handler_address_request_dialog_msg">Aplikacija %s želi vaš Dash naslov, da vam bo lahko poslala kovance. Želite nadaljevati?</string>
 
-	<string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikacija %s želi dostop do vašega javnega ključa. Ne skrbite, vaši Dash kovanci bodo ostali na varnem. </string>
-	<string name="wallet_uri_handler_address_request_dialog_msg">Aplikacija %s želi vaš Dash naslov, da vam bo lahko poslala kovance. Želite nadaljevati?</string>
+    <string name="wallet_lock_unlock">Odkleni</string>
+    <string name="wallet_lock_unlock_wallet">Odkleni denarnico</string>
+    <string name="wallet_lock_unlock_to_see_txs_title">Denarnica je zaklenjena.</string>
+    <string name="wallet_lock_unlock_to_see_txs_txt">Pritisnite na ključavnico zgoraj desno, če želite odkleniti denarnico in preveriti zgodovino transakcij.</string>
+    <string name="wallet_lock_unlock_dialog_title">Odklenite vašo denarnico. </string>
+    <string name="wallet_lock_unlock_dialog_message">Vaša denarnica je zaščitena s PIN številko. Vpišite vašo PIN številko in odklenite denarnico.</string>
+    <string name="wallet_lock_reset_wallet_title">Ponastavite denarnico</string>
+    <string name="wallet_lock_reset_wallet_message">Ste prepričani? Vsi podatki bodo izbrisani. Denarnico boste lahko obnovili šele z varnostno kopijo ali seznamom skrivnih besed. </string>
 
-	<string name="wallet_lock_unlock">Odkleni</string>
-	<string name="wallet_lock_unlock_wallet">Odkleni denarnico</string>
-	<string name="wallet_lock_unlock_to_see_txs_title">Denarnica je zaklenjena.</string>
-	<string name="wallet_lock_unlock_to_see_txs_txt">Pritisnite na ključavnico zgoraj desno, če želite odkleniti denarnico in preveriti zgodovino transakcij.</string>
-	<string name="wallet_lock_unlock_dialog_title">Odklenite vašo denarnico. </string>
-	<string name="wallet_lock_unlock_dialog_message">Vaša denarnica je zaščitena s PIN številko. Vpišite vašo PIN številko in odklenite denarnico.</string>
-	<string name="wallet_lock_reset_wallet_title">Ponastavite denarnico</string>
-	<string name="wallet_lock_reset_wallet_message">Ste prepričani? Vsi podatki bodo izbrisani. Denarnico boste lahko obnovili šele z varnostno kopijo ali seznamom skrivnih besed. </string>
+    <string name="wallet_lock_wallet_disabled">Denarnica onemogočena</string>
+    <string name="wallet_lock_try_again">Poskusite znova čez %1$d %2$s</string>
+    <string name="wallet_lock_reset">Ponastavi</string>
+    <string name="wallet_lock_wrong_pin">Napačna PIN številka! %s</string>
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">Na voljo imate le še %d poskus</item>
+        <item quantity="two">Na voljo imate še %d poskusa</item>
+        <item quantity="few">Na voljo imate še %d poskusov</item>
+        <item quantity="other">Na voljo imate še%d poskusov</item>
+    </plurals>
 
-	<string name="wallet_lock_wallet_disabled">Denarnica onemogočena</string>
-	<string name="wallet_lock_try_again">Poskusite znova čez %1$d %2$s</string>
-	<string name="wallet_lock_reset">Ponastavi</string>
-	<string name="wallet_lock_wrong_pin">Napačna PIN številka! %s</string>
+    <plurals name="minute">
+        <item quantity="one">minuta</item>
+        <item quantity="two">minuti</item>
+        <item quantity="few">minut</item>
+        <item quantity="other">minut</item>
+    </plurals>
 
-	<plurals name="wallet_lock_attempts_remaining">
-		<item quantity="one">Na voljo imate le še %d poskus</item>
-		<item quantity="two">Na voljo imate še %d poskusa</item>
-		<item quantity="few">Na voljo imate še %d poskusov</item>
-		<item quantity="other">Na voljo imate še%d poskusov</item>
-	</plurals>
-
-	<plurals name="minute">
-		<item quantity="one">minuta</item>
-		<item quantity="two">minuti</item>
-		<item quantity="few">minut</item>
-		<item quantity="other">minut</item>
-	</plurals>
-	
-	<plurals name="hour">
-		<item quantity="one">ura</item>
-		<item quantity="two">uri</item>
-		<item quantity="few">ur</item>
-		<item quantity="other">ur</item>
-	</plurals>
+    <plurals name="hour">
+        <item quantity="one">ura</item>
+        <item quantity="two">uri</item>
+        <item quantity="few">ur</item>
+        <item quantity="other">ur</item>
+    </plurals>
 
 	<string name="upgrade">Posodobitev</string>
-	<string name="encrypt_new_key_chain_dialog_title">Posodobite vašo denarnico</string>
-	<string name="encrypt_new_key_chain_dialog_message">Vaša denarnica bo posodobljena v verzijo, ki omogoča povezavo z drugimi aplikacijami. </string>
-	<string name="encrypt_new_key_chain_enter_pin_dialog_message">Za nadaljevanje posodobitve, morate vpisati vašo PIN številko. </string>
-	<string name="pin_code_required_dialog_message">Aplikacija zahteva vpis PIN številke.</string>
+    <string name="encrypt_new_key_chain_dialog_title">Posodobite vašo denarnico</string>
+    <string name="encrypt_new_key_chain_dialog_message">Vaša denarnica bo posodobljena v verzijo, ki omogoča povezavo z drugimi aplikacijami. </string>
+    <string name="encrypt_new_key_chain_enter_pin_dialog_message">Za nadaljevanje posodobitve, morate vpisati vašo PIN številko. </string>
+    <string name="pin_code_required_dialog_message">Aplikacija zahteva vpis PIN številke.</string>
     <string name="backup_wallet_seed_private_key_written_down_box">Na list papirja sem si izpisal seznam skrivnih besed za obnovo denarnice</string>
-	
-	<string name="change_exchange_currency_code_message">Vaša lokalna valuta je %1$s, toda po prevzetem je nastavljena %2$s. Želite pretvoriti v %1$s, ali ohraniti %2$s?</string>
-	<string name="change_to">Pretvori v %s</string>
-	<string name="leave_as">Ohrani %s</string>
 
-</resources>
+    <string name="change_exchange_currency_code_message">Vaša lokalna valuta je %1$s, toda po prevzetem je nastavljena %2$s. Želite pretvoriti v %1$s, ali ohraniti %2$s?</string>
+    <string name="change_to">Pretvori v %s</string>
+    <string name="leave_as">Ohrani %s</string>
+
+    <string name="reset_wallet_text">Ponastavite denarnico</string>
+    </resources>

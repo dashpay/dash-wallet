@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">대시 탐색하기</string>
     <string name="explore_title">탐색하기</string>
-    <string name="explore_subtitle">155,000 개 이상의 오프라인 및 온라인 상점에서 대시로 손쉽게 쇼핑하세요</string>
+    <string name="explore_subtitle">대시를 받는 판매자를 찾고, 구매처를 확인하고, 수익을 얻는 방법을 확인하세요.</string>
     <string name="explore_merchants_title">어디에 사용하나요?</string>
     <string name="explore_merchants_subtitle">대시 지불을 받는 상점을 찾아보세요.</string>
     <string name="explore_atms_title">ATM</string>
@@ -74,6 +74,7 @@
     <string name="explore_payment_method">지불 방법</string>
     <string name="explore_payment_dash">대시</string>
     <string name="explore_payment_gift_card">기프트 카드</string>
+    <string name="explore_filter_gift_cards">기프트 카드</string>
     <string name="explore_radius">반경</string>
     <string name="explore_location">위치</string>
     <string name="explore_current_location">현재 위치</string>
@@ -149,10 +150,12 @@
     <string name="redeem_gift_card_text">수초만에 온라인으로, 혹은 카운터에서 기프트 카드를 현금화합니다.</string>
 
     <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">동기화 진행중... 결과가 표시되지 않을 수 있습니다.</string>
-    <string name="sync_in_progress_error">동기화 진행중... 에러가 발생했습니다.</string>
-    <string name="sync_in_progress_canceled">동기화 취소됨... 잠시후 다시 시도합니다.</string>
+    <string name="sync_in_progress_not_complete">동기화 중... 결과가 나타나지 않을 수 있습니다.</string>
+    <string name="sync_in_progress_error">동기화 중... 오류가 발생했습니다.</string>
+    <string name="sync_in_progress_canceled">동기화 취소됨... 나중에 다시 시도하세요.</string>
 
     <string name="sync_in_progress_file_not_found">빌드 에러: 데이터베이스를 찾을 수 없습니다!</string>
-    <string name="sync_in_progress_network_error">동기화 중단... 네트워크가 오프라인이거나 찾을 수 없습니다</string>
-</resources>
+    <string name="sync_in_progress_network_error">동기화 중단됨... 네트워크가 오프라인이거나 도달할 수 없습니다</string>
+
+
+    </resources>

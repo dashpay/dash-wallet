@@ -22,6 +22,7 @@ import android.graphics.BitmapFactory
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.*
 import org.slf4j.LoggerFactory
+import retrofit2.HttpException
 import java.io.BufferedInputStream
 import java.io.IOException
 import kotlin.coroutines.resume
@@ -36,6 +37,7 @@ fun ResponseBody.decodeBitmap(): Bitmap {
 }
 
 suspend fun OkHttpClient.get(url: String): Response = call(Request.Builder().url(url).get().build())
+suspend fun OkHttpClient.head(url: String): Response = call(Request.Builder().url(url).head().build())
 
 suspend fun OkHttpClient.call(request: Request): Response {
     return suspendCancellableCoroutine { coroutine ->
@@ -60,5 +62,12 @@ fun Response.ensureSuccessful() {
     if (!isSuccessful) {
         log.error("got http error {}: {}", code, message)
         throw IOException("HTTP error: $code; $message")
+    }
+}
+
+fun <T> retrofit2.Response<T>.ensureSuccessful() {
+    if (!isSuccessful) {
+        log.error("got retrofit error {}: {}", code(), message())
+        throw HttpException(this)
     }
 }

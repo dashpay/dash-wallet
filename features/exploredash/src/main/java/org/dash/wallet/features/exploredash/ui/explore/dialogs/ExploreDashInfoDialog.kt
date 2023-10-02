@@ -32,7 +32,6 @@ import javax.inject.Inject
 class ExploreDashInfoDialog : OffsetDialogFragment(R.layout.explore_dash_main_info) {
 
     private val binding by viewBinding(ExploreDashMainInfoBinding::bind)
-
     @Inject lateinit var analyticsService: AnalyticsService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

@@ -64,7 +64,6 @@
     <string name="scan_to_pay_error_dialog_title">Scan to Send</string>
     <string name="scan_to_pay_error_dialog_message">Not a valid Dash Address or URL request in clipboard:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Not a valid Dash Address or URL request in clipboard.</string>
-    <string name="pay_to_confirm_address">Is this the Dash address you want to send payment to?</string>
 
     <string name="receive_title">Receive</string>
     <string name="receive_enter_amount_message">Specify the amount to be received</string>
@@ -338,8 +337,6 @@
     <string name="security_high">High</string>
     <string name="security_very_high">Very High</string>
     <string name="max">Max</string>
-
-    <string name="enter_amount_available">available</string>
 
     <string name="skip">skip</string>
     <string name="get_started">Get Started</string>
@@ -685,7 +682,7 @@
     <string name="masternode_key_type_owner">Owner Keys</string>
     <string name="masternode_key_type_voting">Voting Keys</string>
     <string name="masternode_key_type_operator">Operator Keys</string>
-    <string name="masternode_key_type_platform">HPMN Operator Keys</string>
+    <string name="masternode_key_type_platform">Evolution Node ID Keys</string>
     <string name="masternode_key_type_total">%d keys</string>
     <string name="masternode_key_type_used">%d used</string>
     <string name="masternode_key_pair_index">Keypair %d</string>

@@ -1,15 +1,15 @@
 buildscript {
     ext {
-        kotlin_version = '1.7.10'
+        kotlin_version = '1.8.22'
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.9.1'
         dashjVersion = '19.1-CJ-SNAPSHOT'
-        hiltVersion = '2.40.1'
+        hiltVersion = '2.45'
         hiltWorkVersion = '1.0.0'
         workRuntimeVersion='2.7.1'
-        firebaseVersion = '28.4.2'
+        firebaseVersion = '32.1.1'
         roomVersion = '2.4.3'
-        jetpackVersion = '1.6.0'
+        jetpackVersion = '1.8.0'
         appCompatVersion = '1.4.2'
 
         // Architecture
@@ -32,6 +32,7 @@ buildscript {
         recyclerViewVersion = "1.2.1"
         glideVersion = '4.12.0'
         zxingVersion = '3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
+        swipeRefreshLayoutVersion = '1.1.0'
 
         // Tests
         junitVersion = '4.13.2'

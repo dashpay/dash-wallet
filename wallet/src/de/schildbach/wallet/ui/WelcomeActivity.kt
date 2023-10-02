@@ -24,28 +24,32 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentPagerAdapter
 import androidx.viewpager.widget.ViewPager
-import de.schildbach.wallet.WalletApplication
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_welcome.*
+import de.schildbach.wallet_test.databinding.ActivityWelcomeBinding
 import org.dash.wallet.common.Configuration
+import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
  */
+@AndroidEntryPoint
 class WelcomeActivity : AppCompatActivity() {
 
+    @Inject
     lateinit var configuration: Configuration
+    private lateinit var binding: ActivityWelcomeBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_welcome)
 
-        configuration = WalletApplication.getInstance().configuration
+        binding = ActivityWelcomeBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        viewpager.adapter = WelcomePagerAdapter(supportFragmentManager, 0, configuration)
-        page_indicator.setViewPager(viewpager)
+        binding.viewpager.adapter = WelcomePagerAdapter(supportFragmentManager, 0, configuration)
+        binding.pageIndicator.setViewPager(binding.viewpager)
 
-        viewpager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
+        binding.viewpager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
             override fun onPageScrollStateChanged(state: Int) {
             }
 
@@ -55,54 +59,64 @@ class WelcomeActivity : AppCompatActivity() {
             override fun onPageSelected(position: Int) {
                 when (position) {
                     0, 1 -> {
-                        skip_button.visibility = View.VISIBLE
-                        get_started_button.visibility = View.GONE
+                        binding.skipButton.visibility = View.VISIBLE
+                        binding.getStartedButton.visibility = View.GONE
                     }
                     2 -> {
-                        skip_button.visibility = View.GONE
-                        get_started_button.visibility = View.VISIBLE
+                        binding.skipButton.visibility = View.GONE
+                        binding.getStartedButton.visibility = View.VISIBLE
                     }
                 }
             }
-
         })
 
-        skip_button.setOnClickListener { finish() }
-        get_started_button.setOnClickListener { finish() }
+        binding.skipButton.setOnClickListener { finish() }
+        binding.getStartedButton.setOnClickListener { finish() }
     }
 
     override fun finish() {
-        WalletApplication.getInstance().configuration.setV7TutorialCompleted()
+        configuration.setV7TutorialCompleted()
         setResult(Activity.RESULT_OK)
         super.finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
-    private class WelcomePagerAdapter(fragmentManager: FragmentManager, behavior: Int,
-                                      val configuration: Configuration) : FragmentPagerAdapter(fragmentManager, behavior) {
+    private class WelcomePagerAdapter(
+        fragmentManager: FragmentManager,
+        behavior: Int,
+        val configuration: Configuration
+    ) : FragmentPagerAdapter(fragmentManager, behavior) {
 
         override fun getItem(position: Int): Fragment {
-            when (position) {
+            return when (position) {
                 0 -> {
-                    var title = if (configuration.wasUpgraded()) {
+                    val title = if (configuration.wasUpgraded()) {
                         R.string.welcome_screen_title_1_upgrade
                     } else {
                         R.string.welcome_screen_title_1_new_install
                     }
-                    return WelcomeScreenFragment.newInstance(title, R.string.welcome_screen_subtitle_1,
-                            R.drawable.welcome_screenshot_1)
+                    WelcomeScreenFragment.newInstance(
+                        title,
+                        R.string.welcome_screen_subtitle_1,
+                        R.drawable.welcome_screenshot_1
+                    )
                 }
-                1 -> return WelcomeScreenFragment.newInstance(R.string.welcome_screen_title_2,
-                        R.string.welcome_screen_subtitle_2, R.drawable.welcome_screenshot_2)
-                2 -> return WelcomeScreenFragment.newInstance(R.string.welcome_screen_title_3,
-                        R.string.welcome_screen_subtitle_3, R.drawable.welcome_screenshot_3)
+                1 -> WelcomeScreenFragment.newInstance(
+                    R.string.welcome_screen_title_2,
+                    R.string.welcome_screen_subtitle_2,
+                    R.drawable.welcome_screenshot_2
+                )
+                2 -> WelcomeScreenFragment.newInstance(
+                    R.string.welcome_screen_title_3,
+                    R.string.welcome_screen_subtitle_3,
+                    R.drawable.welcome_screenshot_3
+                )
+                else -> Fragment()
             }
-            return Fragment()
         }
 
         override fun getCount(): Int {
             return 3
         }
     }
-
 }

@@ -58,6 +58,7 @@
     <string name="share_address">Deel adres</string>
     <string name="verify">Verifiëren</string>
     <string name="receive_enter_amount_button">Specificeer bedrag</string>
+    <string name="account_create">Maak account aan</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Zoek</string>
@@ -75,8 +76,25 @@
     <string name="select_currency">Selecteer valuta</string>
     <string name="send_coins_error_dusty_send">bedrag is te klein om te versturen</string>
     <string name="send_coins_error_insufficient_money">Ontoereikende fondsen</string>
+    <string name="syncing">Aan het synchroniseren</string>
+    <string name="no_connection">Geen internetverbinding</string>
+    <string name="rate_not_available">Niet beschikbaar</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">Het ziet er naar uit dat je je Dashportemonee leeg aan het maken bent</string>
     <string name="empty_wallet_crowdnode_warning">Let op, je zal geen geld kunnen opnemen van CrowdNode naar deze portemonnee totdat je je saldo verhoogt tot 0,0003 Dash.</string>
-    <string name="syncing">Aan het synchroniseren</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">Betaling werd niet bevestigd</string>
+    <string name="payment_protocol_default_error_title">Fout in de betaling</string>
+    <string name="payment_request_problem_message">Je betaling kon niet door de server worden verwerkt, doe a.u.b. navraag bij de winkelier</string>
+    <string name="exchange_rate_not_found">De wisselkoers kon niet worden gevonden.</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">Ontvang het direct in de Dash portemonnee.</string>
+    <string name="convert_crypto">Converteer crypto</string>
+    <string name="last_known_balance" >Laatst bekende saldo</string>
+    <string name="disconnected">Verbinding verbroken</string>
+    <string name="enter_amount_available">beschikbaar</string>
+    <string name="transaction_row_rate_not_available">Niet beschikbaar</string>
 </resources>

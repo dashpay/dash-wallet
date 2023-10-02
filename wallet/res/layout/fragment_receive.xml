@@ -15,7 +15,7 @@
         app:title="@string/receive_title"
         app:titleTextColor="@color/content_primary"
         app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@drawable/ic_arrow_back_primary" />
+        app:navigationIcon="@drawable/ic_arrow_back" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/amount_guideline"

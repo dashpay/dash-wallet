@@ -2,12 +2,12 @@ package org.dash.wallet.integration.uphold
 
 import android.content.Context
 import org.dash.wallet.integration.uphold.data.UpholdApiException
-import org.junit.Test
 import org.junit.Assert.*
+import org.junit.Test
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.kotlin.*
 
-class UpholdErrorsTest {
+class UpholdErrorTest {
 
     @Test
     fun error403Test() {
@@ -114,7 +114,7 @@ class UpholdErrorsTest {
                }
             }
         """.trimIndent()
-        val exception = UpholdApiException(error, 400);
+        val exception = UpholdApiException(error, 400)
         val arguments = HashMap<String, String>()
         assertTrue(exception.isValidationFailed(arguments))
         assertEquals("restricted_by_authentication_method_reset", arguments["code"])
@@ -141,7 +141,7 @@ class UpholdErrorsTest {
               }
             }
         """.trimIndent()
-        val exception = UpholdApiException(error, 400);
+        val exception = UpholdApiException(error, 400)
         val arguments = HashMap<String, String>()
         assertTrue(exception.isValidationFailed(arguments))
         assertEquals("password_reset_restriction", arguments["code"])
@@ -169,7 +169,7 @@ class UpholdErrorsTest {
               }
             }
         """.trimIndent()
-        val exception = UpholdApiException(error, 400);
+        val exception = UpholdApiException(error, 400)
         val arguments = HashMap<String, String>()
         assertTrue(exception.isValidationFailed(arguments))
         assertEquals("required", arguments["code"])
@@ -202,7 +202,7 @@ class UpholdErrorsTest {
            }
         }
         """.trimIndent()
-        val exception = UpholdApiException(error, 400);
+        val exception = UpholdApiException(error, 400)
         val arguments = HashMap<String, String>()
         assertTrue(exception.isValidationFailed(arguments))
         assertEquals("sufficient_unlocked_funds", arguments["code"])
@@ -231,7 +231,7 @@ class UpholdErrorsTest {
               }
             }
         """.trimIndent()
-        val exception = UpholdApiException(error, 400);
+        val exception = UpholdApiException(error, 400)
         val arguments = HashMap<String, String>()
         assertTrue(exception.isValidationFailed(arguments))
         assertEquals("sufficient_funds", arguments["code"])
@@ -261,7 +261,7 @@ class UpholdErrorsTest {
               }
             }
         """.trimIndent()
-        val exception = UpholdApiException(error, 400);
+        val exception = UpholdApiException(error, 400)
         val arguments = HashMap<String, String>()
         assertTrue(exception.isValidationFailed(arguments))
         assertEquals("less_than_or_equal_to", arguments["code"])
@@ -292,7 +292,7 @@ class UpholdErrorsTest {
               }
             }
         """.trimIndent()
-        val exception = UpholdApiException(error, 400);
+        val exception = UpholdApiException(error, 400)
         val arguments = HashMap<String, String>()
         assertTrue(exception.isValidationFailed(arguments))
         assertEquals("greater_than_or_equal_to", arguments["code"])

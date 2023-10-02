@@ -20,24 +20,16 @@ package org.dash.wallet.integration.uphold.api;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import androidx.annotation.NonNull;
-
 import com.securepreferences.SecurePreferences;
 
-import org.dash.wallet.integration.uphold.data.UpholdAccessToken;
 import org.dash.wallet.integration.uphold.data.UpholdApiException;
-import org.dash.wallet.integration.uphold.data.UpholdCapability;
 import org.dash.wallet.integration.uphold.data.UpholdCard;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
-import org.dash.wallet.integration.uphold.data.UpholdCryptoCardAddress;
-import org.dash.wallet.integration.uphold.data.UpholdException;
 import org.dash.wallet.integration.uphold.data.UpholdTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,18 +45,18 @@ import retrofit2.Response;
 public class UpholdClient {
 
     private static UpholdClient instance;
-    private final UpholdService service;
-    private final SharedPreferences prefs;
+    final UpholdService service;
+    final SharedPreferences prefs;
     private final String encryptionKey;
-    private String accessToken;
+    String accessToken;
     private String otpToken;
-    private UpholdCard dashCard;
-    private final Map<String, List<String>> requirements = new HashMap<>();
+    UpholdCard dashCard;
+    final Map<String, List<String>> requirements = new HashMap<>();
 
-    private static final Logger log = LoggerFactory.getLogger(UpholdClient.class);
+    static final Logger log = LoggerFactory.getLogger(UpholdClient.class);
 
     private static final String UPHOLD_PREFS = "uphold_prefs.xml";
-    private static final String UPHOLD_ACCESS_TOKEN = "access_token";
+    public static final String UPHOLD_ACCESS_TOKEN = "access_token";
 
     private static final String OTP_REQUIRED_KEY = "OTP-Token";
     private static final String OTP_REQUIRED_VALUE = "required";
@@ -83,13 +75,12 @@ public class UpholdClient {
             }
             return chain.proceed(chain.request());
         }
-
     };
 
     private UpholdClient(Context context, String prefsEncryptionKey) {
         this.encryptionKey = prefsEncryptionKey;
         this.prefs = new SecurePreferences(context, prefsEncryptionKey, UPHOLD_PREFS);
-        this.accessToken = getStoredAccessToken();
+        this.accessToken = UpholdClientExtKt.getStoredAccessToken(this);
 
         String baseUrl = UpholdConstants.CLIENT_BASE_URL;
         HttpLoggingInterceptor loggingIntercepter = new HttpLoggingInterceptor(message -> log.info(message));
@@ -114,212 +105,6 @@ public class UpholdClient {
             throw new IllegalStateException("You must call UpholdClient#init() first");
         }
         return instance;
-    }
-
-    public void getAccessToken(String code, final Callback<String> callback) {
-        service.getAccessToken(UpholdConstants.CLIENT_ID, UpholdConstants.CLIENT_SECRET, code,
-                "authorization_code").enqueue(new retrofit2.Callback<UpholdAccessToken>() {
-            @Override
-            public void onResponse(Call<UpholdAccessToken> call, Response<UpholdAccessToken> response) {
-                if (response.isSuccessful()) {
-                    log.info("Uphold access token obtained");
-                    accessToken = response.body().getAccessToken();
-                    storeAccessToken();
-                    getCards(callback, null);
-                } else {
-                    log.error("Error obtaining Uphold access token " + response.message() + " code: " + response.code());
-                    callback.onError(new UpholdException("Error obtaining Uphold access token", response.message(), response.code()), false);
-                }
-            }
-
-            @Override
-            public void onFailure(Call<UpholdAccessToken> call, Throwable t) {
-                log.error("Error to obtain Uphold access token " + t.getMessage());
-                callback.onError(new Exception(t), false);
-            }
-        });
-    }
-
-    public void revokeAccessToken(final Callback<String> callback) {
-        service.revokeAccessToken(accessToken).enqueue(new retrofit2.Callback<String>() {
-            @Override
-            public void onResponse(Call<String> call, Response<String> response) {
-                if (response.isSuccessful() && response.body().equals("OK")) {
-                    log.info("Uphold access token revoked");
-                    accessToken = null;
-                    storeAccessToken();
-                    callback.onSuccess(response.body());
-                } else {
-                    log.error("Error revoking Uphold access token: " + response.message() + " code: " + response.code());
-                    callback.onError(new UpholdException("Error revoking Uphold access token", response.message(), response.code()), false);
-                }
-            }
-
-            @Override
-            public void onFailure(Call<String> call, Throwable t) {
-                log.error("Error revoking Uphold access token: " + t.getMessage());
-                callback.onError(new Exception(t), false);
-            }
-        });
-    }
-
-    public void checkCapabilities() {
-        String operation = "withdrawals";
-        service.getCapabilities(operation).enqueue(new retrofit2.Callback<UpholdCapability>() {
-            @Override
-            public void onResponse(@NonNull Call<UpholdCapability> call, @NonNull Response<UpholdCapability> response) {
-                if (response.isSuccessful()) {
-                    UpholdCapability capability = response.body();
-
-                    if (capability != null && capability.getKey().equals(operation)) {
-                        requirements.put(capability.getKey(), capability.getRequirements());
-                    }
-                } else {
-                    log.error("Error obtaining Uphold capabilities: " + response.message() + "; code: " + response.code());
-                }
-            }
-
-            @Override
-            public void onFailure(@NonNull Call<UpholdCapability> call, @NonNull Throwable t) {
-                log.error("Error obtaining capabilities: " + t.getMessage());
-            }
-        });
-    }
-
-    public @NonNull List<String> getWithdrawalRequirements() {
-        List<String> result = requirements.get("withdrawals");
-        return result == null ? Collections.emptyList() : result;
-    }
-
-    private void storeAccessToken() {
-        prefs.edit().putString(UPHOLD_ACCESS_TOKEN, accessToken).apply();
-    }
-
-    private String getStoredAccessToken() {
-        return prefs.getString(UPHOLD_ACCESS_TOKEN, null);
-    }
-
-    private void getCards(final Callback<String> callback, final Callback<UpholdCard> getDashCardCb) {
-        service.getCards().enqueue(new retrofit2.Callback<List<UpholdCard>>() {
-            @Override
-            public void onResponse(Call<List<UpholdCard>> call, Response<List<UpholdCard>> response) {
-                if (response.isSuccessful()) {
-                    log.info("get cards success");
-                    dashCard = getDashCard(response.body());
-                    if (dashCard == null) {
-                        log.info("Dash Card not available");
-                        createDashCard(callback, getDashCardCb);
-                    } else {
-                        if (dashCard.getAddress().getCryptoAddress() == null) {
-                            log.info("Dash Card has no addresses");
-                            createDashAddress(dashCard.getId());
-                        }
-                        callback.onSuccess(dashCard.getId());
-                        if (getDashCardCb != null) {
-                            getDashCardCb.onSuccess(dashCard);
-                        }
-                    }
-                } else {
-                    log.error("Error obtaining cards " + response.message() + " code: " + response.code());
-                    callback.onError(new UpholdException("Error obtaining cards", response.message(), response.code()), false);
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<UpholdCard>> call, Throwable t) {
-                log.error("Error obtaining cards: " + t.getMessage());
-                callback.onError(new Exception(t), false);
-            }
-        });
-    }
-
-    private void createDashCard(final Callback<String> callback, final Callback<UpholdCard> getDashCardCb) {
-        Map<String, String> body = new HashMap<>();
-        body.put("label", "Dash Card");
-        body.put("currency", "DASH");
-        service.createCard(body).enqueue(new retrofit2.Callback<UpholdCard>() {
-            @Override
-            public void onResponse(Call<UpholdCard> call, Response<UpholdCard> response) {
-                if (response.isSuccessful()) {
-                    log.info("Dash Card created successfully");
-                    dashCard = response.body();
-                    String dashCardId = dashCard.getId();
-                    callback.onSuccess(dashCardId);
-                    createDashAddress(dashCardId);
-                    if (getDashCardCb != null) {
-                        getDashCardCb.onSuccess(response.body());
-                    }
-                } else {
-                    log.error("Error creating Dash Card: " + response.message() + " code: " + response.code());
-                    callback.onError(new UpholdException("Error creating Dash Card", response.message(), response.code()), false);
-                }
-            }
-
-            @Override
-            public void onFailure(Call<UpholdCard> call, Throwable t) {
-                log.error("Error creating Dash Card " + t.getMessage());
-            }
-        });
-    }
-
-    private void createDashAddress(String cardId) {
-        Map<String, String> body = new HashMap<>();
-        body.put("network", "dash");
-        service.createCardAddress(cardId, body).enqueue(new retrofit2.Callback<UpholdCryptoCardAddress>() {
-            @Override
-            public void onResponse(Call<UpholdCryptoCardAddress> call, Response<UpholdCryptoCardAddress> response) {
-                log.info("Dash Card address created");
-            }
-
-            @Override
-            public void onFailure(Call<UpholdCryptoCardAddress> call, Throwable t) {
-                log.error("Error creating Dash Card address: " + t.getMessage());
-            }
-        });
-    }
-
-    private UpholdCard getDashCard(List<UpholdCard> cards) {
-        for (UpholdCard card : cards) {
-            if (card.getCurrency().equalsIgnoreCase("dash")) {
-                return card;
-            }
-        }
-        return null;
-    }
-
-    public void getDashBalance(final Callback<BigDecimal> callback) {
-        getCards(new Callback<String>() {
-            @Override
-            public void onSuccess(String data) {
-
-            }
-
-            @Override
-            public void onError(Exception e, boolean otpRequired) {
-                log.error("Error loading Dash balance: " + e.getMessage());
-                if (e instanceof UpholdException) {
-                    UpholdException ue = (UpholdException) e;
-                    if (ue.getCode() == 401) {
-                        //we don't have the correct access token, let's logout
-                        accessToken = null;
-                        storeAccessToken();
-                    }
-                }
-                callback.onError(e, otpRequired);
-            }
-        }, new Callback<UpholdCard>() {
-            @Override
-            public void onSuccess(UpholdCard card) {
-                log.info("Dash balance loaded");
-                callback.onSuccess(new BigDecimal(card.getAvailable()));
-            }
-
-            @Override
-            public void onError(Exception e, boolean otpRequired) {
-                log.error("Error loading Dash balance: " + e.getMessage());
-                callback.onError(e, otpRequired);
-            }
-        });
     }
 
     public void createDashWithdrawalTransaction(String amount, String address,
@@ -385,10 +170,6 @@ public class UpholdClient {
         this.otpToken = otpToken;
     }
 
-    public boolean isAuthenticated() {
-        return getStoredAccessToken() != null;
-    }
-
     public String getEncryptionKey() {
         return encryptionKey;
     }
@@ -401,41 +182,5 @@ public class UpholdClient {
         void onSuccess(T data);
 
         void onError(Exception e, boolean otpRequired);
-    }
-
-    public interface CallbackFilter<T> {
-        void onSuccess(T data, String length);
-
-        void onError(Exception e, boolean otpRequired);
-    }
-
-    public void getUpholdCurrency(String rangeString, final CallbackFilter<String> callback) {
-
-        service.getUpholdCurrency(rangeString, UpholdConstants.UPHOLD_CURRENCY_LIST).enqueue(new retrofit2.Callback<String>() {
-            @Override
-            public void onResponse(Call<String> call, Response<String> response) {
-                System.out.println("Response::" + response);
-                String length = "";
-                if (rangeString == "items=0-50") {
-
-                    length = response.headers().get("content-range");
-                }
-
-                System.out.println("ContentLength::" + length);
-
-
-                if (response.isSuccessful()) {
-                    callback.onSuccess(response.body(), length);
-                } else {
-                    log.error("Error obtaining Uphold access token " + response.message() + " code: " + response.code());
-                    callback.onError(new UpholdException("Error obtaining Uphold access token", response.message(), response.code()), false);
-                }
-            }
-
-            @Override
-            public void onFailure(Call<String> call, Throwable t) {
-                callback.onError(new Exception(t), false);
-            }
-        });
     }
 }

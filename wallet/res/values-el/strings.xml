@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">Το υπόλοιπο δεν είναι διαθέσιμο κατά τη διάρκεια της επανάληψης.</string>
     <string name="exchange_rates_activity_title">Τοπικό νόμισμα</string>
     <string name="exchange_rates_fragment_empty_text">Δεν ήταν δυνατή η φόρτωση των ισοτιμιών.</string>
-    <string name="exchange_rates_fragment_empty_search">Δε βρέθηκε η ισοτιμία.</string>
     <string name="exchange_rates_fragment_default">(προεπιλογή)</string>
     <string name="exchange_rates_fragment_rate">Ισοτιμία</string>
     <string name="exchange_rates_fragment_balance">Υπόλοιπο</string>
@@ -43,13 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Διαχείριση εφαρμογών</string>
     <string name="wallet_timeskew_dialog_title">Ελέξτε ρυθμίσεις ημερομηνίας &amp; χρόνου</string>
     <string name="wallet_timeskew_dialog_msg">Ο χρόνος της συσκευής σας είναι λάθος κατά %d λεπτά. Ενδεχομένως να μην μπορείτε να στείλετε ή να λάβετε Dash εξαιτίας αυτού του προβλήματος.\n\nΠρέπει να ελέγξετε και αν χρειάζεται να διορθώσετε στις ρυθμίσεις την ημερομηνία, την ώρα και την ζώνη ώρας.</string>
-    <string name="wallet_version_dialog_title">Μία νέα έκδοση είναι διαθέσιμη!</string>
-    <string name="wallet_version_dialog_msg">Αυτή η έκδοση διορθώνει σημαντικά προβλήματα. Για λεπτομέρειες, δείτε το σύνολο των αλλαγών στο Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Αν δεν βλέπετε καμιά ενημέρωση λογισμικού, αυτό πιθανά σημαίνει ότι  η έκδοση του Android δεν υποστηρίζεται πια.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Λήψη</string>
-    <string name="wallet_old_sdk_dialog_title">Η έκδοση για Android είναι παρωχημένη</string>
-    <string name="wallet_old_sdk_dialog_message">Είναι πολύ πιθανόν μία από τις επόμενες εκδόσεις του Dash Wallet να μην υποστηρίζουν άλλο την συσκευή σας. Σε μερικές περιπτώσεις, μπορεί να γίνει πολύ δύσκολο το να ξοδεύετε νομίσματα σε αυτή την συσκευή.\n\nΕκτός αν ξέρετε τι κάνετε, καλύτερα να μεταφέρετε τα νομίσματά σας το συντομότερο.</string>
     <string name="send_coins_activity_title">Αποστολή Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Παραλαβή υπογραφής από %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Η παραλαβή της υπογραφής απέτυχε</string>
@@ -173,7 +165,6 @@
     <string name="transaction_row_status_error_other">Άγνωστο</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">Σε %s στο %s</string>
-    <string name="transaction_row_rate_not_available">Μη διαθέσιμο</string>
     <string name="transaction_row_status_masternode_registration">Εγγραφή Masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Ανανέωση Masternode</string>
     <string name="transaction_row_status_masternode_update_service">Ανανέωση Masternode</string>
@@ -205,8 +196,6 @@
     <string name="restore_wallet_dialog_success_replay">Το πορτοφόλι σας αποκαταστάθηκε με επιτυχία. Το ποσό του θα καθοριστεί στη συνέχεια. Αυτό θα πάρει κάποιο χρόνο.</string>
     <string name="restore_wallet_dialog_success_encrypted">Προειδοποίηση: Το πορτοφόλι σας προστατεύεται από ένα PIN ξοδέματος. Βεβαιωθείτε ότι το θυμάστε ακόμα πριν να λάβετε σε αυτό το πορτοφόλι.</string>
     <string name="import_keys_dialog_failure">Το πορτοφόλι δεν θα μπορούσε να αποκατασταθεί:\n\n%s\n\nΛάθος κωδικός;</string>
-    <string name="backup_wallet_permission_dialog_title">Δεν έχετε άδεια εγγραφής</string>
-    <string name="backup_wallet_permission_dialog_message">Για να μπορέστε κάνετε backup του πορτοφολιού σας σε εξωτερική αποθηκευτική μονάδα, χρειάζεται να χορηγήσετε άδεια εγγραφής.</string>
     <string name="export_keys_dialog_title">Αντίγραφο ασφαλείας πορτοφολιού</string>
     <string name="backup_wallet_dialog_message">Το αντίγραφο ασφαλείας σας θα κρυπτογραφηθεί με τον επιλεγμένο κωδικό και θα αποθηκευτεί στον εξωτερικό χώρο αποθήκευσης.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Το πορτοφόλι σας προστατεύεται από PIN ξοδέματος. Βεβαιωθείτε ότι θυμάστε το PIN εκτός από τον εφεδρικό κωδικό πρόσβασης!</string>
@@ -378,14 +367,22 @@
     <string name="activity_security_hide_balance">Αυτόματη απόκρυψη Υπολοίπου</string>
     <string name="reset_to_default">Επαναφορά στα Προεπιλεγμένα</string>
 
-    <string name="payment_protocol_default_error_title">Σφάλμα πληρωμής</string>
     <string name="payment_protocol_insufficient_funds_error_title">Ανεπαρκή Χρήματα</string>
     <string name="payment_protocol_insufficient_funds_error_message">Δεν έχετε αρκετά χρήματα για να ολοκληρώσετε αυτή την συναλλαγή</string>
 
-
-    <string name="select_a_service_to_buy_and_sell_dash"> Επιλέξτε μια υπηρεσία για να αγοράσετε και να πουλήσετε Dash.</string>
+    <string name="buy_and_sell_subtitle">Επιλέξτε μια υπηρεσία για αγορά, πώληση, μετατροπή και μεταφορά Dash</string>
     <string name="select_a_service">Επιλέξτε μια Υπηρεσία</string>
     <string name="activity_buy_and_sell_dash_filter">Φίλτρο</string>
     <string name="clear_filter">Καθαρισμός Φίλτρου</string>
     <string name="reason">Λόγος</string>
+    <string name="link_account">Σύνδεση του λογαριασμού σας</string>
+    <string name="buy_no_account_needed">Αγοράστε Dash - Δεν απαιτείται λογαριασμός</string>
+    <string name="your_coinbase_session_has_expired">Η συνεδρία σας στην Coinbase έχει λήξει</string>
+    <string name="please_log_in_to_your_coinbase_account">Συνδεθείτε στο λογαριασμό σας στην Coinbase</string>
+    <string name="log_in">Είσοδος</string>
+
+    <string name="show_clipboard">Εμφάνιση περιεχομένου στο πρόχειρο</string>
+    <string name="tap_to_paste">Πατήστε τη διεύθυνση από το πρόχειρο για να την επικολλήσετε</string>
+    <string name="not_dash_address">Δεν είναι μια έγκυρη διεύθυνση Dash ή URL</string>
+    <string name="send_to_address">Αποστολή στη διεύθυνση</string>
 </resources>

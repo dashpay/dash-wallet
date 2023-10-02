@@ -17,13 +17,13 @@
 
 package de.schildbach.wallet.ui.more
 
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.security.BiometricHelper
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -31,14 +31,15 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFormattedString
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SecurityViewModel @Inject constructor(
     private val exchangeRates: ExchangeRatesProvider,
@@ -51,16 +52,13 @@ class SecurityViewModel @Inject constructor(
 ): ViewModel() {
     private var selectedExchangeRate: ExchangeRate? = null
 
-    val currencyCode
-        get() = configuration.exchangeCurrencyCode ?: Constants.DEFAULT_EXCHANGE_CURRENCY
-
     val needPassphraseBackUp
         get() = configuration.remindBackupSeed
 
     val balance: Coin
         get() = walletData.wallet?.getBalance(Wallet.BalanceType.ESTIMATED) ?: Coin.ZERO
 
-    val hideBalance = walletUIConfig.observePreference(WalletUIConfig.AUTO_HIDE_BALANCE).asLiveData()
+    val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE).asLiveData()
 
     private var _fingerprintIsAvailable = MutableLiveData(false)
     val fingerprintIsAvailable: LiveData<Boolean>
@@ -71,7 +69,9 @@ class SecurityViewModel @Inject constructor(
         get() = _fingerprintIsEnabled
 
     fun init() {
-        exchangeRates.observeExchangeRate(currencyCode)
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .flatMapLatest(exchangeRates::observeExchangeRate)
             .onEach { selectedExchangeRate = it }
             .launchIn(viewModelScope)
 
@@ -107,7 +107,8 @@ class SecurityViewModel @Inject constructor(
                     AnalyticsConstants.Security.FINGERPRINT_ON
                 } else {
                     AnalyticsConstants.Security.FINGERPRINT_OFF
-                }, mapOf()
+                },
+                mapOf()
             )
 
             configuration.enableFingerprint = isEnabled
@@ -120,13 +121,14 @@ class SecurityViewModel @Inject constructor(
 
     fun setHideBalanceOnLaunch(hide: Boolean) {
         viewModelScope.launch {
-            walletUIConfig.setPreference(WalletUIConfig.AUTO_HIDE_BALANCE, hide)
+            walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, hide)
             analytics.logEvent(
                 if (hide) {
                     AnalyticsConstants.Security.AUTOHIDE_BALANCE_ON
                 } else {
                     AnalyticsConstants.Security.AUTOHIDE_BALANCE_OFF
-                }, mapOf()
+                },
+                mapOf()
             )
         }
     }

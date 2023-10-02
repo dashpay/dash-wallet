@@ -44,6 +44,7 @@ import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -61,6 +62,7 @@ class SendCoinsViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val configuration: Configuration,
     private val sendCoinsTaskRunner: SendCoinsTaskRunner,
+    private val notificationService: NotificationService
     private val platformRepo: PlatformRepo,
     private val dashPayContactRequestDao: DashPayContactRequestDao
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
@@ -106,6 +108,9 @@ class SendCoinsViewModel @Inject constructor(
     var isDashToFiatPreferred: Boolean
         get() = configuration.isDashToFiatDirection
         set(value) { configuration.isDashToFiatDirection = value }
+
+    val shouldPlaySounds: Boolean
+        get() = !notificationService.isDoNotDisturb
 
     private val _contactData = MutableLiveData<UsernameSearchResult>()
     val contactData: LiveData<UsernameSearchResult>

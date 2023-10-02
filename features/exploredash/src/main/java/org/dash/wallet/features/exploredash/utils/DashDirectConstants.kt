@@ -22,6 +22,5 @@ object DashDirectConstants {
     const val CLIENT_ID_PARAM_NAME = "clientId"
     @JvmField var CLIENT_ID = ""
     const val EMAIL = "email"
-    const val DASH_DIRECT_URL = "https://www.dashdirect.org/"
     const val DEFAULT_DISCOUNT = 0.0
 }

@@ -39,9 +39,8 @@ import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentToolsBinding
-import kotlinx.android.synthetic.main.fragment_tools.*
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
@@ -111,7 +110,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
             isSyncing = it?.replaying == true
         }
 
-        transaction_export.setOnClickListener {
+        binding.transactionExport.setOnClickListener {
             if (isSyncing) {
                 val dialog = AdaptiveDialog.create(
                     null,

@@ -2,15 +2,18 @@
 <resources>
 
     <string name="uphold_account">آپهولد</string>
+    <string name="topper">تاپر</string>
     <string name="uphold_link_title">حساب آپعولدتان را متصل کنید</string>
+    <string name="uphold_powered_by">قدرت‌گرفته از تاپر</string>
+    <string name="topper_powered_by">قدرت‌گرفته از آپهولد</string>
     <string name="uphold_transfer_details">از آپهولد به دش والت‌ شما</string>
     <string name="uphold_buy_dash_activity_title">خرید/فروش دش با آپهلد</string>
     <string name="uphold_buy_dash_with_uphold">خرید دش با حساب آپهلد</string>
     <string name="uphold_buy_dash_button">خرید دش</string>
     <string name="uphold_transfer_to_this_wallet_button">انتقال از آپهلد</string>
     <string name="uphold_link_account">اتصال حساب کاربری در آپهولد</string>
-    <string name="uphold_account_dash_balance">موجودی حساب آپهلد شما برابر است با</string>
-    <string name="uphold_transfer_to_this_wallet">انتقال دش از حساب آپهلد به این کیف پول</string>
+    <string name="uphold_account_dash_balance">موجودی دش در آپهولد</string>
+    <string name="uphold_transfer_to_this_wallet">از آپهولد به دش والت</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">کارمزد از میزان درخواستی شما کم می‌شود.</string>
     <string name="uphold_withdrawal_instructions">مبلغ مورد نظر برای انتقال را وارد کنید</string>
     <string name="uphold_withdrawal_success_title">با موفقیت انجام شد</string>
@@ -19,11 +22,12 @@
     <string name="uphold_transfer">انتقال</string>
     <string name="uphold_see_on_uphold">مشاهده در آپهلد</string>
     <string name="uphold_logout_title">خروج از آپهولد</string>
+    <string name="uphold_disconnect">قطع اتصال حساب آپهولد</string>
     <string name="uphold_logout">خروج</string>
     <string name="uphold_logout_explanation_text">باید با استفاده از مرورگرتان، از وب‌سایت آپهولد خارج شوید</string>
     <string name="uphold_go_to_website">رفتن به وب‌سایت</string>
     <string name="uphold_error">خطا در آپهولد</string>
-    <string name="uphold_error_not_logged_in">دش والت دیگر به حساب‌تان در آپهولد متصل نیست. در صفحه بعد، دگمه اتصال حساب کاربری در آپهلود را فشار دهید. </string>
+    <string name="uphold_error_not_logged_in">دش والت دیگر به حساب آپهولد شما متصل نیست</string>
     <string name="uphold_error_not_available">سرویس آپهولد در دسترس نیست. لطفا بعدا دوباره امتحان کنید. </string>
     <string name="uphold_error_report_issue">لطفا با استفاده از گزینه «گزارش خطا» در انتهای همین منو، این مشکل را به تیم پشتیبانی دش والت گزارش کنید. </string>
 

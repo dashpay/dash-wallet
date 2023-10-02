@@ -49,6 +49,13 @@
                 android:name="mode"
                 android:defaultValue="2" />
         </action>
+
+        <action
+            android:id="@+id/home_to_addressInput"
+            app:destination="@id/addressInputFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -67,11 +74,18 @@
             android:id="@+id/payments_to_contacts"
             app:destination="@id/contactsFragment" />
 
-        <action 
+        <action
             android:id="@+id/payments_to_receive"
             app:destination="@id/receiveFragment"
             app:enterAnim="@anim/slide_in_bottom"
             app:popExitAnim="@anim/fade_out" />
+
+        <action
+            android:id="@+id/payments_to_addressInput"
+            app:destination="@id/addressInputFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -225,10 +239,6 @@
         android:label="Tools"
         tools:layout="@layout/fragment_more">
 
-        <argument
-            android:name="ShowNavBar"
-            android:defaultValue="false" />
-
         <action
             android:id="@+id/tools_to_masternode_keys"
             app:destination="@id/masternodeKeyTypeFragment"
@@ -243,10 +253,6 @@
         android:name="de.schildbach.wallet.ui.more.masternode_keys.MasternodeKeysFragment"
         android:label="Masternode Keys"
         tools:layout="@layout/fragment_masternode_key_types">
-
-        <argument
-            android:name="ShowNavBar"
-            android:defaultValue="false" />
 
         <action
             android:id="@+id/masternode_key_type_to_masternode_keychain"
@@ -267,13 +273,7 @@
         android:id="@+id/masternodeKeyChainFragment"
         android:name="de.schildbach.wallet.ui.more.masternode_keys.MasternodeKeyChainFragment"
         android:label="Masternode KeyChain"
-        tools:layout="@layout/fragment_masternode_key_chain">
-
-        <argument
-            android:name="ShowNavBar"
-            android:defaultValue="false" />
-
-    </fragment>
+        tools:layout="@layout/fragment_masternode_key_chain"/>
 
     <fragment
         android:id="@+id/buySellFragment"
@@ -285,6 +285,14 @@
             android:id="@+id/buySell_to_overview"
             app:destination="@id/integrationOverviewFragment"
             app:enterAnim="@anim/slide_in_bottom"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/buySell_to_uphold"
+            app:destination="@id/upholdPortalFragment"
+            app:enterAnim="@anim/slide_in_bottom"
+            app:popEnterAnim="@anim/activity_stay"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
     </fragment>
@@ -300,6 +308,12 @@
             android:defaultValue="COINBASE"
             app:argType="de.schildbach.wallet.data.ServiceType" />
     </fragment>
+
+    <fragment
+        android:id="@+id/upholdPortalFragment"
+        android:name="org.dash.wallet.integration.uphold.ui.UpholdPortalFragment"
+        android:label="upholdPortalFragment"
+        tools:layout="@layout/fragment_integration_portal" />
 
     <fragment
         android:id="@+id/securityFragment"
@@ -344,6 +358,12 @@
             app:argType="integer"
             android:defaultValue="2" />
     </fragment>
+
+    <fragment
+        android:id="@+id/addressInputFragment"
+        android:name="de.schildbach.wallet.ui.send.AddressInputFragment"
+        android:label="Address Input"
+        tools:layout="@layout/fragment_address_input" />
 
     <include app:graph="@navigation/nav_explore" />
     <include app:graph="@navigation/nav_voting" />

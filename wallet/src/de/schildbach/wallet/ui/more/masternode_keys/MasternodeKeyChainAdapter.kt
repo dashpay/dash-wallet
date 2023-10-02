@@ -43,9 +43,15 @@ class MasternodeKeyChainAdapter(
         if (keyInfo.privateKeyHex == null) {
             requestedDecryptedKey(keyInfo.masternodeKey, position)
         }
+        // after Reset Wallet, restore wallet the key is missing
+        val usage = if (keyUsage.containsKey(keyInfo.masternodeKey)) {
+            keyUsage[keyInfo.masternodeKey]
+        } else {
+            keyUsage.values.find { it.key.pubKey.contentEquals(keyInfo.masternodeKey.pubKey) }
+        }
         holder.bind(
             keyInfo,
-            keyUsage[keyInfo.masternodeKey],
+            usage,
             clickListener,
         )
     }

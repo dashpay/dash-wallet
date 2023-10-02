@@ -18,63 +18,46 @@
 package org.dash.wallet.integration.coinbase_integration.utils
 
 import android.content.Context
-import android.preference.PreferenceManager
+import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import org.bitcoinj.core.Coin
-import java.io.IOException
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.BaseConfig
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class CoinbaseConfig @Inject constructor(private val context: Context) {
+class CoinbaseConfig @Inject constructor(
+    context: Context,
+    walletDataProvider: WalletDataProvider
+): BaseConfig(
+    context,
+    PREFERENCES_NAME,
+    walletDataProvider,
+    migrations = listOf(
+        SharedPreferencesMigration(
+            context,
+            context.packageName + "_preferences",
+            keysToMigrate = setOf(
+                LAST_ACCESS_TOKEN.name,
+                LAST_REFRESH_TOKEN.name,
+                USER_ACCOUNT_ID.name,
+                AUTH_INFO_SHOWN.name,
+                USER_WITHDRAWAL_LIMIT.name,
+                SEND_LIMIT_CURRENCY.name
+            )
+        )
+    )
+) {
     companion object {
-        private const val PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance"
+        const val PREFERENCES_NAME = "coinbase"
         val LAST_BALANCE = longPreferencesKey("last_balance")
         val UPDATE_BASE_IDS = booleanPreferencesKey("should_update_base_ids")
-    }
-
-    private val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
-
-    private val Context.dataStore by preferencesDataStore("coinbase")
-    private val dataStore = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-
-    fun <T> observePreference(key: Preferences.Key<T>): Flow<T?> {
-        return dataStore.map { preferences -> preferences[key] }
-    }
-
-    suspend fun <T> getPreference(key: Preferences.Key<T>): T? {
-        migrateLastBalance(key)
-        return dataStore.map { preferences -> preferences[key] }.first()
-    }
-
-    suspend fun <T> setPreference(key: Preferences.Key<T>, value: T) {
-        context.dataStore.edit { preferences ->
-            preferences[key] = value
-        }
-    }
-
-    suspend fun clearAll() {
-        context.dataStore.edit { it.clear() }
-    }
-
-    private suspend fun <T> migrateLastBalance(key: Preferences.Key<T>) {
-        if (key == LAST_BALANCE && !sharedPrefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null).isNullOrEmpty()) {
-            // TODO: finish migration of this preference
-            val balanceValue = Coin.parseCoin(sharedPrefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, "0.0")).value
-            setPreference(LAST_BALANCE, balanceValue)
-            sharedPrefs.edit().putString(PREFS_KEY_LAST_COINBASE_BALANCE, null).apply()
-        }
+        val LOGOUT_COINBASE = booleanPreferencesKey("logout_coinbase")
+        val LAST_ACCESS_TOKEN = stringPreferencesKey("last_coinbase_access_token")
+        val LAST_REFRESH_TOKEN = stringPreferencesKey("last_coinbase_refresh_token")
+        val USER_ACCOUNT_ID = stringPreferencesKey("coinbase_account_id")
+        val AUTH_INFO_SHOWN = booleanPreferencesKey("coinbase_auth_info_shown")
+        val USER_WITHDRAWAL_LIMIT = stringPreferencesKey("withdrawal_limit")
+        val SEND_LIMIT_CURRENCY = stringPreferencesKey("send_limit_currency")
     }
 }

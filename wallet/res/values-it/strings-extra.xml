@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Questo PIN ti sarà richiesto per sbloccare l\'app ogni volta che la usi.</string>
     <string name="set_pin_confirm_pin_incorrect">PIN non valido</string>
-    
+
     <string name="home_balance_hide_hint">Tocca per nascondere il saldo</string>
 
     <string name="dialog_confirm_confirm">Conferma</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Scansiona per inviare</string>
     <string name="scan_to_pay_error_dialog_message">Indirizzo Dash o richiesta URL non validi nel clipboard:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Indirizzo Dash o richiesta URL non validi nel clipboard</string>
-    <string name="pay_to_confirm_address">È questo l\'indirizzo Dash a cui vuoi inviare il pagamento?</string>
 
     <string name="receive_title">Ricevi</string>
     <string name="receive_enter_amount_message">Specificare l\'importo da ricevere</string>
@@ -325,8 +324,6 @@
     <string name="security_very_high">Molto Alto</string>
     <string name="max">Massimo</string>
 
-    <string name="enter_amount_available">disponibile</string>
-
     <string name="skip">salta</string>
     <string name="get_started">Iniziare</string>
     <string name="welcome_screen_title_1_new_install">Benvenuto</string>
@@ -351,8 +348,6 @@
     <string name="payment_request_unable_to_send">Impossibile inviare</string>
     <string name="payment_request_please_try_again">Per favore riprova</string>
     <string name="payment_request_try_again">Prova Ancora</string>
-    <string name="payment_request_problem_title">Il pagamento non è stato riconosciuto</string>
-    <string name="payment_request_problem_message">Non è stato possibile processare il tuo pagamento dal server, per favore informati col commerciante</string>
     <string name="payment_request_expired_title">Richiesta di pagamento scaduta</string>
     <string name="payment_request_close">Chiudi</string>
     <string name="payment_request_skip">Salta</string>
@@ -403,7 +398,7 @@
     <string name="masternode_key_type_owner">Chiavi proprietario</string>
     <string name="masternode_key_type_voting">Chiavi  di Voto</string>
     <string name="masternode_key_type_operator">Chiavi operatore</string>
-    <string name="masternode_key_type_platform">Tasti operatore HPMN</string>
+    <string name="masternode_key_type_platform">ID Keys del nodo Evolution</string>
     <string name="masternode_key_type_total">%d chiavi</string>
     <string name="masternode_key_type_used">%d usata</string>
     <string name="masternode_key_pair_index">Coppia di chiavi%d</string>

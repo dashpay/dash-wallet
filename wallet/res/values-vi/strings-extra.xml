@@ -53,6 +53,7 @@
     <string name="scan_to_pay_error_dialog_title">Quét để gửi</string>
     <string name="scan_to_pay_error_dialog_message">Không phải một địa chỉ Dash hoặc URL yêu cầu trong bộ nhớ đệm:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Không phải một địa chỉ Dash hoặc URL yêu cầu trong bộ nhớ đệm.</string>
+
     <string name="receive_title">Nhận</string>
     <string name="receive_enter_amount_message">Hãy xác định rõ số lượng cần nhận</string>
 
@@ -259,8 +260,6 @@
     <string name="security_very_high">Rất cao</string>
     <string name="max">Tối đa</string>
 
-    <string name="enter_amount_available">Hiện có</string>
-
     <string name="skip">bỏ qua</string>
     <string name="get_started">Bắt đầu</string>
     <string name="welcome_screen_title_1_new_install">Chào mừng</string>
@@ -285,7 +284,6 @@
     <string name="payment_request_unable_to_send">Không thể gửi</string>
     <string name="payment_request_please_try_again">Hãy thử lại</string>
     <string name="payment_request_try_again">Hãy thử lại</string>
-    <string name="payment_request_problem_title">Giao dịch không được thừa nhận</string>
     <string name="payment_request_expired_title">Yêu cầu giao dịch đã hết hạn</string>
     <string name="payment_request_close">Đóng</string>
     <string name="payment_request_skip">Bỏ qua</string>

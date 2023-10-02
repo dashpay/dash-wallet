@@ -45,12 +45,10 @@ interface ExploreRepository {
     fun getTimestamp(file: File): Long
     fun getUpdateFile(): File
     suspend fun download()
-    fun markDbForDeletion(dbFile: File)
     suspend fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean): Boolean
     fun finalizeUpdate()
 }
 
-@Suppress("BlockingMethodInNonBlockingContext")
 class GCExploreDatabase @Inject constructor(
     @ApplicationContext private val context: Context,
     private val exploreConfig: ExploreConfig,
@@ -170,25 +168,6 @@ class GCExploreDatabase @Inject constructor(
 
     override fun getUpdateFile(): File {
         return File(context.cacheDir, DATA_FILE_NAME)
-    }
-
-    override fun markDbForDeletion(dbFile: File) {
-        try {
-            if (dbFile.exists()) {
-                dbFile.deleteOnExit()
-            }
-            val dbShmFile = File(dbFile.absolutePath + "-shm")
-            if (dbShmFile.exists()) {
-                dbShmFile.deleteOnExit()
-            }
-            val dbWalFile = File(dbFile.absolutePath + "-wal")
-            if (dbWalFile.exists()) {
-                dbWalFile.deleteOnExit()
-            }
-            log.info("existing explore db files to be deleted on exit")
-        } catch (ex: SecurityException) {
-            log.warn("unable to delete explore db", ex)
-        }
     }
 
     override suspend fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean): Boolean {

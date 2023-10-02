@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Dashを探求する</string>
     <string name="explore_title">探求する</string>
-    <string name="explore_subtitle">155,000以上の店舗やオンライン加盟店で、DASHを使って簡単にお買い物ができます。</string>
+    <string name="explore_subtitle">Dashを使用できる加盟店、Dashを購入できる場所、Dashで収入を得る方法を探します。</string>
     <string name="explore_merchants_title">どこで使えますか。</string>
     <string name="explore_merchants_subtitle">Dashでの支払いが可能な加盟店を探します。</string>
     <string name="explore_atms_title">ATM</string>
@@ -74,6 +74,7 @@
     <string name="explore_payment_method">支払い方法</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">ギフトカード</string>
+    <string name="explore_filter_gift_cards">ギフトカード</string>
     <string name="explore_radius">Radius</string>
     <string name="explore_location">位置</string>
     <string name="explore_current_location">現在地</string>
@@ -149,10 +150,12 @@
     <string name="redeem_gift_card_text">ギフトカードは、オンラインで数秒以内またはレジでご利用いただけます。</string>
 
     <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">同期中...。同期結果は完全ではない可能性があります。</string>
-    <string name="sync_in_progress_error">同期中...。エラーが発生しました。</string>
-    <string name="sync_in_progress_canceled">同期が中止されました...。後ほど再試行します。</string>
+    <string name="sync_in_progress_not_complete">同期中... 入力結果が完了していない可能性があります。</string>
+    <string name="sync_in_progress_error">同期中... エラーが発生しました。</string>
+    <string name="sync_in_progress_canceled">同期がキャンセルされました... 後ほど再試行されます。</string>
 
     <string name="sync_in_progress_file_not_found">ビルドエラー：データベースが見つかりません。</string>
-    <string name="sync_in_progress_network_error">同期が中断されました...。ネットワークがオフラインまたはアクセスできません。</string>
-</resources>
+    <string name="sync_in_progress_network_error">同期が中断されました... ネットワークがオフラインまたはアクセス不可能です。</string>
+
+
+    </resources>

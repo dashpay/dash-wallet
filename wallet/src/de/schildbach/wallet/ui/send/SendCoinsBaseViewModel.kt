@@ -24,6 +24,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.util.Constants
 import javax.inject.Inject
 
 @HiltViewModel

@@ -73,12 +73,8 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
-            setupPaymentMethods()
-        } else {
-            binding.paymentMethods.isVisible = false
-            binding.paymentMethodsLabel.isVisible = false
-        }
+        binding.paymentMethods.isVisible = false
+        binding.paymentMethodsLabel.isVisible = false
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
             if (viewModel.filterMode.value != FilterMode.Online) {

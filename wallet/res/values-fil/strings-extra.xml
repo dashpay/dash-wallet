@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Pagpapatunay ng PIN</string>
     <string name="set_pin_message">Ang PIN na ito ay kailangan upang i-unlock ang iyong app kapag nais gamitin.</string>
     <string name="set_pin_confirm_pin_incorrect">Maling PIN</string>
-    
+
     <string name="home_balance_hide_hint">Pindutin upang itago ang balanse</string>
 
     <string name="dialog_confirm_confirm">Kumpirmahin</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">I-scan para magpadala</string>
     <string name="scan_to_pay_error_dialog_message">Hindi wastong Dash Address or hiling na URL sa clipboard:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Hindi wastong Dash Address or hiling na URL sa clipboard.</string>
-    <string name="pay_to_confirm_address">Ito ba ang Dash address na gusto mong padalhan ng bayad?</string>
 
     <string name="receive_title">Tumanggap</string>
     <string name="receive_enter_amount_message">Tukuyin ang halaga na matatanggap</string>
@@ -322,8 +321,6 @@
     <string name="security_very_high">Napakataas</string>
     <string name="max">Max</string>
 
-    <string name="enter_amount_available">magagamit</string>
-
     <string name="skip">laktawan</string>
     <string name="get_started">Magsimula</string>
     <string name="welcome_screen_title_1_new_install">Maligayang pagdating</string>
@@ -348,8 +345,6 @@
     <string name="payment_request_unable_to_send">Hindi maipadala</string>
     <string name="payment_request_please_try_again">Subukan muli</string>
     <string name="payment_request_try_again">Subukan muli</string>
-    <string name="payment_request_problem_title">Ang pagbabayad ay hindi kinilala</string>
-    <string name="payment_request_problem_message">Ang iyong pagbabayad ay hindi maproseso ng server, mangyaring magtanong sa merchant</string>
     <string name="payment_request_expired_title">Ang hiling sa pagbayad ay nag-expire na</string>
     <string name="payment_request_close">Sarado</string>
     <string name="payment_request_skip">Laktawan</string>
@@ -400,7 +395,6 @@
     <string name="masternode_key_type_owner">Susi ng may-ari</string>
     <string name="masternode_key_type_voting">Mga susi ng pagboto</string>
     <string name="masternode_key_type_operator">Operator na mga Susi</string>
-    <string name="masternode_key_type_platform">Mga Susi ng Operator ng HPMN</string>
     <string name="masternode_key_type_total">%d mga susi</string>
     <string name="masternode_key_type_used">%d ginamit</string>
     <string name="masternode_key_pair_index">Keypair %d</string>

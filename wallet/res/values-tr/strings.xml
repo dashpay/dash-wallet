@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">Tekrar süresince bakiye kullanılamaz</string>
     <string name="exchange_rates_activity_title">Yerel para birimi</string>
     <string name="exchange_rates_fragment_empty_text">Döviz kurları yüklenemedi.</string>
-    <string name="exchange_rates_fragment_empty_search">Döviz kuru bulunamadı.</string>
     <string name="exchange_rates_fragment_default">(varsayılan)</string>
     <string name="exchange_rates_fragment_rate">Oran</string>
     <string name="exchange_rates_fragment_balance">Bakiye</string>
@@ -43,13 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Uygulamaları yönet</string>
     <string name="wallet_timeskew_dialog_title">Tarihi kontrol et &amp; zaman ayarları</string>
     <string name="wallet_timeskew_dialog_msg">Cihazınızın saati %d dakika farklılık göstermekte. Muhtemelen, bu problemden dolayı Dash gönderemeyecek ve alamayacaksınız.\n\nTarih, saat ve saat dilimi ayarlarınızı kontrol etmelisiniz, gerektiği takdirde ise düzeltmelisiniz.</string>
-    <string name="wallet_version_dialog_title">Yeni bir sürüm mevcuttur!</string>
-    <string name="wallet_version_dialog_msg">Bu sürüm önemli hataları düzeltir. Detaylar için, Google Play\'deki değişim günlüğüne bakınız.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Eğer bir güncelleme görmüyorsanız, bu muhtemelen Android sürümünüzün artık desteklenmediği anlamına gelir.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">İndir</string>
-    <string name="wallet_old_sdk_dialog_title">Android sürümü güncel değil</string>
-    <string name="wallet_old_sdk_dialog_message">Gelecek Dash Wallet sürümlerinden birinin cihazınızı desteklememesi olası bir ihtimaldir. Bazı durumlarda, bu cihaz üzerinden Dash harcamak zorlaşabilir. In some cases, it can get difficult to spend coins on this device.\n\nVelev ki ne yaptığınızı biliyorsanız durum başka, Dash\'lerinizi kısa zamanda başka bir yere aktarmanz tavsiye edilir.</string>
     <string name="send_coins_activity_title">Dash Gönder</string>
     <string name="send_coins_fragment_request_payment_request_progress">%s tarafından imza alınıyor…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">İmza alımı başarısız</string>
@@ -173,7 +165,6 @@
     <string name="transaction_row_status_error_other">Bilinmeyen</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">%s tarihinde, saat %s</string>
-    <string name="transaction_row_rate_not_available">Mevcut değil</string>
     <string name="transaction_row_status_masternode_registration">Anadüğüm Kayıt İşlemi</string>
     <string name="transaction_row_status_masternode_update_registrar">Anadüğüm Güncellemesi</string>
     <string name="transaction_row_status_masternode_update_service">Anadüğüm Güncellemesi</string>
@@ -205,8 +196,6 @@
     <string name="restore_wallet_dialog_success_replay">Cüzdanınız başarılı bir şekilde geri yüklendi. Bundan sonra bakiyesi belirlenecektir. Bu biraz vakit alacaktır.</string>
     <string name="restore_wallet_dialog_success_encrypted">Uyarı: Cüzdanınız bir harcama PİN\'i ile korunmaktadır. Bu cüzdana gönderimler yapmadan önce PİN\'i bildiğinizden emin olun.</string>
     <string name="import_keys_dialog_failure">Cüzdan geri yüklenemedi:\n\n%s\n\nYanlış şifre olmasın?</string>
-    <string name="backup_wallet_permission_dialog_title">Yazma izni eksik</string>
-    <string name="backup_wallet_permission_dialog_message">Cüzdanınızı harici bir belleğe yedeklemek için, yazma izni vermeniz gerekiyor.</string>
     <string name="export_keys_dialog_title">Cüzdanı yedekle</string>
     <string name="backup_wallet_dialog_message">Yedeğiniz seçtiğiniz parola ile şifrelenecek ve harici belleğe yazılacaktır.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Cüzdanınız bir harcama PİN\'i ile korunmaktadır. Yedekleme parolasına ilâve olarak bu PİN\'i hatırlayacağınızdan emin olunuz!</string>
@@ -378,14 +367,22 @@
     <string name="activity_security_hide_balance">Otomatik Bakiye Gizleme</string>
     <string name="reset_to_default">Varsayılana sıfırla</string>
 
-    <string name="payment_protocol_default_error_title">Ödeme hatası</string>
     <string name="payment_protocol_insufficient_funds_error_title">Yetersiz Bakiye</string>
     <string name="payment_protocol_insufficient_funds_error_message">Bu işlemi gerçekleştirmek için yeterli bakiyeniz yoktur</string>
 
-
-    <string name="select_a_service_to_buy_and_sell_dash">Dash satın alıp satmak için bir hizmet seçin.</string>
+    <string name="buy_and_sell_subtitle">Dash alıp, satıp, dönüştürebileceğiniz ve aktarım yapabileceğiniz bir hizmet seçin</string>
     <string name="select_a_service">Bir Hizmet Seçin</string>
     <string name="activity_buy_and_sell_dash_filter">Filtre</string>
     <string name="clear_filter">Filtreyi sıfırla</string>
     <string name="reason">Sebep</string>
+    <string name="link_account">Hesabınızı bağlayın</string>
+    <string name="buy_no_account_needed">Dash Satın Al · Hesap gerekmez</string>
+    <string name="your_coinbase_session_has_expired">Coinbase oturumunuzun süresi doldu</string>
+    <string name="please_log_in_to_your_coinbase_account">Lütfen Coinbase hesabınıza giriş yapın</string>
+    <string name="log_in">Giriş Yap</string>
+
+    <string name="show_clipboard">İçeriği panoda göster</string>
+    <string name="tap_to_paste">Yapıştırmak için panodaki adresi seçin</string>
+    <string name="not_dash_address">Geçerli bir Dash Adresi veya URL isteği değil</string>
+    <string name="send_to_address">Adrese Gönder</string>
 </resources>

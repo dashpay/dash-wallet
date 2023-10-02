@@ -311,4 +311,8 @@
     <string name="dash_wallet">Denarnica</string>
 
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
+
+    <string name="wallet_address_fragment_clipboard_msg">Dash naslov kopiran v odložišče</string>
+    <string name="transaction_row_message_own_unbroadcasted">Instantno plačilo še ni bilo poslano.</string>
+    <string name="activity_security_view_recovery_phrase">Preveri seznam skrivnih besed za obnovo denarnice</string>
     </resources>

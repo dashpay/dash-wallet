@@ -20,6 +20,7 @@ package de.schildbach.wallet.di
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.ConnectivityManager
+import android.telephony.TelephonyManager
 import androidx.preference.PreferenceManager
 import dagger.Binds
 import dagger.Module
@@ -32,6 +33,9 @@ import de.schildbach.wallet.payments.ConfirmTransactionLauncher
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.*
+import de.schildbach.wallet.service.AndroidActionsService
+import de.schildbach.wallet.service.AppRestartService
+import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
 import de.schildbach.wallet_test.BuildConfig
 import org.dash.wallet.common.Configuration
@@ -80,6 +84,10 @@ abstract class AppModule {
         @Provides
         fun provideConnectivityManager(@ApplicationContext context: Context): ConnectivityManager =
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        @Provides
+        fun provideTelephonyService(@ApplicationContext context: Context): TelephonyManager =
+            context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 
         @Singleton
         @Provides

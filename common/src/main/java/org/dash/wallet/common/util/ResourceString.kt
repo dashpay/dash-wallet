@@ -28,4 +28,3 @@ data class ResourceString(
         return resources.getString(resourceId, *args.toTypedArray())
     }
 }
-

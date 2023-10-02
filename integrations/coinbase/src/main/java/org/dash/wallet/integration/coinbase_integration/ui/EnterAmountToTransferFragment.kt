@@ -22,9 +22,9 @@ import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
-import androidx.fragment.app.Fragment
 import android.view.View
 import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
@@ -52,7 +52,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
     }
 
     private val viewModel by activityViewModels<EnterAmountToTransferViewModel>()
-    private val binding  by viewBinding(EnterAmountToTransferFragmentBinding::bind)
+    private val binding by viewBinding(EnterAmountToTransferFragmentBinding::bind)
     private var exchangeRate: ExchangeRate? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -76,16 +76,15 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             val cleanedInput = GenericUtils.formatFiatWithoutComma(viewModel.inputValue)
             val fiatAmount: Fiat
             val dashAmount: Coin
-            if (viewModel.isFiatSelected){
+            if (viewModel.isFiatSelected) {
                 fiatAmount = exchangeRate?.let { rate ->
                     Fiat.parseFiat(rate.fiat.currencyCode, cleanedInput)
                 } ?: Fiat.parseFiat(CoinbaseConstants.DEFAULT_CURRENCY_USD, CoinbaseConstants.VALUE_ZERO)
                 dashAmount = viewModel.applyExchangeRateToFiat(fiatAmount)
             } else {
                 dashAmount = Coin.parseCoin(cleanedInput)
-                fiatAmount = exchangeRate?.let { rate ->
-                    rate.coinToFiat(dashAmount)
-                } ?: Fiat.parseFiat(CoinbaseConstants.DEFAULT_CURRENCY_USD, CoinbaseConstants.VALUE_ZERO)
+                fiatAmount = exchangeRate?.coinToFiat(dashAmount)
+                    ?: Fiat.parseFiat(CoinbaseConstants.DEFAULT_CURRENCY_USD, CoinbaseConstants.VALUE_ZERO)
             }
 
             viewModel.onContinueTransferEvent.value = Pair(fiatAmount, dashAmount)
@@ -96,19 +95,19 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             formatTransferredAmount(viewModel.maxValue)
         }
 
-        viewModel.localCurrencyExchangeRate.observe(viewLifecycleOwner){
-            exchangeRate = ExchangeRate(Coin.COIN, it.fiat)
+        viewModel.localCurrencyExchangeRate.observe(viewLifecycleOwner) {
+            exchangeRate = it?.let { ExchangeRate(Coin.COIN, it.fiat) }
         }
 
-        viewModel.keyboardStateCallback.observe(viewLifecycleOwner){
+        viewModel.keyboardStateCallback.observe(viewLifecycleOwner) {
             binding.bottomCard.isVisible = it
         }
     }
 
-    private fun formatTransferredAmount(value: String){
+    private fun formatTransferredAmount(value: String) {
         val text = viewModel.applyNewValue(value, binding.currencyOptions.pickedOption)
         val spannableString = SpannableString(text).apply {
-            if (binding.currencyOptions.pickedOptionIndex == 0){
+            if (binding.currencyOptions.pickedOptionIndex == 0) {
                 spanAmount(this, viewModel.formattedValue.length, text.length)
             } else {
                 if (viewModel.fiatAmount?.isCurrencyFirst() == true && text.length - viewModel.fiatBalance.length > 0) {
@@ -128,14 +127,17 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
         val textSize = 21.0f / binding.inputAmount.paint.textSize
         return spannable.apply {
             setSpan(
-                RelativeSizeSpan(textSize), from,
-                to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                RelativeSizeSpan(textSize),
+                from,
+                to,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
             setSpan(
                 context?.resources?.getColor(R.color.content_primary, null)
                     ?.let { ForegroundColorSpan(it) },
                 from,
-                to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                to,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
         }
     }
@@ -144,23 +146,25 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
 
         var value = StringBuilder()
 
-        private fun refreshValue(){
+        private fun refreshValue() {
             value.clear()
             val inputValue = if (binding.currencyOptions.pickedOptionIndex == 1) {
-                    val localCurrencySymbol =
-                        GenericUtils.getLocalCurrencySymbol(viewModel.localCurrencyCode)
-                    binding.inputAmount.text.split(" ")
-                        .first { it != localCurrencySymbol }
-                } else {
-                    binding.inputAmount.text.split(" ")
-                        .first { it != binding.currencyOptions.pickedOption }
-                }
-            if (inputValue != CoinbaseConstants.VALUE_ZERO)
+                val localCurrencySymbol =
+                    GenericUtils.getLocalCurrencySymbol(viewModel.localCurrencyCode)
+                binding.inputAmount.text.split(" ")
+                    .first { it != localCurrencySymbol }
+            } else {
+                binding.inputAmount.text.split(" ")
+                    .first { it != binding.currencyOptions.pickedOption }
+            }
+            if (inputValue != CoinbaseConstants.VALUE_ZERO) {
                 value.append(inputValue)
+            }
         }
 
         private fun appendIfValidAfter(number: String) {
             try {
+                value.append(number)
                 val formattedValue = GenericUtils.formatFiatWithoutComma(value.toString())
                 Coin.parseCoin(formattedValue)
                 formatTransferredAmount(value.toString())
@@ -187,11 +191,9 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
                 }
             }
 
-            if (!viewModel.isMaxAmountSelected){
-                value.append(number)
+            if (!viewModel.isMaxAmountSelected) {
                 appendIfValidAfter(number.toString())
             }
-
         }
 
         override fun onBack(longClick: Boolean) {

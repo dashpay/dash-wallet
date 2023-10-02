@@ -58,6 +58,7 @@
     <string name="share_address">به اشتراک‌گذاری نشانی</string>
     <string name="verify">تائید</string>
     <string name="receive_enter_amount_button">مبلغ را مشخص کنید</string>
+    <string name="account_create">ایجاد حساب</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">جستجو</string>
@@ -75,8 +76,25 @@
     <string name="select_currency">واحد پول‌تان را انتخاب کنید</string>
     <string name="send_coins_error_dusty_send">مبلغ مورد نظر، بیش از حد کم است</string>
     <string name="send_coins_error_insufficient_money">موجودی ناکافی</string>
+    <string name="syncing">در حال همزمان‌سازی</string>
+    <string name="no_connection">به اینترنت متصل نیستید</string>
+    <string name="rate_not_available">در دسترس نیست</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">به نظر می‌رسد موجودی دش والت‌تان را خالی می‌کنید</string>
     <string name="empty_wallet_crowdnode_warning">لطفا دقت داشته باشید که تا وقتی موجودی آن را به ۰.۰۰۰۳ دش افزایش نداده‌اید، نمی‌توانید از این کیف پول از کراودنود چیزی برداشت کنید. </string>
-    <string name="syncing">در حال همزمان‌سازی</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">پرداخت، پذیرفته نشد</string>
+    <string name="payment_protocol_default_error_title">خطا در پرداخت</string>
+    <string name="payment_request_problem_message">امکان پردازش پرداخت‌تان توسط سرور وجود ندارد. لطفا با فروشنده تماس بگیرید. </string>
+    <string name="exchange_rate_not_found"> نرخ‌های تبدیل پیدا نشد.</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">مستقیما روی دش والت دریافت کنید</string>
+    <string name="convert_crypto">تبدیل رمزارز</string>
+    <string name="last_known_balance" >آخرین موجودی به‌روزشده</string>
+    <string name="disconnected">عدم اتصال به شبکه</string>
+    <string name="enter_amount_available">موجود</string>
+    <string name="transaction_row_rate_not_available">در دسترس نیست</string>
 </resources>

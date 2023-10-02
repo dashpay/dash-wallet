@@ -16,6 +16,64 @@
 default_platform(:android)
 
 platform :android do
+
+  # For Google Play
+
+  desc "Build and upload for pre-launch report"
+  lane :publish do |options|
+	build(options)
+	upload(options)
+  end
+
+  desc "Upload for pre-launch report"
+  lane :upload do |options|
+	filename = "#{ENV['PWD']}/wallet/build/outputs/apk/prod/release/wallet-prod-release.apk"
+	if !File.exist? "#{filename}"
+		UI.user_error!("Missing apk. Run 'publish' lane to build and upload")
+	end
+
+	supply(apk: filename, track: 'internal')
+  end
+
+  desc "Promote to production track with 0.2 rollout by default"
+  lane :promote do |options|
+	rollout=options[:rollout]
+
+	if rollout.nil?
+		rollout='0.2'
+	end
+
+    versions = google_play_track_version_codes(track: "internal")
+    version_code = versions[0]
+
+	supply(
+		track: 'internal',
+		track_promote_to: "production",
+		rollout: rollout,
+		version_code: version_code
+	)
+  end
+
+  desc "Increase rollout"
+  lane :increase do |options|
+	rollout=options[:rollout]
+
+	if rollout.nil?
+		UI.user_error!("Rollout must be specified")
+	end
+
+	versions = google_play_track_version_codes(track: "internal")
+    version_code = versions[0]
+
+	supply(
+		track: 'production',
+		rollout: rollout,
+		version_code: version_code
+	)
+  end
+
+  # For CI
+
   desc "Runs tests"
   lane :test do |options|
     flavor=options[:flavor].capitalize
@@ -28,30 +86,11 @@ platform :android do
 	build(options)
     distribute(options)
   end
-
-  desc "Build apk"
-  lane :build do |options|
-	flavor=options[:flavor].capitalize
-	type=options[:type].capitalize
-	store_pass=options[:store_pass]
-	version_code=options[:version_code]
-    gradle(
-	  task: "clean assemble#{flavor}#{type}",
-	  properties: {
-		"android.injected.signing.store.file" => "#{ENV['PWD']}/.deploy/keystore.jks",
-		"android.injected.signing.store.password" => store_pass,
-		"android.injected.signing.key.alias" => "dash_wallet",
-		"android.injected.signing.key.password" => store_pass,
-		"versionCode" => version_code.to_i,
-	  },
-	  print_command: false
-	)
-  end
   
   desc "Submit apk to Firebase Distribution"
   lane :distribute do |options|
-    app_id=options[:app_id]
-	group=options[:test_group]
+	app_id=options[:appid]
+	group=options[:testgroup]
 	comment=options[:comment]
 	firebase_app_distribution(
 		app: app_id, 
@@ -59,5 +98,105 @@ platform :android do
 		release_notes: comment,
 		groups: group
 	)
+  end
+
+  # Common lanes
+
+  desc "Build apk"
+  lane :build do |options|
+    explore_db(options)
+
+	[
+		"#{ENV['PWD']}/service.properties", 
+		"#{ENV['PWD']}/local.properties", 
+		"#{ENV['PWD']}/wallet/google-services.json", 
+		"#{ENV['PWD']}/wallet/assets/explore/explore.db"
+	].each do |filename|
+		if !File.exist? "#{filename}"
+			UI.user_error!("Missing #{filename}")
+		end
+
+		if File.zero? "#{filename}"
+			UI.user_error!("File is empty #{filename}")
+		end
+	end
+
+	if is_ci
+		flavor=options[:flavor].capitalize
+		type=options[:type].capitalize
+		storepass=options[:storepass]
+		versioncode=options[:versioncode]
+		gradle(
+			task: "clean assemble#{flavor}#{type}",
+			properties: {
+				"android.injected.signing.store.file" => "#{ENV['PWD']}/.deploy/keystore.jks",
+				"android.injected.signing.store.password" => storepass,
+				"android.injected.signing.key.alias" => "dash_wallet",
+				"android.injected.signing.key.password" => storepass,
+				"versionCode" => versioncode.to_i,
+			},
+			print_command: false
+		)
+	else
+		storepass=options[:storepass]
+		keypass=options[:keypass]
+
+		if storepass.nil? || keypass.nil?
+			UI.user_error!("Keystore pass or key pass is not specified")
+		end
+
+		gradle(
+			task: "clean assembleProdRelease",
+			properties: {
+				"android.injected.signing.store.file" => "#{ENV['PWD']}/.deploy/dash-wallet.keystore",
+				"android.injected.signing.store.password" => storepass,
+				"android.injected.signing.key.alias" => "android-apps",
+				"android.injected.signing.key.password" => keypass
+			},
+			print_command: false
+		)
+	end
+  end
+
+  desc "Download explore.db"
+  lane :explore_db do |options|
+    assets_path = "#{ENV['PWD']}/wallet/assets/"
+    target_file_name = "explore/explore.db"
+    target_file_path = "#{assets_path}#{target_file_name}"
+
+    begin
+      File.delete(target_file_path)
+    rescue Errno::ENOENT
+    end
+
+    flavor=options[:flavor]
+    project_id = "dash-wallet-firebase"
+    key_file = "#{ENV['PWD']}/.deploy/gc-storage-service-account.json"
+    bucket_name = "dash-wallet-firebase.appspot.com"
+    file_name = "explore/explore.db"
+    if flavor == "prod" || flavor.nil?
+      puts "Downloading the production database"
+    else
+      file_name = "explore/explore-testnet.db"
+      puts "Downloading the test database"
+    end
+
+    require "google/cloud/storage"
+
+    # Explicitly use service account credentials by specifying the private key
+    # file.
+    storage = Google::Cloud::Storage.new project: project_id, keyfile: key_file
+
+    # Make an authenticated API request
+    storage.buckets.each do |bucket|
+      puts bucket.name
+    end
+
+    bucket = storage.bucket bucket_name, skip_lookup: true
+    file = bucket.file file_name
+    timestamp = file.updated_at.strftime("%Q")
+    file.download target_file_path
+
+    puts "Downloaded #{file.name} to #{target_file_path}"
   end
 end

@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:background="@color/background_primary">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:contentInsetStart="0dp"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center">
+
+                <ImageView
+                    android:id="@+id/toolbar_icon"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    app:layout_constraintEnd_toStartOf="@id/toolbar_title"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    tools:src="@drawable/ic_dash_d_black" />
+
+                <TextView
+                    android:id="@+id/toolbar_title"
+                    style="@style/Subtitle2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    app:layout_constraintStart_toEndOf="@id/toolbar_icon"
+                    app:layout_constraintTop_toTopOf="@id/toolbar_icon"
+                    app:layout_constraintBottom_toTopOf="@id/disconnected_indicator"
+                    app:layout_constraintVertical_chainStyle="packed"
+                    tools:text="Coinbase"/>
+
+                <TextView
+                    android:id="@+id/disconnected_indicator"
+                    style="@style/Overline"
+                    android:visibility="gone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:drawablePadding="5dp"
+                    android:text="@string/disconnected"
+                    app:drawableStartCompat="@drawable/ic_disconnected"
+                    app:iconGravity="textStart"
+                    app:layout_constraintStart_toEndOf="@id/toolbar_icon"
+                    app:layout_constraintTop_toBottomOf="@id/toolbar_title"
+                    app:layout_constraintBottom_toBottomOf="@id/toolbar_icon"
+                    tools:visibility="visible" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.appcompat.widget.Toolbar>
+
+        <TextView
+            android:id="@+id/balance_header"
+            style="@style/Overline.Secondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:textAlignment="gravity"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/toolbar"
+            tools:text="Dash balance on Coinbase" />
+
+        <ImageView
+            android:id="@+id/dash_icon"
+            android:layout_width="21dp"
+            android:layout_height="21dp"
+            app:layout_constraintBottom_toBottomOf="@+id/balance_dash"
+            app:layout_constraintEnd_toStartOf="@+id/balance_dash"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/balance_dash"
+            app:srcCompat="@drawable/ic_dash_d_black"
+            tools:ignore="ContentDescription" />
+
+        <org.dash.wallet.common.ui.CurrencyTextView
+            android:id="@+id/balance_dash"
+            style="@style/Headline3.Regular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintStart_toEndOf="@+id/dash_icon"
+            app:layout_constraintTop_toBottomOf="@+id/balance_header" />
+
+        <org.dash.wallet.common.ui.CurrencyTextView
+            android:id="@+id/balance_local"
+            style="@style/Body2.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/balance_dash" />
+
+        <TextView
+            android:id="@+id/last_known_balance"
+            style="@style/Overline.Red"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:text="@string/last_known_balance"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/balance_local"
+            app:layout_constraintBottom_toTopOf="@id/actions_view"
+            tools:visibility="visible" />
+
+        <Space
+            android:id="@+id/header_space"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            app:layout_constraintTop_toBottomOf="@+id/last_known_balance" />
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/actions_view"
+            style="@style/CardViewRaised"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="15dp"
+            android:layout_marginTop="8dp"
+            app:cardCornerRadius="12dp"
+            app:layout_constraintTop_toBottomOf="@id/header_space"
+            app:layout_constraintVertical_chainStyle="packed">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/buy_btn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingTop="14dp"
+                    android:paddingEnd="5dp"
+                    android:paddingBottom="5dp">
+
+                    <ImageView
+                        android:id="@+id/buy_icon"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:layout_marginStart="1dp"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_buy_dash"
+                        android:background="@drawable/rounded_background"
+                        android:theme="@style/BuyDashCircle"
+                        app:layout_constraintEnd_toStartOf="@id/buy_title"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        tools:background="@color/system_green" />
+
+                    <TextView
+                        android:id="@+id/buy_title"
+                        style="@style/Body2.Medium"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="63dp"
+                        android:text="@string/buy_dash"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/buy_subtitle"
+                        style="@style/Overline.Tertiary"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="7dp"
+                        android:text="@string/buy_dash_subtitle"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="@+id/buy_title"
+                        app:layout_constraintTop_toBottomOf="@+id/buy_title"
+                        app:layout_constraintBottom_toTopOf="@id/additional_info" />
+
+                    <LinearLayout
+                        android:id="@+id/additional_info"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="5dp"
+                        android:padding="5dp"
+                        android:layout_marginTop="2dp"
+                        android:background="@drawable/rounded_background"
+                        android:theme="@style/TextHighlightGrayTheme"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:visibility="gone"
+                        app:layout_constraintTop_toBottomOf="@id/buy_subtitle"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        tools:background="@color/dash_black_0.05"
+                        tools:visibility="visible">
+
+                        <ImageView
+                            android:id="@+id/additional_info_icon"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:src="@drawable/ic_dash_d_black" />
+
+                        <TextView
+                            android:id="@+id/additional_info_txt"
+                            style="@style/Overline"
+                            android:layout_marginStart="6dp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            tools:text="Powered by Topper" />
+                    </LinearLayout>
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/convert_btn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingTop="12dp"
+                    android:paddingEnd="15dp"
+                    android:paddingBottom="12dp">
+
+                    <ImageView
+                        android:id="@+id/convert_icon"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_convert"
+                        android:background="@drawable/rounded_background"
+                        android:theme="@style/ConvertDashCircle"
+                        app:layout_constraintEnd_toStartOf="@id/convert_title"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        tools:background="@color/system_teal" />
+
+                    <TextView
+                        android:id="@+id/convert_title"
+                        style="@style/Body2.Medium"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="63dp"
+                        android:text="@string/convert_crypto"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/convert_subtitle"
+                        style="@style/Overline.Tertiary"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="@+id/convert_title"
+                        app:layout_constraintTop_toBottomOf="@+id/convert_title"
+                        tools:text="Between Dash Wallet and Coinbase" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/transfer_btn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingTop="12dp"
+                    android:paddingEnd="15dp"
+                    android:paddingBottom="14dp">
+
+                    <ImageView
+                        android:id="@+id/transfer_icon"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_transfer"
+                        android:background="@drawable/rounded_background"
+                        android:theme="@style/TransferDashCircle"
+                        app:layout_constraintEnd_toStartOf="@id/transfer_title"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        tools:background="@color/purple" />
+
+                    <TextView
+                        android:id="@+id/transfer_title"
+                        style="@style/Body2.Medium"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="63dp"
+                        android:text="@string/transfer_dash"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/transfer_subtitle"
+                        style="@style/Overline.Tertiary"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="@+id/transfer_title"
+                        app:layout_constraintTop_toBottomOf="@+id/transfer_title"
+                        tools:text="Between Dash Wallet and Coinbase" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <ViewStub
+            android:id="@+id/network_status_stub"
+            android:layout="@layout/network_unavailable_view"
+            android:inflatedId="@+id/network_status_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/actions_view"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/disconnect_btn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="15dp"
+            android:layout_marginBottom="15dp"
+            android:paddingVertical="14dp"
+            android:background="@drawable/rounded_ripple_background"
+            style="@style/Button.Primary.Large.Inverted"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent">
+
+            <ImageView
+                android:id="@+id/disconnect_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_disconnect"
+                android:layout_marginStart="2dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/disconnect_title"
+                style="@style/Body2.Medium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/disconnect_icon"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="Disconnect Coinbase Account" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <Button
+            android:id="@+id/link_account_btn"
+            style="@style/Button.Primary.Large.LightBlue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="15dp"
+            android:layout_marginHorizontal="15dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:text="Link Coinbase Account" />
+
+        <androidx.constraintlayout.widget.Group
+            android:id="@+id/connected_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:constraint_referenced_ids="balance_header, balance_local, balance_dash, dash_icon, header_space, disconnect_btn" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

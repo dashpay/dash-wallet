@@ -17,7 +17,6 @@
 package org.dash.wallet.integration.uphold.ui;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
@@ -28,6 +27,7 @@ import androidx.fragment.app.FragmentActivity;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.dash.wallet.integration.uphold.R;
+import org.dash.wallet.integration.uphold.api.UpholdClientExtKt;
 import org.dash.wallet.integration.uphold.data.ForbiddenError;
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult;
 import org.dash.wallet.integration.uphold.data.UpholdApiException;
@@ -38,7 +38,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-import kotlin.Function;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 
@@ -115,7 +114,7 @@ public class UpholdWithdrawalHelper {
             FragmentActivity activity,
             Function1<RequirementsCheckResult, Unit> dialogCallback
     ) {
-        List<String> requirements = UpholdClient.getInstance().getWithdrawalRequirements();
+        List<String> requirements = UpholdClientExtKt.getWithdrawalRequirements(UpholdClient.getInstance());
 
         if (requirements.isEmpty()) {
             dialogCallback.invoke(RequirementsCheckResult.Satisfied);

@@ -23,7 +23,7 @@
     android:clickable="true"
     android:focusable="true"
     android:background="?attr/selectableItemBackground"
-    android:paddingEnd="15dp"
+    android:paddingHorizontal="15dp"
     android:paddingTop="@dimen/transaction_row_vertical_padding"
     android:paddingBottom="@dimen/transaction_row_vertical_padding"
     android:clipToPadding="false"
@@ -35,7 +35,7 @@
         android:layout_width="@dimen/transaction_icon_size"
         android:layout_height="@dimen/transaction_icon_size"
         android:padding="@dimen/transaction_icon_padding"
-        android:layout_marginHorizontal="15dp"
+        android:layout_marginEnd="15dp"
         android:src="@drawable/ic_transaction_received"
         android:background="@drawable/rounded_background"
         android:theme="@style/TxReceivedBackground"
@@ -198,7 +198,7 @@
             style="@style/Overline.Tertiary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/transaction_row_rate_not_available"
+            android:text="@string/rate_not_available"
             tools:text="Not available"
             tools:visibility="visible" />
     </FrameLayout>

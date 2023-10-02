@@ -110,4 +110,3 @@ class KeyboardUtil(window: Window, private val rootView: View) {
     fun setOnKeyboardShownChanged(listener: (Boolean) -> Unit) {
         onKeyboardShownChanged = listener
     }
-}
