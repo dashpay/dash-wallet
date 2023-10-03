@@ -20,28 +20,24 @@ package de.schildbach.wallet.ui.payments
 import android.app.Activity
 import android.os.Bundle
 import android.view.View
-import android.view.ViewTreeObserver
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import de.schildbach.wallet.ui.dashpay.OnContactItemClickListener
-import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.dashpay.DashPayViewModel
-import de.schildbach.wallet.ui.dashpay.FrequentContactsAdapter
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.FragmentNavigator
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.ui.util.InputParser
-import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.payments.parsers.PaymentIntentParser
 import de.schildbach.wallet.payments.parsers.PaymentIntentParserException
+import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel
+import de.schildbach.wallet.ui.dashpay.FrequentContactsAdapter
+import de.schildbach.wallet.ui.dashpay.OnContactItemClickListener
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
@@ -80,7 +76,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.payByContactSelect.setOnClickListener {
+        binding.contactsBtn.setOnClickListener {
             handleSelectContact()
         }
 
@@ -110,18 +106,19 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     private fun initViewModel() {
         dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
             val visibility = if (it == null) View.GONE else View.VISIBLE
-            binding.payByContactSelect.visibility = visibility
-            binding.payByContactPane.visibility = visibility
+            binding.contactsPane.visibility = visibility
         }
 
         dashPayViewModel.frequentContactsLiveData.observe(viewLifecycleOwner) {
             if (Status.SUCCESS == it.status) {
                 if (it.data == null || it.data.isEmpty()) {
                     binding.frequentContactsRv.visibility = View.GONE
-                    binding.payByContactSelect.showForwardArrow(false)
+                    // TODO: how do we show an arrow
+                    // binding.payByContactSelect.showForwardArrow(false)
                 } else {
                     binding.frequentContactsRv.visibility = View.VISIBLE
-                    binding.payByContactSelect.showForwardArrow(true)
+                    // TODO: how do we show an arrow
+                    // binding.payByContactSelect.showForwardArrow(true)
                 }
                 binding.frequentContactsRvTopLine.visibility = binding.frequentContactsRv.visibility
 
@@ -134,6 +131,16 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
                 binding.frequentContactsRv.visibility = View.GONE
             }
         }
+    }
+
+    private fun handleSelectContact() {
+        dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.TAB_SEND_TO_CONTACT)
+        findNavController().navigate(
+            PaymentsFragmentDirections.paymentsToContacts(
+                ShowNavBar = false,
+                mode = ContactsScreenMode.SELECT_CONTACT
+            )
+        )
     }
 
     private fun handleString(input: String) {
@@ -153,6 +160,6 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        handleString(usernameSearchResult.fromContactRequest!!.userId, true, R.string.scan_to_pay_username_dialog_message)
+        handleString(usernameSearchResult.fromContactRequest!!.userId)
     }
 }

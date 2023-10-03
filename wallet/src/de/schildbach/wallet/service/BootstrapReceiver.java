@@ -155,6 +155,8 @@ public class BootstrapReceiver extends BroadcastReceiver {
             return;
 
         final Wallet wallet = walletDataProvider.getWallet();
+        if (wallet == null)
+            return;
         final Coin estimatedBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE);
         if (!estimatedBalance.isPositive())
             return;

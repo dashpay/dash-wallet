@@ -63,6 +63,9 @@ open class WalletUIConfig @Inject constructor(
         val SHOW_TAP_TO_HIDE_HINT = booleanPreferencesKey("show_tap_to_hide_balance_hint")
         val SELECTED_CURRENCY = stringPreferencesKey("exchange_currency")
         val EXCHANGE_CURRENCY_DETECTED = booleanPreferencesKey("exchange_currency_detected")
+
+        // temporary items for DashPay
+        val VOTE_DASH_PAY_ENABLED = booleanPreferencesKey("VOTE_DASH_PAY_ENABLED")
     }
 
     suspend fun getExchangeCurrencyCode(): String {

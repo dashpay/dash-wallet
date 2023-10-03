@@ -31,7 +31,6 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
@@ -103,8 +102,7 @@ import kotlin.collections.set
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val analytics: AnalyticsService,
-    private val clipboardManager: ClipboardManager,
+    val analytics: AnalyticsService,
     private val config: Configuration,
     private val walletUIConfig: WalletUIConfig,
     exchangeRatesProvider: ExchangeRatesProvider,
@@ -118,6 +116,7 @@ class MainViewModel @Inject constructor(
     private val metadataProvider: TransactionMetadataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
     val biometricHelper: BiometricHelper,
+    private val telephonyManager: TelephonyManager,
     private val invitationsDao: InvitationsDao,
     userAlertDao: UserAlertDao,
     dashPayProfileDao: DashPayProfileDao,
@@ -186,6 +185,9 @@ class MainViewModel @Inject constructor(
         get() = _isNetworkUnavailable
 
     private val _stakingAPY = MutableLiveData<Double>()
+
+    val isPassphraseVerified: Boolean
+        get() = !config.remindBackupSeed
     val stakingAPY: LiveData<Double>
         get() = _stakingAPY
 
