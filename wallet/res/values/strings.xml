@@ -388,9 +388,8 @@
     <string name="send_to_address">Send to Address</string>
 
     <!-- Battery Optimization-->
-    <string name="battery_settings_title">Battery Optimization</string>
-    <string name="alert_dialogs_fragment_battery_optimization_dialog_title">Let Dash Wallet run in the background</string>
-    <string name="alert_dialogs_fragment_battery_optimization_dialog_message">Your device is configured to stop running Dash Wallet after not being visible for some time.\n\nThis results in important features not working very well (chain syncing, payment notifications, etc).\n\nWe recommend to update this setting to "Not optimized" or "Unrestricted"; don\'t worry we will always mind your battery usage. notify incoming payments while Dash Wallet is visible – due to battery usage.</string>
-    <string name="alert_dialogs_fragment_battery_optimization_off_dialog_message">At the moment battery optimization for Dash Wallet is disabled on your device.  This allows you to receive incoming payments notifications while Dash Wallet is not visible.\n\nWe suggest allowing the app to always stay up-to-date with the blockchain, even in the background.\n\nDon\'t worry, we\'ll still mind your battery.</string>
+    <string name="battery_optimization_title">Battery Optimization</string>
+    <string name="alert_dialogs_fragment_battery_optimization_dialog_title">Let Dash Wallet run in the background?</string>
+    <string name="alert_dialogs_fragment_battery_optimization_dialog_message">This device is configured to stop running Dash Wallet in the background after not being visible for some time.\n\nThis will result in not receiving payment notifications until the app returns to the foreground.\n\nWe recommend allowing this app to run in the background by setting battery optimization to \"Not Optimized\" or \"Unrestricted\"; don\'t worry we will always mind your battery usage.</string>
     <string name="alert_dialogs_fragment_battery_optimization_dialog_button_change">Open Settings</string>
 </resources>

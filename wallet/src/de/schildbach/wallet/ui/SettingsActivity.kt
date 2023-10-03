@@ -90,7 +90,7 @@ class SettingsActivity : LockScreenActivity() {
                 !powerManager.isIgnoringBatteryOptimizations(walletApplication.packageName)
             ) {
                 AdaptiveDialog.create(
-                    null,
+                    R.drawable.ic_battery_optimization,
                     getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_title),
                     getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_message),
                     getString(R.string.permission_deny),
@@ -106,20 +106,10 @@ class SettingsActivity : LockScreenActivity() {
                     }
                 }
             } else {
-                // TODO: There will be designs for this dialog
-                AdaptiveDialog.create(
-                    null,
-                    getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_title),
-                    getString(R.string.alert_dialogs_fragment_battery_optimization_off_dialog_message),
-                    getString(R.string.close),
-                    getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_button_change)
-                ).show(this) {
-                    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                    if (intent.resolveActivity(packageManager) != null) {
-                        startActivity(intent)
-                    } else {
-                        // Handle case where the intent is not resolvable (e.g., device doesn't have this setting).
-                    }
+                // Show the list of non-optimized apps
+                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                if (intent.resolveActivity(packageManager) != null) {
+                    startActivity(intent)
                 }
             }
         }

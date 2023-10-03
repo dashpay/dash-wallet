@@ -415,7 +415,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (ContextCompat.checkSelfPermission(walletApplication, Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) == PackageManager.PERMISSION_GRANTED &&
                 !powerManager.isIgnoringBatteryOptimizations(walletApplication.getPackageName())) {
             AdaptiveDialog.create(
-                null,
+                    R.drawable.ic_battery_optimization,
                 getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_title),
                 getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_message),
                 getString(R.string.permission_deny),
