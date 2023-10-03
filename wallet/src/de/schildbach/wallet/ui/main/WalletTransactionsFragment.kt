@@ -75,7 +75,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             viewModel.balanceDashFormat,
             resources,
             true
-        ) { rowView, isProfileClick ->
+        ) { rowView, _, isProfileClick ->
             if (rowView is TransactionRowView) {
                 if (isProfileClick && rowView.contact != null) {
                     requireContext().startActivity(DashPayUserActivity.createIntent(requireContext(), rowView.contact))

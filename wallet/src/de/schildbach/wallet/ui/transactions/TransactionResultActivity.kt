@@ -125,6 +125,7 @@ class TransactionResultActivity : LockScreenActivity() {
 
     private val viewModel: TransactionResultViewModel by viewModels()
     private lateinit var binding: ActivitySuccessfulTransactionBinding
+    private lateinit var contentBinding: TransactionResultContentBinding
     @Inject
     lateinit var dashPayProfileDao: DashPayProfileDao
 
@@ -140,7 +141,7 @@ class TransactionResultActivity : LockScreenActivity() {
         binding = ActivitySuccessfulTransactionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val contentBinding = TransactionResultContentBinding.bind(binding.container)
+        contentBinding = TransactionResultContentBinding.bind(binding.container)
         val transactionResultViewBinder = TransactionResultViewBinder(
             walletData.wallet!!,
             configuration.format.noCode(),
@@ -151,9 +152,6 @@ class TransactionResultActivity : LockScreenActivity() {
         val tx = viewModel.transaction
 
         if (tx != null) {
-            val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
-            val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-            transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
             transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
             contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
             contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
@@ -199,14 +197,14 @@ class TransactionResultActivity : LockScreenActivity() {
         val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
         val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
         transactionResultViewBinder.bind(tx, dashPayProfile, payeeName, payeeVerifiedBy)
-        transaction_close_btn.setOnClickListener {
+        binding.transactionCloseBtn.setOnClickListener {
             onTransactionDetailsDismiss()
         }
-        view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
-        report_issue_card.setOnClickListener { showReportIssue() }
-        tax_category_layout.setOnClickListener { viewOnTaxCategory()}
-        open_explorer_card.setOnClickListener { viewOnExplorer(tx) }
-        add_private_memo_btn.setOnClickListener {
+        contentBinding.viewOnExplorer.setOnClickListener { viewOnExplorer(tx) }
+        contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
+        contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory()}
+        contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
+        contentBinding.addPrivateMemoBtn.setOnClickListener {
             viewModel.transaction?.txId?.let { hash ->
                 PrivateMemoDialog().apply {
                     arguments = bundleOf(PrivateMemoDialog.TX_ID_ARG to hash)

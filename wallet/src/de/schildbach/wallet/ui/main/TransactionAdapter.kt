@@ -51,7 +51,7 @@ class TransactionAdapter(
     private val dashFormat: MonetaryFormat,
     private val resources: Resources,
     private val drawBackground: Boolean = false,
-    private val clickListener: (HistoryRowView, Int) -> Unit
+    private val clickListener: (HistoryRowView, Int, Boolean) -> Unit
 ) : ListAdapter<HistoryRowView, HistoryViewHolder>(DiffCallback()) {
     private val contentColor = resources.getColor(R.color.content_primary, null)
     private val colorSecondaryStatus = resources.getColor(R.color.orange, null)
@@ -104,11 +104,11 @@ class TransactionAdapter(
         when (holder) {
             is TransactionViewHolder -> {
                 holder.bind(item as TransactionRowView, position)
-                holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
+                holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
             }
             is TransactionGroupHeaderViewHolder -> {
                 holder.bind((item as HistoryRowView).localDate!!)
-                holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
+                holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
             }
         }
     }
@@ -183,7 +183,7 @@ class TransactionAdapter(
                     error(R.drawable.ic_avatar)
                 }
                 binding.primaryIcon.setOnClickListener {
-                    clickListener.invoke(txView, true)
+                    clickListener.invoke(txView, 0, true)
                 }
 
                 binding.secondaryIcon.isVisible = true
@@ -218,13 +218,7 @@ class TransactionAdapter(
                 )
             }
 
-            binding.primaryStatus.setTextColor(
-                if (txView.hasErrors) {
-                    warningColor
-                } else {
-                    contentColor
-                }
-            )
+            binding.primaryStatus.setTextColor(contentColor)
         }
 
         private fun setSecondaryStatus(txView: TransactionRowView) {

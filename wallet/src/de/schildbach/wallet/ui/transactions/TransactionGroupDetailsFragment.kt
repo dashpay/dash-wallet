@@ -59,7 +59,7 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment(R.layout.transact
             binding.detailsMessage.text = getString(R.string.crowdnode_tx_set_explainer)
         }
 
-        val adapter = TransactionAdapter(viewModel.dashFormat, resources) { item, _ ->
+        val adapter = TransactionAdapter(viewModel.dashFormat, resources) { item, _, _ ->
             if (item is TransactionRowView) {
                 TransactionDetailsDialogFragment
                     .newInstance(item.txId)

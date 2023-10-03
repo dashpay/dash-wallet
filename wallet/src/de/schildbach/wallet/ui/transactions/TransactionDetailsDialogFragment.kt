@@ -87,7 +87,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         super.onViewCreated(view, savedInstanceState)
 
         contentBinding = TransactionResultContentBinding.bind(binding.transactionResultContainer)
-        val transactionResultViewBinder = TransactionResultViewBinder(
+        transactionResultViewBinder = TransactionResultViewBinder(
             viewModel.wallet!!,
             viewModel.dashFormat,
             contentBinding
@@ -96,9 +96,8 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         viewModel.init(txId)
         val tx = viewModel.transaction
 
-        if (tx != null) {
-            transactionResultViewBinder.bind(tx)
-        } else {
+        // the transactionResultViewBinder.bind is called later
+        if (tx == null) {
             log.error("Transaction not found. TxId: {}", txId)
             dismiss()
             return
