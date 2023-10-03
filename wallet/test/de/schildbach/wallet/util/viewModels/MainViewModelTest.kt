@@ -27,12 +27,14 @@ import de.schildbach.wallet.Constants
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.EntryPointAccessors
 import de.schildbach.wallet.database.AppDatabase
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.transactions.TxFilterType
 import androidx.datastore.preferences.core.Preferences
+import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
@@ -56,6 +58,7 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
@@ -82,9 +85,10 @@ class MainViewModelTest {
         every { applicationContext } returns mockk()
         every { mainLooper } returns Looper.getMainLooper()
     }
-    private val blockchainIdentityDaoMock = mockk<BlockchainIdentityDataDao> {
-        coEvery { loadBase() } returns null
-        every { observeBase() } returns MutableStateFlow(null)
+    private val mockIdentityData = BlockchainIdentityBaseData(-1, BlockchainIdentityData.CreationState.NONE, null, null, null, false,null, false)
+    private val blockchainIdentityConfigMock = mockk<BlockchainIdentityConfig> {
+        coEvery { loadBase() } returns mockIdentityData
+        every { observeBase() } returns MutableStateFlow(mockIdentityData)
     }
     private val dashPayProfileDaoMock = mockk<DashPayProfileDao> {
         every { observeByUserId(any()) } returns MutableStateFlow(null)
@@ -93,7 +97,6 @@ class MainViewModelTest {
         coEvery { loadAll() } returns listOf()
     }
     private val appDatabaseMock = mockk<AppDatabase> {
-        every { blockchainIdentityDataDao() } returns blockchainIdentityDaoMock
         every { dashPayProfileDao() } returns dashPayProfileDaoMock
         every { dashPayContactRequestDao() } returns mockk()
         every { invitationsDao() } returns invitationsDaoMock
@@ -196,8 +199,8 @@ class MainViewModelTest {
             MainViewModel(
                 analyticsService, configMock, uiConfigMock,
                 exchangeRatesMock, walletDataMock, walletApp, platformRepo,
-                mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
-                mockk(), mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
+                mockk(), mockk(), blockchainIdentityConfigMock, savedStateMock, transactionMetadataMock,
+                blockchainStateMock, mockk(), mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
             )
         )
 
@@ -216,8 +219,8 @@ class MainViewModelTest {
             MainViewModel(
                 analyticsService, configMock, uiConfigMock,
                 exchangeRatesMock, walletDataMock, walletApp, platformRepo,
-                mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
-                mockk(), mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
+                mockk(), mockk(), blockchainIdentityConfigMock, savedStateMock, transactionMetadataMock,
+                blockchainStateMock, mockk(), mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
             )
         )
 
