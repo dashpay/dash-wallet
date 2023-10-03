@@ -14,7 +14,7 @@ buildscript {
 
         // Architecture
         lifecycleVersion = '2.5.1'
-        navigationVersion = '2.5.3'
+        navigationVersion = '2.6.0'
         datastoreVersion = "1.0.0"
         hiltVersion = '2.45'
         hiltWorkVersion = '1.0.0'

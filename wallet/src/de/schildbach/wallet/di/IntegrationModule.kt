@@ -24,7 +24,7 @@ import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.BuildConfig
 import org.bitcoinj.core.NetworkParameters
-import org.dash.wallet.integration.uphold.api.TopperClient
+import org.dash.wallet.integrations.uphold.api.TopperClient
 import javax.inject.Singleton
 
 @Module
