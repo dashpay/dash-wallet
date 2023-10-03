@@ -83,12 +83,6 @@ jobs:
         LOCAL_PROPERTIES: ${{secrets.LOCAL_PROPERTIES}}
         APP_DISTRIBUTION_KEY_JSON: ${{secrets.APP_DISTRIBUTION_KEY_JSON}}
         GC_STORAGE_SERVICE_ACCOUNT_KEY_JSON: ${{secrets.GC_STORAGE_SERVICE_ACCOUNT_KEY_JSON}}
-        
-    - name: Copy explore.db from GC Storage
-      run: |
-        gem install google-cloud-storage
-        rm  -rf wallet/assets/explore/*
-        ruby .deploy/exploredata.rb "${{ github.event.inputs.flavor }}"
     
     - name: Test
       run: bundle exec fastlane test flavor:"" type:"debug"
