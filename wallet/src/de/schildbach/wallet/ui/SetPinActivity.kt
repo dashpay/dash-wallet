@@ -21,6 +21,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
+import android.os.PowerManager
 import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
@@ -30,6 +31,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.PackageInfoProvider
@@ -486,7 +488,8 @@ class SetPinActivity : InteractionAwareActivity() {
                     this,
                     packageInfoProvider,
                     viewModel.configuration,
-                    viewModel.walletData.wallet
+                    viewModel.walletData.wallet,
+                    application as WalletApplication
                 ).buildAlertDialog()
                 alertDialog?.show()
             }

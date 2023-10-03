@@ -225,7 +225,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                             applicationInfo,
                             packageInfoProvider,
                             configuration,
-                            walletData.getWallet()
+                            walletData.getWallet(),
+                            walletApplication
                     );
                     return applicationInfo;
                 }
@@ -299,7 +300,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                             WalletActivity.this,
                             packageInfoProvider,
                             configuration,
-                            walletData.getWallet()
+                            walletData.getWallet(),
+                            walletApplication
                         ).buildAlertDialog();
                         alertDialog.show();
                     } else {

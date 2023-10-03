@@ -59,6 +59,8 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.Build;
+import android.os.PowerManager;
+
 import androidx.core.app.ActivityManagerCompat;
 
 /**
@@ -177,26 +179,33 @@ public class CrashReporter {
     }
 
     public static void appendApplicationInfo(
-        final Appendable report,
-        final PackageInfoProvider packageInfoProvider,
-        final Configuration configuration,
-        final Wallet wallet
+            final Appendable report,
+            final PackageInfoProvider packageInfoProvider,
+            final Configuration configuration,
+            final Wallet wallet,
+            final WalletApplication application
     ) throws IOException {
         final PackageInfo pi = packageInfoProvider.getPackageInfo();
         final Calendar calendar = new GregorianCalendar(UTC);
+        final PowerManager powerManager = application.getSystemService(PowerManager.class);
 
         report.append("Version: " + pi.versionName + " (" + pi.versionCode + ")\n");
+        report.append("APK Hash: ").append(application.apkHash().toString()).append("\n");
         report.append("Package: " + pi.packageName + "\n");
         String installer = packageInfoProvider.getInstallerPackageName();
         report.append("Installer: " + (installer != null ? installer : "manual") + "\n");
         report.append("Test/Prod: " + (Constants.IS_PROD_BUILD ? "prod" : "test") + "\n");
         report.append("Flavor: " + BuildConfig.FLAVOR + "\n");
+        report.append("Build Type: " + BuildConfig.BUILD_TYPE + "\n");
+        final boolean isIgnoringBatteryOptimization =
+                powerManager.isIgnoringBatteryOptimizations(application.getPackageName());
+        report.append("Battery optimization: ").append(isIgnoringBatteryOptimization ? "no" : "yes").append("\n");
         report.append("Timezone: " + TimeZone.getDefault().getID() + "\n");
         calendar.setTimeInMillis(System.currentTimeMillis());
-        report.append("Time: " + String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) + "\n");
+        report.append("Current Time: " + String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) + "\n");
         calendar.setTimeInMillis(WalletApplication.TIME_CREATE_APPLICATION);
         report.append(
-                "Time of launch: " + String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) + "\n");
+                "Time of app launch: " + String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) + "\n");
         calendar.setTimeInMillis(pi.lastUpdateTime);
         report.append(
                 "Time of last update: " + String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) + "\n");
@@ -257,6 +266,8 @@ public class CrashReporter {
         final File filesDir = packageInfoProvider.getFilesDir();
         report.append("\nContents of FilesDir " + filesDir + ":\n");
         appendDir(report, filesDir, 0);
+        report.append("free/usable space: ").append(Long.toString(filesDir.getFreeSpace() / 1024))
+                .append("/").append(Long.toString(filesDir.getUsableSpace() / 1024)).append(" kB\n");
     }
 
     private static void appendDir(final Appendable report, final File file, final int indent) throws IOException {
