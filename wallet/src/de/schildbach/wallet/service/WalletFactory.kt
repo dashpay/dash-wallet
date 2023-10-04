@@ -1,3 +1,20 @@
+/*
+ * Copyright 2023 Dash Core Group
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package de.schildbach.wallet.service
 
 import android.net.Uri
@@ -35,12 +52,6 @@ import java.text.ParseException
 import java.util.LinkedList
 import javax.inject.Inject
 
-// RestoreFromFileHelper
-// WalletUtils
-// WalletApplication
-
-// WalletDataProvider (should keep track of WalletExtensions)
-
 interface WalletFactory {
     // Onboarding
     fun create(params: NetworkParameters): Wallet
@@ -53,8 +64,6 @@ interface WalletFactory {
     fun load(params: NetworkParameters, walletFile: File): Wallet
     fun restoreFromBackup(params: NetworkParameters, backupFile: String): Wallet
 }
-
-// class WalletFactoryException(message: String, cause: Throwable?) : Exception(message, cause)
 
 class DashWalletFactory @Inject constructor(
     private val walletApplication: WalletApplication
@@ -335,8 +344,12 @@ class DashWalletFactory @Inject constructor(
                 val line = inputStream.readLine() ?: break
                 // eof
                 charCount += line.length.toLong()
-                if (charCount > Constants.BACKUP_MAX_CHARS) throw IOException("read more than the limit of " + Constants.BACKUP_MAX_CHARS + " characters")
-                if (line.trim { it <= ' ' }.isEmpty() || line[0] == '#') continue  // skip comment
+                if (charCount > Constants.BACKUP_MAX_CHARS) {
+                    throw IOException("read more than the limit of " + Constants.BACKUP_MAX_CHARS + " characters")
+                }
+                if (line.trim { it <= ' ' }.isEmpty() || line[0] == '#') {
+                    continue
+                } // skip comment
                 val parts = line.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
                 val key = DumpedPrivateKey.fromBase58(expectedNetworkParameters, parts[0]).key
                 key.creationTimeSeconds =

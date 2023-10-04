@@ -933,11 +933,9 @@ public class WalletApplication extends MultiDexApplication
         }
         // clear data on wallet reset
         transactionMetadataProvider.clear();
-        //authenticationGroupExtension.reset();
         // wallet must be null for the OnboardingActivity flow
         log.info("removing wallet from memory during wipe");
         wallet = null;
-        //clearExtensions();
     }
 
     private void notifyWalletWipe() {
@@ -1119,13 +1117,4 @@ public class WalletApplication extends MultiDexApplication
                 crowdNodeConfig
         );
     }
-
-    //public void clearExtensions() {
-    //    log.info("clearing extensions: authentication");
-    //    authenticationGroupExtension = new AuthenticationGroupExtension(Constants.NETWORK_PARAMETERS);
-   // }
-
-    //public WalletExtension[] getWalletExtensions() {
-    //    return new WalletExtension[] {authenticationGroupExtension};
-    //}
 }
