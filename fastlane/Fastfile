@@ -78,7 +78,7 @@ platform :android do
   lane :test do |options|
     flavor=options[:flavor].capitalize
 	type=options[:type].capitalize
-    gradle(task: "test#{flavor}#{type}UnitTest --info")
+    gradle(task: "test#{flavor}#{type}UnitTest")
   end
   
   desc "Build and distribute with Firebase"
