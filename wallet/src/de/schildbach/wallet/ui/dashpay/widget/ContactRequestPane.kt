@@ -65,7 +65,7 @@ class ContactRequestPane(context: Context, attrs: AttributeSet) : LinearLayout(c
         binding.contactRequestReceivedPane.visibility = View.GONE
         binding.mainButton.isClickable = true
         // this was originally Blue
-        binding.mainButton.setBackgroundResource(R.drawable.secondary_inverted_button)
+        // binding.mainButton.setBackgroundResource(R.drawable.secondary_inverted_button)
         binding.mainButtonIcon.setImageResource(R.drawable.ic_add_contact_white)
         binding.mainButtonText.setText(R.string.send_contact_request)
         binding.mainButtonText.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_white, null))
