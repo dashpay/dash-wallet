@@ -142,7 +142,7 @@ class TransactionResultActivity : LockScreenActivity() {
         setContentView(binding.root)
 
         contentBinding = TransactionResultContentBinding.bind(binding.container)
-        val transactionResultViewBinder = TransactionResultViewBinder(
+        transactionResultViewBinder = TransactionResultViewBinder(
             walletData.wallet!!,
             configuration.format.noCode(),
             contentBinding
