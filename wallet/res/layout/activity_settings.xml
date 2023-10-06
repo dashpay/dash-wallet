@@ -104,6 +104,45 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/coinjoin"
+        style="@style/MenuRow.Internal">
+
+        <ImageView
+            android:id="@+id/coinjoin_icon"
+            android:layout_gravity="center_vertical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="17dp"
+            app:srcCompat="@drawable/ic_coinjoin"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/coinjoin_title"
+            style="@style/Body2.Medium"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            android:text="@string/coinjoin"
+            android:layout_marginStart="22dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toEndOf="@id/coinjoin_icon"
+            app:layout_constraintBottom_toTopOf="@id/coinjoin_subtitle"
+            app:layout_constraintVertical_chainStyle="packed" />
+
+        <TextView
+            android:id="@+id/coinjoin_subtitle"
+            style="@style/Overline.Tertiary"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            android:layout_marginStart="22dp"
+            android:text="@string/turned_off"
+            app:layout_constraintStart_toEndOf="@id/coinjoin_icon"
+            app:layout_constraintTop_toBottomOf="@id/coinjoin_title"
+            app:layout_constraintBottom_toBottomOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/voting_dash_pay"
         style="@style/MenuRow.Internal">
 
