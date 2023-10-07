@@ -484,8 +484,6 @@
     <string name="quick_vote_subtitle">By tapping the "Vote for All" button, you will automatically vote for all of the filtered usernames (%d) that were submitted first</string>
     <string name="vote_for_all">Vote for All</string>
     <string name="voting_dash_pay">Voting Dash Pay</string>
-    <string name="coinjoin">CoinJoin</string>
-    <string name="turned_off">Turned off</string>
     <string name="there_was_a_network_error">There was a network error, you can try again at no extra cost</string>
     <string name="requested_voting_duration">Requested · Voting: 1 Mar – 15 Mar</string>
     <string name="cancel_request">Cancel Request</string>
@@ -499,4 +497,12 @@
     <string name="invalid_link">The link is invalid</string>
     <string name="welcome_request_username_min_balance_disclaimer">You should have more than %s Dash to create a username</string>
     <string name="request_username_min_balance_disclaimer">To request a username on the Dash Network, you need to have more than %s Dash</string>
+
+    <!-- CoinJoin -->
+    <string name="coinjoin">CoinJoin</string>
+    <string name="turned_off">Turned off</string>
+    <string name="coinjoin_info_subtitle">Mixing your Dash coins will make your transactions more private</string>
+    <string name="coinjoin_description_1">You will only be able to spend Dash that has been mixed when this is turned on. This can be turned off at any time.</string>
+    <string name="coinjoin_description_2">Newly received Dash will be automatically mixed when the wallet is opened</string>
+    <string name="coinjoin_description_3">Turning this feature on will result a higher battery usage</string>
 </resources>

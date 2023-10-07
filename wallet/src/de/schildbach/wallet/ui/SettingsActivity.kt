@@ -22,6 +22,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletBalanceWidgetProvider
+import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.AboutActivity
 import de.schildbach.wallet_test.R
@@ -76,6 +77,9 @@ class SettingsActivity : LockScreenActivity() {
 
         binding.rescanBlockchain.setOnClickListener { resetBlockchain() }
         binding.notifications.setOnClickListener { systemActions.openNotificationSettings() }
+        binding.coinjoin.setOnClickListener {
+            startActivity(Intent(this, CoinJoinActivity::class.java))
+        }
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
