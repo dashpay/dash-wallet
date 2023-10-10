@@ -18,8 +18,7 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/nav_coinjoin"
-    app:startDestination="@id/coinJoinInfoFragment">
+    android:id="@+id/nav_coinjoin">
 
     <fragment
         android:id="@+id/coinJoinInfoFragment"
@@ -27,11 +26,17 @@
         android:label="CoinJoinInfoFragment"
         tools:layout="@layout/fragment_coinjoin_info">
 
-<!--        <action-->
-<!--            android:id="@+id/info_to_level"-->
-<!--            app:destination="@id/coinjoinLevelFragment"-->
-<!--            app:enterAnim="@anim/slide_in_right"-->
-<!--            app:exitAnim="@anim/activity_stay"-->
-<!--            app:popExitAnim="@anim/slide_out_left" />-->
+        <action
+            android:id="@+id/info_to_level"
+            app:destination="@id/coinJoinLevelFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
+
+    <fragment
+        android:id="@+id/coinJoinLevelFragment"
+        android:name="de.schildbach.wallet.ui.coinjoin.CoinJoinLevelFragment"
+        android:label="CoinJoinLevelFragment"
+        tools:layout="@layout/fragment_coinjoin_level" />
 </navigation>

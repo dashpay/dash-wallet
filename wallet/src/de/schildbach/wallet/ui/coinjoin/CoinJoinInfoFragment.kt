@@ -18,13 +18,13 @@
 package de.schildbach.wallet.ui.coinjoin
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.fragment.app.Fragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentCoinjoinInfoBinding
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
 class CoinJoinInfoFragment : Fragment(R.layout.fragment_coinjoin_info) {
@@ -36,7 +36,7 @@ class CoinJoinInfoFragment : Fragment(R.layout.fragment_coinjoin_info) {
         binding.toolbar.setNavigationOnClickListener { requireActivity().finish() }
 
         binding.continueButton.setOnClickListener {
-            Log.i("COINJOIN", "Continue button clicked")
+            safeNavigate(CoinJoinInfoFragmentDirections.infoToLevel())
         }
     }
 }

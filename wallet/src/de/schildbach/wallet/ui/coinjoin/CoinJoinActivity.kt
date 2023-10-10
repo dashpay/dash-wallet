@@ -18,18 +18,38 @@
 package de.schildbach.wallet.ui.coinjoin
 
 import android.os.Bundle
+import androidx.core.os.bundleOf
+import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
+import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityCoinjoinBinding
 
 // TODO: temporary CoinJoin host. Remove when SettingsActivity is refactored.
 // Should not contain any crucial logic.
 @AndroidEntryPoint
 class CoinJoinActivity : LockScreenActivity() {
+    companion object {
+        const val FIRST_TIME_EXTRA = "show_first_time_info"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val binding = ActivityCoinjoinBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        initNavController(intent.getBooleanExtra(FIRST_TIME_EXTRA, true))
+    }
+
+    private fun initNavController(showFirstTimeInfo: Boolean) {
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navController = navHostFragment.navController
+        val navGraph = navController.navInflater.inflate(R.navigation.nav_coinjoin)
+        navGraph.setStartDestination(
+            if (showFirstTimeInfo) R.id.coinJoinInfoFragment else R.id.coinJoinLevelFragment
+        )
+        navController.setGraph(navGraph, bundleOf())
     }
 }

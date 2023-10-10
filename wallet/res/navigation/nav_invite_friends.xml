@@ -61,6 +61,6 @@
 
     <fragment
         android:id="@+id/createUsernamePrivacyFragment"
-        android:name="de.schildbach.wallet.ui.username.CreateUsernamePrivacyFragment"
-        tools:layout="@layout/fragment_user_name_privacy"/>
+        android:name="de.schildbach.wallet.ui.coinjoin.CoinJoinLevelFragment"
+        tools:layout="@layout/fragment_coinjoin_level"/>
 </navigation>
