@@ -23,7 +23,6 @@ import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.dao.BlockchainStateDao
@@ -44,6 +43,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
@@ -100,7 +100,7 @@ open class DashPayViewModel @Inject constructor(
     private var timerUsernameSearch: AnalyticsTimer? = null
 
     suspend fun isVotingFlowEnabled(): Boolean =
-        walletUIConfig.getPreference(WalletUIConfig.VOTE_DASH_PAY_ENABLED) ?: false
+        walletUIConfig.get(WalletUIConfig.VOTE_DASH_PAY_ENABLED) ?: false
     suspend fun isDashPayInfoShown(): Boolean =
         dashPayConfig.get(DashPayConfig.HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN) ?: false
 

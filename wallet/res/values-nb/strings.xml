@@ -16,7 +16,6 @@
     <string name="wallet_balance_fragment_too_much">Dette beløpet er ganske høyt for å bære rundt i lommen din. Vennligst flytt noe til et tryggere sted.</string>
     <string name="wallet_balance_fragment_replaying">Saldo er ikke tilgjengelig under avspilling.</string>
     <string name="exchange_rates_fragment_empty_text">Kunne ikke laste valutakurser.</string>
-    <string name="exchange_rates_fragment_empty_search">Kunne ikke finne valutakurser.</string>
     <string name="exchange_rates_fragment_default">(standard)</string>
     <string name="exchange_rates_fragment_source">Pris fra %s</string>
     <string name="exchange_rates_options_search">Søk i valutakurser</string>
@@ -31,13 +30,6 @@
     <string name="wallet_low_storage_dialog_title">Enhetens interne lagringsplass er lav!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet bruker lagring internt for å huske transaksjoner og blokker. Hvis den løper tom for plass, vil den stoppe å virke og dine Dash vil være under risiko!\n\nVil du åpne app-håndteringen for å avinstallere ubrukte apps?</string>
     <string name="wallet_low_storage_dialog_button_apps">Håndter apps</string>
-    <string name="wallet_version_dialog_title">En ny versjon er tilgjengelig!</string>
-    <string name="wallet_version_dialog_msg">Denne versjonen retter viktige feil. For detaljer, se endringsloggen på Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Hvis du ikke ser en oppdatering, betyr dette sannsynligvis at din versjon av Android ikke støttes lenger.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Last ned</string>
-    <string name="wallet_old_sdk_dialog_title">Android-versjon er utdatert</string>
-    <string name="wallet_old_sdk_dialog_message">Der er risiko for at en av de neste utgivelsene av Dash Wallet ikke vil støtte din enhet lenger. I noen tilfeller kan det være vanskelig å bruke mynter på denne enheten.\n\nMed mindre du vet hva du gjør, anbefales det å straks flytte dine mynter vekk.</string>
     <string name="send_coins_activity_title">Send Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Henter signatur fra %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Henting av signatur mislyktes</string>

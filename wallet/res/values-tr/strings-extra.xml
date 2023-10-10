@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">PİN Doğrulanıyor</string>
     <string name="set_pin_message">Bu PİN uygulamanın açılması için her zaman gerekecektir.</string>
     <string name="set_pin_confirm_pin_incorrect">Hatalı PIN</string>
-    
+
     <string name="home_balance_hide_hint">Bakiyeyi gizlemek için tıkla</string>
 
     <string name="dialog_confirm_confirm">Onayla</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Göndermek için Tara</string>
     <string name="scan_to_pay_error_dialog_message">Panodaki Dash Adresi veya URL isteği geçerli değil:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Panodaki Dash Adresi veya URL isteği geçerli değil.</string>
-    <string name="pay_to_confirm_address">Bu, ödeme göndermek istediğiniz Dash adresi mi?</string>
 
     <string name="receive_title">Al</string>
     <string name="receive_enter_amount_message">Alınacak tutarı belirtin</string>
@@ -322,8 +321,6 @@
     <string name="security_very_high">Çok Yüksek</string>
     <string name="max">Maksimum</string>
 
-    <string name="enter_amount_available">mevcut</string>
-
     <string name="skip">atla</string>
     <string name="get_started">Başla</string>
     <string name="welcome_screen_title_1_new_install">Hoşgeldiniz</string>
@@ -348,8 +345,6 @@
     <string name="payment_request_unable_to_send">Gönderilemiyor</string>
     <string name="payment_request_please_try_again">Lütfen tekrar deneyin</string>
     <string name="payment_request_try_again">Tekrar Dene</string>
-    <string name="payment_request_problem_title">Ödeme kabul edilmedi</string>
-    <string name="payment_request_problem_message">Ödemeniz sunucu tarafından işleme konulamadı, lütfen satıcıya danışın</string>
     <string name="payment_request_expired_title">Ödeme Talebinin Süresi Bitti</string>
     <string name="payment_request_close">Kapat</string>
     <string name="payment_request_skip">Atla</string>
@@ -400,7 +395,6 @@
     <string name="masternode_key_type_owner">Sahip Anahtarları</string>
     <string name="masternode_key_type_voting">Oy Verme Anahtarları</string>
     <string name="masternode_key_type_operator">Operatör Anahtarları</string>
-    <string name="masternode_key_type_platform">HPMN Operatör Anahtarları</string>
     <string name="masternode_key_type_total">%d anahtarları</string>
     <string name="masternode_key_type_used">%d kullanıldı</string>
     <string name="masternode_key_pair_index">Tuş Çifti %d</string>

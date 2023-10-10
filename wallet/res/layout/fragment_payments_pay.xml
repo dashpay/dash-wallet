@@ -1,68 +1,130 @@
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary"
     android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.payments.PaymentsPayFragment">
 
-    <LinearLayout
+    <androidx.cardview.widget.CardView
+        android:id="@+id/actions_view"
+        style="@style/CardViewRaised"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginTop="15dp"
+        app:cardCornerRadius="12dp">
 
         <LinearLayout
-            android:id="@+id/pay_by_contact_pane"
+            android:id="@+id/contacts_pane"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="15dp"
-            android:background="@drawable/round_corners_white_bg"
+            android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <de.schildbach.wallet.ui.widget.PaymentsButtonView
-                android:id="@+id/pay_by_contact_select"
+            <LinearLayout
+                android:id="@+id/contacts_btn"
                 android:layout_width="match_parent"
-                android:layout_height="70dp"
-                android:background="@drawable/selectable_round_corners_white"
-                app:pb_icon="@drawable/ic_payments_send_to_contact"
-                app:pb_sub_title="@string/payments_pay_to_contact_sub_title"
-                app:pb_title="@string/payments_pay_to_contact_title" />
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:orientation="vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingTop="15dp"
+                android:paddingHorizontal="15dp"
+                android:paddingBottom="10dp">
 
-            <FrameLayout
-                android:id="@+id/frequent_contacts_rv_top_line"
+                <ImageView
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_payments_send_to_contact"
+                    android:background="@drawable/rounded_background"
+                    android:theme="@style/EncircledIconBlueTheme"
+                    app:tint="@android:color/white"
+                    tools:background="@color/dash_blue" />
+
+                <TextView
+                    style="@style/Body2.Medium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="15dp"
+                    android:text="@string/payments_pay_to_contact_title"
+                    android:layout_gravity="center_vertical" />
+
+                <FrameLayout
+                    android:id="@+id/frequent_contacts_rv_top_line"
+                    android:layout_width="match_parent"
+                    android:layout_height="1px"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:background="@color/dash_gray" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/frequent_contacts_rv"
+                    android:layout_width="match_parent"
+                    android:layout_height="84dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/scan_btn"
                 android:layout_width="match_parent"
-                android:layout_height="1px"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:background="@color/dash_gray" />
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingTop="15dp"
+                android:paddingHorizontal="15dp"
+                android:paddingBottom="10dp">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/frequent_contacts_rv"
+                <ImageView
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_qr"
+                    android:background="@drawable/rounded_background"
+                    android:theme="@style/EncircledIconBlueTheme"
+                    app:tint="@android:color/white"
+                    tools:background="@color/dash_blue" />
+
+                <TextView
+                    style="@style/Body2.Medium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="15dp"
+                    android:text="@string/scan_qr"
+                    android:layout_gravity="center_vertical" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/send_btn"
                 android:layout_width="match_parent"
-                android:layout_height="84dp" />
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingTop="10dp"
+                android:paddingHorizontal="15dp"
+                android:paddingBottom="15dp">
 
+                <ImageView
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_address"
+                    android:background="@drawable/rounded_background"
+                    android:theme="@style/EncircledIconBlueTheme"
+                    app:tint="@android:color/white"
+                    tools:background="@color/dash_blue" />
+
+                <TextView
+                    style="@style/Body2.Medium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="15dp"
+                    android:text="@string/send_to_address"
+                    android:layout_gravity="center_vertical" />
+            </LinearLayout>
         </LinearLayout>
-
-        <de.schildbach.wallet.ui.widget.PaymentsButtonView
-            android:id="@+id/pay_by_qr_button"
-            style="@style/MenuRow"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:pb_icon="@drawable/ic_payments_send_by_qr"
-            app:pb_sub_title="@string/payments_pay_by_qr_sub_title"
-            app:pb_title="@string/payments_pay_by_qr_title" />
-
-        <de.schildbach.wallet.ui.widget.PaymentsButtonView
-            android:id="@+id/pay_to_address"
-            style="@style/MenuRow"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:pb_active="false"
-            app:pb_icon="@drawable/ic_payments_cend_to_copied"
-            app:pb_sub_title="@string/payments_pay_to_clipboard_sub_title"
-            app:pb_title="@string/payments_pay_to_clipboard_title" />
-
-    </LinearLayout>
-
-</ScrollView>
+    </androidx.cardview.widget.CardView>
+</FrameLayout>

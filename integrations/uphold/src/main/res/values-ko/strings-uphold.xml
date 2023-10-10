@@ -2,15 +2,18 @@
 <resources>
 
     <string name="uphold_account">업홀드</string>
+    <string name="topper">토퍼</string>
     <string name="uphold_link_title">업홀드 계정 연결 연결하기</string>
+    <string name="uphold_powered_by">토퍼 제작</string>
+    <string name="topper_powered_by">업홀드 제작</string>
     <string name="uphold_transfer_details">업홀드에서 당신의 대시 지갑으로</string>
     <string name="uphold_buy_dash_activity_title">업홀드로 대시 매수/매도</string>
     <string name="uphold_buy_dash_with_uphold">업홀드 계정으로 대시 구입</string>
     <string name="uphold_buy_dash_button">대시 구입</string>
     <string name="uphold_transfer_to_this_wallet_button">업홀드에서 대시 송금</string>
     <string name="uphold_link_account">업홀드 계정 연결</string>
-    <string name="uphold_account_dash_balance">귀하의 업홀드 계정 내 대시 잔액은</string>
-    <string name="uphold_transfer_to_this_wallet">업홀드 계정에서 이 지갑으로 대시 송금하기</string>
+    <string name="uphold_account_dash_balance">업홀드 내 대시 잔고</string>
+    <string name="uphold_transfer_to_this_wallet">업홀드에서 대시 지갑으로</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">요청한 금액에서 수수료가 공제됩니다.</string>
     <string name="uphold_withdrawal_instructions">송금할 금액을 입력하십시오</string>
     <string name="uphold_withdrawal_success_title">성공</string>
@@ -19,11 +22,12 @@
     <string name="uphold_transfer">송금하기</string>
     <string name="uphold_see_on_uphold">업홀드에서 보기</string>
     <string name="uphold_logout_title">업홀드에서 로그아웃</string>
+    <string name="uphold_disconnect">업홀드 계정 연결 해제</string>
     <string name="uphold_logout">로그아웃</string>
     <string name="uphold_logout_explanation_text">또한 당신의 브라우저를 이용하여 업홀드 웹사이트에서 로그아웃 하십시오.</string>
     <string name="uphold_go_to_website">웹사이트로 가기</string>
     <string name="uphold_error">업홀드 에러</string>
-    <string name="uphold_error_not_logged_in">대시 지갑은 더 이상 당신의 업홀드 계정에 연결되지 않습니다. 다음 화면에서 업홀드 계정 연결 버튼을 눌러주세요.</string>
+    <string name="uphold_error_not_logged_in">대시 지갑은 더 이상 당신의 업홀드 계정에 연결되지 않습니다.</string>
     <string name="uphold_error_not_available">업홀드 서비스를 이용할 수 없습니다. 다시 시도해주세요.</string>
     <string name="uphold_error_report_issue">이 문제를 메인 메뉴의 \'이슈 보고\'를 이용하여 대시 지갑 지원 팀에 보고해주세요.</string>
 

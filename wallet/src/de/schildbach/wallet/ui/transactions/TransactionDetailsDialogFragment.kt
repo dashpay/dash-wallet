@@ -86,16 +86,18 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        contentBinding = TransactionResultContentBinding.bind(binding.transactionResultContainer)
+        transactionResultViewBinder = TransactionResultViewBinder(
+            viewModel.wallet!!,
+            viewModel.dashFormat,
+            contentBinding
+        )
+
         viewModel.init(txId)
         val tx = viewModel.transaction
 
-        if (tx != null) {
-            transactionResultViewBinder = TransactionResultViewBinder(
-                viewModel.wallet!!,
-                viewModel.dashFormat,
-                binding.transactionResultContainer
-            )
-        } else {
+        // the transactionResultViewBinder.bind is called later
+        if (tx == null) {
             log.error("Transaction not found. TxId: {}", txId)
             dismiss()
             return
@@ -172,7 +174,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
     private fun imitateUserInteraction() {
         requireActivity().onUserInteraction()
     }
-    
+
     private fun rescanBlockchain() {
         AdaptiveDialog.create(
             null,

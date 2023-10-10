@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">PIN 인증 중</string>
     <string name="set_pin_message">당신이 어플을 잠금 해제하실 때마다 이 PIN이 필요합니다.</string>
     <string name="set_pin_confirm_pin_incorrect">유효하지 않은 핀</string>
-    
+
     <string name="home_balance_hide_hint">잔고를 숨기시려면 탭하세요</string>
 
     <string name="dialog_confirm_confirm">승인</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">전송을 위해 스캔합니다</string>
     <string name="scan_to_pay_error_dialog_message">클립보드의 대시 주소 혹은 URL 전송이 유효하지 않습니다:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">클립보드의 대시 주소 혹은 URL 전송이 유효하지 않습니다.</string>
-    <string name="pay_to_confirm_address">이 대시 주소로 송금하시겠습니까?</string>
 
     <string name="receive_title">받기</string>
     <string name="receive_enter_amount_message">받을 금액 특정하기</string>
@@ -319,8 +318,6 @@
     <string name="security_very_high">매우 높음</string>
     <string name="max">최대</string>
 
-    <string name="enter_amount_available">가능</string>
-
     <string name="skip">건너뛰기</string>
     <string name="get_started">시작하기</string>
     <string name="welcome_screen_title_1_new_install">환영합니다</string>
@@ -345,8 +342,6 @@
     <string name="payment_request_unable_to_send">전송할 수 없습니다</string>
     <string name="payment_request_please_try_again">다시 시도하세요</string>
     <string name="payment_request_try_again">다시 시도하세요</string>
-    <string name="payment_request_problem_title">지불이 인식되지 않았습니다</string>
-    <string name="payment_request_problem_message">서버가 귀하의 지불을 처리하지 못했습니다. 판매자에게 문의해주십시오.</string>
     <string name="payment_request_expired_title">지불 요청이 만료되었습니다</string>
     <string name="payment_request_close">닫기</string>
     <string name="payment_request_skip">건너뛰기</string>
@@ -397,7 +392,7 @@
     <string name="masternode_key_type_owner">소유자 키</string>
     <string name="masternode_key_type_voting">투표 키</string>
     <string name="masternode_key_type_operator">운영자 키</string>
-    <string name="masternode_key_type_platform">HPMN 운영자 키</string>
+    <string name="masternode_key_type_platform">에볼루션 노드 ID 키</string>
     <string name="masternode_key_type_total">%d 키</string>
     <string name="masternode_key_type_used">%d 사용됨</string>
     <string name="masternode_key_pair_index">키페어 %d</string>

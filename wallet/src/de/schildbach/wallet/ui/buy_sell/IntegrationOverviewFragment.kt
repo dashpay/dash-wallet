@@ -19,19 +19,14 @@ package de.schildbach.wallet.ui.buy_sell
 
 import android.app.Activity
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.res.ResourcesCompat
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.data.ServiceType
 import de.schildbach.wallet.ui.coinbase.CoinBaseWebClientActivity
 import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
 import de.schildbach.wallet_test.R
@@ -40,13 +35,11 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overview) {
     private val binding by viewBinding(FragmentIntegrationOverviewBinding::bind)
-    private val args by navArgs<IntegrationOverviewFragmentArgs>()
     private val viewModel by viewModels<IntegrationOverviewViewModel>()
 
     private val coinbaseAuthLauncher = registerForActivityResult(
@@ -68,58 +61,29 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
             findNavController().popBackStack()
         }
 
-        if (args.service == ServiceType.UPHOLD) {
-            // TODO: not used atm. Move the auth logic from UpholdSplashActivity to here.
-            setupUphold()
-        }
-
         binding.continueBtn.setOnClickListener {
-            if (args.service == ServiceType.UPHOLD) {
-                continueUphold()
-            } else {
-                continueCoinbase()
-            }
+            continueCoinbase()
         }
-    }
-
-    private fun setupUphold() {
-        binding.headline.text = getText(R.string.uphold_link_title)
-        binding.logo.setImageResource(R.drawable.ic_uphold)
-        binding.logo.imageTintList = ColorStateList.valueOf(resources.getColor(android.R.color.white, null))
-        binding.logo.background = ResourcesCompat.getDrawable(
-            resources, R.drawable.uphold_gradient_background, null
-        )
-        binding.buyWithFiatText.isVisible = false
-        binding.buyWithFiatIc.isVisible = false
-        binding.buyConvertIc.isVisible = false
-        binding.buyConvertText.isVisible = false
-        binding.transferItemDetails.text = getString(R.string.uphold_transfer_details)
-        binding.continueBtn.text = getString(R.string.uphold_link_account)
-    }
-
-    private fun continueUphold() {
-        startActivity(Intent(requireContext(), UpholdSplashActivity::class.java))
     }
 
     private fun continueCoinbase() {
         lifecycleScope.launch {
-            val goodToGo = if (viewModel.shouldShowCoinbaseInfoPopup) {
+            val goodToGo = if (viewModel.shouldShowCoinbaseInfoPopup()) {
                 AdaptiveDialog.custom(
-                    R.layout.dialog_withdrawal_limit_info,
-                    null,
-                    getString(R.string.set_auth_limit),
-                    getString(R.string.change_withdrawal_limit),
-                    "",
-                    getString(R.string.got_it)
+                    R.layout.dialog_withdrawal_limit_info
                 ).showAsync(requireActivity()) ?: false
-            } else true
+            } else {
+                true
+            }
 
             if (goodToGo) {
-                viewModel.shouldShowCoinbaseInfoPopup = false
-                coinbaseAuthLauncher.launch(Intent(
-                    requireContext(),
-                    CoinBaseWebClientActivity::class.java
-                ))
+                viewModel.setCoinbaseInfoPopupShown()
+                coinbaseAuthLauncher.launch(
+                    Intent(
+                        requireContext(),
+                        CoinBaseWebClientActivity::class.java
+                    )
+                )
             }
         }
     }

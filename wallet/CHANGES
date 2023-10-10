@@ -1,4 +1,40 @@
 Dash Wallet
+v9.1.0
+* Add Topper Integration
+
+v9.0.6
+* Update to dashj 19.0.6
+* Fix stuck Crowdnode Signup
+* Fix Unknown Transaction bug
+
+v9.0.5
+* Update to dashj 19.0.5
+* Update translations for the new Send flow
+* Fix stuck currency code on the Receive screen
+* Fix overflowing labels on the Home and Advanced Security screens
+* Fix leaking balance info on the Quick Receive screen
+* Update transaction error handling based on removal of BIP61 in Dash Core 19
+* Fix explore DB file name for prod flavor (was same as testnet for 9.0.4)
+
+v9.0.4
+* Update to dashj 19.0.4
+* Fix fiat amount not matching DASH amount in the system notification
+* Masternode keys fixes
+* Redesign Send flow
+* Redesign some Home screen elements
+* Add ability to open links from system notifications
+
+v9.0.3
+* Update to dashj 19.0.3 (supports Dash Core 19.2)
+* Coinbase: properly handle expired sessions
+* Uphold: update logo
+* Uphold: fix incorrect balance when there are multiple Dash cards
+* Don't make sounds when Do Not Disturb mode is ON
+* Delete old explore databases to reduce storage requirements
+* Fix crash with icons with gradients on Android 6
+* Fix crash when sending Dash
+* Fix crash from Importing Private Key funding by a tx without confirmations
+
 v9.0.2
 * update to dashj 19.0.2
 * Coinbase: hide Transfer Dash when network offline

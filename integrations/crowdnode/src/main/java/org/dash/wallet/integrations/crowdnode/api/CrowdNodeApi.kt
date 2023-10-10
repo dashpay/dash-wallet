@@ -794,7 +794,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         if (webApi.fromCrowdNode(accountAddress!!, tx) == false) {
             log.info("Not confirmed")
             val acceptTermsResponseTx = blockchainApi.waitForAcceptTermsResponse()
-            log.info("new signUpResponseTx id: ${acceptTermsResponseTx.txId}")
+            log.info("new acceptTermsResponseTx id: ${acceptTermsResponseTx.txId}")
         }
     }
 
@@ -858,8 +858,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             notificationService.showNotification(
                 tag,
                 message,
-                false,
-                notificationIntent
+                intent = notificationIntent
             )
         }
     }

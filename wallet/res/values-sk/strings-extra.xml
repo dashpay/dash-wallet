@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Overuje sa PIN</string>
     <string name="set_pin_message">Tento PIN bude potrebný na odomknutie aplikácie pri každom použití.</string>
     <string name="set_pin_confirm_pin_incorrect">Nesprávny PIN</string>
-    
+
     <string name="home_balance_hide_hint">Klepnutím skryť zostatok</string>
 
     <string name="dialog_confirm_confirm">Potvrdiť</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Skenovať a poslať</string>
     <string name="scan_to_pay_error_dialog_message">V schránke nie je platná Dash adresa, alebo URL požiadavka:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">V schránke nie je platná Dash adresa, alebo URL požiadavka.</string>
-    <string name="pay_to_confirm_address">Je toto Dash adresa, na ktorú chcete poslať platbu?</string>
 
     <string name="receive_title">Prijať</string>
     <string name="receive_enter_amount_message">Zadajte čiastku, ktorú chcete prijať</string>
@@ -328,8 +327,6 @@
     <string name="security_very_high">Veľmi vysoká</string>
     <string name="max">Max</string>
 
-    <string name="enter_amount_available">dostupné</string>
-
     <string name="skip">preskočiť</string>
     <string name="get_started">Začať</string>
     <string name="welcome_screen_title_1_new_install">Vitajte</string>
@@ -354,8 +351,6 @@
     <string name="payment_request_unable_to_send">Nedá sa poslať</string>
     <string name="payment_request_please_try_again">Prosím skúste znova</string>
     <string name="payment_request_try_again">Skúsiť znova</string>
-    <string name="payment_request_problem_title">Platba nebola uznaná</string>
-    <string name="payment_request_problem_message">Vaša platba nemohla byť spracovaná serverom, prosím informujte sa u obchodníka</string>
     <string name="payment_request_expired_title">Žiadosť o platbu vypršala</string>
     <string name="payment_request_close">Zatvoriť</string>
     <string name="payment_request_skip">Preskočiť</string>
@@ -406,7 +401,6 @@
     <string name="masternode_key_type_owner">Kľúče vlastníka</string>
     <string name="masternode_key_type_voting">Hlasovacie kľúče</string>
     <string name="masternode_key_type_operator">Kľúče operátora</string>
-    <string name="masternode_key_type_platform">Kľúče operátora HPMN</string>
     <string name="masternode_key_type_total">%d kľúče</string>
     <string name="masternode_key_type_used">%d použité</string>
     <string name="masternode_key_pair_index">Kľúčový pár %d</string>

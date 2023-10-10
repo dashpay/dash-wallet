@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Untuk memulai staking, buat akun di CrowdNode atau hubungkan ke akun yang sudah ada.</string>
     <string name="crowdnode_account">Akun CrowdNode</string>
     <string name="new_account">Akun CrowdNode Baru</string>
-    <string name="account_create">Buat Akun</string>
     <string name="accept_terms_response">Harap Terima Persyaratan</string>
     <string name="accept_terms">Terima Persyaratan</string>
     <string name="welcome_response">Akun dibuat</string>

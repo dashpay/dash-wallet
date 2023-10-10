@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Per iniziare a fare staking, crea un account su CrowdNode o connettiti a uno esistente.</string>
     <string name="crowdnode_account">Account CrowdNode</string>
     <string name="new_account">Nuovo account CrowdNode</string>
-    <string name="account_create">Crea un Account</string>
     <string name="accept_terms_response">Si prega di accettare i Termini</string>
     <string name="accept_terms">Accetta i Termini</string>
     <string name="welcome_response">Account Creato</string>

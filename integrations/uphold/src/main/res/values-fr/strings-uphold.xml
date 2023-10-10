@@ -2,15 +2,18 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="topper">Topper</string>
     <string name="uphold_link_title">Liez votre compte Uphold</string>
+    <string name="uphold_powered_by">Fourni par Topper</string>
+    <string name="topper_powered_by">Fourni par Uphold</string>
     <string name="uphold_transfer_details">De Uphold vers votre Dash Wallet</string>
     <string name="uphold_buy_dash_activity_title">Acheter/vendre Dash avec Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Acheter Dash avec un compte Uphold</string>
     <string name="uphold_buy_dash_button">Acheter Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Transférer depuis Uphold</string>
     <string name="uphold_link_account">Lier un compte Uphold</string>
-    <string name="uphold_account_dash_balance">Le solde Dash de votre compte Uphold est</string>
-    <string name="uphold_transfer_to_this_wallet">Transférer Dash depuis votre compte Uphold vers ce portefeuille</string>
+    <string name="uphold_account_dash_balance">Solde Dash sur Uphold</string>
+    <string name="uphold_transfer_to_this_wallet">Depuis Uphold vers Dash Wallet</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Les frais seront déduits du montant demandé.</string>
     <string name="uphold_withdrawal_instructions">Saisissez le montant à transférer</string>
     <string name="uphold_withdrawal_success_title">Succès</string>
@@ -19,11 +22,12 @@
     <string name="uphold_transfer">Transférer</string>
     <string name="uphold_see_on_uphold">Voir sur Uphold</string>
     <string name="uphold_logout_title">Se déconnecter d\'Uphold</string>
+    <string name="uphold_disconnect">Déconnecter le compte Uphold</string>
     <string name="uphold_logout">Se déconnecter</string>
     <string name="uphold_logout_explanation_text">Vous devrez également vous déconnecter du site Uphold dans votre navigateur web.</string>
     <string name="uphold_go_to_website">Aller sur le site web</string>
     <string name="uphold_error">Erreur Uphold</string>
-    <string name="uphold_error_not_logged_in">Dash Wallet n\'est plus lié à votre compte Uphold. Sur l\'écran suivant, touchez "Lier un compte Uphold".</string>
+    <string name="uphold_error_not_logged_in">Dash Wallet n\'est plus reliée à votre compte Uphold.</string>
     <string name="uphold_error_not_available">Le service Uphold n\'est pas disponible. Veuillez réessayer plus tard.</string>
     <string name="uphold_error_report_issue">Veuillez signaler ce problème à l\'équipe Dash Wallet en choisissant "Signaler un problème" dans le menu principal.</string>
 

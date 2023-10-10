@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Подтверждение PIN-кода</string>
     <string name="set_pin_message">Этот PIN нужно будет вводить для разблокировки приложения при каждом его использовании.</string>
     <string name="set_pin_confirm_pin_incorrect">Неверный PIN</string>
-    
+
     <string name="home_balance_hide_hint">Нажмите, чтобы скрыть баланс</string>
 
     <string name="dialog_confirm_confirm">Подтвердить</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Сканировать</string>
     <string name="scan_to_pay_error_dialog_message">Некорректный адрес Dash или URL запрос в буфере обмена:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Некорректный адрес Dash или URL запрос в буфере обмена.</string>
-    <string name="pay_to_confirm_address">Вы хотите отправить средства на этот адрес Dash?</string>
 
     <string name="receive_title">Получить</string>
     <string name="receive_enter_amount_message">Введите сумму для получения</string>
@@ -288,14 +287,14 @@
     <string name="about_copyright">Авторские права © 2023 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_device_sync">Синхронизация с последним устройством с Explore</string>
+    <string name="about_last_explore_device_sync">Последняя синхронизация с Explore</string>
     <string name="about_last_explore_server_update">Последнее обновление сервера Explore</string>
     <string name="about_firebase_installation_id">Идентификатор установки Firebase</string>
     <string name="about_fcm_token">Токен Firebase Cloud Messaging</string>
     <string name="about_last_explore_dash_update_error">Невозможно получить</string>
     <string name="about_last_explore_dash_sync_never">никогда</string>
     <string name="about_explore_failed_sync">Не удалось синхронизироваться c %s</string>
-    <string name="about_explore_preloaded_on">Предварительно загружен на %s</string>
+    <string name="about_explore_preloaded_on">Предварительно загружена %s</string>
 
     <string name="block">Блок</string>
     <string name="time">Время</string>
@@ -317,9 +316,9 @@
     <string name="one_minute">1 мин</string>
     <string name="five_minute">5 мин</string>
     <string name="one_hour">1 час</string>
-    <string name="biometric_limit">Лимит для биометрической аутентификации</string>
+    <string name="biometric_limit">Биометрический лимит</string>
     <string name="spending_confirmation_hint_zero">Всегда требовать PIN для совершения платежа</string>
-    <string name="spending_confirmation_hint_above_zero">Ниже вы можете пройти биометрическую аутентификацию для перевода средств</string>
+    <string name="spending_confirmation_hint_above_zero">Вы можете использовать биометрическую аутентификацию для переводов меньше</string>
 
     <string name="security_none">Отсутствует</string>
     <string name="security_low">Низкий</string>
@@ -327,8 +326,6 @@
     <string name="security_high">Высокий</string>
     <string name="security_very_high">Очень высокий</string>
     <string name="max">Макс</string>
-
-    <string name="enter_amount_available">доступно</string>
 
     <string name="skip">пропустить</string>
     <string name="get_started">Начать</string>
@@ -354,8 +351,6 @@
     <string name="payment_request_unable_to_send">Невозможно отправить</string>
     <string name="payment_request_please_try_again">Попробуйте еще раз</string>
     <string name="payment_request_try_again">Попробуйте ещё раз</string>
-    <string name="payment_request_problem_title">Платёж не был подтверждён</string>
-    <string name="payment_request_problem_message">Ваш платёж не может быть обработан сервером. Пожалуйста, свяжитесь с продавцом</string>
     <string name="payment_request_expired_title">Запрос на оплату истёк</string>
     <string name="payment_request_close">Закрыть</string>
     <string name="payment_request_skip">Пропустить</string>
@@ -406,7 +401,7 @@
     <string name="masternode_key_type_owner">Ключи владельца</string>
     <string name="masternode_key_type_voting">Ключи голосования</string>
     <string name="masternode_key_type_operator">Ключи оператора</string>
-    <string name="masternode_key_type_platform">HPMN Ключи оператора</string>
+    <string name="masternode_key_type_platform">Ключи идентификаторов Evolution нод</string>
     <string name="masternode_key_type_total">ключи</string>
     <string name="masternode_key_type_used">%d использовано</string>
     <string name="masternode_key_pair_index">Ключи %d</string>

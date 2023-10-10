@@ -637,7 +637,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             return
         }
 
-        val existingGiftCard = giftCardDao.getGiftCard(giftCard.txId)
+        val existingGiftCard = giftCardDao.getCardForTransaction(giftCard.txId)
 
         if (existingGiftCard == null) {
             giftCardDao.insertGiftCard(giftCard)

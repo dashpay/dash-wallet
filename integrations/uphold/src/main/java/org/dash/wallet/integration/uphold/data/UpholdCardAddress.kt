@@ -17,11 +17,11 @@
 
 package org.dash.wallet.integration.uphold.data
 
-import com.squareup.moshi.Json
+import com.google.gson.annotations.SerializedName
 
 class UpholdCardAddress {
-    @Json(name = "wire")
+    @SerializedName("wire")
     var wireId: String? = null
-    @Json(name = "dash")
+    @SerializedName("dash")
     var cryptoAddress: String? = null
 }

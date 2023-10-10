@@ -30,8 +30,8 @@ import coil.load
 import coil.transform.CircleCropTransformation
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.RadiobuttonRowBinding
-import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
+import org.dash.wallet.common.ui.setRoundedBackground
 
 class RadioGroupAdapter(
     defaultSelectedIndex: Int = 0,
@@ -91,10 +91,16 @@ class RadioButtonViewHolder(
         val resources = binding.root.resources
 
         binding.title.text = option.title
-        binding.title.setTextColor(resources.getColorStateList(
-            if (option.iconSelectMode == IconSelectMode.Encircle) R.color.content_primary else R.color.radiobutton_text_color,
-            null
-        ))
+        binding.title.setTextColor(
+            resources.getColorStateList(
+                if (option.iconSelectMode == IconSelectMode.Encircle) {
+                    R.color.content_primary
+                } else {
+                    R.color.radiobutton_text_color
+                },
+                null
+            )
+        )
 
         binding.subtitle.isVisible = option.subtitle.isNotEmpty()
         binding.subtitle.text = option.subtitle
@@ -102,7 +108,9 @@ class RadioButtonViewHolder(
         if (option.iconRes != null) {
             binding.icon.setImageDrawable(
                 ResourcesCompat.getDrawable(
-                    resources, option.iconRes, null
+                    resources,
+                    option.iconRes,
+                    null
                 )
             )
         } else if (option.iconUrl != null) {
@@ -126,11 +134,13 @@ class RadioButtonViewHolder(
                 binding.icon.imageTintList = resources.getColorStateList(tint, null)
             }
 
-            binding.iconWrapper.background = when {
-                option.iconSelectMode != IconSelectMode.Encircle  -> null
-                isSelected -> resources.getRoundedBackground(R.style.EncircledIconSelectedTheme)
-                else -> resources.getRoundedBackground(R.style.EncircledIconTheme)
-            }
+            binding.iconWrapper.setRoundedBackground(
+                when {
+                    option.iconSelectMode != IconSelectMode.Encircle -> null
+                    isSelected -> R.style.EncircledIconSelectedTheme
+                    else -> R.style.EncircledIconTheme
+                }
+            )
         } else {
             binding.iconWrapper.isVisible = false
         }
@@ -159,20 +169,26 @@ class RadioButtonViewHolder(
         binding.additionalInfoSubtitle.text = option.subtitleAdditionalInfo
 
         if (this.isCheckMark) {
-            binding.checkmark.setImageDrawable(ResourcesCompat.getDrawable(
-                resources, R.drawable.ic_checkmark_blue, null
-            ))
+            binding.checkmark.setImageDrawable(
+                ResourcesCompat.getDrawable(
+                    resources,
+                    R.drawable.ic_checkmark_blue,
+                    null
+                )
+            )
             binding.checkmark.isVisible = isSelected
         } else {
-            binding.checkmark.setImageDrawable(ResourcesCompat.getDrawable(
-                resources,
-                if (isSelected) {
-                    R.drawable.ic_radiobutton_on
-                } else {
-                    R.drawable.ic_radiobutton_off
-                },
-                null
-            ))
+            binding.checkmark.setImageDrawable(
+                ResourcesCompat.getDrawable(
+                    resources,
+                    if (isSelected) {
+                        R.drawable.ic_radiobutton_on
+                    } else {
+                        R.drawable.ic_radiobutton_off
+                    },
+                    null
+                )
+            )
         }
     }
 }

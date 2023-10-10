@@ -165,6 +165,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             this.currency = Currency.getInstance(Constants.USD_CURRENCY)
         }
         binding.originalPurchaseValue.text = currencyFormat.format(giftCard.price)
+
         binding.purchaseCardNumber.text = giftCard.number
         binding.cardNumberGroup.isVisible = !giftCard.number.isNullOrEmpty()
         binding.purchaseCardPin.text = giftCard.pin

@@ -28,11 +28,14 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dashpay_contact_row_content.view.*
+import de.schildbach.wallet_test.databinding.ContactRowBinding
+import de.schildbach.wallet_test.databinding.DashpayContactRowBinding
+import de.schildbach.wallet_test.databinding.DashpayContactRowContentBinding
+import de.schildbach.wallet_test.databinding.DashpayContactSuggestionRowBinding
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
-class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes layout: Int, val isSuggestion: Boolean = false, val useFriendsIcon: Boolean = true)
-    : RecyclerView.ViewHolder(inflater.inflate(layout, parent, false)) {
+class ContactViewHolder(val binding: DashpayContactRowBinding, val isSuggestion: Boolean = false, val useFriendsIcon: Boolean = true)
+    : RecyclerView.ViewHolder(binding.root) {
 
     interface OnItemClickListener {
         fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
@@ -43,6 +46,8 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes 
         fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
     }
 
+    val contactRowBinding = DashpayContactRowContentBinding.bind(binding.contactRow)
+
     fun bind(usernameSearchResult: UsernameSearchResult,
              sendContactRequestWorkState: Resource<WorkInfo>?, listener: OnItemClickListener?,
              contactRequestButtonClickListener: OnContactRequestButtonClickListener?,
@@ -50,14 +55,14 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes 
 
         val dashPayProfile = usernameSearchResult.dashPayProfile
         if (dashPayProfile.displayName.isEmpty()) {
-            itemView.display_name.text = dashPayProfile.username
-            itemView.username.text = ""
+            contactRowBinding.displayName.text = dashPayProfile.username
+            contactRowBinding.username.text = ""
         } else {
-            itemView.display_name.text = dashPayProfile.displayName
-            itemView.username.text = usernameSearchResult.username
+            contactRowBinding.displayName.text = dashPayProfile.displayName
+            contactRowBinding.username.text = usernameSearchResult.username
         }
 
-        ProfilePictureDisplay.display(itemView.avatar, dashPayProfile)
+        ProfilePictureDisplay.display(contactRowBinding.avatar, dashPayProfile)
 
         itemView.setOnClickListener {
             listener?.onItemClicked(itemView, usernameSearchResult)
@@ -71,47 +76,139 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes 
         ContactRelation.process(usernameSearchResult.type, sendContactRequestWorkState, object : ContactRelation.RelationshipCallback {
 
             override fun none() {
-                itemView.relation_state.visibility = View.GONE
+                contactRowBinding.relationState.visibility = View.GONE
             }
 
             override fun inviting() {
-                itemView.relation_state.displayedChild = 3
-                itemView.relation_state.visibility = View.VISIBLE
-                itemView.pending_work_text.setText(R.string.sending_contact_request_short)
-                (itemView.pending_work_icon.drawable as AnimationDrawable).start()
+                contactRowBinding.relationState.displayedChild = 3
+                contactRowBinding.relationState.visibility = View.VISIBLE
+                contactRowBinding.pendingWorkText.setText(R.string.sending_contact_request_short)
+                (contactRowBinding.pendingWorkIcon.drawable as AnimationDrawable).start()
             }
 
             override fun invited() {
-                itemView.relation_state.displayedChild = 1
+                contactRowBinding.relationState.displayedChild = 1
             }
 
             override fun inviteReceived() {
-                itemView.relation_state.displayedChild = 2
-                itemView.relation_state.visibility = View.VISIBLE
-                itemView.accept_contact_request.isEnabled = networkAvailable
-                itemView.accept_contact_request.setOnClickListener {
+                contactRowBinding.relationState.displayedChild = 2
+                contactRowBinding.relationState.visibility = View.VISIBLE
+                contactRowBinding.acceptContactRequest.isEnabled = networkAvailable
+                contactRowBinding.acceptContactRequest.setOnClickListener {
                     contactRequestButtonClickListener?.onAcceptRequest(usernameSearchResult, adapterPosition)
                 }
-                itemView.ignore_contact_request.setOnClickListener {
+                contactRowBinding.ignoreContactRequest.setOnClickListener {
                     contactRequestButtonClickListener?.onIgnoreRequest(usernameSearchResult, adapterPosition)
                 }
             }
 
             override fun acceptingInvite() {
-                itemView.relation_state.displayedChild = 3
-                itemView.relation_state.visibility = View.VISIBLE
-                itemView.pending_work_text.setText(R.string.accepting_contact_request_short)
-                (itemView.pending_work_icon.drawable as AnimationDrawable).start()
+                contactRowBinding.relationState.displayedChild = 3
+                contactRowBinding.relationState.visibility = View.VISIBLE
+                contactRowBinding.pendingWorkText.setText(R.string.accepting_contact_request_short)
+                (contactRowBinding.pendingWorkIcon.drawable as AnimationDrawable).start()
             }
 
             override fun friends() {
                 if (useFriendsIcon) {
-                    itemView.relation_state.visibility = View.VISIBLE
-                    itemView.relation_state.displayedChild = 0
+                    contactRowBinding.relationState.visibility = View.VISIBLE
+                    contactRowBinding.relationState.displayedChild = 0
                 } else {
                     none()
                 }
             }
         })
+    }
+}
+
+class ContactSuggestionViewHolder(val binding: DashpayContactSuggestionRowBinding, val isSuggestion: Boolean = false, val useFriendsIcon: Boolean = true)
+    : RecyclerView.ViewHolder(binding.root) {
+
+    interface OnItemClickListener {
+        fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
+    }
+
+    interface OnContactRequestButtonClickListener {
+        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
+        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
+    }
+
+    val contactRowBinding = DashpayContactRowContentBinding.bind(binding.contactRow)
+
+    fun bind(
+        usernameSearchResult: UsernameSearchResult,
+        sendContactRequestWorkState: Resource<WorkInfo>?, listener: OnItemClickListener?,
+        contactRequestButtonClickListener: OnContactRequestButtonClickListener?,
+        networkAvailable: Boolean = true
+    ) {
+
+        val dashPayProfile = usernameSearchResult.dashPayProfile
+        if (dashPayProfile.displayName.isEmpty()) {
+            contactRowBinding.displayName.text = dashPayProfile.username
+            contactRowBinding.username.text = ""
+        } else {
+            contactRowBinding.displayName.text = dashPayProfile.displayName
+            contactRowBinding.username.text = usernameSearchResult.username
+        }
+
+        ProfilePictureDisplay.display(contactRowBinding.avatar, dashPayProfile)
+
+        itemView.setOnClickListener {
+            listener?.onItemClicked(itemView, usernameSearchResult)
+        }
+
+        if (!isSuggestion) {
+            val isPendingRequest = usernameSearchResult.isPendingRequest
+            itemView.setBackgroundResource(if (isPendingRequest) R.drawable.selectable_round_corners_white else R.drawable.selectable_round_corners)
+        }
+
+        ContactRelation.process(
+            usernameSearchResult.type,
+            sendContactRequestWorkState,
+            object : ContactRelation.RelationshipCallback {
+
+                override fun none() {
+                    contactRowBinding.relationState.visibility = View.GONE
+                }
+
+                override fun inviting() {
+                    contactRowBinding.relationState.displayedChild = 3
+                    contactRowBinding.relationState.visibility = View.VISIBLE
+                    contactRowBinding.pendingWorkText.setText(R.string.sending_contact_request_short)
+                    (contactRowBinding.ignoreContactRequest.drawable as AnimationDrawable).start()
+                }
+
+                override fun invited() {
+                    contactRowBinding.relationState.displayedChild = 1
+                }
+
+                override fun inviteReceived() {
+                    contactRowBinding.relationState.displayedChild = 2
+                    contactRowBinding.relationState.visibility = View.VISIBLE
+                    contactRowBinding.acceptContactRequest.isEnabled = networkAvailable
+                    contactRowBinding.acceptContactRequest.setOnClickListener {
+                        contactRequestButtonClickListener?.onAcceptRequest(usernameSearchResult, adapterPosition)
+                    }
+                    contactRowBinding.ignoreContactRequest.setOnClickListener {
+                        contactRequestButtonClickListener?.onIgnoreRequest(usernameSearchResult, adapterPosition)
+                    }
+                }
+
+                override fun acceptingInvite() {
+                    contactRowBinding.relationState.displayedChild = 3
+                    contactRowBinding.relationState.visibility = View.VISIBLE
+                    contactRowBinding.pendingWorkText.setText(R.string.accepting_contact_request_short)
+                    (contactRowBinding.pendingWorkIcon.drawable as AnimationDrawable).start()
+                }
+
+                override fun friends() {
+                    if (useFriendsIcon) {
+                        contactRowBinding.relationState.visibility = View.VISIBLE
+                        contactRowBinding.relationState.displayedChild = 0
+                    } else {
+                        none()
+                    }
+                }
+            })
     }
 }

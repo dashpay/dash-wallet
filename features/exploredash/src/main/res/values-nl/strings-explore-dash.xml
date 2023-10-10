@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Verken Dash</string>
     <string name="explore_title">Verken</string>
-    <string name="explore_subtitle">Winkel eenvoudig met je DASH bij meer dan 155.000 locaties en online acceptanten</string>
+    <string name="explore_subtitle">Vind winkeliers die Dash accepteren, waar Dash kunt kopen, en hoe je er inkomsten mee kunt genereren.</string>
     <string name="explore_merchants_title">Waar uit te geven?</string>
     <string name="explore_merchants_subtitle">Vind acceptanten die Dash als aannemen.</string>
     <string name="explore_atms_title">Geldautomaten</string>
@@ -76,6 +76,7 @@
     <string name="explore_payment_method">Betalingsmethode</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Geschenkbon</string>
+    <string name="explore_filter_gift_cards">Cadeaukaarten</string>
     <string name="explore_radius">Straal</string>
     <string name="explore_location">Locatie</string>
     <string name="explore_current_location">Huidige locatie</string>
@@ -159,4 +160,6 @@
 
     <string name="sync_in_progress_file_not_found">Build Error: Database niet gevonden!</string>
     <string name="sync_in_progress_network_error">Synchronisatie onderbroken... Netwerk is offline of onbereikbaar</string>
-</resources>
+
+
+    </resources>

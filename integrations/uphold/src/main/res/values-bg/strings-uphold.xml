@@ -7,8 +7,6 @@
     <string name="uphold_buy_dash_button">Купи Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Прехвърляне от Uphold</string>
     <string name="uphold_link_account">Свързване на Uphold акаунт</string>
-    <string name="uphold_account_dash_balance">Вашият Dash баланс в Uphold акаунта е</string>
-    <string name="uphold_transfer_to_this_wallet">Прехвърляне на Dash от Вашият Uphold акаунт към този портфейл</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Таксата ще бъде приспадната от поисканата сума.</string>
     <string name="uphold_withdrawal_instructions">Въведи сумата за прехвърляне </string>
     <string name="uphold_withdrawal_success_title">Успешно</string>
@@ -21,7 +19,6 @@
     <string name="uphold_logout_explanation_text">Необходимо е също да излезете от уебсайта на Uphold, чрез вашият браузър</string>
     <string name="uphold_go_to_website">Отидете на уебсайта</string>
     <string name="uphold_error">Uphold грешка</string>
-    <string name="uphold_error_not_logged_in">Dash Wallet вече не е свързан с вашият Uphold акаунт.  На следващият екран натиснете Свързвана с Uphold акаунт.</string>
     <string name="uphold_error_not_available">Uphold услугите не са налични.  Моля  опитайте отново по-късно.</string>
     <string name="uphold_error_report_issue">Моля, докладвайте за този проблем на екипа за поддръжка на  Dash портфейла , използвайки „Report Issue“ от главното меню.</string>
 

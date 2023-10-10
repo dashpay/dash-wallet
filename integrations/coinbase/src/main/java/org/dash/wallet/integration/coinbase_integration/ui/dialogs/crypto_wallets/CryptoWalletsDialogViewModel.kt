@@ -18,18 +18,24 @@ package org.dash.wallet.integration.coinbase_integration.ui.dialogs.crypto_walle
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class CryptoWalletsDialogViewModel @Inject constructor(
     private val exchangeRatesProvider: ExchangeRatesProvider,
-    val config: Configuration
+    val config: Configuration,
+    walletUIConfig: WalletUIConfig
 ) : ViewModel() {
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
@@ -41,7 +47,9 @@ class CryptoWalletsDialogViewModel @Inject constructor(
         get() = _dataList
 
     init {
-        exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode!!)
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
     }

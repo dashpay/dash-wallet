@@ -58,6 +58,7 @@
     <string name="share_address">Adresse teilen</string>
     <string name="verify">Verifizieren</string>
     <string name="receive_enter_amount_button">Betrag festsetzen</string>
+    <string name="account_create">Konto erstellen</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Suchen</string>
@@ -75,8 +76,25 @@
     <string name="select_currency">Währung auswählen</string>
     <string name="send_coins_error_dusty_send">Der Betrag ist zu klein zum Senden</string>
     <string name="send_coins_error_insufficient_money">Guthaben nicht ausreichend</string>
+    <string name="syncing">Synchronisiere</string>
+    <string name="no_connection">Keine Internetverbindung</string>
+    <string name="rate_not_available">Nicht verfügbar</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">Es scheint als würdest du deine Dash Wallet leeren</string>
     <string name="empty_wallet_crowdnode_warning">Bitte beachte, dass du dein Guthaben nicht von CrowdNode abheben kannst solange dies niedriger als 0.0003 Dash ist.</string>
-    <string name="syncing">Synchronisiere</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">Zahlung nicht anerkannt</string>
+    <string name="payment_protocol_default_error_title">Zahlungsfehler</string>
+    <string name="payment_request_problem_message">Deine Zahlung konnte nicht vom Server verarbeitet werden, wende dich bitte an den Händler.</string>
+    <string name="exchange_rate_not_found">Kann Wechselkurs nicht finden.</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">Direkt in der Dash Wallet erhalten</string>
+    <string name="convert_crypto">Kryptowährung umwandeln</string>
+    <string name="last_known_balance" >Alle Standorte anzeigen</string>
+    <string name="disconnected">Verbindung getrennt</string>
+    <string name="enter_amount_available">verfügbar</string>
+    <string name="transaction_row_rate_not_available">Nicht verfügbar</string>
 </resources>

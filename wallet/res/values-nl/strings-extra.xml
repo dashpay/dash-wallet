@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Verifieer pin</string>
     <string name="set_pin_message">Deze PIN is vereist om je app elke keer te ontgrendelen wanneer je deze gebruikt.</string>
     <string name="set_pin_confirm_pin_incorrect">Onjuiste PIN</string>
-    
+
     <string name="home_balance_hide_hint">Tik om saldo te verbergen</string>
 
     <string name="dialog_confirm_confirm">Bevestig</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Scan om te verzenden</string>
     <string name="scan_to_pay_error_dialog_message">Geen geldig Dash adres of URL verzoek op klembord:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Geen geldig Dash adres of URL verzoek op klembord.</string>
-    <string name="pay_to_confirm_address">Is dit het Dash adres waarnaar je de betaling wilt sturen?</string>
 
     <string name="receive_title">Ontvangen</string>
     <string name="receive_enter_amount_message">Specificeer het te ontvangen bedrag</string>
@@ -322,8 +321,6 @@
     <string name="security_very_high">Heel hoog</string>
     <string name="max">Max</string>
 
-    <string name="enter_amount_available">beschikbaar</string>
-
     <string name="skip">Overslaan</string>
     <string name="get_started">Ga aan de slag</string>
     <string name="welcome_screen_title_1_new_install">Welkom</string>
@@ -348,8 +345,6 @@
     <string name="payment_request_unable_to_send">Verzenden niet mogelijk</string>
     <string name="payment_request_please_try_again">Probeer a.u.b. opnieuw</string>
     <string name="payment_request_try_again">Probeer opnieuw</string>
-    <string name="payment_request_problem_title">Betaling werd niet bevestigd</string>
-    <string name="payment_request_problem_message">Je betaling kon niet door de server worden verwerkt, doe a.u.b. navraag bij de winkelier</string>
     <string name="payment_request_expired_title">Betaalverzoek is verlopen</string>
     <string name="payment_request_close">Sluiten</string>
     <string name="payment_request_skip">Overslaan</string>
@@ -400,7 +395,7 @@
     <string name="masternode_key_type_owner">Eigenaar sleutels</string>
     <string name="masternode_key_type_voting">Stem sleutels</string>
     <string name="masternode_key_type_operator">Operator sleutels</string>
-    <string name="masternode_key_type_platform">HPMN Operator sleutels</string>
+    <string name="masternode_key_type_platform">Evolution Node ID sleutels</string>
     <string name="masternode_key_type_total">%d sleutels</string>
     <string name="masternode_key_type_used">%dgebruikt</string>
     <string name="masternode_key_pair_index">Sleutelpaar %d</string>

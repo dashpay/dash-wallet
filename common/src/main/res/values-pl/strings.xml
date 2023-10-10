@@ -58,6 +58,7 @@
     <string name="share_address">Udostępnij Adress</string>
     <string name="verify">Zweryfikuj</string>
     <string name="receive_enter_amount_button">Określ Kwotę</string>
+    <string name="account_create">Stwórz Konto</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Szukaj</string>
@@ -75,8 +76,25 @@
     <string name="select_currency">Wybierz Walutę</string>
     <string name="send_coins_error_dusty_send">Kwota jest zbyt mała, aby wysłać</string>
     <string name="send_coins_error_insufficient_money">Niewystarczająca ilość funduszy</string>
+    <string name="syncing">Synchronizowanie</string>
+    <string name="no_connection">Brak połączenia z Internetem</string>
+    <string name="rate_not_available">Niedostępne</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">Wygląda na to że opróżniasz swój portfel Dash</string>
     <string name="empty_wallet_crowdnode_warning">Pamiętaj, że nie będziesz mógł wypłacić środków z CrowdNode do tego portfela, dopóki nie zwiększysz salda do min. 0,0003 Dash.</string>
-    <string name="syncing">Synchronizowanie</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">Płatność nie została uznana</string>
+    <string name="payment_protocol_default_error_title">Błąd płatności</string>
+    <string name="payment_request_problem_message">Twoja płatność nie mogła zostać uznana przez serwer, skontaktuj się ze sprzedawcą. </string>
+    <string name="exchange_rate_not_found">Kurs nie został znaleziony</string>
+
+    <!-- Integrations -->
+    <string name="buy_dash_subtitle">Otrzymaj bezpośrednio do portfela Dash</string>
+    <string name="convert_crypto">Wymień Krypto</string>
+    <string name="last_known_balance" >Ostatnio znane saldo</string>
+    <string name="disconnected">Rozłączony</string>
+    <string name="enter_amount_available">dostępne</string>
+    <string name="transaction_row_rate_not_available">Niedostępne</string>
 </resources>

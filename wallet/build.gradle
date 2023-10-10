@@ -2,7 +2,7 @@ plugins {
     id 'com.android.application'
     id 'project-report'
     id 'kotlin-android'
-    id 'kotlin-android-extensions'
+    id 'kotlin-parcelize'
     id 'kotlin-kapt'
     id 'dagger.hilt.android.plugin'
     id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
@@ -38,7 +38,7 @@ dependencies {
 
     // Android arch
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.annotation:annotation:1.2.0'
+    implementation 'androidx.annotation:annotation:1.5.0'
     implementation "androidx.core:core-ktx:$jetpackVersion"
     implementation "androidx.fragment:fragment-ktx:1.5.5"
     implementation('androidx.legacy:legacy-support-v13:1.0.0') {
@@ -64,10 +64,6 @@ dependencies {
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
 
-    implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
-    implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
-    implementation 'com.squareup.moshi:moshi:1.11.0'
-    implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
     implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
         exclude(group: 'com.google.android', module: 'android')
@@ -79,12 +75,18 @@ dependencies {
 
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
 
+    // Network
+    implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
+    implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
+    implementation 'com.squareup.moshi:moshi:1.11.0'
+    implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
+    implementation 'com.squareup.retrofit2:converter-moshi:2.6.4'
+
     // UI
     implementation "androidx.appcompat:appcompat:$appCompatVersion"
     implementation 'androidx.coordinatorlayout:coordinatorlayout:1.2.0'
     implementation "com.google.android.material:material:$materialVersion"
     implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
-    implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "com.github.bumptech.glide:glide:$glideVersion"
@@ -206,12 +208,12 @@ if (file("../local.properties").exists()) {
 }
 
 android {
-    compileSdkVersion 31
     android.ndkVersion '21.3.6528147'
 
     defaultConfig {
+        compileSdk 33
         minSdkVersion 23
-        targetSdkVersion 31
+        targetSdkVersion 33
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 80133
         versionName project.hasProperty('versionName') ? project.property('versionName') : "5.3-dashpay"
         multiDexEnabled true
@@ -318,65 +320,44 @@ android {
     }
     flavorDimensions "default"
     productFlavors {
+        all {
+            def coinbaseClientId = props.getProperty("COINBASE_CLIENT_ID", "\"COINBASE_CLIENT_ID\"")
+            def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET", "\"COINBASE_CLIENT_SECRET\"")
+            buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
+            buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
+
+            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID", "\"DASHDIRECT_CLIENT_ID\"")
+            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
+        }
         prod {
             applicationId = "hashengineering.darkcoin.wallet"
-            def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID")
-            def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET")
-            if (upholdClientId == null) {
-                upholdClientId = "\"UPHOLD_CLIENT_ID\""
-            }
-            if (upholdClientSecret == null) {
-                upholdClientSecret = "\"UPHOLD_CLIENT_SECRET\""
-            }
+
+            def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
+            def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
             buildConfigField("String", "UPHOLD_CLIENT_ID", upholdClientId)
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", upholdClientSecret)
 
-            def coinbaseClientId = props.getProperty("COINBASE_CLIENT_ID")
-            def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET")
-
-            if (coinbaseClientId == null) {
-                coinbaseClientId = "\"COINBASE_CLIENT_ID\""
-            }
-            if (coinbaseClientSecret == null) {
-                coinbaseClientSecret = "\"COINBASE_CLIENT_SECRET\""
-            }
-            buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
-            buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
-
-            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
-
-            if (dashDirectClientId == null) {
-                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
-            }
-
-            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
-
+            def topperKeyId = props.getProperty("TOPPER_KEY_ID", "\"TOPPER_KEY_ID\"")
+            def topperWidgetId = props.getProperty("TOPPER_WIDGET_ID", "\"TOPPER_WIDGET_ID\"")
+            def topperPrivateKey = props.getProperty("TOPPER_PRIVATE_KEY", "\"TOPPER_PRIVATE_KEY\"")
+            buildConfigField("String", "TOPPER_KEY_ID", topperKeyId)
+            buildConfigField("String", "TOPPER_WIDGET_ID", topperWidgetId)
+            buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
-            def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
-            def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
-            if (imgurClientId == null) {
-                imgurClientId = "\"UPHOLD_CLIENT_ID\""
-            }
-            if (imgurClientSecret == null) {
-                imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
-            }
-            buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
-            buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
 
-            def coinbaseClientId = props.getProperty("COINBASE_CLIENT_ID")
-            def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET")
+            def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX", "\"UPHOLD_CLIENT_ID\"")
+            def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX", "\"UPHOLD_CLIENT_SECRET\"")
+            buildConfigField("String", "UPHOLD_CLIENT_ID", upholdClientId)
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", upholdClientSecret)
 
-            if (coinbaseClientId == null) {
-                coinbaseClientId = "\"COINBASE_CLIENT_ID\""
-            }
-            if (coinbaseClientSecret == null) {
-                coinbaseClientSecret = "\"COINBASE_CLIENT_SECRET\""
-            }
-            buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
-            buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
-
+            def topperKeyId = props.getProperty("TOPPER_KEY_ID_SANDBOX", "\"TOPPER_KEY_ID\"")
+            def topperWidgetId = props.getProperty("TOPPER_WIDGET_ID_SANDBOX", "\"TOPPER_WIDGET_ID\"")
+            def topperPrivateKey = props.getProperty("TOPPER_PRIVATE_KEY_SANDBOX", "\"TOPPER_PRIVATE_KEY\"")
+            buildConfigField("String", "TOPPER_KEY_ID", topperKeyId)
+            buildConfigField("String", "TOPPER_WIDGET_ID", topperWidgetId)
+            buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
             def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
             if (dashDirectClientId == null) {
                 dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
@@ -395,6 +376,12 @@ android {
             }
             buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
+            def topperKeyId = props.getProperty("TOPPER_KEY_ID_SANDBOX", "\"TOPPER_KEY_ID\"")
+            def topperWidgetId = props.getProperty("TOPPER_WIDGET_ID_SANDBOX", "\"TOPPER_WIDGET_ID\"")
+            def topperPrivateKey = props.getProperty("TOPPER_PRIVATE_KEY_SANDBOX", "\"TOPPER_PRIVATE_KEY\"")
+            buildConfigField("String", "TOPPER_KEY_ID", topperKeyId)
+            buildConfigField("String", "TOPPER_WIDGET_ID", topperWidgetId)
+            buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
 
             def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
             if (dashDirectClientId == null) {
@@ -412,14 +399,9 @@ android {
             if (imgurClientSecret == null) {
                 imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
             }
-            buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
-            buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
-
-            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
-            if (dashDirectClientId == null) {
-                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
-            }
-            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
+            applicationId = "org.dash.wallet.devnet"
+            buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
         }
     }
 

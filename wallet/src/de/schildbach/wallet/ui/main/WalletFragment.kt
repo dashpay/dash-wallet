@@ -286,48 +286,13 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     private fun handlePayToAddress() {
         viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SEND_TO_ADDRESS)
-        val input = viewModel.getClipboardInput()
-        handlePaste(input)
-    }
-
-    fun handlePaste(input: String) {
-        if (input.isNotEmpty()) {
-            handleString(
-                input,
-                R.string.scan_to_pay_error_dialog_title,
-                R.string.scan_to_pay_error_dialog_message
-            )
-        } else {
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.shortcut_pay_to_address),
-                getString(R.string.scan_to_pay_error_dialog_message_no_data),
-                getString(R.string.button_close),
-                null
-            ).show(requireActivity()) {
-                viewModel.logEvent(AnalyticsConstants.Home.NO_ADDRESS_COPIED)
-            }
-        }
+        safeNavigate(WalletFragmentDirections.homeToAddressInput())
     }
 
     private fun handleString(input: String, errorDialogTitleResId: Int, cannotClassifyCustomMessageResId: Int) {
         object : StringInputParser(input, true) {
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
-                if (paymentIntent.shouldConfirmAddress) {
-                    AdaptiveDialog.create(
-                        null,
-                        getString(R.string.pay_to_confirm_address),
-                        paymentIntent.address.toBase58(),
-                        getString(R.string.button_cancel),
-                        getString(R.string.confirm)
-                    ).show(requireActivity()) { confirmed ->
-                        if (confirmed != null && confirmed) {
-                            SendCoinsActivity.start(requireContext(), paymentIntent)
-                        }
-                    }
-                } else {
-                    SendCoinsActivity.start(requireActivity(), paymentIntent)
-                }
+                SendCoinsActivity.start(requireActivity(), paymentIntent)
             }
 
             override fun handlePrivateKey(key: PrefixedChecksummedBytes) {

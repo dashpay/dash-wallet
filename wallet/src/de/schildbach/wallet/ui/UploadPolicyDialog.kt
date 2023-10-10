@@ -26,9 +26,11 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.upload_policy_dialog.*
+import de.schildbach.wallet_test.databinding.UploadPolicyDialogBinding
 
 class UploadPolicyDialog : DialogFragment() {
+
+    private lateinit var binding: UploadPolicyDialogBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,22 +38,23 @@ class UploadPolicyDialog : DialogFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.upload_policy_dialog, container, false)
+        binding = UploadPolicyDialogBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val editProfileViewModel = ViewModelProvider(requireActivity()).get(EditProfileViewModel::class.java)
         if (editProfileViewModel.storageService == EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE) {
-            policy_text_one.setText(R.string.google_drive_policy_one)
-            policy_text_three.setText(R.string.google_drive_policy_two)
-            policy_text_three.setText(R.string.google_drive_policy_three)
+            binding.policyTextOne.setText(R.string.google_drive_policy_one)
+            binding.policyTextTwo.setText(R.string.google_drive_policy_two)
+            binding.policyTextThree.setText(R.string.google_drive_policy_three)
         }
-        agree_btn.setOnClickListener {
+        binding.agreeBtn.setOnClickListener {
             dismiss()
             editProfileViewModel.uploadDialogAcceptLiveData.postValue(true)
         }
-        cancel_btn.setOnClickListener {
+        binding.cancelBtn.setOnClickListener {
             dismiss()
         }
     }

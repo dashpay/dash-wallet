@@ -1,15 +1,17 @@
-apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
-apply plugin: 'kotlin-kapt'
-apply plugin: 'dagger.hilt.android.plugin'
+plugins {
+    id 'com.android.library'
+    id 'kotlin-android'
+    id 'kotlin-kapt'
+    id 'dagger.hilt.android.plugin'
+    id 'org.jlleitschuh.gradle.ktlint'
+}
 
 android {
-    compileSdkVersion 31
 
     defaultConfig {
+        compileSdk 33
         minSdkVersion 23
-        targetSdkVersion 31
+        targetSdkVersion 33
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -29,8 +31,20 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    buildFeatures {
+        viewBinding true
+    }
     namespace 'org.dash.wallet.integration.uphold'
 }
+
+kapt {
+    correctErrorTypes true
+}
+
+hilt {
+    enableAggregatingTask = true
+}
+
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
@@ -40,15 +54,34 @@ dependencies {
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'com.scottyab:secure-preferences-lib:0.1.7'
-    implementation 'org.slf4j:slf4j-api:1.7.30'
+    implementation "org.slf4j:slf4j-api:$slf4jVersion"
+
+    // UI / Architecture
+    implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
+    implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
+    implementation "com.google.android.material:material:$materialVersion"
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
+    implementation "androidx.datastore:datastore-preferences:$datastoreVersion"
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
-    implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     kapt "com.google.dagger:hilt-compiler:$hiltVersion"
+
+    // JWT
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly('io.jsonwebtoken:jjwt-orgjson:0.11.5') {
+        exclude(group: 'org.json', module: 'json') //provided by Android natively
+    }
+
+    implementation 'com.madgag.spongycastle:core:1.50.0.0'
+    implementation 'com.madgag.spongycastle:prov:1.50.0.0'
+    implementation 'com.madgag.spongycastle:pkix:1.50.0.0'
 
     // Tests
     testImplementation "junit:junit:$junitVersion"
+    testImplementation "androidx.test:core-ktx:1.5.0"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4"
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
     testImplementation "com.squareup.okhttp3:mockwebserver:$ok_http_version"

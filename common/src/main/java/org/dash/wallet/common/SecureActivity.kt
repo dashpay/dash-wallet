@@ -45,4 +45,12 @@ open class SecureActivity : AppCompatActivity() {
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         }
     }
+
+    open fun turnOffAutoLogout() {
+        (application as AutoLogoutTimerHandler).stopAutoLogoutTimer()
+    }
+
+    open fun turnOnAutoLogout() {
+        (application as AutoLogoutTimerHandler).startAutoLogoutTimer()
+    }
 }

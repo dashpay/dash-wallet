@@ -22,7 +22,7 @@ import android.view.View
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.invitation_already_claimed_view.*
+import de.schildbach.wallet_test.databinding.InvitationAlreadyClaimedViewBinding
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
@@ -47,12 +47,12 @@ open class InviteAlreadyClaimedDialog : FancyAlertDialog() {
         }
 
         fun newInstance(context: Context, nameLabel: String): FancyAlertDialog {
-            val messageHtml = context.getString(R.string.invitation_already_claimed_message, "<b>${nameLabel}</b>")
+            val messageHtml = context.getString(R.string.invitation_already_claimed_message, "<b>$nameLabel</b>")
             return InviteAlreadyClaimedDialog().apply {
                 arguments = createBaseArguments(Type.INFO, 0, R.string.okay, 0)
-                        .apply {
-                            putString("message", messageHtml)
-                        }
+                    .apply {
+                        putString("message", messageHtml)
+                    }
             }
         }
     }
@@ -64,12 +64,18 @@ open class InviteAlreadyClaimedDialog : FancyAlertDialog() {
         super.onViewCreated(view, savedInstanceState)
 
         val args = requireArguments()
+        val binding = InvitationAlreadyClaimedViewBinding.bind(view)
         if (args.containsKey(EXTRA_PROFILE)) {
             val profile = args.getParcelable<DashPayProfile>(EXTRA_PROFILE)
-            profile_picture_envelope.avatarProfile = profile
+            binding.profilePictureEnvelope.avatarProfile = profile
         } else {
             val invite = args.getParcelable<InvitationLinkData>(EXTRA_INVITE)!!
-            ProfilePictureDisplay.display(profile_picture_envelope.avatarView, invite.avatarUrl, null, invite.displayName)
+            ProfilePictureDisplay.display(
+                binding.profilePictureEnvelope.avatarView,
+                invite.avatarUrl,
+                null,
+                invite.displayName
+            )
         }
     }
 }

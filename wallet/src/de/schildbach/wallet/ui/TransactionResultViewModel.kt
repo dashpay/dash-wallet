@@ -48,7 +48,7 @@ class TransactionResultViewModel @Inject constructor(
     private val dashPayProfileDao: DashPayProfileDao,
     private val platformRepo: PlatformRepo,
     private val analytics: AnalyticsService,
-    private val walletApplication: WalletApplication
+    val walletApplication: WalletApplication
 ) : ViewModel() {
 
     val dashFormat: MonetaryFormat = configuration.format.noCode()
@@ -74,7 +74,7 @@ class TransactionResultViewModel @Inject constructor(
     val merchantName = _transactionMetadata
         .filterNotNull()
         .filter { it.service == ServiceName.DashDirect }
-        .map { giftCardDao.getGiftCard(it.txId)?.merchantName }
+        .map { giftCardDao.getCardForTransaction(it.txId)?.merchantName }
         .filterNotNull()
         .asLiveData()
 

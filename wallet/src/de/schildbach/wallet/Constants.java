@@ -76,6 +76,7 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "";
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "dash";
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore.db");
                 SUPPORTS_PLATFORM = false;
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-devnet.db");
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
@@ -109,6 +110,7 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "-" + devNetName;
                 FEE_NETWORK_SUFFIX = "-testnet"; // use the same fee file as testnet
                 WALLET_NAME_CURRENCY_CODE = "tdash";
+                org.dash.wallet.common.util.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-devnet.db";
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
@@ -187,11 +189,6 @@ public final class Constants {
     /** Maximum size of backups. Files larger will be rejected. */
     public static final long BACKUP_MAX_CHARS = 10000000;
 
-    /** URL to fetch version alerts from. */
-    public static final HttpUrl VERSION_URL = HttpUrl.parse("https://wallet.schildbach.de/version");
-    /** URL to fetch dynamic fees from. */
-    public static final HttpUrl DYNAMIC_FEES_URL = HttpUrl.parse("https://wallet.schildbach.de/fees");
-
     /** MIME type used for transmitting single transactions. */
     public static final String MIMETYPE_TRANSACTION = "application/x-dashtx";
 
@@ -203,9 +200,6 @@ public final class Constants {
 
     /** User-agent to use for network access. */
     public static final String USER_AGENT = "Dash Wallet";
-
-    /** Default currency to use if all default mechanisms fail. */
-    public static final String DEFAULT_EXCHANGE_CURRENCY = "USD";
 
     /** Recipient e-mail address for reports. */
     public static final String REPORT_EMAIL = BuildConfig.SUPPORT_EMAIL;

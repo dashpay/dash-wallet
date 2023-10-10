@@ -55,7 +55,7 @@
                 android:layout_height="?attr/actionBarSize"
                 app:layout_collapseMode="pin"
                 app:contentInsetEnd="10dp"
-                app:navigationIcon="@drawable/ic_arrow_back_primary"
+                app:navigationIcon="@drawable/ic_arrow_back"
                 app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
                 <TextView

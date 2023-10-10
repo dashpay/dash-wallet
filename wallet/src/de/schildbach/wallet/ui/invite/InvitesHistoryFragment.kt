@@ -27,7 +27,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_invites_history.*
+import de.schildbach.wallet_test.databinding.FragmentInvitesHistoryBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.slf4j.LoggerFactory
 
@@ -43,6 +43,7 @@ class InvitesHistoryFragment(private val caller: String) :
 
     // need default constructor to prevent crashes
     constructor() :this("")
+    private lateinit var binding: FragmentInvitesHistoryBinding
 
     private val invitesHistoryViewModel: InvitesHistoryViewModel by viewModels()
     private val filterViewModel: InvitesHistoryFilterViewModel by viewModels()
@@ -52,7 +53,7 @@ class InvitesHistoryFragment(private val caller: String) :
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        binding = FragmentInvitesHistoryBinding.bind(view)
         setHasOptionsMenu(true)
 
         val toolbar = view.findViewById<Toolbar>(R.id.toolbar)
@@ -69,19 +70,19 @@ class InvitesHistoryFragment(private val caller: String) :
         initViewModel()
 
         invitesAdapter = InvitesAdapter(this, invitesHistoryViewModel.filterClick)
-        history_rv.layoutManager = LinearLayoutManager(requireContext())
-        history_rv.adapter = this.invitesAdapter
+        binding.historyRv.layoutManager = LinearLayoutManager(requireContext())
+        binding.historyRv.adapter = this.invitesAdapter
 
         initHistoryView()
     }
 
     private fun initViewModel() {
-        invitesHistoryViewModel.filterClick.observe(this) {
+        invitesHistoryViewModel.filterClick.observe(viewLifecycleOwner) {
             InviteFilterSelectionDialog.createDialog(this)
                 .show(requireActivity().supportFragmentManager, "inviteFilterDialog")
         }
 
-        filterViewModel.filterBy.observe(this) {
+        filterViewModel.filterBy.observe(viewLifecycleOwner) {
             invitesAdapter.onFilter(it)
         }
 

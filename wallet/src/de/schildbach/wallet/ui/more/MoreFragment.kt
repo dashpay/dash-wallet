@@ -91,9 +91,11 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         binding.buyAndSell.setOnClickListener {
-            startBuyAndSellActivity()
+            analytics.logEvent(AnalyticsConstants.MoreMenu.BUY_SELL, mapOf())
+            safeNavigate(MoreFragmentDirections.moreToBuySell())
         }
         binding.explore.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.MoreMenu.EXPLORE, mapOf())
             findNavController().navigate(
                 R.id.exploreFragment,
                 bundleOf(),
@@ -104,13 +106,15 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             )
         }
         binding.security.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.MoreMenu.SECURITY, mapOf())
             safeNavigate(MoreFragmentDirections.moreToSecurity())
         }
         binding.settings.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.MoreMenu.SETTINGS, mapOf())
             startActivity(Intent(requireContext(), SettingsActivity::class.java))
         }
         binding.tools.setOnClickListener {
-            //startActivity(Intent(requireContext(), ToolsActivity::class.java))
+            analytics.logEvent(AnalyticsConstants.MoreMenu.TOOLS, mapOf())
             findNavController().navigate(
                 R.id.toolsFragment,
                 bundleOf(),
@@ -120,6 +124,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             )
         }
         binding.contactSupport.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.MoreMenu.CONTACT_SUPPORT, mapOf())
             val alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
                 requireActivity(),
                 packageInfoProvider,
@@ -165,11 +170,6 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         initViewModel()
-    }
-
-    private fun startBuyAndSellActivity() {
-        analytics.logEvent(AnalyticsConstants.MoreMenu.BUY_SELL_MORE, mapOf())
-        safeNavigate(MoreFragmentDirections.moreToBuySell())
     }
 
     private fun dismissProfileError() {

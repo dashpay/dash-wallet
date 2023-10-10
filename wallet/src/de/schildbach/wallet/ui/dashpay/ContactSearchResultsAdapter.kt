@@ -29,13 +29,18 @@ import androidx.work.WorkInfo
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.ui.ContactSuggestionViewHolder
 import de.schildbach.wallet.ui.ContactViewHolder
 import de.schildbach.wallet.util.PlatformUtils
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.contact_header_row.view.*
-import kotlinx.android.synthetic.main.contact_request_header_row.view.*
-import kotlinx.android.synthetic.main.contacts_suggestions_header.view.*
-import kotlinx.android.synthetic.main.no_contacts_results.view.*
+import de.schildbach.wallet_test.databinding.ContactHeaderRowBinding
+import de.schildbach.wallet_test.databinding.ContactRequestHeaderRowBinding
+import de.schildbach.wallet_test.databinding.ContactRequestRowBinding
+import de.schildbach.wallet_test.databinding.ContactRowBinding
+import de.schildbach.wallet_test.databinding.ContactsSuggestionsHeaderBinding
+import de.schildbach.wallet_test.databinding.DashpayContactRowBinding
+import de.schildbach.wallet_test.databinding.DashpayContactSuggestionRowBinding
+import de.schildbach.wallet_test.databinding.NoContactsResultsBinding
 
 
 class ContactSearchResultsAdapter(private val listener: Listener,
@@ -74,13 +79,30 @@ class ContactSearchResultsAdapter(private val listener: Listener,
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return when (viewType) {
-            CONTACT_REQUEST_HEADER -> ContactRequestHeaderViewHolder(inflater, parent)
-            CONTACT_HEADER -> ContactHeaderViewHolder(inflater, parent)
-            CONTACT -> ContactViewHolder(inflater, parent, R.layout.dashpay_contact_row, useFriendsIcon = false)
-            CONTACT_NO_RESULTS -> ContactsNoResultsViewHolder(inflater, parent)
-            CONTACTS_SUGGESTIONS_HEADER -> ContactsSuggestionsHeaderViewHolder(inflater, parent)
-            CONTACT_SUGGESTION_ROW -> ContactViewHolder(inflater, parent,
-                    R.layout.dashpay_contact_suggestion_row, isSuggestion = true)
+            CONTACT_REQUEST_HEADER -> {
+                val binding = ContactRequestHeaderRowBinding.inflate(inflater, parent, false)
+                ContactRequestHeaderViewHolder(binding)
+            }
+            CONTACT_HEADER -> {
+                val binding = ContactHeaderRowBinding.inflate(inflater, parent, false)
+                ContactHeaderViewHolder(binding)
+            }
+            CONTACT -> {
+                val binding = DashpayContactRowBinding.inflate(inflater, parent, false)
+                ContactViewHolder(binding, useFriendsIcon = false)
+            }
+            CONTACT_NO_RESULTS -> {
+                val binding = NoContactsResultsBinding.inflate(inflater)
+                ContactsNoResultsViewHolder(binding)
+            }
+            CONTACTS_SUGGESTIONS_HEADER -> {
+                val binding = ContactsSuggestionsHeaderBinding.inflate(inflater, parent, false)
+                ContactsSuggestionsHeaderViewHolder(binding)
+            }
+            CONTACT_SUGGESTION_ROW -> {
+                val binding = DashpayContactSuggestionRowBinding.inflate(inflater)
+                ContactSuggestionViewHolder(binding, isSuggestion = true)
+            }
             else -> throw IllegalArgumentException("Invalid viewType $viewType")
         }
     }
@@ -143,17 +165,17 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         return results[position].viewType
     }
 
-    inner class ContactHeaderViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-            RecyclerView.ViewHolder(inflater.inflate(R.layout.contact_header_row, parent, false)) {
+    inner class ContactHeaderViewHolder(val binding: ContactHeaderRowBinding) :
+            RecyclerView.ViewHolder(binding.root) {
 
         var direction = UsernameSortOrderBy.DISPLAY_NAME
         fun bind() {
             var firstTime = true
-            itemView.apply {
-                val adapter = ArrayAdapter.createFromResource(sort_filter.context, R.array.contacts_sort, R.layout.custom_spinner_item)
+            binding.apply {
+                val adapter = ArrayAdapter.createFromResource(sortFilter.context, R.array.contacts_sort, R.layout.custom_spinner_item)
                 adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                sort_filter.adapter = adapter
-                sort_filter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                sortFilter.adapter = adapter
+                sortFilter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(parent: AdapterView<*>?, view: View, position: Int, id: Long) {
                         if (firstTime) {
                             // don't process this the first time (during loading)
@@ -174,44 +196,43 @@ class ContactSearchResultsAdapter(private val listener: Listener,
 
                     override fun onNothingSelected(parent: AdapterView<*>?) {}
                 }
-                sort_filter.setSelection(direction.ordinal, false)
+                sortFilter.setSelection(direction.ordinal, false)
             }
         }
     }
 
-    inner class ContactRequestHeaderViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-            RecyclerView.ViewHolder(inflater.inflate(R.layout.contact_request_header_row, parent, false)) {
+    inner class ContactRequestHeaderViewHolder(val binding: ContactRequestHeaderRowBinding) :
+            RecyclerView.ViewHolder(binding.root) {
 
         fun bind(requestCount: Int) {
-            itemView.apply {
-                contact_request_header.text = resources.getString(R.string.contacts_contact_requests_count, requestCount)
+            binding.apply {
+                contactRequestHeader.text = itemView.resources.getString(R.string.contacts_contact_requests_count, requestCount)
 
-                view_all_contacts.isVisible = requestCount > 3
-                view_all_contacts.setOnClickListener {
+                viewAllContacts.isVisible = requestCount > 3
+                viewAllContacts.setOnClickListener {
                     onViewAllRequestsListener.invoke()
                 }
             }
         }
     }
 
-    inner class ContactsNoResultsViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-            RecyclerView.ViewHolder(inflater.inflate(R.layout.no_contacts_results, parent, false)) {
+    inner class ContactsNoResultsViewHolder(val binding: NoContactsResultsBinding) :
+            RecyclerView.ViewHolder(binding.root) {
 
         fun bind() {
-            itemView.search_for_user_suggestions.setOnClickListener {
+            binding.searchForUserSuggestions.setOnClickListener {
                 listener.onSearchUser()
             }
         }
     }
 
-    inner class ContactsSuggestionsHeaderViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-            RecyclerView.ViewHolder(inflater.inflate(R.layout.contacts_suggestions_header, parent, false)) {
+    inner class ContactsSuggestionsHeaderViewHolder(val binding: ContactsSuggestionsHeaderBinding) :
+            RecyclerView.ViewHolder(binding.root) {
 
         fun bind(query: String) {
             val suggestionsSubtitle = itemView.context.getString(R.string.users_that_matches) + " \"<b>$query</b>\" " +
                     itemView.context.getString(R.string.not_in_your_contacts)
-            val suggestionsSubtitleTv = itemView.suggestions_subtitle
-            suggestionsSubtitleTv.text = HtmlCompat.fromHtml(suggestionsSubtitle, HtmlCompat.FROM_HTML_MODE_COMPACT)
+            binding.suggestionsSubtitle.text = HtmlCompat.fromHtml(suggestionsSubtitle, HtmlCompat.FROM_HTML_MODE_COMPACT)
         }
     }
 

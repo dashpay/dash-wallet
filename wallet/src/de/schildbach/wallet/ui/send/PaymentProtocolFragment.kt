@@ -157,9 +157,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         }
                     }
                 }
-                else -> {
-                    // ignore
-                }
+                else -> {}
             }
         }
         viewModel.directPaymentAckLiveData.observe(viewLifecycleOwner) { ack ->
@@ -186,9 +184,8 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         showTransactionResult(ack.data!!.first.tx)
                     }
                 }
-                else -> {
-                    // ignore
-                }
+
+                else -> {}
             }
         }
     }

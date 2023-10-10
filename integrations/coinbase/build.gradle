@@ -8,12 +8,11 @@ plugins {
 }
 
 android {
-    compileSdkVersion 31
-    buildToolsVersion "30.0.3"
 
     defaultConfig {
+        compileSdk 33
         minSdkVersion 23
-        targetSdkVersion 31
+        targetSdkVersion 33
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -79,8 +78,7 @@ dependencies {
     implementation "io.coil-kt:coil:$coilVersion"
     implementation 'me.grantland:autofittextview:0.2.1'
     implementation "androidx.browser:browser:$browserVersion"
-
-    implementation 'com.scottyab:secure-preferences-lib:0.1.7'
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
 
     // Logging
     implementation "org.slf4j:slf4j-api:$slf4jVersion"

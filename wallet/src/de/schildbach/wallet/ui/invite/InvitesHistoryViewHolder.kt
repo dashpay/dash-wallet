@@ -16,10 +16,8 @@
 
 package de.schildbach.wallet.ui.invite
 
-import android.view.LayoutInflater
-import android.view.ViewGroup
+import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 
-open class InvitesHistoryViewHolder(resId: Int, inflater: LayoutInflater, parent: ViewGroup) :
-        RecyclerView.ViewHolder(inflater.inflate(resId, parent, false)) {
-}
+open class InvitesHistoryViewHolder(root: View) :
+    RecyclerView.ViewHolder(root)

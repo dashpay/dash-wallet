@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >Последний известный баланс</string>
     <string name="coinbase_link_title">Привяжите ваш аккаунт Coinbase</string>
     <string name="coinbase_link">Привязать аккаунт Coinbase</string>
     <string name="coinbase_transfer_details">Между Dash Wallet и вашим аккаунтом Coinbase</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">Отключить аккаунт Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Получать напрямую на Dash Wallet.</string>
     <string name="buy_dash">Купить Dash</string>
-    <string name="balance_on_coinbase">Баланс Coinbase</string>
+    <string name="balance_on_coinbase">Баланс Dash на Coinbase</string>
     <string name="sending_to">Отправка</string>
     <string name="dash_wallet_device">Dash Wallet на этом устройстве</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,7 @@
     <string name="learn_more">Узнать больше</string>
     <string name="something_wrong_title">Что-то пошло не так!</string>
     <string name="retry_later_message">Пожалуйста, повторите попытку чуть позже или свяжитесь с нашей службой поддержки</string>
-    <string name="convert_crypto">Обменять криптовалюту</string>
-    <string name="between_dash_wallet_and_coinbase">Между Dash Wallet и Coinbase.</string>
+    <string name="between_dash_wallet_and_coinbase">Между Dash Wallet и Coinbase</string>
     <string name="conversion_preview">Предпросмотр обмена</string>
     <string name="you_send">вы отправляете</string>
     <string name="from_your_coinbase_account">с аккаунта Coinbase</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">Эту сумму нельзя отправить без превышения заявленного лимита</string>
     <string name="dont_have_any_dash">В вашем аккаунте Dash Wallet нет Dash.</string>
     <string name="transfer_wallet_not_synced">Переводы из Dash Wallet в Coinbase невозможны до завершения синхронизации кошелька.</string>
-    <string name="disconnected">Подключение отсутствует</string>
 
     <string name="insufficient_money_title">Недостаточно монет</string>
     <string name="insufficient_money_msg">Количество монет слишком мало для переноса этого кошелька.</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg">При переводе средств на Dash Wallet на этом устройстве возникла проблема.</string>
     <string name="insufficient_money_to_transfer">В этом кошельке слишком мало монет для перевода.</string>
     <string name="amount_to_transfer">Вы получите %s%s%s</string>
-
+    <string name="amount_to_transfer_dash">Вы получите %s</string>
     </resources>

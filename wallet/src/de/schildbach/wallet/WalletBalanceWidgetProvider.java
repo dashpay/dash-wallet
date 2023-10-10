@@ -33,9 +33,9 @@ import android.widget.RemoteViews;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.data.entity.ExchangeRate;
 import org.dash.wallet.common.util.GenericUtils;
 import org.dash.wallet.common.util.MonetarySpannable;
@@ -64,6 +64,7 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
     @InstallIn(SingletonComponent.class)
     interface BalanceWidgetEntryPoint {
         ExchangeRatesDao provideExchangeRatesDao();
+        WalletUIConfig provideWalletUIConfig();
     }
 
     private static final Logger log = LoggerFactory.getLogger(WalletBalanceWidgetProvider.class);
@@ -88,13 +89,12 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    public static void updateWidgets(final Context context, final Wallet wallet) {
+    public static void updateWidgets(final Context context, final Coin balance) {
         final AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
         final ComponentName providerName = new ComponentName(context, WalletBalanceWidgetProvider.class);
         try {
             final int[] appWidgetIds = appWidgetManager.getAppWidgetIds(providerName);
             if (appWidgetIds.length > 0) {
-                final Coin balance = wallet.getBalance(BalanceType.ESTIMATED);
                 updateWidgets(context, appWidgetManager, appWidgetIds, balance);
             }
         } catch (final RuntimeException x) {// system server dead?
@@ -135,11 +135,13 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
         new AsyncTask<Context, Void, ExchangeRate>() {
             private final ExchangeRatesDao exchangeRatesDao =
                 EntryPointAccessors.fromApplication(context, BalanceWidgetEntryPoint.class).provideExchangeRatesDao();
+            private final WalletUIConfig walletUIConfig =
+                    EntryPointAccessors.fromApplication(context, BalanceWidgetEntryPoint.class).provideWalletUIConfig();
 
 
             @Override
             protected ExchangeRate doInBackground(Context... contexts) {
-                return exchangeRatesDao.getRateSync(config.getExchangeCurrencyCode());
+                return exchangeRatesDao.getRateSync(walletUIConfig.getExchangeCurrencyCodeBlocking());
             }
 
             @Override

@@ -39,8 +39,18 @@ object AnalyticsConstants {
         const val BUY_DASH = "uphold_buy_dash"
     }
 
+    object Topper {
+        const val ENTER_BUY_SELL = "buy_sell_portal_topper"
+        const val ENTER_UPHOLD = "uphold_topper_buy_dash"
+    }
+
     object MoreMenu {
-        const val BUY_SELL_MORE = "more_buy_sell_dash"
+        const val BUY_SELL = "more_buy_sell_dash"
+        const val EXPLORE = "more_explore"
+        const val SECURITY = "more_security"
+        const val SETTINGS = "more_settings"
+        const val TOOLS = "more_tools"
+        const val CONTACT_SUPPORT = "more_contact_support"
     }
 
     object Security {
@@ -86,6 +96,13 @@ object AnalyticsConstants {
         const val ENTER_AMOUNT_RECEIVE = "enter_amount_receive"
         const val ENTER_AMOUNT_SHOW_BALANCE = "enter_amount_show_balance"
         const val ENTER_AMOUNT_HIDE_BALANCE = "enter_amount_hide_balance"
+    }
+
+    object AddressInput {
+        const val SCAN_QR = "send_inner_scan_qr"
+        const val SHOW_CLIPBOARD = "send_show_content"
+        const val ADDRESS_TAP = "send_show_content_tap_address"
+        const val CONTINUE = "send_b_continue"
     }
 
     object Home {
@@ -172,8 +189,6 @@ object AnalyticsConstants {
     }
 
     object Explore {
-        const val WHERE_TO_SPEND = "explore__where_to_spend"
-        const val PORTAL_ATM = "explore__atms"
         const val LEARN_MORE = "explore_info_learn_more"
         const val CONTINUE = "explore_info_continue"
         const val ONLINE_MERCHANTS = "explore_online_merchants"
@@ -316,7 +331,7 @@ object AnalyticsConstants {
         const val BUY_QUOTE_RETRY = "coinbase_buy_quote_b_retry"
         const val BUY_QUOTE_FEE_INFO = "coinbase_buy_quote_b_fee_info"
 
-        const val BUY_SUCCESS_CLOSE = "coinbase_buy_success_b_close"
+        const val BUY_SUCCESS_CLOSE = "coinbase_buy_success"
         const val BUY_ERROR_RETRY = "coinbase_buy_error_b_retry"
         const val BUY_ERROR_CLOSE = "coinbase_buy_error_b_close"
 
@@ -359,7 +374,7 @@ object AnalyticsConstants {
         const val CONVERT_QUOTE_RETRY = "coinbase_convert_preview_b_retry"
         const val CONVERT_QUOTE_FEE_INFO = "coinbase_convert_preview_b_fee_info"
 
-        const val CONVERT_SUCCESS_CLOSE = "coinbase_convert_success_b_close"
+        const val CONVERT_SUCCESS_CLOSE = "coinbase_convert_success"
         const val CONVERT_ERROR_RETRY = "coinbase_convert_error_b_retry"
         const val CONVERT_ERROR_CLOSE = "coinbase_convert_error_b_close"
 

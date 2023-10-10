@@ -34,7 +34,7 @@ import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_invite_created.*
+import de.schildbach.wallet_test.databinding.InvitationBitmapTemplateBinding
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
 const val REQUEST_CODE_SHARE = 1
@@ -44,6 +44,8 @@ abstract class InvitationFragment(fragmentResId: Int) : Fragment(fragmentResId) 
     protected val viewModel by lazy {
         ViewModelProvider(requireActivity()).get(InvitationFragmentViewModel::class.java)
     }
+
+    abstract val invitationBitmapTemplateBinding: InvitationBitmapTemplateBinding
 
     protected fun shareInvitation(shareImage: Boolean, shortLink: String?) {
         ShareCompat.IntentBuilder.from(requireActivity()).apply {
@@ -66,12 +68,10 @@ abstract class InvitationFragment(fragmentResId: Int) : Fragment(fragmentResId) 
     }
 
     protected fun setupInvitationPreviewTemplate(profile: DashPayProfile) {
-        val profilePictureEnvelope: InvitePreviewEnvelopeView = invitation_bitmap_template.findViewById(
-            R.id.bitmap_template_profile_picture_envelope
-        )
+        val profilePictureEnvelope: InvitePreviewEnvelopeView = invitationBitmapTemplateBinding.bitmapTemplateProfilePictureEnvelope
         val messageHtml = getString(R.string.invitation_preview_message, "<b>${profile.nameLabel}</b>")
         val message = HtmlCompat.fromHtml(messageHtml, HtmlCompat.FROM_HTML_MODE_COMPACT)
-        val messageView = invitation_bitmap_template.findViewById<TextView>(R.id.bitmap_template_message)
+        val messageView = invitationBitmapTemplateBinding.bitmapTemplateMessage
         messageView.text = message
         ProfilePictureDisplay.display(
             profilePictureEnvelope.avatarView,
@@ -80,8 +80,8 @@ abstract class InvitationFragment(fragmentResId: Int) : Fragment(fragmentResId) 
             disableTransition = true,
             listener = object : ProfilePictureDisplay.OnResourceReadyListener {
                 override fun onResourceReady(resource: Drawable?) {
-                    invitation_bitmap_template.post {
-                        viewModel.saveInviteBitmap(invitation_bitmap_template)
+                    invitationBitmapTemplateBinding.root.post {
+                        viewModel.saveInviteBitmap(invitationBitmapTemplateBinding.root)
                     }
                 }
             }

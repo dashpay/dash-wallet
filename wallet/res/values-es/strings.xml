@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">Saldo no disponible durante la reevaluación.</string>
     <string name="exchange_rates_activity_title">Moneda local</string>
     <string name="exchange_rates_fragment_empty_text">No se pueden cargar las tasas de cambio.</string>
-    <string name="exchange_rates_fragment_empty_search">No se encuentra la tasa de cambio.</string>
     <string name="exchange_rates_fragment_default">(predeterminado)</string>
     <string name="exchange_rates_fragment_rate">Tasa</string>
     <string name="exchange_rates_fragment_balance">Saldo</string>
@@ -43,13 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Gestionar aplicaciones</string>
     <string name="wallet_timeskew_dialog_title">Verifica la fecha&amp; y configuración de hora.s</string>
     <string name="wallet_timeskew_dialog_msg">Tu dispositivo se ha desconectado por %d minutos. Probablemente no podrás enviar o recibir Dash por este problema.\\n\\nDeberás revisar si es necesario corregir la configuración de fecha, hora o zona horaria.</string>
-    <string name="wallet_version_dialog_title">¡Hay una nueva versión disponible!</string>
-    <string name="wallet_version_dialog_msg">Esta versión corrige fallos importantes. Más detalles en el historial de cambios de Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Si no ves una actualización, es probable que tu versión de Android ya no sea compatible.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Descargar</string>
-    <string name="wallet_old_sdk_dialog_title">Versión de Android desactualizada</string>
-    <string name="wallet_old_sdk_dialog_message">Es probable que una de las próximas versiones de Dash Wallet no sea compatible con tu dispositivo. En algunos casos, puede ser dificil gastar las monedas en este dispositivo.\n\nA menos que sepas lo que haces, es recomendable transferir tus monedas pronto.</string>
     <string name="send_coins_activity_title">Enviar Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Adquiriendo firma de %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ha fallado la adquisición de firma</string>
@@ -173,7 +165,6 @@
     <string name="transaction_row_status_error_other">Desconocido</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">sobre %s a las%s</string>
-    <string name="transaction_row_rate_not_available">No disponible</string>
     <string name="transaction_row_status_masternode_registration">Registro de masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Actualizar Masternodo</string>
     <string name="transaction_row_status_masternode_update_service">Actualizar Masternodo</string>
@@ -205,8 +196,6 @@
     <string name="restore_wallet_dialog_success_replay">Tu billetera fue restaurada satisfactoriamente. El balance será determinado a continuación. Esto llevará algún tiempo.</string>
     <string name="restore_wallet_dialog_success_encrypted">Advertencia: tu billetera está protegida por un PIN. Asegúrate de recordarlo antes de recibir fondos en esta billetera.</string>
     <string name="import_keys_dialog_failure">La billetera no pudo ser restaurada:\n\n%s\n\n¿Contraseña errónea?</string>
-    <string name="backup_wallet_permission_dialog_title">Permisos de escritura no encontrados</string>
-    <string name="backup_wallet_permission_dialog_message">Para respaldar tu billetera a un medio externo, necesitas dar permisos de escritura.</string>
     <string name="export_keys_dialog_title">Hacer copia de seguridad de la cartera</string>
     <string name="backup_wallet_dialog_message">Tu copia de seguridad será encriptada con la contraseña que elijas y guardada en una unidad de almacenamiento externo.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Tu cartera está protegida con un PIN de pagos. ¡Asegúrate de recordar el PIN, además de la contraseña de tu copia de seguridad!</string>
@@ -378,14 +367,23 @@
     <string name="activity_security_hide_balance">Esconder Saldo Automáticamente</string>
     <string name="reset_to_default">Restablecer a los valores predeterminados</string>
 
-    <string name="payment_protocol_default_error_title">Error en el pago</string>
     <string name="payment_protocol_insufficient_funds_error_title">Fondos insuficientes</string>
     <string name="payment_protocol_insufficient_funds_error_message">No tienes fondos suficientes para completar esta transacción.</string>
 
-
-    <string name="select_a_service_to_buy_and_sell_dash">Seleccione un servicio para comprar y vender Dash.</string>
+    <string name="buy_and_sell_subtitle">Selecciona un servicio para comprar, vender, convertir y transferir Dash</string>
     <string name="select_a_service">Seleccionar un servicio</string>
     <string name="activity_buy_and_sell_dash_filter">Filtrar</string>
     <string name="clear_filter">Borrar filtro</string>
     <string name="reason">Razón</string>
+    <string name="link_account">Vincula tu cuenta</string>
+    <string name="buy_no_account_needed">Compra Dash. No se necesita una cuenta</string>
+    <string name="your_coinbase_session_has_expired">Tu sesión de Coinbase ha expirado</string>
+    <string name="please_log_in_to_your_coinbase_account">Inicia sesión en tu cuenta de Coinbase</string>
+    <string name="log_in">Iniciar sesión</string>
+
+    <string name="recipient_address">Dirección de la destinataria</string>
+    <string name="show_clipboard">Mostrar contenido en el portapapeles</string>
+    <string name="tap_to_paste">Toca la dirección del portapapeles para pegarla.</string>
+    <string name="not_dash_address">No es una dirección de Dash válida o una solicitud de URL</string>
+    <string name="send_to_address">Enviar a Dirección</string>
 </resources>

@@ -38,7 +38,7 @@ class TransactionsFilterDialog(
     @StyleRes
     override val backgroundStyle: Int = R.style.PrimaryBackground
     private val binding by viewBinding(DialogTransactionsFilterBinding::bind)
-    private val options = listOf(TxFilterType.ALL, TxFilterType.SENT, TxFilterType.RECEIVED, TxFilterType.GIFT_CARD)
+    private val options = listOf(TxFilterType.ALL, TxFilterType.SENT, TxFilterType.RECEIVED)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

@@ -22,9 +22,10 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_invite_created.*
+import de.schildbach.wallet_test.databinding.FragmentWelcomeBinding
 import org.dash.wallet.common.util.KeyboardUtil
 
 class InviteWelcomeFragment : Fragment(R.layout.fragment_invite_welcome) {
@@ -33,11 +34,14 @@ class InviteWelcomeFragment : Fragment(R.layout.fragment_invite_welcome) {
         fun newInstance() = InviteWelcomeFragment()
     }
 
+    private lateinit var binding: FragmentWelcomeBinding
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        binding = FragmentWelcomeBinding.bind(view)
         setHasOptionsMenu(true)
 
+        val toolbar = view.findViewById<Toolbar>(R.id.toolbar)
         toolbar.title = ""
         val appCompatActivity = requireActivity() as AppCompatActivity
         appCompatActivity.setSupportActionBar(toolbar)
@@ -52,7 +56,6 @@ class InviteWelcomeFragment : Fragment(R.layout.fragment_invite_welcome) {
         return when (item.itemId) {
             R.id.option_close -> {
                 requireActivity().run {
-                    KeyboardUtil.hideKeyboard(this, tag_edit)
                     finish()
                 }
                 true

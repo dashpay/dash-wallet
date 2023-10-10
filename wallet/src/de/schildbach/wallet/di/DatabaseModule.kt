@@ -24,7 +24,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.database.AppDatabaseMigrations
 import de.schildbach.wallet.database.dao.*
@@ -80,11 +79,6 @@ object DatabaseModule {
     }
 
     // DashPay
-
-    @Provides
-    fun provideBlockchainIdentityDao(appDatabase: AppDatabase): BlockchainIdentityDataDao {
-        return appDatabase.blockchainIdentityDataDao()
-    }
     @Provides
     fun provideDashPayProfileDao(appDatabase: AppDatabase): DashPayProfileDao {
         return appDatabase.dashPayProfileDao()

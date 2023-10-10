@@ -97,7 +97,7 @@ password.
 
 We need wallet-tool from dashj. First, in a working directory, let's get dashj:
 
-	git clone -b release-0.17 https://github.com/HashEngineering/dashj.git
+	git clone -b release-19 https://github.com/HashEngineering/dashj.git
 
 Make sure everything is compiled and ready to go by using once:
 

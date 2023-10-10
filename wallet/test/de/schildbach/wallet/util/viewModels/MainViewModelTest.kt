@@ -17,8 +17,6 @@
 
 package de.schildbach.wallet.util.viewModels
 
-import android.content.ClipDescription
-import android.content.ClipboardManager
 import android.os.Looper
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.MutableLiveData
@@ -29,13 +27,14 @@ import de.schildbach.wallet.Constants
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.EntryPointAccessors
 import de.schildbach.wallet.database.AppDatabase
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.transactions.TxFilterType
 import androidx.datastore.preferences.core.Preferences
-import de.schildbach.wallet.WalletUIConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
@@ -51,11 +50,13 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -78,19 +79,16 @@ class MainCoroutineRule(
 }
 
 class MainViewModelTest {
-    private val configMock = mockk<Configuration> {
-        every { exchangeCurrencyCode } returns "USD"
-        every { format } returns MonetaryFormat()
-        every { registerOnSharedPreferenceChangeListener(any()) } just runs
-    }
+    private val configMock = mockk<Configuration>()
     private val exchangeRatesMock = mockk<ExchangeRatesProvider>()
     private val walletApp = mockk<WalletApplication> {
         every { applicationContext } returns mockk()
         every { mainLooper } returns Looper.getMainLooper()
     }
-    private val blockchainIdentityDaoMock = mockk<BlockchainIdentityDataDao> {
-        coEvery { loadBase() } returns null
-        every { observeBase() } returns MutableStateFlow(null)
+    private val mockIdentityData = BlockchainIdentityBaseData(-1, BlockchainIdentityData.CreationState.NONE, null, null, null, false,null, false)
+    private val blockchainIdentityConfigMock = mockk<BlockchainIdentityConfig> {
+        coEvery { loadBase() } returns mockIdentityData
+        every { observeBase() } returns MutableStateFlow(mockIdentityData)
     }
     private val dashPayProfileDaoMock = mockk<DashPayProfileDao> {
         every { observeByUserId(any()) } returns MutableStateFlow(null)
@@ -99,7 +97,6 @@ class MainViewModelTest {
         coEvery { loadAll() } returns listOf()
     }
     private val appDatabaseMock = mockk<AppDatabase> {
-        every { blockchainIdentityDataDao() } returns blockchainIdentityDaoMock
         every { dashPayProfileDao() } returns dashPayProfileDaoMock
         every { dashPayContactRequestDao() } returns mockk()
         every { invitationsDao() } returns invitationsDaoMock
@@ -111,6 +108,10 @@ class MainViewModelTest {
         every { getWorkInfosByTagLiveData(any()) } returns MutableLiveData(listOf())
     }
     private val savedStateMock = mockk<SavedStateHandle>()
+
+    private val analyticsService = mockk<AnalyticsService> {
+        every { logError(any(), any()) } returns Unit
+    }
 
     private val walletDataMock = mockk<WalletDataProvider> {
         every { wallet } returns null
@@ -128,10 +129,13 @@ class MainViewModelTest {
         every { observe<Long>(any()) } returns MutableStateFlow(0L)
         coEvery { areNotificationsDisabled() } returns false
     }
-    
+
     private val uiConfigMock = mockk<WalletUIConfig> {
-        every { observePreference(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
+        every { observe(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
+        every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns MutableStateFlow("USD")
     }
+
+    private val platformRepo = mockk<PlatformRepo>()
 
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
@@ -141,7 +145,6 @@ class MainViewModelTest {
 
     @Before
     fun setup() {
-        every { configMock.exchangeCurrencyCode } returns "USD"
         every { configMock.format } returns MonetaryFormat()
         every { configMock.registerOnSharedPreferenceChangeListener(any()) } just runs
 
@@ -179,9 +182,9 @@ class MainViewModelTest {
         } returns mockPlatformRepoEntryPoint
 
         mockkObject(PlatformRepo.Companion)
-        every { PlatformRepo.Companion.getInstance() } returns mockk {
-            every { walletApplication } returns walletApp
-        }
+        //every { PlatformRepo.Companion.getInstance() } returns mockk {
+        //    every { walletApplication } returns walletApp
+        //}
 
         mockkStatic(WorkManager::class)
         every { WorkManager.getInstance(any()) } returns workManagerMock
@@ -190,75 +193,14 @@ class MainViewModelTest {
     }
 
     @Test
-    fun getClipboardInput_noClip_returnsEmptyString() {
-        val clipboardManagerMock = mockk<ClipboardManager>()
-        every { clipboardManagerMock.hasPrimaryClip() } returns false
-
-        val viewModel = spyk(
-            MainViewModel(
-                mockk(), clipboardManagerMock, configMock, uiConfigMock,
-                exchangeRatesMock, walletDataMock, walletApp, mockk(),
-                mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
-                mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
-            )
-        )
-
-        val clipboardInput = viewModel.getClipboardInput()
-        assertEquals("", clipboardInput)
-    }
-
-    @Test
-    fun getClipboardInput_returnsCorrectText() {
-        val mockUri = "mock://example.uri"
-        val mockText = "some text"
-        val clipboardManagerMock = mockk<ClipboardManager>()
-        val clipDescription = mockk<ClipDescription>()
-
-        every { clipboardManagerMock.hasPrimaryClip() } returns true
-        every { clipboardManagerMock.primaryClip?.description } returns clipDescription
-
-        val viewModel = spyk(
-            MainViewModel(
-                mockk(), clipboardManagerMock, configMock, uiConfigMock,
-                exchangeRatesMock, walletDataMock, walletApp, mockk(),
-                mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
-                mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
-            )
-        )
-
-        every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) } returns true
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) } returns false
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML) } returns false
-
-        var clipboardInput = viewModel.getClipboardInput()
-        assertEquals(mockUri, clipboardInput)
-
-        every { clipboardManagerMock.primaryClip?.getItemAt(0)?.text?.toString() } returns mockText
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) } returns false
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) } returns true
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML) } returns false
-
-        clipboardInput = viewModel.getClipboardInput()
-        assertEquals(mockText, clipboardInput)
-
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) } returns false
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) } returns false
-        every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML) } returns true
-
-        clipboardInput = viewModel.getClipboardInput()
-        assertEquals(mockText, clipboardInput)
-    }
-
-    @Test
     fun observeBlockchainState_replaying_notSynced() {
         every { blockchainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
         val viewModel = spyk(
             MainViewModel(
-                mockk(), mockk(), configMock, uiConfigMock,
-                exchangeRatesMock, walletDataMock, walletApp, mockk(),
-                mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
-                mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
+                analyticsService, configMock, uiConfigMock,
+                exchangeRatesMock, walletDataMock, walletApp, platformRepo,
+                mockk(), mockk(), blockchainIdentityConfigMock, savedStateMock, transactionMetadataMock,
+                blockchainStateMock, mockk(), mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
             )
         )
 
@@ -275,10 +217,10 @@ class MainViewModelTest {
         every { blockchainStateMock.observeState() } returns MutableStateFlow(state)
         val viewModel = spyk(
             MainViewModel(
-                mockk(), mockk(), configMock, uiConfigMock,
-                exchangeRatesMock, walletDataMock, walletApp, mockk(),
-                mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
-                mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
+                analyticsService, configMock, uiConfigMock,
+                exchangeRatesMock, walletDataMock, walletApp, platformRepo,
+                mockk(), mockk(), blockchainIdentityConfigMock, savedStateMock, transactionMetadataMock,
+                blockchainStateMock, mockk(), mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
             )
         )
 

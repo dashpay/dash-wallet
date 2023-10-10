@@ -85,6 +85,7 @@ import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.data.NetworkStatus;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.NotificationService;
@@ -152,6 +153,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     @Inject WalletApplication application;
     @Inject Configuration config;
+    @Inject WalletUIConfig walletUIConfig;
     @Inject NotificationService notificationService;
     @Inject CrowdNodeBlockchainApi crowdNodeBlockchainApi;
     @Inject CrowdNodeConfig crowdNodeConfig;
@@ -265,7 +267,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
                 try {
                     final org.dash.wallet.common.data.entity.ExchangeRate exchangeRate =
-                            exchangeRatesDao.getRateSync(config.getExchangeCurrencyCode());
+                            exchangeRatesDao.getRateSync(walletUIConfig.getExchangeCurrencyCodeBlocking());
                     if (exchangeRate != null) {
                         log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate + " tx: " + tx.getTxId().toString());
                         tx.setExchangeRate(new ExchangeRate(Coin.COIN, exchangeRate.getFiat()));
@@ -291,8 +293,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         notificationService.showNotification(
                                 "deposit_received",
                                 getString(R.string.crowdnode_deposit_received),
-                                false,
-                                new Intent(BlockchainServiceImpl.this, StakingActivity.class)
+                                null,
+                                null,
+                                new Intent(BlockchainServiceImpl.this, StakingActivity.class),
+                                null
                         );
                     } else if (apiConfirmationHandler != null && apiConfirmationHandler.matches(tx)) {
                         apiConfirmationHandler.handle(tx);
@@ -375,10 +379,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         String msgSuffix = packageFlavor != null ? " [" + packageFlavor + "]" : "";
 
         if (exchangeRate != null) {
-            exchangeRate.coinToFiat(amount);
             MonetaryFormat format = Constants.LOCAL_FORMAT.code(0,
                     PREFIX_ALMOST_EQUAL_TO + exchangeRate.fiat.getCurrencyCode());
-            msgSuffix += " " + format.format(exchangeRate.coinToFiat(amount));
+            msgSuffix += " " + format.format(exchangeRate.coinToFiat(notificationAccumulatedAmount));
         }
 
         final String tickerMsg = getString(R.string.notification_coins_received_msg, btcFormat.format(amount))
@@ -1315,7 +1318,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private void updateAppWidget() {
-        WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, application.getWallet());
+        Coin balance = application.getWallet().getBalance(Wallet.BalanceType.ESTIMATED);
+        WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, balance);
     }
 
     public void forceForeground() {

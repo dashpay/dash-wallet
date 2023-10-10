@@ -21,7 +21,6 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import de.schildbach.wallet.database.dao.AddressMetadataDao
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
@@ -78,8 +77,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun addressMetadataDao(): AddressMetadataDao
     abstract fun iconBitmapDao(): IconBitmapDao
     abstract fun giftCardDao(): GiftCardDao
-    @Deprecated("Use BlockchainIdentityConfig instead")
-    abstract fun blockchainIdentityDataDao(): BlockchainIdentityDataDao
     abstract fun dashPayProfileDao(): DashPayProfileDao
     abstract fun dashPayContactRequestDao(): DashPayContactRequestDao
     abstract fun invitationsDao(): InvitationsDao

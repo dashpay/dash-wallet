@@ -22,6 +22,8 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletExtension;
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.dash.wallet.common.WalletDataProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +46,7 @@ import android.text.format.DateUtils;
 import androidx.annotation.WorkerThread;
 import androidx.core.app.NotificationCompat;
 
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -68,6 +71,8 @@ public class BootstrapReceiver extends BroadcastReceiver {
     protected WalletDataProvider walletDataProvider;
     @Inject
     protected WalletApplication application;
+    @Inject
+    protected Configuration configuration;
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
@@ -98,6 +103,10 @@ public class BootstrapReceiver extends BroadcastReceiver {
             // if the app hasn't been used for a while and contains coins, maybe show reminder
             maybeShowInactivityNotification();
             application.myPackageReplaced = true;
+
+            // reset the notification explainer flag
+            if (packageReplaced)
+                configuration.setShowNotificationsExplainer(true);
         } else if (ACTION_DISMISS.equals(action)) {
             dismissNotification(context);
         } else if (ACTION_DISMISS_FOREVER.equals(action)) {
@@ -111,10 +120,25 @@ public class BootstrapReceiver extends BroadcastReceiver {
     private void maybeUpgradeWallet(final Wallet wallet) {
         log.info("maybe upgrading wallet");
 
+        if (wallet == null) {
+            // with version 7.0 and above it is possible to have the app installed without a wallet
+            log.info("wallet does not exist, not upgrading the wallet file");
+            return;
+        }
+
         // Maybe upgrade wallet from basic to deterministic, and maybe upgrade to the latest script type
         if (wallet.isDeterministicUpgradeRequired(Script.ScriptType.P2PKH) && !wallet.isEncrypted()) {
             // upgrade from v1 wallet to v4 wallet
             wallet.upgradeToDeterministic(Script.ScriptType.P2PKH, null);
+        }
+
+        // for upgrades from version 9.0.0 to 9.0.3, there is a bug that requires rescanning
+        // the transactions for protx related items
+        Map<String, WalletExtension> extensions = wallet.getExtensions();
+        WalletExtension extension = extensions.get(AuthenticationGroupExtension.EXTENSION_ID);
+        if (extension != null) {
+            // reset will rescan existing transactions and rebuild the authentication usage info
+            ((AuthenticationGroupExtension) extension).reset();
         }
 
         // Maybe upgrade wallet to secure chain
@@ -131,6 +155,8 @@ public class BootstrapReceiver extends BroadcastReceiver {
             return;
 
         final Wallet wallet = walletDataProvider.getWallet();
+        if (wallet == null)
+            return;
         final Coin estimatedBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE);
         if (!estimatedBalance.isPositive())
             return;

@@ -31,21 +31,17 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.databinding.FragmentExploreBinding
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import java.util.*
 
 @AndroidEntryPoint
-@FlowPreview
-@ExperimentalCoroutinesApi
 class ExploreFragment : Fragment(R.layout.fragment_explore) {
     private val binding by viewBinding(FragmentExploreBinding::bind)
     private val viewModel: MainViewModel by activityViewModels()
@@ -63,12 +59,10 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         enterTransition = MaterialFadeThrough()
 
         binding.merchantsBtn.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Explore.WHERE_TO_SPEND)
             safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.Merchants))
         }
 
         binding.atmsBtn.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Explore.PORTAL_ATM)
             safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.ATMs))
         }
 
@@ -110,7 +104,7 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         }
     }
 
-    fun setAPY(apy: Double) {
+    private fun setAPY(apy: Double) {
         if (apy != 0.0) {
             binding.stakingApyContainer.isVisible = true
             binding.stakingApy.text = getString(

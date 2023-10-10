@@ -17,7 +17,6 @@
     <string name="wallet_balance_fragment_too_much">Ez az összeg igen magas ahhoz, hogy a zsebedben hordd. Kérlek helyezd át egy részét biztonságosabb helyre.</string>
     <string name="wallet_balance_fragment_replaying">A frissítés során az egyenleg nem elérhető.</string>
     <string name="exchange_rates_fragment_empty_text">Az árfolyamok betöltése sikertelen</string>
-    <string name="exchange_rates_fragment_empty_search">Árfolyam nem található.</string>
     <string name="exchange_rates_fragment_default">(alapértelmezett)</string>
     <string name="exchange_rates_fragment_rate">Arány</string>
     <string name="exchange_rates_fragment_balance">Egyenleg</string>
@@ -35,13 +34,6 @@
     <string name="wallet_low_storage_dialog_msg">A Dash Wallet belső tárhelyet használ a tranzakciók és blokkok megjegyzéséhez. Ha kifogy a helyből, leáll a működése és a Dash-jaid veszélyben lesznek!\n\nMeg akarod nyitni az Alkalmazáskezelőt, hogy eltávolítsd a szükségtelen alkalmazásokat?</string>
     <string name="wallet_low_storage_dialog_button_apps">Alkalmazások kezelése</string>
     <string name="wallet_timeskew_dialog_title">Ellenőrizd a dátum &amp; idő beállításokat</string>
-    <string name="wallet_version_dialog_title">Egy új verzió elérhető!</string>
-    <string name="wallet_version_dialog_msg">Ez a verzió fontos hibákat javít. A részletekért nézd meg a változásokat a Google Play-en.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Ha nem látsz egy frissítést, az valószínűleg azt jelenti, hogy az Androidod verziója többé nem támogatott.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Letöltés</string>
-    <string name="wallet_old_sdk_dialog_title">Ez az Android verzió elavult</string>
-    <string name="wallet_old_sdk_dialog_message">Van esély arra, hogy a Dash Wallet következő kiadásaiból egy már nem fogja többé támogatni a készüléked. Egyes esetekben bonyolult lehet érméket küldeni ezen a készüléken.\n\nHacsak nem vagy tisztában vele, hogy mit csinálsz, akkor minél előbb ajánlott az érméid átmozgatása.</string>
     <string name="send_coins_activity_title">Dash küldése</string>
     <string name="send_coins_fragment_request_payment_request_progress">Aláírás begyűjtése tőle: %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Aláírás begyűjtése sikertelen</string>

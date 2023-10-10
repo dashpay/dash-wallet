@@ -33,5 +33,5 @@ interface CoinBaseAuthApi {
     ): TokenResponse?
 
     @POST("oauth/revoke")
-    suspend fun revokeToken()
+    suspend fun revokeToken(@Field("token") token: String)
 }

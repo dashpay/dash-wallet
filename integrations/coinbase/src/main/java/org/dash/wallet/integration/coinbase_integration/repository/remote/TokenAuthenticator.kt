@@ -17,52 +17,57 @@
 package org.dash.wallet.integration.coinbase_integration.repository.remote
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
-import org.dash.wallet.common.Configuration
-import org.dash.wallet.integration.coinbase_integration.model.TokenResponse
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
-import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
+import org.dash.wallet.integration.coinbase_integration.model.TokenResponse
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseTokenRefreshApi
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
 
 class TokenAuthenticator @Inject constructor(
     private val tokenApi: CoinBaseTokenRefreshApi,
-    private val userPreferences: Configuration,
-    private val config: CoinbaseConfig,
-    private val closeCoinbasePortalBroadcaster: CloseCoinbasePortalBroadcaster
+    private val config: CoinbaseConfig
 ) : Authenticator {
+
+    // For multiple call to refresh token sync
+    private val tokenMutex = Mutex()
 
     override fun authenticate(route: Route?, response: Response): Request? {
         return runBlocking {
-            when (val tokenResponse = getUpdatedToken()) {
-                is ResponseResource.Success -> {
-                    tokenResponse.value?.let {
-                        userPreferences.setLastCoinBaseAccessToken(it.accessToken)
-                        userPreferences.setLastCoinBaseRefreshToken(it.refreshToken)
-                        response.request.newBuilder()
-                            .header("Authorization", "Bearer ${it.accessToken}")
-                            .build()
+            tokenMutex.withLock {
+                when (val tokenResponse = getUpdatedToken()) {
+                    is ResponseResource.Success -> {
+                        tokenResponse.value?.let {
+                            config.set(CoinbaseConfig.LAST_ACCESS_TOKEN, it.accessToken)
+                            config.set(CoinbaseConfig.LAST_REFRESH_TOKEN, it.refreshToken)
+                            response.request.newBuilder()
+                                .header("Authorization", "Bearer ${it.accessToken}")
+                                .build()
+                        }
+                    }
+
+                    else -> {
+                        config.set(CoinbaseConfig.LAST_ACCESS_TOKEN, "")
+                        config.set(CoinbaseConfig.LAST_REFRESH_TOKEN, "")
+                        config.set(CoinbaseConfig.LOGOUT_COINBASE, true)
+                        null
                     }
                 }
-                else -> {
-                    userPreferences.setLastCoinBaseAccessToken(null)
-                    userPreferences.setLastCoinBaseRefreshToken(null)
-                    config.clearAll()
-                    closeCoinbasePortalBroadcaster.dispatchCall()
-                    null
-                }
-
             }
         }
     }
 
     private suspend fun getUpdatedToken(): ResponseResource<TokenResponse?> {
-        val refreshToken = userPreferences.lastCoinbaseRefreshToken
+        val accessToken = config.get(CoinbaseConfig.LAST_ACCESS_TOKEN) ?: ""
+        val refreshToken = config.get(CoinbaseConfig.LAST_REFRESH_TOKEN) ?: ""
+        println(" --- lastCoinbaseAccessToken --- $accessToken")
+        println(" === lastCoinbaseRefreshToken === $refreshToken")
         return safeApiCall { tokenApi.refreshToken(refreshToken = refreshToken) }
     }
 }

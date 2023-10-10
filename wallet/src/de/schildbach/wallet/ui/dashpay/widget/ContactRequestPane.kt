@@ -64,7 +64,8 @@ class ContactRequestPane(context: Context, attrs: AttributeSet) : LinearLayout(c
         binding.payButtonPane.visibility = View.GONE
         binding.contactRequestReceivedPane.visibility = View.GONE
         binding.mainButton.isClickable = true
-        binding.mainButton.setBackgroundResource(R.drawable.blue_button_background)
+        // this was originally Blue
+        // binding.mainButton.setBackgroundResource(R.drawable.secondary_inverted_button)
         binding.mainButtonIcon.setImageResource(R.drawable.ic_add_contact_white)
         binding.mainButtonText.setText(R.string.send_contact_request)
         binding.mainButtonText.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_white, null))
@@ -77,7 +78,6 @@ class ContactRequestPane(context: Context, attrs: AttributeSet) : LinearLayout(c
         var disclaimerText = resources.getString(R.string.contact_history_disclaimer)
         disclaimerText = disclaimerText.replace("%", username)
         binding.contactHistoryDisclaimerText.text = HtmlCompat.fromHtml(disclaimerText, HtmlCompat.FROM_HTML_MODE_COMPACT)
-
     }
 
     fun applySendingState() {
@@ -90,7 +90,7 @@ class ContactRequestPane(context: Context, attrs: AttributeSet) : LinearLayout(c
         binding.mainButtonIcon.setImageResource(R.drawable.ic_hourglass)
         (binding.mainButtonIcon.drawable as AnimationDrawable).start()
         binding.mainButtonText.setText(R.string.sending_contact_request)
-        binding.mainButtonText.setTextColor(ResourcesCompat.getColor(resources, R.color.medium_gray, null))
+        binding.mainButtonText.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_medium_gray, null))
     }
 
     fun applySendingStateWithDisclaimer(username: String?) {

@@ -1,20 +1,20 @@
-/*
- * Copyright 2020 Dash Core Group.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
+///*
+// * Copyright 2020 Dash Core Group.
+// *
+// * This program is free software: you can redistribute it and/or modify
+// * it under the terms of the GNU General Public License as published by
+// * the Free Software Foundation, either version 3 of the License, or
+// * (at your option) any later version.
+// *
+// * This program is distributed in the hope that it will be useful,
+// * but WITHOUT ANY WARRANTY; without even the implied warranty of
+// * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// * GNU General Public License for more details.
+// *
+// * You should have received a copy of the GNU General Public License
+// * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// */
+//
 package de.schildbach.wallet.ui
 
 import android.graphics.Color
@@ -27,10 +27,10 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
-import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.delete_image_confirmation_dialog.*
+import de.schildbach.wallet_test.databinding.DeleteImageConfirmationDialogBinding
 
 class DeleteProfilePictureConfirmationDialog : DialogFragment() {
+    lateinit var binding: DeleteImageConfirmationDialogBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,19 +38,20 @@ class DeleteProfilePictureConfirmationDialog : DialogFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.delete_image_confirmation_dialog, container, false)
+        binding = DeleteImageConfirmationDialogBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val editProfileViewModel = ViewModelProvider(requireActivity()).get(EditProfileViewModel::class.java)
         val avatarUrl = editProfileViewModel.dashPayProfile.value?.avatarUrl
-        Glide.with(view).load(avatarUrl).circleCrop().into(avatar)
-        agree_btn.setOnClickListener {
+        Glide.with(view).load(avatarUrl).circleCrop().into(binding.avatar)
+        binding.agreeBtn.setOnClickListener {
             editProfileViewModel.deleteProfilePictureConfirmationLiveData.postValue(true)
             dismiss()
         }
-        cancel_btn.setOnClickListener {
+        binding.cancelBtn.setOnClickListener {
             dismiss()
         }
     }

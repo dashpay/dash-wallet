@@ -32,17 +32,17 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import coil.transform.RoundedCornersTransformation
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.ui.transactions.TransactionDateHeaderViewHolder
+import de.schildbach.wallet.ui.transactions.TransactionGroupHeaderViewHolder
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet.ui.transactions.TxResourceMapper
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.TransactionDateHeaderBinding
+import de.schildbach.wallet_test.databinding.TransactionGroupHeaderBinding
 import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
-import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.util.GenericUtils
 
 open class HistoryViewHolder(root: View): RecyclerView.ViewHolder(root)
@@ -51,10 +51,9 @@ class TransactionAdapter(
     private val dashFormat: MonetaryFormat,
     private val resources: Resources,
     private val drawBackground: Boolean = false,
-    private val clickListener: (HistoryRowView, Boolean) -> Unit
+    private val clickListener: (HistoryRowView, Int, Boolean) -> Unit
 ) : ListAdapter<HistoryRowView, HistoryViewHolder>(DiffCallback()) {
     private val contentColor = resources.getColor(R.color.content_primary, null)
-    private val warningColor = resources.getColor(R.color.content_warning, null)
     private val colorSecondaryStatus = resources.getColor(R.color.orange, null)
 
     class DiffCallback : DiffUtil.ItemCallback<HistoryRowView>() {
@@ -76,7 +75,7 @@ class TransactionAdapter(
 
         return when (getItem(position)) {
             is TransactionRowView -> R.layout.transaction_row
-            is HistoryRowView -> R.layout.transaction_date_header
+            is HistoryRowView -> R.layout.transaction_group_header
             else -> -1
         }
     }
@@ -89,9 +88,9 @@ class TransactionAdapter(
                 val binding = TransactionRowBinding.inflate(inflater, parent, false)
                 TransactionViewHolder(binding)
             }
-            R.layout.transaction_date_header -> {
-                val binding = TransactionDateHeaderBinding.inflate(inflater, parent, false)
-                TransactionDateHeaderViewHolder(binding)
+            R.layout.transaction_group_header -> {
+                val binding = TransactionGroupHeaderBinding.inflate(inflater, parent, false)
+                TransactionGroupHeaderViewHolder(binding)
             }
             else -> {
                 throw IllegalArgumentException("viewType $viewType isn't recognized")
@@ -105,11 +104,11 @@ class TransactionAdapter(
         when (holder) {
             is TransactionViewHolder -> {
                 holder.bind(item as TransactionRowView, position)
-                holder.binding.root.setOnClickListener { clickListener.invoke(item, false) }
+                holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
             }
-            is TransactionDateHeaderViewHolder -> {
+            is TransactionGroupHeaderViewHolder -> {
                 holder.bind((item as HistoryRowView).localDate!!)
-                holder.binding.root.setOnClickListener { clickListener.invoke(item, false) }
+                holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
             }
         }
     }
@@ -131,14 +130,6 @@ class TransactionAdapter(
                 null
             }
             val isLastInGroup = nextItem !is TransactionRowView
-
-            if (drawBackground) {
-                binding.root.background = if (isLastInGroup) {
-                    ResourcesCompat.getDrawable(resources, R.drawable.selectable_rectangle_white_bottom_radius, null)
-                } else {
-                    ResourcesCompat.getDrawable(resources, R.drawable.selectable_rectangle_white, null)
-                }
-            }
 
             if (drawBackground) {
                 binding.root.background = if (isLastInGroup) {
@@ -179,8 +170,8 @@ class TransactionAdapter(
         }
 
         private fun setIcon(txView: TransactionRowView) {
-            val icon = txView.icon
             val iconBackground = txView.iconBackground
+            val icon = txView.icon
             val contact = txView.contact
 
             if (contact != null) {
@@ -192,7 +183,7 @@ class TransactionAdapter(
                     error(R.drawable.ic_avatar)
                 }
                 binding.primaryIcon.setOnClickListener {
-                    clickListener.invoke(txView, true)
+                    clickListener.invoke(txView, 0, true)
                 }
 
                 binding.secondaryIcon.isVisible = true
@@ -209,7 +200,7 @@ class TransactionAdapter(
             } else {
                 val padding = resources.getDimensionPixelOffset(R.dimen.transaction_icon_padding)
                 binding.primaryIcon.updatePadding(padding, padding, padding, padding)
-                binding.primaryIcon.background = resources.getRoundedBackground(iconBackground!!)
+                binding.primaryIcon.setRoundedBackground(iconBackground!!)
                 binding.primaryIcon.load(icon)
                 binding.primaryIcon.setOnClickListener { }
                 binding.secondaryIcon.isVisible = false
@@ -227,13 +218,7 @@ class TransactionAdapter(
                 )
             }
 
-            binding.primaryStatus.setTextColor(
-                if (txView.hasErrors) {
-                    warningColor
-                } else {
-                    contentColor
-                }
-            )
+            binding.primaryStatus.setTextColor(contentColor)
         }
 
         private fun setSecondaryStatus(txView: TransactionRowView) {

@@ -105,65 +105,63 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             binding.transferView.inputInDash = it
         }
 
-        enterAmountToTransferViewModel.localCurrencyExchangeRate.observe(viewLifecycleOwner){ rate ->
-            binding.transferView.exchangeRate = ExchangeRate(Coin.COIN, rate.fiat)
+        enterAmountToTransferViewModel.localCurrencyExchangeRate.observe(viewLifecycleOwner) { rate ->
+            binding.transferView.exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
         }
 
-
-
         enterAmountToTransferViewModel.onContinueTransferEvent.observe(viewLifecycleOwner){
-            dashValue = it.second
-            if (binding.transferView.walletToCoinbase){
-                val coinInput = it.second
-                val coinBalance = enterAmountToTransferViewModel.dashBalanceInWalletState.value
-                binding.authLimitBanner.root.isVisible = false
-                binding.dashWalletLimitBanner.isVisible =
-                    transferDashViewModel.isInputGreaterThanWalletBalance(
-                        coinInput,
-                        coinBalance
-                    )
+            lifecycleScope.launch {
+                dashValue = it.second
+                if (binding.transferView.walletToCoinbase) {
+                    val coinInput = it.second
+                    val coinBalance = enterAmountToTransferViewModel.dashBalanceInWalletState.value
+                    binding.authLimitBanner.root.isVisible = false
+                    binding.dashWalletLimitBanner.isVisible =
+                        transferDashViewModel.isInputGreaterThanWalletBalance(
+                            coinInput,
+                            coinBalance
+                        )
 
-                binding.topGuideLine.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    guidePercent = if (binding.dashWalletLimitBanner.isVisible) 0.13f else 0.09f
-                }
+                    binding.topGuideLine.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                        guidePercent = if (binding.dashWalletLimitBanner.isVisible) 0.13f else 0.09f
+                    }
 
-                if (!binding.dashWalletLimitBanner.isVisible && transferDashViewModel.isUserAuthorized()){
-                    lifecycleScope.launch {
-                        val isEmptyWallet= enterAmountToTransferViewModel.isMaxAmountSelected &&
+                    if (!binding.dashWalletLimitBanner.isVisible && transferDashViewModel.isUserAuthorized()) {
+
+                        val isEmptyWallet = enterAmountToTransferViewModel.isMaxAmountSelected &&
                                 binding.transferView.walletToCoinbase
-                       transferDashViewModel.estimateNetworkFee(dashValue, emptyWallet = isEmptyWallet)?.let {
+                        transferDashViewModel.estimateNetworkFee(dashValue, emptyWallet = isEmptyWallet)?.let {
                             securityFunctions.authenticate(requireActivity())?.let {
                                 transferDashViewModel.createAddressForAccount()
                             }
-                       }
+                        }
                     }
-                }
-            } else {
-                binding.dashWalletLimitBanner.isVisible = false
-                val error=transferDashViewModel.checkEnteredAmountValue(it.second)
-                binding.authLimitBanner.root.isVisible = error == SwapValueErrorType.UnAuthorizedValue
-                binding.dashWalletLimitBanner.isVisible = (error == SwapValueErrorType.MoreThanMax
-                        || error==SwapValueErrorType.LessThanMin
-                        ||error==SwapValueErrorType.NotEnoughBalance)
+                } else {
+                    binding.dashWalletLimitBanner.isVisible = false
+                    val error = transferDashViewModel.checkEnteredAmountValue(it.second)
+                    binding.authLimitBanner.root.isVisible = error == SwapValueErrorType.UnAuthorizedValue
+                    binding.dashWalletLimitBanner.isVisible = (error == SwapValueErrorType.MoreThanMax
+                            || error == SwapValueErrorType.LessThanMin
+                            || error == SwapValueErrorType.NotEnoughBalance)
 
-                if (binding.authLimitBanner.root.isVisible){
-                    binding.topGuideLine.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        guidePercent = if (binding.authLimitBanner.root.isVisible) 0.15f else 0.09f
-                    }
+                    if (binding.authLimitBanner.root.isVisible) {
+                        binding.topGuideLine.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                            guidePercent = if (binding.authLimitBanner.root.isVisible) 0.15f else 0.09f
+                        }
 
-                }else if ( binding.dashWalletLimitBanner.isVisible){
-                    binding.topGuideLine.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        guidePercent = if (binding.dashWalletLimitBanner.isVisible) 0.15f else 0.09f
+                    } else if (binding.dashWalletLimitBanner.isVisible) {
+                        binding.topGuideLine.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                            guidePercent = if (binding.dashWalletLimitBanner.isVisible) 0.15f else 0.09f
+                        }
+                        when (error) {
+                            SwapValueErrorType.LessThanMin -> setMinAmountErrorMessage()
+                            SwapValueErrorType.MoreThanMax -> setMaxAmountError()
+                            SwapValueErrorType.NotEnoughBalance -> setNoEnoughBalanceError()
+                            else -> {}
+                        }
+                    } else {
+                        transferDashViewModel.reviewTransfer(dashValue.toPlainString())
                     }
-                    when (error) {
-                        SwapValueErrorType.LessThanMin -> setMinAmountErrorMessage()
-                        SwapValueErrorType.MoreThanMax -> setMaxAmountError()
-                        SwapValueErrorType.NotEnoughBalance -> setNoEnoughBalanceError()
-                        else -> { }
-                    }
-                }
-                else{
-                    transferDashViewModel.reviewTransfer(dashValue.toPlainString())
                 }
             }
         }
@@ -193,6 +191,8 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 it.coinBaseUserAccountData.balance?.amount ?: CoinbaseConstants.VALUE_ZERO,
                 fiatVal
             )
+            // After initial load when coinbase exchange rate loaded
+            enterAmountToTransferViewModel.setBalanceForWallet()
         }
 
         enterAmountToTransferViewModel.dashWalletEmptyCallback.observe(viewLifecycleOwner) {
@@ -217,8 +217,21 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             } else {
                 "$amountFiat $fiatSymbol"
             }
-
-            binding.amountReceived.text = getString(R.string.amount_to_transfer, formatDashValue, Constants.PREFIX_ALMOST_EQUAL_TO, formatFiatValue)
+            // For initial load till coinbase exchange rate loaded
+            if(enterAmountToTransferViewModel.coinbaseExchangeRate==null){
+                binding.amountReceived.text = getString(
+                    R.string.amount_to_transfer_dash,
+                    formatDashValue
+                )
+            }
+            enterAmountToTransferViewModel.coinbaseExchangeRate?.let {
+                binding.amountReceived.text = getString(
+                    R.string.amount_to_transfer,
+                    formatDashValue,
+                    Constants.PREFIX_ALMOST_EQUAL_TO,
+                    formatFiatValue
+                )
+            }
             binding.amountReceived.isVisible = enterAmountToTransferViewModel.hasBalance
         }
 
@@ -238,36 +251,32 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
         binding.authLimitBanner.root.setOnClickListener {
             transferDashViewModel.logEvent(AnalyticsConstants.Coinbase.TRANSFER_AUTH_LIMIT)
-            AdaptiveDialog.custom(
-                R.layout.dialog_withdrawal_limit_info,
-                null,
-                getString(R.string.set_auth_limit),
-                getString(R.string.change_withdrawal_limit),
-                "",
-                getString(R.string.got_it)
-            ).show(requireActivity())
+            AdaptiveDialog.custom(R.layout.dialog_withdrawal_limit_info).show(requireActivity())
         }
 
-        transferDashViewModel.observeCoinbaseAddressState.observe(viewLifecycleOwner){ address ->
-            val fiatVal = enterAmountToTransferViewModel.getFiat(dashValue.toPlainString())
-            val amountFiat = dashFormat.format(fiatVal).toString()
-            val fiatSymbol = GenericUtils.currencySymbol(fiatVal.currencyCode)
-            val isEmptyWallet= enterAmountToTransferViewModel.isMaxAmountSelected &&
+        transferDashViewModel.observeCoinbaseAddressState.observe(viewLifecycleOwner) { address ->
+            val exchangeRate = enterAmountToTransferViewModel.getExchangeRate()
+            val isEmptyWallet = enterAmountToTransferViewModel.isMaxAmountSelected &&
                     binding.transferView.walletToCoinbase
 
             lifecycleScope.launch {
                 val details = transferDashViewModel.estimateNetworkFee(dashValue, emptyWallet = isEmptyWallet)
-                details?.amountToSend?.toPlainString()?.let{   amountStr ->
+                details?.amountToSend?.toPlainString()?.let { amountStr ->
                     hideBanners()
                     val isTransactionConfirmed = confirmTransactionLauncher.showTransactionDetailsPreview(
-                      requireActivity(), address, amountStr, amountFiat, fiatSymbol, details.fee,
-                      details.totalAmount, null, null, null)
+                        requireActivity(),
+                        address,
+                        amountStr,
+                        exchangeRate,
+                        details.fee,
+                        details.totalAmount
+                    )
 
                     if (isTransactionConfirmed) {
-                      transferDashViewModel.logTransfer(enterAmountToTransferViewModel.isFiatSelected)
-                      AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
-                          handleSend(dashValue, isEmptyWallet)
-                      }
+                        transferDashViewModel.logTransfer(enterAmountToTransferViewModel.isFiatSelected)
+                        AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
+                            handleSend(dashValue, isEmptyWallet)
+                        }
                     }
                 }
             }
@@ -391,7 +400,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private fun setMinAmountErrorMessage() {
         binding.dashWalletLimitBanner.text = "${getString(
             R.string.entered_amount_is_too_low
-        )} ${transferDashViewModel.minFaitAmount.toFormattedString()}"
+        )} ${transferDashViewModel.minFiatAmount.toFormattedString()}"
     }
 
     @SuppressLint("SetTextI18n")

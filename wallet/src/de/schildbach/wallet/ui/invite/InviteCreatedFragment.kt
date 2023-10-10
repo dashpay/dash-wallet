@@ -24,7 +24,8 @@ import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_invite_created.*
+import de.schildbach.wallet_test.databinding.FragmentInviteCreatedBinding
+import de.schildbach.wallet_test.databinding.InvitationBitmapTemplateBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.util.KeyboardUtil
 
@@ -43,29 +44,32 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
             return fragment
         }
     }
+    private lateinit var binding: FragmentInviteCreatedBinding
+    override val invitationBitmapTemplateBinding: InvitationBitmapTemplateBinding
+        get() = binding.invitationBitmapTemplate
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        binding = FragmentInviteCreatedBinding.bind(view)
         setHasOptionsMenu(true)
 
-        toolbar.title = ""
+        binding.toolbar.title = ""
         val appCompatActivity = requireActivity() as AppCompatActivity
-        appCompatActivity.setSupportActionBar(toolbar)
+        appCompatActivity.setSupportActionBar(binding.toolbar)
 
-        preview_button.setOnClickListener {
+        binding.previewButton.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Invites.CREATED_PREVIEW)
             showPreviewDialog()
         }
-        copy_invitation_link.setOnClickListener {
+        binding.copyInvitationLink.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Invites.CREATED_COPY_LINK)
             copyInvitationLink()
         }
-        send_button.setOnClickListener {
+        binding.sendButton.setOnClickListener {
             shareInvitation(false)
         }
-        maybe_later_button.setOnClickListener {
-            viewModel.saveTag(tag_edit.text.toString())
+        binding.maybeLaterButton.setOnClickListener {
+            viewModel.saveTag(binding.tagEdit.text.toString())
             viewModel.logEvent(AnalyticsConstants.Invites.CREATED_LATER)
             finishActivity()
         }
@@ -88,21 +92,21 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         viewModel.identityIdLiveData.value = identityId
 
         viewModel.invitationLiveData.observe(viewLifecycleOwner) {
-            tag_edit.setText(it.memo)
+            binding.tagEdit.setText(it.memo)
         }
 
         viewModel.dashPayProfile.observe(viewLifecycleOwner) {
-            profile_picture_envelope.avatarProfile = it
+            binding.profilePictureEnvelope.avatarProfile = it
             setupInvitationPreviewTemplate(it!!)
         }
     }
 
     private fun shareInvitation(shareImage: Boolean) {
         // save memo to the database
-        viewModel.saveTag(tag_edit.text.toString())
+        viewModel.saveTag(binding.tagEdit.text.toString())
         viewModel.logEvent(AnalyticsConstants.Invites.CREATED_SEND)
 
-        if (!tag_edit.text.isNullOrBlank()) {
+        if (!binding.tagEdit.text.isNullOrBlank()) {
             viewModel.logEvent(AnalyticsConstants.Invites.CREATED_TAG)
         }
 
@@ -129,7 +133,7 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         return when (item.itemId) {
             R.id.option_close -> {
                 requireActivity().run {
-                    KeyboardUtil.hideKeyboard(this, tag_edit)
+                    KeyboardUtil.hideKeyboard(this, binding.tagEdit)
                     finish()
                 }
                 true

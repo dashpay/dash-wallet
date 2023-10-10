@@ -18,6 +18,8 @@ package de.schildbach.wallet.ui.invite
 
 import android.os.Bundle
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
@@ -30,8 +32,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_integration_overview.*
-import kotlinx.android.synthetic.main.fragment_invite_friend.*
+import de.schildbach.wallet_test.databinding.FragmentInviteFriendBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.util.safeNavigate
@@ -51,6 +52,8 @@ class InviteFriendFragment() :
         }
     }
 
+    private lateinit var binding: FragmentInviteFriendBinding
+
     private lateinit var walletApplication: WalletApplication
 
     private val viewModel: InvitationFragmentViewModel by activityViewModels()
@@ -59,12 +62,22 @@ class InviteFriendFragment() :
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding = FragmentInviteFriendBinding.bind(view)
 
-        toolbar.title = getString(R.string.invitation_init_title)
+        val toolbar = view.findViewById<Toolbar>(R.id.toolbar)
+        val appCompatActivity = requireActivity() as AppCompatActivity
+        appCompatActivity.setSupportActionBar(toolbar)
         toolbar.setNavigationOnClickListener { requireActivity().finish() }
+        toolbar.title = getString(R.string.invitation_init_title)
+
+        val actionBar = appCompatActivity.supportActionBar
+        actionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+            setDisplayShowHomeEnabled(true)
+        }
 
         walletApplication = requireActivity().application as WalletApplication
-        create_invitation_button.setOnClickListener {
+        binding.createInvitationButton.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Invites.INVITE_FRIEND)
             safeNavigate(InviteFriendFragmentDirections.inviteFriendFragmentToUsernamePrivacy())
         }

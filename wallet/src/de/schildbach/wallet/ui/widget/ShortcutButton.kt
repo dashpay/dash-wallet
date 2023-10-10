@@ -21,13 +21,14 @@ import android.content.Context
 import android.content.res.Resources
 import android.util.AttributeSet
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.LinearLayout
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.res.ResourcesCompat
 import com.tbuonomo.viewpagerdotsindicator.setPaddingVertical
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.shortcut_button.view.*
+import de.schildbach.wallet_test.databinding.ShortcutButtonBinding
 import kotlin.math.roundToInt
 
 class ShortcutButton : LinearLayout {
@@ -43,9 +44,9 @@ class ShortcutButton : LinearLayout {
 
     private var marginsSet = false
     var shouldAppear: Boolean = true
+    private val binding = ShortcutButtonBinding.inflate(LayoutInflater.from(context), this)
 
     init {
-        inflate(context, R.layout.shortcut_button, this)
         setBackgroundResource(R.drawable.white_button_background_no_shadow)
         orientation = VERTICAL
         gravity = Gravity.CENTER
@@ -59,22 +60,25 @@ class ShortcutButton : LinearLayout {
             if (drawableResId > -1) {
                 val actionIconDrawable = AppCompatResources.getDrawable(context, drawableResId)
                 if (actionIconDrawable != null) {
-                    action_icon.setImageDrawable(actionIconDrawable)
+                    binding.actionIcon.setImageDrawable(actionIconDrawable)
                 }
             } else {
-                action_icon.visibility = View.GONE
+                binding.actionIcon.visibility = View.GONE
             }
             val actionText = attrsArray.getString(R.styleable.ShortcutButton_text)
             if (actionText != null) {
-                action_text.text = actionText
+                binding.actionText.text = actionText
             } else {
-                action_text.visibility = View.GONE
+                binding.actionText.visibility = View.GONE
             }
-            val backgroundResId = attrsArray.getResourceId(R.styleable.ShortcutButton_background, R.drawable.white_button_background_no_shadow)
+            val backgroundResId = attrsArray.getResourceId(
+                R.styleable.ShortcutButton_background,
+                R.drawable.white_button_background_no_shadow
+            )
             setBackgroundResource(backgroundResId)
             val customTextColor = attrsArray.getColorStateList(R.styleable.ShortcutButton_shortcut_text_color)
             if (customTextColor != null) {
-                action_text.setTextColor(customTextColor)
+                binding.actionText.setTextColor(customTextColor)
             }
             val actionActive = attrsArray.getBoolean(R.styleable.ShortcutButton_shortcut_active, true)
             setActive(actionActive)
@@ -92,21 +96,21 @@ class ShortcutButton : LinearLayout {
         textColorResId: Int = 0
     ) : super(context) {
         if (iconResId != 0) {
-            action_icon.setImageResource(iconResId)
+            binding.actionIcon.setImageResource(iconResId)
         } else {
-            action_icon.visibility = View.GONE
+            binding.actionIcon.visibility = View.GONE
         }
         if (textResIt != 0) {
-            action_text.setText(textResIt)
+            binding.actionText.setText(textResIt)
         } else {
-            action_text.visibility = View.GONE
+            binding.actionText.visibility = View.GONE
         }
         setOnClickListener(onClickListener)
         if (backgroundResId != 0) {
             setBackgroundResource(backgroundResId)
         }
         if (textColorResId != 0) {
-            action_text.setTextColor(ResourcesCompat.getColor(resources, textColorResId, null))
+            binding.actionText.setTextColor(ResourcesCompat.getColor(resources, textColorResId, null))
         }
     }
 
@@ -124,13 +128,13 @@ class ShortcutButton : LinearLayout {
 
     private fun setActive(active: Boolean) {
         if (active) {
-            action_icon.colorFilter = null
-            action_icon.alpha = 1.0f
+            binding.actionIcon.colorFilter = null
+            binding.actionIcon.alpha = 1.0f
             alpha = 1.0f
         } else {
             val tintColor = ResourcesCompat.getColor(resources, R.color.dash_gray, null)
-            action_icon.setColorFilter(tintColor)
-            action_icon.alpha = 0.7f
+            binding.actionIcon.setColorFilter(tintColor)
+            binding.actionIcon.alpha = 0.7f
             alpha = 0.5f
         }
     }

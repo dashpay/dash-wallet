@@ -352,7 +352,8 @@ class CreateIdentityService : LifecycleService() {
             //
             // check to see if the funding transaction exists
             if (blockchainIdentity.creditFundingTransaction == null) {
-                platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey, blockchainIdentityData.privacyMode != CoinJoinMode.BASIC)
+                val useCoinJoin = blockchainIdentityData.privacyMode == CoinJoinMode.INTERMEDIATE || blockchainIdentityData.privacyMode == CoinJoinMode.ADVANCED
+                platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey, useCoinJoin)
             }
         }
 

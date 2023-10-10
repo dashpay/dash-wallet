@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Підтвердження PIN</string>
     <string name="set_pin_message">Цей PIN-код необхідний, щоб розблокувати вашу програму кожного разу, коли ви її використовуєте.</string>
     <string name="set_pin_confirm_pin_incorrect">Неправильний PIN-код</string>
-    
+
     <string name="home_balance_hide_hint">Торкніться, щоб приховати баланс</string>
 
     <string name="dialog_confirm_confirm">Підтверджую</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Сканувати для відправки</string>
     <string name="scan_to_pay_error_dialog_message">Некоректна адреса Dash або URL запит у буфері обміну:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Некоректна адреса Dash або URL запит у буфері обміну.</string>
-    <string name="pay_to_confirm_address">Це адреса Dash, на яку ви хочете надіслати платіж?</string>
 
     <string name="receive_title">Отримати</string>
     <string name="receive_enter_amount_message">Вкажіть суму для отримання</string>
@@ -328,8 +327,6 @@
     <string name="security_very_high">Дуже високий</string>
     <string name="max">Максимум</string>
 
-    <string name="enter_amount_available">доступно</string>
-
     <string name="skip">пропустити</string>
     <string name="get_started">Почати</string>
     <string name="welcome_screen_title_1_new_install">Ласкаво просимо</string>
@@ -354,8 +351,6 @@
     <string name="payment_request_unable_to_send">Не вдалось відправити</string>
     <string name="payment_request_please_try_again">Будь ласка, спробуйте ще раз</string>
     <string name="payment_request_try_again">Спробуйте ще раз</string>
-    <string name="payment_request_problem_title">Платіж не підтверджено</string>
-    <string name="payment_request_problem_message">Ваш платіж не може бути оброблений сервером, будь ласка, зверніться до продавця</string>
     <string name="payment_request_expired_title">Термін дії запиту на оплату минув</string>
     <string name="payment_request_close">Закрити</string>
     <string name="payment_request_skip">Пропустити</string>
@@ -406,7 +401,6 @@
     <string name="masternode_key_type_owner">Ключі власника</string>
     <string name="masternode_key_type_voting">Ключі голосування</string>
     <string name="masternode_key_type_operator">Ключі оператора</string>
-    <string name="masternode_key_type_platform">HPMN ключі оператора</string>
     <string name="masternode_key_type_total">%d ключів</string>
     <string name="masternode_key_type_used">%dвикористано</string>
     <string name="masternode_key_pair_index">Ключі %d</string>

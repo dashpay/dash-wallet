@@ -38,8 +38,8 @@ import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_successful_transaction.*
-import kotlinx.android.synthetic.main.transaction_result_content.*
+import de.schildbach.wallet_test.databinding.ActivitySuccessfulTransactionBinding
+import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -64,18 +64,34 @@ class TransactionResultActivity : LockScreenActivity() {
         private const val EXTRA_USER_DATA = "user_data"
 
         @JvmStatic
-        fun createIntent(context: Context, action: String? = null, transaction: Transaction, userAuthorized: Boolean): Intent {
+        fun createIntent(
+            context: Context,
+            action: String? = null,
+            transaction: Transaction,
+            userAuthorized: Boolean
+        ): Intent {
             return createIntent(context, action, transaction, userAuthorized, null, null)
         }
 
         @JvmStatic
-        fun createIntent(context: Context, transaction: Transaction, userAuthorized: Boolean, payeeName: String? = null,
-                         payeeVerifiedBy: String? = null): Intent {
+        fun createIntent(
+            context: Context,
+            transaction: Transaction,
+            userAuthorized: Boolean,
+            payeeName: String? = null,
+            payeeVerifiedBy: String? = null
+        ): Intent {
             return createIntent(context, null, transaction, userAuthorized, payeeName, payeeVerifiedBy)
         }
 
-        fun createIntent(context: Context, action: String?, transaction: Transaction, userAuthorized: Boolean,
-                         paymentMemo: String? = null, payeeVerifiedBy: String? = null): Intent {
+        fun createIntent(
+            context: Context,
+            action: String?,
+            transaction: Transaction,
+            userAuthorized: Boolean,
+            paymentMemo: String? = null,
+            payeeVerifiedBy: String? = null
+        ): Intent {
             return Intent(context, TransactionResultActivity::class.java).apply {
                 setAction(action)
                 putExtra(EXTRA_TX_ID, transaction.txId)
@@ -108,6 +124,8 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private val viewModel: TransactionResultViewModel by viewModels()
+    private lateinit var binding: ActivitySuccessfulTransactionBinding
+    private lateinit var contentBinding: TransactionResultContentBinding
     @Inject
     lateinit var dashPayProfileDao: DashPayProfileDao
 
@@ -116,20 +134,38 @@ class TransactionResultActivity : LockScreenActivity() {
         super.onCreate(savedInstanceState)
 
         val txId = intent.getSerializableExtra(EXTRA_TX_ID) as Sha256Hash
-        if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false)!!)
+        if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false)!!) {
             intent.putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true)
+        }
 
-        setContentView(R.layout.activity_successful_transaction)
+        binding = ActivitySuccessfulTransactionBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        contentBinding = TransactionResultContentBinding.bind(binding.container)
+        transactionResultViewBinder = TransactionResultViewBinder(
+            walletData.wallet!!,
+            configuration.format.noCode(),
+            contentBinding
+        )
 
         viewModel.init(txId)
         val tx = viewModel.transaction
 
         if (tx != null) {
-            transactionResultViewBinder = TransactionResultViewBinder(
-                walletData.wallet!!,
-                configuration.format.noCode(),
-                container
-            )
+            transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
+            contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
+            contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
+            binding.transactionCloseBtn.setOnClickListener {
+                onTransactionDetailsDismiss()
+            }
+            contentBinding.reportIssueCard.setOnClickListener {
+                showReportIssue()
+            }
+
+            viewModel.transactionMetadata.observe(this) {
+                transactionResultViewBinder.setTransactionMetadata(it)
+            }
+            transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
         } else {
             log.error("Transaction not found. TxId: {}", txId)
             finish()
@@ -161,14 +197,14 @@ class TransactionResultActivity : LockScreenActivity() {
         val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
         val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
         transactionResultViewBinder.bind(tx, dashPayProfile, payeeName, payeeVerifiedBy)
-        transaction_close_btn.setOnClickListener {
+        binding.transactionCloseBtn.setOnClickListener {
             onTransactionDetailsDismiss()
         }
-        view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
-        report_issue_card.setOnClickListener { showReportIssue() }
-        tax_category_layout.setOnClickListener { viewOnTaxCategory()}
-        open_explorer_card.setOnClickListener { viewOnExplorer(tx) }
-        add_private_memo_btn.setOnClickListener {
+        contentBinding.viewOnExplorer.setOnClickListener { viewOnExplorer(tx) }
+        contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
+        contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory()}
+        contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
+        contentBinding.addPrivateMemoBtn.setOnClickListener {
             viewModel.transaction?.txId?.let { hash ->
                 PrivateMemoDialog().apply {
                     arguments = bundleOf(PrivateMemoDialog.TX_ID_ARG to hash)

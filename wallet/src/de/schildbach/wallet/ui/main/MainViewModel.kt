@@ -17,9 +17,9 @@
 
 package de.schildbach.wallet.ui.main
 
-import android.content.ClipDescription
-import android.content.ClipboardManager
-import android.content.SharedPreferences
+import android.os.Build
+import android.os.LocaleList
+import android.telephony.TelephonyManager
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
@@ -31,7 +31,6 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
@@ -74,9 +73,11 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.CurrencyInfo
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -88,16 +89,20 @@ import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
+import org.dash.wallet.common.util.Constants.HTTP_CLIENT
+import org.dash.wallet.common.util.head
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.slf4j.LoggerFactory
+import java.util.Currency
+import java.util.Locale
 import javax.inject.Inject
+import kotlin.math.abs
 import kotlin.collections.set
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
     val analytics: AnalyticsService,
-    private val clipboardManager: ClipboardManager,
     private val config: Configuration,
     private val walletUIConfig: WalletUIConfig,
     exchangeRatesProvider: ExchangeRatesProvider,
@@ -111,6 +116,7 @@ class MainViewModel @Inject constructor(
     private val metadataProvider: TransactionMetadataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
     val biometricHelper: BiometricHelper,
+    private val telephonyManager: TelephonyManager,
     private val invitationsDao: InvitationsDao,
     userAlertDao: UserAlertDao,
     dashPayProfileDao: DashPayProfileDao,
@@ -125,11 +131,7 @@ class MainViewModel @Inject constructor(
     private val workerJob = SupervisorJob()
     @VisibleForTesting
     val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
-    private val listener: SharedPreferences.OnSharedPreferenceChangeListener
-    private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
 
-    val isPassphraseVerified: Boolean
-        get() = !config.remindBackupSeed
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
@@ -170,21 +172,26 @@ class MainViewModel @Inject constructor(
         get() = _mostRecentTransaction
 
     private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
-    val hideBalance = walletUIConfig.observePreference(WalletUIConfig.AUTO_HIDE_BALANCE)
+    val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
         .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
             temporaryHide ?: autoHide ?: false
         }
         .asLiveData()
 
-    val showTapToHideHint = walletUIConfig.observePreference(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT).asLiveData()
+    val showTapToHideHint = walletUIConfig.observe(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT).asLiveData()
 
     private val _isNetworkUnavailable = MutableLiveData<Boolean>()
     val isNetworkUnavailable: LiveData<Boolean>
         get() = _isNetworkUnavailable
 
     private val _stakingAPY = MutableLiveData<Double>()
+
+    val isPassphraseVerified: Boolean
+        get() = !config.remindBackupSeed
     val stakingAPY: LiveData<Double>
         get() = _stakingAPY
+
+    val currencyChangeDetected = SingleLiveEvent<Pair<String, String>>()
 
     // DashPay
 
@@ -266,22 +273,15 @@ class MainViewModel @Inject constructor(
             .onEach(_mostRecentTransaction::postValue)
             .launchIn(viewModelScope)
 
-        currencyCode.filterNotNull()
+        walletUIConfig
+            .observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
             .flatMapLatest { code ->
                 exchangeRatesProvider.observeExchangeRate(code)
                     .filterNotNull()
             }
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
-
-        listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            when (key) {
-                Configuration.PREFS_KEY_EXCHANGE_CURRENCY -> {
-                    currencyCode.value = config.exchangeCurrencyCode
-                }
-            }
-        }
-        config.registerOnSharedPreferenceChangeListener(listener)
 
         // DashPay
         startContactRequestTimer()
@@ -311,25 +311,6 @@ class MainViewModel @Inject constructor(
         analytics.logError(ex, details)
     }
 
-    fun getClipboardInput(): String {
-        var input: String? = null
-
-        if (clipboardManager.hasPrimaryClip()) {
-            val clip = clipboardManager.primaryClip ?: return ""
-            val clipDescription = clip.description
-
-            if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
-                input = clip.getItemAt(0).uri?.toString()
-            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
-                clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
-            ) {
-                input = clip.getItemAt(0).text?.toString()
-            }
-        }
-
-        return input ?: ""
-    }
-
     fun triggerHideBalance() {
         val isHiding = hideBalance.value ?: false
         _temporaryHideBalance.value = !isHiding
@@ -340,7 +321,7 @@ class MainViewModel @Inject constructor(
             logEvent(AnalyticsConstants.Home.SHOW_BALANCE)
         }
 
-        viewModelScope.launch { walletUIConfig.setPreference(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT, false) }
+        viewModelScope.launch { walletUIConfig.set(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT, false) }
     }
 
     fun logDirectionChangedEvent(direction: TxFilterType) {
@@ -372,9 +353,70 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        config.unregisterOnSharedPreferenceChangeListener(listener)
+    suspend fun getDeviceTimeSkew(): Long {
+        return try {
+            val systemTimeMillis = System.currentTimeMillis()
+            val result = HTTP_CLIENT.head("https://www.dash.org/")
+            val networkTime = result.headers.getDate("date")?.time
+            requireNotNull(networkTime)
+            abs(systemTimeMillis - networkTime)
+        } catch (ex: Exception) {
+            // Ignore errors
+            0L
+        }
+    }
+
+    /**
+     * Get ISO 3166-1 alpha-2 country code for this device (or null if not available)
+     * If available, call [.showFiatCurrencyChangeDetectedDialog]
+     * passing the country code.
+     */
+    fun detectUserCountry() = viewModelScope.launch {
+        if (walletUIConfig.get(WalletUIConfig.EXCHANGE_CURRENCY_DETECTED) == true) {
+            return@launch
+        }
+
+        val selectedCurrencyCode = walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY)
+
+        try {
+            val simCountry = telephonyManager.simCountryIso
+            log.info("Detecting currency based on device, mobile network or locale:")
+
+            if (simCountry != null && simCountry.length == 2) { // SIM country code is available
+                log.info("Device Sim Country: $simCountry")
+                updateCurrencyExchange(simCountry.uppercase(Locale.getDefault()))
+            } else if (telephonyManager.phoneType != TelephonyManager.PHONE_TYPE_CDMA) {
+                // device is not 3G (would be unreliable)
+                val networkCountry = telephonyManager.networkCountryIso
+                log.info("Network Country: $simCountry")
+                if (networkCountry != null && networkCountry.length == 2) { // network country code is available
+                    updateCurrencyExchange(networkCountry.uppercase(Locale.getDefault()))
+                } else {
+                    // Couldn't obtain country code - Use Default
+                    if (selectedCurrencyCode == null) {
+                        setDefaultCurrency()
+                    }
+                }
+            } else {
+                // No cellular network - Wifi Only
+                if (selectedCurrencyCode == null) {
+                    setDefaultCurrency()
+                }
+            }
+        } catch (e: java.lang.Exception) {
+            // fail safe
+            log.info("NMA-243:  Exception thrown obtaining Locale information: ", e)
+            if (selectedCurrencyCode == null) {
+                setDefaultCurrency()
+            }
+        }
+    }
+
+    fun setExchangeCurrencyCodeDetected(currencyCode: String?) {
+        viewModelScope.launch {
+            currencyCode?.let { walletUIConfig.set(WalletUIConfig.SELECTED_CURRENCY, it) }
+            walletUIConfig.set(WalletUIConfig.EXCHANGE_CURRENCY_DETECTED, true)
+        }
     }
 
     private suspend fun refreshTransactions(filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
@@ -461,8 +503,94 @@ class MainViewModel @Inject constructor(
         return (filter.direction == TxFilterType.GIFT_CARD && isGiftCard(metadata)) ||
             transactions.any { tx -> filter.matches(tx) }
     }
+
     private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
         return metadata[transactions.first().txId]?.service == ServiceName.DashDirect
+    }
+
+    /**
+     * Check whether app was ever updated or if it is an installation that was never updated.
+     * Show dialog to update if it's being updated or change it automatically.
+     *
+     * @param countryCode countryCode ISO 3166-1 alpha-2 country code.
+     */
+    private suspend fun updateCurrencyExchange(countryCode: String) {
+        log.info("Updating currency exchange rate based on country: $countryCode")
+        val l = Locale("", countryCode)
+        val currency = Currency.getInstance(l)
+        var newCurrencyCode = currency.currencyCode
+        val currentCurrencyCode = walletUIConfig.getExchangeCurrencyCode()
+
+        if (!currentCurrencyCode.equals(newCurrencyCode, ignoreCase = true)) {
+            if (config.wasUpgraded()) {
+                currencyChangeDetected.postValue(Pair(currentCurrencyCode, newCurrencyCode))
+            } else {
+                if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
+                    log.info("found obsolete currency: $newCurrencyCode")
+                    newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode)
+                }
+                // check to see if we use a different currency code for exchange rates
+                newCurrencyCode = CurrencyInfo.getOtherName(newCurrencyCode)
+                log.info("Setting Local Currency: $newCurrencyCode")
+                walletUIConfig.set(WalletUIConfig.EXCHANGE_CURRENCY_DETECTED, true)
+                walletUIConfig.set(WalletUIConfig.SELECTED_CURRENCY, newCurrencyCode)
+            }
+        }
+
+        // Fallback to default
+        if (walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY) == null) {
+            setDefaultExchangeCurrencyCode()
+        }
+    }
+
+    private suspend fun setDefaultCurrency() {
+        val countryCode = getCurrentCountry()
+        log.info("Setting default currency:")
+
+        try {
+            log.info("Local Country: $countryCode")
+            val l = Locale("", countryCode)
+            val currency = Currency.getInstance(l)
+            var newCurrencyCode = currency.currencyCode
+
+            if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
+                log.info("found obsolete currency: $newCurrencyCode")
+                newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode)
+            }
+
+            // check to see if we use a different currency code for exchange rates
+            newCurrencyCode = CurrencyInfo.getOtherName(newCurrencyCode)
+            log.info("Setting Local Currency: $newCurrencyCode")
+            walletUIConfig.set(WalletUIConfig.SELECTED_CURRENCY, newCurrencyCode)
+
+            // Fallback to default
+            if (walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY) == null) {
+                setDefaultExchangeCurrencyCode()
+            }
+        } catch (x: IllegalArgumentException) {
+            log.info("Cannot obtain currency for $countryCode: ", x)
+            setDefaultExchangeCurrencyCode()
+        }
+    }
+
+    private suspend fun setDefaultExchangeCurrencyCode() {
+        log.info("Using default Country: US")
+        log.info(
+            "Using default currency: " +
+                org.dash.wallet.common.util.Constants.DEFAULT_EXCHANGE_CURRENCY
+        )
+        walletUIConfig.set(
+            WalletUIConfig.SELECTED_CURRENCY,
+            org.dash.wallet.common.util.Constants.DEFAULT_EXCHANGE_CURRENCY
+        )
+    }
+
+    private fun getCurrentCountry(): String {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            LocaleList.getDefault()[0].country
+        } else {
+            Locale.getDefault().country
+        }
     }
 
     // DashPay

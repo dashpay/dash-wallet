@@ -24,7 +24,8 @@
     <fragment
         android:id="@+id/coinbaseServicesFragment"
         android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseServicesFragment"
-        android:label="CoinbaseServicesFragment">
+        android:label="CoinbaseServicesFragment"
+        tools:layout="@layout/fragment_integration_portal">
 
         <action
             android:id="@+id/services_to_buy_dash"

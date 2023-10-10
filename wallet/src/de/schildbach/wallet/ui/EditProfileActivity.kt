@@ -117,7 +117,7 @@ class EditProfileActivity : LockScreenActivity() {
             binding.displayNameCharCount.isVisible = hasFocus
         }
         val redTextColor = ContextCompat.getColor(this, R.color.dash_red)
-        val mediumGrayTextColor = ContextCompat.getColor(this, R.color.medium_gray)
+        val mediumGrayTextColor = ContextCompat.getColor(this, R.color.dash_medium_gray)
         binding.displayName.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 showSaveReminderDialog = initialDisplayName != s?.toString()

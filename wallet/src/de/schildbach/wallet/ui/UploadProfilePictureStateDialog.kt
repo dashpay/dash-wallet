@@ -30,14 +30,15 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.profile_picture_state_dialog.*
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
+import de.schildbach.wallet_test.databinding.ProfilePictureStateDialogBinding
 
 class UploadProfilePictureStateDialog : DialogFragment() {
 
     private val showError: UpdateProfileError by lazy {
         UpdateProfileError.getByValue(requireArguments().getInt(ARG_SHOW_ERROR, UpdateProfileError.NO_ERROR.ordinal))!!
     }
+    private lateinit var binding: ProfilePictureStateDialogBinding
     private lateinit var editProfileViewModel: EditProfileViewModel
 
     companion object {
@@ -60,7 +61,8 @@ class UploadProfilePictureStateDialog : DialogFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.profile_picture_state_dialog, container, false)
+        binding = ProfilePictureStateDialogBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -72,17 +74,17 @@ class UploadProfilePictureStateDialog : DialogFragment() {
         val file = editProfileViewModel.profilePictureFile
         if (file != null) {
             Glide.with(requireActivity()).load(file)
-                    .circleCrop().signature(ObjectKey(file.lastModified())).into(avatar)
+                    .circleCrop().signature(ObjectKey(file.lastModified())).into(binding.avatar)
 
         }
 
-        try_again_btn.setOnClickListener {
+        binding.tryAgainBtn.setOnClickListener {
             dismiss()
             if (showError != UpdateProfileError.AUTHENTICATION) {
                 editProfileViewModel.uploadProfilePicture()
             }
         }
-        cancel_btn.setOnClickListener {
+        binding.cancelBtn.setOnClickListener {
             if (showError != UpdateProfileError.NO_ERROR) {
                 dismiss()
             } else {
@@ -111,31 +113,31 @@ class UploadProfilePictureStateDialog : DialogFragment() {
     private fun updateUiState(error: UpdateProfileError = UpdateProfileError.NO_ERROR) {
         when (error) {
             UpdateProfileError.UPLOAD -> {
-                icon.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.ic_error))
-                title.setText(R.string.profile_picture_upload_error_title)
-                subtitle.setText(R.string.profile_picture_upload_error_message)
-                try_again_btn.visibility = View.VISIBLE
-                cancel_btn.visibility = View.VISIBLE
+                binding.icon.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.ic_error))
+                binding.title.setText(R.string.profile_picture_upload_error_title)
+                binding.subtitle.setText(R.string.profile_picture_upload_error_message)
+                binding.tryAgainBtn.visibility = View.VISIBLE
+                binding.cancelBtn.visibility = View.VISIBLE
             }
             UpdateProfileError.NO_ERROR -> {
-                icon.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.ic_hourglass))
-                (icon.drawable as AnimationDrawable).start()
-                title.setText(R.string.profile_picture_uploading_title)
-                subtitle.setText(R.string.profile_picture_uploading_message)
-                try_again_btn.visibility = View.GONE
-                cancel_btn.visibility = View.VISIBLE
+                binding.icon.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.ic_hourglass))
+                (binding.icon.drawable as AnimationDrawable).start()
+                binding.title.setText(R.string.profile_picture_uploading_title)
+                binding.subtitle.setText(R.string.profile_picture_uploading_message)
+                binding.tryAgainBtn.visibility = View.GONE
+                binding.cancelBtn.visibility = View.VISIBLE
             }
             UpdateProfileError.AUTHENTICATION -> {
-                icon.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.ic_error))
-                title.setText(
+                binding.icon.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.ic_error))
+                binding.title.setText(
                         when (editProfileViewModel.storageService) {
                             EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE -> R.string.select_source_google_drive
                             EditProfileViewModel.ProfilePictureStorageService.IMGUR -> R.string.edit_profile_imgur
                         }
                 )
-                subtitle.setText(R.string.google_drive_failed_authorization)
-                try_again_btn.visibility = View.GONE
-                cancel_btn.visibility = View.VISIBLE
+                binding.subtitle.setText(R.string.google_drive_failed_authorization)
+                binding.tryAgainBtn.visibility = View.GONE
+                binding.cancelBtn.visibility = View.VISIBLE
             }
             else -> {
                 // ignore

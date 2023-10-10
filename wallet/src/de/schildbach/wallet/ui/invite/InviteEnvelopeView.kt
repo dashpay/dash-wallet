@@ -23,7 +23,7 @@ import androidx.annotation.LayoutRes
 import androidx.constraintlayout.widget.ConstraintLayout
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.utils.display
-import kotlinx.android.synthetic.main.invite_preview_envelope_view.view.*
+import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
 
@@ -39,9 +39,9 @@ open class InviteEnvelopeView(context: Context, attrs: AttributeSet?) : Constrai
 
     var avatarProfile: DashPayProfile? = null
         set(value) {
-            ProfilePictureDisplay.display(avatar, value)
+            ProfilePictureDisplay.display(avatarView, value)
         }
 
     val avatarView: ImageView
-        get() = avatar
+        get() = findViewById(R.id.avatar)
 }

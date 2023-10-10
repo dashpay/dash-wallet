@@ -22,7 +22,7 @@ import android.os.Bundle
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_forgot_pin.*
+import de.schildbach.wallet_test.databinding.ActivityForgotPinBinding
 
 class ForgotPinActivity : AppCompatActivity() {
 
@@ -34,19 +34,17 @@ class ForgotPinActivity : AppCompatActivity() {
         }
     }
 
+    private lateinit var binding: ActivityForgotPinBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_forgot_pin)
 
-        setSupportActionBar(toolbar)
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
-        }
+        binding = ActivityForgotPinBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        setTitle(R.string.forgot_pin_title)
-        recovery_pin.setOnClickListener {
+        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.title = getString(R.string.forgot_pin_title)
+        binding.recoveryPin.setOnClickListener {
             startActivity(RestoreWalletFromSeedActivity.createIntent(this, true))
         }
     }

@@ -19,7 +19,6 @@
     <string name="wallet_balance_fragment_replaying">再生中は残高情報は利用できません。</string>
     <string name="exchange_rates_activity_title">通貨表示</string>
     <string name="exchange_rates_fragment_empty_text">為替レートを読み込めません。</string>
-    <string name="exchange_rates_fragment_empty_search">為替レートが見つかりません。</string>
     <string name="exchange_rates_fragment_default">（既定外貨）</string>
     <string name="exchange_rates_fragment_rate">為替レート</string>
     <string name="exchange_rates_fragment_balance">残高</string>
@@ -43,13 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">アプリの管理</string>
     <string name="wallet_timeskew_dialog_title">時刻の設定を確認してください！</string>
     <string name="wallet_timeskew_dialog_msg">デバイスの時間が%d分ずれてます。 この問題の為、Dashのやり取りが出来なくなる可能性があります。\n\n正確な時間とタイムゾーンを設定してください。</string>
-    <string name="wallet_version_dialog_title">新バージョンが利用可能です！</string>
-    <string name="wallet_version_dialog_msg">このバージョンでは重要なバグが修正されます。詳細を見るには、Google Playの詳細情報を見てください。</string>
-    <string name="wallet_version_dialog_msg_deprecated">アップデートが表示されない場合、それはおそらくあなたのバージョンのAndroidはもうサポートされていないということです。</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">ダウンロード</string>
-    <string name="wallet_old_sdk_dialog_title">Androidのバージョンが古すぎます</string>
-    <string name="wallet_old_sdk_dialog_message">次のDashウォレットのリリースの際、このデバイスはもうサポートされないかもしれません。場合によっては、このデバイスでのコインの利用が困難になるかもしれません。\n\n意図的にしているのでない限り、あなたのコインをすぐにでも移動させることをおすすめします。</string>
     <string name="send_coins_activity_title">Dashの送金</string>
     <string name="send_coins_fragment_request_payment_request_progress">%s から署名の取得中…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">署名の取得に失敗しました</string>
@@ -173,7 +165,6 @@
     <string name="transaction_row_status_error_other">未知の</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text"> %sに関して %sで</string>
-    <string name="transaction_row_rate_not_available">ご利用できません</string>
     <string name="transaction_row_status_masternode_registration">マスターノードの登録</string>
     <string name="transaction_row_status_masternode_update_registrar">マスターノードのアップデート</string>
     <string name="transaction_row_status_masternode_update_service">マスターノードのアップデート</string>
@@ -205,8 +196,6 @@
     <string name="restore_wallet_dialog_success_replay">あなたのウォレットは正常に復元されました。続いて残高を計算します。これには多少時間がかかる場合があります。</string>
     <string name="restore_wallet_dialog_success_encrypted">警告: お客様の財ウォレットは支出暗証番号で保護されています。このウォレットで受け取る前に、現在でもそれを覚えているかを確認してください。</string>
     <string name="import_keys_dialog_failure">ウォレットが復元できませんでした:\n\n%s\n\nパスワード間違い？</string>
-    <string name="backup_wallet_permission_dialog_title">書き込み権限がありません</string>
-    <string name="backup_wallet_permission_dialog_message">あなたのウォレットを外部ストレージにバックアップするには、書き込み権限を許可する必要があります。</string>
     <string name="export_keys_dialog_title">ウォレットのバックアップ</string>
     <string name="backup_wallet_dialog_message">バックアップはあなたが決めたパスワードで暗号化され、外部ストレージに書き込まれます。</string>
     <string name="backup_wallet_dialog_warning_encrypted">あなたのウォレットは送金用PINで保護されています。バックアップ用パスワードに加えてPINも忘れないようにしてください。</string>
@@ -378,14 +367,23 @@
     <string name="activity_security_hide_balance">残高を自動的に非表示にする</string>
     <string name="reset_to_default">初期設定にリセットする</string>
 
-    <string name="payment_protocol_default_error_title">支払いエラー</string>
     <string name="payment_protocol_insufficient_funds_error_title">資金不足</string>
     <string name="payment_protocol_insufficient_funds_error_message">この取引を完了するのに十分な資金がありません</string>
 
-
-    <string name="select_a_service_to_buy_and_sell_dash">サービスを選択してDashを売買します。</string>
+    <string name="buy_and_sell_subtitle">Dashの購入、売却、交換、送金などサービスを選択します</string>
     <string name="select_a_service">サービスを選択する</string>
     <string name="activity_buy_and_sell_dash_filter">絞り込み</string>
     <string name="clear_filter">フィルターをクリアする</string>
     <string name="reason">理由</string>
+    <string name="link_account">お客様のアカウントをリンク</string>
+    <string name="buy_no_account_needed">Dashを購入 · アカウント不要</string>
+    <string name="your_coinbase_session_has_expired">お客様のCoinbaseのセッションは有効期限切れです</string>
+    <string name="please_log_in_to_your_coinbase_account">お客様のCoinbaseアカウントにログインしてください</string>
+    <string name="log_in">ログイン</string>
+
+    <string name="recipient_address">受取人のアドレス</string>
+    <string name="show_clipboard">クリップボードのコンテンツを表示する</string>
+    <string name="tap_to_paste">クリップボードからアドレスをタップしてペーストする</string>
+    <string name="not_dash_address">無効なDashアドレスやURLリクエスト</string>
+    <string name="send_to_address">アドレスに送金する</string>
 </resources>

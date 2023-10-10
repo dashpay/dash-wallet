@@ -37,6 +37,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.util.PlatformUtils
+import de.schildbach.wallet_test.databinding.FrequentContactItemBinding
 
 class FrequentContactsAdapter() :
         RecyclerView.Adapter<FrequentContactViewHolder>() {
@@ -53,7 +54,8 @@ class FrequentContactsAdapter() :
         }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FrequentContactViewHolder {
-         return FrequentContactViewHolder(LayoutInflater.from(parent.context), parent, itemClickListener)
+        val binding = FrequentContactItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return FrequentContactViewHolder(binding, itemClickListener)
     }
 
     override fun getItemCount(): Int {

@@ -9,7 +9,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.username.utils.votingViewModels
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameRequestDetailsBinding
-import org.dash.wallet.common.ui.getRoundedRippleBackground
+import org.dash.wallet.common.ui.setRoundedRippleBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
@@ -38,7 +38,7 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
                 binding.link.text = request.link
             }
 
-            binding.voteButton.background = resources.getRoundedRippleBackground(
+            binding.voteButton.setRoundedRippleBackground(
                 if (request.isApproved) R.style.PrimaryButtonTheme_Large_Red else R.style.PrimaryButtonTheme_Large_Blue
             )
 

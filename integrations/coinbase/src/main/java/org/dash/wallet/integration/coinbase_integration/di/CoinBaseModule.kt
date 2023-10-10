@@ -31,7 +31,6 @@ import org.dash.wallet.integration.coinbase_integration.SwapTradeMapper
 import org.dash.wallet.integration.coinbase_integration.network.RemoteDataSource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
-import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
@@ -45,16 +44,15 @@ object CoinBaseModule {
     fun provideRemoteDataSource(
         userPreferences: Configuration,
         config: CoinbaseConfig,
-        broadcaster: CloseCoinbasePortalBroadcaster,
-        @ApplicationContext context: Context)
-    : RemoteDataSource {
-        return RemoteDataSource(context, userPreferences, config, broadcaster)
+        @ApplicationContext context: Context
+    ): RemoteDataSource {
+        return RemoteDataSource(context, config)
     }
 
     @Singleton
     @Provides
     fun provideAuthApi(
-        remoteDataSource: RemoteDataSource,
+        remoteDataSource: RemoteDataSource
     ): CoinBaseAuthApi {
         return remoteDataSource.buildApi(CoinBaseAuthApi::class.java)
     }
@@ -62,7 +60,7 @@ object CoinBaseModule {
     @Singleton
     @Provides
     fun provideUserApi(
-        remoteDataSource: RemoteDataSource,
+        remoteDataSource: RemoteDataSource
     ): CoinBaseServicesApi {
         return remoteDataSource.buildApi(CoinBaseServicesApi::class.java)
     }
@@ -73,8 +71,7 @@ object CoinBaseModule {
     fun provideCommitBuyOrderMapper(): CommitBuyOrderMapper = CommitBuyOrderMapper()
     @Provides
     fun provideSwapTradeMapper(): SwapTradeMapper = SwapTradeMapper()
-    @Provides
-    fun provideReceiver(): CloseCoinbasePortalBroadcaster = CloseCoinbasePortalBroadcaster()
+
     @Provides
     fun provideCoinbaseAddressMapper(): CoinbaseAddressMapper = CoinbaseAddressMapper()
 }

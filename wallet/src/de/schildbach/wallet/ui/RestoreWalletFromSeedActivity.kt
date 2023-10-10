@@ -32,8 +32,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_forgot_pin.*
-import kotlinx.android.synthetic.main.activity_recover_wallet_from_seed.*
+import de.schildbach.wallet_test.databinding.ActivityRecoverWalletFromSeedBinding
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.MnemonicException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -60,6 +59,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
 
     @Inject
     lateinit var walletApplication: WalletApplication
+    private lateinit var binding: ActivityRecoverWalletFromSeedBinding
 
     private val recoveryPinMode by lazy {
         intent?.extras?.getBoolean(EXTRA_RECOVERY_PIN_MODE) ?: false
@@ -68,16 +68,12 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         super.setSecuredActivity(true)
-        setContentView(R.layout.activity_recover_wallet_from_seed)
 
-        setSupportActionBar(toolbar)
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
-        }
+        binding = ActivityRecoverWalletFromSeedBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        setTitle(R.string.recover_wallet_title)
+        binding.appBar.toolbar.title = getString(R.string.recover_wallet_title)
+        binding.appBar.toolbar.setNavigationOnClickListener { finish() }
         initView()
 
         viewModel.startActivityAction.observe(this) {
@@ -86,8 +82,8 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
     }
 
     private fun initView() {
-        input.requestFocus()
-        input.filters = arrayOf<InputFilter>(
+        binding.input.requestFocus()
+        binding.input.filters = arrayOf<InputFilter>(
             object : InputFilter.AllCaps() {
                 override fun filter(
                     source: CharSequence,
@@ -102,17 +98,17 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
             }
         )
 
-        input.addTextChangedListener(object : TextWatcher {
+        binding.input.addTextChangedListener(object : TextWatcher {
             override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-                submit.isEnabled = s.toString().trim().isNotEmpty()
+                binding.submit.isEnabled = s.toString().trim().isNotEmpty()
             }
 
             override fun afterTextChanged(s: Editable?) {}
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
         })
-        submit.setOnClickListener {
+        binding.submit.setOnClickListener {
             walletApplication.initEnvironmentIfNeeded()
-            val seed = input.text.trim().replace(Regex(" +"), " ")
+            val seed = binding.input.text.trim().replace(Regex(" +"), " ")
             if (seed.isNotEmpty()) {
                 val words = ArrayList(mutableListOf(*seed.split(' ').toTypedArray()))
                 lifecycleScope.launch {
@@ -124,10 +120,20 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                             else -> ex.message!!
                         }
                         val errorMessage = when (ex) {
-                            is MnemonicException.MnemonicLengthException -> walletApplication.getString(R.string.restore_wallet_from_invalid_seed_not_twelve_words)
-                            is MnemonicException.MnemonicChecksumException -> walletApplication.getString(R.string.restore_wallet_from_invalid_seed_bad_checksum)
-                            is MnemonicException.MnemonicWordException -> walletApplication.getString(R.string.restore_wallet_from_invalid_seed_warning_message, ex.badWord)
-                            else -> walletApplication.getString(R.string.restore_wallet_from_invalid_seed_failure, message)
+                            is MnemonicException.MnemonicLengthException -> walletApplication.getString(
+                                R.string.restore_wallet_from_invalid_seed_not_twelve_words
+                            )
+                            is MnemonicException.MnemonicChecksumException -> walletApplication.getString(
+                                R.string.restore_wallet_from_invalid_seed_bad_checksum
+                            )
+                            is MnemonicException.MnemonicWordException -> walletApplication.getString(
+                                R.string.restore_wallet_from_invalid_seed_warning_message,
+                                ex.badWord
+                            )
+                            else -> walletApplication.getString(
+                                R.string.restore_wallet_from_invalid_seed_failure,
+                                message
+                            )
                         }
                         showErrorDialog(errorMessage)
                     }

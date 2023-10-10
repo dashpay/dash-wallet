@@ -16,7 +16,6 @@
     <string name="wallet_balance_fragment_too_much">Kjo shumë është e madhe për tu mbajtur nê xhep. Ju lutem zhvendosni disa monedha në një vend më të sigurt.</string>
     <string name="wallet_balance_fragment_replaying">Bilanci nuk mund të shikohet gjatë përseritjes.</string>
     <string name="exchange_rates_fragment_empty_text">Nuk mund të ngarkohet kursi i këmbimit.</string>
-    <string name="exchange_rates_fragment_empty_search">Nuk mund të gjej kursin e këmbimit.</string>
     <string name="exchange_rates_fragment_default">(normal)</string>
     <string name="exchange_rates_fragment_balance">Balanca</string>
     <string name="exchange_rates_fragment_source">Çmimi nga %s</string>
@@ -32,13 +31,6 @@
     <string name="wallet_low_storage_dialog_title">Hapësira e diskut në pajisjen tuaj është e ulët!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet përdor memorjen interne për të ruajtur transaksionet dhe blloqet. Nëse nuk ka hapsir të mjaftueshme, nuk do të punoj dhe monedhat tuaja do jenë ne rrezik!\n\nDëshironi të hapni Menagjerin e Aplikacioneve dhe të fshini aplikacionet që nuk ju duhen?</string>
     <string name="wallet_low_storage_dialog_button_apps">Menaxhoni programet</string>
-    <string name="wallet_version_dialog_title">Një verzion i ri është në dispozicion!</string>
-    <string name="wallet_version_dialog_msg">Në këtë verzion janë përmirësuar disa gabime. Për më shumë hollësira kyçuni në Google Play.</string>
-    <string name="wallet_version_dialog_msg_deprecated">Nëse nuk e shiheni ndonjë aktualizim, shkaku është se versioni juaj i Androidit nuk është më aktual.</string>
-    <string name="wallet_version_dialog_button_market">Google Play</string>
-    <string name="wallet_version_dialog_button_binary">Shkarkoni</string>
-    <string name="wallet_old_sdk_dialog_title">Versioni i Androidit nuk është aktual</string>
-    <string name="wallet_old_sdk_dialog_message">Mundësit janë që në verzionet e ardhshme të Dash Wallet nuk do të mbështes paisjen tuaj. Në disa raste, mund të jetë e vështir që të shpenzohen monedhat në këtë paisje.\n\nVetëm në rast se dini cfarë po bëni, është e rekomanduar që të zhvendosni monedhat tuaja në një kulet tjetër.</string>
     <string name="send_coins_activity_title">Dërgo Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Duke marrë firmat nga %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Marrja e firmës dështoj</string>

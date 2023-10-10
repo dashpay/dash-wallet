@@ -52,59 +52,55 @@ import kotlin.coroutines.resumeWithException
 )
 @TypeConverters(RoomConverters::class)
 abstract class ExploreDatabase : RoomDatabase() {
+
     abstract fun merchantDao(): MerchantDao
     abstract fun atmDao(): AtmDao
 
     companion object {
+        private const val EXPLORE_DB_NAME = "explore-database"
         private val log = LoggerFactory.getLogger(ExploreDatabase::class.java)
         private var instance: ExploreDatabase? = null
 
-        suspend fun getAppDatabase(context: Context, config: ExploreConfig): ExploreDatabase {
+        suspend fun getAppDatabase(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
             if (instance == null) {
-                instance = open(context, config)
+                instance = open(context, exploreConfig)
             }
             return instance!!
         }
 
-        suspend fun updateDatabase(context: Context, config: ExploreConfig, repository: ExploreRepository) {
+        suspend fun updateDatabase(context: Context, repository: ExploreRepository) {
             log.info("force update explore db")
             if (instance != null) {
                 instance!!.close()
             }
-            instance = update(context, config, repository)
+            instance = update(context, repository)
         }
 
-        private suspend fun open(context: Context, config: ExploreConfig): ExploreDatabase {
-            val exploreDatabaseName = config.get(ExploreConfig.EXPLORE_DATABASE_NAME)
-                ?: ExploreConfig.EXPLORE_DB_PREFIX
-            val dbBuilder = Room.databaseBuilder(context, ExploreDatabase::class.java, exploreDatabaseName)
-            log.info("Open database $exploreDatabaseName")
-            return dbBuilder.build()
+        private suspend fun open(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
+            fixObsoleteName(context, exploreConfig)
+
+            val dbBuilder = Room.databaseBuilder(
+                context,
+                ExploreDatabase::class.java,
+                EXPLORE_DB_NAME
+            )
+
+            log.info("Open database {}", EXPLORE_DB_NAME)
+            return dbBuilder
+                .setJournalMode(JournalMode.TRUNCATE)
+                .fallbackToDestructiveMigration()
+                .build()
         }
 
-        private suspend fun update(
-            context: Context,
-            config: ExploreConfig,
-            repository: ExploreRepository
-        ): ExploreDatabase {
+        private suspend fun update(context: Context, repository: ExploreRepository): ExploreDatabase {
+            cleanupPreviousDatabases(context)
+
             val dbUpdateFile = repository.getUpdateFile()
-            var exploreDatabaseName = config.get(ExploreConfig.EXPLORE_DATABASE_NAME)
-                ?: ExploreConfig.EXPLORE_DB_PREFIX
-
-            if (dbUpdateFile.exists()) {
-                val dbTimestamp = repository.getTimestamp(dbUpdateFile)
-                log.info(
-                    "found explore db update package {}, with a timestamp: {}",
-                    dbUpdateFile.absolutePath,
-                    dbTimestamp
-                )
-                val oldDbFile = context.getDatabasePath(exploreDatabaseName)
-                repository.markDbForDeletion(oldDbFile)
-                exploreDatabaseName = "${ExploreConfig.EXPLORE_DATABASE_NAME}-$dbTimestamp"
-                config.set(ExploreConfig.EXPLORE_DATABASE_NAME, exploreDatabaseName)
-            }
-
-            val dbBuilder = Room.databaseBuilder(context, ExploreDatabase::class.java, exploreDatabaseName)
+            val dbBuilder = Room.databaseBuilder(
+                context,
+                ExploreDatabase::class.java,
+                EXPLORE_DB_NAME
+            )
 
             return preloadAndOpen(dbBuilder, repository, dbUpdateFile)
         }
@@ -163,7 +159,11 @@ abstract class ExploreDatabase : RoomDatabase() {
                         }
                     }
 
-                database = dbBuilder.addCallback(onOpenCallback).build()
+                database = dbBuilder
+                    .setJournalMode(JournalMode.TRUNCATE)
+                    .fallbackToDestructiveMigration()
+                    .addCallback(onOpenCallback)
+                    .build()
 
                 if (database.isOpen) {
                     log.warn("database is already open")
@@ -183,6 +183,27 @@ abstract class ExploreDatabase : RoomDatabase() {
             cursor.close()
 
             return merchantCount > 0 && atmCount > 0
+        }
+
+        private suspend fun fixObsoleteName(context: Context, config: ExploreConfig) {
+            config.get(ExploreConfig.EXPLORE_DATABASE_NAME)?.let { previousName ->
+                val file = context.getDatabasePath(previousName)
+                file.renameTo(context.getDatabasePath(EXPLORE_DB_NAME))
+            }
+        }
+
+        private fun cleanupPreviousDatabases(context: Context) {
+            var list = context.databaseList()
+            log.info("cleanup, before: ${list.joinToString("; ")}")
+
+            for (database in list) {
+                if (database.startsWith(EXPLORE_DB_NAME)) {
+                    context.deleteDatabase(database)
+                }
+            }
+
+            list = context.databaseList()
+            log.info("cleanup, after: ${list.joinToString("; ")}")
         }
     }
 }

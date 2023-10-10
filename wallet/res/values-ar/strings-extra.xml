@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">تأكيد الرقم السري</string>
     <string name="set_pin_message">سيكون الرقم  السري هذا مطلوبًا لإلغاء قفل تطبيقك في كل مرة تستخدمه.</string>
     <string name="set_pin_confirm_pin_incorrect">رقم التعريف الشخصي غير صحيح</string>
-    
+
     <string name="home_balance_hide_hint">اضغط لاخفاء الرصيد</string>
 
     <string name="dialog_confirm_confirm">تأكيد</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">مسح للإرسال</string>
     <string name="scan_to_pay_error_dialog_message">عنوان داش أو عنوان URL غير صالح في الحافظة:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">عنوان داش أو عنوان URL غير صالح في الحافظة.</string>
-    <string name="pay_to_confirm_address">هل هذا هو عنوان داش الذي تريد إرسال الدفعة إليه؟</string>
 
     <string name="receive_title">إستقبال</string>
     <string name="receive_enter_amount_message">حدد المبلغ المراد استلامه</string>
@@ -334,8 +333,6 @@
     <string name="security_very_high">مرتفع جداً</string>
     <string name="max">الحد الأقصى</string>
 
-    <string name="enter_amount_available">متاح</string>
-
     <string name="skip">تخطي</string>
     <string name="get_started">البدء</string>
     <string name="welcome_screen_title_1_new_install">مرحباً</string>
@@ -360,8 +357,6 @@
     <string name="payment_request_unable_to_send">غير قادر على الارسال</string>
     <string name="payment_request_please_try_again">حاول مرة اخرى</string>
     <string name="payment_request_try_again">حاول ثانية</string>
-    <string name="payment_request_problem_title">لم يتم الإعتراف بالدفع</string>
-    <string name="payment_request_problem_message">تعذر على الخادم معالجة دفعتك ، يرجى الاستفسار من التاجر</string>
     <string name="payment_request_expired_title">انتهت صلاحية طلب الدفع</string>
     <string name="payment_request_close">اغلاق</string>
     <string name="payment_request_skip">تخطي</string>
@@ -412,7 +407,6 @@
     <string name="masternode_key_type_owner">مفاتيح المالك</string>
     <string name="masternode_key_type_voting">مفاتيح التصويت</string>
     <string name="masternode_key_type_operator">مفاتيح المشغل</string>
-    <string name="masternode_key_type_platform">مفاتيح مشغل HPMN</string>
     <string name="masternode_key_type_total">%dمفاتيح</string>
     <string name="masternode_key_type_used">%dمستعملة</string>
     <string name="masternode_key_pair_index">%dزوج المفتاح</string>

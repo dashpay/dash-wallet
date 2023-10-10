@@ -18,7 +18,6 @@
     <!-- Explore screen -->
     <string name="explore_dash">Εξερευνήστε το Dash</string>
     <string name="explore_title">Εξερευνήστε</string>
-    <string name="explore_subtitle">Πραγματοποιήστε εύκολα αγορές με τα DASH σας σε πάνω από 155.000 τοποθεσίες και διαδικτυακούς εμπόρους.</string>
     <string name="explore_merchants_title">Πού να ξοδέψετε;</string>
     <string name="explore_merchants_subtitle">Βρείτε εμπόρους που δέχονται το Dash ως πληρωμή</string>
     <string name="explore_atms_title">ATM</string>
@@ -152,11 +151,5 @@
     <string name="buy_gift_card_with_dash_text">Αγοράστε μια δωροκάρτα με Dash.</string>
     <string name="redeem_gift_card_text">Εξαργυρώστε τη δωροκάρτα σας online μέσα σε λίγα δευτερόλεπτα ή σε ταμείο.</string>
 
-    <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">Συγχρονισμός σε εξέλιξη... Τα αποτελέσματα μπορεί να μην είναι πλήρη.</string>
-    <string name="sync_in_progress_error">Συγχρονισμός σε εξέλιξη... Υπήρξε ένα σφάλμα.</string>
-    <string name="sync_in_progress_canceled">Ο συγχρονισμός ακυρώθηκε... Θα γίνει νέα προσπάθεια αργότερα.</string>
-
     <string name="sync_in_progress_file_not_found">Σφάλμα Build: Η βάση δεδομένων δεν βρέθηκε!</string>
-    <string name="sync_in_progress_network_error">Ο συγχρονισμός διακόπηκε... Το δίκτυο είναι εκτός σύνδεσης ή μη προσβάσιμο</string>
-</resources>
+    </resources>

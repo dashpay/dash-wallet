@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >Huling alam na balanse</string>
     <string name="coinbase_link_title">I-link ang iyong Coinbase account</string>
     <string name="coinbase_link">I-link ang Coinbase account</string>
     <string name="coinbase_transfer_details">Sa pagitan ng Dash Wallet at ng iyong Coinbase account</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">Idiskonekta ang Coinbase Account</string>
     <string name="receive_directly_into_dash_wallet">Direktang tumanggap sa Dash Wallet.</string>
     <string name="buy_dash">Bumili ng Dash</string>
-    <string name="balance_on_coinbase">Balanse sa Coinbase</string>
+    <string name="balance_on_coinbase">Dash balanse sa Coinbase</string>
     <string name="sending_to">Nagpapadala kay</string>
     <string name="dash_wallet_device">Dash Wallet sa device na ito</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,7 @@
     <string name="learn_more">Matuto pa</string>
     <string name="something_wrong_title">May maling nangyari</string>
     <string name="retry_later_message">Pakisubukang muli sa ibang pagkakataon o makipag-ugnayan sa aming support center para makakuha ng tulong</string>
-    <string name="convert_crypto">I-convert ang Crypto</string>
-    <string name="between_dash_wallet_and_coinbase">Sa pagitan ng Dash Wallet at Coinbase.</string>
+    <string name="between_dash_wallet_and_coinbase">Sa pagitan ng Dash Wallet at Coinbase</string>
     <string name="conversion_preview">Preview ng Conversion</string>
     <string name="you_send">Ipadala mo</string>
     <string name="from_your_coinbase_account">Mula sa iyong Coinbase account</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">Hindi maipadala ang halagang ito nang hindi lalampas sa limitasyon ng aplikasyon</string>
     <string name="dont_have_any_dash">Wala kang anumang Dash sa iyong Dash Wallet.</string>
     <string name="transfer_wallet_not_synced">Ang mga paglilipat mula sa Dash Wallet patungo sa Coinbase ay hindi posible hanggang sa makumpleto ang pag-sync ng wallet.</string>
-    <string name="disconnected">Idiskonekta</string>
 
     <string name="insufficient_money_title">Hindi sapat ang barya</string>
     <string name="insufficient_money_msg">Ang halaga ng barya sa iyong pitraka ay !asyadong maliit para sa pag-sweep.</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg">Nagkaroon ng problema sa paglilipat nito sa Dash Wallet sa device na ito.</string>
     <string name="insufficient_money_to_transfer">Ang halaga ng mga barya sa wallet ay masyadong maliit upang ilipat.</string>
     <string name="amount_to_transfer">Matatanggap mo %s %s %s</string>
-
+    <string name="amount_to_transfer_dash">Matatanggap mo %s</string>
     </resources>

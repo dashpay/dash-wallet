@@ -17,19 +17,25 @@
 
 package de.schildbach.wallet.payments.parsers
 
+import com.google.common.hash.Hashing
+import com.google.protobuf.InvalidProtocolBufferException
+import com.google.protobuf.UninitializedMessageException
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.util.AddressUtil
 import de.schildbach.wallet.util.Io
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.bitcoin.protocols.payments.Protos.PaymentRequest
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
-import org.bitcoinj.core.Base58
+import org.bitcoinj.crypto.TrustStoreLoader.DefaultTrustStoreLoader
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.protocols.payments.PaymentProtocolException
+import org.bitcoinj.protocols.payments.PaymentProtocolException.Expired
+import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidNetwork
+import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentURL
 import org.bitcoinj.protocols.payments.PaymentProtocolException.PkiVerificationException
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
@@ -37,10 +43,11 @@ import org.dash.wallet.common.util.Base43
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
+import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
+import java.security.KeyStoreException
 import java.util.*
-import java.util.regex.Pattern
 
 class PaymentIntentParserException(
     innerException: Exception,
@@ -49,7 +56,6 @@ class PaymentIntentParserException(
 
 object PaymentIntentParser {
     private val log = LoggerFactory.getLogger(PaymentIntentParser::class.java)
-    private val PATTERN_BITCOIN_ADDRESS = Pattern.compile("[" + String(Base58.ALPHABET) + "]{20,40}")
 
     suspend fun parse(input: String, supportAnypayUrls: Boolean): PaymentIntent = withContext(Dispatchers.Default) {
         var inputStr = input
@@ -88,22 +94,16 @@ object PaymentIntentParser {
 
                 return@withContext PaymentIntent.fromBitcoinUri(bitcoinUri)
             } catch (ex: BitcoinURIParseException) {
-                val paymentIntent = tryFindAnyMatch(inputStr)
-
-                if (paymentIntent == null) {
-                    log.info("got invalid bitcoin uri: '$inputStr'", ex)
-                    throw PaymentIntentParserException(
-                        ex,
-                        ResourceString(
-                            R.string.input_parser_invalid_bitcoin_uri,
-                            listOf(inputStr)
-                        )
+                log.info("got invalid bitcoin uri: '$inputStr'", ex)
+                throw PaymentIntentParserException(
+                    ex,
+                    ResourceString(
+                        R.string.input_parser_invalid_bitcoin_uri,
+                        listOf(inputStr)
                     )
-                }
-
-                return@withContext paymentIntent
+                )
             }
-        } else if (PATTERN_BITCOIN_ADDRESS.matcher(inputStr).matches()) {
+        } else if (AddressParser.exactMatch(inputStr)) {
             try {
                 val address = Address.fromString(Constants.NETWORK_PARAMETERS, inputStr)
                 return@withContext PaymentIntent.fromAddress(address, null)
@@ -162,35 +162,9 @@ object PaymentIntentParser {
         )
     }
 
-    private fun tryFindAnyMatch(input: String): PaymentIntent? {
-        val matcher = PATTERN_BITCOIN_ADDRESS.matcher(input)
-
-        if (matcher.find() && matcher.group(0) != null) {
-            try {
-                val addressStr = matcher.group(0)!!
-                val address = Address.fromString(Constants.NETWORK_PARAMETERS, addressStr)
-                val intent = PaymentIntent.fromAddress(address, null)
-                intent.setShouldConfirmAddress(true)
-
-                return intent
-            } catch (ex: AddressFormatException) {
-                log.info("got invalid address", ex)
-                throw PaymentIntentParserException(
-                    ex,
-                    ResourceString(
-                        R.string.input_parser_invalid_address,
-                        listOf()
-                    )
-                )
-            }
-        }
-
-        return null
-    }
-
     private fun parseRequest(byteArray: ByteArray): PaymentIntent {
         return try {
-            InputParser.parsePaymentRequest(byteArray)
+            parsePaymentRequest(byteArray)
         } catch (ex: PkiVerificationException) {
             log.info("got unverifiable payment request", ex)
             throw PaymentIntentParserException(
@@ -209,6 +183,77 @@ object PaymentIntentParser {
                     listOf(ex.message ?: "")
                 )
             )
+        }
+    }
+
+    @Suppress("UnstableApiUsage")
+    private fun parsePaymentRequest(serializedPaymentRequest: ByteArray): PaymentIntent {
+        try {
+            if (serializedPaymentRequest.size > 50000) {
+                throw PaymentProtocolException("payment request too big: " + serializedPaymentRequest.size)
+            }
+
+            val paymentRequest = PaymentRequest.parseFrom(serializedPaymentRequest)
+            var pkiName: String? = null
+            var pkiCaName: String? = null
+
+            if (paymentRequest.pkiType != "none") {
+                val keystore = DefaultTrustStoreLoader().keyStore
+                val verificationData = PaymentProtocol.verifyPaymentRequestPki(
+                    paymentRequest,
+                    keystore
+                )
+                pkiName = verificationData!!.displayName
+                pkiCaName = verificationData.rootAuthorityName
+            }
+
+            val paymentSession = PaymentProtocol.parsePaymentRequest(paymentRequest)
+
+            if (paymentSession.isExpired) {
+                throw Expired(
+                    "payment details expired: current time " + Date() +
+                        " after expiry time " + paymentSession.expires
+                )
+            }
+
+            if (paymentSession.networkParameters != Constants.NETWORK_PARAMETERS) {
+                throw InvalidNetwork(
+                    "cannot handle payment request network: " + paymentSession.networkParameters
+                )
+            }
+
+            val outputs = paymentSession.outputs.map { PaymentIntent.Output.valueOf(it) }
+            val paymentRequestHash = Hashing.sha256().hashBytes(serializedPaymentRequest).asBytes()
+            val paymentIntent = PaymentIntent(
+                PaymentIntent.Standard.BIP70,
+                pkiName,
+                pkiCaName,
+                outputs.toTypedArray(),
+                paymentSession.memo,
+                paymentSession.paymentUrl,
+                paymentSession.merchantData,
+                null,
+                paymentRequestHash,
+                paymentSession.expires,
+                null,
+                null
+            )
+
+            if (paymentIntent.hasPaymentUrl() && !paymentIntent.isSupportedPaymentUrl) {
+                throw InvalidPaymentURL(
+                    "cannot handle payment url: " + paymentIntent.paymentUrl
+                )
+            }
+
+            return paymentIntent
+        } catch (x: InvalidProtocolBufferException) {
+            throw PaymentProtocolException(x)
+        } catch (x: UninitializedMessageException) {
+            throw PaymentProtocolException(x)
+        } catch (x: FileNotFoundException) {
+            throw RuntimeException(x)
+        } catch (x: KeyStoreException) {
+            throw RuntimeException(x)
         }
     }
 }

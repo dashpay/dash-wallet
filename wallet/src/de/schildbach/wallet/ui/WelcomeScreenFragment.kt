@@ -22,7 +22,8 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_welcome.*
+import de.schildbach.wallet_test.databinding.FragmentWelcomeBinding
+import org.dash.wallet.common.ui.viewBinding
 
 /**
  * @author Samuel Barbosa
@@ -34,8 +35,11 @@ class WelcomeScreenFragment : Fragment(R.layout.fragment_welcome) {
         private const val ARG_SUBTITLE = "subtitle"
         private const val ARG_IMAGE = "image"
 
-        fun newInstance(@StringRes title: Int, @StringRes subTitle: Int,
-                        @DrawableRes image: Int): WelcomeScreenFragment {
+        fun newInstance(
+            @StringRes title: Int,
+            @StringRes subTitle: Int,
+            @DrawableRes image: Int
+        ): WelcomeScreenFragment {
             val fragment = WelcomeScreenFragment()
 
             val args = Bundle()
@@ -49,12 +53,13 @@ class WelcomeScreenFragment : Fragment(R.layout.fragment_welcome) {
         }
     }
 
+    private val binding by viewBinding(FragmentWelcomeBinding::bind)
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        title.text = getString(arguments!!.getInt(ARG_TITLE))
-        subtitle.text = getString(arguments!!.getInt(ARG_SUBTITLE))
-        screenshot.setImageResource(arguments!!.getInt(ARG_IMAGE))
+        binding.title.text = getString(requireArguments().getInt(ARG_TITLE))
+        binding.subtitle.text = getString(requireArguments().getInt(ARG_SUBTITLE))
+        binding.screenshot.setImageResource(requireArguments().getInt(ARG_IMAGE))
     }
-
 }

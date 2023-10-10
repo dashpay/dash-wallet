@@ -85,6 +85,14 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
             }
         }
 
+    var isFilterButtonVisible: Boolean = true
+        set(value) {
+            field = value
+            if (::binding.isInitialized) {
+                binding.filterBtn.isVisible = value
+            }
+        }
+
     override fun getItemCount() = 1
 
     override fun getItemViewType(position: Int) = R.layout.search_header_view
@@ -143,13 +151,13 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         }
 
         binding.clearBtn.setOnClickListener { clearSearchQuery() }
-
         binding.filterBtn.setOnClickListener { onFilterButtonClicked?.invoke() }
 
         binding.search.setText(searchText)
         binding.searchTitle.text = title
         binding.searchSubtitle.text = subtitle
         binding.searchSubtitle.isVisible = subtitle.isNotEmpty()
+        binding.filterBtn.isVisible = isFilterButtonVisible
         refreshControls(controlsVisible)
         refreshSpaceForMessage(allowSpaceForMessage)
     }

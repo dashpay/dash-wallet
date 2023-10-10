@@ -24,9 +24,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import javax.inject.Inject
@@ -34,7 +36,8 @@ import javax.inject.Inject
 @HiltViewModel
 class NewAccountConfirmDialogViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
-    private val exchangeRatesProvider: ExchangeRatesProvider
+    private val exchangeRatesProvider: ExchangeRatesProvider,
+    private val walletUIConfig: WalletUIConfig
 ) : ViewModel() {
 
     private val _exchangeRateData = MutableLiveData<ExchangeRate?>()
@@ -47,8 +50,9 @@ class NewAccountConfirmDialogViewModel @Inject constructor(
         }
 
     init {
-        val currencyCode = walletApplication.configuration.exchangeCurrencyCode
-        exchangeRatesProvider.observeExchangeRate(currencyCode!!)
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
             .filterNotNull()
             .distinctUntilChanged()
             .onEach(_exchangeRateData::postValue)

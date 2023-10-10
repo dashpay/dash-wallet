@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">กำลังตรวจสอบเลขรหัสส่วนตัว</string>
     <string name="set_pin_message">ต้องใช้ PIN นี้เพื่อปลดล็อคแอพของคุณทุกครั้งที่ใช้</string>
     <string name="set_pin_confirm_pin_incorrect">PIN ไม่ถูกต้อง</string>
-    
+
     <string name="home_balance_hide_hint">กดเพื่อซ่อนยอดคงเหลือ</string>
 
     <string name="dialog_confirm_confirm">ยืนยัน</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">สแกนเพื่อส่ง</string>
     <string name="scan_to_pay_error_dialog_message">ที่อยู่ของ Dash ไม่ถูกต้อง หรือคำขอ URL ในคลิปบอร์ด:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">ที่อยู่ของ Dash ไม่ถูกต้อง หรือคำขอ URL ในคลิปบอร์ด</string>
-    <string name="pay_to_confirm_address">นี่คือที่อยู่ Dash ที่คุณต้องการส่งการชำระเงินหรือไม่?</string>
 
     <string name="receive_title">ได้รับ</string>
     <string name="receive_enter_amount_message">ระบุจำนวนที่ได้รับ</string>
@@ -319,8 +318,6 @@
     <string name="security_very_high">สูงมาก</string>
     <string name="max">สูงสุด</string>
 
-    <string name="enter_amount_available">ที่สามารถใช้ได้</string>
-
     <string name="skip">ข้าม</string>
     <string name="get_started">เริ่มต้น</string>
     <string name="welcome_screen_title_1_new_install">ยินดีต้อนรับ</string>
@@ -345,8 +342,6 @@
     <string name="payment_request_unable_to_send">ไม่สามารถส่งออก</string>
     <string name="payment_request_please_try_again">โปรดลองใหม่อีกครั้ง</string>
     <string name="payment_request_try_again">ลองอีกครั้ง</string>
-    <string name="payment_request_problem_title">การชำระเงินไม่ได้รับการยอมรับ</string>
-    <string name="payment_request_problem_message">เซิร์ฟเวอร์การชำระเงินของคุณไม่สามารถดำเนินการโดยเซิร์ฟเวอร์นี้ได้ โปรดสอบถามกับทางร้านค้า</string>
     <string name="payment_request_expired_title">คำขอชำระเงินหมดอายุ</string>
     <string name="payment_request_close">ปิด</string>
     <string name="payment_request_skip">ข้าม</string>
@@ -397,7 +392,7 @@
     <string name="masternode_key_type_owner">เจ้าของกุญแจ</string>
     <string name="masternode_key_type_voting">Voting Keys</string>
     <string name="masternode_key_type_operator">ตัวดำเนินการกุญแจ</string>
-    <string name="masternode_key_type_platform">คีย์ตัวดำเนินการ HPMN</string>
+    <string name="masternode_key_type_platform">วิวัฒนาการรหัส Node ID</string>
     <string name="masternode_key_type_total">%d คีย์</string>
     <string name="masternode_key_type_used">%d ใช้แล้ว</string>
     <string name="masternode_key_pair_index">Keypair %d</string>

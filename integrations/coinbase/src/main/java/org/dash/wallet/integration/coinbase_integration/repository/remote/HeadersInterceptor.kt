@@ -16,21 +16,21 @@
  */
 package org.dash.wallet.integration.coinbase_integration.repository.remote
 
+import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
-import org.dash.wallet.common.Configuration
+import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
 
 class HeadersInterceptor @Inject constructor(
-    private val userPreferences: Configuration
+    private val config: CoinbaseConfig
 ) : Interceptor {
-
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
         val requestBuilder = original.newBuilder()
         requestBuilder.header("Accept", "application/json")
 
-        val accessToken = userPreferences.lastCoinbaseAccessToken
+        val accessToken = runBlocking { config.get(CoinbaseConfig.LAST_ACCESS_TOKEN) ?: "" }
         if (accessToken.isNotEmpty()) {
             requestBuilder.header("Authorization", "Bearer $accessToken")
         }

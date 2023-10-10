@@ -36,7 +36,7 @@ interface GiftCardDao {
     suspend fun updateGiftCard(giftCard: GiftCard)
 
     @Query("SELECT * FROM gift_cards WHERE txId = :txId")
-    suspend fun getGiftCard(txId: Sha256Hash): GiftCard?
+    suspend fun getCardForTransaction(txId: Sha256Hash): GiftCard?
 
     @Query("SELECT * FROM gift_cards WHERE txId = :txId")
     fun observeCardForTransaction(txId: Sha256Hash): Flow<GiftCard?>

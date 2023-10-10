@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Επαλήθευση PIN</string>
     <string name="set_pin_message">Αυτός ο κωδικός PIN θα χρειαστεί να ξεκλειδώσετε την εφαρμογή σας κάθε φορά που την χρησιμοποιείτε.</string>
     <string name="set_pin_confirm_pin_incorrect">Λανθασμένο PIN</string>
-    
+
     <string name="home_balance_hide_hint">Πατήστε για να κρύψετε το υπόλοιπο</string>
 
     <string name="dialog_confirm_confirm">Επιβεβαίωση</string>
@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Σαρώστε για να στείλετε</string>
     <string name="scan_to_pay_error_dialog_message">Δεν είναι μια έγκυρη διεύθυνση Dash ή ένα URL που αιτήθηκε στο πρόχειρο:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Δεν είναι μια έγκυρη διεύθυνση Dash ή ένα URL που αιτήθηκε στο πρόχειρο</string>
-    <string name="pay_to_confirm_address">Αυτή είναι η διεύθυνση Dash στην οποία θέλετε να στείλετε την πληρωμή;</string>
 
     <string name="receive_title">Λήψη</string>
     <string name="receive_enter_amount_message">Καθορίστε το ποσό που θα παραληφθεί</string>
@@ -322,8 +321,6 @@
     <string name="security_very_high">Πολύ Υψηλά</string>
     <string name="max">Μέγιστο</string>
 
-    <string name="enter_amount_available">διαθέσιμο</string>
-
     <string name="skip">παράλειψη</string>
     <string name="get_started">Ξεκινήστε</string>
     <string name="welcome_screen_title_1_new_install">Καλώς ορίσατε</string>
@@ -348,8 +345,6 @@
     <string name="payment_request_unable_to_send">Δεν είναι δυνατή η Αποστολή</string>
     <string name="payment_request_please_try_again">Παρακαλώ προσπαθήστε ξανά</string>
     <string name="payment_request_try_again">Προσπαθήστε ξανά</string>
-    <string name="payment_request_problem_title">Η πληρωμή δεν αναγνωρίστηκε</string>
-    <string name="payment_request_problem_message">Δεν ήταν δυνατή η επεξεργασία της πληρωμής σας από τον διακομιστή, παρακαλώ ρωτήστε τον έμπορο</string>
     <string name="payment_request_expired_title">Το αίτημα πληρωμής Έληξε</string>
     <string name="payment_request_close">κλείσιμο</string>
     <string name="payment_request_skip">Παράλειψη</string>
@@ -400,7 +395,6 @@
     <string name="masternode_key_type_owner">Κλειδιά Κατόχου</string>
     <string name="masternode_key_type_voting">Κλειδιά ψήφου</string>
     <string name="masternode_key_type_operator">Κλειδιά Χειριστή</string>
-    <string name="masternode_key_type_platform">HPMN Κλειδιά Χειριστή</string>
     <string name="masternode_key_type_total">%d κλειδιά</string>
     <string name="masternode_key_type_used">%d χρησιμοποιείται</string>
     <string name="masternode_key_pair_index">Ζεύγος κλειδιών %d</string>

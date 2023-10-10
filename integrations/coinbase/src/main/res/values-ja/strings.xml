@@ -16,7 +16,6 @@
   -->
 <resources>
     <string name="coinbase">Coinbase</string>
-    <string name="last_known_balance" >直近の残高</string>
     <string name="coinbase_link_title">Coinbaseアカウントをリンクする</string>
     <string name="coinbase_link">Coinbaseアカウントをリンク</string>
     <string name="coinbase_transfer_details">DashウォレットとCoinbaseアカウント間</string>
@@ -29,7 +28,7 @@
     <string name="disconnect_coinbase_account">Coinbaseのアカウントを切断する</string>
     <string name="receive_directly_into_dash_wallet">Dashウォレットへ直接入金します。</string>
     <string name="buy_dash">Dashを購入する</string>
-    <string name="balance_on_coinbase">Coinbaseの残高</string>
+    <string name="balance_on_coinbase">CoinbaseでのDashの残高</string>
     <string name="sending_to">に送信</string>
     <string name="dash_wallet_device">この端末のDashウォレット</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
@@ -69,8 +68,7 @@
     <string name="learn_more">詳細はこちら</string>
     <string name="something_wrong_title">問題が発生しました!</string>
     <string name="retry_later_message">少し時間をおいてから再試行するか、弊社のサポートセンターまでお問い合わせください。</string>
-    <string name="convert_crypto">仮想通貨を変換</string>
-    <string name="between_dash_wallet_and_coinbase">DashウォレットとCoinbase間で行います。</string>
+    <string name="between_dash_wallet_and_coinbase">DashウォレットとCoinbase間</string>
     <string name="conversion_preview">変換プレビュー</string>
     <string name="you_send">送金</string>
     <string name="from_your_coinbase_account">Coinbaseのアカウントから</string>
@@ -91,7 +89,6 @@
     <string name="send_to_wallet_error">申請限度額を越えているため、この金額を送金できません。</string>
     <string name="dont_have_any_dash">DashウォレットにDashがありません。</string>
     <string name="transfer_wallet_not_synced">DashウォレットからCoinbaseへの送金は、ウォレットの同期が完了してから行えます。</string>
-    <string name="disconnected">切断されました</string>
 
     <string name="insufficient_money_title">充分なコインがありません</string>
     <string name="insufficient_money_msg">ウォレット内のコインがスイープするには不十分です。</string>
@@ -118,5 +115,5 @@
     <string name="transfer_dash_failed_msg">この端末のDashウォレットに送金する際に問題が発生しました。</string>
     <string name="insufficient_money_to_transfer">ウォレット内の通貨の金額が不足しているため、送金できません。</string>
     <string name="amount_to_transfer">%s %s %sを入金できます</string>
-
+    <string name="amount_to_transfer_dash">%sを入金します</string>
     </resources>

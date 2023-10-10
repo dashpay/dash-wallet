@@ -98,7 +98,7 @@ object GoogleDriveService {
         return id
     }
 
-    fun isGDriveAvailable(context: Context?): Boolean {
+    fun isGDriveAvailable(context: Context): Boolean {
         val connectionResult = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
         return if (connectionResult != ConnectionResult.SUCCESS) {
             log.info("gdrive: Google play services are not available (code {})", connectionResult)
