@@ -24,7 +24,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.ui.username.CreateUsernamePrivacyViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentCoinjoinLevelBinding
 import kotlinx.coroutines.launch
@@ -36,7 +35,7 @@ import org.dash.wallet.common.ui.viewBinding
 @AndroidEntryPoint
 class CoinJoinLevelFragment : Fragment(R.layout.fragment_coinjoin_level) {
     private val binding by viewBinding(FragmentCoinjoinLevelBinding::bind)
-    private val viewModel by viewModels<CreateUsernamePrivacyViewModel>()
+    private val viewModel by viewModels<CoinJoinLevelViewModel>()
     private var selectedCoinJoinMode = CoinJoinMode.BASIC
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
