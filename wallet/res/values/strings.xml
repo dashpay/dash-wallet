@@ -497,4 +497,12 @@
     <string name="invalid_link">The link is invalid</string>
     <string name="welcome_request_username_min_balance_disclaimer">You should have more than %s Dash to create a username</string>
     <string name="request_username_min_balance_disclaimer">To request a username on the Dash Network, you need to have more than %s Dash</string>
+
+    <!-- CoinJoin -->
+    <string name="coinjoin">CoinJoin</string>
+    <string name="turned_off">Turned off</string>
+    <string name="coinjoin_info_subtitle">Mixing your Dash coins will make your transactions more private</string>
+    <string name="coinjoin_description_1">You will only be able to spend Dash that has been mixed when this is turned on. This can be turned off at any time.</string>
+    <string name="coinjoin_description_2">Newly received Dash will be automatically mixed when the wallet is opened</string>
+    <string name="coinjoin_description_3">Turning this feature on will result a higher battery usage</string>
 </resources>
