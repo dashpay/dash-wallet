@@ -33,6 +33,8 @@ class CoinJoinInfoFragment : Fragment(R.layout.fragment_coinjoin_info) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.toolbar.setNavigationOnClickListener { requireActivity().finish() }
+
         binding.continueButton.setOnClickListener {
             Log.i("COINJOIN", "Continue button clicked")
         }
