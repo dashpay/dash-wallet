@@ -114,6 +114,7 @@ class CoinJoinLevelFragment : Fragment(R.layout.fragment_coinjoin_level) {
                 )
             ).show(requireActivity()) { toChange ->
                 if (toChange == true) {
+                    setMode(mode)
                     viewModel.mixingMode = mode
                     requireActivity().finish()
                 }
