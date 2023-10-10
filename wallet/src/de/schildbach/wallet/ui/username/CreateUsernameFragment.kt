@@ -94,18 +94,10 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
         }
         binding.username.addTextChangedListener(this)
         binding.registerBtn.setOnClickListener {
-            safeNavigate(CreateUsernameFragmentDirections.createUsernameToUsernamePrivacy())
-        }
-
-        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<CoinJoinMode?>("mode")?.observe(
-            viewLifecycleOwner) { result ->
-            // Do something with the result.
-            result?.let {
-                if (reuseTransaction) {
-                    triggerIdentityCreation(true)
-                } else {
-                    showConfirmationDialog()
-                }
+            if (reuseTransaction) {
+                triggerIdentityCreation(true)
+            } else {
+                showConfirmationDialog()
             }
         }
         binding.processingIdentityDismissBtn.setOnClickListener { requireActivity().finish() }

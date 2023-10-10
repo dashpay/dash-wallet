@@ -393,15 +393,6 @@
     <string name="send_to_address">Send to Address</string>
     <string name="select_privacy_preferences">Select your username privacy preferences</string>
     <string name="please_note_cant_change_this_later">Please note that you will not be able to change this later</string>
-    <string name="Basic">Basic</string>
-    <string name="Intermediate">Intermediate</string>
-    <string name="basic_level_card_decs">Advanced users can determine your transaction history</string>
-    <string name="minutes_to_create_a_username">1–2 minutes to create a username</string>
-    <string name="intermediate_level_card_decs">Advanced users who have a very high level of technical expertise can determine your transaction history</string>
-    <string name="_1_2_hours">1–2 hours</string>
-    <string name="several_hours">Several hours</string>
-    <string name="advanced_level_card_decs">It would be very difficult for advanced users with any level of technical expertise to determine your transaction history</string>
-    <string name="advanced">Advanced</string>
     <string name="Intermediate_level_WIFI_Warning">Intermediate privacy level requires a reliable internet connection</string>
     <string name="Advanced_level_WIFI_Warning">Advanced privacy level requires a reliable internet connection</string>
     <string name="privcay_level_WIFI_warning_desc">It is recommended to be on a Wi-Fi network to avoid losing any funds</string>
@@ -505,4 +496,18 @@
     <string name="coinjoin_description_1">You will only be able to spend Dash that has been mixed when this is turned on. This can be turned off at any time.</string>
     <string name="coinjoin_description_2">Newly received Dash will be automatically mixed when the wallet is opened</string>
     <string name="coinjoin_description_3">Turning this feature on will result a higher battery usage</string>
+    <string name="coinjoin_mixing_level_title">Select mixing level</string>
+    <string name="coinjoin_mixing_level_subtitle">You can change or stop the mixing level at any time</string>
+    <string name="intermediate">Intermediate</string>
+    <string name="advanced">Advanced</string>
+    <string name="intermediate_level_card_decs">Advanced users who have a very high level of technical expertise can determine your transaction history</string>
+    <string name="advanced_level_card_decs">It would be very difficult for advanced users with any level of technical expertise to determine your transaction history</string>
+    <string name="coinjoin_intermediate_time">up to 30 minutes</string>
+    <string name="coinjoin_advanced_time">Multiple hours</string>
+    <string name="coinjoin_start">Start Mixing</string>
+    <string name="coinjoin_stop">Stop Mixing</string>
+    <string name="coinjoin_progress">Mixing · %1$s of %2$s</string>
+    <string name="coinjoin_change_level_confirmation">Are you sure you want to change the privacy level?</string>
+    <string name="coinjoin_stop_mixing_title">Are you sure you want to stop mixing?</string>
+    <string name="coinjoin_stop_mixing_message">Any funds that have been mixed will be combined with your un mixed funds</string>
 </resources>

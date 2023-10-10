@@ -140,6 +140,19 @@
             app:layout_constraintStart_toEndOf="@id/coinjoin_icon"
             app:layout_constraintTop_toBottomOf="@id/coinjoin_title"
             app:layout_constraintBottom_toBottomOf="parent" />
+
+        <ImageView
+            android:id="@+id/coinjoin_subtitle_icon"
+            android:layout_gravity="center_vertical"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:layout_marginStart="3dp"
+            android:layout_marginTop="3dp"
+            android:visibility="gone"
+            app:srcCompat="@drawable/ic_dash"
+            app:tint="@color/content_tertiary"
+            app:layout_constraintTop_toTopOf="@id/coinjoin_subtitle"
+            app:layout_constraintStart_toEndOf="@id/coinjoin_subtitle" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout

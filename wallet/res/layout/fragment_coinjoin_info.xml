@@ -15,7 +15,7 @@
         android:orientation="vertical"
         android:paddingBottom="20dp"
         android:clipToPadding="false"
-        app:layout_constraintBottom_toTopOf="@+id/cointinue_button"
+        app:layout_constraintBottom_toTopOf="@+id/continue_button"
         app:layout_constraintTop_toTopOf="parent">
 
         <androidx.constraintlayout.widget.ConstraintLayout

@@ -39,39 +39,25 @@
         tools:text="Cancel transaction?" />
 
     <Button
-        android:id="@+id/dialog_negative_button"
-        style="@style/Button.Tertiary.Blue"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="30dp"
-        android:layout_marginEnd="6dp"
-        app:layout_constraintEnd_toStartOf="@id/dialog_positive_button"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/dialog_message"
-        tools:text="No, keep it" />
-
-    <Button
-        android:id="@+id/dialog_negative_button_secondary"
-        style="@style/Button.Secondary"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="30dp"
-        android:layout_marginEnd="6dp"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/dialog_message"
-        tools:text="No, keep it" />
-
-    <Button
         android:id="@+id/dialog_positive_button"
         style="@style/Button.Primary.Blue"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="30dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/dialog_negative_button"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/dialog_message"
         tools:text="Yes, cancel" />
+
+    <Button
+        android:id="@+id/dialog_negative_button"
+        style="@style/Button.Tertiary"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/dialog_positive_button"
+        tools:text="No, keep it" />
 </androidx.constraintlayout.widget.ConstraintLayout>
 

@@ -18,7 +18,6 @@
 package de.schildbach.wallet.data
 
 import android.content.Context
-
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -39,5 +38,6 @@ open class CoinJoinConfig @Inject constructor(
         val COINJOIN_SESSIONS = intPreferencesKey("coinjoin_sessions")
         val COINJOIN_MULTISESSION = booleanPreferencesKey("coinjoin_multisession")
         val COINJOIN_AMOUNT = longPreferencesKey("coinjoin_amount")
+        val FIRST_TIME_INFO_SHOWN = booleanPreferencesKey("first_time_info_shown")
     }
 }
