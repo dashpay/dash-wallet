@@ -632,20 +632,8 @@ class CrowdNodeApiAggregator @Inject constructor(
                 checkIfAddressIsInUse(address)
             }
             OnlineAccountStatus.Creating, OnlineAccountStatus.SigningUp -> {
-                if (status == OnlineAccountStatus.Creating && globalConfig.crowdNodePrimaryAddress.isNotEmpty()) {
-                    // The bug from 7.5.0 -> 7.5.1 upgrade scenario.
-                    // The actual state is Done, there is a linked account.
-                    // TODO: remove when there is no 7.5.0 in the wild
-                    log.info("found 7.5.0 -> 7.5.1 upgrade bug, resolving")
-                    changeOnlineStatus(OnlineAccountStatus.Done, save = true)
-                    log.info(
-                        "found online account, status: ${OnlineAccountStatus.Done}, " +
-                            "account: ${address.toBase58()}, primary: $primaryAddressStr"
-                    )
-                } else {
-                    // This should not happen - this method is reachable only for a linked account case
-                    throw IllegalStateException("Invalid state found in tryRestoreLinkedOnlineAccount: $status")
-                }
+                // This should not happen - this method is reachable only for a linked account case
+                throw IllegalStateException("Invalid state found in tryRestoreLinkedOnlineAccount: $status")
             }
             else -> {
                 changeOnlineStatus(status, save = false)
