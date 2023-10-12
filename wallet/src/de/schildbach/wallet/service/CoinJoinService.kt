@@ -66,9 +66,10 @@ enum class CoinJoinMode {
 }
 
 interface CoinJoinService {
+    var mode: CoinJoinMode
+    val mixingStatus: MixingStatus
+
     fun needsToMix(amount: Coin): Boolean
-    fun getMode(): CoinJoinMode
-    fun setMode(mode: CoinJoinMode)
     suspend fun configureMixing(
         amount: Coin,
         requestKeyParameter: RequestKeyParameter,
@@ -77,7 +78,6 @@ interface CoinJoinService {
     )
 
     suspend fun prepareAndStartMixing()
-    fun getMixingStatus(): MixingStatus
     suspend fun waitForMixing()
     suspend fun waitForMixingWithException()
 }
@@ -115,8 +115,9 @@ class CoinJoinMixingService @Inject constructor(
     private var mixingCompleteListeners: ArrayList<MixingCompleteListener> = arrayListOf()
     private var sessionCompleteListeners: ArrayList<SessionCompleteListener> = arrayListOf()
 
-    private var mixingStatus: MixingStatus = MixingStatus.NOT_STARTED
-    private var mode: CoinJoinMode = CoinJoinMode.BASIC
+    override var mode: CoinJoinMode = CoinJoinMode.BASIC
+    override var mixingStatus: MixingStatus = MixingStatus.NOT_STARTED
+        private set
 
     private val coroutineScope = CoroutineScope(
         Executors.newFixedThreadPool(2).asCoroutineDispatcher(),
@@ -250,21 +251,9 @@ class CoinJoinMixingService @Inject constructor(
         }
     }
 
-    override fun getMixingStatus(): MixingStatus {
-        return mixingStatus
-    }
-
     override fun needsToMix(amount: Coin): Boolean {
         return walletApplication.wallet?.getBalance(Wallet.BalanceType.COINJOIN_SPENDABLE)
             ?.isLessThan(amount) ?: false
-    }
-
-    override fun getMode(): CoinJoinMode {
-        return mode
-    }
-
-    override fun setMode(mode: CoinJoinMode) {
-        this.mode = mode
     }
 
     override suspend fun configureMixing(

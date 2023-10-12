@@ -19,9 +19,12 @@ package de.schildbach.wallet.ui
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletBalanceWidgetProvider
+import de.schildbach.wallet.service.MixingStatus
+import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.AboutActivity
 import de.schildbach.wallet_test.R
@@ -36,6 +39,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
+import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -76,6 +80,19 @@ class SettingsActivity : LockScreenActivity() {
 
         binding.rescanBlockchain.setOnClickListener { resetBlockchain() }
         binding.notifications.setOnClickListener { systemActions.openNotificationSettings() }
+        binding.coinjoin.setOnClickListener {
+            lifecycleScope.launch {
+                val shouldShowFirstTimeInfo = viewModel.shouldShowCoinJoinInfo()
+
+                if (shouldShowFirstTimeInfo) {
+                    viewModel.setCoinJoinInfoShown()
+                }
+
+                val intent = Intent(this@SettingsActivity, CoinJoinActivity::class.java)
+                intent.putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, shouldShowFirstTimeInfo)
+                startActivity(intent)
+            }
+        }
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
@@ -88,6 +105,20 @@ class SettingsActivity : LockScreenActivity() {
 
         binding.votingDashPaySwitch.setOnCheckedChangeListener { _, isChecked ->
             viewModel.setVoteDashPay(isChecked)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        if (viewModel.coinJoinMixingStatus == MixingStatus.MIXING ||
+            viewModel.coinJoinMixingStatus == MixingStatus.PAUSED
+        ) {
+            // TODO: Observe progress
+            binding.coinjoinSubtitleIcon.isVisible = true
+            binding.coinjoinSubtitle.text = getString(R.string.coinjoin_progress, "0.012", "0.028")
+        } else {
+            binding.coinjoinSubtitle.text = getText(R.string.turned_off)
         }
     }
 

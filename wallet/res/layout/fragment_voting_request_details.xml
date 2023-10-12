@@ -272,7 +272,7 @@
 
     <Button
         android:id="@+id/cancel_request_button"
-        style="@style/Button.Primary.Large.Red"
+        style="@style/Button.Primary.Large.LightRed"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="15dp"
