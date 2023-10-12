@@ -30,18 +30,18 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.data.Status
+import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.TickerFlow
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.*
@@ -138,7 +138,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             .onEach { status ->
                 cancelTrackingJob()
                 val initialDelay = if (isOnlineStatusRestored) 0.seconds else 10.seconds
-                when(status) {
+                when (status) {
                     OnlineAccountStatus.Linking -> startTrackingLinked(linkingApiAddress!!)
                     OnlineAccountStatus.Validating -> startTrackingValidated(accountAddress!!, initialDelay)
                     OnlineAccountStatus.Confirming -> startTrackingConfirmed(accountAddress!!, initialDelay)
@@ -197,10 +197,12 @@ class CrowdNodeApiAggregator @Inject constructor(
         log.info("CrowdNode persistent sign up")
 
         val crowdNodeWorker = OneTimeWorkRequestBuilder<CrowdNodeWorker>()
-            .setInputData(workDataOf(
-                CrowdNodeWorker.API_REQUEST to CrowdNodeWorker.SIGNUP_CALL,
-                CrowdNodeWorker.ACCOUNT_ADDRESS to accountAddress.toBase58()
-            ))
+            .setInputData(
+                workDataOf(
+                    CrowdNodeWorker.API_REQUEST to CrowdNodeWorker.SIGNUP_CALL,
+                    CrowdNodeWorker.ACCOUNT_ADDRESS to accountAddress.toBase58()
+                )
+            )
             .build()
 
         WorkManager.getInstance(appContext)
@@ -323,20 +325,22 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     override suspend fun getWithdrawalLimit(period: WithdrawalLimitPeriod): Coin {
-        return Coin.valueOf(when(period) {
-            WithdrawalLimitPeriod.PerTransaction -> {
-                config.get(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_TX) ?:
-                    CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_TX.value
+        return Coin.valueOf(
+            when (period) {
+                WithdrawalLimitPeriod.PerTransaction -> {
+                    config.get(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_TX)
+                        ?: CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_TX.value
+                }
+                WithdrawalLimitPeriod.PerHour -> {
+                    config.get(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_HOUR)
+                        ?: CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_HOUR.value
+                }
+                WithdrawalLimitPeriod.PerDay -> {
+                    config.get(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_DAY)
+                        ?: CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_DAY.value
+                }
             }
-            WithdrawalLimitPeriod.PerHour -> {
-                config.get(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_HOUR) ?:
-                    CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_HOUR.value
-            }
-            WithdrawalLimitPeriod.PerDay -> {
-                config.get(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_DAY) ?:
-                    CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_DAY.value
-            }
-        })
+        )
     }
 
     override fun hasAnyDeposits(): Boolean {
@@ -373,7 +377,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                     if (!afterWithdrawal) {
                         // balance changed, no need to retry anymore
                         break
-                    } else if (lastBalance - (currentBalance.data?.value?: 0L) >= minimumWithdrawal.value) {
+                    } else if (lastBalance - (currentBalance.data?.value ?: 0L) >= minimumWithdrawal.value) {
                         // balance changed, no need to retry anymore
                         break
                     }
@@ -494,7 +498,10 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
 
         if (result.isSuccessful) {
-            log.info("SendMessage not received, status: ${result.body()?.messageStatus ?: "null"}. Result: ${result.body()?.result}")
+            log.info(
+                "SendMessage not received, status: ${result.body()?.messageStatus ?: "null"}. " +
+                    "Result: ${result.body()?.result}"
+            )
             apiError.value = MessageStatusException(result.body()?.result ?: "")
             return false
         }
@@ -618,7 +625,10 @@ class CrowdNodeApiAggregator @Inject constructor(
         when (status) {
             OnlineAccountStatus.None -> {}
             OnlineAccountStatus.Linking -> {
-                log.info("found linking online account in progress, account: ${address.toBase58()}, primary: $primaryAddressStr")
+                log.info(
+                    "found linking online account in progress, " +
+                        "account: ${address.toBase58()}, primary: $primaryAddressStr"
+                )
                 checkIfAddressIsInUse(address)
             }
             OnlineAccountStatus.Creating, OnlineAccountStatus.SigningUp -> {
@@ -628,7 +638,10 @@ class CrowdNodeApiAggregator @Inject constructor(
                     // TODO: remove when there is no 7.5.0 in the wild
                     log.info("found 7.5.0 -> 7.5.1 upgrade bug, resolving")
                     changeOnlineStatus(OnlineAccountStatus.Done, save = true)
-                    log.info("found online account, status: ${OnlineAccountStatus.Done}, account: ${address.toBase58()}, primary: $primaryAddressStr")
+                    log.info(
+                        "found online account, status: ${OnlineAccountStatus.Done}, " +
+                            "account: ${address.toBase58()}, primary: $primaryAddressStr"
+                    )
                 } else {
                     // This should not happen - this method is reachable only for a linked account case
                     throw IllegalStateException("Invalid state found in tryRestoreLinkedOnlineAccount: $status")
@@ -636,7 +649,10 @@ class CrowdNodeApiAggregator @Inject constructor(
             }
             else -> {
                 changeOnlineStatus(status, save = false)
-                log.info("found online account, status: ${status.name}, account: ${address.toBase58()}, primary: $primaryAddressStr")
+                log.info(
+                    "found online account, status: ${status.name}, " +
+                        "account: ${address.toBase58()}, primary: $primaryAddressStr"
+                )
             }
         }
     }
@@ -673,8 +689,10 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private fun restoreCreatedOnlineAccount(address: Address) {
-        val statusOrdinal = runBlocking { config.get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
-                ?: OnlineAccountStatus.None.ordinal }
+        val statusOrdinal = runBlocking {
+            config.get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
+                ?: OnlineAccountStatus.None.ordinal
+        }
 
         when (val status = OnlineAccountStatus.values()[statusOrdinal]) {
             OnlineAccountStatus.None -> statusScope.launch { checkIfEmailRegistered(address) }
