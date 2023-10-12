@@ -107,14 +107,33 @@
         android:id="@+id/battery_optimization"
         style="@style/MenuRow.Internal">
 
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
         <TextView
             android:id="@+id/battery_settings_title"
             style="@style/MenuRowTitle.Internal"
-            android:text="@string/battery_optimization_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            android:text="@string/battery_optimization_title" />
 
+        <TextView
+            android:id="@+id/battery_settings_subtitle"
+            style="@style/Overline.Medium.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="@id/battery_settings_title"
+            app:layout_constraintTop_toBottomOf="@id/battery_settings_title"
+            android:text="@string/battery_optimization_subtitle_unrestricted" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
         <ImageView
             style="@style/MenuRowArrow"
             app:layout_constraintBottom_toBottomOf="parent"

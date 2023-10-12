@@ -28,10 +28,8 @@ import android.nfc.NfcAdapter;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.LocaleList;
 import android.os.PowerManager;
 import android.provider.Settings;
-import android.telephony.TelephonyManager;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -43,19 +41,15 @@ import com.google.common.collect.ImmutableList;
 
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Currency;
-import java.util.Locale;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.EncryptKeysDialogFragment;
@@ -417,9 +411,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (ContextCompat.checkSelfPermission(walletApplication, Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) == PackageManager.PERMISSION_GRANTED &&
                 !powerManager.isIgnoringBatteryOptimizations(walletApplication.getPackageName())) {
             AdaptiveDialog.create(
-                    R.drawable.ic_battery_optimization,
-                getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_title),
-                getString(R.string.alert_dialogs_fragment_battery_optimization_dialog_message),
+                    R.drawable.ic_bolt_border,
+                getString(R.string.battery_optimization_dialog_optimized_title),
+                getString(R.string.battery_optimization_dialog_message_optimized),
                 getString(R.string.permission_deny),
                 getString(R.string.permission_allow)
             ).show(this, (allow) -> {
