@@ -35,7 +35,6 @@ import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.data.TaxCategory
-import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -50,11 +49,10 @@ import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWelcomeToApi
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
+import retrofit2.HttpException
 import java.io.IOException
-import java.net.URLEncoder
 import java.util.concurrent.Executors
 import javax.inject.Inject
-import kotlin.math.min
 import kotlin.math.pow
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
@@ -94,7 +92,6 @@ class CrowdNodeApiAggregator @Inject constructor(
     private val analyticsService: AnalyticsService,
     private val config: CrowdNodeConfig,
     private val globalConfig: Configuration,
-    private val securityFunctions: AuthenticationManager,
     private val transactionMetadataProvider: TransactionMetadataProvider,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
@@ -296,29 +293,19 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         return try {
             apiError.value = null
+            val result = webApi.requestWithdrawal(accountAddress, amount)
 
-            val maxPermil = ApiCode.WithdrawAll.code
-            val requestPermil = min(amount.value * maxPermil / balance.value, maxPermil)
-            val requestValue = CrowdNodeConstants.API_OFFSET + Coin.valueOf(requestPermil)
-            val topUpTx = blockchainApi.topUpAddress(accountAddress, requestValue + Constants.ECONOMIC_FEE)
-            log.info("topUpTx id: ${topUpTx.txId}")
-            val withdrawTx = blockchainApi.requestWithdrawal(accountAddress, requestValue)
-            log.info("withdrawTx id: ${withdrawTx.txId}")
-
-            responseScope.launch {
-                try {
-                    val txResponse = blockchainApi.waitForWithdrawalResponse(requestValue)
-                    log.info("got withdrawal queue response: ${txResponse.txId}")
-                    val txWithdrawal = blockchainApi.waitForWithdrawalReceived()
-                    log.info("got withdrawal: ${txWithdrawal.txId}")
-                } catch (ex: Exception) {
-                    handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
-                }
+            if (result.messageStatus.lowercase() == MESSAGE_RECEIVED_STATUS) {
+                log.info("Withdrawal request sent successfully")
                 refreshBalance(retries = 3, afterWithdrawal = true)
+                true
+            } else {
+                log.info("Withdrawal request not received, status: ${result.messageStatus}. Result: ${result.result}")
+                apiError.value = MessageStatusException(result.result ?: "")
+                false
             }
-
-            return true
-        } catch (ex: Exception) {
+        } catch (ex: HttpException) {
+            log.info("SendMessage error, code: ${ex.code()}, error: ${ex.response()?.errorBody()?.string()}")
             handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
             false
         }
@@ -417,9 +404,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         requireNotNull(address) { "Account address is null, make sure to sign up" }
 
         try {
-            val signature = securityFunctions.signMessage(address, email)
-
-            if (sendSignedEmailMessage(address, email, signature)) {
+            if (sendSignedEmailMessage(address, email)) {
                 changeOnlineStatus(OnlineAccountStatus.Creating)
             }
         } catch (ex: Exception) {
@@ -481,34 +466,25 @@ class CrowdNodeApiAggregator @Inject constructor(
             .launchIn(statusScope)
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
-    private suspend fun sendSignedEmailMessage(
-        address: Address,
-        email: String,
-        signature: String
-    ): Boolean {
+    private suspend fun sendSignedEmailMessage(address: Address, email: String): Boolean {
         log.info("Sending signed email message")
-        val encodedSignature = URLEncoder.encode(signature, "utf-8")
-        val result = webApi.sendSignedMessage(address.toBase58(), email, encodedSignature)
+        val result = webApi.registerEmail(address, email)
 
-        if (result.isSuccessful && result.body()!!.messageStatus.lowercase() == MESSAGE_RECEIVED_STATUS) {
-            log.info("Signed email sent successfully")
-            config.set(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID, result.body()!!.id)
-            return true
-        }
-
-        if (result.isSuccessful) {
-            log.info(
-                "SendMessage not received, status: ${result.body()?.messageStatus ?: "null"}. " +
-                    "Result: ${result.body()?.result}"
-            )
-            apiError.value = MessageStatusException(result.body()?.result ?: "")
+        return try {
+            if (result.messageStatus.lowercase() == MESSAGE_RECEIVED_STATUS) {
+                log.info("Signed email sent successfully")
+                config.set(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID, result.id)
+                true
+            } else {
+                log.info("SendMessage not received, status: ${result.messageStatus}. Result: ${result.result}")
+                apiError.value = MessageStatusException(result.result ?: "")
+                false
+            }
+        } catch (ex: HttpException) {
+            log.info("SendMessage error, code: ${ex.code()}, error: ${ex.response()?.errorBody()?.string()}")
+            apiError.value = MessageStatusException(ex.response()?.errorBody()?.string() ?: "")
             return false
         }
-
-        log.info("SendMessage error, code: ${result.code()}, error: ${result.errorBody()?.string()}")
-        apiError.value = MessageStatusException(result.errorBody()?.string() ?: "")
-        return false
     }
 
     override suspend fun reset() {
