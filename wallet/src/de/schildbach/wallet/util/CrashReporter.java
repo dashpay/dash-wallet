@@ -183,14 +183,13 @@ public class CrashReporter {
             final PackageInfoProvider packageInfoProvider,
             final Configuration configuration,
             final Wallet wallet,
-            final WalletApplication application
+            final PowerManager powerManager
     ) throws IOException {
         final PackageInfo pi = packageInfoProvider.getPackageInfo();
         final Calendar calendar = new GregorianCalendar(UTC);
-        final PowerManager powerManager = application.getSystemService(PowerManager.class);
 
         report.append("Version: " + pi.versionName + " (" + pi.versionCode + ")\n");
-        report.append("APK Hash: ").append(application.apkHash().toString()).append("\n");
+        report.append("APK Hash: ").append(packageInfoProvider.apkHash().toString()).append("\n");
         report.append("Package: " + pi.packageName + "\n");
         String installer = packageInfoProvider.getInstallerPackageName();
         report.append("Installer: " + (installer != null ? installer : "manual") + "\n");
@@ -198,7 +197,7 @@ public class CrashReporter {
         report.append("Flavor: " + BuildConfig.FLAVOR + "\n");
         report.append("Build Type: " + BuildConfig.BUILD_TYPE + "\n");
         final boolean isIgnoringBatteryOptimization =
-                powerManager.isIgnoringBatteryOptimizations(application.getPackageName());
+                powerManager.isIgnoringBatteryOptimizations(packageInfoProvider.getPackageInfo().packageName);
         report.append("Battery optimization: ").append(isIgnoringBatteryOptimization ? "no" : "yes").append("\n");
         report.append("Timezone: " + TimeZone.getDefault().getID() + "\n");
         calendar.setTimeInMillis(System.currentTimeMillis());

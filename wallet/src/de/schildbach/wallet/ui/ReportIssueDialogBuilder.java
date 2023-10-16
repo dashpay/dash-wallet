@@ -241,7 +241,7 @@ public abstract class ReportIssueDialogBuilder extends BaseAlertDialogBuilder {
             @Override
             protected CharSequence collectApplicationInfo() throws IOException {
                 final StringBuilder applicationInfo = new StringBuilder();
-                CrashReporter.appendApplicationInfo(applicationInfo, packageInfoProvider, configuration, wallet, application);
+                CrashReporter.appendApplicationInfo(applicationInfo, packageInfoProvider, configuration, wallet, application.getSystemService(PowerManager.class));
                 return applicationInfo;
             }
 

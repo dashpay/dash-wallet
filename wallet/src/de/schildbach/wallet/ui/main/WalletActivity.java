@@ -220,7 +220,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                             packageInfoProvider,
                             configuration,
                             walletData.getWallet(),
-                            walletApplication
+                            walletApplication.getSystemService(PowerManager.class)
                     );
                     return applicationInfo;
                 }

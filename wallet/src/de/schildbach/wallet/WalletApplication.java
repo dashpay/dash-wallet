@@ -1119,15 +1119,4 @@ public class WalletApplication extends MultiDexApplication
     public WalletExtension[] getWalletExtensions() {
         return new WalletExtension[] {authenticationGroupExtension};
     }
-
-    public final HashCode apkHash() throws IOException {
-        final Hasher hasher = Hashing.sha256().newHasher();
-        final FileInputStream is = new FileInputStream(getPackageCodePath());
-        final byte[] buf = new byte[4096];
-        int read;
-        while (-1 != (read = is.read(buf)))
-            hasher.putBytes(buf, 0, read);
-        is.close();
-        return hasher.hash();
-    }
 }
