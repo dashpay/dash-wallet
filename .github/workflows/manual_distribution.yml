@@ -61,7 +61,7 @@ jobs:
     - name: set up JDK
       uses: actions/setup-java@v3
       with:
-        java-version: '16'
+        java-version: '17'
         distribution: 'adopt'
         cache: gradle
 

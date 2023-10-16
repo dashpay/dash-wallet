@@ -18,7 +18,6 @@
     <!-- Explore screen -->
     <string name="explore_dash">Prozkoumejte Dash</string>
     <string name="explore_title">Prozkoumat</string>
-    <string name="explore_subtitle">Nakupujte pomocí DASH snadno na více než 155 000 místech a u online obchodníků.</string>
     <string name="explore_merchants_title">Kde nakupovat?</string>
     <string name="explore_merchants_subtitle">Najděte obchodníky, kteří přijímají Dash.</string>
     <string name="explore_atms_title">Bankomaty</string>
@@ -158,11 +157,5 @@
     <string name="buy_gift_card_with_dash_text">Koupit dárkový poukaz za Dash.</string>
     <string name="redeem_gift_card_text">Uplatněte dárkový poukaz online během několika sekund nebo u pokladny.</string>
 
-    <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">Probíhá synchronizace... Výsledky nemusí být kompletní.</string>
-    <string name="sync_in_progress_error">Probíhá synchronizace... Došlo k chybě.</string>
-    <string name="sync_in_progress_canceled">Synchronizace zrušena... Další pokus bude proveden později.</string>
-
     <string name="sync_in_progress_file_not_found">Chyba sestavení: Databáze nenalezena!</string>
-    <string name="sync_in_progress_network_error">Synchronizace byla přerušena... Síť je offline nebo nedostupná</string>
-</resources>
+    </resources>

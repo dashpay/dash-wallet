@@ -17,22 +17,27 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.WalletFactory
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.MnemonicException
-import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.Configuration
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-class OnboardingViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class OnboardingViewModel @Inject constructor(
+    private val walletApplication: WalletApplication,
+    private val walletFactory: WalletFactory,
+    private val configuration: Configuration
+) : ViewModel() {
 
     private val log = LoggerFactory.getLogger(OnboardingViewModel::class.java)
-
-    private val walletApplication = application as WalletApplication
 
     internal val showToastAction = SingleLiveEvent<String>()
     internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
@@ -41,13 +46,10 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
 
     fun createNewWallet() {
         walletApplication.initEnvironmentIfNeeded()
-        val wallet = Wallet(Constants.NETWORK_PARAMETERS)
-        for (extension in walletApplication.getWalletExtensions()) {
-            wallet.addExtension(extension)
-        }
+        val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS)
         log.info("successfully created new wallet")
         walletApplication.setWallet(wallet)
-        walletApplication.configuration.armBackupSeedReminder()
+        configuration.armBackupSeedReminder()
         finishCreateNewWalletAction.call(Unit)
     }
 
@@ -58,7 +60,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
             if (!walletApplication.isWalletUpgradedToBIP44) {
                 walletApplication.wallet!!.addKeyChain(Constants.BIP44_PATH)
             }
-            walletApplication.configuration.armBackupSeedReminder()
+            configuration.armBackupSeedReminder()
 
             finishUnecryptedWalletUpgradeAction.call(Unit)
         }

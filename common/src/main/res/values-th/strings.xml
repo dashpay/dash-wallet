@@ -58,6 +58,7 @@
     <string name="share_address">แชร์ที่อยู่</string>
     <string name="verify">ตรวจสอบ</string>
     <string name="receive_enter_amount_button">ระบุจำนวน</string>
+    <string name="account_create">สร้างบัญชี</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">ค้นหา</string>
@@ -75,12 +76,19 @@
     <string name="select_currency">เลือกสกุลเงิน</string>
     <string name="send_coins_error_dusty_send">จำนวนเงินน้อยเกินไปที่จะส่ง</string>
     <string name="send_coins_error_insufficient_money">ยอดเงินไม่เพียงพอ</string>
+    <string name="syncing">กำลังซิงค์</string>
     <string name="no_connection">ไม่มีการเชื่อมต่ออินเทอร์เน็ต</string>
     <string name="rate_not_available">ไม่สามารถใช้ได้</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">ดูเหมือนว่าคุณกำลังล้างกระเป๋าเงินของคุณ</string>
     <string name="empty_wallet_crowdnode_warning">โปรดทราบว่าคุณจะไม่สามารถถอนเงินจาก CrowdNode ไปยังกระเป๋าเงินนี้ได้จนกว่าคุณจะเพิ่มยอดคงเหลือเป็น 0.0003 Dash</string>
-    <string name="syncing">กำลังซิงค์</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">การชำระเงินไม่ได้รับการยอมรับ</string>
+    <string name="payment_protocol_default_error_title">การชำระเงินผิดพลาด</string>
+    <string name="payment_request_problem_message">เซิร์ฟเวอร์การชำระเงินของคุณไม่สามารถดำเนินการโดยเซิร์ฟเวอร์นี้ได้ โปรดสอบถามกับทางร้านค้า</string>
+    <string name="exchange_rate_not_found">ไม่พบอัตราแลกเปลี่ยน</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">รับโดยตรงไปยังกระเป๋าเงิน Dash</string>

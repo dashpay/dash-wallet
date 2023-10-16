@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">스테이킹을 시작하려면 크라우드노드에 계정을 만들거나 기존 계정에 연결하세요.</string>
     <string name="crowdnode_account">크라우드노드 계정</string>
     <string name="new_account">새로운 크라우드노드 계정</string>
-    <string name="account_create">계정 생성하기</string>
     <string name="accept_terms_response">약관에 동의해주십시오</string>
     <string name="accept_terms">약관 동의하기</string>
     <string name="welcome_response">계정이 생성되었습니다</string>

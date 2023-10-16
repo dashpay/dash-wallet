@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">برای آغاز سپرده‌گذاری، ابتدا یک حساب در کراودنود ایجاد کنید و یا به یک حساب موجود در آن متصل شوید. </string>
     <string name="crowdnode_account">حساب کراودنود</string>
     <string name="new_account">ایجاد حساب جدید کراودنود</string>
-    <string name="account_create">ایجاد حساب</string>
     <string name="accept_terms_response">لطفا شرایط استفاده را بپذیرید</string>
     <string name="accept_terms">پذیرش شرایط</string>
     <string name="welcome_response">حساب ایجاد شد</string>

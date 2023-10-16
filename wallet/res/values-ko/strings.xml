@@ -367,7 +367,6 @@
     <string name="activity_security_hide_balance">잔고 자동숨김</string>
     <string name="reset_to_default">기본값으로 재설정하기</string>
 
-    <string name="payment_protocol_default_error_title">지불 오류</string>
     <string name="payment_protocol_insufficient_funds_error_title">잔액 부족</string>
     <string name="payment_protocol_insufficient_funds_error_message">이 거래를 완료하기 위해 필요한 자금이 충분하지 않습니다</string>
 
@@ -375,7 +374,6 @@
     <string name="select_a_service">서비스를 선택하십시오</string>
     <string name="activity_buy_and_sell_dash_filter">필터</string>
     <string name="clear_filter">필터 초기화</string>
-    <string name="select_currency">통화 선택</string>
     <string name="reason">이유</string>
     <string name="link_account">당신의 계정을 연결하세요</string>
     <string name="buy_no_account_needed">대시 구매하기 · 계정이 필요하지 않습니다</string>
@@ -383,7 +381,7 @@
     <string name="please_log_in_to_your_coinbase_account">코인베이스 계정에 로그인 하십시오</string>
     <string name="log_in">로그인</string>
 
-    <string name="recipient_address">지갑 주소</string>
+    <string name="recipient_address">수신자 주소</string>
     <string name="show_clipboard">클립보드 내용 보이기</string>
     <string name="tap_to_paste">클립보드의 주소를 탭하여 붙여넣기</string>
     <string name="not_dash_address">대시 주소 혹은 URL 요청이 유효하지 않습니다</string>

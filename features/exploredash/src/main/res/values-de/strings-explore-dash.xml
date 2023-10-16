@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Explore Dash</string>
     <string name="explore_title">Explore</string>
-    <string name="explore_subtitle">Bezahle einfach mit deinen DASH bei über 155000 Verkaufsstellen und Online-Händlern</string>
+    <string name="explore_subtitle">Finde Händler die Dash akzeptieren, Orte wo du Dash kaufen kannst und Wege wie du Einkommen damit erzielen kannst.</string>
     <string name="explore_merchants_title">Wo bezahlen?</string>
     <string name="explore_merchants_subtitle">Finde Händler, die Dash als Zahlungsmethode akzeptieren.</string>
     <string name="explore_atms_title">ATMs</string>
@@ -76,6 +76,7 @@
     <string name="explore_payment_method">Zahlungsmethode</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Gutscheinkarte</string>
+    <string name="explore_filter_gift_cards">Geschenkkarten</string>
     <string name="explore_radius">Radius</string>
     <string name="explore_location">Ort</string>
     <string name="explore_current_location">Aktueller Ort</string>
@@ -153,10 +154,12 @@
     <string name="redeem_gift_card_text">Die Geschenkkarte kann innerhalb von Sekunden online oder an der Kasse eingelöst werden.</string>
 
     <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">Die Synchronisierung läuft... Die Ergebnisse sind möglicherweise nicht vollständig.</string>
-    <string name="sync_in_progress_error">Die Synchronisierung läuft... Es gab einen Fehler.</string>
-    <string name="sync_in_progress_canceled">Synchronisierung abgebrochen... Zu einem späteren Zeitpunkt wird ein neuer Versuch unternommen.</string>
+    <string name="sync_in_progress_not_complete">Synchronisierung läuft... Ergebnisse können unvollständig sein.</string>
+    <string name="sync_in_progress_error">Synchronisierung läuft... Es ist ein Fehler aufgetreten.</string>
+    <string name="sync_in_progress_canceled">Synchronisierung abgebrochen... Ein weiterer Versuch wird später durchgeführt werden.</string>
 
     <string name="sync_in_progress_file_not_found">Build-Fehler: Datenbank nicht gefunden!</string>
-    <string name="sync_in_progress_network_error">Synchronisierung unterbrochen... Netzwerk offline oder nicht erreichbar</string>
-</resources>
+    <string name="sync_in_progress_network_error">Synchronisierung unterbrochen... Das Netzwerk ist offline oder nicht erreichbar.</string>
+
+
+    </resources>

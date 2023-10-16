@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Odkryj Dash</string>
     <string name="explore_title">Odkryj</string>
-    <string name="explore_subtitle">Rób zakupy z łatwością w ponad 155 000 sklepach i stronach internetowych.</string>
+    <string name="explore_subtitle">Znajdź sprzedawców którzy akceptują Dash, gdzie go zakupić oraz jak zarabiać dzięki niemu.</string>
     <string name="explore_merchants_title">Gdzie Kupować?</string>
     <string name="explore_merchants_subtitle">Znajdź sprzedawcę, który przyjmuje płatności w Dash. </string>
     <string name="explore_atms_title">Bankomaty</string>
@@ -80,6 +80,7 @@
     <string name="explore_payment_method">Metody Płatności</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Karta Podarunkowa</string>
+    <string name="explore_filter_gift_cards">Karty podarunkowe</string>
     <string name="explore_radius">Promień</string>
     <string name="explore_location">Miejsce</string>
     <string name="explore_current_location">Obecne miejsce</string>
@@ -161,10 +162,12 @@
     <string name="redeem_gift_card_text">Wymień swoją kartę podarunkową w ciągu kilku sekund, online  lub bezpośrednio u kasjera.</string>
 
     <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">Trwa synchronizacja... Wyniki mogą nie być kompletne</string>
-    <string name="sync_in_progress_error">Wystąpił błąd podczas synchronizacji</string>
-    <string name="sync_in_progress_canceled">Synchronizacja została anulowana... kolejna próba zostanie podjęta później.</string>
+    <string name="sync_in_progress_not_complete">Synchronizacja w toku... Wyniki mogą nie być kompletne.</string>
+    <string name="sync_in_progress_error">Synchronizacja w toku... Wystąpił błąd.</string>
+    <string name="sync_in_progress_canceled">Synchronizacja anulowana… Kolejna próba zostanie podjęta później.</string>
 
     <string name="sync_in_progress_file_not_found">Błąd Kompilacji: nie znaleziono bazy danych!</string>
-    <string name="sync_in_progress_network_error">Synchrnizacja została przerwana... Sieć jest offline lub niedostępna</string>
-</resources>
+    <string name="sync_in_progress_network_error">Synchronizacja przerwana… Sieć jest w trybie offline lub nieosiągalna</string>
+
+
+    </resources>

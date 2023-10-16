@@ -201,15 +201,21 @@
         <action
             android:id="@+id/buySell_to_overview"
             app:destination="@id/integrationOverviewFragment"
-            app:enterAnim="@anim/slide_in_bottom"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/buySell_to_coinbase"
+            app:destination="@id/nav_coinbase"
+            app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
 
         <action
             android:id="@+id/buySell_to_uphold"
             app:destination="@id/upholdPortalFragment"
-            app:enterAnim="@anim/slide_in_bottom"
-            app:popEnterAnim="@anim/activity_stay"
+            app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
     </fragment>
@@ -224,11 +230,19 @@
             android:name="service"
             android:defaultValue="COINBASE"
             app:argType="de.schildbach.wallet.data.ServiceType" />
+
+        <action
+            android:id="@+id/overview_to_coinbase"
+            app:popUpTo="@id/buySellFragment"
+            app:destination="@id/nav_coinbase"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
         android:id="@+id/upholdPortalFragment"
-        android:name="org.dash.wallet.integration.uphold.ui.UpholdPortalFragment"
+        android:name="org.dash.wallet.integrations.uphold.ui.UpholdPortalFragment"
         android:label="upholdPortalFragment"
         tools:layout="@layout/fragment_integration_portal" />
 
@@ -271,4 +285,5 @@
         tools:layout="@layout/fragment_address_input" />
 
     <include app:graph="@navigation/nav_explore" />
+    <include app:graph="@navigation/nav_coinbase" />
 </navigation>

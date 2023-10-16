@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Исследовать Dash</string>
     <string name="explore_title">Исследовать</string>
-    <string name="explore_subtitle">Совершайте покупки используя DASH в более чем 155 000 магазинах и онлайн</string>
+    <string name="explore_subtitle">Узнайте, где принимают Dash, где можно купить монеты и как получить доход с их помощью. </string>
     <string name="explore_merchants_title">Где потратить?</string>
     <string name="explore_merchants_subtitle">Найдите места где принимают DASH в качестве оплаты.</string>
     <string name="explore_atms_title">Банкоматы</string>
@@ -80,6 +80,7 @@
     <string name="explore_payment_method">Способ оплаты</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Подарочная карта</string>
+    <string name="explore_filter_gift_cards">Подарочные карты</string>
     <string name="explore_radius">Радиус</string>
     <string name="explore_location">Место нахождения</string>
     <string name="explore_current_location">Текущее местоположение</string>
@@ -161,10 +162,12 @@
     <string name="redeem_gift_card_text">Используйте подарочную карту сразу же онлайн или в кассе.</string>
 
     <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">Синхронизация... Результаты могут быть неполными.</string>
-    <string name="sync_in_progress_error">Синхронизация... Произошла ошибка.</string>
-    <string name="sync_in_progress_canceled">Синхронизация отменена. Позже будет выполнена ещё одна попытка.</string>
+    <string name="sync_in_progress_not_complete">Синхронизация… Результаты могут быть неполными.</string>
+    <string name="sync_in_progress_error">Синхронизация… Произошла ошибка.</string>
+    <string name="sync_in_progress_canceled">Синхронизация отменена… Позже будет выполнена ещё одна попытка.</string>
 
     <string name="sync_in_progress_file_not_found">Ошибка сборки: не найдена база данных!</string>
-    <string name="sync_in_progress_network_error">Синхронизация прервана... Сеть отключена или недоступна</string>
-</resources>
+    <string name="sync_in_progress_network_error">Синхронизация прервана… Сеть отключена или недоступна</string>
+
+
+    </resources>

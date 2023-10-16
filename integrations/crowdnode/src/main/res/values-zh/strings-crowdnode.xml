@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">开始质押前, 需要创建一个CrowdNode账户或连接到现有账户.</string>
     <string name="crowdnode_account">CrowdNode 账户</string>
     <string name="new_account">新的CrowdNode账户</string>
-    <string name="account_create">创建账户</string>
     <string name="accept_terms_response">请接受条款</string>
     <string name="accept_terms">接受条款</string>
     <string name="welcome_response">已创建账户</string>

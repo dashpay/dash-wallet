@@ -74,14 +74,15 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
             action: suspend () -> T
         ): T {
             val dialog = progress(message)
-            dialog.show(activity) { }
-            val result = action.invoke()
 
-            if (dialog.activity != null && dialog.isAdded) {
-                dialog.dismissAllowingStateLoss()
+            try {
+                dialog.show(activity) { }
+                return action.invoke()
+            } finally {
+                if (dialog.activity != null && dialog.isAdded) {
+                    dialog.dismissAllowingStateLoss()
+                }
             }
-
-            return result
         }
 
         @JvmStatic

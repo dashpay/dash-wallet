@@ -58,6 +58,7 @@
     <string name="share_address">Bagikan Alamat</string>
     <string name="verify">Memeriksa</string>
     <string name="receive_enter_amount_button">Tentukan Jumlah</string>
+    <string name="account_create">Buat Akun</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Cari</string>
@@ -75,11 +76,18 @@
     <string name="select_currency">Pilih mata uang</string>
     <string name="send_coins_error_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
     <string name="send_coins_error_insufficient_money">Dana tidak mencukupi</string>
+    <string name="syncing">Menyingkronkan:</string>
     <string name="rate_not_available">Tak tersedia</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">Sepertinya Anda sedang mengosongkan Dompet Dash Anda</string>
     <string name="empty_wallet_crowdnode_warning">Harap dicatat, Anda tidak akan dapat menarik dana Anda dari CrowdNode ke dompet ini sampai saldo Anda meningkat menjadi 0,0003 Dash.</string>
-    <string name="syncing">Menyingkronkan:</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">Pembayaran tidak diakui</string>
+    <string name="payment_protocol_default_error_title">Kesalahan pembayaran</string>
+    <string name="payment_request_problem_message">Pembayaran Anda tidak dapat diproses oleh server, harap tanyakan kepada pedagang</string>
+    <string name="exchange_rate_not_found">Tidak dapat menemukan nilai tukar. </string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Terima langsung ke Dash Wallet</string>

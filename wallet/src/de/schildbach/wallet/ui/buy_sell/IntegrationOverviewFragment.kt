@@ -27,16 +27,14 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.coinbase.CoinBaseWebClientActivity
-import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
+import org.dash.wallet.integrations.coinbase.ui.CoinBaseWebClientActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentIntegrationOverviewBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overview) {
     private val binding by viewBinding(FragmentIntegrationOverviewBinding::bind)
@@ -95,8 +93,7 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
             }
 
             if (success) {
-                startActivity(Intent(requireContext(), CoinbaseActivity::class.java))
-                findNavController().popBackStack()
+                safeNavigate(IntegrationOverviewFragmentDirections.overviewToCoinbase())
             } else {
                 AdaptiveDialog.create(
                     R.drawable.ic_error,

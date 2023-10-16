@@ -342,8 +342,6 @@
     <string name="payment_request_unable_to_send">ไม่สามารถส่งออก</string>
     <string name="payment_request_please_try_again">โปรดลองใหม่อีกครั้ง</string>
     <string name="payment_request_try_again">ลองอีกครั้ง</string>
-    <string name="payment_request_problem_title">การชำระเงินไม่ได้รับการยอมรับ</string>
-    <string name="payment_request_problem_message">เซิร์ฟเวอร์การชำระเงินของคุณไม่สามารถดำเนินการโดยเซิร์ฟเวอร์นี้ได้ โปรดสอบถามกับทางร้านค้า</string>
     <string name="payment_request_expired_title">คำขอชำระเงินหมดอายุ</string>
     <string name="payment_request_close">ปิด</string>
     <string name="payment_request_skip">ข้าม</string>
@@ -394,7 +392,7 @@
     <string name="masternode_key_type_owner">เจ้าของกุญแจ</string>
     <string name="masternode_key_type_voting">Voting Keys</string>
     <string name="masternode_key_type_operator">ตัวดำเนินการกุญแจ</string>
-    <string name="masternode_key_type_platform">คีย์ตัวดำเนินการ HPMN</string>
+    <string name="masternode_key_type_platform">วิวัฒนาการรหัส Node ID</string>
     <string name="masternode_key_type_total">%d คีย์</string>
     <string name="masternode_key_type_used">%d ใช้แล้ว</string>
     <string name="masternode_key_pair_index">Keypair %d</string>

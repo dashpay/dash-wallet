@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Щоб почати стейкінг, створіть обліковий запис на CrowdNode або підключіться до існуючого.</string>
     <string name="crowdnode_account">Акаунт CrowdNode</string>
     <string name="new_account">Новий акаунт CrowdNode</string>
-    <string name="account_create">Створити обліковий запис</string>
     <string name="accept_terms_response">Будь ласка, прийміть умови</string>
     <string name="accept_terms">Прийняти Умови</string>
     <string name="welcome_response">Акаунт створено</string>
