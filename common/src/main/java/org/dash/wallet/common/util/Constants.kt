@@ -37,7 +37,6 @@ object Constants {
     const val PREFIX_ALMOST_EQUAL_TO = CHAR_ALMOST_EQUAL_TO.toString() + CHAR_THIN_SPACE
 
     const val USER_BUY_SELL_DASH = 101
-    const val RESULT_CODE_GO_HOME = 100
 
     var MAX_MONEY: Coin = MainNetParams.get().maxMoney
     val ECONOMIC_FEE: Coin = Coin.valueOf(1000)

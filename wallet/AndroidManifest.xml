@@ -276,7 +276,7 @@
             android:theme="@style/LockScreenActivity.Theme" />
 
         <activity
-            android:name="org.dash.wallet.integration.uphold.ui.UpholdTransferActivity"
+            android:name="org.dash.wallet.integrations.uphold.ui.UpholdTransferActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
@@ -364,12 +364,7 @@
             android:value="true" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.coinbase.CoinbaseActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme"
-            android:screenOrientation="portrait" />
-
-        <activity
-            android:name="de.schildbach.wallet.ui.coinbase.CoinBaseWebClientActivity"
+            android:name="org.dash.wallet.integrations.coinbase.ui.CoinBaseWebClientActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"
             android:exported="true" />

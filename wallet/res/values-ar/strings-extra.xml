@@ -357,8 +357,6 @@
     <string name="payment_request_unable_to_send">غير قادر على الارسال</string>
     <string name="payment_request_please_try_again">حاول مرة اخرى</string>
     <string name="payment_request_try_again">حاول ثانية</string>
-    <string name="payment_request_problem_title">لم يتم الإعتراف بالدفع</string>
-    <string name="payment_request_problem_message">تعذر على الخادم معالجة دفعتك ، يرجى الاستفسار من التاجر</string>
     <string name="payment_request_expired_title">انتهت صلاحية طلب الدفع</string>
     <string name="payment_request_close">اغلاق</string>
     <string name="payment_request_skip">تخطي</string>
@@ -409,7 +407,6 @@
     <string name="masternode_key_type_owner">مفاتيح المالك</string>
     <string name="masternode_key_type_voting">مفاتيح التصويت</string>
     <string name="masternode_key_type_operator">مفاتيح المشغل</string>
-    <string name="masternode_key_type_platform">مفاتيح مشغل HPMN</string>
     <string name="masternode_key_type_total">%dمفاتيح</string>
     <string name="masternode_key_type_used">%dمستعملة</string>
     <string name="masternode_key_pair_index">%dزوج المفتاح</string>

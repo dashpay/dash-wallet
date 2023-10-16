@@ -351,8 +351,6 @@
     <string name="payment_request_unable_to_send">Wysłąnie funduszy jest niemożliwe</string>
     <string name="payment_request_please_try_again">Spróbuj jeszcze raz</string>
     <string name="payment_request_try_again">Spróbuj ponownie</string>
-    <string name="payment_request_problem_title">Płatność nie została uznana</string>
-    <string name="payment_request_problem_message">Twoja płatność nie mogła zostać uznana przez serwer, skontaktuj się ze sprzedawcą. </string>
     <string name="payment_request_expired_title">Żądanie płatności przedawniło się</string>
     <string name="payment_request_close">Zamknij</string>
     <string name="payment_request_skip">Pomiń</string>
@@ -403,7 +401,7 @@
     <string name="masternode_key_type_owner">Klucze właściciela</string>
     <string name="masternode_key_type_voting">Klucze głosujące</string>
     <string name="masternode_key_type_operator">Klucze operatora</string>
-    <string name="masternode_key_type_platform">Operator Kluczy do HPMN</string>
+    <string name="masternode_key_type_platform">Klucze Evolution Node ID</string>
     <string name="masternode_key_type_total">%d kluczy</string>
     <string name="masternode_key_type_used">%d użyte</string>
     <string name="masternode_key_pair_index">Para Kluczy %d</string>

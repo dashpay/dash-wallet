@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">要開始質押，請在 CrowdNode 上創建一個帳戶或連接到現有帳戶。</string>
     <string name="crowdnode_account">CrowdNode 帳戶</string>
     <string name="new_account">新建 CrowdNode 帳戶</string>
-    <string name="account_create">創建帳號</string>
     <string name="accept_terms_response">請接受條款</string>
     <string name="accept_terms">接受條款</string>
     <string name="welcome_response">已創建帳戶</string>

@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Para simulan ang staking, gumawa ng account sa CrowdNode o kumonekta sa mayroon na.</string>
     <string name="crowdnode_account">CrowdNode Account</string>
     <string name="new_account">Bagong CrowdNode Account</string>
-    <string name="account_create">Lumikha ng Account</string>
     <string name="accept_terms_response">Mangyaring Tanggapin ang Mga Tuntunin</string>
     <string name="accept_terms">Tanggapin ang Mga Tuntunin</string>
     <string name="welcome_response">Nakagawa na ng account</string>

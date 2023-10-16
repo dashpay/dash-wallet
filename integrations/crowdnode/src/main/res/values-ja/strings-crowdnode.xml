@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">ステーキングを開始するには、CrowdNodeにアカウントを作成するか、既存のアカウントに接続します。</string>
     <string name="crowdnode_account">CrowdNodeアカウント</string>
     <string name="new_account">CrowdNodeの新規アカウント</string>
-    <string name="account_create">アカウントの作成</string>
     <string name="accept_terms_response">規約に同意してください</string>
     <string name="accept_terms">規約に同意する</string>
     <string name="welcome_response">アカウントが作成されました</string>

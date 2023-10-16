@@ -30,7 +30,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
-import org.dash.wallet.integration.uphold.ui.UpholdPortalFragment;
+import org.dash.wallet.integrations.uphold.ui.UpholdPortalFragment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

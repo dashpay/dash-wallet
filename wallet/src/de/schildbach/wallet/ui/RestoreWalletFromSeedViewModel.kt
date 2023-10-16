@@ -18,16 +18,18 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.WalletFactory
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet.util.MnemonicCodeExt
-import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.MnemonicException
 import org.dash.wallet.common.Configuration
@@ -38,6 +40,7 @@ import javax.inject.Inject
 @HiltViewModel
 class RestoreWalletFromSeedViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
+    private val walletFactory: WalletFactory,
     private val configuration: Configuration,
     private val securityFunctions: SecurityFunctions
 ) : ViewModel() {
@@ -73,7 +76,7 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
 
     fun restoreWalletFromSeed(words: List<String>) {
         if (isSeedValid(words)) {
-            val wallet = WalletUtils.restoreWalletFromSeed(normalize(words), Constants.NETWORK_PARAMETERS, walletApplication.getWalletExtensions())
+            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words))
             walletApplication.setWallet(wallet)
             log.info("successfully restored wallet from seed")
             configuration.disarmBackupSeedReminder()

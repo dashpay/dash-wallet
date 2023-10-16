@@ -58,6 +58,7 @@
     <string name="share_address">分享地址</string>
     <string name="verify">验证</string>
     <string name="receive_enter_amount_button">指定数额</string>
+    <string name="account_create">创建账户</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">搜索</string>
@@ -75,12 +76,19 @@
     <string name="select_currency">选择货币</string>
     <string name="send_coins_error_dusty_send">该金额太小, 无法支付</string>
     <string name="send_coins_error_insufficient_money">资金不足</string>
+    <string name="syncing">正在同步</string>
     <string name="no_connection">没有网络连接</string>
     <string name="rate_not_available">不可用</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">看起来您正在清空Dash钱包</string>
     <string name="empty_wallet_crowdnode_warning">请注意, 您需要增加余额至 0.0003 Dash才能够从CrowdNode账户中提币到此钱包.</string>
-    <string name="syncing">正在同步</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">支付无法被确认</string>
+    <string name="payment_protocol_default_error_title">支付错误</string>
+    <string name="payment_request_problem_message">您的交易无法被服务器处理, 请联系商家</string>
+    <string name="exchange_rate_not_found">汇率未找到.</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">直接在Dash钱包上收款</string>

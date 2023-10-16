@@ -367,7 +367,6 @@
     <string name="activity_security_hide_balance">Automatisch saldo verbergen</string>
     <string name="reset_to_default">Reset naar standaard</string>
 
-    <string name="payment_protocol_default_error_title">Fout in de betaling</string>
     <string name="payment_protocol_insufficient_funds_error_title">Onvoldoende fondsen</string>
     <string name="payment_protocol_insufficient_funds_error_message">Je hebt onvoldoende saldo om deze transactie te voltooien</string>
 
@@ -375,7 +374,6 @@
     <string name="select_a_service">Kies een dienst</string>
     <string name="activity_buy_and_sell_dash_filter">Filteren</string>
     <string name="clear_filter">Maak filter leeg</string>
-    <string name="select_currency">Selecteer valuta</string>
     <string name="reason">Reden</string>
     <string name="link_account">Koppel je rekening</string>
     <string name="buy_no_account_needed">Koop Dash · Geen rekening nodig</string>
@@ -383,7 +381,7 @@
     <string name="please_log_in_to_your_coinbase_account">Log in bij je Coinbase-account</string>
     <string name="log_in">Log in</string>
 
-    <string name="recipient_address">Portemonnee-adres</string>
+    <string name="recipient_address">Adres van ontvanger</string>
     <string name="show_clipboard">Toon inhoud op het klembord</string>
     <string name="tap_to_paste">Tik op het adres van het klembord om het te plakken</string>
     <string name="not_dash_address">Geen geldig Dash adres of URL verzoek</string>

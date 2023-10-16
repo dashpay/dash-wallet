@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Pour commencer à investir, créez un compte sur CrowdNode ou connectez-vous à un compte existant.</string>
     <string name="crowdnode_account">Compte CrowdNode</string>
     <string name="new_account">Nouveau compte CrowdNode</string>
-    <string name="account_create">Créer un compte</string>
     <string name="accept_terms_response">Veuillez accepter les conditions</string>
     <string name="accept_terms">Accepter les conditions</string>
     <string name="welcome_response">Compte créé</string>

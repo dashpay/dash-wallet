@@ -329,8 +329,6 @@
     <string name="payment_request_unable_to_send">Tidak dapat mengirim</string>
     <string name="payment_request_please_try_again">Silakan coba lagi</string>
     <string name="payment_request_try_again">Coba lagi</string>
-    <string name="payment_request_problem_title">Pembayaran tidak diakui</string>
-    <string name="payment_request_problem_message">Pembayaran Anda tidak dapat diproses oleh server, harap tanyakan kepada pedagang</string>
     <string name="payment_request_expired_title">Permintaan pembayaran kedaluwarsa</string>
     <string name="payment_request_close">Tutup</string>
     <string name="payment_request_skip">Lewati</string>

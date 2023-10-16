@@ -342,8 +342,6 @@
     <string name="payment_request_unable_to_send">無法發送</string>
     <string name="payment_request_please_try_again">請再試一遍</string>
     <string name="payment_request_try_again">再試一次</string>
-    <string name="payment_request_problem_title">付款未得到確認</string>
-    <string name="payment_request_problem_message">服務器無法處理您的付款，請向商家查詢</string>
     <string name="payment_request_expired_title">付款請求已過期</string>
     <string name="payment_request_close">關閉</string>
     <string name="payment_request_skip">略過</string>
@@ -394,7 +392,7 @@
     <string name="masternode_key_type_owner">擁有者公鑰</string>
     <string name="masternode_key_type_voting">投票公鑰</string>
     <string name="masternode_key_type_operator">操作員公鑰</string>
-    <string name="masternode_key_type_platform">HPMN 操作員公鑰</string>
+    <string name="masternode_key_type_platform">Evolution 節點 ID 金鑰</string>
     <string name="masternode_key_type_total">%d 密鑰</string>
     <string name="masternode_key_type_used">%d 己使用</string>
     <string name="masternode_key_pair_index">密鑰對%d</string>

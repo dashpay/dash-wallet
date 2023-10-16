@@ -21,7 +21,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
-import androidx.lifecycle.ViewModelProvider
+import androidx.activity.viewModels
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.AbstractPINDialogFragment
@@ -32,11 +32,13 @@ import de.schildbach.wallet.ui.SET_PIN_REQUEST_CODE
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
+import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
 
 @SuppressLint("Registered")
+@AndroidEntryPoint
 open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment.WalletProvider {
 
     companion object {
@@ -44,14 +46,14 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
         const val REQUEST_CODE_RESTORE_WALLET = 1
     }
 
-    private lateinit var viewModel: RestoreWalletFromFileViewModel
+    private val viewModel: RestoreWalletFromFileViewModel by viewModels()
 
     private lateinit var walletApplication: WalletApplication
     private lateinit var walletBuffer: Wallet
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel = ViewModelProvider(this)[RestoreWalletFromFileViewModel::class.java]
+        // viewModel = ViewModelProvider(this)[RestoreWalletFromFileViewModel::class.java]
         walletApplication = (application as WalletApplication)
         initViewModel()
     }
@@ -88,7 +90,7 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
         }
         viewModel.restoreWallet.observe(this) {
             walletBuffer = it
-            viewModel.restoreWalletFromFile(wallet, null)
+            viewModel.restoreWallet(wallet, null)
         }
         viewModel.retryRequest.observe(this) {
             RestoreWalletDialogFragment.showPick(supportFragmentManager)
@@ -105,7 +107,7 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
     }
 
     override fun onWalletUpgradeComplete(password: String) {
-        viewModel.restoreWalletFromFile(walletBuffer, password)
+        viewModel.restoreWallet(walletBuffer, password)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

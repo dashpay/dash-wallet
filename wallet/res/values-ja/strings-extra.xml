@@ -346,8 +346,6 @@
     <string name="payment_request_unable_to_send">送金できません</string>
     <string name="payment_request_please_try_again">もう一度お試しください</string>
     <string name="payment_request_try_again">再試行する</string>
-    <string name="payment_request_problem_title">お支払いが確認されませんでした</string>
-    <string name="payment_request_problem_message">お客様のお支払いがサーバーで処理されませんでしたので、加盟店にお問い合わせください。</string>
     <string name="payment_request_expired_title">お支払いの請求は消滅しました</string>
     <string name="payment_request_close">閉じる</string>
     <string name="payment_request_skip">スキップする</string>
@@ -398,7 +396,7 @@
     <string name="masternode_key_type_owner">所有者の諸々のキー</string>
     <string name="masternode_key_type_voting">投票の諸々のキー</string>
     <string name="masternode_key_type_operator">運用者の諸々のキー</string>
-    <string name="masternode_key_type_platform">HPMNのオペレーターキー</string>
+    <string name="masternode_key_type_platform">エボリューションのノードIDキー</string>
     <string name="masternode_key_type_total">%d キー</string>
     <string name="masternode_key_type_used">%dは使用済みです</string>
     <string name="masternode_key_pair_index">キーペア%d</string>
