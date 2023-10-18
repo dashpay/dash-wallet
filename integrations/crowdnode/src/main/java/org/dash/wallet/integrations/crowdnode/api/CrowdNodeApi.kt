@@ -51,6 +51,7 @@ import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
 import retrofit2.HttpException
 import java.io.IOException
+import java.net.UnknownHostException
 import java.util.concurrent.Executors
 import javax.inject.Inject
 import kotlin.math.pow
@@ -305,7 +306,11 @@ class CrowdNodeApiAggregator @Inject constructor(
                 false
             }
         } catch (ex: HttpException) {
-            log.info("SendMessage error, code: ${ex.code()}, error: ${ex.response()?.errorBody()?.string()}")
+            log.error("SendMessage error, code: ${ex.code()}, error: ${ex.response()?.errorBody()?.string()}")
+            handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
+            false
+        } catch (ex: UnknownHostException) {
+            log.error("Withdrawal error: ${ex.message}")
             handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
             false
         }
@@ -371,7 +376,9 @@ class CrowdNodeApiAggregator @Inject constructor(
                 }
             }
 
-            balance.value = currentBalance
+            currentBalance.data?.let {
+                balance.value = currentBalance
+            }
         }
     }
 
