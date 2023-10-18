@@ -52,6 +52,9 @@ import androidx.multidex.MultiDexApplication;
 import androidx.work.WorkManager;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;

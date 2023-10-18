@@ -22,13 +22,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.LocaleList;
-import android.telephony.TelephonyManager;
+import android.os.PowerManager;
+import android.provider.Settings;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -40,19 +41,15 @@ import com.google.common.collect.ImmutableList;
 
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Currency;
-import java.util.Locale;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.EncryptKeysDialogFragment;
@@ -222,7 +219,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                             applicationInfo,
                             packageInfoProvider,
                             configuration,
-                            walletData.getWallet()
+                            walletData.getWallet(),
+                            walletApplication.getSystemService(PowerManager.class)
                     );
                     return applicationInfo;
                 }
@@ -296,7 +294,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                             WalletActivity.this,
                             packageInfoProvider,
                             configuration,
-                            walletData.getWallet()
+                            walletData.getWallet(),
+                            walletApplication
                         ).buildAlertDialog();
                         alertDialog.show();
                     } else {
@@ -376,6 +375,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 // do nothing
+                requestDisableBatteryOptimisation();
             });
 
     /**
@@ -397,9 +397,31 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     getString(R.string.button_okay)
             );
 
-            dialog.show(this, result -> Unit.INSTANCE);
+            dialog.show(this, result -> {
+                requestDisableBatteryOptimisation();
+                return Unit.INSTANCE;
+            });
         }
         // only show either the permissions dialog (Android >= 13) or the explainer (Android <= 12) once
         configuration.setShowNotificationsExplainer(false);
+    }
+
+    private void requestDisableBatteryOptimisation() {
+        PowerManager powerManager = getSystemService(PowerManager.class);
+        if (ContextCompat.checkSelfPermission(walletApplication, Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) == PackageManager.PERMISSION_GRANTED &&
+                !powerManager.isIgnoringBatteryOptimizations(walletApplication.getPackageName())) {
+            AdaptiveDialog.create(
+                    R.drawable.ic_bolt_border,
+                getString(R.string.battery_optimization_dialog_optimized_title),
+                getString(R.string.battery_optimization_dialog_message_optimized),
+                getString(R.string.permission_deny),
+                getString(R.string.permission_allow)
+            ).show(this, (allow) -> {
+                if (allow) {
+                    startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName())));
+                }
+                return Unit.INSTANCE;
+            });
+        }
     }
 }
