@@ -95,7 +95,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     private val globalConfig: Configuration,
     private val transactionMetadataProvider: TransactionMetadataProvider,
     @ApplicationContext private val appContext: Context
-): CrowdNodeApi {
+) : CrowdNodeApi {
     companion object {
         private val log = LoggerFactory.getLogger(CrowdNodeApiAggregator::class.java)
         private const val CONFIRMED_STATUS = "confirmed"

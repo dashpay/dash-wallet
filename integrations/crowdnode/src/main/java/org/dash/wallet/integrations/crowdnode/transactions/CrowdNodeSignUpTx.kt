@@ -24,8 +24,9 @@ import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class CrowdNodeSignUpTx(networkParams: NetworkParameters): CoinsToAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(networkParams), SIGNUP_REQUEST_CODE
+class CrowdNodeSignUpTx(networkParams: NetworkParameters) : CoinsToAddressTxFilter(
+    CrowdNodeConstants.getCrowdNodeAddress(networkParams),
+    SIGNUP_REQUEST_CODE
 ) {
     companion object {
         val SIGNUP_REQUEST_CODE: Coin =

@@ -19,15 +19,14 @@ package org.dash.wallet.integrations.crowdnode.transactions
 
 import org.bitcoinj.core.*
 import org.dash.wallet.common.transactions.TransactionComparator
-import org.dash.wallet.common.transactions.filters.TransactionFilter
-import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 
 open class FullCrowdNodeSignUpTxSet(
     networkParams: NetworkParameters,
     private val bag: TransactionBag
-): TransactionWrapper {
+) : TransactionWrapper {
     private val signUpFilter = CrowdNodeSignUpTx(networkParams)
     private val crowdNodeTxFilters = mutableListOf(
         signUpFilter,
@@ -45,13 +44,21 @@ open class FullCrowdNodeSignUpTxSet(
         get() = matchedFilters.filterIsInstance<CrowdNodeAcceptTermsResponse>().firstOrNull()
 
     open val possibleAcceptTermsResponse: PossibleAcceptTermsResponse?
-        get() = matchedFilters.filterIsInstance<PossibleAcceptTermsResponse>().firstOrNull { didSignUpFromAddress(it.toAddress) }
+        get() = matchedFilters.filterIsInstance<PossibleAcceptTermsResponse>().firstOrNull {
+            didSignUpFromAddress(
+                it.toAddress
+            )
+        }
 
     open val welcomeToApiResponse: CrowdNodeWelcomeToApiResponse?
         get() = matchedFilters.filterIsInstance<CrowdNodeWelcomeToApiResponse>().firstOrNull()
 
     open val possibleWelcomeToApiResponse: PossibleWelcomeResponse?
-        get() = matchedFilters.filterIsInstance<PossibleWelcomeResponse>().firstOrNull { didSignUpFromAddress(it.toAddress) }
+        get() = matchedFilters.filterIsInstance<PossibleWelcomeResponse>().firstOrNull {
+            didSignUpFromAddress(
+                it.toAddress
+            )
+        }
 
     override fun tryInclude(tx: Transaction): Boolean {
         if (transactions.any { it.txId == tx.txId }) {
@@ -70,7 +77,7 @@ open class FullCrowdNodeSignUpTxSet(
                 }
             }
         }
-        
+
         val matchedFilter = crowdNodeTxFilters.firstOrNull { it.matches(tx) }
 
         if (matchedFilter != null) {

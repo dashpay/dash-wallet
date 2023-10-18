@@ -36,4 +36,4 @@ enum class WithdrawalLimitPeriod {
 data class WithdrawalLimitsException(
     val amount: Coin,
     val period: WithdrawalLimitPeriod
-): Exception()
+) : Exception()
