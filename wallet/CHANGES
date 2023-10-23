@@ -1,4 +1,7 @@
 Dash Wallet
+v9.1.0
+* Add Topper Integration
+
 v9.0.6
 * Update to dashj 19.0.6
 * Fix stuck Crowdnode Signup

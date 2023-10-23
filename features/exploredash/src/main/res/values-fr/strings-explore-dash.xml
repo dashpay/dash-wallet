@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Explorez Dash</string>
     <string name="explore_title">Explorer</string>
-    <string name="explore_subtitle">Dépensez facilement vos dashs dans plus de 155 000 magasins et vendeurs en ligne</string>
+    <string name="explore_subtitle">Découvrez des vendeurs qui acceptent Dash, comment acheter des dashs et comment en gagner un revenu.</string>
     <string name="explore_merchants_title">Où dépenser ?</string>
     <string name="explore_merchants_subtitle">Trouvez des vendeurs qui acceptent les paiements avec Dash.</string>
     <string name="explore_atms_title">Distributeurs d\'espèces</string>
@@ -78,6 +78,7 @@
     <string name="explore_payment_method">Méthode de paiement</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Carte-cadeau</string>
+    <string name="explore_filter_gift_cards">Cartes-cadeau</string>
     <string name="explore_radius">Rayon</string>
     <string name="explore_location">Localisation</string>
     <string name="explore_current_location">Localisation actuelle</string>
@@ -157,10 +158,12 @@
     <string name="redeem_gift_card_text">Profitez en ligne de votre carte-cadeau en quelques secondes ou auprès du responsable de la caisse.</string>
 
     <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">Synchronisation en cours… Les résultats peuvent être incomplets.</string>
-    <string name="sync_in_progress_error">Synchronisation en cours… Une erreur a eu lieu.</string>
-    <string name="sync_in_progress_canceled">Synchronisation annulée… Une autre tentative aura lieu plus tard.</string>
+    <string name="sync_in_progress_not_complete">Synchronisation en cours… Les résultats peuvent être encore incomplets.</string>
+    <string name="sync_in_progress_error">Synchronisation en cours… Une erreur a été rencontrée.</string>
+    <string name="sync_in_progress_canceled">Synchronisation annulée… Une autre tentative sera faite plus tard.</string>
 
     <string name="sync_in_progress_file_not_found">Erreur : base de données non trouvée !</string>
-    <string name="sync_in_progress_network_error">Synchronisation interrompue… Le réseau est hors ligne ou inatteignable</string>
-</resources>
+    <string name="sync_in_progress_network_error">Synchronisation interrompue… Le réseau est hors ligne ou inatteignable.</string>
+
+
+    </resources>

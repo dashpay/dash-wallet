@@ -377,13 +377,21 @@
     <string name="reason">Reason</string>
     <string name="link_account">Link your account</string>
     <string name="buy_no_account_needed">Buy Dash · No account needed</string>
-    <string name="your_coinbase_session_has_expired">Your Coinbase session has expired</string>
-    <string name="please_log_in_to_your_coinbase_account">Please log in to your Coinbase account</string>
-    <string name="log_in">Log In</string>
 
     <string name="recipient_address">Recipient Address</string>
     <string name="show_clipboard">Show content in the clipboard</string>
     <string name="tap_to_paste">Tap the address from the clipboard to paste it</string>
     <string name="not_dash_address">Not a valid Dash Address or URL request</string>
     <string name="send_to_address">Send to Address</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Battery optimization</string>
+    <string name="battery_optimization_subtitle_optimized">Optimized</string>
+    <string name="battery_optimization_subtitle_unrestricted">Unrestricted</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Let Dash Wallet run in the background?</string>
+    <string name="battery_optimization_dialog_message_optimized">This app is configured to stop running after not being visible for some time.\n\nThis will result in not receiving payment notifications until the app returns to the foreground.\n\nWe recommend allowing this app to run in the background by setting battery optimization to \"Not Optimized\" or \"Unrestricted.\"\n\nDon\'t worry, we will always mind your battery usage.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Do you want to receive payments in the background?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">This app is configured to continue running after not being visible for some time.\n\nWe suggest allowing this app to always stay up-to-date with the blockchain, even in the background.\n\nDon\'t worry, we will always mind your battery usage.</string>
+    <string name="battery_optimization_dialog_button_change">Open Settings</string>
 </resources>

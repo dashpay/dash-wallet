@@ -21,6 +21,7 @@ import android.view.View
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
@@ -57,6 +58,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
+    @Inject lateinit var walletApplication: WalletApplication
 
     override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
@@ -124,7 +126,8 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
             requireActivity(),
             packageInfoProvider,
             configuration,
-            viewModel.walletData.wallet
+            viewModel.walletData.wallet,
+            walletApplication
         ).buildAlertDialog().show()
     }
 

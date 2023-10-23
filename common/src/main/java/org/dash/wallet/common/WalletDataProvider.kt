@@ -68,6 +68,4 @@ interface WalletDataProvider {
     fun checkSendingConditions(address: Address?, amount: Coin)
 
     fun observeMostRecentTransaction(): Flow<Transaction>
-
-    fun getWalletExtensions(): Array<WalletExtension>
 }

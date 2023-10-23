@@ -21,8 +21,8 @@ import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
-import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
+import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 

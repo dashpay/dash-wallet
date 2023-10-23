@@ -26,6 +26,7 @@ import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet_test.R
@@ -45,6 +46,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var walletData: WalletDataProvider
+    @Inject lateinit var walletApplication: WalletApplication
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -94,7 +96,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 requireActivity(),
                 packageInfoProvider,
                 configuration,
-                walletData.wallet
+                walletData.wallet,
+                walletApplication
             ).buildAlertDialog()
             (requireActivity() as LockScreenActivity).alertDialog = alertDialog
             alertDialog.show()

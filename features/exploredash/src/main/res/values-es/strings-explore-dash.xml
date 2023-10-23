@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Explora Dash</string>
     <string name="explore_title">Explorar</string>
-    <string name="explore_subtitle">Compra fácilmente con DASH en más de 155,000 ubicaciones y comerciantes en línea</string>
+    <string name="explore_subtitle">Encuentra comercios que acepten Dash, dónde comprar y cómo obtener ingresos con él.</string>
     <string name="explore_merchants_title">Donde gastar?</string>
     <string name="explore_merchants_subtitle">Encuentra comerciantes que acepten Dash como forma de pago.</string>
     <string name="explore_atms_title">Cajeros automáticos</string>
@@ -78,6 +78,7 @@
     <string name="explore_payment_method">Método de pago</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Tarjeta de regalo</string>
+    <string name="explore_filter_gift_cards">Tarjetas de regalo</string>
     <string name="explore_radius">Radio</string>
     <string name="explore_location">Ubicación</string>
     <string name="explore_current_location">Ubicación actual</string>
@@ -157,10 +158,12 @@
     <string name="redeem_gift_card_text">Canjea tu tarjeta de regalo en línea en segundos o en el cajero.</string>
 
     <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">Sincronización en curso... Es posible que los resultados no estén completos.</string>
-    <string name="sync_in_progress_error">Sincronización en curso... Ha ocurrido un error.</string>
-    <string name="sync_in_progress_canceled">Sincronización cancelada... Se realizará otro intento más tarde.</string>
+    <string name="sync_in_progress_not_complete">Sincronización en curso… Es posible que los resultados no estén completos.</string>
+    <string name="sync_in_progress_error">Sincronización en curso… Ha ocurrido un error.</string>
+    <string name="sync_in_progress_canceled">Sincronización cancelada… Se realizará otro intento más tarde.</string>
 
     <string name="sync_in_progress_file_not_found">Error de compilación: ¡No se encontró la base de datos!</string>
-    <string name="sync_in_progress_network_error">Sincronización interrumpida... La red está desconectada o inaccesible</string>
-</resources>
+    <string name="sync_in_progress_network_error">Sincronización interrumpida… La red está desconectada o inaccesible</string>
+
+
+    </resources>

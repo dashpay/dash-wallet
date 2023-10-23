@@ -88,7 +88,8 @@ class StakingActivity : LockScreenActivity() {
                     this,
                     packageInfoProvider,
                     configuration,
-                    walletData.wallet
+                    walletData.wallet,
+                    walletApplication
                 ).buildAlertDialog()
                 alertDialog.show()
             }

@@ -60,6 +60,7 @@ class MasternodeKeysViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(MasternodeKeysViewModel::class.java)
     }
 
+    // this is the only place in the app that should addOrGetExistingExtension besides WalletFactory
     private val authenticationGroup: AuthenticationGroupExtension = walletData.wallet!!.addOrGetExistingExtension(
         AuthenticationGroupExtension(walletData.wallet)
     ) as AuthenticationGroupExtension
