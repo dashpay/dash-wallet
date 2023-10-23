@@ -31,12 +31,13 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.setRoundedRippleBackground
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 
 @AndroidEntryPoint
 class CoinJoinLevelFragment : Fragment(R.layout.fragment_coinjoin_level) {
     private val binding by viewBinding(FragmentCoinjoinLevelBinding::bind)
     private val viewModel by viewModels<CoinJoinLevelViewModel>()
-    private var selectedCoinJoinMode = CoinJoinMode.BASIC
+    private var selectedCoinJoinMode = CoinJoinMode.NONE
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -53,11 +54,11 @@ class CoinJoinLevelFragment : Fragment(R.layout.fragment_coinjoin_level) {
             lifecycleScope.launch {
                 if (viewModel.isMixing) {
                     if (confirmStopMixing()) {
-                        viewModel.stopMixing()
+                        viewModel.setMode(CoinJoinMode.NONE)
                         requireActivity().finish()
                     }
                 } else {
-                    viewModel.startMixing(selectedCoinJoinMode)
+                    viewModel.setMode(selectedCoinJoinMode)
                     requireActivity().finish()
                 }
             }
@@ -67,7 +68,9 @@ class CoinJoinLevelFragment : Fragment(R.layout.fragment_coinjoin_level) {
             requireActivity().finish()
         }
 
-        setMode(viewModel.mixingMode)
+        viewModel.mixingMode.observe(viewLifecycleOwner) { mixingMode ->
+            setMode(mixingMode)
+        }
 
         if (viewModel.isMixing) {
             binding.continueBtn.setText(R.string.coinjoin_stop)
@@ -113,7 +116,9 @@ class CoinJoinLevelFragment : Fragment(R.layout.fragment_coinjoin_level) {
             ).show(requireActivity()) { toChange ->
                 if (toChange == true) {
                     setMode(mode)
-                    viewModel.mixingMode = mode
+                    lifecycleScope.launch {
+                        viewModel.setMode(mode)
+                    }
                     requireActivity().finish()
                 }
             }

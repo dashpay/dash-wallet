@@ -18,12 +18,17 @@
 package de.schildbach.wallet.ui.coinjoin
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
-import de.schildbach.wallet.service.MixingStatus
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import org.dash.wallet.common.services.NetworkStateInt
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
@@ -31,36 +36,33 @@ import javax.inject.Inject
 open class CoinJoinLevelViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val coinJoinService: CoinJoinService,
+    private val coinJoinConfig: CoinJoinConfig,
     private var networkState: NetworkStateInt
 ) : ViewModel() {
 
     val isMixing: Boolean
-        get() = coinJoinService.mixingStatus == MixingStatus.MIXING ||
-            coinJoinService.mixingStatus == MixingStatus.PAUSED
+        get() = _mixingMode.value != CoinJoinMode.NONE
+    //    get() = coinJoinService.mixingStatus == MixingStatus.MIXING ||
+    //        coinJoinService.mixingStatus == MixingStatus.PAUSED
 
-    var mixingMode: CoinJoinMode
-        get() = coinJoinService.mode
-        set(value) {
-            coinJoinService.mode = value
-//            coinJoinService.prepareAndStartMixing() TODO restart mixing?
-        }
+    val _mixingMode = MutableStateFlow<CoinJoinMode>(CoinJoinMode.NONE)
+
+    val mixingMode: Flow<CoinJoinMode>
+        get() = _mixingMode
+
+    init {
+        coinJoinConfig.observeMode()
+            .filterNotNull()
+            .onEach { _mixingMode.value = it }
+            .launchIn(viewModelScope)
+    }
 
     fun isWifiConnected(): Boolean {
         return networkState.isWifiConnected()
     }
 
-    suspend fun startMixing(mode: CoinJoinMode) {
-        analytics.logEvent(
-            AnalyticsConstants.CoinJoinPrivacy.USERNAME_PRIVACY_BTN_CONTINUE,
-            mapOf(AnalyticsConstants.Parameter.VALUE to mode.name)
-        )
-
-        coinJoinService.mode = mode
-        coinJoinService.prepareAndStartMixing() // TODO: change the logic if needed
-    }
-
-    suspend fun stopMixing() {
-//        coinJoinService.stopMixing() // TODO expose stop method?
+    suspend fun setMode(mode: CoinJoinMode) {
+        coinJoinConfig.setMode(mode)
     }
 
     fun logEvent(event: String) {
