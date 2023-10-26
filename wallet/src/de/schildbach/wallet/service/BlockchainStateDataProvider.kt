@@ -206,6 +206,14 @@ class BlockchainStateDataProvider @Inject constructor(
             // Activated but we have to wait for the next cycle to start realocation, nothing to do
             return ret
         }
+
+        if (Constants.NETWORK_PARAMETERS.isV20Active(height)) {
+            // Once MNRewardReallocated activates, block reward is 80% of block subsidy (+ tx fees) since treasury is 20%
+            // Since the MN reward needs to be equal to 60% of the block subsidy (according to the proposal), MN reward is set to 75% of the block reward.
+            // Previous reallocation periods are dropped.
+            return blockValue * 3 / 4
+        }
+
         val reallocCycle = superblockCycle * 3
         val nCurrentPeriod: Int =
             min((height - reallocStart) / reallocCycle, periods.size - 1)
