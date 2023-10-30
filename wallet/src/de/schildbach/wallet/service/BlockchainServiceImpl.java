@@ -165,7 +165,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject PackageInfoProvider packageInfoProvider;
     @Inject ConnectivityManager connectivityManager;
     @Inject BlockchainStateDataProvider blockchainStateDataProvider;
-
+    @Inject CoinJoinService coinJoinService;
     private BlockStore blockStore;
     private BlockStore headerStore;
     private File blockChainFile;
@@ -1013,6 +1013,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         updateAppWidget();
         initViewModel();
+        BlockchainServiceExtKt.initCoinJoin(this);
     }
 
     void initViewModel() {

@@ -23,6 +23,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletBalanceWidgetProvider
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
@@ -106,19 +107,23 @@ class SettingsActivity : LockScreenActivity() {
         binding.votingDashPaySwitch.setOnCheckedChangeListener { _, isChecked ->
             viewModel.setVoteDashPay(isChecked)
         }
-    }
 
-    override fun onResume() {
-        super.onResume()
-
-        if (viewModel.coinJoinMixingStatus == MixingStatus.MIXING ||
-            viewModel.coinJoinMixingStatus == MixingStatus.PAUSED
-        ) {
-            // TODO: Observe progress
-            binding.coinjoinSubtitleIcon.isVisible = true
-            binding.coinjoinSubtitle.text = getString(R.string.coinjoin_progress, "0.012", "0.028")
-        } else {
-            binding.coinjoinSubtitle.text = getText(R.string.turned_off)
+        viewModel.coinJoinMixingMode.observe(this) { mode ->
+            if (mode == CoinJoinMode.NONE) {
+                binding.coinjoinSubtitle.text = getText(R.string.turned_off)
+            } else {
+                // TODO: Observe progress
+                // TODO: This does not meet the designs
+                binding.coinjoinSubtitleIcon.isVisible = true
+                binding.coinjoinSubtitle.text = getString(
+                    if (viewModel.coinJoinMixingStatus == MixingStatus.FINISHED)
+                        R.string.coinjoin_progress_finished
+                    else R.string.coinjoin_progress,
+                    viewModel.mixedBalance,
+                    viewModel.walletBalance,
+                    viewModel.mixingPercent
+                )
+            }
         }
     }
 

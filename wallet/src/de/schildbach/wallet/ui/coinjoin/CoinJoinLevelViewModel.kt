@@ -42,8 +42,6 @@ open class CoinJoinLevelViewModel @Inject constructor(
 
     val isMixing: Boolean
         get() = _mixingMode.value != CoinJoinMode.NONE
-    //    get() = coinJoinService.mixingStatus == MixingStatus.MIXING ||
-    //        coinJoinService.mixingStatus == MixingStatus.PAUSED
 
     val _mixingMode = MutableStateFlow<CoinJoinMode>(CoinJoinMode.NONE)
 
