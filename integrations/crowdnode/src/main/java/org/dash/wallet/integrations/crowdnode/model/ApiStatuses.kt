@@ -22,12 +22,14 @@ package org.dash.wallet.integrations.crowdnode.model
 // that maps to the old order value (see ApiCode)
 enum class SignUpStatus {
     NotStarted,
+
     // Create New Account
     FundingWallet,
     SigningUp,
     AcceptingTerms,
     Finished,
     Error,
+
     // Link Existing Account
     LinkedOnline
 }
@@ -45,7 +47,7 @@ enum class OnlineAccountStatus {
     Done
 }
 
-open class CrowdNodeException(message: String): Exception(message) {
+open class CrowdNodeException(message: String) : Exception(message) {
     companion object {
         const val DEPOSIT_ERROR = "deposit_error"
         const val CONFIRMATION_ERROR = "confirmation_error"

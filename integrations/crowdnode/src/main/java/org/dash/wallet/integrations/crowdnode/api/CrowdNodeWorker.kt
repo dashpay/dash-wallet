@@ -39,7 +39,7 @@ class CrowdNodeWorker @AssistedInject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val notificationService: NotificationService,
     private val analytics: AnalyticsService
-): CoroutineWorker(appContext, workerParams) {
+) : CoroutineWorker(appContext, workerParams) {
     companion object {
         private val log = LoggerFactory.getLogger(CrowdNodeWorker::class.java)
 

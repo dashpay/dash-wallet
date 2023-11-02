@@ -25,7 +25,7 @@ import org.dash.wallet.common.transactions.filters.CoinsReceivedTxFilter
 class PossibleWelcomeResponse(
     bag: TransactionBag,
     private val accountAddress: Address?
-): CoinsReceivedTxFilter(
+) : CoinsReceivedTxFilter(
     bag,
     CrowdNodeWelcomeToApiResponse.WELCOME_TO_API_RESPONSE_CODE
 ) {
@@ -33,7 +33,7 @@ class PossibleWelcomeResponse(
         private set
 
     override fun matches(tx: Transaction): Boolean {
-        val matches =  super.matches(tx) && (accountAddress == null || super.toAddress == accountAddress)
+        val matches = super.matches(tx) && (accountAddress == null || super.toAddress == accountAddress)
 
         if (matches) {
             transaction = tx

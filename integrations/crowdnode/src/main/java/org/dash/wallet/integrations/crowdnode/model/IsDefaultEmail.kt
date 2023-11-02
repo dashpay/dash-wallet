@@ -21,5 +21,5 @@ import com.google.gson.annotations.SerializedName
 
 class IsDefaultEmail(
     @SerializedName("value")
-    val isDefault : Boolean
+    val isDefault: Boolean
 )

@@ -37,7 +37,7 @@ import java.util.concurrent.Executors
 
 class CrowdNodeAPIConfirmationForwarded(
     params: NetworkParameters
-): CoinsToAddressTxFilter(
+) : CoinsToAddressTxFilter(
     CrowdNodeConstants.getCrowdNodeAddress(params),
     CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT,
     includeFee = true
@@ -45,7 +45,7 @@ class CrowdNodeAPIConfirmationForwarded(
 
 open class CrowdNodeAPIConfirmationTx(
     address: Address
-): CoinsToAddressTxFilter(address, CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT)
+) : CoinsToAddressTxFilter(address, CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT)
 
 class CrowdNodeAPIConfirmationHandler(
     private val apiAddress: Address,
@@ -55,7 +55,7 @@ class CrowdNodeAPIConfirmationHandler(
     private val crowdNodeConfig: CrowdNodeConfig,
     private val resources: Resources,
     private val intent: Intent?
-): CrowdNodeAPIConfirmationTx(apiAddress) {
+) : CrowdNodeAPIConfirmationTx(apiAddress) {
     companion object {
         private val log = LoggerFactory.getLogger(CrowdNodeAPIConfirmationHandler::class.java)
     }
@@ -68,7 +68,8 @@ class CrowdNodeAPIConfirmationHandler(
         log.info("Handling confirmation tx: ${tx.txId}")
 
         handlerScope.launch {
-            val statusOrdinal = crowdNodeConfig.get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) ?: OnlineAccountStatus.None.ordinal
+            val statusOrdinal = crowdNodeConfig.get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
+                ?: OnlineAccountStatus.None.ordinal
 
             if (statusOrdinal == OnlineAccountStatus.Done.ordinal) {
                 log.info("API address already confirmed")

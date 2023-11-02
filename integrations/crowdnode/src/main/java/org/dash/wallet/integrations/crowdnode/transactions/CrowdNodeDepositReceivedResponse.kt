@@ -23,8 +23,9 @@ import org.dash.wallet.common.transactions.filters.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class CrowdNodeDepositReceivedResponse(networkParams: NetworkParameters): CoinsFromAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(networkParams), DEPOSIT_RECEIVED_RESPONSE_CODE
+class CrowdNodeDepositReceivedResponse(networkParams: NetworkParameters) : CoinsFromAddressTxFilter(
+    CrowdNodeConstants.getCrowdNodeAddress(networkParams),
+    DEPOSIT_RECEIVED_RESPONSE_CODE
 ) {
     companion object {
         val DEPOSIT_RECEIVED_RESPONSE_CODE: Coin =

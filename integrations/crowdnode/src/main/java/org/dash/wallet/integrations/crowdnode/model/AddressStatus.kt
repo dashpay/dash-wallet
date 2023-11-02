@@ -21,5 +21,5 @@ import com.google.gson.annotations.SerializedName
 
 class AddressStatus(
     @SerializedName("Status")
-    val status : String
+    val status: String
 )
