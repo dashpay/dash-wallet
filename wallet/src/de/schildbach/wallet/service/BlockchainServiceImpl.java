@@ -81,7 +81,6 @@ import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
-import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.dash.wallet.common.Configuration;
@@ -165,7 +164,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject PackageInfoProvider packageInfoProvider;
     @Inject ConnectivityManager connectivityManager;
     @Inject BlockchainStateDataProvider blockchainStateDataProvider;
-    @Inject CoinJoinService coinJoinService;
     private BlockStore blockStore;
     private BlockStore headerStore;
     private File blockChainFile;
@@ -1013,7 +1011,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         updateAppWidget();
         initViewModel();
-        BlockchainServiceExtKt.initCoinJoin(this);
     }
 
     void initViewModel() {

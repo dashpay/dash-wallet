@@ -18,7 +18,6 @@
 package de.schildbach.wallet.service
 
 import com.google.common.base.Stopwatch
-import com.google.common.collect.Comparators.max
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.CoroutineScope
@@ -73,51 +72,42 @@ enum class CoinJoinMode {
     ADVANCED
 }
 
+/**
+ * CoinJoin Service
+ *
+ * Monitor the status of the CoinJoin Mixing Service
+ */
 interface CoinJoinService {
-    //var mode: CoinJoinMode
     val mixingStatus: MixingStatus
-    val mixingProgress: Flow<Double>
     val mixingState: Flow<MixingStatus>
-
-    //fun needsToMix(amount: Coin): Boolean
-    suspend fun configureMixing(
-        amount: Coin,
-        requestKeyParameter: RequestKeyParameter,
-        requestDecryptedKey: RequestDecryptedKey,
-        restoreFromConfig: Boolean
-    )
-
-    suspend fun configureMixing(restoreFromConfig: Boolean)
-
-    //suspend fun prepareAndStartMixing()
-    // suspend fun waitForMixing()
-    // suspend fun waitForMixingWithException()
+    val mixingProgress: Flow<Double>
 }
 
 enum class MixingStatus {
-    NOT_STARTED,
-    MIXING,
-    PAUSED,
-    FINISHED,
-    ERROR
+    NOT_STARTED, // Mixing has not begun or CoinJoinMode is NONE
+    MIXING, // Mixing is underway
+    PAUSED, // Mixing is not finished, but is blocked by network connectivity
+    FINISHED, // The entire balance has been mixed
+    ERROR // An error stopped the mixing process
 }
 
 @Singleton
 class CoinJoinMixingService @Inject constructor(
     val walletDataProvider: WalletDataProvider,
     blockchainStateProvider: BlockchainStateProvider,
-    private val config: CoinJoinConfig,
+    config: CoinJoinConfig,
     private val platformRepo: PlatformRepo
 ) : CoinJoinService {
 
     companion object {
         val log: Logger = LoggerFactory.getLogger(CoinJoinMixingService::class.java)
-        const val DEFAULT_MULTISESSION = false
+        const val DEFAULT_MULTISESSION = false // for stability, need to investigate
         const val DEFAULT_ROUNDS = 1
         const val DEFAULT_SESSIONS = 4
+        const val DEFAULT_DENOMINATIONS_GOAL = 50
+        const val DEFAULT_DENOMINATIONS_HARDCAP = 300
 
         // these are not for production
-        val FAST_MIXING_DASHPAY_FEE: Coin = Coin.valueOf(1000, 0)
         val FAST_MIXING_DENOMINATIONS_REMOVE = listOf<Denomination>() // Denomination.THOUSANDTH)
     }
 
@@ -148,7 +138,6 @@ class CoinJoinMixingService @Inject constructor(
     private var hasAnonymizableBalance: Boolean = false
 
     // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
-//    private val mixingMutex = Mutex(locked = true)
     private val updateMutex = Mutex(locked = false)
     private val updateMixingStateMutex = Mutex(locked = false)
     private var exception: Throwable? = null
@@ -156,6 +145,7 @@ class CoinJoinMixingService @Inject constructor(
     override val mixingProgress: Flow<Double>
         get() = _progressFlow
     private val _progressFlow = MutableStateFlow(0.00)
+    private var clientOptionsConfigured = false
 
     init {
         blockchainStateProvider.observeNetworkStatus()
@@ -238,6 +228,7 @@ class CoinJoinMixingService @Inject constructor(
             if (mode == CoinJoinMode.NONE) {
                 updateMixingState(MixingStatus.NOT_STARTED)
             } else {
+                configureMixing()
                 if (hasAnonymizableBalance) {
                     if (networkStatus == NetworkStatus.CONNECTED && isBlockChainSet) {
                         updateMixingState(MixingStatus.MIXING)
@@ -274,7 +265,6 @@ class CoinJoinMixingService @Inject constructor(
                 previousMixingStatus == MixingStatus.MIXING && mixingStatus != MixingStatus.MIXING -> {
                     // finish mixing
                     stopMixing()
-                    // setMixingComplete()
                 }
             }
         } finally {
@@ -293,6 +283,7 @@ class CoinJoinMixingService @Inject constructor(
     private suspend fun updateMode(mode: CoinJoinMode) {
         CoinJoinClientOptions.setEnabled(mode != CoinJoinMode.NONE)
         if (mode != CoinJoinMode.NONE && this.mode == CoinJoinMode.NONE) {
+            configureMixing()
             updateBalance(walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.AVAILABLE))
         }
         updateState(mode, hasAnonymizableBalance, networkStatus, blockChain)
@@ -347,77 +338,44 @@ class CoinJoinMixingService @Inject constructor(
         return decryptedKey
     }
 
-    override suspend fun configureMixing(restoreFromConfig: Boolean) {
-        configureMixing(
-            Coin.valueOf(1000, 0),
-            { encryptionKeyParameter() },
-            { decryptKey(it) },
-            restoreFromConfig
-        )
-    }
+    private val requestKeyParameter = RequestKeyParameter { encryptionKeyParameter() }
+    private val requestDecryptedKey = RequestDecryptedKey { decryptKey(it) }
 
-    override suspend fun configureMixing(
-        amount: Coin,
-        requestKeyParameter: RequestKeyParameter,
-        requestDecryptedKey: RequestDecryptedKey,
-        restoreFromConfig: Boolean
-    ) {
-        if (restoreFromConfig) {
-            // read from data store
-            val amountToMix = config.get(CoinJoinConfig.COINJOIN_AMOUNT)
-            val rounds = config.get(CoinJoinConfig.COINJOIN_ROUNDS)
-            val sessions = 4; //config.get(CoinJoinConfig.COINJOIN_SESSIONS)
-            val isMultiSession = false //config.get(CoinJoinConfig.COINJOIN_MULTISESSION)
-            // set client options
-            CoinJoinClientOptions.setRounds(rounds ?: DEFAULT_ROUNDS)
-            CoinJoinClientOptions.setSessions(sessions ?: DEFAULT_SESSIONS)
-            //CoinJoinClientOptions.setAmount(Coin.valueOf(1000, 0)) // amountToMix?.let { Coin.valueOf(amountToMix) } ?: amount)
-            CoinJoinClientOptions.setMultiSessionEnabled(isMultiSession ?: DEFAULT_MULTISESSION)
-        } else {
-            CoinJoinClientOptions.setSessions(DEFAULT_SESSIONS)
-            CoinJoinClientOptions.setAmount(max(FAST_MIXING_DASHPAY_FEE, amount))
-            CoinJoinClientOptions.setMultiSessionEnabled(DEFAULT_MULTISESSION)
-
-            when (mode) {
-                CoinJoinMode.NONE -> CoinJoinClientOptions.setAmount(Coin.ZERO)
-                CoinJoinMode.INTERMEDIATE -> CoinJoinClientOptions.setRounds(DEFAULT_ROUNDS)
-                CoinJoinMode.ADVANCED -> CoinJoinClientOptions.setRounds(DEFAULT_ROUNDS * 2)
-            }
-            // save to data store
-            //config.set(CoinJoinConfig.COINJOIN_AMOUNT, CoinJoinClientOptions.getAmount().value)
-            config.set(CoinJoinConfig.COINJOIN_ROUNDS, CoinJoinClientOptions.getRounds())
-            config.set(CoinJoinConfig.COINJOIN_SESSIONS, CoinJoinClientOptions.getSessions())
-            config.set(CoinJoinConfig.COINJOIN_MULTISESSION, CoinJoinClientOptions.isMultiSessionEnabled())
+    private fun configureMixing() {
+        if (!clientOptionsConfigured) {
+            configureMixing(walletDataProvider.getWalletBalance())
+            clientOptionsConfigured = true;
         }
+    }
+    /** set CoinJoinClientOptions based on CoinJoinMode */
+    private fun configureMixing(amount: Coin) {
+        when (mode) {
+            CoinJoinMode.NONE -> {
+                // no options to set
+            }
+            CoinJoinMode.INTERMEDIATE -> {
+                CoinJoinClientOptions.setRounds(DEFAULT_ROUNDS)
+                (walletDataProvider.wallet as WalletEx).coinJoin.setRounds(DEFAULT_ROUNDS)
+            }
+            CoinJoinMode.ADVANCED -> {
+                CoinJoinClientOptions.setRounds(DEFAULT_ROUNDS * 2)
+                (walletDataProvider.wallet as WalletEx).coinJoin.setRounds(DEFAULT_ROUNDS * 2)
+            }
+        }
+
+        CoinJoinClientOptions.setSessions(DEFAULT_SESSIONS)
+        CoinJoinClientOptions.setMultiSessionEnabled(DEFAULT_MULTISESSION)
+        CoinJoinClientOptions.setDenomsGoal(DEFAULT_DENOMINATIONS_GOAL)
+        CoinJoinClientOptions.setDenomsHardCap(DEFAULT_DENOMINATIONS_HARDCAP)
+
         FAST_MIXING_DENOMINATIONS_REMOVE.forEach {
             CoinJoinClientOptions.removeDenomination(it)
         }
+
         // TODO: have CoinJoinClientOptions.toString instead do this
         log.info(
-            "mixing configuration:  { rounds: ${CoinJoinClientOptions.getRounds()}, sessions: ${CoinJoinClientOptions.getSessions()}, amount: ${amount.toFriendlyString()}}"
+            "mixing configuration:  { rounds: ${CoinJoinClientOptions.getRounds()}, sessions: ${CoinJoinClientOptions.getSessions()}, amount: ${amount.toFriendlyString()}, multisession: ${CoinJoinClientOptions.isMultiSessionEnabled()}}"
         )
-        coinJoinManager?.run {
-            setRequestKeyParameter(requestKeyParameter)
-            setRequestDecryptedKey(requestDecryptedKey)
-        }
-    }
-
-    @Deprecated("no longer required")
-    suspend fun prepareAndStartMixing() {
-        log.info("coinjoin: prepare and start mixing...")
-        // do we need to mix?
-        val wallet = walletDataProvider.wallet!! as WalletEx
-        Context.propagate(wallet.context)
-        // the mixed balance must meet the getAmount() requirement and all denominated coins must be mixed
-        val mixedAmount = wallet.coinJoinBalance
-        val denominatedAmount = wallet.denominatedBalance
-        if (wallet.anonymizableBalance.isGreaterThan(Coin.ZERO)) {
-            log.info(
-                "coinjoin: mixing is complete $mixedAmount/$denominatedAmount of ${CoinJoinClientOptions.getAmount()}"
-            )
-        } else {
-            log.info("coinjoin: start the mixing process...")
-        }
     }
 
     private suspend fun prepareMixing() {
@@ -475,6 +433,9 @@ class CoinJoinMixingService @Inject constructor(
             addMixingCompleteListener(Threading.USER_THREAD, mixingCompleteListener)
             addSessionCompleteListener(Threading.USER_THREAD, sessionCompleteListener)
             log.info("coinjoin: mixing preparation finished")
+
+            setRequestKeyParameter(requestKeyParameter)
+            setRequestDecryptedKey(requestDecryptedKey)
         }
     }
 
