@@ -35,6 +35,8 @@ import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
@@ -50,6 +52,7 @@ import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HomeContentBinding
+import de.schildbach.wallet_test.databinding.MixingStatusPaneBinding
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
@@ -61,6 +64,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -74,6 +78,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     private val viewModel: MainViewModel by activityViewModels()
     private val binding by viewBinding(HomeContentBinding::bind)
+    private lateinit var mixingBinding: MixingStatusPaneBinding
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var authManager: AuthenticationManager
 
@@ -93,6 +98,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
         reenterTransition = MaterialFadeThrough()
         initShortcutActions()
+        mixingBinding = MixingStatusPaneBinding.bind(binding.mixingStatusPane.root)
 
         val params = binding.appBar.layoutParams as CoordinatorLayout.LayoutParams
 
@@ -150,6 +156,26 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
 
         viewModel.notificationCountData.observe(viewLifecycleOwner) { setNotificationIndicator() }
+
+        viewModel.coinJoinMode.observe(viewLifecycleOwner) { mode ->
+            mixingBinding.root.isVisible = mode != CoinJoinMode.NONE
+        }
+
+        viewModel.mixingProgress.observe(viewLifecycleOwner) { progress ->
+            mixingBinding.balance.text = getString(
+                R.string.coinjoin_progress_balance,
+                viewModel.mixedBalance,
+                viewModel.walletBalance
+            )
+            mixingBinding.mixingProgress.progress = progress.toInt()
+        }
+
+        viewModel.mixingState.observe(viewLifecycleOwner) { mixingState ->
+            mixingBinding.root.isVisible = when (mixingState) {
+                MixingStatus.NOT_STARTED, MixingStatus.FINISHED -> false
+                else -> true
+            }
+        }
     }
 
     fun scrollToTop() {

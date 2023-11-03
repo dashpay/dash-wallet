@@ -77,6 +77,7 @@ interface CoinJoinService {
     //var mode: CoinJoinMode
     val mixingStatus: MixingStatus
     val mixingProgress: Flow<Double>
+    val mixingState: Flow<MixingStatus>
 
     //fun needsToMix(amount: Coin): Boolean
     suspend fun configureMixing(
@@ -130,6 +131,9 @@ class CoinJoinMixingService @Inject constructor(
     var mode: CoinJoinMode = CoinJoinMode.NONE
     override var mixingStatus: MixingStatus = MixingStatus.NOT_STARTED
         private set
+    val _mixingState = MutableStateFlow(MixingStatus.NOT_STARTED)
+    override val mixingState: Flow<MixingStatus>
+        get() = _mixingState
 
     private val coroutineScope = CoroutineScope(
         Executors.newFixedThreadPool(2, ContextPropagatingThreadFactory("coinjoin-pool")).asCoroutineDispatcher()
@@ -227,6 +231,7 @@ class CoinJoinMixingService @Inject constructor(
             val previousNetworkStatus = this.networkStatus
             this.networkStatus = networkStatus
             this.mixingStatus = mixingStatus
+            _mixingState.value = mixingStatus
             this.hasAnonymizableBalance = hasAnonymizableBalance
             this.mode = mode
 

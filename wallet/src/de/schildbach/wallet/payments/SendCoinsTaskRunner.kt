@@ -17,6 +17,7 @@
 package de.schildbach.wallet.payments
 
 import androidx.annotation.VisibleForTesting
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.PaymentIntent
@@ -26,6 +27,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.PackageInfoProvider
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -260,7 +262,7 @@ class SendCoinsTaskRunner @Inject constructor(
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
         sendRequest.signInputs = signInputs
 
-        val walletBalance = wallet.getBalance(MaxOutputAmountCoinSelector())
+        val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
         sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
 
         return sendRequest
@@ -294,6 +296,14 @@ class SendCoinsTaskRunner @Inject constructor(
     } else {
         // collect all coins, mixed and unmixed
         ZeroConfCoinSelector.get()
+    }
+
+    private fun getMaxOutputCoinSelector() = if (coinJoinSend) {
+        // mixed only
+        MaxOutputAmountCoinJoinCoinSelector(walletData.wallet!!)
+    } else {
+        // collect all coins, mixed and unmixed
+        MaxOutputAmountCoinSelector()
     }
 
     @Throws(LeftoverBalanceException::class)

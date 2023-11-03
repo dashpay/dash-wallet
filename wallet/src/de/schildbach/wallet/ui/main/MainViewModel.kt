@@ -31,6 +31,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
@@ -42,6 +43,9 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirectionFilter
@@ -57,6 +61,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -71,6 +76,8 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.CurrencyInfo
@@ -91,13 +98,17 @@ import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.common.util.Constants.HTTP_CLIENT
 import org.dash.wallet.common.util.head
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.slf4j.LoggerFactory
+import java.math.MathContext
+import java.math.RoundingMode
+import java.text.DecimalFormat
 import java.util.Currency
 import java.util.Locale
 import javax.inject.Inject
-import kotlin.math.abs
 import kotlin.collections.set
+import kotlin.math.abs
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
@@ -120,7 +131,9 @@ class MainViewModel @Inject constructor(
     private val invitationsDao: InvitationsDao,
     userAlertDao: UserAlertDao,
     dashPayProfileDao: DashPayProfileDao,
-    private val dashPayConfig: DashPayConfig
+    private val dashPayConfig: DashPayConfig,
+    private val coinJoinConfig: CoinJoinConfig,
+    private val coinJoinService: CoinJoinService
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     companion object {
         private const val THROTTLE_DURATION = 500L
@@ -192,6 +205,21 @@ class MainViewModel @Inject constructor(
         get() = _stakingAPY
 
     val currencyChangeDetected = SingleLiveEvent<Pair<String, String>>()
+
+    // CoinJoin
+    val coinJoinMode: Flow<CoinJoinMode>
+        get() = coinJoinConfig.observeMode()
+    val mixingState: Flow<MixingStatus>
+        get() = coinJoinService.mixingState
+    val mixingProgress: Flow<Double>
+        get() = coinJoinService.mixingProgress
+
+    var decimalFormat: DecimalFormat = DecimalFormat("0.000")
+    val walletBalance: String
+        get() = decimalFormat.format(walletData.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED).toBigDecimal())
+
+    val mixedBalance: String
+        get() = decimalFormat.format((walletData.wallet as WalletEx).coinJoinBalance.toBigDecimal())
 
     // DashPay
 
