@@ -19,30 +19,17 @@ package de.schildbach.wallet.payments
 
 import org.bitcoinj.coinjoin.CoinJoinCoinSelector
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
-import org.bitcoinj.core.VarInt
 import org.bitcoinj.wallet.CoinSelection
 import org.bitcoinj.wallet.Wallet
 
 // refactor this class and derive it from MaxOutputAmountCoinSelector
-class MaxOutputAmountCoinJoinCoinSelector(wallet: Wallet): CoinJoinCoinSelector(wallet) {
-    companion object {
-        private const val TX_OUTPUT_SIZE = 34 // estimated size for a typical transaction output
-        private const val TX_INPUT_SIZE = 148 // estimated size for a typical compact pubkey transaction input
-    }
+class MaxOutputAmountCoinJoinCoinSelector(wallet: Wallet): MaxOutputAmountCoinSelector() {
+
+    val coinJoinCoinSelector = CoinJoinCoinSelector(wallet)
 
     override fun select(target: Coin, candidates: MutableList<TransactionOutput>): CoinSelection {
-        val coinJoinCandidates = super.select(target, candidates)
-        val value = coinJoinCandidates.valueGathered
-        val inputCount = coinJoinCandidates.gathered.size.toLong()
-        val outputCount = 1L
-        // Formula is lifted from DashSync for ios: https://github.com/dashpay/dashsync-iOS/blob/master/DashSync/shared/Models/Wallet/DSAccount.m#L1680-L1711
-        // Android has an extra byte per input
-        val txSize = 8 + VarInt.sizeOf(inputCount) + (TX_INPUT_SIZE + 1) * inputCount +
-            VarInt.sizeOf(outputCount) + TX_OUTPUT_SIZE * outputCount
-        val fee = Transaction.DEFAULT_TX_FEE.multiply(txSize).divide(1000)
-
-        return CoinSelection((value - fee).coerceAtLeast(Coin.ZERO), coinJoinCandidates.gathered)
+        val coinJoinCandidates = coinJoinCoinSelector.select(target, candidates)
+        return super.select(coinJoinCandidates.valueGathered, coinJoinCandidates.gathered.toMutableList())
     }
 }
