@@ -141,7 +141,6 @@ class CoinJoinMixingService @Inject constructor(
     override val mixingProgress: Flow<Double>
         get() = _progressFlow
     private val _progressFlow = MutableStateFlow(0.00)
-    private var clientOptionsConfigured = false
 
     init {
         blockchainStateProvider.observeNetworkStatus()
@@ -168,10 +167,7 @@ class CoinJoinMixingService @Inject constructor(
             .launchIn(coroutineScope)
 
         walletDataProvider.observeBalance()
-            .onEach { balance ->
-                log.info("coinjoin: total balance: $balance (before distinct)")
-            }
-            //.distinctUntilChanged()
+            .distinctUntilChanged()
             .onEach { balance ->
                 // switch to our context
                 coroutineScope.launch {
@@ -337,10 +333,7 @@ class CoinJoinMixingService @Inject constructor(
     private val requestDecryptedKey = RequestDecryptedKey { decryptKey(it) }
 
     private fun configureMixing() {
-        if (!clientOptionsConfigured) {
-            configureMixing(walletDataProvider.getWalletBalance())
-            clientOptionsConfigured = true;
-        }
+        configureMixing(walletDataProvider.getWalletBalance())
     }
     /** set CoinJoinClientOptions based on CoinJoinMode */
     private fun configureMixing(amount: Coin) {
