@@ -164,6 +164,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject PackageInfoProvider packageInfoProvider;
     @Inject ConnectivityManager connectivityManager;
     @Inject BlockchainStateDataProvider blockchainStateDataProvider;
+    @Inject CoinJoinService coinJoinService; // not used in this class, but we need to create it
     private BlockStore blockStore;
     private BlockStore headerStore;
     private File blockChainFile;
