@@ -235,6 +235,7 @@ class CoinJoinMixingService @Inject constructor(
                     updateMixingState(MixingStatus.FINISHED)
                 }
             }
+            updateProgress()
         } finally {
             updateMutex.unlock()
             log.info("updateMutex is unlocked")
@@ -289,7 +290,6 @@ class CoinJoinMixingService @Inject constructor(
         override fun onMixingComplete(wallet: WalletEx?, statusList: MutableList<PoolStatus>?) {
             super.onMixingComplete(wallet, statusList)
             log.info("Mixing Complete.  {}% mixed", progress)
-            // TODO: _progressFlow.emit(progress)
         }
 
         override fun onSessionStarted(
@@ -312,7 +312,6 @@ class CoinJoinMixingService @Inject constructor(
             joined: Boolean
         ) {
             super.onSessionComplete(wallet, sessionId, denomination, state, message, address, joined)
-            // TODO: _progressFlow.emit(progress)
             log.info("Session {} complete. {} % mixed -- {}", sessionId, progress, message)
         }
     }
