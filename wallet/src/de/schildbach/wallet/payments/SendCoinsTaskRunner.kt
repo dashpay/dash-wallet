@@ -261,6 +261,7 @@ class SendCoinsTaskRunner @Inject constructor(
         sendRequest.feePerKb = Constants.ECONOMIC_FEE
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
         sendRequest.signInputs = signInputs
+        sendRequest.returnChange = !coinJoinSend // if CoinJoin Send, do not return change
 
         val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
         sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
