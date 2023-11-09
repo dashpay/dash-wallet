@@ -320,7 +320,6 @@ class TransactionResultViewBinder(
             binding.openTaxCategoryCard.isVisible = false
             binding.dashAmount.setStrikeThru(true)
             binding.fiatValue.setStrikeThru(true)
-            binding.checkIcon.setImageResource(R.drawable.ic_transaction_failed)
             binding.transactionTitle.text = context.getText(R.string.transaction_failed_details)
 
             var rescanText = ""
@@ -345,26 +344,16 @@ class TransactionResultViewBinder(
             }
         } else {
             if (tx.getValue(wallet).signum() < 0) {
-                binding.checkIcon.setImageResource(
-                    if (tx.isEntirelySelf(wallet)) {
-                        R.drawable.ic_internal
-                    } else {
-                        R.drawable.ic_transaction_sent
-                    }
-                )
-
                 binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
                 binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_sent)
                 binding.transactionAmountSignal.text = "-"
                 binding.transactionAmountSignal.isVisible = true
             } else {
-                binding.checkIcon.setImageResource(R.drawable.ic_transaction_received)
                 binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.system_green))
                 binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_received)
                 binding.transactionAmountSignal.isVisible = true
                 binding.transactionAmountSignal.text = "+"
             }
-            binding.checkIcon.isVisible = true
             binding.feeContainer.isVisible = isFeeAvailable(tx.fee)
         }
     }
