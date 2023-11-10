@@ -52,7 +52,7 @@ open class CoinJoinConfig @Inject constructor(
     }
 
     suspend fun getMode(): CoinJoinMode {
-        return get(COINJOIN_MODE).let { CoinJoinMode.valueOf(it!!) }
+        return get(COINJOIN_MODE).let { mode -> mode?.let { CoinJoinMode.valueOf(it) } ?: CoinJoinMode.NONE }
     }
 
     suspend fun setMode(mode: CoinJoinMode) {
