@@ -43,7 +43,7 @@ import org.bitcoinj.coinjoin.PoolStatus
 import org.bitcoinj.coinjoin.callbacks.RequestDecryptedKey
 import org.bitcoinj.coinjoin.callbacks.RequestKeyParameter
 import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener
-import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionType
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.coinjoin.listeners.MixingCompleteListener
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener
 import org.bitcoinj.coinjoin.progress.MixingProgressTracker
@@ -473,7 +473,6 @@ class CoinJoinMixingService @Inject constructor(
         // remove all listeners
         mixingCompleteListeners.forEach { coinJoinManager?.removeMixingCompleteListener(it) }
         sessionCompleteListeners.forEach { coinJoinManager?.removeSessionCompleteListener(it) }
-        coinJoinManager?.stop()
     }
 
     private fun setBlockchain(blockChain: AbstractBlockChain?) {
