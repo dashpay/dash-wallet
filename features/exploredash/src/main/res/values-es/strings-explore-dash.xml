@@ -24,7 +24,7 @@
     <string name="explore_atms_title">Cajeros automáticos</string>
     <string name="explore_atms_subtitle">Encuentra dónde comprar o vender DASH y otras criptomonedas por dinero en efectivo.</string>
     <string name="explore_staking_subtitle">Haz fácilmente staking de tus Dash y obtén ingresos pasivos con unos pocos clics.</string>
-    <string name="explore_staking_current_apy">Rendimiento anual aproximado actual = %s%%</string>
+    <string name="explore_staking_current_apy">APY actual = %s%%</string>
 
     <!-- Search -->
     <string name="explore_search_results">Buscar resultados</string>

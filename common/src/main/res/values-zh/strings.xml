@@ -97,4 +97,5 @@
     <string name="disconnected">连接断开</string>
     <string name="enter_amount_available">可用</string>
     <string name="transaction_row_rate_not_available">不可用</string>
+    <string name="log_in">登录</string>
 </resources>

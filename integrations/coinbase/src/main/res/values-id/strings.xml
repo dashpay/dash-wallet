@@ -37,7 +37,6 @@
     <string name="coinbase_fee">Biaya Coinbase</string>
     <string name="total">Total</string>
     <string name="order_preview">Pratinjau Pesanan</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Anda akan menerima %s Dash di Dash Wallet Anda di perangkat ini. Harap perhatikan bahwa perlu waktu hingga 2–3 menit untuk menyelesaikan transfer.</string>
     <string name="amount_in_dash">Jumlah dalam Dash</string>
     <string name="cancel">Batal</string>
     <string name="confirm_sec">Konfirmasi (%ss)</string>
@@ -57,11 +56,8 @@
     <string name="purchase_failed">Pembelian gagal</string>
     <string name="transfer_failed">Transfer Gagal</string>
     <string name="conversion_failed">Konversi Gagal</string>
-    <string name="transfer_failed_msg">Dash berhasil disetorkan ke akun Coinbase Anda. Namun ada masalah saat mentransfernya ke Dash Wallet di perangkat ini.</string>
-    <string name="purchase_failed_msg">Ada yang salah</string>
     <string name="it_could_take_up_to_2_3_minutes">Diperlukan waktu hingga 2–3 menit agar Dash ditransfer ke Dash Wallet Anda di perangkat ini.</string>
     <string name="it_could_take_up_to_5_minutes">Diperlukan waktu hingga 5 menit untuk mengonversi %s dari akun Coinbase ke Dash di Dash Wallet Anda di perangkat ini..</string>
-    <string name="it_could_take_up_to_5_minutes_to_coinbase">“Diperlukan waktu hingga 5 menit untuk mengonversi %s Dash dari Dash Wallet di perangkat ini ke akun Coinbase Anda.</string>
     <string name="contact_coinbase_support">Hubungi Dukungan Coinbase</string>
     <string name="fees_in_crypto_purchase">Biaya dalam pembelian kripto</string>
     <string name="coinbase_fee_info_msg_content">Selain biaya Coinbase yang ditampilkan, kami menyertakan spread dalam harga. Pasar Cryptocurrency tidak stabil, dan ini memungkinkan kami untuk mengunci harga sementara untuk eksekusi perdagangan.</string>
@@ -76,9 +72,7 @@
     <string name="to_your_coinbase_account">ke akun Coinbase Anda</string>
     <string name="from_dash_wallet_on_this_device">Dari dompet Dash di perangkat ini</string>
     <string name="you_will_receive">Anda akan menerima</string>
-    <string name="we_didnt_find_any_assets" >Kami tidak menemukan aset apa pun di akun Coinbase Anda.</string>
-    <string name="you_dont_own_any_crypto" >Anda tidak memiliki kripto apa pun. Beli beberapa krypto untuk memulai..</string>
-    <string name="buy_crypto_on_coinbase" >Beli kripto di Coinbase</string>
+    <string name="buy_crypto_on_coinbase">Beli kripto di Coinbase</string>
     <string name="auth_limit_description">Anda melampaui batas otorisasi di Coinbase.</string>
     <string name="debit_money">Debit uang dari akun Anda</string>
     <string name="change_limit">Ubah batas ini</string>
@@ -97,11 +91,9 @@
     <string name="verify_continue">Memeriksa</string>
     <string name="enter_auth_code">Masukkan kode Coinbase 2FA</string>
     <string name="extra_steps_label">Langkah ekstra ini menunjukkan bahwa Anda benar-benar mencoba melakukan transaksi.</string>
-    <string name="need_help">Butuh bantuan ?</string>
     <string name="coinbase_fa_code_hint">Kode 2FA Coinbase</string>
     <string name="enter_code_details">Bisa jadi kode dari SMS di ponsel Anda. Jika tidak, masukkan kode dari aplikasi otentikasi.</string>
     <string name="two_fa_code_incorrect">Kode tidak benar. Silakan periksa dan coba lagi!</string>
-    <string name="invalid_code">Kode itu tidak valid. Silakan coba lagi</string>
     <string name="verify_code">Memeriksa</string>
     <string name="you_dont_have_enough_balance">Anda tidak memiliki cukup saldo</string>
     <string name="transfer_amount">Transfer</string>
@@ -111,7 +103,6 @@
     <string name="transfer_dash_successful">Transfer berhasil</string>
     <string name="it_could_take_up_to_10_minutes">Diperlukan waktu hingga 10 menit untuk mentransfer Dash dari Coinbase ke dompet Dash perangkat ini.</string>
     <string name="it_could_take_up_to_10_minutes_to_coinbase">Diperlukan waktu hingga 10 menit untuk mentransfer Dash dari Dash Wallet di perangkat ini ke akun Coinbase Anda.</string>
-    <string name="transfer_dash_failed_msg">Terjadi masalah saat mentransfernya ke Dompet Dash di perangkat ini.</string>
     <string name="insufficient_money_to_transfer">Jumlah koin di dompet terlalu kecil untuk ditransfer.</string>
     <string name="amount_to_transfer">Anda akan menerima %s %s %s</string>
     </resources>

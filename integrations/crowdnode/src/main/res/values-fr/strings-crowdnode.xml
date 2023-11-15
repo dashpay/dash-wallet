@@ -94,7 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">Transférez %s pour recevoir des récompenses</string>
     <string name="crowdnode_first_deposit">Le premier transfert doit être supérieur à %s</string>
     <string name="crowdnode_staking_info_title">Comment marche l\'épargne CrowdNode (staking)</string>
-    <string name="crowdnode_staking_info_message_first">Le réseau Dash est généré par un certain nombre de masternodes, qui sont une fonction essentielle pour faciliter les paiements.</string>
+    <string name="crowdnode_staking_info_message_first">Le réseau Dash est opéré par un certain nombre de masternodes, qui sont un facteur essentiel pour faciliter les paiements.</string>
     <string name="crowdnode_staking_info_message_second">Un masternode a besoin de 1000 dashs comme caution, et chaque masternode est actuellement rémunéré à hauteur de %s%% par an.</string>
     <string name="crowdnode_staking_apy_title">L\'APY actuel est %s%%</string>
     <string name="crowdnode_staking_info_message">Vous commencerez à percevoir si votre compte CrowdNode détient plus de %s</string>
@@ -107,7 +107,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">Recevoir les paiements</string>
     <string name="crowdnode_staking_receiving_rewards_message">Vous recevrez automatiquement les paiements partiels, et ils seront réinvestis par défaut. Cependant, il est également simple d\'opter pour des retraits automatiques pour recevoir les paiements récurrents.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">Premier dépôt minimal</string>
-    <string name="crowdnode_staking_join_pool_message">Comme la plupart des gens ne possèdent pas exactement 1000 dashs, CrowdNode a créé un service où ils rassemblent les dépôts faits par les membres, et leur permettent de bénéficier des gains d\'un masternode.</string>
+    <string name="crowdnode_staking_join_pool_message">Comme beaucoup de gens n\'ont pas 1000 dashs sous la main, CrowdNode a bâti un service qui permet à ses membres, par la réunion de leurs dépôts, de bénéficier des revenus de la propriété d\'un masternode.</string>
     <string name="crowdnode_staking_join_pool_title">Rejoindre une équipe</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">Bénéfices CrowdNode</string>
     <string name="crowdnode_staking_connected_dash_address_title">Adresse Dash connectée</string>

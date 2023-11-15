@@ -359,4 +359,5 @@
 
     <string name="activity_buy_and_sell_dash_filter">Филтър</string>
     <string name="send_to_address">Изпрати до адрес</string>
-</resources>
+
+    </resources>

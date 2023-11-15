@@ -18,6 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">اكتشف داش</string>
     <string name="explore_title">اكتشف </string>
+    <string name="explore_subtitle">ابحث عن التجار الذين يقبلون الداش، وأماكن شرائها وكيفية كسب الدخل منها.</string>
     <string name="explore_merchants_title">أين تنفق؟</string>
     <string name="explore_merchants_subtitle">ابحث عن التجار الذين يقبلون داش كوسيلة للدفع.</string>
     <string name="explore_atms_title">أجهزة الصراف الآلي</string>
@@ -83,6 +84,7 @@
     <string name="explore_payment_method">طريقة الدفع</string>
     <string name="explore_payment_dash">داش</string>
     <string name="explore_payment_gift_card">كرت هدية</string>
+    <string name="explore_filter_gift_cards">بطاقات الهدايا</string>
     <string name="explore_radius">القطر</string>
     <string name="explore_location">الموقع</string>
     <string name="explore_current_location">الموقع الحالي</string>
@@ -167,5 +169,13 @@
     <string name="buy_gift_card_with_dash_text">شراء بطاقة هدية مع داش.</string>
     <string name="redeem_gift_card_text">استرد بطاقة الهدايا الخاصة بك عبر الإنترنت في غضون ثوانٍ أو عند الصراف.</string>
 
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">المزامنة جارية... قد لا تكون النتائج كاملة.</string>
+    <string name="sync_in_progress_error">المزامنة جارية... حدث خطأ.</string>
+    <string name="sync_in_progress_canceled">تم إلغاء المزامنة... سيتم إجراء محاولة أخرى لاحقًا.</string>
+
     <string name="sync_in_progress_file_not_found">خطأ في الإنشاء: قاعدة البيانات غير موجودة!</string>
+    <string name="sync_in_progress_network_error">تمت مقاطعة المزامنة... الشبكة غير متصلة بالإنترنت أو لا يمكن الوصول إليها</string>
+
+
     </resources>

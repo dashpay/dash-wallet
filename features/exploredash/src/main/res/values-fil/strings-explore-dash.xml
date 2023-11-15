@@ -18,6 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Galugarin ang Dash</string>
     <string name="explore_title">Galugarin</string>
+    <string name="explore_subtitle">Maghanap ng mga merchant na tumatanggap ng Dash, kung saan ito bibilhin at kung paano kumita gamit ito</string>
     <string name="explore_merchants_title">Saan Gagastos?</string>
     <string name="explore_merchants_subtitle">Maghanap ng mga merchant na tumatanggap ng Dash bilang bayad.</string>
     <string name="explore_atms_title">Mga ATM</string>
@@ -75,6 +76,7 @@
     <string name="explore_payment_method">Paraan ng Pagbayad</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Gift card</string>
+    <string name="explore_filter_gift_cards">Mga gift card</string>
     <string name="explore_radius">Radius</string>
     <string name="explore_location">Lokasyon</string>
     <string name="explore_current_location">Kasalukuyang Lokasyon</string>
@@ -151,5 +153,13 @@
     <string name="buy_gift_card_with_dash_text">Bumili ng gift card gamit ang iyong Dash</string>
     <string name="redeem_gift_card_text">I-redeem ang iyong gift card online sa loob ng ilang segundo o sa cashier.</string>
 
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Kasalukuyang isinasagawa ang pag-sync... Maaaring hindi kumpleto ang resulta.</string>
+    <string name="sync_in_progress_error">Kasalukuyang isinasagawa ang pag-sync... Nagkaroon ng error.</string>
+    <string name="sync_in_progress_canceled">Kinansela ang pag-sync... Isa pang pagtatangka ang gagawin sa ibang pagkakataon.</string>
+
     <string name="sync_in_progress_file_not_found">Error sa Pagbuo: Hindi nakita ang database!</string>
+    <string name="sync_in_progress_network_error">Naantala ang pag-sync... Ang network ay offline o hindi maabot</string>
+
+
     </resources>

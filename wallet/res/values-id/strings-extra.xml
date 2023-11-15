@@ -252,8 +252,6 @@
     <string name="menu_contact_support_title">Hubungi Dukungan</string>
     <string name="menu_contact_support_subtitle">Laporkan masalah</string>
     <string name="menu_explore_title">Jelajahi</string>
-    <string name="menu_explore_subtitle">Berbelanja dengan DASH di lebih dari 155.000 pedagang</string>
-
     <string name="tools_address_book">Buku alamat</string>
     <string name="tools_import_private_key">Impor kunci pribadi</string>
     <string name="tools_network_monitor">Monitor jaringan</string>

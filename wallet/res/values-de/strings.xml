@@ -378,13 +378,11 @@
     <string name="reason">Ursache</string>
     <string name="link_account">Konto verknüpfen</string>
     <string name="buy_no_account_needed">Dash kaufen. Es wird kein Konto benötigt.</string>
-    <string name="your_coinbase_session_has_expired">Deine Coinbase Session ist abgelaufen.</string>
-    <string name="please_log_in_to_your_coinbase_account">Bitte logge dich in deinen Coinbase Account ein.</string>
-    <string name="log_in">Einloggen</string>
 
     <string name="recipient_address">Adresse des Empfängers</string>
     <string name="show_clipboard">Inhalt der Zwischenablage anzeigen</string>
     <string name="tap_to_paste">Tippe auf die Adresse in der Zwischenablage, um sie einzufügen.</string>
     <string name="not_dash_address">Keine gültige Dash Adresse oder URL-Anfrage</string>
     <string name="send_to_address">An Adresse senden</string>
-</resources>
+
+    </resources>

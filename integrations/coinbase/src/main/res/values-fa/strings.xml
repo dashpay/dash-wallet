@@ -37,7 +37,6 @@
     <string name="coinbase_fee">کارمزد کوین‌بیس</string>
     <string name="total">مجموع</string>
     <string name="order_preview">پیش‌نمایش سفارش</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">شما %sدش در دش والت‌تان روی همین دستگاه دریافت خواهید کرد. لطفا توجه داشته باشید که تکمیل عملیات انتقال این مبلغ می‌تواند بین ۲ تا ۳ دقیقه زمان ببرد. </string>
     <string name="amount_in_dash">مبلغ بر حسب دش</string>
     <string name="cancel">لغو</string>
     <string name="confirm_sec">تائید (%sثانیه) </string>
@@ -57,11 +56,8 @@
     <string name="purchase_failed">عملیات خرید ناموفق بود</string>
     <string name="transfer_failed">عملیات انتقال ناموفق بود</string>
     <string name="conversion_failed">عملیات تبدیل انجام نشد</string>
-    <string name="transfer_failed_msg">دش با موفقیت به حساب کوین‌بیس شما انتقال یافت. اما انتقال دش به دش والت روی این دستگاه موفق نبود. </string>
-    <string name="purchase_failed_msg">مشکلی روی داده است</string>
     <string name="it_could_take_up_to_2_3_minutes">عملیات انتقال دش به این دش والت روی این دستگاه ممکن است ۲ تا ۳ دقیقه زمان ببرد. </string>
     <string name="it_could_take_up_to_5_minutes">تا حداکثر ۵ دقیقه زمان لازم است تا %s از حساب کوین‌بیس به دش تبدیل شده و به دش والت در دستگاه‌تان انتقال یابد. </string>
-    <string name="it_could_take_up_to_5_minutes_to_coinbase">تا حداکثر ۵ دقیقه زمان لازم است تا %s از دش والت روی این دستگاه به حساب کوین‌بیس شما تبدیل شده و انتقال یابد. </string>
     <string name="contact_coinbase_support">با پشتیبانی کوین‌بیس تماس بگیرید</string>
     <string name="fees_in_crypto_purchase">کارمزد خرید رمزارز</string>
     <string name="coinbase_fee_info_msg_content">علاوه بر کارمزد نمایش‌داده‌شده در کوین‌بیس، ما مبلغی را به اقیمت اضافه کردیم. بازار رمزارزها نوسانات زیادی دارد و با این کار می‌توانیم قیمت را به صورت موقت برای اجرای تراکنش قفل کنیم. </string>
@@ -77,9 +73,7 @@
     <string name="to_your_coinbase_account">به حساب کوین‌بیس</string>
     <string name="from_dash_wallet_on_this_device">از دش والت روی این دستگاه</string>
     <string name="you_will_receive">دریافت خواهید کرد</string>
-    <string name="we_didnt_find_any_assets" >هیچ دارایی در حساب کوین‌بیس شما یافت نشد. </string>
-    <string name="you_dont_own_any_crypto" >هیچ رمزارزی ندارید. برای شروع مقداری رمزارز بخرید</string>
-    <string name="buy_crypto_on_coinbase" >خرید رمزارز در کوین‌بیس</string>
+    <string name="buy_crypto_on_coinbase">خرید رمزارز در کوین‌بیس</string>
     <string name="auth_limit_description">از حد تعریف‌شده در کوین‌بیس فراتر رفتید.</string>
     <string name="debit_money">واریز از حساب‌تان</string>
     <string name="change_limit">تغییر این محدوده</string>
@@ -98,11 +92,9 @@
     <string name="verify_continue">تائید</string>
     <string name="enter_auth_code">کد 2FA کوین‌بیس را وارد کنید</string>
     <string name="extra_steps_label">این گام اضافه نشان می‌دهد واقعا خودتان قصد انجام این تراکنش را دارید. </string>
-    <string name="need_help">نیاز به کمک دارید؟ </string>
     <string name="coinbase_fa_code_hint">کد 2FA کوین‌بیس</string>
     <string name="enter_code_details">این کد ممکن است به صورت پیامک به گوشی شما بیاید. در عیر این صورت، از کد اپلیکیشن اعتبارسنجی استفاده کنید. </string>
     <string name="two_fa_code_incorrect">کد وارد شده درست نیست. لطفا دوباره آن را بررسی کرده و وارد کنید! </string>
-    <string name="invalid_code">کد نامعتبر بود. لطفا دوباره امتحان کنید</string>
     <string name="verify_code">تائید</string>
     <string name="you_dont_have_enough_balance">موجودی کافی ندارید</string>
     <string name="transfer_amount">انتقال</string>
@@ -112,8 +104,9 @@
     <string name="transfer_dash_successful">تراکنش موفق</string>
     <string name="it_could_take_up_to_10_minutes">انتقال دش از کوین‌بیس به کیف پول دش روی این دستگاه شاید تا ۱۰ دقیقه زمان ببرد. </string>
     <string name="it_could_take_up_to_10_minutes_to_coinbase">تا حداکثر ۱۰ دقیقه زمان لازم است تا دش والت شما روی این دستگاه به حساب‌تان در کوین‌بیس انتقال یابد. </string>
-    <string name="transfer_dash_failed_msg"> انتقال دش از دش والت به این دستگاه با مشکل روبرو شد. </string>
     <string name="insufficient_money_to_transfer">مقدار دش در کیف‌ پول‌تان آن قدر نیست که بتوانید انتقال دهید. </string>
     <string name="amount_to_transfer">شما این مقدار دریافت کردید: %s%s%s</string>
     <string name="amount_to_transfer_dash">شما %s دریافت خواهید کرد</string>
+    <string name="your_coinbase_session_has_expired">حساب کوینبیس‌ شما منقضی شده است</string>
+    <string name="please_log_in_to_your_coinbase_account">لطفا وارد حساب کوینبیس‌تان شوید</string>
     </resources>

@@ -94,7 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">Deposite %s para começar a ganhar</string>
     <string name="crowdnode_first_deposit">O primeiro depósito deve ser superior a %s</string>
     <string name="crowdnode_staking_info_title">Como funciona o staking no CrowdNode</string>
-    <string name="crowdnode_staking_info_message_first">A Rede Dash é impulsionada por vários Masternodes, o que é uma parte essencial para facilitar os pagamentos.</string>
+    <string name="crowdnode_staking_info_message_first">A Rede Dash é impulsionada por vários Masternodes, que são uma parte essencial para facilitar os pagamentos.</string>
     <string name="crowdnode_staking_info_message_second">Um Masternode precisa de 1000 Dash como garantia e cada Masternode é atualmente recompensado aproximadamente por %s %% por ano.</string>
     <string name="crowdnode_staking_apy_title">O APY atual é %s %%</string>
     <string name="crowdnode_staking_info_message">Você começa a ganhar se sua conta CrowdNode tiver mais de %s</string>
@@ -107,7 +107,6 @@
     <string name="crowdnode_staking_receiving_rewards_title">Recebendo recompensas</string>
     <string name="crowdnode_staking_receiving_rewards_message">Você receberá pagamentos fracionados automaticamente e eles serão reinvestidos por padrão, no entanto, também é fácil configurar saques automáticos para receber pagamentos recorrentes.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">Primeiro Depósito Mínimo</string>
-    <string name="crowdnode_staking_join_pool_message">Como a maioria das pessoas não tem exatamente 1000 Dash em mãos, o CrowdNode criou um serviço em que, ao reunir depósitos de membros, podem obter os benefícios de possuir um Masternode.</string>
     <string name="crowdnode_staking_join_pool_title">Entrando no \"pool\"</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">Benefícios CrowdNode</string>
     <string name="crowdnode_staking_connected_dash_address_title">Endereço Dash conectado</string>

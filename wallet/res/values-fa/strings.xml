@@ -378,13 +378,11 @@
     <string name="reason">دلیل</string>
     <string name="link_account">به حساب‌تان متصل کنید</string>
     <string name="buy_no_account_needed">دش بخرید - بدون نیاز به حساب</string>
-    <string name="your_coinbase_session_has_expired">حساب کوینبیس‌ شما منقضی شده است</string>
-    <string name="please_log_in_to_your_coinbase_account">لطفا وارد حساب کوینبیس‌تان شوید</string>
-    <string name="log_in">ورود</string>
 
     <string name="recipient_address">نشانی دریافت‌کننده</string>
     <string name="show_clipboard">نشان دادن اطلاعات در کلیپ‌برد</string>
     <string name="tap_to_paste">روی نشانی موجود در کلیپ‌برد لمس کنید تا چسبانده شود</string>
     <string name="not_dash_address">نشانی دش و یا نشانی وب درخواستی معتبر نیست</string>
     <string name="send_to_address">ارسال به نشانی</string>
-</resources>
+
+    </resources>
