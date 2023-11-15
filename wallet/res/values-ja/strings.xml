@@ -377,13 +377,21 @@
     <string name="reason">理由</string>
     <string name="link_account">お客様のアカウントをリンク</string>
     <string name="buy_no_account_needed">Dashを購入 · アカウント不要</string>
-    <string name="your_coinbase_session_has_expired">お客様のCoinbaseのセッションは有効期限切れです</string>
-    <string name="please_log_in_to_your_coinbase_account">お客様のCoinbaseアカウントにログインしてください</string>
-    <string name="log_in">ログイン</string>
 
     <string name="recipient_address">受取人のアドレス</string>
     <string name="show_clipboard">クリップボードのコンテンツを表示する</string>
     <string name="tap_to_paste">クリップボードからアドレスをタップしてペーストする</string>
     <string name="not_dash_address">無効なDashアドレスやURLリクエスト</string>
     <string name="send_to_address">アドレスに送金する</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">バッテリーの最適化</string>
+    <string name="battery_optimization_subtitle_optimized">最適化済み</string>
+    <string name="battery_optimization_subtitle_unrestricted">制限なし</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Dashウォレットをバックグラウンドで起動しますか。</string>
+    <string name="battery_optimization_dialog_message_optimized">このアプリは、しばらく表示されないと動作が停止するように設定されています。\n\nこのため、アプリがフォアグラウンドに戻るまで、支払い通知を受け取ることができないようになります。\n\nバッテリー最適化を「最適化しない」または「制限なし」に設定し、このアプリをバックグラウンドで動作させることをお勧めします。\n\nバッテリーの使用量は常に管理していますのでご安心ください。</string>
+    <string name="battery_optimization_dialog_unrestricted_title">バックグラウンドで支払いを受け取りたいですか。</string>
+    <string name="battery_optimization_dialog_message_not_optimized">このアプリは、しばらく表示されなくても動作し続けるように設定されています。\n\nバックグラウンドでも、このアプリが常にブロックチェーンの最新情報を取得できるようにすることをお勧めします。\n\nバッテリーの使用量は常に管理していますのでご安心ください。</string>
+    <string name="battery_optimization_dialog_button_change">設定を開く</string>
 </resources>

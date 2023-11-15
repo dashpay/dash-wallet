@@ -94,7 +94,6 @@
     <string name="crowdnode_minimum_deposit_difference">سپرده‌گذاری %s برای آغاز دریافت پاداش </string>
     <string name="crowdnode_first_deposit">اولین واریزی باید بیشتر از %s باشد. </string>
     <string name="crowdnode_staking_info_title">عملکرد استیکینگ کراونود</string>
-    <string name="crowdnode_staking_info_message_first">شبکه دش توسط تعدادی مسترنود اداره می‌شود که بخشی اساسی در تسهیل پرداخت‌ها هستند. </string>
     <string name="crowdnode_staking_info_message_second">هر مسترنود باید هزار دش به عنوان وثیقه داشته باشد و هر مسترنود هر سال تقریبا %s%% پاداش می‌گیرد. </string>
     <string name="crowdnode_staking_apy_title">بازدهی سالانه کنونی %s%%</string>
     <string name="crowdnode_staking_info_message">در صورتی می‌توانید کسب درآمد کنید که موجودی حساب کراودنود شما بیش از %s باشد. </string>
@@ -107,7 +106,6 @@
     <string name="crowdnode_staking_receiving_rewards_title">دریافت پاداش</string>
     <string name="crowdnode_staking_receiving_rewards_message">مبلغی جزئی را به صورت خودکار دریافت خواهید کرد و به صورت خودکار دوباره سرمایه‌گذاری می‌شود. با این وجود، امکان تنظیم برداشت خودکار برای دریافت پرداخت‌های مکرر به سادگی امکان‌پذیر است. </string>
     <string name="crowdnode_staking_first_minimum_deposit_title">اولین حداقل واریزی</string>
-    <string name="crowdnode_staking_join_pool_message">از آنجا که بیشتر کاربران هزار دش در اختیار ندارند، کراودنود این خدمت را فراهم کرده تا با در کنار هم قرار گرفتن موجودی‌ کاربران مختلف، همه آنها بنوانند از مزایای در اختیار داشتن یک مسترنود بهره‌مند شوند. </string>
     <string name="crowdnode_staking_join_pool_title">پیوستن به مجموعه</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">مزایای کراودنود</string>
     <string name="crowdnode_staking_connected_dash_address_title">اتصال به نشانی دش برقرار است</string>

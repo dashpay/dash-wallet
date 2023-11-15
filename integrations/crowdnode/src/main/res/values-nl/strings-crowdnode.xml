@@ -94,7 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">Stort %s om te beginnen met verdienen</string>
     <string name="crowdnode_first_deposit">Eerste storting moet meer zijn dan %s</string>
     <string name="crowdnode_staking_info_title">Hoe staking bij CrowdNode werkt</string>
-    <string name="crowdnode_staking_info_message_first">Het Dash Netwerk wordt aangedreven door \'Masternodes\', wat een essentieel onderdeel is voor het faciliteren van betalingen.</string>
+    <string name="crowdnode_staking_info_message_first">Het Dash netwerk wordt aangedreven door een aantal Masternodes, welke een essentieel onderdeel zijn voor het faciliteren van betalingen.</string>
     <string name="crowdnode_staking_info_message_second">Een Masternode heeft 1000 Dash nodig als onderpand. Elke Masternode wordt momenteel ongeveer met %s%% per jaar beloond.</string>
     <string name="crowdnode_staking_apy_title">Huidig jaarlijks rendement = %s%%</string>
     <string name="crowdnode_staking_info_message">Je begint te verdienen als je CrowdNode account meer heeft dan %s</string>
@@ -107,7 +107,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">Beloningen ontvangen</string>
     <string name="crowdnode_staking_receiving_rewards_message">U ontvangt automatisch fractionele betalingen en deze worden standaard opnieuw geïnvesteerd. Het is ook mogelijk om automatische opnames in te stellen om terugkerende uitbetalingen te ontvangen.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">Eerste minimale storting</string>
-    <string name="crowdnode_staking_join_pool_message">Omdat de meeste mensen geen 1000 Dash bij de hand hebben, heeft CrowdNode een service gemaakt waarbij ze door stortingen van leden te bundelen de voordelen van het bezitten van een Masternode kunnen bereiken.</string>
+    <string name="crowdnode_staking_join_pool_message">Omdat de meeste mensen geen 1000 Dash bezitten, biedt CrowdNode een service waarbij de stortingen van leden worden gebundeld tot masternodes, om zo de voordelen van het bezitten hiervan te kunnen bereiken.</string>
     <string name="crowdnode_staking_join_pool_title">Deelnemen aan de pool</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">CrowdNode voordelen</string>
     <string name="crowdnode_staking_connected_dash_address_title">Verbonden Dash adres</string>

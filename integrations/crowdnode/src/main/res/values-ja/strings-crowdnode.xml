@@ -94,7 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">%s入金して収益化を始める</string>
     <string name="crowdnode_first_deposit">初回の入金には、%s以上が必要になります</string>
     <string name="crowdnode_staking_info_title">CrowdNodeのステーキングの仕組み</string>
-    <string name="crowdnode_staking_info_message_first">Dashネットワークは多くのマスターノードによって稼働しており、決済を円滑に行うために不可欠な要素となっています。</string>
+    <string name="crowdnode_staking_info_message_first">Dashネットワークは多くのマスターノードで駆動され、決済を促進するのに不可欠な役割を担っています。</string>
     <string name="crowdnode_staking_info_message_second">マスターノードには1000Dashの担保金が必要で、現在各マスターノードには年に%s%%回程度の報酬が支払われます。</string>
     <string name="crowdnode_staking_apy_title">現在のAPYは、%s%%です</string>
     <string name="crowdnode_staking_info_message">お客様のCrowdNodeのアカウントに%s以上あれば、収益が発生します。</string>
@@ -107,7 +107,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">報酬の受取</string>
     <string name="crowdnode_staking_receiving_rewards_message">端数の支払いは自動的に受け取れ、デフォルトでは再投資されますが、定期的な支払いを受け取るための自動出金の設定も簡単に行うことができます。</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">初回最低入金額</string>
-    <string name="crowdnode_staking_join_pool_message">手元に1000Dashもない人がほとんどなため、CrowdNodeはサービスを作り、会員からの預金をプールすることで、そのような人々がマスターノードを所有する特典を得られるようにしました。</string>
+    <string name="crowdnode_staking_join_pool_message">大半の人が手元に1000Dashをきっちり持っているわけではないため、CrowdNodeは会員からの預金をプールしてマスターノードを所有するメリットを得ることができるサービスを作りました。</string>
     <string name="crowdnode_staking_join_pool_title">プールの参加</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">CrowdNodeの特典</string>
     <string name="crowdnode_staking_connected_dash_address_title">連結されたDashアドレス</string>

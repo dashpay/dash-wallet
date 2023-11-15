@@ -264,7 +264,7 @@
     <string name="menu_contact_support_title">고객 지원부에 문의하기</string>
     <string name="menu_contact_support_subtitle">오류 보고하기</string>
     <string name="menu_explore_title">탐색하기</string>
-    <string name="menu_explore_subtitle">155,000개 이상의 상점에서 대시로 쇼핑하세요</string>
+    <string name="menu_explore_subtitle">대시 거래를 허용하는 판매자 찾기</string>
 
     <string name="tools_address_book">주소록</string>
     <string name="tools_import_private_key">프라이빗 키 가져오기</string>

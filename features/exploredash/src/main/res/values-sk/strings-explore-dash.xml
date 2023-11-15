@@ -18,6 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Objavte Dash</string>
     <string name="explore_title">Objaviť</string>
+    <string name="explore_subtitle">Nájdite obchodníkov, ktorí akceptujú Dash, kde ho kúpiť a ako s ním zarobiť.</string>
     <string name="explore_merchants_title">Kde minúť?</string>
     <string name="explore_merchants_subtitle">Nájsť obchodníkov, ktorí akceptujú Dash ako platbu.</string>
     <string name="explore_atms_title">Bankomaty</string>
@@ -79,6 +80,7 @@
     <string name="explore_payment_method">Spôsob platby</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Darčeková karta</string>
+    <string name="explore_filter_gift_cards">Darčekové karty</string>
     <string name="explore_radius">Okruh</string>
     <string name="explore_location">Miesto</string>
     <string name="explore_current_location">Súčasná poloha</string>
@@ -159,5 +161,13 @@
     <string name="buy_gift_card_with_dash_text">Kúpte si darčekovú kartu s Dashom.</string>
     <string name="redeem_gift_card_text">Uplatnite svoju darčekovú kartu online v priebehu niekoľkých sekúnd alebo pri pokladni.</string>
 
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Prebieha synchronizácia… Výsledky nemusia byť úplné.</string>
+    <string name="sync_in_progress_error">Prebieha synchronizácia… Vyskytla sa chyba.</string>
+    <string name="sync_in_progress_canceled">Synchronizácia bola zrušená… Ďalší pokus sa uskutoční neskôr.</string>
+
     <string name="sync_in_progress_file_not_found">Chyba zostavy: Databáza sa nenašla!</string>
+    <string name="sync_in_progress_network_error">Synchronizácia bola prerušená… Sieť je offline alebo nedostupná</string>
+
+
     </resources>

@@ -97,4 +97,5 @@
     <string name="disconnected">عدم اتصال به شبکه</string>
     <string name="enter_amount_available">موجود</string>
     <string name="transaction_row_rate_not_available">در دسترس نیست</string>
+    <string name="log_in">ورود</string>
 </resources>

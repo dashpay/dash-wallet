@@ -267,8 +267,6 @@
     <string name="menu_contact_support_title">Destekle İletişime Geçin</string>
     <string name="menu_contact_support_subtitle">Sorun rapor et</string>
     <string name="menu_explore_title">Keşfet</string>
-    <string name="menu_explore_subtitle">155.000\'den fazla satıcıda DASH ile alışveriş yapın</string>
-
     <string name="tools_address_book">Adres Rehberi</string>
     <string name="tools_import_private_key">Özel anahtar içeri al</string>
     <string name="tools_network_monitor">Ağ monitörü</string>
@@ -395,6 +393,7 @@
     <string name="masternode_key_type_owner">Sahip Anahtarları</string>
     <string name="masternode_key_type_voting">Oy Verme Anahtarları</string>
     <string name="masternode_key_type_operator">Operatör Anahtarları</string>
+    <string name="masternode_key_type_platform">Evolution Node Kimlik Anahtarları</string>
     <string name="masternode_key_type_total">%d anahtarları</string>
     <string name="masternode_key_type_used">%d kullanıldı</string>
     <string name="masternode_key_pair_index">Tuş Çifti %d</string>
