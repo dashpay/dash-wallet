@@ -19,31 +19,31 @@ package org.dash.wallet.integrations.crowdnode.model
 
 import com.google.gson.annotations.SerializedName
 
-data class CrowdNodeTx (
+data class CrowdNodeTx(
     @SerializedName("FundingType")
-    val fundingType : String,
+    val fundingType: String,
     @SerializedName("Amount")
-    val amount : Double,
+    val amount: Double,
     @SerializedName("Time")
-    val time : Int,
+    val time: Int,
     @SerializedName("TimeReceived")
-    val timeReceived : Int,
+    val timeReceived: Int,
     @SerializedName("TxId")
-    val txId : String,
+    val txId: String,
     @SerializedName("PortalUserId")
-    val portalUserId : Int,
+    val portalUserId: Int,
     @SerializedName("Status")
-    val status : String,
+    val status: String,
     @SerializedName("Comment")
-    val comment : String,
+    val comment: String,
     @SerializedName("TimeUTC")
-    val timeUTC : String,
+    val timeUTC: String,
     @SerializedName("Id")
-    val id : Int,
+    val id: Int,
     @SerializedName("UpdatedOn")
-    val updatedOn : String,
+    val updatedOn: String,
     @SerializedName("SyncFromPrivateOn")
-    val syncFromPrivateOn : String,
+    val syncFromPrivateOn: String,
     @SerializedName("UpdatedInPrivateOn")
-    val updatedInPrivateOn : String
+    val updatedInPrivateOn: String
 )

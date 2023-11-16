@@ -270,7 +270,7 @@
     <string name="menu_contact_support_title">Contactar Soporte</string>
     <string name="menu_contact_support_subtitle">Reportar un problema</string>
     <string name="menu_explore_title">Explorar</string>
-    <string name="menu_explore_subtitle">Compra con DASH en más de 155,000 comerciantes</string>
+    <string name="menu_explore_subtitle">Encuentra comerciantes que acepten DASH</string>
 
     <string name="tools_address_book">Libreta de direcciones</string>
     <string name="tools_import_private_key">Barrer billetera de papel</string>

@@ -27,7 +27,7 @@ import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class CrowdNodeWithdrawalReceivedTx(
     private val networkParams: NetworkParameters
-): TransactionFilter {
+) : TransactionFilter {
     private val joinedFilters = mutableListOf<TransactionFilter>()
 
     override fun matches(tx: Transaction): Boolean {

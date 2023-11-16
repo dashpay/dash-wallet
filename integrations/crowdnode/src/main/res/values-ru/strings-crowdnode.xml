@@ -24,7 +24,7 @@
     <string name="welcome_response">Аккаунт создан</string>
     <string name="account_link">Привязать уже существующий аккаунт</string>
     <string name="crowdnode_login">Войти в CrowdNode</string>
-    <string name="crowdnode_signup">Подписаться на новости CrowdNode</string>
+    <string name="crowdnode_signup">Создать CrowdNode аккаунт</string>
     <string name="crowdnode_link">Привязать уже существующий аккаунт CrowdNode</string>
     <string name="required_passphrase_backup">Необходимо создать резервную копию кодовой фразы Dash Wallet</string>
     <string name="backup_passphrase">Создать резервную копию кодовой фразы</string>

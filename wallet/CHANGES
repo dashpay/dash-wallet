@@ -1,4 +1,13 @@
 Dash Wallet
+v9.1.1
+* Import Private Key Image Crash Fix
+* Add support to change battery optimization
+* Decrease shortcut fonts for some languages
+* Fix bug where MN keys remained from previous wallet
+* Update Coinbase Buy API
+* CrowdNode: Increase precision of Withdrawals
+* CrowdNode: Fix grammar on How staking works page
+
 v9.1.0
 * Add Topper Integration
 

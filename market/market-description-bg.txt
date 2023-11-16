@@ -1,4 +1,4 @@
-﻿MAIN DESCRIPTION
+﻿ОСНОВНО ОПИСАНИЕ
 
 Dash Wallet е референтният Android портфейл, поддържан от Dash Core Group за Dash - Digital Cash - иновативна алтернатива на Bitcoin, която е изрично предназначена за плащания.
 

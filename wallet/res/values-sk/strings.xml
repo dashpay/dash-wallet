@@ -377,12 +377,21 @@
     <string name="reason">Dôvod</string>
     <string name="link_account">Pripojiť váš účet</string>
     <string name="buy_no_account_needed">Kúpiť Dash · Nie je potrebný žiadny účet</string>
-    <string name="your_coinbase_session_has_expired">Vaša relácia s Coinbase vypršala</string>
-    <string name="please_log_in_to_your_coinbase_account">Prihláste sa do svojho Coinbase účtu</string>
-    <string name="log_in">Prihlásiť sa</string>
 
+    <string name="recipient_address">Adresa príjemcu</string>
     <string name="show_clipboard">Zobraziť obsah v schránke</string>
     <string name="tap_to_paste">Klepnutím na adresu zo schránky ju použijete</string>
     <string name="not_dash_address">Neplatná Dash adresa alebo URL žiadosť</string>
     <string name="send_to_address">Poslať na adresu</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Optimalizácia batérie</string>
+    <string name="battery_optimization_subtitle_optimized">Optimalizované</string>
+    <string name="battery_optimization_subtitle_unrestricted">Neobmedzené</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Nechať Dash Wallet bežať na pozadí?</string>
+    <string name="battery_optimization_dialog_message_optimized">Táto aplikácia je nakonfigurovaná tak, aby sa zastavila, keď nebude nejaký čas viditeľná.\n\nV dôsledku toho nebudete dostávať upozornenia na platby, kým sa aplikácia nevráti do popredia.\n\nOdporúčame povoliť tejto aplikácii spustenie na pozadí nastavením batérie optimalizácia na „Neoptimalizované“ alebo „Neobmedzené.“\n\nNebojte sa, vždy nám bude záležať na spotrebe batérie.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Chcete dostávať platby na pozadí?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Táto aplikácia je nakonfigurovaná tak, aby bola spustená aj vtedy, keď nebude nejaký čas viditeľná.\n\nOdporúčame tejto aplikácii povoliť, aby mala vždy aktuálne informácie o blockchaine, a to aj na pozadí.\n\nNebojte sa, vždy nám bude záležať na spotrebe batérie.</string>
+    <string name="battery_optimization_dialog_button_change">Otvoriť nastavenia</string>
 </resources>

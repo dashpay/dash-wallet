@@ -93,7 +93,7 @@ class CrowdNodeApiAggregatorTest {
             localConfig.stub {
                 onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.Linking.ordinal
             }
-            val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock(), mock(), mock()) // ktlint-disable max-line-length
+            val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock(), mock()) // ktlint-disable max-line-length
             api.restoreStatus()
             api.stopTrackingLinked()
 
@@ -112,7 +112,7 @@ class CrowdNodeApiAggregatorTest {
             }
             val api = CrowdNodeApiAggregator(
                 mock(), blockchainApi, walletData, mock(), mock(),
-                localConfig, globalConfig, mock(), mock(), mock()
+                localConfig, globalConfig, mock(), mock()
             )
             api.restoreStatus()
             api.stopTrackingLinked()
@@ -139,7 +139,7 @@ class CrowdNodeApiAggregatorTest {
             blockchainApi.stub {
                 on { getFullSignUpTxSet() } doReturn mockFullSet
             }
-            val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock(), mock(), mock()) // ktlint-disable max-line-length
+            val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock(), mock()) // ktlint-disable max-line-length
             api.restoreStatus()
             assertEquals(SignUpStatus.Finished, api.signUpStatus.value)
             assertEquals(OnlineAccountStatus.None, api.onlineAccountStatus.value)
@@ -159,7 +159,7 @@ class CrowdNodeApiAggregatorTest {
             }
             val api = CrowdNodeApiAggregator(
                 webApi, blockchainApi, walletData, mock(), mock(),
-                localConfig, globalConfig, mock(), mock(), mock()
+                localConfig, globalConfig, mock(), mock()
             )
             api.restoreStatus()
             api.refreshBalance()
@@ -177,24 +177,7 @@ class CrowdNodeApiAggregatorTest {
             }
             val api = CrowdNodeApiAggregator(
                 webApi, blockchainApi, walletData, mock(), mock(),
-                localConfig, globalConfig, mock(), mock(), mock()
-            )
-            api.restoreStatus()
-            assertEquals(SignUpStatus.LinkedOnline, api.signUpStatus.value)
-            assertEquals(OnlineAccountStatus.Done, api.onlineAccountStatus.value)
-        }
-    }
-
-    // TODO: remove when there is no 7.5.0 in the wild
-    @Test
-    fun oldOnlineStatusDoneValue_restoredCorrectly() {
-        runBlocking {
-            localConfig.stub {
-                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn 4
-            }
-            val api = CrowdNodeApiAggregator(
-                webApi, blockchainApi, walletData, mock(), mock(),
-                localConfig, globalConfig, mock(), mock(), mock()
+                localConfig, globalConfig, mock(), mock()
             )
             api.restoreStatus()
             assertEquals(SignUpStatus.LinkedOnline, api.signUpStatus.value)
@@ -221,7 +204,7 @@ class CrowdNodeApiAggregatorTest {
             }
             val api = CrowdNodeApiAggregator(
                 webApi, blockchainApi, walletData, mock(), mock(),
-                localConfig, globalConfig, mock(), mock(), mock()
+                localConfig, globalConfig, mock(), mock()
             )
             api.restoreStatus()
             assertEquals(SignUpStatus.Finished, api.signUpStatus.value)
@@ -255,7 +238,7 @@ class CrowdNodeApiAggregatorTest {
 
         val api = CrowdNodeApiAggregator(
             webApi, blockchainApi, walletData, mock(), mock(),
-            localConfig, globalConfig, mock(), mock(), mock()
+            localConfig, globalConfig, mock(), mock()
         )
         api.restoreStatus()
 

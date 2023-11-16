@@ -37,7 +37,7 @@
     <string name="coinbase_fee">Coinbase vergoeding</string>
     <string name="total">Totaal</string>
     <string name="order_preview">Voorbeeld bestelling</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Je ontvangt %s Dash in je Dash portemonnee op dit apparaat. Houd er rekening mee dat het tot 2 à 3 minuten kan duren om een overdracht te voltooien.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Je ontvangt ~ %s Dash in je Dash portemonnee op dit apparaat. Houd er rekening mee dat het 2 à 3 minuten kan duren om een overdracht te voltooien.</string>
     <string name="amount_in_dash">Bedrag in Dash</string>
     <string name="cancel">Annuleer</string>
     <string name="confirm_sec">Bevestig (%ss)</string>
@@ -57,11 +57,10 @@
     <string name="purchase_failed">Aankoop mislukt</string>
     <string name="transfer_failed">Overdracht mislukt</string>
     <string name="conversion_failed">Conversie mislukt</string>
-    <string name="transfer_failed_msg">De Dash is succesvol gestort op je Coinbase account. Maar er was een probleem bij het overzetten naar de Dash portemonnee op dit apparaat.</string>
-    <string name="purchase_failed_msg">Er is iets verkeerd gegaan</string>
+    <string name="transfer_failed_msg">Dash is succesvol gestort op je Coinbase account, maar er was een probleem bij het overzetten hiervan naar de Dash portemonnee op dit apparaat.</string>
     <string name="it_could_take_up_to_2_3_minutes">Het kan tot 2 à 3 minuten duren voordat de Dash is verzonden naar je Dash portemonnee op dit apparaat.</string>
     <string name="it_could_take_up_to_5_minutes">Het kan tot 5 minuten duren om %s van je Coinbase-account naar Dash in je Dash portemonnee te converteren.</string>
-    <string name="it_could_take_up_to_5_minutes_to_coinbase">“Het kan tot 5 minuten duren om Dash van je Dash portemonnee naar %s in je Coinbase-account te converteren.</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">Het kan tot 5 minuten duren om Dash van je Dash portemonnee naar %s op je Coinbase account te converteren.</string>
     <string name="contact_coinbase_support">Neem contact op met Coinbase</string>
     <string name="fees_in_crypto_purchase">Kosten bij crypto aankopen</string>
     <string name="coinbase_fee_info_msg_content">Naast de weergegeven Coinbase vergoeding, nemen we een spread in de prijs. Cryptocurrency markten zijn volatiel en dit stelt ons in staat om tijdelijk een prijs vast te leggen voor de uitvoering van transacties.</string>
@@ -77,9 +76,9 @@
     <string name="to_your_coinbase_account">naar je Coinbase account</string>
     <string name="from_dash_wallet_on_this_device">Van Dash portemonnee op dit apparaat</string>
     <string name="you_will_receive">Je ontvangt</string>
-    <string name="we_didnt_find_any_assets" >We hebben geen activa gevonden op je Coinbase account.</string>
-    <string name="you_dont_own_any_crypto" >Je bezit geen cryptovaluta. Koop wat crypto om te beginnen..</string>
-    <string name="buy_crypto_on_coinbase" >Koop crypto op Coinbase</string>
+    <string name="we_didnt_find_any_assets">We hebben geen activa gevonden op je Coinbase account.</string>
+    <string name="you_dont_own_any_crypto">Je bezit geen crypto valuta. Koop wat crypto om te beginnen..</string>
+    <string name="buy_crypto_on_coinbase">Koop crypto op Coinbase</string>
     <string name="auth_limit_description">Je hebt de autorisatielimiet op Coinbase overschreden.</string>
     <string name="debit_money">Geld van uw rekening afschrijven</string>
     <string name="change_limit">Wijzig dit limiet</string>
@@ -102,7 +101,6 @@
     <string name="coinbase_fa_code_hint">Coinbase 2FA code</string>
     <string name="enter_code_details">Het kan de code van de SMS op je telefoon zijn. Zo niet, voer dan de code van de authenticatie app in.</string>
     <string name="two_fa_code_incorrect">De code is onjuist. Controleer en probeer het opnieuw.</string>
-    <string name="invalid_code">Die code was ongeldig. Probeer het opnieuw</string>
     <string name="verify_code">Verifiëren</string>
     <string name="you_dont_have_enough_balance">Je hebt niet genoeg saldo</string>
     <string name="transfer_amount">Maak over</string>
@@ -116,4 +114,7 @@
     <string name="insufficient_money_to_transfer">Het aantal munten in de portemonnee is te klein om over te dragen.</string>
     <string name="amount_to_transfer">Je ontvangt %s%s%s</string>
     <string name="amount_to_transfer_dash">Je zal %s ontvangen</string>
+    <string name="your_coinbase_session_has_expired">Je Coinbase sessie is verlopen</string>
+    <string name="please_log_in_to_your_coinbase_account">Log in bij je Coinbase-account</string>
+    <string name="coinbase_use_bank_account">Wil je de aankoop storten via een gekoppelde bankrekening?</string>
     </resources>

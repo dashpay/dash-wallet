@@ -377,12 +377,21 @@
     <string name="reason">Dahilan</string>
     <string name="link_account">I-link ang iyong account</string>
     <string name="buy_no_account_needed">Bumili ng Dash · Walang kinakailangang account</string>
-    <string name="your_coinbase_session_has_expired">Ang iyong session sa Coinbase ay nag-expire na</string>
-    <string name="please_log_in_to_your_coinbase_account">Mangyaring mag-log in sa iyong Coinbase account</string>
-    <string name="log_in">Mag log in</string>
 
+    <string name="recipient_address">Address ng Tatanggap</string>
     <string name="show_clipboard">Ipakita ang nilalaman sa clipboard</string>
     <string name="tap_to_paste">I-tap ang address mula sa clipboard para i-paste ito</string>
     <string name="not_dash_address">Hindi wastong Dash Address o kahilingan sa URL</string>
     <string name="send_to_address">Ipadala sa address</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Pag-optimize ng baterya</string>
+    <string name="battery_optimization_subtitle_optimized">Na-optimize</string>
+    <string name="battery_optimization_subtitle_unrestricted">Hindi pinaghihigpitan</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Hayaang tumakbo ang Dash Wallet sa background?</string>
+    <string name="battery_optimization_dialog_message_optimized">Ang app na ito ay na-configure na huminto sa pagtakbo pagkatapos na hindi makita sa loob ng ilang oras.\n\nMagreresulta ito sa hindi pagtanggap ng mga notification sa pagbabayad hanggang sa bumalik ang app sa foreground.\n\nInirerekomenda naming payagan ang app na ito na tumakbo sa background sa pamamagitan ng pagtatakda ng pag-optimize baterya sa \"Not Optimized\" o \"Unrestricted.\"\n\nHuwag mag-alala, lagi naming iisipin ang iyong paggamit ng baterya.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Gusto mo bang makatanggap ng mga pagbabayad sa background?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Ang app na ito ay na-configure upang magpatuloy sa pagtakbo pagkatapos na hindi makita sa loob ng ilang oras.\n\nIminumungkahi namin na payagan ang app na ito na laging manatiling up-to-date sa blockchain, kahit na nasa background.\n\nHuwag mag-alala, gagawin namin laging isipin ang iyong paggamit ng baterya.</string>
+    <string name="battery_optimization_dialog_button_change">Buksan ang settings</string>
 </resources>

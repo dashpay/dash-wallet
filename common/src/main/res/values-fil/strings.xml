@@ -97,4 +97,5 @@
     <string name="disconnected">Idiskonekta</string>
     <string name="enter_amount_available">magagamit</string>
     <string name="transaction_row_rate_not_available">Hindi available</string>
+    <string name="log_in">Mag log in</string>
 </resources>

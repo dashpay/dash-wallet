@@ -376,4 +376,5 @@
     <string name="reason">Alasan</string>
     <string name="link_account">Tautkan akun Anda</string>
     <string name="send_to_address">Kirim ke alamat</string>
-</resources>
+
+    </resources>

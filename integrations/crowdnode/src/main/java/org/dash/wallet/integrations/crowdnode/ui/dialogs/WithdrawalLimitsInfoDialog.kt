@@ -28,8 +28,8 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
-import org.dash.wallet.integrations.crowdnode.model.WithdrawalLimitPeriod
 import org.dash.wallet.integrations.crowdnode.databinding.DialogWithdrawalLimitsBinding
+import org.dash.wallet.integrations.crowdnode.model.WithdrawalLimitPeriod
 
 class WithdrawalLimitsInfoDialog(
     private val limitPerTx: Coin,
@@ -37,18 +37,18 @@ class WithdrawalLimitsInfoDialog(
     private val limitPerDay: Coin,
     private val highlightedLimit: WithdrawalLimitPeriod? = null,
     private val okButtonText: String? = null
-): AdaptiveDialog(R.layout.dialog_withdrawal_limits) {
+) : AdaptiveDialog(R.layout.dialog_withdrawal_limits) {
     private val limitFormat = MonetaryFormat.BTC.minDecimals(0).optionalDecimals(0).noCode()
     private val binding by viewBinding(DialogWithdrawalLimitsBinding::bind)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         arguments = if (okButtonText.isNullOrEmpty()) {
-            bundleOf (
+            bundleOf(
                 NEG_BUTTON_ARG to getString(android.R.string.ok)
             )
         } else {
             binding.withdrawOnlineText.isVisible = true
-            bundleOf (
+            bundleOf(
                 NEG_BUTTON_ARG to getString(R.string.button_close),
                 POS_BUTTON_ARG to okButtonText
             )

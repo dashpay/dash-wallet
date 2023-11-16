@@ -377,12 +377,21 @@
     <string name="reason">Λόγος</string>
     <string name="link_account">Σύνδεση του λογαριασμού σας</string>
     <string name="buy_no_account_needed">Αγοράστε Dash - Δεν απαιτείται λογαριασμός</string>
-    <string name="your_coinbase_session_has_expired">Η συνεδρία σας στην Coinbase έχει λήξει</string>
-    <string name="please_log_in_to_your_coinbase_account">Συνδεθείτε στο λογαριασμό σας στην Coinbase</string>
-    <string name="log_in">Είσοδος</string>
 
+    <string name="recipient_address">Διεύθυνση παραλήπτη</string>
     <string name="show_clipboard">Εμφάνιση περιεχομένου στο πρόχειρο</string>
     <string name="tap_to_paste">Πατήστε τη διεύθυνση από το πρόχειρο για να την επικολλήσετε</string>
     <string name="not_dash_address">Δεν είναι μια έγκυρη διεύθυνση Dash ή URL</string>
     <string name="send_to_address">Αποστολή στη διεύθυνση</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Βελτιστοποίηση μπαταρίας</string>
+    <string name="battery_optimization_subtitle_optimized">Βελτιστοποίηση</string>
+    <string name="battery_optimization_subtitle_unrestricted">Απεριόριστα</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Θα επιτρέψετε στο Dash Wallet να εκτελείται στο παρασκήνιο;</string>
+    <string name="battery_optimization_dialog_message_optimized">Αυτή η εφαρμογή έχει ρυθμιστεί ώστε να σταματά να εκτελείται όταν δεν είναι ορατή για κάποιο χρονικό διάστημα.\n\nΑυτό θα έχει ως αποτέλεσμα να μην λαμβάνετε ειδοποιήσεις πληρωμής έως ότου η εφαρμογή επιστρέψει στο προσκήνιο.\n\nΣυνιστούμε να επιτρέψετε σε αυτή την εφαρμογή να εκτελείται στο παρασκήνιο, ρυθμίζοντας τη βελτιστοποίηση της μπαταρίας σε \"Μη βελτιστοποιημένη\" ή \"Χωρίς περιορισμούς\".\n\nΜην ανησυχείτε, θα προσέχουμε πάντα τη χρήση της μπαταρίας σας.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Θέλετε να λαμβάνετε πληρωμές στο παρασκήνιο;</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Αυτή η εφαρμογή έχει ρυθμιστεί ώστε να συνεχίζει να εκτελείται ακόμη και όταν δεν είναι ορατή για κάποιο χρονικό διάστημα.\n\nΠροτείνουμε να επιτρέψετε σε αυτή την εφαρμογή να παραμένει πάντα ενημερωμένη με TO blockchain, ακόμη και στο παρασκήνιο.\n\nΜην ανησυχείτε, θα προσέχουμε πάντα τη χρήση της μπαταρίας σας.</string>
+    <string name="battery_optimization_dialog_button_change">Άνοιγμα Ρυθμίσεων</string>
 </resources>

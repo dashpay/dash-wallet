@@ -94,7 +94,6 @@
     <string name="crowdnode_minimum_deposit_difference">%s einzahlen um Erträge zu erhalten</string>
     <string name="crowdnode_first_deposit">Die erste Einzahlung sollte größer als %s sein</string>
     <string name="crowdnode_staking_info_title">Wie CrowdNode Staking funktioniert</string>
-    <string name="crowdnode_staking_info_message_first">Das Dash Netzwerk wird von einer Vielzahl von Masternodes betrieben, welche einen großen Anteil an der Zahlungsabwicklung besitzen.</string>
     <string name="crowdnode_staking_info_message_second">Ein Masternode benötigt 1000 Dash als Einlage und jeder Masternode erhält derzeit rund %s %% pro Jahr.</string>
     <string name="crowdnode_staking_apy_title">Derzeitige APY ist %s %%</string>
     <string name="crowdnode_staking_info_message">Du erhältst Erträge, wenn dein CrowdNode Konto mehr als %s aufweist</string>
@@ -107,7 +106,6 @@
     <string name="crowdnode_staking_receiving_rewards_title">Rewards erhalten</string>
     <string name="crowdnode_staking_receiving_rewards_message">Du erhältst automatisch Teilzahlungen, die standardmäßig reinvestiert werden. Du kannst jedoch auch automatische Entnahme einrichten, um wiederkehrende Auszahlungen zu erhalten.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">Erste Mindesteinlage</string>
-    <string name="crowdnode_staking_join_pool_message">Da die meisten Menschen nicht über 1000 Dash verfügen, hat CrowdNode einen Service erstellt der die Einzahlungen von Teilnehmer zusammenfügt um einen ganzen Masternode zu betreiben.</string>
     <string name="crowdnode_staking_join_pool_title">Eintritt in den Pool</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">CrowdNode Leistungen</string>
     <string name="crowdnode_staking_connected_dash_address_title">Dash Adresse verknüpfen</string>

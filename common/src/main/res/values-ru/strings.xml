@@ -97,4 +97,5 @@
     <string name="disconnected">Подключение отсутствует</string>
     <string name="enter_amount_available">доступно</string>
     <string name="transaction_row_rate_not_available">Недоступно</string>
+    <string name="log_in">Войти</string>
 </resources>

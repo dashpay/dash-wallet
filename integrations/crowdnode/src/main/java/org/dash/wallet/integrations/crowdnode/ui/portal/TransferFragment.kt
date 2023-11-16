@@ -44,7 +44,6 @@ import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.ui.wiggle
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integrations.crowdnode.R
@@ -115,15 +114,19 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
         viewModel.observeCrowdNodeError().observe(viewLifecycleOwner) { error ->
             error?.let {
-                safeNavigate(TransferFragmentDirections.transferToResult(
-                    true,
-                    getString(if (args.withdraw) {
-                        R.string.crowdnode_withdraw_error
-                    } else {
-                        R.string.crowdnode_deposit_error
-                    }),
-                    ""
-                ))
+                safeNavigate(
+                    TransferFragmentDirections.transferToResult(
+                        true,
+                        getString(
+                            if (args.withdraw) {
+                                R.string.crowdnode_withdraw_error
+                            } else {
+                                R.string.crowdnode_deposit_error
+                            }
+                        ),
+                        ""
+                    )
+                )
             }
         }
 
@@ -233,22 +236,25 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             }
         }
 
-
         if (isSuccess) {
             if (isWithdraw) {
                 viewModel.logEvent(AnalyticsConstants.CrowdNode.WITHDRAWAL_REQUESTED)
-                safeNavigate(TransferFragmentDirections.transferToResult(
-                    false,
-                    getString(R.string.withdrawal_requested),
-                    getString(R.string.withdrawal_requested_message)
-                ))
+                safeNavigate(
+                    TransferFragmentDirections.transferToResult(
+                        false,
+                        getString(R.string.withdrawal_requested),
+                        getString(R.string.withdrawal_requested_message)
+                    )
+                )
             } else {
                 viewModel.logEvent(AnalyticsConstants.CrowdNode.DEPOSIT_REQUESTED)
-                safeNavigate(TransferFragmentDirections.transferToResult(
-                    false,
-                    getString(R.string.deposit_sent),
-                    getString(R.string.deposit_sent_message)
-                ))
+                safeNavigate(
+                    TransferFragmentDirections.transferToResult(
+                        false,
+                        getString(R.string.deposit_sent),
+                        getString(R.string.deposit_sent_message)
+                    )
+                )
             }
         }
     }
@@ -304,8 +310,10 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
         binding.balanceText.text = when {
             dashToFiat -> getString(R.string.available_balance, balance.toFriendlyString())
-            rate != null -> getString(R.string.available_balance,
-                rate.coinToFiat(balance).toFormattedString())
+            rate != null -> getString(
+                R.string.available_balance,
+                rate.coinToFiat(balance).toFormattedString()
+            )
             else -> ""
         }
     }
@@ -319,7 +327,9 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         if (viewModel.shouldShowWithdrawalLimitsInfo()) {
             val limits = viewModel.getWithdrawalLimits()
             val result = WithdrawalLimitsInfoDialog(
-                limits[0], limits[1], limits[2]
+                limits[0],
+                limits[1],
+                limits[2]
             ).showAsync(requireActivity())
 
             if (result == false) {
@@ -341,7 +351,9 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         }
 
         val doAction = WithdrawalLimitsInfoDialog(
-            limits[0], limits[1], limits[2],
+            limits[0],
+            limits[1],
+            limits[2],
             highlightedLimit = period,
             okButtonText = okButtonText
         ).showAsync(requireActivity())

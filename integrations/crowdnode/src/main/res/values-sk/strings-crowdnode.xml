@@ -94,7 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">Aby ste mohli začať zarábať, vložte %s</string>
     <string name="crowdnode_first_deposit">Prvý vklad by mal byť vyšší ako %s</string>
     <string name="crowdnode_staking_info_title">Ako funguje stávkovanie na CrowdNode</string>
-    <string name="crowdnode_staking_info_message_first">Sieť Dash je riadená množstvom Masternódov, čo je nevyhnutná súčasť pre uskutočnenie platieb.</string>
+    <string name="crowdnode_staking_info_message_first">Sieť Dash je riadená množstvom Masternodov, ktoré sú nevyhnutnou súčasťou uskutočnenia platieb.</string>
     <string name="crowdnode_staking_info_message_second">Masternód potrebuje 1000 Dash ako záruku a každý Masternód je v súčasnosti odmeňovaný približne %s%% ročne.</string>
     <string name="crowdnode_staking_apy_title">Aktuálny APY je %s%%</string>
     <string name="crowdnode_staking_info_message">Zarábať začnete, ak má váš účet CrowdNode viac ako %s</string>
@@ -107,7 +107,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">Prijímané odmeny</string>
     <string name="crowdnode_staking_receiving_rewards_message">Čiastkové platby budete dostávať automaticky a štandardne budú reinvestované, ale je tiež jednoduché nastaviť automatické výbery pre prijímanie opakujúcich sa platieb.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">Prvý minimálny vklad</string>
-    <string name="crowdnode_staking_join_pool_message">Keďže väčšina ľudí nemá po ruke presne 1000 Dash, CrowdNode vytvoril službu, kde môžete združovaním vkladov od členov dosiahnuť výhody vlastníctva Masternódu.</string>
+    <string name="crowdnode_staking_join_pool_message">Keďže väčšina ľudí nemá po ruke presne 1000 Dash, CrowdNode vytvoril službu, kde môžu združovaním vkladov od členov dosiahnuť výhody vlastníctva Masternode.</string>
     <string name="crowdnode_staking_join_pool_title">Pripojenie k členstvu</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">Výhody CrowdNode</string>
     <string name="crowdnode_staking_connected_dash_address_title">Pripojená Dash adresa</string>

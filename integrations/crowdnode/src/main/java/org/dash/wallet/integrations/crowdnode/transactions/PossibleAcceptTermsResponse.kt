@@ -25,7 +25,7 @@ import org.dash.wallet.common.transactions.filters.CoinsReceivedTxFilter
 class PossibleAcceptTermsResponse(
     bag: TransactionBag,
     private val accountAddress: Address?
-): CoinsReceivedTxFilter(
+) : CoinsReceivedTxFilter(
     bag,
     CrowdNodeAcceptTermsResponse.ACCEPT_TERMS_RESPONSE_CODE
 ) {

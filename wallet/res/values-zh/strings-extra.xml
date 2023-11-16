@@ -264,8 +264,6 @@
     <string name="menu_contact_support_title">联系支持</string>
     <string name="menu_contact_support_subtitle">报告问题</string>
     <string name="menu_explore_title">探索</string>
-    <string name="menu_explore_subtitle">在超过155,000家商户使用Dash购物</string>
-
     <string name="tools_address_book">地址簿</string>
     <string name="tools_import_private_key">导入私钥</string>
     <string name="tools_network_monitor">网络监视器</string>
@@ -392,6 +390,7 @@
     <string name="masternode_key_type_owner">所有者私钥</string>
     <string name="masternode_key_type_voting">投票者密钥</string>
     <string name="masternode_key_type_operator">运营者私钥</string>
+    <string name="masternode_key_type_platform">Evolution 节点 ID 私钥</string>
     <string name="masternode_key_type_total">%d 密钥</string>
     <string name="masternode_key_type_used">%d 已使用</string>
     <string name="masternode_key_pair_index">密钥对 %d</string>

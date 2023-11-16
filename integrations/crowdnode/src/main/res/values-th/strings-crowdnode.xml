@@ -94,7 +94,6 @@
     <string name="crowdnode_minimum_deposit_difference">ฝากเงิน %s เพื่อเริ่มต้นหารายได้</string>
     <string name="crowdnode_first_deposit">เงินฝากครั้งแรกควรมากกว่า %s</string>
     <string name="crowdnode_staking_info_title">การ staking CrowdNode ทำงานอย่างไร</string>
-    <string name="crowdnode_staking_info_message_first">เครือข่าย Dash นั้นขับเคลื่อนด้วยมาสเตอร์โหนดจำนวนมากซึ่งเป็นส่วนสำคัญของการชำระเงินที่อำนวยความสะดวก</string>
     <string name="crowdnode_staking_info_message_second">มาสเตอร์โหนดต้องการ 1000 Dash เป็นหลักประกันและแต่ละ มาสเตอร์โหนดต้องการจะได้รับรางวัลประมาณ %s%%ต่อปี  </string>
     <string name="crowdnode_staking_apy_title">APY ปัจจุบันคือ %s%%</string>
     <string name="crowdnode_staking_info_message">คุณเริ่มมีรายได้หากบัญชี CrowdNode ของคุณมีมากกว่า %s</string>
@@ -107,7 +106,6 @@
     <string name="crowdnode_staking_receiving_rewards_title">การรับรีวอร์ด</string>
     <string name="crowdnode_staking_receiving_rewards_message">คุณจะได้รับการชำระเงินแบบเศษส่วนโดยอัตโนมัติและโดยค่าเริ่มต้นจะถูกนำกลับมาลงทุนใหม่อย่างไรก็ตามมันเป็นเรื่องง่ายที่จะตั้งค่าการถอนอัตโนมัติเพื่อรับการจ่ายเงินที่เกิดขึ้นซ้ำ</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">เงินฝากขั้นต่ำขั้นแรก</string>
-    <string name="crowdnode_staking_join_pool_message">เนื่องจากคนส่วนใหญ่ไม่ได้มี 1000 Dash ในมือ CrowdNode ได้ให้บริการที่พวกเขามีการรวมเงินฝากจากสมาชิกสามารถได้รับประโยชน์จากการเป็นเจ้าของมาสเตอร์โหนด</string>
     <string name="crowdnode_staking_join_pool_title">เข้าร่วม pool</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">ผลประโยชน์ของ CrowdNode</string>
     <string name="crowdnode_staking_connected_dash_address_title">ที่อยู่ Dash ที่เชื่อมต่อ</string>

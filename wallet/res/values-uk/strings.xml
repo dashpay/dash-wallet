@@ -377,12 +377,21 @@
     <string name="reason">Причина</string>
     <string name="link_account">Прив\'язати ваш акаунт</string>
     <string name="buy_no_account_needed">Купити Dash · Обліковий запис не потрібен</string>
-    <string name="your_coinbase_session_has_expired">Ваш сеанс у Coinbase закінчився</string>
-    <string name="please_log_in_to_your_coinbase_account">Увійдіть у свій обліковий запис Coinbase</string>
-    <string name="log_in">Увійти</string>
 
+    <string name="recipient_address">Адреса отримувача</string>
     <string name="show_clipboard">Показати вміст у буфері обміну</string>
     <string name="tap_to_paste">Натисніть на адресу з буфера обміну, щоб вставити її</string>
     <string name="not_dash_address">Некоректна адреса Dash або URL запит</string>
     <string name="send_to_address">Відправити на адресу</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Оптимізація батареї</string>
+    <string name="battery_optimization_subtitle_optimized">Оптимізовано</string>
+    <string name="battery_optimization_subtitle_unrestricted">Необмежений</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Дозволити Dash Wallet працювати у фоновому режимі?</string>
+    <string name="battery_optimization_dialog_message_optimized">Цю програму налаштовано так, щоб вона припиняла працювати, якщо деякий час її не видно.\n\nЦе призведе до того, що сповіщення про платежі не надходитимуть, доки програма не повернеться на передній план.\n\nМи рекомендуємо дозволити цій програмі працювати у фоновому режимі, налаштувавши акумулятор оптимізація на «Не оптимізовано» або «Необмежено».\n\nНе хвилюйтеся, ми завжди будемо звертати увагу на використання акумулятора.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Ви хочете отримувати платежі у фоновому режимі?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Ця програма налаштована на продовження роботи після того, як деякий час її не видно.\n\nМи радимо дозволити цій програмі завжди оновлюватися з блокчейном, навіть у фоновому режимі.\n\nНе хвилюйтеся, ми будемо завжди звертати увагу на використання акумулятора.</string>
+    <string name="battery_optimization_dialog_button_change">Відкрити налаштування</string>
 </resources>

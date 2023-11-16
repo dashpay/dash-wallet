@@ -377,13 +377,11 @@
     <string name="reason">Razão</string>
     <string name="link_account">Conectar sua conta</string>
     <string name="buy_no_account_needed">Compre Dash · Não é necessário ter uma conta</string>
-    <string name="your_coinbase_session_has_expired">Sua sessão na Coinbase expirou</string>
-    <string name="please_log_in_to_your_coinbase_account">Por favor, faça login em sua conta Coinbase</string>
-    <string name="log_in">Entrar</string>
 
     <string name="recipient_address">Endereço do Destinatário</string>
     <string name="show_clipboard">Exibir conteúdo na área de transferência </string>
     <string name="tap_to_paste">Toque no endereço da área de transferência para colá-lo</string>
     <string name="not_dash_address">Endereço Dash inválido ou solicitação de URL inválida</string>
     <string name="send_to_address">Enviar para Endereço</string>
-</resources>
+
+    </resources>
