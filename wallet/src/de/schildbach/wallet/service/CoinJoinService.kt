@@ -167,8 +167,10 @@ class CoinJoinMixingService @Inject constructor(
             .filterNotNull()
             .distinctUntilChanged()
             .onEach { blockChainState ->
-                log.info("coinjoin: new block: ${blockChainState.bestChainHeight}")
-                updateBalance(walletDataProvider.getWalletBalance())
+                if (blockChainState.isSynced()) {
+                    log.info("coinjoin: new block: ${blockChainState.bestChainHeight}")
+                    updateBalance(walletDataProvider.getWalletBalance())
+                }
             }
             .launchIn(coroutineScope)
 
