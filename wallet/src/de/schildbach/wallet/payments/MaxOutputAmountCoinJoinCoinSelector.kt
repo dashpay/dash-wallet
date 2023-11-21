@@ -23,10 +23,9 @@ import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelection
 import org.bitcoinj.wallet.Wallet
 
-// refactor this class and derive it from MaxOutputAmountCoinSelector
 class MaxOutputAmountCoinJoinCoinSelector(wallet: Wallet): MaxOutputAmountCoinSelector() {
 
-    val coinJoinCoinSelector = CoinJoinCoinSelector(wallet)
+    private val coinJoinCoinSelector = CoinJoinCoinSelector(wallet)
 
     override fun select(target: Coin, candidates: MutableList<TransactionOutput>): CoinSelection {
         val coinJoinCandidates = coinJoinCoinSelector.select(target, candidates)
