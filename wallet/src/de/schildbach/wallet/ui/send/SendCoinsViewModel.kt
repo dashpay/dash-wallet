@@ -22,19 +22,26 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.entity.DashPayContactRequest
+import de.schildbach.wallet.payments.MaxOutputAmountCoinJoinCoinSelector
 import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
+import org.bitcoinj.coinjoin.CoinJoinCoinSelector
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
@@ -64,7 +71,8 @@ class SendCoinsViewModel @Inject constructor(
     private val sendCoinsTaskRunner: SendCoinsTaskRunner,
     private val notificationService: NotificationService,
     private val platformRepo: PlatformRepo,
-    private val dashPayContactRequestDao: DashPayContactRequestDao
+    private val dashPayContactRequestDao: DashPayContactRequestDao,
+    coinJoinConfig: CoinJoinConfig
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
@@ -124,8 +132,18 @@ class SendCoinsViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        // TODO: the coin selector will need to use CoinJoinCoinSelector if CoinJoin is ON
-        walletDataProvider.observeBalance(coinSelector = MaxOutputAmountCoinSelector())
+        coinJoinConfig.observeMode()
+            .map { mode ->
+                if (mode == CoinJoinMode.NONE) {
+                    MaxOutputAmountCoinSelector()
+                } else {
+                    MaxOutputAmountCoinJoinCoinSelector(wallet)
+                    // MaxOutputAmountCoinSelector()
+                }
+            }
+            .flatMapLatest { coinSelector ->
+                walletDataProvider.observeBalance(Wallet.BalanceType.ESTIMATED, coinSelector)
+            }
             .distinctUntilChanged()
             .onEach(_maxOutputAmount::postValue)
             .launchIn(viewModelScope)

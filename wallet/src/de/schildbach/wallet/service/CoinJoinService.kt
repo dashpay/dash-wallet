@@ -42,6 +42,8 @@ import org.bitcoinj.coinjoin.PoolState
 import org.bitcoinj.coinjoin.PoolStatus
 import org.bitcoinj.coinjoin.callbacks.RequestDecryptedKey
 import org.bitcoinj.coinjoin.callbacks.RequestKeyParameter
+import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.coinjoin.listeners.MixingCompleteListener
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener
 import org.bitcoinj.coinjoin.progress.MixingProgressTracker
@@ -51,6 +53,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.MasternodeAddress
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.ContextPropagatingThreadFactory
 import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.Wallet
@@ -79,6 +82,7 @@ enum class CoinJoinMode {
  */
 interface CoinJoinService {
     val mixingStatus: MixingStatus
+    val mixingState: Flow<MixingStatus>
     val mixingProgress: Flow<Double>
 }
 
@@ -93,8 +97,8 @@ enum class MixingStatus {
 @Singleton
 class CoinJoinMixingService @Inject constructor(
     val walletDataProvider: WalletDataProvider,
-    blockchainStateProvider: BlockchainStateProvider,
-    config: CoinJoinConfig,
+    private val blockchainStateProvider: BlockchainStateProvider,
+    private val config: CoinJoinConfig,
     private val platformRepo: PlatformRepo
 ) : CoinJoinService {
 
@@ -120,6 +124,9 @@ class CoinJoinMixingService @Inject constructor(
     var mode: CoinJoinMode = CoinJoinMode.NONE
     override var mixingStatus: MixingStatus = MixingStatus.NOT_STARTED
         private set
+    val _mixingState = MutableStateFlow(MixingStatus.NOT_STARTED)
+    override val mixingState: Flow<MixingStatus>
+        get() = _mixingState
 
     private val coroutineScope = CoroutineScope(
         Executors.newFixedThreadPool(2, ContextPropagatingThreadFactory("coinjoin-pool")).asCoroutineDispatcher()
@@ -151,7 +158,6 @@ class CoinJoinMixingService @Inject constructor(
             .launchIn(coroutineScope)
 
         blockchainStateProvider.observeBlockChain()
-            .filterNotNull()
             .onEach { blockChain ->
                 updateBlockChain(blockChain)
             }
@@ -161,8 +167,10 @@ class CoinJoinMixingService @Inject constructor(
             .filterNotNull()
             .distinctUntilChanged()
             .onEach { blockChainState ->
-                log.info("coinjoin: new block: ${blockChainState.bestChainHeight}")
-                updateBalance(walletDataProvider.getWalletBalance())
+                if (blockChainState.isSynced()) {
+                    log.info("coinjoin: new block: ${blockChainState.bestChainHeight}")
+                    updateBalance(walletDataProvider.getWalletBalance())
+                }
             }
             .launchIn(coroutineScope)
 
@@ -196,7 +204,7 @@ class CoinJoinMixingService @Inject constructor(
 
         val hasAnonymizableBalance = anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())
         log.info("coinjoin: mixing can occur: $hasAnonymizableBalance")
-        updateState(mode, hasAnonymizableBalance, networkStatus, blockChain)
+        updateState(config.getMode(), hasAnonymizableBalance, networkStatus, blockchainStateProvider.getBlockChain())
     }
 
     private suspend fun updateState(
@@ -210,9 +218,9 @@ class CoinJoinMixingService @Inject constructor(
         try {
             setBlockchain(blockChain)
             log.info("coinjoin-updateState: $mode, $hasAnonymizableBalance, $networkStatus, ${blockChain != null}")
-            val previousNetworkStatus = this.networkStatus
             this.networkStatus = networkStatus
             this.mixingStatus = mixingStatus
+            _mixingState.value = mixingStatus
             this.hasAnonymizableBalance = hasAnonymizableBalance
             this.mode = mode
 
@@ -230,6 +238,7 @@ class CoinJoinMixingService @Inject constructor(
                     updateMixingState(MixingStatus.FINISHED)
                 }
             }
+            updateProgress()
         } finally {
             updateMutex.unlock()
             log.info("updateMutex is unlocked")
@@ -263,7 +272,7 @@ class CoinJoinMixingService @Inject constructor(
         }
     }
 
-    private suspend fun updateBlockChain(blockChain: AbstractBlockChain) {
+    private suspend fun updateBlockChain(blockChain: AbstractBlockChain?) {
         updateState(mode, hasAnonymizableBalance, networkStatus, blockChain)
     }
 
@@ -284,7 +293,6 @@ class CoinJoinMixingService @Inject constructor(
         override fun onMixingComplete(wallet: WalletEx?, statusList: MutableList<PoolStatus>?) {
             super.onMixingComplete(wallet, statusList)
             log.info("Mixing Complete.  {}% mixed", progress)
-            // TODO: _progressFlow.emit(progress)
         }
 
         override fun onSessionStarted(
@@ -307,8 +315,12 @@ class CoinJoinMixingService @Inject constructor(
             joined: Boolean
         ) {
             super.onSessionComplete(wallet, sessionId, denomination, state, message, address, joined)
-            // TODO: _progressFlow.emit(progress)
             log.info("Session {} complete. {} % mixed -- {}", sessionId, progress, message)
+        }
+
+        override fun onTransactionProcessed(tx: Transaction?, type: CoinJoinTransactionType?, sessionId: Int) {
+            super.onTransactionProcessed(tx, type, sessionId)
+            log.info("coinjoin-tx {} in session {}  {}", type, sessionId, tx?.txId)
         }
     }
 
@@ -372,6 +384,7 @@ class CoinJoinMixingService @Inject constructor(
         val wallet = walletDataProvider.wallet!!
         addMixingCompleteListener(mixingProgressTracker)
         addSessionCompleteListener(mixingProgressTracker)
+        addTransationListener(mixingProgressTracker)
         coinJoinManager?.run {
             clientManager = CoinJoinClientManager(wallet)
             coinJoinClientManagers[wallet.description] = clientManager
@@ -462,7 +475,6 @@ class CoinJoinMixingService @Inject constructor(
         // remove all listeners
         mixingCompleteListeners.forEach { coinJoinManager?.removeMixingCompleteListener(it) }
         sessionCompleteListeners.forEach { coinJoinManager?.removeSessionCompleteListener(it) }
-        coinJoinManager?.stop()
     }
 
     private fun setBlockchain(blockChain: AbstractBlockChain?) {
@@ -482,6 +494,10 @@ class CoinJoinMixingService @Inject constructor(
     private fun addMixingCompleteListener(mixingCompleteListener: MixingCompleteListener) {
         mixingCompleteListeners.add(mixingCompleteListener)
         coinJoinManager?.addMixingCompleteListener(Threading.USER_THREAD, mixingCompleteListener)
+    }
+
+    private fun addTransationListener(sessionCompleteListener: CoinJoinTransactionListener) {
+        coinJoinManager?.addTransationListener(Threading.USER_THREAD, sessionCompleteListener)
     }
 
     /** clear previous state */

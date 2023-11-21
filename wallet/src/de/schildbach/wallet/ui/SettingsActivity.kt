@@ -112,17 +112,17 @@ class SettingsActivity : LockScreenActivity() {
             if (mode == CoinJoinMode.NONE) {
                 binding.coinjoinSubtitle.text = getText(R.string.turned_off)
             } else {
-                // TODO: Observe progress
-                // TODO: This does not meet the designs
-                binding.coinjoinSubtitleIcon.isVisible = true
-                binding.coinjoinSubtitle.text = getString(
-                    if (viewModel.coinJoinMixingStatus == MixingStatus.FINISHED)
-                        R.string.coinjoin_progress_finished
-                    else R.string.coinjoin_progress,
-                    viewModel.mixedBalance,
-                    viewModel.walletBalance,
-                    viewModel.mixingPercent
-                )
+                if (viewModel.coinJoinMixingStatus == MixingStatus.FINISHED) {
+                    binding.coinjoinSubtitle.text = getString(R.string.coinjoin_progress_finished)
+                    binding.coinjoinSubtitleIcon.isVisible = false
+                } else {
+                    binding.coinjoinSubtitle.text = getString(
+                        R.string.coinjoin_progress,
+                        viewModel.mixedBalance,
+                        viewModel.walletBalance
+                    )
+                    binding.coinjoinSubtitleIcon.isVisible = true
+                }
             }
         }
     }

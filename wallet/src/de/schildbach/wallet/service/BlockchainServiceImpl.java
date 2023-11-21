@@ -82,6 +82,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.WalletUIConfig;
@@ -91,6 +92,8 @@ import org.dash.wallet.common.services.NotificationService;
 import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionUtils;
+import org.dash.wallet.common.util.FlowExtKt;
+import org.dash.wallet.common.util.MonetaryExtKt;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi;
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositReceivedResponse;
@@ -104,6 +107,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -213,6 +217,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
+    private MixingStatus mixingStatus = MixingStatus.NOT_STARTED;
+    private boolean isForegroundService = false;
 
     // Risk Analyser for Transactions that is PeerGroup Aware
     AllowLockTimeRiskAnalysis.Analyzer riskAnalyzer;
@@ -855,7 +861,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         builder.append(", ");
                     builder.append(entry);
                 }
-                log.info("History of transactions/blocks: " + builder);
+                log.info("History of transactions/blocks: " +
+                        (mixingStatus == MixingStatus.MIXING ? "[mixing] " : "") + builder);
 
                 // determine if block and transaction activity is idling
                 boolean isIdle = false;
@@ -875,7 +882,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 }
 
                 // if idling, shutdown service
-                if (isIdle) {
+                if (isIdle && mixingStatus != MixingStatus.MIXING) {
                     log.info("idling detected, stopping service");
                     stopSelf();
                 }
@@ -1015,8 +1022,33 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     void initViewModel() {
-        blockchainStateDao.load().observe(this, this::handleBlockchainStateNotification);
+        blockchainStateDao.load().observe(this, (blockchainState) -> handleBlockchainStateNotification(blockchainState, mixingStatus));
         registerCrowdNodeConfirmedAddressFilter();
+
+        FlowExtKt.observe(coinJoinService.getMixingState(), this, (mixingStatus, continuation) -> {
+            handleBlockchainStateNotification(blockchainState, mixingStatus);
+            return null;
+        });
+    }
+
+    private Notification createCoinJoinNotification(Coin mixedBalance, Coin totalBalance) {
+        Intent notificationIntent = OnboardingActivity.createIntent(this);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+                notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        DecimalFormat decimalFormat = new DecimalFormat("0.000");
+        final String message = getString(
+                R.string.coinjoin_progress,
+                decimalFormat.format(MonetaryExtKt.toBigDecimal(mixedBalance)),
+                decimalFormat.format(MonetaryExtKt.toBigDecimal(totalBalance))
+        );
+
+        return new NotificationCompat.Builder(this,
+                Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
+                .setSmallIcon(R.drawable.ic_dash_d_white)
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(message)
+                .setContentIntent(pendingIntent).build();
     }
 
     private void resetMNLists(boolean requestFreshList) {
@@ -1102,6 +1134,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         //preventing it from being killed in Android 26 or later
         Notification notification = createNetworkSyncNotification(null);
         startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+        isForegroundService = true;
     }
 
     @Override
@@ -1289,7 +1322,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
     }
 
-    private void handleBlockchainStateNotification(BlockchainState blockchainState) {
+    private void handleBlockchainStateNotification(BlockchainState blockchainState, MixingStatus mixingStatus) {
         // send this out for the Network Monitor, other activities observe the database
         final Intent broadcast = new Intent(ACTION_BLOCKCHAIN_STATE);
         broadcast.setPackage(getPackageName());
@@ -1299,17 +1332,29 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 && blockchainState.getBestChainDate() != null) {
             //Handle Ongoing notification state
             boolean syncing = blockchainState.getBestChainDate().getTime() < (Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS); //1 hour
-            if (!syncing && blockchainState.getBestChainHeight() == config.getBestChainHeightEver()) {
+            if (!syncing && blockchainState.getBestChainHeight() == config.getBestChainHeightEver() && mixingStatus != MixingStatus.MIXING) {
                 //Remove ongoing notification if blockchain sync finished
                 stopForeground(true);
+                isForegroundService = false;
                 nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
             } else if (blockchainState.getReplaying() || syncing) {
                 //Shows ongoing notification when synchronizing the blockchain
                 Notification notification = createNetworkSyncNotification(blockchainState);
                 nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+            } else if (mixingStatus == MixingStatus.MIXING) {
+                Notification notification = createCoinJoinNotification(
+                        ((WalletEx)application.getWallet()).getCoinJoinBalance(),
+                        application.getWallet().getBalance()
+                );
+                if (isForegroundService) {
+                    nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+                } else {
+                    startForeground();
+                }
             }
         }
         this.blockchainState = blockchainState;
+        this.mixingStatus = mixingStatus;
     }
 
     private int percentageSync() {

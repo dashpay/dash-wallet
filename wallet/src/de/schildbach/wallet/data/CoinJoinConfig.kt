@@ -48,11 +48,11 @@ open class CoinJoinConfig @Inject constructor(
     }
 
     fun observeMode(): Flow<CoinJoinMode> {
-        return observe(COINJOIN_MODE).filterNotNull().map { mode -> CoinJoinMode.valueOf(mode!!) }
+        return observe(COINJOIN_MODE).map { mode -> mode?.let { CoinJoinMode.valueOf(mode) } ?: CoinJoinMode.NONE }
     }
 
     suspend fun getMode(): CoinJoinMode {
-        return get(COINJOIN_MODE).let { CoinJoinMode.valueOf(it!!) }
+        return get(COINJOIN_MODE).let { mode -> mode?.let { CoinJoinMode.valueOf(it) } ?: CoinJoinMode.NONE }
     }
 
     suspend fun setMode(mode: CoinJoinMode) {

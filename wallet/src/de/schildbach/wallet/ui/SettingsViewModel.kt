@@ -14,6 +14,8 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.util.toBigDecimal
+import java.text.DecimalFormat
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,25 +32,12 @@ class SettingsViewModel @Inject constructor(
     val coinJoinMixingStatus: MixingStatus
         get() = coinJoinService.mixingStatus
 
+    var decimalFormat: DecimalFormat = DecimalFormat("0.000")
     val walletBalance: String
-        get() = dashFormat.format(walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED)).toString()
+        get() = decimalFormat.format(walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED).toBigDecimal())
 
     val mixedBalance: String
-        get() = dashFormat.format((walletDataProvider.wallet as WalletEx).coinJoinBalance).toString()
-
-    val mixingPercent: String
-        get() {
-            val wallet = walletDataProvider.wallet as WalletEx
-            val mixedBalance = wallet.coinJoinBalance
-            val anonymizableBalance = wallet.getAnonymizableBalance(false, false)
-            return if (mixedBalance.value + anonymizableBalance.value != 0L) {
-                return "${mixedBalance.value * 100 / (mixedBalance.value + anonymizableBalance.value)}%"
-            } else {
-                return "N/A"
-            }
-        }
-
-    private val dashFormat = MonetaryFormat.BTC.noCode().minDecimals(2)
+        get() = decimalFormat.format((walletDataProvider.wallet as WalletEx).coinJoinBalance.toBigDecimal())
 
     fun setVoteDashPay(isEnabled: Boolean) {
         viewModelScope.launch {
