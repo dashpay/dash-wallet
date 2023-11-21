@@ -21,6 +21,11 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import de.schildbach.wallet.service.CoinJoinMode
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import javax.inject.Inject
@@ -34,10 +39,23 @@ open class CoinJoinConfig @Inject constructor(
 ) : BaseConfig(context, PREFERENCES_NAME, walletDataProvider) {
     companion object {
         const val PREFERENCES_NAME = "coinjoin"
+        val COINJOIN_MODE = stringPreferencesKey("coinjoin_mode")
         val COINJOIN_ROUNDS = intPreferencesKey("coinjoin_rounds")
         val COINJOIN_SESSIONS = intPreferencesKey("coinjoin_sessions")
         val COINJOIN_MULTISESSION = booleanPreferencesKey("coinjoin_multisession")
         val COINJOIN_AMOUNT = longPreferencesKey("coinjoin_amount")
         val FIRST_TIME_INFO_SHOWN = booleanPreferencesKey("first_time_info_shown")
+    }
+
+    fun observeMode(): Flow<CoinJoinMode> {
+        return observe(COINJOIN_MODE).filterNotNull().map { mode -> CoinJoinMode.valueOf(mode!!) }
+    }
+
+    suspend fun getMode(): CoinJoinMode {
+        return get(COINJOIN_MODE).let { CoinJoinMode.valueOf(it!!) }
+    }
+
+    suspend fun setMode(mode: CoinJoinMode) {
+        set(COINJOIN_MODE, mode.toString())
     }
 }

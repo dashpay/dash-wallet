@@ -124,6 +124,7 @@ class SendCoinsViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
+        // TODO: the coin selector will need to use CoinJoinCoinSelector if CoinJoin is ON
         walletDataProvider.observeBalance(coinSelector = MaxOutputAmountCoinSelector())
             .distinctUntilChanged()
             .onEach(_maxOutputAmount::postValue)

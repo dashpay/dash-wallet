@@ -506,8 +506,9 @@
     <string name="coinjoin_advanced_time">Multiple hours</string>
     <string name="coinjoin_start">Start Mixing</string>
     <string name="coinjoin_stop">Stop Mixing</string>
-    <string name="coinjoin_progress">Mixing · %1$s of %2$s</string>
+    <string name="coinjoin_progress">Mixing · %1$s of %2$s (%3$s)</string>
+    <string name="coinjoin_progress_finished">Finished · %1$s of %2$s</string>
     <string name="coinjoin_change_level_confirmation">Are you sure you want to change the privacy level?</string>
     <string name="coinjoin_stop_mixing_title">Are you sure you want to stop mixing?</string>
-    <string name="coinjoin_stop_mixing_message">Any funds that have been mixed will be combined with your un mixed funds</string>
+    <string name="coinjoin_stop_mixing_message">Any funds that have been mixed will be combined with your unmixed funds</string>
 </resources>

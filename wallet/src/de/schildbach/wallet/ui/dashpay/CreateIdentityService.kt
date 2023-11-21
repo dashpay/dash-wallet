@@ -8,6 +8,7 @@ import androidx.lifecycle.LifecycleService
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
@@ -17,7 +18,6 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet_test.R
@@ -135,7 +135,7 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var userAlertDao: UserAlertDao
     @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityConfig
     @Inject lateinit var securityFunctions: SecurityFunctions
-    @Inject lateinit var coinJoinService: CoinJoinService
+    @Inject lateinit var coinJoinConfig: CoinJoinConfig
     private lateinit var securityGuard: SecurityGuard
 
     private val wakeLock by lazy {
@@ -332,19 +332,6 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
-        if (blockchainIdentityData.creationState <= CreationState.MIXING_FUNDS) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.MIXING_FUNDS)
-            coinJoinService.configureMixing(
-                Constants.DASH_PAY_FEE,
-                { encryptionKey },
-                { it.decrypt(encryptionKey) },
-                restoreFromConfig = username == null
-            )
-            coinJoinService.prepareAndStartMixing()
-
-            coinJoinService.waitForMixingWithException()
-        }
-
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CREATING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_CREATING)
             //
@@ -352,7 +339,7 @@ class CreateIdentityService : LifecycleService() {
             //
             // check to see if the funding transaction exists
             if (blockchainIdentity.creditFundingTransaction == null) {
-                val useCoinJoin = blockchainIdentityData.privacyMode == CoinJoinMode.INTERMEDIATE || blockchainIdentityData.privacyMode == CoinJoinMode.ADVANCED
+                val useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE
                 platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey, useCoinJoin)
             }
         }

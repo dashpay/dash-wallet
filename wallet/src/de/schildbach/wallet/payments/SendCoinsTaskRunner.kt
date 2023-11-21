@@ -18,12 +18,17 @@ package de.schildbach.wallet.payments
 
 import androidx.annotation.VisibleForTesting
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.payments.parsers.PaymentIntentParser
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.PackageInfoProvider
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import okhttp3.CacheControl
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -34,7 +39,6 @@ import okio.IOException
 import org.bitcoin.protocols.payments.Protos
 import org.bitcoin.protocols.payments.Protos.Payment
 import org.bitcoinj.coinjoin.CoinJoinCoinSelector
-import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IKey
 import org.bitcoinj.crypto.KeyCrypterException
@@ -57,11 +61,24 @@ class SendCoinsTaskRunner @Inject constructor(
     private val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
     private val securityFunctions: SecurityFunctions,
-    private val packageInfoProvider: PackageInfoProvider
+    private val packageInfoProvider: PackageInfoProvider,
+    coinJoinConfig: CoinJoinConfig
 ) : SendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
         private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
+    }
+    private var coinJoinSend = false
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+
+    init {
+        coinJoinConfig
+            .observeMode()
+            .filterNotNull()
+            .onEach { mode ->
+                coinJoinSend = mode != CoinJoinMode.NONE
+            }
+            .launchIn(coroutineScope)
     }
 
     @Throws(LeftoverBalanceException::class)
@@ -233,12 +250,11 @@ class SendCoinsTaskRunner @Inject constructor(
         mayEditAmount: Boolean,
         paymentIntent: PaymentIntent,
         signInputs: Boolean,
-        forceEnsureMinRequiredFee: Boolean,
-        coinJoin: Boolean = false
+        forceEnsureMinRequiredFee: Boolean
     ): SendRequest {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         val sendRequest = paymentIntent.toSendRequest()
-        sendRequest.coinSelector = getCoinSelector(coinJoin)
+        sendRequest.coinSelector = getCoinSelector()
         sendRequest.useInstantSend = false
         sendRequest.feePerKb = Constants.ECONOMIC_FEE
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
@@ -256,15 +272,14 @@ class SendCoinsTaskRunner @Inject constructor(
         amount: Coin,
         coinSelector: CoinSelector? = null,
         emptyWallet: Boolean = false,
-        forceMinFee: Boolean = true,
-        coinJoin: Boolean = false
+        forceMinFee: Boolean = true
     ): SendRequest {
         return SendRequest.to(address, amount).apply {
             this.feePerKb = Constants.ECONOMIC_FEE
             this.ensureMinRequiredFee = forceMinFee
             this.emptyWallet = emptyWallet
 
-            val selector = coinSelector ?: getCoinSelector(coinJoin)
+            val selector = coinSelector ?: getCoinSelector()
             this.coinSelector = selector
 
             if (selector is ByAddressCoinSelector) {
@@ -273,10 +288,12 @@ class SendCoinsTaskRunner @Inject constructor(
         }
     }
 
-    private fun getCoinSelector(coinJoin: Boolean) = if (coinJoin) {
+    private fun getCoinSelector() = if (coinJoinSend) {
+        // mixed only
         CoinJoinCoinSelector(walletData.wallet)
     } else {
-        UnmixedZeroConfCoinSelector(walletData.wallet)
+        // collect all coins, mixed and unmixed
+        ZeroConfCoinSelector.get()
     }
 
     @Throws(LeftoverBalanceException::class)

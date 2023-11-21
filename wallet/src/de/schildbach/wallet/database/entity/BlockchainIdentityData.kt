@@ -100,7 +100,6 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
     enum class CreationState {
         NONE,   // this should always be the first value
         UPGRADING_WALLET,
-        MIXING_FUNDS,
         CREDIT_FUNDING_TX_CREATING,
         CREDIT_FUNDING_TX_SENDING,
         CREDIT_FUNDING_TX_SENT,
