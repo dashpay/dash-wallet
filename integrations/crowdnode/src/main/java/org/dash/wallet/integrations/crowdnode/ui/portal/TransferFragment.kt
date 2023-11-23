@@ -339,30 +339,51 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
     }
 
     private suspend fun showWithdrawalLimitsError(period: WithdrawalLimitPeriod) {
-        val limits = viewModel.getWithdrawalLimits()
-        val okButtonText = if (period == WithdrawalLimitPeriod.PerTransaction) {
-            if (viewModel.onlineAccountStatus == OnlineAccountStatus.Done) {
-                getString(R.string.read_withdrawal_policy)
-            } else {
-                getString(R.string.online_account_create)
+        if (period == WithdrawalLimitPeriod.PerBlock) {
+            AdaptiveDialog.create(
+                R.drawable.ic_warning,
+                "Please wait before initiating the next withdrawal",
+                "Please wait 5 minutes before initiating another withdrawal",
+                getString(R.string.button_okay)
+            ).show(requireActivity()) {
+                // TODO: what do we do here?
+                // close this page?
+                // findNavController().popBackStack()
+                // show an error?
+                safeNavigate(
+                    TransferFragmentDirections.transferToResult(
+                        true,
+                        getString(R.string.crowdnode_withdraw_error),
+                        ""
+                    )
+                )
             }
         } else {
-            ""
-        }
-
-        val doAction = WithdrawalLimitsInfoDialog(
-            limits[0],
-            limits[1],
-            limits[2],
-            highlightedLimit = period,
-            okButtonText = okButtonText
-        ).showAsync(requireActivity())
-
-        if (doAction == true) {
-            if (viewModel.onlineAccountStatus == OnlineAccountStatus.Done) {
-                openWithdrawalPolicy()
+            val limits = viewModel.getWithdrawalLimits()
+            val okButtonText = if (period == WithdrawalLimitPeriod.PerTransaction) {
+                if (viewModel.onlineAccountStatus == OnlineAccountStatus.Done) {
+                    getString(R.string.read_withdrawal_policy)
+                } else {
+                    getString(R.string.online_account_create)
+                }
             } else {
-                safeNavigate(TransferFragmentDirections.transferToOnlineAccountEmail())
+                ""
+            }
+
+            val doAction = WithdrawalLimitsInfoDialog(
+                limits[0],
+                limits[1],
+                limits[2],
+                highlightedLimit = period,
+                okButtonText = okButtonText
+            ).showAsync(requireActivity())
+
+            if (doAction == true) {
+                if (viewModel.onlineAccountStatus == OnlineAccountStatus.Done) {
+                    openWithdrawalPolicy()
+                } else {
+                    safeNavigate(TransferFragmentDirections.transferToOnlineAccountEmail())
+                }
             }
         }
     }
