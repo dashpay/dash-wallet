@@ -345,19 +345,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 "Please wait before initiating the next withdrawal",
                 "Please wait 5 minutes before initiating another withdrawal",
                 getString(R.string.button_okay)
-            ).show(requireActivity()) {
-                // TODO: what do we do here?
-                // close this page?
-                // findNavController().popBackStack()
-                // show an error?
-                safeNavigate(
-                    TransferFragmentDirections.transferToResult(
-                        true,
-                        getString(R.string.crowdnode_withdraw_error),
-                        ""
-                    )
-                )
-            }
+            ).showAsync(requireActivity())
         } else {
             val limits = viewModel.getWithdrawalLimits()
             val okButtonText = if (period == WithdrawalLimitPeriod.PerTransaction) {

@@ -128,7 +128,6 @@ class CrowdNodeApiAggregator @Inject constructor(
         private set
     override var notificationIntent: Intent? = null
     override var showNotificationOnResult = false
-    var currentBlockHeight = -1
 
     init {
         walletDataProvider.attachOnWalletWipedListener {
@@ -158,12 +157,6 @@ class CrowdNodeApiAggregator @Inject constructor(
                 }
             }
             .launchIn(configScope)
-
-        blockchainStateProvider.observeState()
-            .onEach {
-                it?.run { currentBlockHeight = bestChainHeight  }
-            }
-            .launchIn(statusScope)
     }
 
     override suspend fun restoreStatus() {
@@ -308,6 +301,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             if (result.messageStatus.lowercase() == MESSAGE_RECEIVED_STATUS) {
                 log.info("Withdrawal request sent successfully")
                 refreshBalance(retries = 3, afterWithdrawal = true)
+                val currentBlockHeight = blockchainStateProvider.getState()?.bestChainHeight ?: -1
                 config.set(CrowdNodeConfig.LAST_WITHDRAWAL_BLOCK, currentBlockHeight)
                 true
             } else {
@@ -837,8 +831,9 @@ class CrowdNodeApiAggregator @Inject constructor(
         if (withdrawalsLast24h.add(value) > perDayLimit) {
             throw WithdrawalLimitsException(perDayLimit, WithdrawalLimitPeriod.PerDay)
         }
-        val lastWithrawBlock = config.get(CrowdNodeConfig.LAST_WITHDRAWAL_BLOCK)
-        if (lastWithrawBlock != null && lastWithrawBlock >= currentBlockHeight) {
+        val lastWithdrawBlock = config.get(CrowdNodeConfig.LAST_WITHDRAWAL_BLOCK)
+        val currentBlockHeight = blockchainStateProvider.getState()?.bestChainHeight ?: -1
+        if (lastWithdrawBlock != null && lastWithdrawBlock >= currentBlockHeight) {
             throw WithdrawalLimitsException(value, WithdrawalLimitPeriod.PerBlock)
         }
     }

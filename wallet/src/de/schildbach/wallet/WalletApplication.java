@@ -86,6 +86,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants;
 import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
+import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.transactions.MasternodeObserver;
@@ -187,6 +188,8 @@ public class WalletApplication extends MultiDexApplication
     HiltWorkerFactory workerFactory;
     @Inject
     BlockchainStateDao blockchainStateDao;
+    @Inject
+    BlockchainStateDataProvider blockchainStateDataProvider;
     @Inject
     CrowdNodeConfig crowdNodeConfig;
     @Inject
@@ -749,9 +752,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void resetBlockchainState() {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            blockchainStateDao.save(new BlockchainState(true));
-        });
+        blockchainStateDataProvider.resetBlockchainState();
     }
 
     public void resetBlockchain() {
@@ -768,20 +769,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void resetBlockchainSyncProgress() {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            BlockchainState blockchainState;
-
-            try {
-                 blockchainState = blockchainStateDao.loadSync();
-            } catch (SQLiteException ex) {
-                blockchainState = null;
-            }
-
-            if (blockchainState != null) {
-                blockchainState.setPercentageSync(0);
-                blockchainStateDao.save(blockchainState);
-            }
-        });
+        blockchainStateDataProvider.resetBlockchainSyncProgress();
     }
 
     public void replaceWallet(final Wallet newWallet) {
