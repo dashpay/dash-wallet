@@ -342,8 +342,8 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         if (period == WithdrawalLimitPeriod.PerBlock) {
             AdaptiveDialog.create(
                 R.drawable.ic_warning,
-                "Please wait before initiating the next withdrawal",
-                "Please wait 5 minutes before initiating another withdrawal",
+                getString(R.string.crowdnode_withdrawal_limits_per_block_title),
+                getString(R.string.crowdnode_withdrawal_limits_per_block_message),
                 getString(R.string.button_okay)
             ).showAsync(requireActivity())
         } else {
