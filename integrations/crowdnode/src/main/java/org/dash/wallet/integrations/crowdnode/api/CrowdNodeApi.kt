@@ -35,6 +35,7 @@ import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -94,6 +95,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     private val config: CrowdNodeConfig,
     private val globalConfig: Configuration,
     private val transactionMetadataProvider: TransactionMetadataProvider,
+    private val blockchainStateProvider: BlockchainStateProvider,
     @ApplicationContext private val appContext: Context
 ) : CrowdNodeApi {
     companion object {
@@ -299,6 +301,8 @@ class CrowdNodeApiAggregator @Inject constructor(
             if (result.messageStatus.lowercase() == MESSAGE_RECEIVED_STATUS) {
                 log.info("Withdrawal request sent successfully")
                 refreshBalance(retries = 3, afterWithdrawal = true)
+                val currentBlockHeight = blockchainStateProvider.getState()?.bestChainHeight ?: -1
+                config.set(CrowdNodeConfig.LAST_WITHDRAWAL_BLOCK, currentBlockHeight)
                 true
             } else {
                 log.info("Withdrawal request not received, status: ${result.messageStatus}. Result: ${result.result}")
@@ -330,6 +334,9 @@ class CrowdNodeApiAggregator @Inject constructor(
                 WithdrawalLimitPeriod.PerDay -> {
                     config.get(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_DAY)
                         ?: CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_DAY.value
+                }
+                else -> {
+                    0L
                 }
             }
         )
@@ -823,6 +830,11 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         if (withdrawalsLast24h.add(value) > perDayLimit) {
             throw WithdrawalLimitsException(perDayLimit, WithdrawalLimitPeriod.PerDay)
+        }
+        val lastWithdrawBlock = config.get(CrowdNodeConfig.LAST_WITHDRAWAL_BLOCK)
+        val currentBlockHeight = blockchainStateProvider.getState()?.bestChainHeight ?: -1
+        if (lastWithdrawBlock != null && lastWithdrawBlock >= currentBlockHeight) {
+            throw WithdrawalLimitsException(value, WithdrawalLimitPeriod.PerBlock)
         }
     }
 

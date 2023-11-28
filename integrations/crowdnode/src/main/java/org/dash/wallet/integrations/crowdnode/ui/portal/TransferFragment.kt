@@ -339,30 +339,39 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
     }
 
     private suspend fun showWithdrawalLimitsError(period: WithdrawalLimitPeriod) {
-        val limits = viewModel.getWithdrawalLimits()
-        val okButtonText = if (period == WithdrawalLimitPeriod.PerTransaction) {
-            if (viewModel.onlineAccountStatus == OnlineAccountStatus.Done) {
-                getString(R.string.read_withdrawal_policy)
-            } else {
-                getString(R.string.online_account_create)
-            }
+        if (period == WithdrawalLimitPeriod.PerBlock) {
+            AdaptiveDialog.create(
+                R.drawable.ic_warning,
+                getString(R.string.crowdnode_withdrawal_limits_per_block_title),
+                getString(R.string.crowdnode_withdrawal_limits_per_block_message),
+                getString(R.string.button_okay)
+            ).showAsync(requireActivity())
         } else {
-            ""
-        }
-
-        val doAction = WithdrawalLimitsInfoDialog(
-            limits[0],
-            limits[1],
-            limits[2],
-            highlightedLimit = period,
-            okButtonText = okButtonText
-        ).showAsync(requireActivity())
-
-        if (doAction == true) {
-            if (viewModel.onlineAccountStatus == OnlineAccountStatus.Done) {
-                openWithdrawalPolicy()
+            val limits = viewModel.getWithdrawalLimits()
+            val okButtonText = if (period == WithdrawalLimitPeriod.PerTransaction) {
+                if (viewModel.onlineAccountStatus == OnlineAccountStatus.Done) {
+                    getString(R.string.read_withdrawal_policy)
+                } else {
+                    getString(R.string.online_account_create)
+                }
             } else {
-                safeNavigate(TransferFragmentDirections.transferToOnlineAccountEmail())
+                ""
+            }
+
+            val doAction = WithdrawalLimitsInfoDialog(
+                limits[0],
+                limits[1],
+                limits[2],
+                highlightedLimit = period,
+                okButtonText = okButtonText
+            ).showAsync(requireActivity())
+
+            if (doAction == true) {
+                if (viewModel.onlineAccountStatus == OnlineAccountStatus.Done) {
+                    openWithdrawalPolicy()
+                } else {
+                    safeNavigate(TransferFragmentDirections.transferToOnlineAccountEmail())
+                }
             }
         }
     }

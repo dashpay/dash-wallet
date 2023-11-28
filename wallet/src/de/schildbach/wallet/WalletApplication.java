@@ -30,7 +30,6 @@ import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.database.sqlite.SQLiteException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
@@ -52,9 +51,6 @@ import androidx.multidex.MultiDexApplication;
 import androidx.work.WorkManager;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.Hasher;
-import com.google.common.hash.Hashing;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
@@ -70,7 +66,6 @@ import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage;
@@ -86,6 +81,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants;
 import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
+import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.transactions.MasternodeObserver;
@@ -123,8 +119,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import dagger.hilt.android.HiltAndroidApp;
-import org.dash.wallet.common.data.entity.BlockchainState;
-import de.schildbach.wallet.database.dao.BlockchainStateDao;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
@@ -186,7 +180,7 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     HiltWorkerFactory workerFactory;
     @Inject
-    BlockchainStateDao blockchainStateDao;
+    BlockchainStateDataProvider blockchainStateDataProvider;
     @Inject
     CrowdNodeConfig crowdNodeConfig;
     @Inject
@@ -749,9 +743,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void resetBlockchainState() {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            blockchainStateDao.save(new BlockchainState(true));
-        });
+        blockchainStateDataProvider.resetBlockchainState();
     }
 
     public void resetBlockchain() {
@@ -768,20 +760,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void resetBlockchainSyncProgress() {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            BlockchainState blockchainState;
-
-            try {
-                 blockchainState = blockchainStateDao.loadSync();
-            } catch (SQLiteException ex) {
-                blockchainState = null;
-            }
-
-            if (blockchainState != null) {
-                blockchainState.setPercentageSync(0);
-                blockchainStateDao.save(blockchainState);
-            }
-        });
+        blockchainStateDataProvider.resetBlockchainSyncProgress();
     }
 
     public void replaceWallet(final Wallet newWallet) {

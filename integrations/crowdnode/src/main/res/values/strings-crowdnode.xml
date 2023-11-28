@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Due to CrowdNode’s terms of service users can withdraw no more than:</string>
     <string name="crowdnode_withdraw_without_limits_online">Withdraw without limits with an online account on CrowdNode website.</string>
     <string name="crowdnode_withdrawal_limits_error">This error is most likely due to exceeding CrowdNode withdrawal limits. Try again later.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Please wait before initiating the next withdrawal</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Please wait 5 minutes before initiating another withdrawal.</string>
     <string name="per_transaction">per transaction</string>
     <string name="per_hour">per hour</string>
     <string name="per_day">per 24 hours</string>
