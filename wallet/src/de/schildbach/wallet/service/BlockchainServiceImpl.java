@@ -87,6 +87,7 @@ import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.transactions.TransactionUtils;
+import org.dash.wallet.common.util.FlowExtKt;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi;
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositReceivedResponse;
@@ -132,6 +133,9 @@ import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
+import kotlin.coroutines.Continuation;
+import kotlinx.coroutines.flow.FlowCollector;
 
 import static org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO;
 
@@ -148,6 +152,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject CrowdNodeBlockchainApi crowdNodeBlockchainApi;
     @Inject CrowdNodeConfig crowdNodeConfig;
     @Inject BlockchainStateDao blockchainStateDao;
+    @Inject BlockchainStateDataProvider blockchainStateDataProvider;
     @Inject ExchangeRatesDao exchangeRatesDao;
     @Inject TransactionMetadataProvider transactionMetadataProvider;
     @Inject PackageInfoProvider packageInfoProvider;
@@ -976,7 +981,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         peerDiscoveryList.add(dnsDiscovery);
         updateAppWidget();
-        blockchainStateDao.load().observe(this, this::handleBlockchainStateNotification);
+        FlowExtKt.observe(blockchainStateDao.observeState(), this, (blockchainState, continuation) -> {
+            handleBlockchainStateNotification((BlockchainState) blockchainState);
+            return null;
+        });
         registerCrowdNodeConfirmedAddressFilter();
     }
 
@@ -1154,47 +1162,15 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private void updateBlockchainStateImpediments() {
-        executor.execute(() -> {
-            BlockchainState blockchainState = blockchainStateDao.loadSync();
-            if (blockchainState != null) {
-                blockchainState.getImpediments().clear();
-                blockchainState.getImpediments().addAll(impediments);
-                blockchainStateDao.save(blockchainState);
-            }
-        });
+        blockchainStateDataProvider.updateImpediments(impediments);
     }
 
     private void updateBlockchainState() {
-        executor.execute(() -> {
-            BlockchainState blockchainState = blockchainStateDao.loadSync();
-            if (blockchainState == null) {
-                blockchainState = new BlockchainState();
-            }
-
-            StoredBlock chainHead = blockChain.getChainHead();
-            StoredBlock block = application.getWallet().getContext().chainLockHandler.getBestChainLockBlock();
-            int chainLockHeight = block != null ? block.getHeight() : 0;
-            int mnListHeight = (int) application.getWallet().getContext().masternodeListManager.getListAtChainTip().getHeight();
-
-            blockchainState.setBestChainDate(chainHead.getHeader().getTime());
-            blockchainState.setBestChainHeight(chainHead.getHeight());
-            blockchainState.setImpediments(EnumSet.copyOf(impediments));
-            blockchainState.setChainlockHeight(chainLockHeight);
-            blockchainState.setMnlistHeight(mnListHeight);
-            blockchainState.setPercentageSync(percentageSync());
-
-            blockchainStateDao.save(blockchainState);
-        });
+        blockchainStateDataProvider.updateBlockchainState(blockChain, impediments, percentageSync());
     }
 
     public void setBlockchainDownloaded() {
-        executor.execute(() -> {
-            BlockchainState blockchainState = blockchainStateDao.loadSync();
-            if (blockchainState != null && blockchainState.getPercentageSync() != 100) {
-                blockchainState.setPercentageSync(100);
-                blockchainStateDao.save(blockchainState);
-            }
-        });
+        blockchainStateDataProvider.setBlockchainDownloaded();
     }
 
     @Override

@@ -30,7 +30,8 @@ data class WithdrawalLimit(
 enum class WithdrawalLimitPeriod {
     PerTransaction,
     PerHour,
-    PerDay
+    PerDay,
+    PerBlock
 }
 
 data class WithdrawalLimitsException(
