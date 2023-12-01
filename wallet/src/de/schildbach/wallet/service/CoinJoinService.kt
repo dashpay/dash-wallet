@@ -43,11 +43,11 @@ import org.bitcoinj.coinjoin.PoolStatus
 import org.bitcoinj.coinjoin.callbacks.RequestDecryptedKey
 import org.bitcoinj.coinjoin.callbacks.RequestKeyParameter
 import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener
-import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.coinjoin.listeners.MixingCompleteListener
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener
 import org.bitcoinj.coinjoin.progress.MixingProgressTracker
 import org.bitcoinj.coinjoin.utils.CoinJoinManager
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.core.AbstractBlockChain
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -138,6 +138,7 @@ class CoinJoinMixingService @Inject constructor(
     private val isBlockChainSet: Boolean
         get() = blockChain != null
     private var networkStatus: NetworkStatus = NetworkStatus.UNKNOWN
+    private var isSynced = false
     private var hasAnonymizableBalance: Boolean = false
 
     // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
@@ -167,7 +168,12 @@ class CoinJoinMixingService @Inject constructor(
             .filterNotNull()
             .distinctUntilChanged()
             .onEach { blockChainState ->
-                if (blockChainState.isSynced()) {
+                val isSynced = blockChainState.isSynced()
+                if (isSynced != this.isSynced) {
+                    updateState(config.getMode(), hasAnonymizableBalance, networkStatus, isSynced, blockChain)
+                }
+                // this will trigger mixing as new blocks are mined and received tx's are confirmed
+                if (isSynced) {
                     log.info("coinjoin: new block: ${blockChainState.bestChainHeight}")
                     updateBalance(walletDataProvider.getWalletBalance())
                 }
@@ -204,24 +210,36 @@ class CoinJoinMixingService @Inject constructor(
 
         val hasAnonymizableBalance = anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())
         log.info("coinjoin: mixing can occur: $hasAnonymizableBalance")
-        updateState(config.getMode(), hasAnonymizableBalance, networkStatus, blockchainStateProvider.getBlockChain())
+        updateState(
+            config.getMode(),
+            hasAnonymizableBalance,
+            networkStatus,
+            isSynced,
+            blockchainStateProvider.getBlockChain()
+        )
     }
 
     private suspend fun updateState(
         mode: CoinJoinMode,
         hasAnonymizableBalance: Boolean,
         networkStatus: NetworkStatus,
+        isSynced: Boolean,
         blockChain: AbstractBlockChain?
     ) {
         updateMutex.lock()
-        log.info("coinjoin-updateState: ${this.mode}, ${this.hasAnonymizableBalance}, ${this.networkStatus}, ${blockChain != null}")
+        log.info(
+            "coinjoin-updateState: ${this.mode}, ${this.hasAnonymizableBalance}, ${this.networkStatus}, ${this.isSynced} ${blockChain != null}"
+        )
         try {
             setBlockchain(blockChain)
-            log.info("coinjoin-updateState: $mode, $hasAnonymizableBalance, $networkStatus, ${blockChain != null}")
+            log.info(
+                "coinjoin-updateState: $mode, $hasAnonymizableBalance, $networkStatus, $isSynced, ${blockChain != null}"
+            )
             this.networkStatus = networkStatus
             this.mixingStatus = mixingStatus
             _mixingState.value = mixingStatus
             this.hasAnonymizableBalance = hasAnonymizableBalance
+            this.isSynced = isSynced
             this.mode = mode
 
             if (mode == CoinJoinMode.NONE) {
@@ -229,7 +247,7 @@ class CoinJoinMixingService @Inject constructor(
             } else {
                 configureMixing()
                 if (hasAnonymizableBalance) {
-                    if (networkStatus == NetworkStatus.CONNECTED && isBlockChainSet) {
+                    if (networkStatus == NetworkStatus.CONNECTED && isBlockChainSet && isSynced) {
                         updateMixingState(MixingStatus.MIXING)
                     } else {
                         updateMixingState(MixingStatus.PAUSED)
@@ -250,7 +268,6 @@ class CoinJoinMixingService @Inject constructor(
     ) {
         updateMixingStateMutex.lock()
         try {
-
             val previousMixingStatus = this.mixingStatus
             this.mixingStatus = mixingStatus
             log.info("coinjoin-updateMixingState: $previousMixingStatus -> $mixingStatus")
@@ -273,11 +290,11 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateBlockChain(blockChain: AbstractBlockChain?) {
-        updateState(mode, hasAnonymizableBalance, networkStatus, blockChain)
+        updateState(mode, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
     }
 
     private suspend fun updateNetworkStatus(networkStatus: NetworkStatus) {
-        updateState(mode, hasAnonymizableBalance, networkStatus, blockChain)
+        updateState(mode, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
     }
 
     private suspend fun updateMode(mode: CoinJoinMode) {
@@ -286,7 +303,7 @@ class CoinJoinMixingService @Inject constructor(
             configureMixing()
             updateBalance(walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.AVAILABLE))
         }
-        updateState(mode, hasAnonymizableBalance, networkStatus, blockChain)
+        updateState(mode, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
     }
 
     private var mixingProgressTracker: MixingProgressTracker = object : MixingProgressTracker() {
@@ -347,6 +364,7 @@ class CoinJoinMixingService @Inject constructor(
     private fun configureMixing() {
         configureMixing(walletDataProvider.getWalletBalance())
     }
+
     /** set CoinJoinClientOptions based on CoinJoinMode */
     private fun configureMixing(amount: Coin) {
         when (mode) {
@@ -389,7 +407,7 @@ class CoinJoinMixingService @Inject constructor(
             clientManager = CoinJoinClientManager(wallet)
             coinJoinClientManagers[wallet.description] = clientManager
             // this allows mixing to wait for the last transaction to be confirmed
-            //clientManager.addContinueMixingOnError(PoolStatus.ERR_NO_INPUTS)
+            // clientManager.addContinueMixingOnError(PoolStatus.ERR_NO_INPUTS)
             // wait until the masternode sync system fixes itself
             clientManager.addContinueMixingOnError(PoolStatus.ERR_NO_MASTERNODES_DETECTED)
             clientManager.setStopOnNothingToDo(true)
