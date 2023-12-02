@@ -22,6 +22,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -62,6 +63,10 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
         binding.continueBtn.setOnClickListener {
             continueCoinbase()
         }
+        // the convert or buy swap feature should be hidden
+        // as there are not enough supported currencies with the v3 API
+        binding.buyConvertText.isVisible = false
+        binding.buyConvertIc.isVisible = false
     }
 
     private fun continueCoinbase() {
