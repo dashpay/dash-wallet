@@ -87,6 +87,9 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash())
         }
 
+        // the convert or buy swap feature should be hidden
+        // as there are not enough supported currencies with the v3 API
+        binding.convertBtn.isVisible = false
         binding.convertBtn.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_DASH)
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToConvertCrypto(true))
