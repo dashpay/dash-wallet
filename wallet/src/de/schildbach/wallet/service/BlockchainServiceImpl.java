@@ -1025,7 +1025,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         blockchainStateDao.load().observe(this, (blockchainState) -> handleBlockchainStateNotification(blockchainState, mixingStatus));
         registerCrowdNodeConfirmedAddressFilter();
 
-        FlowExtKt.observe(coinJoinService.getMixingState(), this, (mixingStatus, continuation) -> {
+        FlowExtKt.observe(coinJoinService.observeMixingState(), this, (mixingStatus, continuation) -> {
             handleBlockchainStateNotification(blockchainState, mixingStatus);
             return null;
         });

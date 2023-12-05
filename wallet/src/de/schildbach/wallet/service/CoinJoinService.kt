@@ -81,9 +81,9 @@ enum class CoinJoinMode {
  * Monitor the status of the CoinJoin Mixing Service
  */
 interface CoinJoinService {
-    val mixingStatus: MixingStatus
-    val mixingState: Flow<MixingStatus>
-    val mixingProgress: Flow<Double>
+    suspend fun getMixingState(): MixingStatus
+    fun observeMixingState(): Flow<MixingStatus>
+    fun observeMixingProgress(): Flow<Double>
 }
 
 enum class MixingStatus {
@@ -122,11 +122,11 @@ class CoinJoinMixingService @Inject constructor(
     private var sessionCompleteListeners: ArrayList<SessionCompleteListener> = arrayListOf()
 
     var mode: CoinJoinMode = CoinJoinMode.NONE
-    override var mixingStatus: MixingStatus = MixingStatus.NOT_STARTED
-        private set
-    val _mixingState = MutableStateFlow(MixingStatus.NOT_STARTED)
-    override val mixingState: Flow<MixingStatus>
-        get() = _mixingState
+    private val _mixingState = MutableStateFlow(MixingStatus.NOT_STARTED)
+    private val _progressFlow = MutableStateFlow(0.00)
+
+    override suspend fun getMixingState(): MixingStatus = _mixingState.value
+    override fun observeMixingState(): Flow<MixingStatus> = _mixingState
 
     private val coroutineScope = CoroutineScope(
         Executors.newFixedThreadPool(2, ContextPropagatingThreadFactory("coinjoin-pool")).asCoroutineDispatcher()
@@ -146,9 +146,7 @@ class CoinJoinMixingService @Inject constructor(
     private val updateMixingStateMutex = Mutex(locked = false)
     private var exception: Throwable? = null
 
-    override val mixingProgress: Flow<Double>
-        get() = _progressFlow
-    private val _progressFlow = MutableStateFlow(0.00)
+    override fun observeMixingProgress(): Flow<Double> = _progressFlow
 
     init {
         blockchainStateProvider.observeNetworkStatus()
@@ -236,8 +234,8 @@ class CoinJoinMixingService @Inject constructor(
                 "coinjoin-updateState: $mode, $hasAnonymizableBalance, $networkStatus, $isSynced, ${blockChain != null}"
             )
             this.networkStatus = networkStatus
-            this.mixingStatus = mixingStatus
-            _mixingState.value = mixingStatus
+            // this.getMixingState = getMixingState
+            // _mixingState.value = getMixingState
             this.hasAnonymizableBalance = hasAnonymizableBalance
             this.isSynced = isSynced
             this.mode = mode
@@ -268,8 +266,8 @@ class CoinJoinMixingService @Inject constructor(
     ) {
         updateMixingStateMutex.lock()
         try {
-            val previousMixingStatus = this.mixingStatus
-            this.mixingStatus = mixingStatus
+            val previousMixingStatus = _mixingState.value
+            _mixingState.value = mixingStatus
             log.info("coinjoin-updateMixingState: $previousMixingStatus -> $mixingStatus")
 
             when {
