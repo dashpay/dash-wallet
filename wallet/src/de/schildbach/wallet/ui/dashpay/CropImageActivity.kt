@@ -73,6 +73,7 @@ class CropImageActivity : LockScreenActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCropImageBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         val tempFile = intent.getParcelableExtra<Uri>(TEMP_FILE)
         val destinationFile = intent.getParcelableExtra<Uri>(DESTINATION_FILE)

@@ -17,10 +17,11 @@
 package de.schildbach.wallet.ui
 
 import android.Manifest
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.READ_MEDIA_IMAGES
 import android.app.Activity
-import android.content.ClipData
 import android.content.Intent
-import android.content.pm.PackageManager
+import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -34,8 +35,10 @@ import android.text.TextWatcher
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
@@ -56,12 +59,12 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.display
-import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityEditProfileBinding
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import org.dash.wallet.common.ui.avatar.ProfilePictureTransformation
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
@@ -71,19 +74,12 @@ import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
 
+
 @AndroidEntryPoint
 class EditProfileActivity : LockScreenActivity() {
 
     companion object {
-        const val REQUEST_CODE_URI = 0
-        const val REQUEST_CODE_IMAGE = 1
-        const val REQUEST_CODE_CHOOSE_PICTURE_PERMISSION = 2
-        const val REQUEST_CODE_TAKE_PICTURE_PERMISSION = 3
-        const val REQUEST_CODE_CROP_IMAGE = 4
-        const val REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN = 5
-
-        protected val log = LoggerFactory.getLogger(EditProfileActivity::class.java)
-
+        private val log = LoggerFactory.getLogger(EditProfileActivity::class.java)
     }
 
     private lateinit var binding: ActivityEditProfileBinding
@@ -96,6 +92,12 @@ class EditProfileActivity : LockScreenActivity() {
 
     private var profilePictureChanged = false
     private var uploadProfilePictureStateDialog: UploadProfilePictureStateDialog? = null
+    private lateinit var takePicturePermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var takePictureLauncher: ActivityResultLauncher<Uri>
+    private lateinit var choosePicturePermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var chooseImageLauncher: ActivityResultLauncher<String>
+    private lateinit var cropImageLauncher: ActivityResultLauncher<Intent>
+    private lateinit var googleDriveSignInLauncher: ActivityResultLauncher<Intent>
 
     private var mDrive: Drive? = null
     private var showSaveReminderDialog = false
@@ -206,6 +208,81 @@ class EditProfileActivity : LockScreenActivity() {
         editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this) {
             imitateUserInteraction()
             cropProfilePicture()
+        }
+
+        takePicturePermissionLauncher =  registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+            if (isGranted) {
+                takePicture()
+            } else {
+                // Handle the case where permission is denied
+            }
+        }
+
+        takePictureLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { isSuccess: Boolean ->
+            if (isSuccess) {
+                editProfileViewModel.onTmpPictureReadyForEditEvent.postValue(editProfileViewModel.tmpPictureFile)
+            }
+            turnOnAutoLogout()
+        }
+
+        choosePicturePermissionLauncher =  registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+            if (isGranted) {
+                choosePicture()
+            } else {
+                // Handle the case where permission is denied
+            }
+        }
+        // Initialize the launchers
+        chooseImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { selectedImage: Uri? ->
+            // Handle the picked image
+            if (selectedImage != null) {
+                // your code to handle the image
+                turnOnAutoLogout()
+
+                @Suppress("DEPRECATION")
+                val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
+                val cursor: Cursor? = contentResolver.query(
+                    selectedImage,
+                    filePathColumn, null, null, null
+                )
+                if (cursor != null) {
+                    cursor.moveToFirst()
+                    val columnIndex: Int = cursor.getColumnIndex(filePathColumn[0])
+                    val picturePath: String? = cursor.getString(columnIndex)
+                    if (picturePath != null) {
+                        editProfileViewModel.saveAsProfilePictureTmp(picturePath)
+                    } else {
+                        saveImageWithAuthority(selectedImage)
+                    }
+                }
+            }
+        }
+
+        cropImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                if (externalUrlSharedViewModel.externalUrl != null) {
+                    saveUrl(CropImageActivity.extractZoomedRect(result.data!!))
+                } else {
+                    showProfilePictureServiceDialog()
+                }
+            } else if (result.resultCode == Activity.RESULT_CANCELED) {
+                // if crop was canceled, then return the externalUrl to its original state
+                if (externalUrlSharedViewModel.externalUrl != null) {
+                    externalUrlSharedViewModel.externalUrl =
+                        if (editProfileViewModel.dashPayProfile.value!!.avatarUrl == "") {
+                            null
+                        } else {
+                            Uri.parse(editProfileViewModel.dashPayProfile.value!!.avatarUrl)
+                        }
+                }
+            }
+        }
+
+        googleDriveSignInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                // Handle Google Drive Sign In Result
+                handleGdriveSigninResult(result.data!!)
+            }
         }
     }
 
@@ -373,18 +450,28 @@ class EditProfileActivity : LockScreenActivity() {
     }
 
     private fun takePictureWithPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PERMISSION_GRANTED) {
             takePicture()
         } else {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQUEST_CODE_TAKE_PICTURE_PERMISSION)
+            takePicturePermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
     private fun choosePictureWithPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+        // TODO: see https://android-developers.googleblog.com/2023/08/choosing-right-storage-experience.html
+        // for android 14 changes
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            (ContextCompat.checkSelfPermission(this, READ_MEDIA_IMAGES) == PERMISSION_GRANTED)
+        ) {
+            // Full access on Android 13+
+            choosePicture()
+        } else if (ContextCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE) == PERMISSION_GRANTED) {
+            // Full access up to Android 12
             choosePicture()
         } else {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_CHOOSE_PICTURE_PERMISSION)
+            // Access denied, so ask for permission
+            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) READ_MEDIA_IMAGES else READ_EXTERNAL_STORAGE
+            choosePicturePermissionLauncher.launch(permission)
         }
     }
 
@@ -395,9 +482,8 @@ class EditProfileActivity : LockScreenActivity() {
 
     private fun choosePicture() {
         if (editProfileViewModel.createTmpPictureFile()) {
-            val pickPhoto = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
             turnOffAutoLogout()
-            startActivityForResult(pickPhoto, REQUEST_CODE_URI)
+            chooseImageLauncher.launch("image/*")
         } else {
             Toast.makeText(this, "Unable to create temporary file", Toast.LENGTH_LONG).show()
         }
@@ -413,74 +499,8 @@ class EditProfileActivity : LockScreenActivity() {
     }
 
     private fun dispatchTakePictureIntent() {
-        Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
-            // Ensure that there's a camera activity to handle the intent
-            takePictureIntent.resolveActivity(packageManager)?.also {
-                val tmpFileUri = getFileUri(editProfileViewModel.tmpPictureFile)
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, tmpFileUri)
-                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP) {
-                    // to avoid 'SecurityException: Permission Denial' on KitKat
-                    takePictureIntent.clipData = ClipData.newRawUri("", tmpFileUri)
-                    takePictureIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                startActivityForResult(takePictureIntent, REQUEST_CODE_IMAGE)
-            }
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        when (requestCode) {
-            REQUEST_CODE_IMAGE -> {
-                turnOnAutoLogout()
-                if (resultCode == RESULT_OK) {
-                    // picture saved in editProfileViewModel.profilePictureTmpFile
-                    editProfileViewModel.onTmpPictureReadyForEditEvent.postValue(editProfileViewModel.tmpPictureFile)
-                }
-            }
-            REQUEST_CODE_URI -> {
-                turnOnAutoLogout()
-                if (resultCode == RESULT_OK && data != null) {
-                    val selectedImage: Uri? = data.data
-                    if (selectedImage != null) {
-                        @Suppress("DEPRECATION")
-                        val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
-                        val cursor: Cursor? = contentResolver.query(selectedImage,
-                            filePathColumn, null, null, null)
-                        if (cursor != null) {
-                            cursor.moveToFirst()
-                            val columnIndex: Int = cursor.getColumnIndex(filePathColumn[0])
-                            val picturePath: String? = cursor.getString(columnIndex)
-                            if (picturePath != null) {
-                                editProfileViewModel.saveAsProfilePictureTmp(picturePath)
-                            } else {
-                                saveImageWithAuthority(selectedImage)
-                            }
-                        }
-                    }
-                }
-            }
-            REQUEST_CODE_CROP_IMAGE -> {
-                if (resultCode == Activity.RESULT_OK) {
-                    if (externalUrlSharedViewModel.externalUrl != null) {
-                        saveUrl(CropImageActivity.extractZoomedRect(data!!))
-                    } else {
-                        showProfilePictureServiceDialog()
-                    }
-                } else if (resultCode == Activity.RESULT_CANCELED) {
-                    // if crop was canceled, then return the externalUrl to its original state
-                    if (externalUrlSharedViewModel.externalUrl != null)
-                        externalUrlSharedViewModel.externalUrl = if (editProfileViewModel.dashPayProfile.value!!.avatarUrl == "") {
-                            null
-                        } else {
-                            Uri.parse(editProfileViewModel.dashPayProfile.value!!.avatarUrl)
-                        }
-                }
-            }
-            REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN -> {
-                handleGdriveSigninResult(data!!)
-            }
-        }
+        val tmpFileUri = getFileUri(editProfileViewModel.tmpPictureFile)
+        takePictureLauncher.launch(tmpFileUri)
     }
 
     private fun saveImageWithAuthority(uri: Uri) {
@@ -540,30 +560,15 @@ class EditProfileActivity : LockScreenActivity() {
     private fun cropProfilePicture() {
         if (externalUrlSharedViewModel.shouldCrop) {
             val tmpPictureUri = editProfileViewModel.tmpPictureFile.toUri()
+
             val profilePictureUri = editProfileViewModel.profilePictureFile!!.toUri()
             val initZoomedRect = ProfilePictureHelper.extractZoomedRect(externalUrlSharedViewModel.externalUrl)
             val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri, initZoomedRect)
-            startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
+
+            // Use the launcher to start the activity
+            cropImageLauncher.launch(intent)
         } else {
             saveUrl(RectF(0.0f, 0.0f, 1.0f, 1.0f))
-        }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        when (requestCode) {
-            REQUEST_CODE_TAKE_PICTURE_PERMISSION -> {
-                when {
-                    grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED -> takePicture()
-                    else -> takePictureWithPermission()
-                }
-            }
-            REQUEST_CODE_CHOOSE_PICTURE_PERMISSION -> {
-                when {
-                    grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED -> choosePicture()
-                    else -> choosePictureWithPermission()
-                }
-            }
-            else -> super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }
 
@@ -592,10 +597,10 @@ class EditProfileActivity : LockScreenActivity() {
         val signInAccount = GoogleDriveService.getSigninAccount(applicationContext)
         val googleSignInClient = GoogleSignIn.getClient(this, GoogleDriveService.getGoogleSigninOptions())
         if (signInAccount == null) {
-            startActivityForResult(googleSignInClient.signInIntent, REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN)
+            googleDriveSignInLauncher.launch(googleSignInClient.signInIntent)
         } else {
             googleSignInClient.revokeAccess()
-                .addOnSuccessListener { startActivityForResult(googleSignInClient.signInIntent, REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN) }
+                .addOnSuccessListener { googleDriveSignInLauncher.launch(googleSignInClient.signInIntent) }
                 .addOnFailureListener { e: java.lang.Exception? ->
                     log.error("could not revoke access to drive: ", e)
                     applyGdriveAccessDenied()
