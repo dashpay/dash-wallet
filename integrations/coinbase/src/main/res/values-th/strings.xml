@@ -37,6 +37,7 @@
     <string name="coinbase_fee">ค่าธรรมเนียม Coinbase </string>
     <string name="total">ทั้งหมด</string>
     <string name="order_preview">คำสั่งซื้อตัวอย่าง</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">คุณจะได้รับ ~ %s Dash บน Dash Wallet ของคุณบนอุปกรณ์นี้ โปรดทราบว่าอาจใช้เวลาถึง 2-3 นาทีในการโอนให้เสร็จสมบูรณ์</string>
     <string name="amount_in_dash">จำนวนเงินใน Dash</string>
     <string name="cancel">ยกเลิก</string>
     <string name="confirm_sec">ยืนยัน (%ss)</string>
@@ -56,8 +57,10 @@
     <string name="purchase_failed">การซื้อไม่สำเร็จ</string>
     <string name="transfer_failed">การโอนไม่สำเร็จ</string>
     <string name="conversion_failed">การแปลงไม่สำเร็จ</string>
+    <string name="transfer_failed_msg">ฝาก Dash ไปยังบัญชี Coinbase ของคุณเรียบร้อยแล้ว แต่มีปัญหาในการโอนไปยัง Dash Wallet บนอุปกรณ์นี้</string>
     <string name="it_could_take_up_to_2_3_minutes">อาจใช้เวลานานถึง 2-3 นาทีในการโอนไปยังกระเป๋าเงิน Dash ของคุณบนอุปกรณ์นี้</string>
     <string name="it_could_take_up_to_5_minutes">อาจใช้เวลานานถึง 5 นาทีในการแปลง %s จากบัญชี Coinbase เป็น Dash ในกระเป๋าเงิน Dash ของคุณบนอุปกรณ์นี้..</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">อาจใช้เวลาถึง 5 นาทีในการแปลง Dash จาก Dash Wallet บนอุปกรณ์นี้เป็น %s ในบัญชี Coinbase ของคุณ</string>
     <string name="contact_coinbase_support">ติดต่อฝ่ายสนับสนุน Coinbase</string>
     <string name="fees_in_crypto_purchase">ค่าธรรมเนียมในการซื้อคริปโต</string>
     <string name="coinbase_fee_info_msg_content">นอกเหนือจากค่าธรรมเนียม Coinbase ที่แสดงแล้วเรายังรวมถึงสเปรดในราคาตลาด คริปปโตมีความผันผวนและสิ่งนี้ช่วยให้เราสามารถล็อคไว้ชั่วคราวในราคาสำหรับการดำเนินการเทรด</string>
@@ -73,6 +76,8 @@
     <string name="to_your_coinbase_account">ถึงบัญชี Coinbase ของคุณ</string>
     <string name="from_dash_wallet_on_this_device">จากกระเป๋าเงิน Dash ในอุปกรณ์นี้</string>
     <string name="you_will_receive">คุณจะได้รับ</string>
+    <string name="we_didnt_find_any_assets">เราไม่พบสินทรัพย์ใดๆ ในบัญชี Coinbase ของคุณ</string>
+    <string name="you_dont_own_any_crypto">คุณไม่ได้เป็นเจ้าของคริปโตใด ๆ ซื้อคริปโตเพื่อเริ่มต้น</string>
     <string name="buy_crypto_on_coinbase">ซื้อคริปโตบน Coinbase</string>
     <string name="auth_limit_description">คุณทำรายการเกินขีดจำกัดการอนุญาตของ Coinbase</string>
     <string name="debit_money">หักเงินจากบัญชีของคุณ</string>
@@ -92,6 +97,7 @@
     <string name="verify_continue">ตรวจสอบ</string>
     <string name="enter_auth_code">ป้อนรหัส 2FA ของ Coinbase </string>
     <string name="extra_steps_label">ขั้นตอนพิเศษนี้แสดงให้เห็นว่าคุณพยายามทำธุรกรรม</string>
+    <string name="need_help">ต้องการความช่วยเหลือ?</string>
     <string name="coinbase_fa_code_hint">รหัส 2FA ของ Coinbase </string>
     <string name="enter_code_details">อาจเป็นรหัสจาก SMS บนโทรศัพท์ของคุณ หรืออาจเป็นรหัสจากแอพ authentication</string>
     <string name="two_fa_code_incorrect">รหัสไม่ถูกต้อง กรุณาตรวจสอบและลองอีกครั้ง!</string>
@@ -104,6 +110,7 @@
     <string name="transfer_dash_successful">โอนสำเร็จ</string>
     <string name="it_could_take_up_to_10_minutes">อาจใช้เวลานานถึง 10 นาทีในการโอน Dash จาก Coinbase ไปยังกระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
     <string name="it_could_take_up_to_10_minutes_to_coinbase">อาจใช้เวลานานถึง 10 นาทีในการถ่ายโอน Dash จากกระเป๋าเงิน Dash บนอุปกรณ์นี้ไปยังบัญชี Coinbase ของคุณ</string>
+    <string name="transfer_dash_failed_msg">เกิดปัญหาในการโอนไปยัง Dash Wallet บนอุปกรณ์นี้</string>
     <string name="insufficient_money_to_transfer">จำนวนเหรียญในกระเป๋าเงินนั้นน้อยเกินในการโอน</string>
     <string name="amount_to_transfer">คุณจะได้รับ %s %s %s</string>
     <string name="amount_to_transfer_dash">คุณจะได้รับ %s</string>

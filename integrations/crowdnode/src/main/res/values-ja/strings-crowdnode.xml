@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">CrowdNodeの利用規約により、ユーザーはこれ以上出金できません。</string>
     <string name="crowdnode_withdraw_without_limits_online">CrowdNodeのウェブサイトからオンラインアカウントで無制限に出金することができます。</string>
     <string name="crowdnode_withdrawal_limits_error">このエラーは、CrowdNodeの出金限度額を超えているためと考えられます。後でもう一度お試しください。</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">次の出金を開始する前に少々お待ちください</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">5分間待ってから次の出金を開始しましょう</string>
     <string name="per_transaction">1取引あたり</string>
     <string name="per_hour">1時間あたり</string>
     <string name="per_day">24時間あたり</string>

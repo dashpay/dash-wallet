@@ -2,13 +2,18 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="topper">Puncak</string>
     <string name="uphold_link_title">Tautkan akun Uphold anda</string>
+    <string name="uphold_powered_by">Didukung oleh Topper</string>
+    <string name="topper_powered_by">Didukung oleh Uphold</string>
     <string name="uphold_transfer_details">Dari Uphold ke Dompet Dash anda</string>
     <string name="uphold_buy_dash_activity_title">Beli/Jual Dash dengan Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Beli Dash dengan akun Uphold</string>
     <string name="uphold_buy_dash_button">Beli Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Transfer dari Uphold</string>
     <string name="uphold_link_account">Tautkan Akun Uphold</string>
+    <string name="uphold_account_dash_balance">Saldo Dash di Uphold</string>
+    <string name="uphold_transfer_to_this_wallet">Dari Uphold ke Dompet Dash</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Biaya akan dipotong dari jumlah yang diminta.</string>
     <string name="uphold_withdrawal_instructions">Masukkan jumlah yang akan ditransfer</string>
     <string name="uphold_withdrawal_success_title">Berhasil</string>
@@ -17,10 +22,12 @@
     <string name="uphold_transfer">Transfer</string>
     <string name="uphold_see_on_uphold">Lihat di Uphold</string>
     <string name="uphold_logout_title">Keluar dari Uphold</string>
+    <string name="uphold_disconnect">Putuskan akun Uphold</string>
     <string name="uphold_logout">Keluar</string>
     <string name="uphold_logout_explanation_text">Anda juga harus keluar dari situs web Uphold menggunakan browser Anda</string>
     <string name="uphold_go_to_website">Pergi ke Situs Web</string>
     <string name="uphold_error">Uphold Error</string>
+    <string name="uphold_error_not_logged_in">Dompet Dash tidak lagi terhubung ke akun Uphold anda.</string>
     <string name="uphold_error_not_available">Layanan Uphold tidak tersedia. Silakan coba lagi nanti.</string>
     <string name="uphold_error_report_issue">Silakan laporkan masalah ini ke tim dukungan Dash Wallet menggunakan "Laporkan Masalah" dari menu utama.</string>
 

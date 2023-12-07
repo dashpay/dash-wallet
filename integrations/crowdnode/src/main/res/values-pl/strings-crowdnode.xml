@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Zgodnie z warunkami korzystania z usługi CrowdNode użytkownicy mogą wypłacić nie więcej niż:</string>
     <string name="crowdnode_withdraw_without_limits_online">Wypłacaj bez ograniczeń za pomocą konta online na stronie CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Ten błąd jest najprawdopodobniej spowodowany przekroczeniem limitów wypłat CrowdNode. Spróbuj ponownie później.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Proszę poczekać przed rozpoczęciem kolejnej wypłaty</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Musisz odczekać 5 minut przed rozpoczęciem kolejnej wypłaty</string>
     <string name="per_transaction">w jednej transakcji</string>
     <string name="per_hour">na godzinę</string>
     <string name="per_day">na 24 godzin</string>

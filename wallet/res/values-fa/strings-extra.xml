@@ -269,6 +269,8 @@
     <string name="menu_contact_support_title">تماس با پشتیبانی</string>
     <string name="menu_contact_support_subtitle">گزارش مشکل</string>
     <string name="menu_explore_title">کاوش</string>
+    <string name="menu_explore_subtitle">فروشنده‌ای بیابید که دش می‌پذیرد</string>
+
     <string name="tools_address_book">دفترچه نشانی‌ها</string>
     <string name="tools_import_private_key">وارد کردن کلید خصوصی</string>
     <string name="tools_network_monitor">پایش شبکه</string>
