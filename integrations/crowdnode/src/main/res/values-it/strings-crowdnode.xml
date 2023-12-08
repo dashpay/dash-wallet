@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">A causa dei termini di servizio di CrowdNode, gli utenti possono recedere non più di:</string>
     <string name="crowdnode_withdraw_without_limits_online">Preleva senza limiti con un account online sul sito web di CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Questo errore è molto probabilmente dovuto al superamento dei limiti di prelievo di CrowdNode. Riprovare più tardi.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Si prega di attendere prima di avviare il prossimo prelievo</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Devi attendere 5 minuti prima di avviare un altro prelievo</string>
     <string name="per_transaction">per transazione</string>
     <string name="per_hour">all\'ora</string>
     <string name="per_day">ogni 24 ore</string>

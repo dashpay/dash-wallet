@@ -264,6 +264,8 @@
     <string name="menu_contact_support_title">联系支持</string>
     <string name="menu_contact_support_subtitle">报告问题</string>
     <string name="menu_explore_title">探索</string>
+    <string name="menu_explore_subtitle">查找接受 DASH 支付的商家</string>
+
     <string name="tools_address_book">地址簿</string>
     <string name="tools_import_private_key">导入私钥</string>
     <string name="tools_network_monitor">网络监视器</string>

@@ -270,6 +270,8 @@
     <string name="menu_contact_support_title">Contato com o Suporte</string>
     <string name="menu_contact_support_subtitle">Reportar um problema</string>
     <string name="menu_explore_title">Explorador</string>
+    <string name="menu_explore_subtitle">Encontrar comerciantes que aceitam DASH</string>
+
     <string name="tools_address_book">Livro de endereços</string>
     <string name="tools_import_private_key">Importar Chave Privada</string>
     <string name="tools_network_monitor">Monitor de rede</string>

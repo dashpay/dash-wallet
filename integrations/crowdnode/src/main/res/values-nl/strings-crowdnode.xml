@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Vanwege de servicevoorwaarden van CrowdNode kunnen gebruikers niet meer opnemen dan:</string>
     <string name="crowdnode_withdraw_without_limits_online">Neem onbeperkt geld op met een online account via de CrowdNode website.</string>
     <string name="crowdnode_withdrawal_limits_error">Deze fout is hoogstwaarschijnlijk te wijten aan het overschrijden van het opnamelimiet van CrowdNode. Probeer het later opnieuw.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Wacht voordat je de volgende opname uitvoert</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Je moet 5 minuten wachten voordat je een nieuwe opname kunt uitvoeren</string>
     <string name="per_transaction">per transactie</string>
     <string name="per_hour">per uur</string>
     <string name="per_day">per 24 uur</string>

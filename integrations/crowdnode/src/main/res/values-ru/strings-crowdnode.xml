@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Из-за условий использования CrowdNode пользователи не могут вывести больше, чем:</string>
     <string name="crowdnode_withdraw_without_limits_online">Вывести без ограничений в онлайн аккаунте на сайте CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Скорее всего, ошибка произошла из-за превышения лимита CrowdNode на вывод. Попробуйте ещё раз позже.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Пожалуйста, подождите, прежде чем запустить следующий вывод средств</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Вы должны подождать 5 минут, прежде чем вывести средства ещё раз</string>
     <string name="per_transaction">за транзакцию</string>
     <string name="per_hour">в час</string>
     <string name="per_day">в 24 часа</string>

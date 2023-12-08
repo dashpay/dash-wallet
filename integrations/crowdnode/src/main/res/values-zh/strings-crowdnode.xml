@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">由于 CrowdNode的服务条款, 用户的提款额不能超过:</string>
     <string name="crowdnode_withdraw_without_limits_online">使用 CrowdNode网站上的在线账户可以无限制地提款.</string>
     <string name="crowdnode_withdrawal_limits_error">此错误很可能是由于超出了 CrowdNode提款上限. 请稍后再试.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">请稍等片刻再开始下次提现</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">您需要等待5分钟才能再次发起提现</string>
     <string name="per_transaction">每笔交易</string>
     <string name="per_hour">每小时</string>
     <string name="per_day">每24小时</string>

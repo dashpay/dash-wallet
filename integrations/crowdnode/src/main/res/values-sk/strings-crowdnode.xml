@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Vzhľadom na zmluvné podmienky CrowdNode môžu používatelia vybrať maximálne:</string>
     <string name="crowdnode_withdraw_without_limits_online">Výber bez obmedzení s online účtom na webe CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Táto chyba je s najväčšou pravdepodobnosťou spôsobená prekročením limitov výberu CrowdNode. Skúste to neskôr.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Pred spustením ďalšieho výberu prosím počkajte</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Pred ďalším výberom musíte počkať 5 minút</string>
     <string name="per_transaction">za transakciu</string>
     <string name="per_hour">za hodinu</string>
     <string name="per_day">za 24 hodín</string>
