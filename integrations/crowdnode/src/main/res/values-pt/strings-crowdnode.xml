@@ -107,6 +107,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">Recebendo recompensas</string>
     <string name="crowdnode_staking_receiving_rewards_message">Você receberá pagamentos fracionados automaticamente e eles serão reinvestidos por padrão, no entanto, também é fácil configurar saques automáticos para receber pagamentos recorrentes.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">Primeiro Depósito Mínimo</string>
+    <string name="crowdnode_staking_join_pool_message">Como a maioria das pessoas não possui exatamente 1000 Dash em mãos, o CrowdNode criou um serviço no qual, reunindo os depósitos dos membros, eles podem obter os benefícios de possuir um Masternode.</string>
     <string name="crowdnode_staking_join_pool_title">Entrando no \"pool\"</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">Benefícios CrowdNode</string>
     <string name="crowdnode_staking_connected_dash_address_title">Endereço Dash conectado</string>
@@ -142,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Devido aos termos de serviço do CrowdNode, os usuários não podem retirar mais do que:</string>
     <string name="crowdnode_withdraw_without_limits_online">Saque sem limites com uma conta online no site do CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Este erro ocorre provavelmente devido a exceder os limites de retirada do CrowdNode. Tente mais tarde.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Por favor, aguarde antes de iniciar o próximo saque</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Você precisa aguardar 5 minutos antes de iniciar outro saque</string>
     <string name="per_transaction">por transação</string>
     <string name="per_hour">por hora</string>
     <string name="per_day">por 24 horas</string>

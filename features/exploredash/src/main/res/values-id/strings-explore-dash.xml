@@ -18,6 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Jelajahi Dash</string>
     <string name="explore_title">Jelajahi</string>
+    <string name="explore_subtitle">Temukan pedagang yang menerima Dash, tempat membelinya, dan cara memperoleh penghasilan dengannya.</string>
     <string name="explore_merchants_title">Dimana harus Belanja?</string>
     <string name="explore_merchants_subtitle">Temukan pedagang yang menerima Dash sebagai pembayaran.</string>
     <string name="explore_atms_title">ATM</string>
@@ -73,6 +74,7 @@
     <string name="explore_payment_method">Metode Pembayaran</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Kartu Hadiah</string>
+    <string name="explore_filter_gift_cards">Kartu Hadiah</string>
     <string name="explore_radius">Radius</string>
     <string name="explore_location">Lokasi</string>
     <string name="explore_current_location">Lokasi Saat ini</string>
@@ -147,5 +149,13 @@
     <string name="buy_gift_card_with_dash_text">Beli kartu hadiah dengan Dash.</string>
     <string name="redeem_gift_card_text">Tukarkan kartu hadiah Anda secara online dalam hitungan detik atau di kasir.</string>
 
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Sinkronisasi sedang berlangsung... Hasil mungkin tidak lengkap.</string>
+    <string name="sync_in_progress_error">Sinkronisasi sedang berlangsung... Terjadi kesalahan.</string>
+    <string name="sync_in_progress_canceled">Sinkronisasi dibatalkan... Upaya lain akan dilakukan nanti.</string>
+
     <string name="sync_in_progress_file_not_found">Kesalahan Pembuatan: Basis data tidak ditemukan!</string>
+    <string name="sync_in_progress_network_error">Sinkronisasi terputus... Jaringan sedang offline atau tidak dapat dijangkau</string>
+
+
     </resources>

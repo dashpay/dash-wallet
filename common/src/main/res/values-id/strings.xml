@@ -77,6 +77,7 @@
     <string name="send_coins_error_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
     <string name="send_coins_error_insufficient_money">Dana tidak mencukupi</string>
     <string name="syncing">Menyingkronkan:</string>
+    <string name="no_connection">Tidak ada koneksi internet</string>
     <string name="rate_not_available">Tak tersedia</string>
 
     <!-- CrowdNode warning -->
@@ -96,4 +97,5 @@
     <string name="disconnected">Terputus</string>
     <string name="enter_amount_available">tersedia</string>
     <string name="transaction_row_rate_not_available">Tak tersedia</string>
-    </resources>
+    <string name="log_in">masuk</string>
+</resources>

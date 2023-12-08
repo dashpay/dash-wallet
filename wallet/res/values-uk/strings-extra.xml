@@ -273,6 +273,8 @@
     <string name="menu_contact_support_title">Служба підтримки</string>
     <string name="menu_contact_support_subtitle">Повідомити про проблему</string>
     <string name="menu_explore_title">Дослідити</string>
+    <string name="menu_explore_subtitle">Знайдіть продавців, які приймають DASH</string>
+
     <string name="tools_address_book">Адресна книга</string>
     <string name="tools_import_private_key">Імпорт приватного ключа</string>
     <string name="tools_network_monitor">Мережевий монітор</string>

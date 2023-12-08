@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Відповідно до умов обслуговування CrowdNode користувачі можуть знімати не більше ніж:</string>
     <string name="crowdnode_withdraw_without_limits_online">Знімайте без обмежень за допомогою онлайн-облікового запису на веб-сайті CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Ця помилка, швидше за все, пов’язана з перевищенням обмежень на зняття з CrowdNode. Спробуйте ще раз пізніше.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Будь ласка, зачекайте перш ніж починати наступне виведення</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Вам потрібно зачекати 5 хвилин, перш ніж почати наступне виведення</string>
     <string name="per_transaction">за транзакцію</string>
     <string name="per_hour">за годину</string>
     <string name="per_day">за 24 години</string>

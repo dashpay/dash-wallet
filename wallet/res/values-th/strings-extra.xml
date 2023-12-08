@@ -264,6 +264,8 @@
     <string name="menu_contact_support_title">ติดต่อฝ่ายสนับสนุน</string>
     <string name="menu_contact_support_subtitle">รายงานปัญหา</string>
     <string name="menu_explore_title">สำรวจ </string>
+    <string name="menu_explore_subtitle">ค้นหาร้านค้าที่ยอมรับ DASH</string>
+
     <string name="tools_address_book">สมุดที่อยู่</string>
     <string name="tools_import_private_key">นำเข้าคีย์ส่วนตัว</string>
     <string name="tools_network_monitor">จอภาพเครือข่าย</string>

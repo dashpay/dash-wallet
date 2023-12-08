@@ -267,6 +267,8 @@
     <string name="menu_contact_support_title">Destekle İletişime Geçin</string>
     <string name="menu_contact_support_subtitle">Sorun rapor et</string>
     <string name="menu_explore_title">Keşfet</string>
+    <string name="menu_explore_subtitle">DASH\'i kabul eden satıcıları bulun</string>
+
     <string name="tools_address_book">Adres Rehberi</string>
     <string name="tools_import_private_key">Özel anahtar içeri al</string>
     <string name="tools_network_monitor">Ağ monitörü</string>
