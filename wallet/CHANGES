@@ -1,4 +1,11 @@
 Dash Wallet
+v10.0.0
+* Support Dash Core v20 network protocol
+* Update translations
+* Coinbase: hide buy swap features and information
+* Crowdnode: add per block withdrawal limit
+* Fix crash when dismissing Battery Optimization info dialog
+
 v9.1.1
 * Import Private Key Image Crash Fix
 * Add support to change battery optimization
