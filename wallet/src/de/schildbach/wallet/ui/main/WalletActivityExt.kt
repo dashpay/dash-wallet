@@ -203,11 +203,6 @@ object WalletActivityExt {
         }
     }
 
-    private val WalletActivity.requestPermissionLauncher: ActivityResultLauncher<String>
-        get() = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-            requestDisableBatteryOptimisation()
-        }
-
     /**
      * Android 13 - Show system dialog to get notification permission from user, if not granted
      * ask again with each app upgrade if not granted.  This logic is handled by
@@ -238,7 +233,7 @@ object WalletActivityExt {
         configuration.showNotificationsExplainer = false
     }
 
-    private fun WalletActivity.requestDisableBatteryOptimisation() {
+    fun WalletActivity.requestDisableBatteryOptimisation() {
         val powerManager: PowerManager = getSystemService(PowerManager::class.java)
         if (ContextCompat.checkSelfPermission(
                 walletApplication,
