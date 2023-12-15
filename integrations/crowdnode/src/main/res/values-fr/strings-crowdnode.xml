@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">En raison des conditions d\'utilisation CrowdNode, les utilisateurs ne peuvent pas retirer plus de :</string>
     <string name="crowdnode_withdraw_without_limits_online">Retirer sans limite avec un compte en ligne sur le site web CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Cette erreur est sans doute due au dépassement des limites de retrait CrowdNode. Veuillez réessayer plus tard.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Veuillez attendre avant de lancer le retrait suivant</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Vous devez attendre 5 minutes avant de lancer un autre retrait</string>
     <string name="per_transaction">par transaction</string>
     <string name="per_hour">par heure</string>
     <string name="per_day">par 24 heures</string>

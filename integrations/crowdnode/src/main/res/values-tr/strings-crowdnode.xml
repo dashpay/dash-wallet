@@ -94,6 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">Kazanmaya başlamak için %s yatırın</string>
     <string name="crowdnode_first_deposit">İlk depozito %s\'den fazla olmalıdır</string>
     <string name="crowdnode_staking_info_title">CrowdNode staking nasıl çalışır?</string>
+    <string name="crowdnode_staking_info_message_first">Dash Ağı, ödemeleri kolaylaştırmanın önemli bir parçası olan bir dizi Ana Düğüm tarafından yönlendirilmektedir.</string>
     <string name="crowdnode_staking_info_message_second">Bir Ana Düğüm teminat olarak 1000 Dash\'a ihtiyaç duyar ve her Ana Düğüm şu anda yılda yaklaşık %s%% ödüllendirilir.</string>
     <string name="crowdnode_staking_apy_title">Güncel YFG: %s%%</string>
     <string name="crowdnode_staking_info_message">CrowdNode hesabınızda %s\'den fazla varsa kazanmaya başlarsınız</string>
@@ -106,6 +107,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">Ödüller alınıyor</string>
     <string name="crowdnode_staking_receiving_rewards_message">Kısmı ödemeleri otomatik olarak alacaksınız ve bunlar yeniden yatırım için kullanılacak. Tekrarlayan ödemeleri almak için otomatik para çekme işlemlerini ayarlamak kolaydır.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">İlk Asgari Para Yatırma</string>
+    <string name="crowdnode_staking_join_pool_message">Çoğu insanın elinde 1000 Dash bulunmadığından Crowdnode üyelerinden gelen yatırma işlemlerini bir havuzda toplayarak ana düğüm sahibi olmanın avantajlarından yararlanabilecekleri bir hizmet sunmuştur.</string>
     <string name="crowdnode_staking_join_pool_title">Havuza katılmak</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">CrowdNode avantajları</string>
     <string name="crowdnode_staking_connected_dash_address_title">Bağlantılı Dash adresleri</string>

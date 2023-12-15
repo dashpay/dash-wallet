@@ -18,12 +18,17 @@
 package de.schildbach.wallet.service
 
 import android.content.Context
+import android.database.sqlite.SQLiteException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.BlockchainStateDao
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Block
+import org.bitcoinj.core.BlockChain
 import org.bitcoinj.core.CheckpointManager
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
@@ -32,10 +37,12 @@ import org.bitcoinj.store.BlockStoreException
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.data.entity.BlockchainState.Impediment
 import org.dash.wallet.common.services.BlockchainStateProvider
 import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
+import java.util.EnumSet
 import javax.inject.Inject
 import kotlin.math.min
 
@@ -67,12 +74,77 @@ class BlockchainStateDataProvider @Inject constructor(
         const val MASTERNODE_COUNT = 3800
     }
 
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+
     override suspend fun getState(): BlockchainState? {
-        return blockchainStateDao.loadSync()
+        return blockchainStateDao.getState()
     }
 
     override fun observeState(): Flow<BlockchainState?> {
         return blockchainStateDao.observeState().distinctUntilChanged()
+    }
+
+    fun updateImpediments(impediments: Set<Impediment>) {
+        coroutineScope.launch {
+            val blockchainState = blockchainStateDao.getState()
+            if (blockchainState != null) {
+                blockchainState.impediments.clear()
+                blockchainState.impediments.addAll(impediments)
+                blockchainStateDao.saveState(blockchainState)
+            }
+        }
+    }
+
+     fun updateBlockchainState(blockChain: BlockChain, impediments: Set<Impediment>, percentageSync: Int) {
+         coroutineScope.launch {
+            var blockchainState = blockchainStateDao.getState()
+            if (blockchainState == null) {
+                blockchainState = BlockchainState()
+            }
+            val chainHead: StoredBlock = blockChain.chainHead
+            val chainLockHeight = walletDataProvider.wallet!!.context.chainLockHandler.bestChainLockBlockHeight
+            val mnListHeight: Int =
+                walletDataProvider.wallet!!.context.masternodeListManager.listAtChainTip.height.toInt()
+            blockchainState.bestChainDate = chainHead.header.time
+            blockchainState.bestChainHeight = chainHead.height
+            blockchainState.impediments = EnumSet.copyOf(impediments)
+            blockchainState.chainlockHeight = chainLockHeight
+            blockchainState.mnlistHeight = mnListHeight
+            blockchainState.percentageSync = percentageSync
+            blockchainStateDao.saveState(blockchainState)
+        }
+    }
+
+    fun setBlockchainDownloaded() {
+        coroutineScope.launch {
+            val blockchainState = blockchainStateDao.getState()
+            if (blockchainState != null && blockchainState.percentageSync != 100) {
+                blockchainState.percentageSync = 100
+                blockchainStateDao.saveState(blockchainState)
+            }
+        }
+    }
+
+    fun resetBlockchainState() {
+        coroutineScope.launch {
+            blockchainStateDao.saveState(
+                BlockchainState(true)
+            )
+        }
+    }
+
+    fun resetBlockchainSyncProgress() {
+        coroutineScope.launch {
+            val blockchainState: BlockchainState? = try {
+                blockchainStateDao.getState()
+            } catch (ex: SQLiteException) {
+                null
+            }
+            if (blockchainState != null) {
+                blockchainState.percentageSync = 0
+                blockchainStateDao.saveState(blockchainState)
+            }
+        }
     }
 
     override fun getLastMasternodeAPY(): Double {

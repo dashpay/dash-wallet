@@ -30,6 +30,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.DialogWithdrawalLimitsBinding
 import org.dash.wallet.integrations.crowdnode.model.WithdrawalLimitPeriod
+import java.lang.IllegalArgumentException
 
 class WithdrawalLimitsInfoDialog(
     private val limitPerTx: Coin,
@@ -78,6 +79,9 @@ class WithdrawalLimitsInfoDialog(
                     binding.perDayLabel.setTextColor(warningColor)
                     binding.perDayLimit.setTextColor(warningColor)
                     TextViewCompat.setCompoundDrawableTintList(binding.perDayLimit, colorStateLit)
+                }
+                else -> {
+                    throw IllegalArgumentException("highlightedLimit $highlightedLimit not supported")
                 }
             }
         }

@@ -385,4 +385,14 @@
     <string name="not_dash_address">Keine gültige Dash Adresse oder URL-Anfrage</string>
     <string name="send_to_address">An Adresse senden</string>
 
-    </resources>
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Akku-Optimierung</string>
+    <string name="battery_optimization_subtitle_optimized">Optimiert</string>
+    <string name="battery_optimization_subtitle_unrestricted">Unbeschränkt</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Dash Wallet im Hintergrund laufen lassen?</string>
+    <string name="battery_optimization_dialog_message_optimized">Diese App wurde so eingestellt, dass sie endet, wenn sie seit langem nicht mehr angeschaut wurde.\n\nDies führt dazu, dass Zahlungsbenachrichtigungen nicht erhalten werden bis die App wieder im Vordergrund erscheint.\n\nWir empfehlen diese App im Hintergrund laufen zu lassen und die Akkuoptimierung zu \"Nicht optimiert\" oder \"Unbeschränkt\" zu ändern.\n\nMach dir keine Sorgen. Wir achten immer auf ausgewogene Akkunutzung.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Möchtest du Zahlungen im Hintergrund erhalten?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Diese App wurde so eingestellt, dass sie endet, wenn sie seit langem nicht mehr angeschaut wurde.\n\nWir empfehlen, diese App immer up-to-date mit der Blockchain zu halten, selbst wenn sie im Hintergrund läuft.\n\nMach dir keine Sorgen. Wir achten immer auf ausgewogene Akkunutzung.</string>
+    <string name="battery_optimization_dialog_button_change">Einstellungen öffnen</string>
+</resources>

@@ -17,24 +17,17 @@
 
 package de.schildbach.wallet.ui.main;
 
-import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
-import android.provider.Settings;
-
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.common.collect.ImmutableList;
@@ -85,6 +78,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private BaseAlertDialogBuilder baseAlertDialogBuilder;
     private MainViewModel viewModel;
 
+    ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), result -> WalletActivityExt.INSTANCE.requestDisableBatteryOptimisation(WalletActivity.this));
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -125,7 +119,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         super.onStart();
 
         if (!getLockScreenDisplayed() && configuration.getShowNotificationsExplainer()) {
-            explainPushNotifications();
+            WalletActivityExt.INSTANCE.explainPushNotifications(this);
         }
     }
 
@@ -368,60 +362,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     public void onLockScreenDeactivated() {
         if (configuration.getShowNotificationsExplainer()) {
-            explainPushNotifications();
-        }
-    }
-
-    private final ActivityResultLauncher<String> requestPermissionLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
-                // do nothing
-                requestDisableBatteryOptimisation();
-            });
-
-    /**
-     * Android 13 - Show system dialog to get notification permission from user, if not granted
-     *              ask again with each app upgrade if not granted.  This logic is handled by
-     *              {@link #onLockScreenDeactivated} and {@link #onStart}.
-     * Android 12 and below - show a explainer dialog once only.
-     */
-    private void explainPushNotifications() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
-        } else if (configuration.getShowNotificationsExplainer()) {
-            AdaptiveDialog dialog = AdaptiveDialog.create(
-                    R.drawable.ic_info_blue,
-                    getString(R.string.notification_explainer_title),
-                    getString(R.string.notification_explainer_message),
-                    "",
-                    getString(R.string.button_okay)
-            );
-
-            dialog.show(this, result -> {
-                requestDisableBatteryOptimisation();
-                return Unit.INSTANCE;
-            });
-        }
-        // only show either the permissions dialog (Android >= 13) or the explainer (Android <= 12) once
-        configuration.setShowNotificationsExplainer(false);
-    }
-
-    private void requestDisableBatteryOptimisation() {
-        PowerManager powerManager = getSystemService(PowerManager.class);
-        if (ContextCompat.checkSelfPermission(walletApplication, Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) == PackageManager.PERMISSION_GRANTED &&
-                !powerManager.isIgnoringBatteryOptimizations(walletApplication.getPackageName())) {
-            AdaptiveDialog.create(
-                    R.drawable.ic_bolt_border,
-                getString(R.string.battery_optimization_dialog_optimized_title),
-                getString(R.string.battery_optimization_dialog_message_optimized),
-                getString(R.string.permission_deny),
-                getString(R.string.permission_allow)
-            ).show(this, (allow) -> {
-                if (allow) {
-                    startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName())));
-                }
-                return Unit.INSTANCE;
-            });
+            WalletActivityExt.INSTANCE.explainPushNotifications(this);
         }
     }
 }
