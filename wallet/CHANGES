@@ -1,4 +1,8 @@
 Dash Wallet
+v10.0.1
+* Fix crash with InactivityService with no wallet
+* Fix crash on Android 13 and 14 when requesting notification permissions
+
 v10.0.0
 * Support Dash Core v20 network protocol
 * Update translations
