@@ -25,6 +25,8 @@ import android.nfc.NfcAdapter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -76,6 +78,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private BaseAlertDialogBuilder baseAlertDialogBuilder;
     private MainViewModel viewModel;
 
+    ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), result -> WalletActivityExt.INSTANCE.requestDisableBatteryOptimisation(WalletActivity.this));
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
