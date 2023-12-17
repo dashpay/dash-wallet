@@ -166,7 +166,11 @@ class BlockchainStateDataProvider @Inject constructor(
                 }
 
                 val validMNsCount = if (mnlist.size() != 0) {
-                    mnlist.validMNsCount
+                    var virtualMNCount = 0
+                    mnlist.forEachMN(true) { entry ->
+                        virtualMNCount += if (entry.isHPMN) 4 else 1
+                    }
+                    virtualMNCount
                 } else {
                     MASTERNODE_COUNT
                 }
