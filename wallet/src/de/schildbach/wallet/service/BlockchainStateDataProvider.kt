@@ -23,7 +23,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -39,10 +39,12 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
 import org.dash.wallet.common.services.BlockchainStateProvider
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
 import java.util.EnumSet
+import java.util.concurrent.Executors
 import javax.inject.Inject
 import kotlin.math.min
 
@@ -74,7 +76,8 @@ class BlockchainStateDataProvider @Inject constructor(
         const val MASTERNODE_COUNT = 3800
     }
 
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    // this coroutineScope should execute all jobs sequentially
+    private val coroutineScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
     override suspend fun getState(): BlockchainState? {
         return blockchainStateDao.getState()
@@ -95,8 +98,8 @@ class BlockchainStateDataProvider @Inject constructor(
         }
     }
 
-     fun updateBlockchainState(blockChain: BlockChain, impediments: Set<Impediment>, percentageSync: Int) {
-         coroutineScope.launch {
+    fun updateBlockchainState(blockChain: BlockChain, impediments: Set<Impediment>, percentageSync: Int) {
+        coroutineScope.launch {
             var blockchainState = blockchainStateDao.getState()
             if (blockchainState == null) {
                 blockchainState = BlockchainState()
@@ -112,16 +115,6 @@ class BlockchainStateDataProvider @Inject constructor(
             blockchainState.mnlistHeight = mnListHeight
             blockchainState.percentageSync = percentageSync
             blockchainStateDao.saveState(blockchainState)
-        }
-    }
-
-    fun setBlockchainDownloaded() {
-        coroutineScope.launch {
-            val blockchainState = blockchainStateDao.getState()
-            if (blockchainState != null && blockchainState.percentageSync != 100) {
-                blockchainState.percentageSync = 100
-                blockchainStateDao.saveState(blockchainState)
-            }
         }
     }
 
@@ -173,7 +166,11 @@ class BlockchainStateDataProvider @Inject constructor(
                 }
 
                 val validMNsCount = if (mnlist.size() != 0) {
-                    mnlist.validMNsCount
+                    var virtualMNCount = 0
+                    mnlist.forEachMN(true) { entry ->
+                        virtualMNCount += if (entry.isHPMN) 4 else 1
+                    }
+                    virtualMNCount
                 } else {
                     MASTERNODE_COUNT
                 }

@@ -501,6 +501,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         protected void progress(double pct, int blocksLeft, Date date) {
             super.progress(pct, blocksLeft, date);
             syncPercentage = pct > 0.0 ? (int)pct : 0;
+            log.info("progress {}", syncPercentage);
             if (syncPercentage > 100) {
                 syncPercentage = 100;
             }
@@ -513,9 +514,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         @Override
         protected void doneDownload() {
             super.doneDownload();
-            updateBlockchainState();
+            log.info("DoneDownload {}", syncPercentage);
+            // if the chain is already synced from a previous session, then syncPercentage = 0
+            // set to 100% so that observers will see that sync is completed
             syncPercentage = 100;
-            setBlockchainDownloaded();
+            updateBlockchainState();
         }
 
         @Override
@@ -1167,10 +1170,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private void updateBlockchainState() {
         blockchainStateDataProvider.updateBlockchainState(blockChain, impediments, percentageSync());
-    }
-
-    public void setBlockchainDownloaded() {
-        blockchainStateDataProvider.setBlockchainDownloaded();
     }
 
     @Override
