@@ -172,7 +172,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
         viewModel.mixingState.observe(viewLifecycleOwner) { mixingState ->
             mixingBinding.root.isVisible = when (mixingState) {
-                MixingStatus.NOT_STARTED, MixingStatus.FINISHED -> false
+                MixingStatus.NOT_STARTED,
+                MixingStatus.ERROR,
+                MixingStatus.FINISHED -> false
                 else -> true
             }
         }

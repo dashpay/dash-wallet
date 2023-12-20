@@ -8,8 +8,9 @@ import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.MixingStatus
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.WalletDataProvider
@@ -29,8 +30,12 @@ class SettingsViewModel @Inject constructor(
     val coinJoinMixingMode: Flow<CoinJoinMode>
         get() = coinJoinConfig.observeMode()
 
-    val coinJoinMixingStatus: MixingStatus
-        get() = coinJoinService.mixingStatus
+    var coinJoinMixingStatus: MixingStatus = MixingStatus.NOT_STARTED
+    init {
+        coinJoinService.observeMixingState()
+            .onEach { coinJoinMixingStatus = it }
+            .launchIn(viewModelScope)
+    }
 
     var decimalFormat: DecimalFormat = DecimalFormat("0.000")
     val walletBalance: String

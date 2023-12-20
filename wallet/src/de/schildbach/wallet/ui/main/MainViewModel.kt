@@ -101,8 +101,6 @@ import org.dash.wallet.common.util.head
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.slf4j.LoggerFactory
-import java.math.MathContext
-import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.util.Currency
 import java.util.Locale
@@ -210,9 +208,9 @@ class MainViewModel @Inject constructor(
     val coinJoinMode: Flow<CoinJoinMode>
         get() = coinJoinConfig.observeMode()
     val mixingState: Flow<MixingStatus>
-        get() = coinJoinService.mixingState
+        get() = coinJoinService.observeMixingState()
     val mixingProgress: Flow<Double>
-        get() = coinJoinService.mixingProgress
+        get() = coinJoinService.observeMixingProgress()
 
     var decimalFormat: DecimalFormat = DecimalFormat("0.000")
     val walletBalance: String
