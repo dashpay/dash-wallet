@@ -38,6 +38,7 @@ import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformService
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
@@ -84,7 +85,8 @@ class PlatformRepo @Inject constructor(
     val walletApplication: WalletApplication,
     val blockchainIdentityDataDao: BlockchainIdentityConfig,
     val appDatabase: AppDatabase,
-    val platform: PlatformService
+    val platform: PlatformService,
+    val coinJoinConfig: CoinJoinConfig
 ) {
 
     @EntryPoint
@@ -553,7 +555,7 @@ class PlatformRepo @Inject constructor(
     suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, useCoinJoin: Boolean) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
-            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin)
+            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin, false)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
         }
     }
@@ -1019,7 +1021,12 @@ class PlatformRepo @Inject constructor(
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)
-        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin = false)
+        val cftx = blockchainIdentity.createInviteFundingTransaction(
+            Constants.DASH_PAY_FEE,
+            keyParameter,
+            useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE,
+            returnChange = false
+        )
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())
         // update database
