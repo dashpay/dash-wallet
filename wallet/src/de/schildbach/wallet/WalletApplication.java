@@ -401,7 +401,7 @@ public class WalletApplication extends MultiDexApplication
         WalletEx walletEx = (WalletEx) wallet;
         if (walletEx.getCoinJoin() != null) {
             // this wallet is not encrypted yet
-            walletEx.initializeCoinJoin(null);
+            walletEx.initializeCoinJoin(null, 0);
         }
     }
 

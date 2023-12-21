@@ -538,7 +538,7 @@ class PlatformRepo @Inject constructor(
         withContext(Dispatchers.IO) {
             val wallet = walletApplication.wallet as WalletEx
             // this will initialize any missing key chains
-            wallet.initializeCoinJoin(keyParameter)
+            wallet.initializeCoinJoin(keyParameter, 0)
 
             var authenticationGroupExtension = AuthenticationGroupExtension(wallet)
             authenticationGroupExtension = wallet.addOrGetExistingExtension(authenticationGroupExtension) as AuthenticationGroupExtension
