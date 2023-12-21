@@ -138,7 +138,7 @@ public class BootstrapReceiver extends BroadcastReceiver {
         WalletExtension extension = extensions.get(AuthenticationGroupExtension.EXTENSION_ID);
         if (extension != null) {
             // reset will rescan existing transactions and rebuild the authentication usage info
-            ((AuthenticationGroupExtension) extension).reset();
+            ((AuthenticationGroupExtension) extension).rescanWallet();
         }
 
         // Maybe upgrade wallet to secure chain
