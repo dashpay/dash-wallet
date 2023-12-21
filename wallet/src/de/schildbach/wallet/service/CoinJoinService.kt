@@ -234,8 +234,6 @@ class CoinJoinMixingService @Inject constructor(
                 "coinjoin-updateState: $mode, $hasAnonymizableBalance, $networkStatus, $isSynced, ${blockChain != null}"
             )
             this.networkStatus = networkStatus
-            // this.getMixingState = getMixingState
-            // _mixingState.value = getMixingState
             this.hasAnonymizableBalance = hasAnonymizableBalance
             this.isSynced = isSynced
             this.mode = mode

@@ -214,7 +214,7 @@ android {
         compileSdk 33
         minSdkVersion 23
         targetSdkVersion 33
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 80133
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 90000
         versionName project.hasProperty('versionName') ? project.property('versionName') : "5.3-dashpay"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']

@@ -199,6 +199,6 @@ class HistoryHeaderAdapter(
 
     private fun shouldShowJoinDashPay(canJoin: Boolean): Boolean {
         val hideJoinDashPay = preferences.getBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, false)
-        return blockchainIdentityData == null && canJoin && !hideJoinDashPay
+        return blockchainIdentityData?.creationState == BlockchainIdentityData.CreationState.NONE && canJoin && !hideJoinDashPay
     }
 }

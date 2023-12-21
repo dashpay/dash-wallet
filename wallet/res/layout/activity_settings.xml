@@ -161,7 +161,7 @@
 
         <TextView
             style="@style/MenuRowTitle.Internal"
-            android:text="@string/voting_dash_pay"
+            android:text="@string/voting_period_active"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/voting_dash_pay_switch"
             app:layout_constraintStart_toStartOf="parent"
