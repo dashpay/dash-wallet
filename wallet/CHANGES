@@ -1,4 +1,10 @@
 Dash Wallet
+v10.0.2
+* Fix Syncing... issue
+* Fix CrowdNode and Masternode APY calculation
+* Update to dashj 20.0.2 (block reward fix)
+* Fix Rescan Blockchain failure on older wallets
+
 v10.0.1
 * Fix crash with InactivityService with no wallet
 * Fix crash on Android 13 and 14 when requesting notification permissions
