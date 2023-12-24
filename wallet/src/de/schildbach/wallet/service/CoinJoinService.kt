@@ -205,12 +205,33 @@ class CoinJoinMixingService @Inject constructor(
         log.info("coinjoin: mixed balance: ${walletEx.coinJoinBalance.toFriendlyString()}")
         val anonBalance = walletEx.getAnonymizableBalance(false, false)
         log.info("coinjoin: anonymizable balance {}", anonBalance.toFriendlyString())
-
+        val hasPartiallyMixedCoins = (walletEx.denominatedBalance - walletEx.coinJoinBalance).isGreaterThan(Coin.ZERO)
         val hasAnonymizableBalance = anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())
-        log.info("coinjoin: mixing can occur: $hasAnonymizableBalance")
+
+        val canDenominate = if (this::clientManager.isInitialized) {
+            clientManager.doAutomaticDenominating(true)
+        } else {
+            // we can't just start another session, unless we also don't allocate keys
+            //log.info("determining canDenominate with temp client manager")
+            //val tempClientManager = CoinJoinClientManager(walletDataProvider.wallet as WalletEx)
+            //tempClientManager.startMixing()
+            //val result = tempClientManager.doAutomaticDenominating(true)
+            //tempClientManager.stopMixing()
+            //log.info("finished determining canDenominate with temp client manager")
+            //result
+            true
+        }
+
+        val hasBalanceLeftToMix = when {
+            hasPartiallyMixedCoins -> true
+            hasAnonymizableBalance && canDenominate -> true
+            else -> false
+        }
+
+        log.info("coinjoin: mixing can occur: $hasBalanceLeftToMix = (${anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())} || $canDenominate) && $hasPartiallyMixedCoins")
         updateState(
             config.getMode(),
-            hasAnonymizableBalance,
+            hasBalanceLeftToMix,
             networkStatus,
             isSynced,
             blockchainStateProvider.getBlockChain()
@@ -226,12 +247,12 @@ class CoinJoinMixingService @Inject constructor(
     ) {
         updateMutex.lock()
         log.info(
-            "coinjoin-updateState: ${this.mode}, ${this.hasAnonymizableBalance}, ${this.networkStatus}, ${this.isSynced} ${blockChain != null}"
+            "coinjoin-old-state: ${this.mode}, ${this.hasAnonymizableBalance}, ${this.networkStatus}, synced: ${this.isSynced} ${blockChain != null}"
         )
         try {
             setBlockchain(blockChain)
             log.info(
-                "coinjoin-updateState: $mode, $hasAnonymizableBalance, $networkStatus, $isSynced, ${blockChain != null}"
+                "coinjoin-new-state: $mode, $hasAnonymizableBalance, $networkStatus, synced: $isSynced, ${blockChain != null}"
             )
             this.networkStatus = networkStatus
             // this.getMixingState = getMixingState
@@ -453,6 +474,7 @@ class CoinJoinMixingService @Inject constructor(
 
             setRequestKeyParameter(requestKeyParameter)
             setRequestDecryptedKey(requestDecryptedKey)
+            start()
         }
     }
 
@@ -491,6 +513,8 @@ class CoinJoinMixingService @Inject constructor(
         // remove all listeners
         mixingCompleteListeners.forEach { coinJoinManager?.removeMixingCompleteListener(it) }
         sessionCompleteListeners.forEach { coinJoinManager?.removeSessionCompleteListener(it) }
+        clientManager.stopMixing()
+        coinJoinManager?.stop()
     }
 
     private fun setBlockchain(blockChain: AbstractBlockChain?) {
