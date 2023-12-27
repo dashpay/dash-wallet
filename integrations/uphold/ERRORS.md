@@ -154,7 +154,7 @@ Error: 403
 ```json
 {
   "error": {
-    "capability": "withdrawals",
+    "capability": "crypto_withdrawals",
     "code": "forbidden",
     "message": "Quote not allowed due to capability constraints",
     "requirements": [],
