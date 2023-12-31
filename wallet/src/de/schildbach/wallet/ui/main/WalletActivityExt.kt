@@ -219,7 +219,7 @@ object WalletActivityExt {
      * [.onLockScreenDeactivated] and [.onStart].
      * Android 12 and below - show a explainer dialog once only.
      */
-    fun WalletActivity.explainPushNotifications() {
+    fun MainActivity.explainPushNotifications() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(
                 this,
@@ -243,7 +243,7 @@ object WalletActivityExt {
         configuration.showNotificationsExplainer = false
     }
 
-    fun WalletActivity.requestDisableBatteryOptimisation() {
+    fun MainActivity.requestDisableBatteryOptimisation() {
         val powerManager: PowerManager = getSystemService(PowerManager::class.java)
         if (ContextCompat.checkSelfPermission(
                 walletApplication,

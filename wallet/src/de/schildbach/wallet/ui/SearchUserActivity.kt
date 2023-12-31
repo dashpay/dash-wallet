@@ -50,6 +50,7 @@ import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySearchDashpayProfileRootBinding
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.util.observe
 
 @AndroidEntryPoint
 class SearchUserActivity : LockScreenActivity(), ContactViewHolder.OnItemClickListener,

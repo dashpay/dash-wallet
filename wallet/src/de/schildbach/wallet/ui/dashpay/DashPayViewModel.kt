@@ -17,9 +17,9 @@ package de.schildbach.wallet.ui.dashpay
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
+import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
@@ -82,7 +82,7 @@ open class DashPayViewModel @Inject constructor(
         platformSyncService,
         viewModelScope
     )
-    val blockchainStateData = blockchainState.load()
+    val blockchainStateData = blockchainState.observeState()
 
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
 
@@ -119,7 +119,7 @@ open class DashPayViewModel @Inject constructor(
             )
         )
     }
-    val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
+    val getUsernameLiveData = usernameLiveData.switchMap { username ->
         getUsernameJob.cancel()
         getUsernameJob = Job()
         liveData(context = getUsernameJob + Dispatchers.IO) {
@@ -146,7 +146,7 @@ open class DashPayViewModel @Inject constructor(
     // Search Usernames that start with "text".  Results are a list of documents for names
     // starting with text.  If no results are found then an empty list is returned.
     //
-    val searchUsernamesLiveData = Transformations.switchMap(userSearchLiveData) { search: UserSearch ->
+    val searchUsernamesLiveData = userSearchLiveData.switchMap { search: UserSearch ->
         searchUsernamesJob.cancel()
         searchUsernamesJob = Job()
         liveData(context = searchUsernamesJob + Dispatchers.IO) {
@@ -190,7 +190,7 @@ open class DashPayViewModel @Inject constructor(
     //
     // Search (established contacts) Usernames and Display Names that contain "text".
     //
-    val searchContactsLiveData = Transformations.switchMap(contactsLiveData) { usernameSearch: UsernameSearch ->
+    val searchContactsLiveData = contactsLiveData.switchMap { usernameSearch: UsernameSearch ->
         searchContactsJob.cancel()
         searchContactsJob = Job()
         liveData(context = searchContactsJob + Dispatchers.IO) {
@@ -230,7 +230,7 @@ open class DashPayViewModel @Inject constructor(
             .enqueue()
     }
 
-    val getContactRequestLiveData = Transformations.switchMap(contactRequestLiveData) {
+    val getContactRequestLiveData = contactRequestLiveData.switchMap {
         liveData(context = contactRequestJob + Dispatchers.IO) {
             if (it.second != null) {
                 emit(Resource.loading(null))
@@ -246,7 +246,7 @@ open class DashPayViewModel @Inject constructor(
         }
     }
 
-    val getContactLiveData = Transformations.switchMap(contactUserIdLiveData) { userId ->
+    val getContactLiveData = contactUserIdLiveData.switchMap { userId ->
         getContactJob.cancel()
         getContactJob = Job()
         liveData(context = getContactJob + Dispatchers.IO) {

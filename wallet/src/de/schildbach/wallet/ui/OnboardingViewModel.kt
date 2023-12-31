@@ -65,7 +65,7 @@ class OnboardingViewModel @Inject constructor(
 
         if (onboardingInvite != null) {
             analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
-            startActivityAction.call(AcceptInviteActivity.createIntent(getApplication(), onboardingInvite, true))
+            startActivityAction.call(AcceptInviteActivity.createIntent(walletApplication, onboardingInvite, true))
         } else {
             finishCreateNewWalletAction.call(Unit)
         }

@@ -153,7 +153,7 @@ open class DatabaseMigrationTest {
 
         // Check that data is valid
         runBlocking {
-            val savedBlockchainState = db.blockchainStateDao().loadSync()
+            val savedBlockchainState = db.blockchainStateDao().getState()
             assert(savedBlockchainState!!.bestChainHeight == BLOCKCHAIN_HEIGHT)
 
             val savedRate = db.exchangeRatesDao().getRateSync("ARS")

@@ -132,7 +132,7 @@ open class InvitationFragmentViewModel @Inject constructor(
         }
     }
 
-    val invitationLiveData = Transformations.switchMap(identityIdLiveData) {
+    val invitationLiveData = identityIdLiveData.switchMap {
         liveData(Dispatchers.IO) {
             emit(invitationDao.loadByUserId(it)!!)
         }

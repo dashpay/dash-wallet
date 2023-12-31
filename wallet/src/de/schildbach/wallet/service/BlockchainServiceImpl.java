@@ -164,7 +164,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject CrowdNodeBlockchainApi crowdNodeBlockchainApi;
     @Inject CrowdNodeConfig crowdNodeConfig;
     @Inject BlockchainStateDao blockchainStateDao;
-    @Inject BlockchainStateDataProvider blockchainStateDataProvider;
     @Inject ExchangeRatesDao exchangeRatesDao;
     @Inject TransactionMetadataProvider transactionMetadataProvider;
     @Inject PlatformSyncService platformSyncService;
@@ -882,7 +881,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         builder.append(", ");
                     builder.append(entry);
                 }
-                log.info("History of transactions/blocks/headers/mnlistdiff: " + builder);
+                log.info("History of transactions/blocks/headers/mnlistdiff: " +
                         (mixingStatus == MixingStatus.MIXING ? "[mixing] " : "") + builder);
 
                 // determine if block and transaction activity is idling
@@ -1043,7 +1042,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         updateAppWidget();
         FlowExtKt.observe(blockchainStateDao.observeState(), this, (blockchainState, continuation) -> {
-            handleBlockchainStateNotification((BlockchainState) blockchainState);
+            handleBlockchainStateNotification((BlockchainState) blockchainState, mixingStatus);
             return null;
         });
         registerCrowdNodeConfirmedAddressFilter();

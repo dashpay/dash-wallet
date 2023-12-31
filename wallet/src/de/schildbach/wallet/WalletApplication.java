@@ -368,7 +368,7 @@ public class WalletApplication extends MultiDexApplication
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
-                AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
                 AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
                 AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
                 AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
@@ -405,7 +405,7 @@ public class WalletApplication extends MultiDexApplication
         WalletEx walletEx = (WalletEx) wallet;
         if (walletEx.getCoinJoin() != null) {
             // this wallet is not encrypted yet
-            walletEx.initializeCoinJoin(null);
+            walletEx.initializeCoinJoin(null, 0);
                 }
             }
         }

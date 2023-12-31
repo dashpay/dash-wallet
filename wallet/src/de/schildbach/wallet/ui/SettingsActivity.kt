@@ -62,8 +62,6 @@ class SettingsActivity : LockScreenActivity() {
     @Inject
     lateinit var walletUIConfig: WalletUIConfig
 
-    val viewModel by viewModels<SettingsViewModel>()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
