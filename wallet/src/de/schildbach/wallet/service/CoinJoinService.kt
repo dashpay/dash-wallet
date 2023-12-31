@@ -211,14 +211,9 @@ class CoinJoinMixingService @Inject constructor(
         val canDenominate = if (this::clientManager.isInitialized) {
             clientManager.doAutomaticDenominating(true)
         } else {
-            // we can't just start another session, unless we also don't allocate keys
-            //log.info("determining canDenominate with temp client manager")
-            //val tempClientManager = CoinJoinClientManager(walletDataProvider.wallet as WalletEx)
-            //tempClientManager.startMixing()
-            //val result = tempClientManager.doAutomaticDenominating(true)
-            //tempClientManager.stopMixing()
-            //log.info("finished determining canDenominate with temp client manager")
-            //result
+            // if the client manager is not running, just say canDenominate is true
+            // The first round of execution will determine if mixing can happen
+            log.info("coinjoin: client manager is not running, canDemoninate=true")
             true
         }
 
@@ -228,7 +223,7 @@ class CoinJoinMixingService @Inject constructor(
             else -> false
         }
 
-        log.info("coinjoin: mixing can occur: $hasBalanceLeftToMix = (${anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())} || $canDenominate) && $hasPartiallyMixedCoins")
+        log.info("coinjoin: mixing can occur: $hasBalanceLeftToMix = balance: (${anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())} && canDenominate: $canDenominate) || partially-mixed: $hasPartiallyMixedCoins")
         updateState(
             config.getMode(),
             hasBalanceLeftToMix,
@@ -434,7 +429,10 @@ class CoinJoinMixingService @Inject constructor(
                 MixingCompleteListener { _, statusList ->
                     statusList?.let {
                         for (status in it) {
-                            if (status != PoolStatus.FINISHED && status != PoolStatus.ERR_NOT_ENOUGH_FUNDS && status != PoolStatus.ERR_NO_INPUTS) {
+                            if (status != PoolStatus.FINISHED &&
+                                status != PoolStatus.ERR_NOT_ENOUGH_FUNDS &&
+                                status != PoolStatus.ERR_NO_INPUTS
+                            ) {
                                 coroutineScope.launch { updateMixingState(MixingStatus.ERROR) }
                                 exception = Exception("Mixing stopped before completion ${status.name}")
                                 return@let
@@ -486,6 +484,7 @@ class CoinJoinMixingService @Inject constructor(
             // run this on a different thread?
             val asyncStart = coroutineScope.async(Dispatchers.IO) {
                 Context.propagate(walletDataProvider.wallet!!.context)
+                coinJoinManager?.initMasternodeGroup(blockChain)
                 clientManager.doAutomaticDenominating()
             }
             val result = asyncStart.await()
@@ -497,11 +496,10 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private fun stopMixing() {
-        log.info("Mixing process will stop...")
         if (coinJoinManager == null || !this::clientManager.isInitialized) {
             return
         }
-
+        log.info("Mixing process will stop...")
         encryptionKey = null
 
         // if mixing is not complete, then tell the future we didn't finish yet
@@ -549,7 +547,13 @@ class CoinJoinMixingService @Inject constructor(
         val anonymizableBalance = wallet.getAnonymizableBalance(false, false)
         if (mixedBalance != Coin.ZERO && anonymizableBalance != Coin.ZERO) {
             val progress = mixedBalance.value * 100.0 / (mixedBalance.value + anonymizableBalance.value)
-            log.info("coinjoin: progress {}", progress)
+            log.info(
+                "coinjoin: progress {} = 100*{}/({} + {})",
+                progress,
+                mixedBalance.value,
+                mixedBalance.value,
+                anonymizableBalance.value
+            )
             _progressFlow.emit(progress)
         }
     }
