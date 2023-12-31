@@ -276,6 +276,9 @@ As soon as a translation is ready, it can be pulled:
     # pull translation from Transifex
     tx pull -f -l <language code>
 
+    # pull all translations > 50% complete from Transifex
+    tx pull -f --minimum-perc=50
+
 Note that after pulling, any bugs introduced by either translators or Transifex itself need to be
 corrected manually.
 

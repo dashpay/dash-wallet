@@ -29,7 +29,7 @@ import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 class CrowdNodeErrorResponse(
     private val networkParams: NetworkParameters,
     private val requestValue: Coin
-): CoinsFromAddressTxFilter(
+) : CoinsFromAddressTxFilter(
     CrowdNodeConstants.getCrowdNodeAddress(networkParams),
     requestValue,
     includeFee = true
@@ -41,8 +41,8 @@ class CrowdNodeErrorResponse(
     private fun isChangeSentBackToCrowdNode(tx: Transaction): Boolean {
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(networkParams)
         return tx.outputs.size > 2 &&
-                tx.outputs.first().value + (tx.fee ?: Coin.ZERO) == requestValue &&
-                tx.outputs.drop(1).any { addressMatch(it.scriptPubKey, crowdNodeAddress) }
+            tx.outputs.first().value + (tx.fee ?: Coin.ZERO) == requestValue &&
+            tx.outputs.drop(1).any { addressMatch(it.scriptPubKey, crowdNodeAddress) }
     }
 
     private fun addressMatch(script: Script, address: Address): Boolean {

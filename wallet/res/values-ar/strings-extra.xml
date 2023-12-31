@@ -279,8 +279,6 @@
     <string name="menu_contact_support_title">اتصل بالدعم</string>
     <string name="menu_contact_support_subtitle">بلغ عن خطأ</string>
     <string name="menu_explore_title">اكتشف </string>
-    <string name="menu_explore_subtitle">تسوق مع داش لدى أكثر من 155000 تاجر</string>
-
     <string name="tools_address_book">دليل العناوين</string>
     <string name="tools_import_private_key">استيراد مفتاح خاص</string>
     <string name="tools_network_monitor">مراقب الشبكة</string>
@@ -407,6 +405,7 @@
     <string name="masternode_key_type_owner">مفاتيح المالك</string>
     <string name="masternode_key_type_voting">مفاتيح التصويت</string>
     <string name="masternode_key_type_operator">مفاتيح المشغل</string>
+    <string name="masternode_key_type_platform">المعرف الشخصي التابع لعقدة Evolution</string>
     <string name="masternode_key_type_total">%dمفاتيح</string>
     <string name="masternode_key_type_used">%dمستعملة</string>
     <string name="masternode_key_pair_index">%dزوج المفتاح</string>

@@ -43,6 +43,8 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
@@ -85,6 +87,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.payments.DeriveKeyTask;
 import de.schildbach.wallet.security.SecurityFunctions;
 import de.schildbach.wallet.security.SecurityGuard;
+import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.ui.ShowPasswordCheckListener;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Iso8601Format;
@@ -123,6 +126,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
     private HandlerThread backgroundThread;
     private Handler backgroundHandler;
     private BackupWalletViewModel viewModel;
+    @Inject WalletFactory walletFactory;
 
     private static final int REQUEST_CODE_CREATE_DOCUMENT = 0;
 
@@ -297,11 +301,6 @@ public class BackupWalletDialogFragment extends DialogFragment {
         if (requestCode == REQUEST_CODE_CREATE_DOCUMENT) {
             if (resultCode == Activity.RESULT_OK) {
                 Wallet wallet = walletData.getWallet();
-                //walletActivityViewModel.wallet.observe(this, new Observer<Wallet>() {
-                //    @Override
-                //    public void onChanged(final Wallet wallet) {
-                //        walletActivityViewModel.wallet.removeObserver(this);
-
 
                 final Uri targetUri = checkNotNull(intent.getData());
                 final String targetProvider = WalletUtils.uriToProvider(targetUri);
@@ -316,7 +315,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
                     SecurityGuard securityGuard = new SecurityGuard();
                     if (wallet.isEncrypted()) {
                         String walletPassword = securityGuard.retrievePassword();
-                        final Wallet decryptedWallet = new WalletProtobufSerializer().readWallet(Constants.NETWORK_PARAMETERS, walletData.getWalletExtensions(), walletProto);
+                        final Wallet decryptedWallet = new WalletProtobufSerializer().readWallet(Constants.NETWORK_PARAMETERS, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS), walletProto);
                         new DeriveKeyTask(backgroundHandler, securityFunctions.getScryptIterationsTarget()) {
                             @Override
                             protected void onSuccess(KeyParameter encryptionKey, boolean changed) {

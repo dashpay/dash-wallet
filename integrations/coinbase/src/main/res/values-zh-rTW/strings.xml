@@ -37,7 +37,7 @@
     <string name="coinbase_fee">Coinbase 費用</string>
     <string name="total">總共</string>
     <string name="order_preview">訂單預覽</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">您將在此設備上的達世錢包中收到 %s Dash。請注意，完成轉帳最多可能需要 2-3 分鐘。</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">您將在此設備上的達世錢包中收到~ %s Dash。請注意，完成轉帳最多可能需要 2-3 分鐘。</string>
     <string name="amount_in_dash">達世幣金額</string>
     <string name="cancel">取消</string>
     <string name="confirm_sec">確認 (%ss)</string>
@@ -58,10 +58,9 @@
     <string name="transfer_failed">轉帳失敗</string>
     <string name="conversion_failed">兌換失敗</string>
     <string name="transfer_failed_msg">達世幣已成功存入您的 Coinbase 帳戶。但是把達世幣轉賬到此設備上的達世幣錢包時出現問題。</string>
-    <string name="purchase_failed_msg">出了些問題</string>
     <string name="it_could_take_up_to_2_3_minutes">最多可能需要 2-3 分鐘才能將 Dash 轉帳到您在此設備上的達世幣錢包。</string>
     <string name="it_could_take_up_to_5_minutes">從Coinbase 帳戶中的 %s  轉換為這設備上達世幣錢包中的達世幣最多可能需要 5 分鐘。</string>
-    <string name="it_could_take_up_to_5_minutes_to_coinbase">“最多可能需要 5 分鐘才能將達世幣從這設備上的達世幣錢包轉換為您在 Coinbase 帳戶中的 %s 。</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">最多可能需要 5 分鐘才能將達世幣從這設備上的達世幣錢包轉換為您在 Coinbase 帳戶中的 %s 。</string>
     <string name="contact_coinbase_support">聯繫 Coinbase 支援服務</string>
     <string name="fees_in_crypto_purchase">購買加密貨幣的費用</string>
     <string name="coinbase_fee_info_msg_content">除了顯示的 Coinbase 費用外，我們還包括價格差價。加密貨幣市場是不穩定的，這使我們能夠暫時鎖定交易執行的價格。</string>
@@ -77,9 +76,9 @@
     <string name="to_your_coinbase_account">到你的 Coinbase 賬戶</string>
     <string name="from_dash_wallet_on_this_device">從此設備上的達世幣錢包</string>
     <string name="you_will_receive">您將會收到</string>
-    <string name="we_didnt_find_any_assets" >我們沒有在您的 Coinbase 帳戶中找到任何資產。</string>
-    <string name="you_dont_own_any_crypto" >你未擁有任何加密貨幣。購買一些加密貨幣來開始..</string>
-    <string name="buy_crypto_on_coinbase" >在 Coinbase 上購買加密貨幣</string>
+    <string name="we_didnt_find_any_assets">我們沒有在您的 Coinbase 帳戶中找到任何資產。</string>
+    <string name="you_dont_own_any_crypto">你未擁有任何加密貨幣。購買一些加密貨幣來開始。</string>
+    <string name="buy_crypto_on_coinbase">在 Coinbase 上購買加密貨幣</string>
     <string name="auth_limit_description">你超出了 Coinbase 的授權限制。</string>
     <string name="debit_money">從您的帳戶中扣款</string>
     <string name="change_limit">更改此限制</string>
@@ -102,7 +101,6 @@
     <string name="coinbase_fa_code_hint">Coinbase 兩步認證代碼</string>
     <string name="enter_code_details">它可能是您手機上短信中的代碼。如果沒有，請輸入身份驗證應用程序中的代碼。</string>
     <string name="two_fa_code_incorrect">代碼不正確。請檢查並重試!</string>
-    <string name="invalid_code">該代碼無效。請再試一次</string>
     <string name="verify_code">檢查</string>
     <string name="you_dont_have_enough_balance">你沒有足夠的餘額</string>
     <string name="transfer_amount">轉帳</string>
@@ -116,4 +114,7 @@
     <string name="insufficient_money_to_transfer">錢包中餘額不足，因此無法進行轉賬。</string>
     <string name="amount_to_transfer">您將會收到 %s %s %s</string>
     <string name="amount_to_transfer_dash">您將會收到 %s</string>
+    <string name="your_coinbase_session_has_expired">您的 Coinbase 工作階段已過期</string>
+    <string name="please_log_in_to_your_coinbase_account">請登錄您的 Coinbase 賬戶</string>
+    <string name="coinbase_use_bank_account">您想在關聯的銀行帳戶所存入一筆資金並使用它來為您的購買埋單嗎？</string>
     </resources>

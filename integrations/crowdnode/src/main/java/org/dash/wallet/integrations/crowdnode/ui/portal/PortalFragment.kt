@@ -37,7 +37,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.blinkAnimator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integrations.crowdnode.R
@@ -64,13 +63,13 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
     private val isConfirmed: Boolean
         get() = viewModel.signUpStatus === SignUpStatus.Finished ||
-                viewModel.onlineAccountStatus == OnlineAccountStatus.Done
+            viewModel.onlineAccountStatus == OnlineAccountStatus.Done
 
     private val isLinkingInProgress: Boolean
         get() = viewModel.onlineAccountStatus != OnlineAccountStatus.None &&
-                viewModel.onlineAccountStatus != OnlineAccountStatus.Creating &&
-                viewModel.onlineAccountStatus != OnlineAccountStatus.SigningUp &&
-                viewModel.onlineAccountStatus != OnlineAccountStatus.Done
+            viewModel.onlineAccountStatus != OnlineAccountStatus.Creating &&
+            viewModel.onlineAccountStatus != OnlineAccountStatus.SigningUp &&
+            viewModel.onlineAccountStatus != OnlineAccountStatus.Done
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -79,11 +78,13 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
         viewModel.observeCrowdNodeError().observe(viewLifecycleOwner) { error ->
             error?.let {
-                safeNavigate(PortalFragmentDirections.portalToResult(
-                    true,
-                    getErrorMessage(it),
-                    ""
-                ))
+                safeNavigate(
+                    PortalFragmentDirections.portalToResult(
+                        true,
+                        getErrorMessage(it),
+                        ""
+                    )
+                )
             }
         }
 
@@ -117,9 +118,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         viewModel.onlineAccountRequest.observe(viewLifecycleOwner) { args ->
             safeNavigate(
                 PortalFragmentDirections.portalToSignUp(
-                args[CrowdNodeViewModel.URL_ARG]!!,
-                args[CrowdNodeViewModel.EMAIL_ARG] ?: ""
-            ))
+                    args[CrowdNodeViewModel.URL_ARG]!!,
+                    args[CrowdNodeViewModel.EMAIL_ARG] ?: ""
+                )
+            )
         }
     }
 
@@ -260,18 +262,22 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         binding.onlineAccountBtn.isClickable = !isLinkingInProgress
         binding.onlineNavIcon.isVisible = !isLinkingInProgress
 
-        binding.onlineAccountStatus.text = getText(when (status) {
-            OnlineAccountStatus.Done -> R.string.crowdnode_online_synced
-            OnlineAccountStatus.None -> R.string.secure_online_account
-            OnlineAccountStatus.SigningUp -> R.string.crowdnode_signup_to_finish
-            else -> R.string.crowdnode_in_process
-        })
+        binding.onlineAccountStatus.text = getText(
+            when (status) {
+                OnlineAccountStatus.Done -> R.string.crowdnode_online_synced
+                OnlineAccountStatus.None -> R.string.secure_online_account
+                OnlineAccountStatus.SigningUp -> R.string.crowdnode_signup_to_finish
+                else -> R.string.crowdnode_in_process
+            }
+        )
 
-        binding.onlineAccountTitle.text = getText(if (status == OnlineAccountStatus.None) {
-            R.string.online_account_create
-        } else {
-            R.string.online_account
-        })
+        binding.onlineAccountTitle.text = getText(
+            if (status == OnlineAccountStatus.None) {
+                R.string.online_account_create
+            } else {
+                R.string.online_account
+            }
+        )
 
         binding.addressStatusWarning.isVisible =
             status == OnlineAccountStatus.Validating ||
@@ -327,12 +333,14 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             return getString(R.string.crowdnode_signup_error)
         }
 
-        return getString(when(exception.message) {
-            CrowdNodeException.WITHDRAWAL_ERROR -> R.string.crowdnode_withdraw_error
-            CrowdNodeException.DEPOSIT_ERROR -> R.string.crowdnode_deposit_error
-            CrowdNodeException.CONFIRMATION_ERROR -> R.string.crowdnode_bad_confirmation
-            else -> R.string.crowdnode_transfer_error
-        })
+        return getString(
+            when (exception.message) {
+                CrowdNodeException.WITHDRAWAL_ERROR -> R.string.crowdnode_withdraw_error
+                CrowdNodeException.DEPOSIT_ERROR -> R.string.crowdnode_deposit_error
+                CrowdNodeException.CONFIRMATION_ERROR -> R.string.crowdnode_bad_confirmation
+                else -> R.string.crowdnode_transfer_error
+            }
+        )
     }
 
     private fun showInfoDialog() {

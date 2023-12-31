@@ -266,7 +266,7 @@
     <string name="menu_contact_support_title">サポートへ連絡する</string>
     <string name="menu_contact_support_subtitle">問題を報告する</string>
     <string name="menu_explore_title">探求する</string>
-    <string name="menu_explore_subtitle">155,000以上の加盟店でDASHでショッピング</string>
+    <string name="menu_explore_subtitle">DASHが使える加盟店を探す</string>
 
     <string name="tools_address_book">アドレスブック</string>
     <string name="tools_import_private_key">秘密鍵をインポート</string>

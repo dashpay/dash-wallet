@@ -32,7 +32,10 @@
         android:lineSpacingMultiplier="0.9"
         android:maxLines="2"
         android:minLines="1"
-        tools:ignore="SmallSp"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeMaxTextSize="12sp"
+        android:autoSizeStepGranularity="1sp"
         tools:text="Send" />
 
 </merge>

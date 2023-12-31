@@ -37,7 +37,7 @@
     <string name="coinbase_fee">코인베이스 수수료</string>
     <string name="total">총합</string>
     <string name="order_preview">주문 미리보기</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">이 기기의 대시 지갑에 %s대시를 받게 됩니다. 송금이 완료되는 데에는 최대 2-3분이 소요될 수 있습니다.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">이 기기의 대시 지갑에 ~ %s대시를 받게 됩니다. 송금이 완료되는 데에는 최대 2-3분이 소요될 수 있습니다.</string>
     <string name="amount_in_dash">대시 금액</string>
     <string name="cancel">취소</string>
     <string name="confirm_sec">확인 (%ss)</string>
@@ -57,11 +57,10 @@
     <string name="purchase_failed">매수에 실패하였습니다</string>
     <string name="transfer_failed">송금에 실패하였습니다</string>
     <string name="conversion_failed">환전에 실패하였습니다</string>
-    <string name="transfer_failed_msg">당신의 코인베이스 계정에 대시가 성공적으로 입금되었으나, 이 기기의 대시 지갑에 전송하는 과정에서 문제가 발생하였습니다.</string>
-    <string name="purchase_failed_msg">오류가 발생하였습니다</string>
+    <string name="transfer_failed_msg">당신의 코인베이스 계정에 대시가 성공적으로 입금되었습니다. 그러나, 이 기기의 대시 지갑에 전송하는 과정에서 문제가 발생하였습니다.</string>
     <string name="it_could_take_up_to_2_3_minutes">이 기기 내 대시 지갑으로 해당 대시를 송금하는 데에는 최대 2-3분이 소요될 수 있습니다.</string>
     <string name="it_could_take_up_to_5_minutes">코인베이스 계정의 %s를 대시로 환전하여 이 기기의 대시 지갑으로 받는 데에는 최대 5분이 소요될 수 있습니다..</string>
-    <string name="it_could_take_up_to_5_minutes_to_coinbase">이 기기의 대시 지갑 내 대시를 귀하의  %s로 환전하여 코인베이스 계정으로 받는 데에는 최대 5분이 소요될 수 있습니다.</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">이 기기의 대시 지갑으로부터 당신의 코인베이스 계정의 %s로 대시를 전환하는 데에는 최대 5분이 소요될 수 있습니다.</string>
     <string name="contact_coinbase_support">코인베이스 지원센터에 문의하기</string>
     <string name="fees_in_crypto_purchase">암호화폐 매수 수수료</string>
     <string name="coinbase_fee_info_msg_content">해당 가격에는 표시된 코인베이스 수수료 외에도 차액이 포함됩니다. 암호화폐 시장은 변동성이 높으며, 이로 인해 거래를 완료하기 위해서는 일시적으로 가격을 잠글 수 있습니다.</string>
@@ -77,9 +76,9 @@
     <string name="to_your_coinbase_account">코앤 베이스 계정으로</string>
     <string name="from_dash_wallet_on_this_device">이 기기의 대시 지갑으로부터</string>
     <string name="you_will_receive">다음을 통해 보낸 금액을 받게 됩니다</string>
-    <string name="we_didnt_find_any_assets" >귀하의 코인베이스 계정에서 어떤 자산도 찾지 못했습니다.</string>
-    <string name="you_dont_own_any_crypto" >보유하고 있는 암호화폐가 없습니다. 암호화폐를 구매하셔서 시작하세요...</string>
-    <string name="buy_crypto_on_coinbase" >코인베이스에서 암호화폐를 구입하세요</string>
+    <string name="we_didnt_find_any_assets">귀하의 코인베이스 계정에서 어떤 자산도 찾지 못했습니다.</string>
+    <string name="you_dont_own_any_crypto">보유하고 있는 암호화폐가 없습니다. 시작하시려면 암호화폐를 구입하세요.</string>
+    <string name="buy_crypto_on_coinbase">코인베이스에서 암호화폐를 구입하세요</string>
     <string name="auth_limit_description">코인베이스 인증 제한을 초과하였습니다.</string>
     <string name="debit_money">당신의 계정으로부터 돈을 인출합니다</string>
     <string name="change_limit">이 제한을 변경합니다</string>
@@ -102,7 +101,6 @@
     <string name="coinbase_fa_code_hint">코인베이스 2FA 코드</string>
     <string name="enter_code_details">휴대폰 SMS로 전송된 코드일 수 있습니다. 아니라면, 인증 어플의 코드를 입력하십시오.</string>
     <string name="two_fa_code_incorrect">잘못된 코드입니다. 확인 후 다시 시도해주십시오!</string>
-    <string name="invalid_code">유효하지 않은 코드입니다. 다시 시도해주십시오.</string>
     <string name="verify_code">인증하기</string>
     <string name="you_dont_have_enough_balance">잔액이 충분하지 않습니다</string>
     <string name="transfer_amount">송금하기</string>
@@ -112,8 +110,11 @@
     <string name="transfer_dash_successful">성공적으로 송금되었습니다</string>
     <string name="it_could_take_up_to_10_minutes">코인베이스로부터 이 기기의 대시 지갑으로 전송하는 데에는 최대 10분 가량 소요될 수 있습니다.</string>
     <string name="it_could_take_up_to_10_minutes_to_coinbase">이 기기의 대시 지갑 내 대시를 코인베이스 계정으로 전송하는 데에는 최대 10분이 소요될 수 있습니다.</string>
-    <string name="transfer_dash_failed_msg">이 기기의 대시 지갑에 전송하는 데 문제가 발생하였습니다.</string>
+    <string name="transfer_dash_failed_msg">이 기기의 대시 지갑에 송금하는 데 문제가 발생하였습니다.</string>
     <string name="insufficient_money_to_transfer">지갑 내 코인의 양이 너무 적어 송금할 수 없습니다.</string>
     <string name="amount_to_transfer">%s%s%s을 받습니다.</string>
     <string name="amount_to_transfer_dash">%s을 받습니다.</string>
+    <string name="your_coinbase_session_has_expired">코인베이스 세션이 만료되었습니다</string>
+    <string name="please_log_in_to_your_coinbase_account">코인베이스 계정에 로그인 하십시오</string>
+    <string name="coinbase_use_bank_account">연결된 은행 계좌를 이용해 구매를 위한 입금 처리를 완료하시겠습니까?</string>
     </resources>

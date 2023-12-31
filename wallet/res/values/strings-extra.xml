@@ -283,7 +283,7 @@
     <string name="menu_contact_support_title">Contact Support</string>
     <string name="menu_contact_support_subtitle">Report an issue</string>
     <string name="menu_explore_title">Explore</string>
-    <string name="menu_explore_subtitle">Shop with DASH at over 155,000 merchants</string>
+    <string name="menu_explore_subtitle">Find merchants that accept DASH</string>
 
     <string name="tools_address_book">Address Book</string>
     <string name="tools_import_private_key">Import Private Key</string>

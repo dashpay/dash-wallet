@@ -36,6 +36,7 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="4dp"
         android:gravity="end"
+        android:textAlignment="gravity"
         android:maxLines="1"
         app:layout_constraintBottom_toBottomOf="@+id/pay_label"
         app:layout_constraintEnd_toStartOf="@id/account"

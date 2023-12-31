@@ -74,7 +74,6 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
             }
         }
 
-
         binding.continueBtn.setOnClickListener {
             continueAction()
         }
@@ -94,10 +93,12 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
         }
 
         viewModel.onlineAccountRequest.observe(viewLifecycleOwner) { args ->
-            safeNavigate(OnlineAccountEmailFragmentDirections.onlineAccountEmailToSignUp(
-                args[CrowdNodeViewModel.URL_ARG]!!,
-                args[CrowdNodeViewModel.EMAIL_ARG] ?: ""
-            ))
+            safeNavigate(
+                OnlineAccountEmailFragmentDirections.onlineAccountEmailToSignUp(
+                    args[CrowdNodeViewModel.URL_ARG]!!,
+                    args[CrowdNodeViewModel.EMAIL_ARG] ?: ""
+                )
+            )
         }
 
         viewModel.networkError.observe(viewLifecycleOwner) {
@@ -110,11 +111,13 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
 
         viewModel.observeCrowdNodeError().observe(viewLifecycleOwner) {
             if (it != null) {
-                safeNavigate(OnlineAccountEmailFragmentDirections.onlineAccountEmailToResult(
-                    true,
-                    getString(R.string.crowdnode_signup_error),
-                    ""
-                ))
+                safeNavigate(
+                    OnlineAccountEmailFragmentDirections.onlineAccountEmailToResult(
+                        true,
+                        getString(R.string.crowdnode_signup_error),
+                        ""
+                    )
+                )
             }
         }
 
@@ -130,6 +133,6 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
 
     private fun isEmail(text: CharSequence?): Boolean {
         return !text.isNullOrEmpty() &&
-                android.util.Patterns.EMAIL_ADDRESS.matcher(text).matches()
+            android.util.Patterns.EMAIL_ADDRESS.matcher(text).matches()
     }
 }

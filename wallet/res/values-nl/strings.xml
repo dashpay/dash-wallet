@@ -377,13 +377,21 @@
     <string name="reason">Reden</string>
     <string name="link_account">Koppel je rekening</string>
     <string name="buy_no_account_needed">Koop Dash · Geen rekening nodig</string>
-    <string name="your_coinbase_session_has_expired">Je Coinbase sessie is verlopen</string>
-    <string name="please_log_in_to_your_coinbase_account">Log in bij je Coinbase-account</string>
-    <string name="log_in">Log in</string>
 
     <string name="recipient_address">Adres van ontvanger</string>
     <string name="show_clipboard">Toon inhoud op het klembord</string>
     <string name="tap_to_paste">Tik op het adres van het klembord om het te plakken</string>
     <string name="not_dash_address">Geen geldig Dash adres of URL verzoek</string>
     <string name="send_to_address">Versturen naar adres</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Batterij optimalisatie</string>
+    <string name="battery_optimization_subtitle_optimized">Geoptimaliseerd</string>
+    <string name="battery_optimization_subtitle_unrestricted">Onbeperkt</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Dash portemonnee op de achtergrond laten draaien?</string>
+    <string name="battery_optimization_dialog_message_optimized">Deze app is zo geconfigureerd dat deze niet meer actief is nadat deze enige tijd niet zichtbaar is geweest.\n\nDit heeft tot gevolg dat er geen betalingsmeldingen worden ontvangen totdat de app terugkeert naar de voorgrond.\n\nWe raden aan deze app op de achtergrond te laten draaien door bij batterij instellingen voor \'Niet geoptimaliseerd\' of \'Onbeperkt\' te kiezen.\n\nMaak je geen zorgen, we houden rekening met je batterijgebruik.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Wilt je betalingen op de achtergrond ontvangen?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Deze app is geconfigureerd om actief te blijven nadat hij enige tijd niet zichtbaar is geweest.\n\nWe raden aan deze app altijd up-to-date te laten blijven met de blockchain, zelfs op de achtergrond.\n\nMaak je geen zorgen, we houden rekening met je batterijgebruik.</string>
+    <string name="battery_optimization_dialog_button_change">Open instellingen</string>
 </resources>

@@ -377,13 +377,21 @@
     <string name="reason">Razón</string>
     <string name="link_account">Vincula tu cuenta</string>
     <string name="buy_no_account_needed">Compra Dash. No se necesita una cuenta</string>
-    <string name="your_coinbase_session_has_expired">Tu sesión de Coinbase ha expirado</string>
-    <string name="please_log_in_to_your_coinbase_account">Inicia sesión en tu cuenta de Coinbase</string>
-    <string name="log_in">Iniciar sesión</string>
 
     <string name="recipient_address">Dirección de la destinataria</string>
     <string name="show_clipboard">Mostrar contenido en el portapapeles</string>
     <string name="tap_to_paste">Toca la dirección del portapapeles para pegarla.</string>
     <string name="not_dash_address">No es una dirección de Dash válida o una solicitud de URL</string>
     <string name="send_to_address">Enviar a Dirección</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Optimización de la batería</string>
+    <string name="battery_optimization_subtitle_optimized">Optimizado</string>
+    <string name="battery_optimization_subtitle_unrestricted">Irrestricto</string>
+
+    <string name="battery_optimization_dialog_optimized_title">¿Dejar que la billetera de Dash se ejecute en segundo plano?</string>
+    <string name="battery_optimization_dialog_message_optimized">Esta aplicación está configurada para dejar de ejecutarse después de no estar visible durante algún tiempo.\n\nEsto provocará que no recibas notificaciones de pago hasta que la aplicación vuelva al primer plano.\n\nRecomendamos permitir que esta aplicación se ejecute en segundo plano configurando la batería optimización a \"No optimizado\" o \"Sin restricciones\".\n\nNo te preocupes, lo haremos siempre teniendo en cuenta el uso de la batería.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">¿Quieres recibir pagos en segundo plano?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Esta aplicación está configurada para continuar ejecutándose después de no estar visible durante algún tiempo.\n\nSugerimos permitir que esta aplicación se mantenga siempre actualizada con la cadena de bloques, incluso en segundo plano.\n\nNo te preocupes, lo haremos siempre teniendo en cuenta el uso de la batería.</string>
+    <string name="battery_optimization_dialog_button_change">Abrir Configuración </string>
 </resources>

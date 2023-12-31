@@ -37,7 +37,7 @@
     <string name="coinbase_fee">Комиссия Coinbase</string>
     <string name="total">Всего</string>
     <string name="order_preview">Просмотр заказа</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Вы получите %sDash на Dash Wallet на этом устройстве. Пожалуйста, обратите внимание, что перевод займёт 2-3 минуты.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Вы получите ~ %sDash на Dash Wallet на этом устройстве. Пожалуйста, обратите внимание, что перевод займёт 2-3 минуты.</string>
     <string name="amount_in_dash">Сумма в Dash</string>
     <string name="cancel">Отмена</string>
     <string name="confirm_sec">Подтвердить (%s)</string>
@@ -58,7 +58,6 @@
     <string name="transfer_failed">Ошибка при переводе</string>
     <string name="conversion_failed">Ошибка при обмене</string>
     <string name="transfer_failed_msg">Dash был успешно зачислен на ваш аккаунт Coinbase. Но при переводе его на Dash Wallet на этом устройстве произошла проблема.</string>
-    <string name="purchase_failed_msg">Что-то пошло не так</string>
     <string name="it_could_take_up_to_2_3_minutes">Перевод Dash на Dash Wallet на этом устройстве может занять 2-3 минуты.</string>
     <string name="it_could_take_up_to_5_minutes">Обмен %s с Coinbase в Dash на Dash Wallet на этом устройстве может занять до 5 минут.</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">Обмен Dash из Dash Wallet на этом устройстве на %s в вашем Coinbase аккаунте может занять до 5 минут. </string>
@@ -77,9 +76,9 @@
     <string name="to_your_coinbase_account">на аккаунт Coinbase</string>
     <string name="from_dash_wallet_on_this_device">С Dash Wallet на этом устройстве</string>
     <string name="you_will_receive">Вы получите</string>
-    <string name="we_didnt_find_any_assets" >Мы не нашли никаких активов на вашем аккаунте Coinbase</string>
-    <string name="you_dont_own_any_crypto" >У вас нет криптовалюты. Для начала приобретите немного криптовалюты.</string>
-    <string name="buy_crypto_on_coinbase" >Купить криптовалюту на Coinbase</string>
+    <string name="we_didnt_find_any_assets">Мы не нашли никаких активов на вашем аккаунте Coinbase</string>
+    <string name="you_dont_own_any_crypto">У вас нет криптовалюты. Для начала приобретите немного криптовалюты.</string>
+    <string name="buy_crypto_on_coinbase">Купить криптовалюту на Coinbase</string>
     <string name="auth_limit_description">Превышен лимит авторизаций на Coinbase.</string>
     <string name="debit_money">Списать деньги с аккаунта</string>
     <string name="change_limit">Изменить лимит</string>
@@ -102,7 +101,6 @@
     <string name="coinbase_fa_code_hint">2FA код Coinbase</string>
     <string name="enter_code_details">Это может быть SMS-код. Или код из приложения для аутентификации.</string>
     <string name="two_fa_code_incorrect">Неверный код. Попробуйте ещё раз!</string>
-    <string name="invalid_code">Неправильный код. Пожалуйста, попробуйте ещё раз</string>
     <string name="verify_code">Подтвердить</string>
     <string name="you_dont_have_enough_balance">Средств на балансе недостаточно</string>
     <string name="transfer_amount">Перевести</string>
@@ -116,4 +114,7 @@
     <string name="insufficient_money_to_transfer">В этом кошельке слишком мало монет для перевода.</string>
     <string name="amount_to_transfer">Вы получите %s%s%s</string>
     <string name="amount_to_transfer_dash">Вы получите %s</string>
+    <string name="your_coinbase_session_has_expired">Время сессии Coinbase истекло</string>
+    <string name="please_log_in_to_your_coinbase_account">Пожалуйста, войдите в свой аккаунт Coinbase</string>
+    <string name="coinbase_use_bank_account">Хотите внести депозит за покупку, используя привязанный банковский счет?</string>
     </resources>

@@ -24,8 +24,9 @@ import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 // TODO: consider making sure that `toAddress` matches our account address
-class CrowdNodeAcceptTermsResponse(networkParams: NetworkParameters): CoinsFromAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(networkParams), ACCEPT_TERMS_RESPONSE_CODE
+class CrowdNodeAcceptTermsResponse(networkParams: NetworkParameters) : CoinsFromAddressTxFilter(
+    CrowdNodeConstants.getCrowdNodeAddress(networkParams),
+    ACCEPT_TERMS_RESPONSE_CODE
 ) {
     companion object {
         val ACCEPT_TERMS_RESPONSE_CODE: Coin =

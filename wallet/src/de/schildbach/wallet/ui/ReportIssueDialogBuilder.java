@@ -46,6 +46,7 @@ import android.content.Intent;
 import android.net.Uri;
 import androidx.core.content.FileProvider;
 
+import android.os.PowerManager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -226,7 +227,8 @@ public abstract class ReportIssueDialogBuilder extends BaseAlertDialogBuilder {
             final Activity context,
             final PackageInfoProvider packageInfoProvider,
             final Configuration configuration,
-            final Wallet wallet
+            final Wallet wallet,
+            final WalletApplication application
     ) {
         return new ReportIssueDialogBuilder(context,
                 R.string.report_issue_dialog_title_issue, R.string.report_issue_dialog_message_issue) {
@@ -239,7 +241,7 @@ public abstract class ReportIssueDialogBuilder extends BaseAlertDialogBuilder {
             @Override
             protected CharSequence collectApplicationInfo() throws IOException {
                 final StringBuilder applicationInfo = new StringBuilder();
-                CrashReporter.appendApplicationInfo(applicationInfo, packageInfoProvider, configuration, wallet);
+                CrashReporter.appendApplicationInfo(applicationInfo, packageInfoProvider, configuration, wallet, application.getSystemService(PowerManager.class));
                 return applicationInfo;
             }
 
