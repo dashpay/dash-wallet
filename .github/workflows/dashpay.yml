@@ -26,7 +26,7 @@ jobs:
     - name: set up JDK
       uses: actions/setup-java@v3
       with:
-        java-version: '11'
+        java-version: '17'
         distribution: 'adopt'
         cache: gradle
 
@@ -53,6 +53,7 @@ jobs:
     - name: Setup fastlane
       run: |
         gem install bundler:2.2.26
+        gem install google-cloud-storage
         bundle config path vendor/bundle
         bundle install --jobs 4 --retry 3
         
@@ -91,6 +92,6 @@ jobs:
       if: github.event_name == 'pull_request'
       run: bundle exec fastlane build flavor:"staging" type:"release" storepass:"${{ secrets.SIGNING_STORE_PASS }}" versioncode:"${{ env.build_number }}"
       
-    - name: Build and Firebase Distribution
+    - name: Staging Build and Firebase Distribution
       if: github.event_name == 'push'
-      run: bundle exec fastlane build_distribute flavor:"staging" type:"release" storepass:"${{ secrets.SIGNING_STORE_PASS }}" versioncode:"${{ env.build_number }}" comment:"Up to date DashPay build" appid:"1:1039839682638:android:bbcfa8c9939ee993ea631f" testgroup:"qa"
+      run: bundle exec fastlane build_distribute flavor:"staging" type:"release" storepass:"${{ secrets.SIGNING_STORE_PASS }}" versioncode:"${{ env.build_number }}" comment:"Up to date Dash Wallet TestNet build" appid:"1:1039839682638:android:3202b16d460a1a88" testgroup:"qa" SUPPORT_EMAIL:"${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
