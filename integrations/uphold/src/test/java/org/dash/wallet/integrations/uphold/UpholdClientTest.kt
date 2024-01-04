@@ -122,7 +122,7 @@ class UpholdClientTest {
             listOf()
         )
 
-        val actualResponse = api.getCapabilities("withdrawals")
+        val actualResponse = api.getCapabilities("crypto_withdrawals")
         assertEquals(expected, actualResponse.body())
     }
 
