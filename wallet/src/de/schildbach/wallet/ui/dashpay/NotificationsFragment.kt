@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import java.util.*
 import javax.inject.Inject

@@ -37,7 +37,7 @@
     <string name="coinbase_fee">Taxa Coinbase</string>
     <string name="total">Total</string>
     <string name="order_preview">Visualização do pedido</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Você receberá %s Dash em sua Carteira Dash neste dispositivo. Por favor, observe que pode levar de 2 a 3 minutos para completar a transferência. </string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Você receberá ~ %s Dash em sua Carteira Dash neste dispositivo. Por favor, observe que pode levar de 2 a 3 minutos para completar a transferência. </string>
     <string name="amount_in_dash">Quantidade em Dash</string>
     <string name="cancel">Cancelar</string>
     <string name="confirm_sec">Confirmar (%ss)</string>
@@ -58,10 +58,9 @@
     <string name="transfer_failed">A transferência falhou</string>
     <string name="conversion_failed">A conversão falhou</string>
     <string name="transfer_failed_msg">O Dash foi depositado com sucesso na sua conta Coinbase. Mas houve um problema ao transferi-lo para a Carteira Dash neste dispositivo.</string>
-    <string name="purchase_failed_msg">Algo deu errado</string>
     <string name="it_could_take_up_to_2_3_minutes">Pode levar de 2 a 3 minutos para que o Dash seja transferido para sua Carteira Dash neste dispositivo.</string>
     <string name="it_could_take_up_to_5_minutes">Pode levar até 5 minutos para converter %s da conta Coinbase para o Dash em sua Carteira Dash neste dispositivo.</string>
-    <string name="it_could_take_up_to_5_minutes_to_coinbase">“Pode levar até 5 minutos para converter o DASH da Dash Wallet neste dispositivo para %s na sua conta Coinbase.</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">Pode levar até 5 minutos para converter o Dash da Carteira Dash neste dispositivo para %s na sua conta Coinbase.</string>
     <string name="contact_coinbase_support">Contato com o Suporte Coinbase</string>
     <string name="fees_in_crypto_purchase">Taxas em compras de criptomoedas</string>
     <string name="coinbase_fee_info_msg_content">Além da taxa Coinbase exibida, nós incluímos um spread no preço. Os mercados de criptomoedas são voláteis e isso nos permite bloquear temporariamente um preço para a execução da negociação.</string>
@@ -77,9 +76,9 @@
     <string name="to_your_coinbase_account">para a sua conta Coinbase</string>
     <string name="from_dash_wallet_on_this_device">Da sua Carteira Dash neste dispositivo</string>
     <string name="you_will_receive">Você receberá</string>
-    <string name="we_didnt_find_any_assets" >Nós não encontramos nenhum ativo em sua conta Coinbase.</string>
-    <string name="you_dont_own_any_crypto" >Você não possui nenhuma criptomoeda. Compre algumas criptomoedas para começar.</string>
-    <string name="buy_crypto_on_coinbase" >Compre Crypto na Coinbase</string>
+    <string name="we_didnt_find_any_assets">Nós não encontramos nenhum ativo em sua conta Coinbase.</string>
+    <string name="you_dont_own_any_crypto">Você não possui nenhuma criptomoeda. Compre algumas criptomoedas para começar.</string>
+    <string name="buy_crypto_on_coinbase">Compre Crypto na Coinbase</string>
     <string name="auth_limit_description">Você excedeu o limite de autorização na Coinbase.</string>
     <string name="debit_money">Debitar dinheiro da sua conta</string>
     <string name="change_limit">Alterar este limite</string>
@@ -102,7 +101,6 @@
     <string name="coinbase_fa_code_hint">Código 2FA da Coinbase</string>
     <string name="enter_code_details">Pode ser o código do SMS no seu telefone. Caso contrário, insira o código do aplicativo de autenticação.</string>
     <string name="two_fa_code_incorrect">Código incorreto. Por favor, verifique e tente novamente!</string>
-    <string name="invalid_code">Código inválido. Por favor, tente novamente</string>
     <string name="verify_code">Verificar</string>
     <string name="you_dont_have_enough_balance">Você não tem saldo suficiente</string>
     <string name="transfer_amount">Transferir</string>
@@ -116,4 +114,7 @@
     <string name="insufficient_money_to_transfer">A quantidade de moedas na carteira é muito pequena para transferir.</string>
     <string name="amount_to_transfer">Você receberá %s %s %s</string>
     <string name="amount_to_transfer_dash">Você receberá %s</string>
+    <string name="your_coinbase_session_has_expired">Sua sessão na Coinbase expirou</string>
+    <string name="please_log_in_to_your_coinbase_account">Por favor, faça login em sua conta Coinbase</string>
+    <string name="coinbase_use_bank_account">Você gostaria de fazer um depósito para a sua compra usando uma conta bancária vinculada?</string>
     </resources>

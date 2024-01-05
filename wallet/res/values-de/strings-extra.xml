@@ -267,7 +267,7 @@
     <string name="menu_contact_support_title">Support kontaktieren</string>
     <string name="menu_contact_support_subtitle">Ein Problem melden</string>
     <string name="menu_explore_title">Explore</string>
-    <string name="menu_explore_subtitle">Bei über 155.000 Händlern mit DASH einkaufen</string>
+    <string name="menu_explore_subtitle">Finde Händler die DASH akzeptieren</string>
 
     <string name="tools_address_book">Adressbuch</string>
     <string name="tools_import_private_key">Privaten Schlüssel importieren</string>

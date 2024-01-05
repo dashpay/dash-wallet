@@ -22,6 +22,7 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
@@ -63,6 +64,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
+    @Inject lateinit var walletApplication: WalletApplication
     @Inject lateinit var dashPayProfileDao: DashPayProfileDao
 
     override val backgroundStyle = R.style.PrimaryBackground
@@ -149,7 +151,8 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
             requireActivity(),
             packageInfoProvider,
             configuration,
-            viewModel.walletData.wallet
+            viewModel.walletData.wallet,
+            walletApplication
         ).buildAlertDialog().show()
     }
 

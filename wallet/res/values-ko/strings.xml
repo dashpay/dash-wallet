@@ -377,13 +377,21 @@
     <string name="reason">이유</string>
     <string name="link_account">당신의 계정을 연결하세요</string>
     <string name="buy_no_account_needed">대시 구매하기 · 계정이 필요하지 않습니다</string>
-    <string name="your_coinbase_session_has_expired">코인베이스 세션이 만료되었습니다</string>
-    <string name="please_log_in_to_your_coinbase_account">코인베이스 계정에 로그인 하십시오</string>
-    <string name="log_in">로그인</string>
 
     <string name="recipient_address">수신자 주소</string>
     <string name="show_clipboard">클립보드 내용 보이기</string>
     <string name="tap_to_paste">클립보드의 주소를 탭하여 붙여넣기</string>
     <string name="not_dash_address">대시 주소 혹은 URL 요청이 유효하지 않습니다</string>
     <string name="send_to_address">주소로 전송합니다</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">배터리 최적화</string>
+    <string name="battery_optimization_subtitle_optimized">최적화됨</string>
+    <string name="battery_optimization_subtitle_unrestricted">제한이 해제됨</string>
+
+    <string name="battery_optimization_dialog_optimized_title">대시 지갑을 백그라운드에서 실행하시겠습니까?</string>
+    <string name="battery_optimization_dialog_message_optimized">이 어플은 일정 시간동안 화면에 보이지 않은 경우 실행을 중단하도록 설정되었습니다.\n\n이로써 해당 어플이 전면에 실행되기 전까지 지불 알림을 받지 않게 됩니다.\n\n우리는 배터리 최적화를 \"최적화 하지 않음\" 혹은 \"제한 해제\"로 설정하여 이 어플이 백그라운드에서 실행되도록 할 것을 권장합니다.\n\n걱정마세요, 언제나 당신의 배터리 사용량을 신경쓸게요.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">백그라운드에서 지불을 받으시겠습니까?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">이 어플은 일정 시간동안 화면에 보이지 않은 경우에도 게속 실행되도록 설정되었습니다.\n\n우리는 백그라운드에서도 이 어플이 언제나 블록체인의 최신 상태에 맞도록 유지할 것을 권장합니다\n\n걱정마세요, 언제나 당신의 배터리 사용량을 신경쓸게요.</string>
+    <string name="battery_optimization_dialog_button_change">설정 열기</string>
 </resources>

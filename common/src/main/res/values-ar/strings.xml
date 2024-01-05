@@ -58,6 +58,7 @@
     <string name="share_address">شارك العنوان</string>
     <string name="verify">تحقق</string>
     <string name="receive_enter_amount_button">حدد المبلغ</string>
+    <string name="account_create">إنشاء حساب</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">بحث</string>
@@ -75,12 +76,19 @@
     <string name="select_currency">اختر العملة</string>
     <string name="send_coins_error_dusty_send">المبلغ صغير جدا بحيث لا يمكن إرساله.</string>
     <string name="send_coins_error_insufficient_money">رصيد غير كاف</string>
+    <string name="syncing">يتم المزامنة</string>
     <string name="no_connection">لا يوجد اتصال انترنت </string>
     <string name="rate_not_available">غير متاح</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">يبدو أنك تقوم بإفراغ محفظة داش</string>
     <string name="empty_wallet_crowdnode_warning">يرجى ملاحظة أنك لن تتمكن من سحب أموالك من CrowdNode إلى هذه المحفظة حتى تقوم بزيادة رصيدك إلى 0.0003 داش.</string>
-    <string name="syncing">يتم المزامنة</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">لم يتم الإعتراف بالدفع</string>
+    <string name="payment_protocol_default_error_title">خطأ في الدفع</string>
+    <string name="payment_request_problem_message">تعذر على الخادم معالجة دفعتك ، يرجى الاستفسار من التاجر</string>
+    <string name="exchange_rate_not_found">تعذر العثور على سعر الصرف.</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">استلم مباشرةً إلى محفظة داش</string>
@@ -89,4 +97,5 @@
     <string name="disconnected">تم قطع الاتصال</string>
     <string name="enter_amount_available">متاح</string>
     <string name="transaction_row_rate_not_available">غير متاح</string>
+    <string name="log_in">تسجيل الدخول </string>
 </resources>

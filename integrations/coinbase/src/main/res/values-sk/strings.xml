@@ -37,7 +37,7 @@
     <string name="coinbase_fee">Poplatok Coinbase</string>
     <string name="total">Celkovo</string>
     <string name="order_preview">Ukážka objednávky</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Na tomto zariadení dostanete %s Dash do svojej peňaženky Dash. Upozorňujeme, že dokončenie prevodu môže trvať 2 až 3 minúty.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Do svojej peňaženky Dash na tomto zariadení dostanete zhruba %s Dash. Upozorňujeme, že dokončenie prevodu môže trvať 2 až 3 minúty</string>
     <string name="amount_in_dash">Suma v Dash</string>
     <string name="cancel">Zrušiť</string>
     <string name="confirm_sec">Potvrďte (%ss)</string>
@@ -57,11 +57,10 @@
     <string name="purchase_failed">Nákup zlyhal</string>
     <string name="transfer_failed">Prenos zlyhal</string>
     <string name="conversion_failed">Konverzia zlyhala</string>
-    <string name="transfer_failed_msg">Dash bol úspešne vložený na váš účet Coinbase. Pri prenose do Dash peňaženky v tomto zariadení sa však vyskytol problém.</string>
-    <string name="purchase_failed_msg">Niečo sa pokazilo</string>
+    <string name="transfer_failed_msg">Dash bol úspešne vložený na váš Coinbase účet. Pri prenose do Dash Wallet na tomto zariadení sa však vyskytol problém.</string>
     <string name="it_could_take_up_to_2_3_minutes">Prenos Dash do vašej peňaženky na tomto zariadení môže trvať 2 až 3 minúty.</string>
     <string name="it_could_take_up_to_5_minutes">Prevod %s z Coinbase účtu na Dash vo vašej Dash peňaženke na tomto zariadení,  môže trvať až 5 minút.</string>
-    <string name="it_could_take_up_to_5_minutes_to_coinbase">Prevod %s na váš Coinbase účet z Dash vo vašej Dash peňaženke na tomto zariadení môže trvať až 5 minút.</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">Prevod Dash z Dash Wallet na tomto zariadení na váš účet Coinbase %s môže trvať až 5 minút.</string>
     <string name="contact_coinbase_support">Kontaktujte podporu Coinbase</string>
     <string name="fees_in_crypto_purchase">Poplatky pri nákupoch kryptomien</string>
     <string name="coinbase_fee_info_msg_content">Okrem zobrazeného poplatku za Coinbase  započítavame aj rozpätie v cene. Trhy s kryptomenami sú volatilné, čo nám umožňuje dočasne zablokovať cenu za realizáciu obchodu.</string>
@@ -77,9 +76,9 @@
     <string name="to_your_coinbase_account">na váš Coinbase účet</string>
     <string name="from_dash_wallet_on_this_device">Z peňaženky Dash na tomto zariadení</string>
     <string name="you_will_receive">Dostanete</string>
-    <string name="we_didnt_find_any_assets" >Na vašom účte Coinbase sme nenašli žiadne aktíva.</string>
-    <string name="you_dont_own_any_crypto" >Nevlastníte žiadne kryptomeny. Pre začiatok si kúpte nejaké kryptomeny.</string>
-    <string name="buy_crypto_on_coinbase" >Kúpte si kryptomeny na Coinbase</string>
+    <string name="we_didnt_find_any_assets">Na vašom Coinbase účte sme nenašli žiadne aktíva.</string>
+    <string name="you_dont_own_any_crypto">Nevlastníte žiadne kryptomeny. Ak chcete začať, kúpte si nejaké kryptomeny.</string>
+    <string name="buy_crypto_on_coinbase">Kúpte si kryptomeny na Coinbase</string>
     <string name="auth_limit_description">Prekročili ste autorizačný limit na Coinbase.</string>
     <string name="debit_money">Zaplatiť z vášho účtu</string>
     <string name="change_limit">Zmeniť tento limit</string>
@@ -102,7 +101,6 @@
     <string name="coinbase_fa_code_hint">Coinbase 2FA kód</string>
     <string name="enter_code_details">Môže to byť kód z SMS vo vašom telefóne. Ak nie, zadajte kód z overovacej aplikácie.</string>
     <string name="two_fa_code_incorrect">Kód je nesprávny. Skontrolujte a skúste to znova!</string>
-    <string name="invalid_code">Kód bol neplatný. Prosím skúste znova</string>
     <string name="verify_code">Overiť</string>
     <string name="you_dont_have_enough_balance">Váš zostatok je nedostatočný</string>
     <string name="transfer_amount">Presun</string>
@@ -116,4 +114,7 @@
     <string name="insufficient_money_to_transfer">Na prevod je množstvo mincí v peňaženke príliš malé.</string>
     <string name="amount_to_transfer">Dostanete %s %s%s</string>
     <string name="amount_to_transfer_dash">Dostanete %s</string>
+    <string name="your_coinbase_session_has_expired">Vaša relácia s Coinbase vypršala</string>
+    <string name="please_log_in_to_your_coinbase_account">Prihláste sa do svojho Coinbase účtu</string>
+    <string name="coinbase_use_bank_account">Chceli by ste vložiť zálohu za svoj nákup pomocou prepojeného bankového účtu?</string>
     </resources>

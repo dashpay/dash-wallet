@@ -25,7 +25,7 @@ import java.util.*
 data class BlockchainState(var bestChainDate: Date?,
                            var bestChainHeight: Int,
                            var replaying: Boolean,
-                           var impediments: Set<Impediment>,
+                           var impediments: MutableSet<Impediment>,
                            var chainlockHeight: Int,
                            var mnlistHeight: Int,
                            var percentageSync: Int) {

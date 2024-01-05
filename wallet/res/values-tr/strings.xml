@@ -377,12 +377,21 @@
     <string name="reason">Sebep</string>
     <string name="link_account">Hesabınızı bağlayın</string>
     <string name="buy_no_account_needed">Dash Satın Al · Hesap gerekmez</string>
-    <string name="your_coinbase_session_has_expired">Coinbase oturumunuzun süresi doldu</string>
-    <string name="please_log_in_to_your_coinbase_account">Lütfen Coinbase hesabınıza giriş yapın</string>
-    <string name="log_in">Giriş Yap</string>
 
+    <string name="recipient_address">Alıcı adresi</string>
     <string name="show_clipboard">İçeriği panoda göster</string>
     <string name="tap_to_paste">Yapıştırmak için panodaki adresi seçin</string>
     <string name="not_dash_address">Geçerli bir Dash Adresi veya URL isteği değil</string>
     <string name="send_to_address">Adrese Gönder</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Pil iyileştirmesi</string>
+    <string name="battery_optimization_subtitle_optimized">Optimize edilmiş</string>
+    <string name="battery_optimization_subtitle_unrestricted">Sınırsız</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Dash Cüzdan\'ının arka planda çalışmasına izin verilsin mi?</string>
+    <string name="battery_optimization_dialog_message_optimized">Bu uygulama, bir süre görünür olmadığında çalışmayı durduracak şekilde yapılandırılmıştır.\n\nBu durum, uygulama ön plana dönene kadar ödeme bildirimlerinin alınmamasına neden olacaktır.\n\nPil ayarını yaparak bu uygulamanın arka planda çalışmasına izin vermenizi öneririz. Optimizasyonunu \"Optimize Edilmemiş\" veya \"Kısıtlanmamış\" olarak ayarlayın.\n\nMerak etmeyin, pil kullanımınıza her zaman önem vereceğiz.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Arka planda ödeme almak ister misiniz?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Bu uygulama bir süre görünmez kaldıktan sonra çalışmaya devam edecek şekilde yapılandırılmıştır.\n\nBu uygulamanın arka planda bile her zaman blockchain ile güncel kalmasına izin vermenizi öneririz.\n\nMerak etmeyin, pil kullanımınıza her zaman önem vereceğiz.</string>
+    <string name="battery_optimization_dialog_button_change">Ayarları aç</string>
 </resources>

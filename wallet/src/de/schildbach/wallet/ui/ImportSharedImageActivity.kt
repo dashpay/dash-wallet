@@ -25,12 +25,11 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.google.zxing.*
-import com.google.zxing.common.HybridBinarizer
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
@@ -83,44 +82,38 @@ class ImportSharedImageActivity : AppCompatActivity() {
         val imageUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
         if (imageUri != null) {
             Glide.with(this)
-                    .asBitmap()
-                    .load(imageUri).into(object : CustomTarget<Bitmap>() {
-
-                        override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                            val qrCode = Qr.scanQRImage(resource)
-                            if (qrCode != null) {
-                                handleQRCode(qrCode)
-                            } else {
-                                log.info("no QR code found in image {}", imageUri)
-                                showErrorDialog(
-                                        R.string.import_image_not_valid_qr_code,
-                                        R.string.import_image_please_use_valid_qr_code,
-                                        R.drawable.ic_not_valid_qr_code)
-                            }
+                .asBitmap()
+                .load(imageUri).into(object : CustomTarget<Bitmap>() {
+                    override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                        val qrCode = Qr.scanQRImage(resource)
+                        if (qrCode != null) {
+                            handleQRCode(qrCode)
+                        } else {
+                            log.info("no QR code found in image {}", imageUri)
+                            AdaptiveDialog.create(
+                                R.drawable.ic_not_valid_qr_code,
+                                getString(R.string.import_image_not_valid_qr_code),
+                                getString(R.string.import_image_please_use_valid_qr_code),
+                                getString(R.string.button_ok)
+                            ).show(this@ImportSharedImageActivity)
                         }
+                    }
 
-                        override fun onLoadFailed(errorDrawable: Drawable?) {
-                            log.info("load image failed {}", imageUri)
-                            showErrorDialog(
-                                    R.string.import_image_not_valid_qr_code,
-                                    R.string.import_image_please_use_valid_qr_code,
-                                    R.drawable.ic_not_valid_qr_code)
-                        }
+                    override fun onLoadFailed(errorDrawable: Drawable?) {
+                        log.info("load image failed {}", imageUri)
+                        AdaptiveDialog.create(
+                            R.drawable.ic_not_valid_qr_code,
+                            getString(R.string.import_image_not_valid_qr_code),
+                            getString(R.string.import_image_please_use_valid_qr_code),
+                            getString(R.string.button_ok)
+                        ).show(this@ImportSharedImageActivity)
+                    }
 
-                        override fun onLoadCleared(placeholder: Drawable?) {
-                            // nothing to do
-                        }
-                    })
+                    override fun onLoadCleared(placeholder: Drawable?) {
+                        // nothing to do
+                    }
+                })
         }
-    }
-
-    private fun showErrorDialog(title: Int, msg: Int, image: Int) {
-        AdaptiveDialog.create(
-            image,
-            getString(title),
-            getString(msg),
-            getString(R.string.button_ok)
-        ).show(this)
     }
 
     private fun handleQRCode(input: String) {
@@ -142,9 +135,12 @@ class ImportSharedImageActivity : AppCompatActivity() {
             }
 
             override fun error(x: Exception?, messageResId: Int, vararg messageArgs: Any) {
-                showErrorDialog(
-                        R.string.import_image_invalid_private, 0,
-                        R.drawable.ic_not_valid_qr_code)
+                AdaptiveDialog.create(
+                    R.drawable.ic_not_valid_qr_code,
+                    getString(R.string.import_image_invalid_private),
+                    getString(messageResId, *messageArgs),
+                    getString(R.string.button_ok)
+                ).show(this@ImportSharedImageActivity)
             }
         }.parse()
     }

@@ -185,23 +185,6 @@ class CrowdNodeApiAggregatorTest {
         }
     }
 
-    // TODO: remove when there is no 7.5.0 in the wild
-    @Test
-    fun oldOnlineStatusDoneValue_restoredCorrectly() {
-        runBlocking {
-            localConfig.stub {
-                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn 4
-            }
-            val api = CrowdNodeApiAggregator(
-                webApi, blockchainApi, walletData, mock(), mock(),
-                localConfig, globalConfig, mock(), mock(), mock()
-            )
-            api.restoreStatus()
-            assertEquals(SignUpStatus.LinkedOnline, api.signUpStatus.value)
-            assertEquals(OnlineAccountStatus.Done, api.onlineAccountStatus.value)
-        }
-    }
-
     @Test
     fun onlineStatusCreating_restoredCorrectly() {
         runBlocking {

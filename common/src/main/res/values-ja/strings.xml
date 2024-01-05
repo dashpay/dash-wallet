@@ -97,4 +97,5 @@
     <string name="disconnected">切断されました</string>
     <string name="enter_amount_available">ご利用可能</string>
     <string name="transaction_row_rate_not_available">ご利用できません</string>
+    <string name="log_in">ログイン</string>
 </resources>

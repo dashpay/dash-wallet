@@ -93,7 +93,7 @@
     <string name="crowdnode_minimum_deposit_difference">Deposit %s to start earning</string>
     <string name="crowdnode_first_deposit">First deposit should be more than %s</string>
     <string name="crowdnode_staking_info_title">How CrowdNode staking works</string>
-    <string name="crowdnode_staking_info_message_first">The Dash Network is driven by a number of Masternodes which is an essential part of facilitating payments.</string>
+    <string name="crowdnode_staking_info_message_first">The Dash Network is driven by a number of Masternodes which are an essential part of facilitating payments.</string>
     <string name="crowdnode_staking_info_message_second">A Masternode needs 1000 Dash as collateral and each Masternode is currently rewarded approximately %s%% per year.</string>
     <string name="crowdnode_staking_apy_title">Current APY is %s%%</string>
     <string name="crowdnode_staking_info_message">You start earning if your CrowdNode account has more than %s</string>
@@ -106,7 +106,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">Receiving rewards</string>
     <string name="crowdnode_staking_receiving_rewards_message">You will receive fractional payments automatically and they will by default be reinvested, however, it is also easy to set up automatic withdrawals to receive recurring payouts.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">First Minimum Deposit</string>
-    <string name="crowdnode_staking_join_pool_message">As most people do not have exactly 1000 Dash at hand, CrowdNode has made a service where they by pooling deposits from members can achieve the benefits of owning a Masternode.</string>
+    <string name="crowdnode_staking_join_pool_message">As most people do not have exactly 1000 Dash at hand, CrowdNode has made a service where, by pooling deposits from members, they can achieve the benefits of owning a Masternode.</string>
     <string name="crowdnode_staking_join_pool_title">Joining the pool</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">CrowdNode benefits</string>
     <string name="crowdnode_staking_connected_dash_address_title">Connected Dash address</string>
@@ -142,6 +142,8 @@
     <string name="crowdnode_withdrawal_limits_message">Due to CrowdNode’s terms of service users can withdraw no more than:</string>
     <string name="crowdnode_withdraw_without_limits_online">Withdraw without limits with an online account on CrowdNode website.</string>
     <string name="crowdnode_withdrawal_limits_error">This error is most likely due to exceeding CrowdNode withdrawal limits. Try again later.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Please wait before initiating the next withdrawal</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">You need to wait 5 minutes before initiating another withdrawal</string>
     <string name="per_transaction">per transaction</string>
     <string name="per_hour">per hour</string>
     <string name="per_day">per 24 hours</string>

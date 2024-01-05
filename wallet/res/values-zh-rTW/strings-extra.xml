@@ -264,7 +264,7 @@
     <string name="menu_contact_support_title">聯繫支援服務</string>
     <string name="menu_contact_support_subtitle">報告問題</string>
     <string name="menu_explore_title">瀏覽</string>
-    <string name="menu_explore_subtitle">在超過 155,000 家商家處使用達世幣購物</string>
+    <string name="menu_explore_subtitle">尋找接受達世幣付款的商家</string>
 
     <string name="tools_address_book">地址簿</string>
     <string name="tools_import_private_key">導入私鑰</string>

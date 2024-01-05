@@ -273,7 +273,7 @@
     <string name="menu_contact_support_title">Служба підтримки</string>
     <string name="menu_contact_support_subtitle">Повідомити про проблему</string>
     <string name="menu_explore_title">Дослідити</string>
-    <string name="menu_explore_subtitle">Купуйте з DASH у понад 155 000 магазинів</string>
+    <string name="menu_explore_subtitle">Знайдіть продавців, які приймають DASH</string>
 
     <string name="tools_address_book">Адресна книга</string>
     <string name="tools_import_private_key">Імпорт приватного ключа</string>
@@ -401,6 +401,7 @@
     <string name="masternode_key_type_owner">Ключі власника</string>
     <string name="masternode_key_type_voting">Ключі голосування</string>
     <string name="masternode_key_type_operator">Ключі оператора</string>
+    <string name="masternode_key_type_platform">Ключі ідентифікатора вузла Evolution</string>
     <string name="masternode_key_type_total">%d ключів</string>
     <string name="masternode_key_type_used">%dвикористано</string>
     <string name="masternode_key_pair_index">Ключі %d</string>

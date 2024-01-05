@@ -23,8 +23,9 @@ import org.dash.wallet.common.transactions.filters.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class CrowdNodeWithdrawalQueueResponse(networkParams: NetworkParameters): CoinsFromAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(networkParams), WITHDRAWAL_QUEUE_RESPONSE_CODE
+class CrowdNodeWithdrawalQueueResponse(networkParams: NetworkParameters) : CoinsFromAddressTxFilter(
+    CrowdNodeConstants.getCrowdNodeAddress(networkParams),
+    WITHDRAWAL_QUEUE_RESPONSE_CODE
 ) {
     companion object {
         val WITHDRAWAL_QUEUE_RESPONSE_CODE: Coin =

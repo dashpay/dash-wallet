@@ -377,13 +377,21 @@
     <string name="reason">理由</string>
     <string name="link_account">連結您的帳戶</string>
     <string name="buy_no_account_needed">購買達世幣 · 無需賬戶</string>
-    <string name="your_coinbase_session_has_expired">您的 Coinbase 工作階段已過期</string>
-    <string name="please_log_in_to_your_coinbase_account">請登錄您的 Coinbase 賬戶</string>
-    <string name="log_in">登入</string>
 
     <string name="recipient_address">收款者位址</string>
     <string name="show_clipboard">顯示剪貼板中的內容</string>
     <string name="tap_to_paste">點擊剪貼板中的地址進行粘貼</string>
     <string name="not_dash_address">不是有效的達世幣位址或 URL 請求</string>
     <string name="send_to_address">發送到位址</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">電池優化</string>
+    <string name="battery_optimization_subtitle_optimized">最佳化</string>
+    <string name="battery_optimization_subtitle_unrestricted">無限制</string>
+
+    <string name="battery_optimization_dialog_optimized_title">讓達世幣錢包在後台運行嗎？</string>
+    <string name="battery_optimization_dialog_message_optimized">此應用程式被設置為在後台運行一段時間後停止運行。\n\n這將導致在應用程式返回前台之前無法接收付款通知。\n\n我們建議透過設定優化電池來允許此應用程式在背景運行優化為「未優化」或「無限制」。\n\n不用擔心，我們將始終提醒您的電池使用情況。</string>
+    <string name="battery_optimization_dialog_unrestricted_title">您想在後台接收付款嗎？</string>
+    <string name="battery_optimization_dialog_message_not_optimized">此應用程式被設置為在後台運行後繼續運行。\n\n我們建議允許此應用程式始終與區塊鏈保持最新狀態，即使在後台也是如此。\n\n不用擔心，我們會的經常提醒你電池的使用情況。</string>
+    <string name="battery_optimization_dialog_button_change">開啟設定</string>
 </resources>

@@ -377,13 +377,21 @@
     <string name="reason">Powód</string>
     <string name="link_account">Połącz swoje konto</string>
     <string name="buy_no_account_needed">Kup Dash · Konto nie jest potrzebne</string>
-    <string name="your_coinbase_session_has_expired">Twoja sesja Coinbase wygasła</string>
-    <string name="please_log_in_to_your_coinbase_account">Zaloguj się na  konto Coinbase</string>
-    <string name="log_in">Zaloguj się</string>
 
     <string name="recipient_address">Adres odbiorcy</string>
     <string name="show_clipboard">Pokaz zawartość schowka</string>
     <string name="tap_to_paste">Naciśnij, adres ze schowka, aby go wkleić</string>
     <string name="not_dash_address">Nieprawidłowy adres Dash lub żądanie adresu URL</string>
     <string name="send_to_address">Zapłać na Adres</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Optymalizacja baterii</string>
+    <string name="battery_optimization_subtitle_optimized">Zoptymalizowana</string>
+    <string name="battery_optimization_subtitle_unrestricted">Bez ograniczeń</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Pozwolić, aby Dash Wallet działał w tle?</string>
+    <string name="battery_optimization_dialog_message_optimized">Ta aplikacja jest skonfigurowana tak, aby przestała działać, gdy nie będzie widoczna przez pewien czas.\n\nSpowoduje to, że powiadomienia o płatnościach nie będą pokazywane, dopóki aplikacja nie powróci na pierwszy plan.\n\nZalecamy zezwolenie tej aplikacji na działanie w tle poprzez ustawienie baterii optymalizacja na „Niezoptymalizowana” lub „Bez ograniczeń”.\n\nNie martw się, zawsze będziemy zwracać uwagę na Twoje zużycie baterii.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Chcesz otrzymywać płatności w tle?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Ta aplikacja jest skonfigurowana tak, aby nadal działać, gdy nie będzie widoczna przez pewien czas.\n\nSugerujemy zezwolenie tej aplikacji na ciągłe aktualizowanie łańcucha bloków, nawet w tle.\n\nNie martw się, zawsze będziemy uważali na poziom zużycia baterii.</string>
+    <string name="battery_optimization_dialog_button_change">Otwórz Ustawienia</string>
 </resources>

@@ -34,6 +34,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet_test.BuildConfig
@@ -186,7 +187,8 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
             this,
             packageInfoProvider,
             configuration,
-            walletData.wallet
+            walletData.wallet,
+            application as WalletApplication
         ).buildAlertDialog()
         alertDialog.show()
     }

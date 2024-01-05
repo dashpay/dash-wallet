@@ -267,7 +267,7 @@
     <string name="menu_contact_support_title">Επικοινωνήστε με την υποστήριξη</string>
     <string name="menu_contact_support_subtitle">Αναφέρετε ένα πρόβλημα</string>
     <string name="menu_explore_title">Εξερευνήστε</string>
-    <string name="menu_explore_subtitle">Αγοράστε με το DASH σε πάνω από 155.000 εμπόρους</string>
+    <string name="menu_explore_subtitle">Βρείτε εμπόρους που δέχονται DASH</string>
 
     <string name="tools_address_book">Βιβλίο Διευθύνσεων</string>
     <string name="tools_import_private_key">Εισάγετε το ιδιωτικό κλειδί</string>
@@ -395,6 +395,7 @@
     <string name="masternode_key_type_owner">Κλειδιά Κατόχου</string>
     <string name="masternode_key_type_voting">Κλειδιά ψήφου</string>
     <string name="masternode_key_type_operator">Κλειδιά Χειριστή</string>
+    <string name="masternode_key_type_platform">Κλειδιά Evolution Node ID </string>
     <string name="masternode_key_type_total">%d κλειδιά</string>
     <string name="masternode_key_type_used">%d χρησιμοποιείται</string>
     <string name="masternode_key_pair_index">Ζεύγος κλειδιών %d</string>

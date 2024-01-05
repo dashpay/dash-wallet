@@ -34,7 +34,7 @@ android {
     buildFeatures {
         viewBinding true
     }
-    namespace 'org.dash.wallet.integration.uphold'
+    namespace 'org.dash.wallet.integrations.uphold'
 }
 
 kapt {

@@ -74,6 +74,7 @@
     <string name="explore_payment_method">วิธีการชำระเงิน</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">บัตรของขวัญ</string>
+    <string name="explore_filter_gift_cards">บัตรของขวัญ</string>
     <string name="explore_radius">รัศมี</string>
     <string name="explore_location">ตำแหน่ง</string>
     <string name="explore_current_location">ตำแหน่งปัจจุบัน</string>
@@ -148,5 +149,13 @@
     <string name="buy_gift_card_with_dash_text">ซื้อบัตรของขวัญด้วย Dash</string>
     <string name="redeem_gift_card_text">แลกบัตรของขวัญของคุณทางออนไลน์ภายในไม่กี่วินาทีหรือที่แคชเชียร์</string>
 
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">กำลังซิงค์... ผลลัพธ์อาจไม่สมบูรณ์</string>
+    <string name="sync_in_progress_error">กำลังซิงค์... มีข้อผิดพลาด</string>
+    <string name="sync_in_progress_canceled">การซิงค์ถูกยกเลิก... จะพยายามดำเนินการอีกครั้งในภายหลัง</string>
+
     <string name="sync_in_progress_file_not_found">สร้างข้อผิดพลาด: ไม่พบฐานข้อมูล!</string>
+    <string name="sync_in_progress_network_error">การซิงค์ถูกขัดจังหวะ... เครือข่ายออฟไลน์หรือไม่สามารถเข้าถึงได้</string>
+
+
     </resources>

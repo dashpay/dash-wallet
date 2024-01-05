@@ -129,7 +129,8 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
                     getString(R.string.crowdnode_login),
                     args[CrowdNodeViewModel.URL_ARG]!!,
                     true
-                ))
+                )
+            )
         }
     }
 
@@ -164,19 +165,23 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
 
         val clickOnTerms = object : ClickableSpan() {
             override fun onClick(widget: View) {
-                safeNavigate(NewAccountFragmentDirections.newAccountToWebView(
-                    getString(R.string.terms_of_use),
-                    getString(R.string.crowdnode_terms_of_use_url)
-                ))
+                safeNavigate(
+                    NewAccountFragmentDirections.newAccountToWebView(
+                        getString(R.string.terms_of_use),
+                        getString(R.string.crowdnode_terms_of_use_url)
+                    )
+                )
             }
         }
 
         val clickOnPrivacy = object : ClickableSpan() {
             override fun onClick(widget: View) {
-                safeNavigate(NewAccountFragmentDirections.newAccountToWebView(
-                    getString(R.string.privacy_policy),
-                    getString(R.string.crowdnode_privacy_policy_url)
-                ))
+                safeNavigate(
+                    NewAccountFragmentDirections.newAccountToWebView(
+                        getString(R.string.privacy_policy),
+                        getString(R.string.crowdnode_privacy_policy_url)
+                    )
+                )
             }
         }
 

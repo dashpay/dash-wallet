@@ -273,7 +273,7 @@
     <string name="menu_contact_support_title">Связаться с поддержкой</string>
     <string name="menu_contact_support_subtitle">Сообщить о проблеме</string>
     <string name="menu_explore_title">Исследовать</string>
-    <string name="menu_explore_subtitle">Покупайте за DASH в более чем 155 000 магазинах</string>
+    <string name="menu_explore_subtitle">Найти магазины, где принимают DASH</string>
 
     <string name="tools_address_book">Адресная книга</string>
     <string name="tools_import_private_key">Импортировать приватный ключ</string>

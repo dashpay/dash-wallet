@@ -270,7 +270,7 @@
     <string name="menu_contact_support_title">Contatta il Supporto</string>
     <string name="menu_contact_support_subtitle">Segnala un problema</string>
     <string name="menu_explore_title">Esplora</string>
-    <string name="menu_explore_subtitle">Acquista con DASH presso oltre 155.000 commercianti</string>
+    <string name="menu_explore_subtitle">Trova commercianti che accettano DASH</string>
 
     <string name="tools_address_book">Rubrica degli indirizzi</string>
     <string name="tools_import_private_key">Importa chiave privata</string>

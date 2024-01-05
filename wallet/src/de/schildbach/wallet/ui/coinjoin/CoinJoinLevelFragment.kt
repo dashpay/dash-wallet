@@ -83,7 +83,7 @@ class CoinJoinLevelFragment : Fragment(R.layout.fragment_coinjoin_level) {
 
     private fun showConnectionWaringDialog(mode: CoinJoinMode) {
         AdaptiveDialog.create(
-            org.dash.wallet.integration.coinbase_integration.R.drawable.ic_warning,
+            R.drawable.ic_warning,
             getString(
                 if (mode == CoinJoinMode.INTERMEDIATE) {
                     R.string.Intermediate_level_WIFI_Warning
@@ -92,7 +92,7 @@ class CoinJoinLevelFragment : Fragment(R.layout.fragment_coinjoin_level) {
                 }
             ),
             getString(R.string.privcay_level_WIFI_warning_desc),
-            getString(org.dash.wallet.integration.coinbase_integration.R.string.cancel),
+            getString(R.string.cancel),
             getString(R.string.continue_anyway)
         ).show(requireActivity()) {
             if (it == true) {

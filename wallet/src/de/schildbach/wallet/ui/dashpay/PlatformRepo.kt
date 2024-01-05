@@ -538,7 +538,7 @@ class PlatformRepo @Inject constructor(
         withContext(Dispatchers.IO) {
             val wallet = walletApplication.wallet as WalletEx
             // this will initialize any missing key chains
-            wallet.initializeCoinJoin(keyParameter)
+            wallet.initializeCoinJoin(keyParameter, 0)
 
             var authenticationGroupExtension = AuthenticationGroupExtension(wallet)
             authenticationGroupExtension = wallet.addOrGetExistingExtension(authenticationGroupExtension) as AuthenticationGroupExtension
@@ -553,7 +553,7 @@ class PlatformRepo @Inject constructor(
     suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, useCoinJoin: Boolean) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
-            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin)
+            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin, true)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
         }
     }
@@ -1019,7 +1019,7 @@ class PlatformRepo @Inject constructor(
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)
-        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin = false)
+        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin = false, returnChange = true)
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())
         // update database

@@ -251,8 +251,6 @@
     <string name="menu_contact_support_title">Podpora</string>
     <string name="menu_contact_support_subtitle">Nahlásit problém</string>
     <string name="menu_explore_title">Prozkoumat</string>
-    <string name="menu_explore_subtitle">Nakupujte s DASH u více než 155 000 obchodníků</string>
-
     <string name="tools_address_book">Adresář</string>
     <string name="tools_import_private_key">Importovat Privátní Klíč</string>
     <string name="tools_network_monitor">Monitor Sítě</string>
