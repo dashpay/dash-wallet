@@ -24,7 +24,7 @@
     <string name="welcome_response">Аккаунт создан</string>
     <string name="account_link">Привязать уже существующий аккаунт</string>
     <string name="crowdnode_login">Войти в CrowdNode</string>
-    <string name="crowdnode_signup">Подписаться на новости CrowdNode</string>
+    <string name="crowdnode_signup">Создать CrowdNode аккаунт</string>
     <string name="crowdnode_link">Привязать уже существующий аккаунт CrowdNode</string>
     <string name="required_passphrase_backup">Необходимо создать резервную копию кодовой фразы Dash Wallet</string>
     <string name="backup_passphrase">Создать резервную копию кодовой фразы</string>
@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Из-за условий использования CrowdNode пользователи не могут вывести больше, чем:</string>
     <string name="crowdnode_withdraw_without_limits_online">Вывести без ограничений в онлайн аккаунте на сайте CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Скорее всего, ошибка произошла из-за превышения лимита CrowdNode на вывод. Попробуйте ещё раз позже.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Пожалуйста, подождите, прежде чем запустить следующий вывод средств</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Вы должны подождать 5 минут, прежде чем вывести средства ещё раз</string>
     <string name="per_transaction">за транзакцию</string>
     <string name="per_hour">в час</string>
     <string name="per_day">в 24 часа</string>

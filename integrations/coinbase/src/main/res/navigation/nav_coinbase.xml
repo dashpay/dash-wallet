@@ -23,24 +23,26 @@
 
     <fragment
         android:id="@+id/coinbaseServicesFragment"
-        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseServicesFragment"
+        android:name="org.dash.wallet.integrations.coinbase.ui.CoinbaseServicesFragment"
         android:label="CoinbaseServicesFragment"
         tools:layout="@layout/fragment_integration_portal">
 
         <action
-            android:id="@+id/services_to_buy_dash"
+            android:id="@+id/services_to_buyDash"
             app:destination="@id/coinbaseBuyDashFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
         <action
-            android:id="@+id/services_to_convert_crypto"
+            android:id="@+id/services_to_convertCrypto"
             app:destination="@id/coinbaseConvertCryptoFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
         <action
-            android:id="@+id/services_to_transfer_dash"
+            android:id="@+id/services_to_transferDash"
             app:destination="@id/transferDashFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
@@ -49,33 +51,25 @@
 
     <fragment
         android:id="@+id/coinbaseBuyDashFragment"
-        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseBuyDashFragment"
+        android:name="org.dash.wallet.integrations.coinbase.ui.CoinbaseBuyDashFragment"
         android:label="CoinbaseBuyDashFragment"
         tools:layout="@layout/fragment_coinbase_buy_dash">
+
         <action
-            android:id="@+id/buy_dash_to_order_review"
-            app:destination="@id/coinbaseBuyDashOrderReviewFragment"
+            android:id="@+id/buyDash_to_orderReview"
+            app:destination="@id/coinbaseOrderReviewFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
-        
-        <argument
-            android:name="paymentMethods"
-            app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod[]" />
 
     </fragment>
 
     <fragment
-        android:id="@+id/coinbaseBuyDashOrderReviewFragment"
-        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseBuyDashOrderReviewFragment"
-        android:label="CoinbaseBuyDashOrderReviewFragment"
-        tools:layout="@layout/fragment_coinbase_buy_dash_order_review">
-        <argument
-            android:name="paymentMethod"
-            app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod" />
-        <argument
-            android:name="placeBuyOrderUIModel"
-            app:argType="org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel" />
+        android:id="@+id/coinbaseOrderReviewFragment"
+        android:name="org.dash.wallet.integrations.coinbase.ui.CoinbaseOrderReviewFragment"
+        android:label="CoinbaseOrderReviewFragment"
+        tools:layout="@layout/fragment_coinbase_order_review">
+
         <action
             android:id="@+id/orderReviewToFeeInfo"
             app:destination="@id/coinbaseFeeInfoDialog" />
@@ -90,7 +84,7 @@
 
     <fragment
         android:id="@+id/coinbaseConvertCryptoFragment"
-        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseConvertCryptoFragment"
+        android:name="org.dash.wallet.integrations.coinbase.ui.CoinbaseConvertCryptoFragment"
         android:label="CoinbaseConvertCryptoFragment"
         tools:layout="@layout/fragment_coinbase_convert_crypto">
         <argument
@@ -105,14 +99,14 @@
 
     <dialog
         android:id="@+id/coinbaseFeeInfoDialog"
-        android:name="org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinbaseFeeInfoDialog"
+        android:name="org.dash.wallet.integrations.coinbase.ui.dialogs.CoinbaseFeeInfoDialog"
         android:label="coinbase_info_fee"
         tools:layout="@layout/dialog_coinbase_fee_info"
         />
 
     <fragment
         android:id="@+id/coinbaseConversionPreviewFragment"
-        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseConversionPreviewFragment"
+        android:name="org.dash.wallet.integrations.coinbase.ui.CoinbaseConversionPreviewFragment"
         android:label="CoinbaseConversionPreviewFragment"
         tools:layout="@layout/fragment_coinbase_conversion_preview">
 
@@ -121,7 +115,7 @@
             app:destination="@id/coinbaseFeeInfoDialog" />
         <argument
             android:name="swapModel"
-            app:argType="org.dash.wallet.integration.coinbase_integration.model.SwapTradeUIModel" />
+            app:argType="org.dash.wallet.integrations.coinbase.model.SwapTradeUIModel" />
         <action
             android:id="@+id/conversionPreviewToTwoFaCode"
             app:destination="@id/enterTwoFaCodeFragment"
@@ -129,12 +123,12 @@
     </fragment>
     <fragment
         android:id="@+id/enterTwoFaCodeFragment"
-        android:name="org.dash.wallet.integration.coinbase_integration.ui.EnterTwoFaCodeFragment"
+        android:name="org.dash.wallet.integrations.coinbase.ui.EnterTwoFaCodeFragment"
         android:label="TwoFACodeFragment"
         tools:layout="@layout/enter_two_fa_code_fragment">
         <argument
             android:name="transactionParams"
-            app:argType="org.dash.wallet.integration.coinbase_integration.model.CoinbaseTransactionParams"
+            app:argType="org.dash.wallet.integrations.coinbase.model.CoinbaseTransactionParams"
             />
         <action
             android:id="@+id/conversionPreviewToTwoFaCode"
@@ -143,7 +137,7 @@
     </fragment>
     <fragment
         android:id="@+id/transferDashFragment"
-        android:name="org.dash.wallet.integration.coinbase_integration.ui.TransferDashFragment"
+        android:name="org.dash.wallet.integrations.coinbase.ui.TransferDashFragment"
         tools:layout="@layout/transfer_dash_fragment"
         android:label="TransferDash">
 

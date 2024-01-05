@@ -94,7 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">보증금 %s로 리워드를 받으세요</string>
     <string name="crowdnode_first_deposit">첫 보증금은 %s 이상이어야 합니다</string>
     <string name="crowdnode_staking_info_title">크라우드노드 스테이킹이 이루어지는 방식</string>
-    <string name="crowdnode_staking_info_message_first">대시 네트워크는 지불이 이루어지도록 도와주는 중요 부분인 마스터노드에 의해 운영됩니다.</string>
+    <string name="crowdnode_staking_info_message_first">대시 네트워크는 지불이 이루어지는 데 중요한 역할을 하는 다수의 마스터노드에 의해 운영됩니다.</string>
     <string name="crowdnode_staking_info_message_second">마스터노드는 보증금으로 1000대시가 필요하며, 각 마스터노드는 현재 연간 약 %s%%을 보상받고 있습니다.</string>
     <string name="crowdnode_staking_apy_title">현재 APY는 %s%% 입니다</string>
     <string name="crowdnode_staking_info_message">당신의 크라우드노드 계정에 %s이상 보유하면 보상을 받기 시작합니다.</string>
@@ -107,7 +107,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">보상 받기</string>
     <string name="crowdnode_staking_receiving_rewards_message">당신은 분할된 지불금을 자동적으로 받게 되며, 이 금액은 디폴트로 다시 투자됩니다. 그러나, 쉬운 설정을 통해 지속적으로 이 수익금을 받아 자동 출금할 수도 있습니다.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">첫 번째 최소 보증금</string>
-    <string name="crowdnode_staking_join_pool_message">대부분의 사람들이 당장 손에 1000대시를 쥐고 있지 않은 만큼, 크라우드노드는 멤버들의 보증금을 풀로 모아 마스터노드 소유의 이점을 누릴 수 있도록 하는 서비스를 개설하였습니다.</string>
+    <string name="crowdnode_staking_join_pool_message">대부분의 사람들이 당장 1000대시를 지니고 있지 않은 만큼, 크라우드노드는 구성원들의 보증금을 모아 마스터노드 소유의 장점을 누릴 수 있도록 하는 서비스를 개설하였습니다.</string>
     <string name="crowdnode_staking_join_pool_title">풀 가입하기</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">크라우드노드의 이점</string>
     <string name="crowdnode_staking_connected_dash_address_title">연결된 대시 주소</string>

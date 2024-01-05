@@ -267,7 +267,7 @@
     <string name="menu_contact_support_title">Contact Support</string>
     <string name="menu_contact_support_subtitle">I-report ang Isyu</string>
     <string name="menu_explore_title">Galugarin</string>
-    <string name="menu_explore_subtitle">Mamili gamit ang DASH sa mahigit 155,000 merchant</string>
+    <string name="menu_explore_subtitle">Maghanap ng mga merchant na tumatanggap ng DASH</string>
 
     <string name="tools_address_book">Adresbuk</string>
     <string name="tools_import_private_key">I-import ang private key</string>
@@ -395,6 +395,7 @@
     <string name="masternode_key_type_owner">Susi ng may-ari</string>
     <string name="masternode_key_type_voting">Mga susi ng pagboto</string>
     <string name="masternode_key_type_operator">Operator na mga Susi</string>
+    <string name="masternode_key_type_platform">Mga key ng Evolution Node ID</string>
     <string name="masternode_key_type_total">%d mga susi</string>
     <string name="masternode_key_type_used">%d ginamit</string>
     <string name="masternode_key_pair_index">Keypair %d</string>

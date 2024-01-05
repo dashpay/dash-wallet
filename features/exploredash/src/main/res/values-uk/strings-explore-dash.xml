@@ -18,6 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">Дослідити Dash</string>
     <string name="explore_title">Дослідити</string>
+    <string name="explore_subtitle">Знайти торговців, які приймають Dash, де їх купити та як з ними заробити.</string>
     <string name="explore_merchants_title">Де витратити?</string>
     <string name="explore_merchants_subtitle">Знайдіть місця де приймають DASH в якості оплати.</string>
     <string name="explore_atms_title">Банкомати</string>
@@ -79,6 +80,7 @@
     <string name="explore_payment_method">Спосіб оплати</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Подарункова карта</string>
+    <string name="explore_filter_gift_cards">Подарункові карти</string>
     <string name="explore_radius">Радіус</string>
     <string name="explore_location">Місцезнаходження</string>
     <string name="explore_current_location">Поточне місцезнаходження</string>
@@ -159,5 +161,13 @@
     <string name="buy_gift_card_with_dash_text">Купити подарункову картку за допомогою Dash</string>
     <string name="redeem_gift_card_text">Отримайте свою подарункову картку онлайн за лічені секунди або в касі.</string>
 
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Триває синхронізація... Результати можуть бути неповними.</string>
+    <string name="sync_in_progress_error">Триває синхронізація... Сталася помилка.</string>
+    <string name="sync_in_progress_canceled">Синхронізацію скасовано... Ще одна спроба буде зроблена пізніше.</string>
+
     <string name="sync_in_progress_file_not_found">Помилка збірки: база даних не знайдена!</string>
+    <string name="sync_in_progress_network_error">Синхронізацію перервано... Мережа офлайн або недоступна</string>
+
+
     </resources>

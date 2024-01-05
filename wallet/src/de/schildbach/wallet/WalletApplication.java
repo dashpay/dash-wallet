@@ -30,7 +30,6 @@ import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.database.sqlite.SQLiteException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
@@ -64,8 +63,6 @@ import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.IKey;
-import org.bitcoinj.crypto.LinuxSecureRandom;
-import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Protos;
@@ -87,13 +84,16 @@ import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants;
-import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants;
+import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
+import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.PackageInfoProvider;
+import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
-import org.dash.wallet.integration.uphold.api.UpholdClient;
-import org.dash.wallet.integration.uphold.data.UpholdConstants;
+import org.dash.wallet.integrations.uphold.api.UpholdClient;
+import org.dash.wallet.integrations.uphold.data.UpholdConstants;
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
 import org.jetbrains.annotations.NotNull;
@@ -168,7 +168,6 @@ public class WalletApplication extends MultiDexApplication
 
     private File walletFile;
     private Wallet wallet;
-    private AuthenticationGroupExtension authenticationGroupExtension;
 
     public static final String ACTION_WALLET_REFERENCE_CHANGED = WalletApplication.class.getPackage().getName()
             + ".wallet_reference_changed";
@@ -194,7 +193,7 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     protected AnalyticsService analyticsService;
     @Inject
-    BlockchainStateDao blockchainStateDao;
+    BlockchainStateDataProvider blockchainStateDataProvider;
     @Inject
     CrowdNodeConfig crowdNodeConfig;
     @Inject
@@ -205,6 +204,8 @@ public class WalletApplication extends MultiDexApplication
     PlatformSyncService platformSyncService;
     @Inject
     PackageInfoProvider packageInfoProvider;
+    @Inject
+    WalletFactory walletFactory;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -224,7 +225,6 @@ public class WalletApplication extends MultiDexApplication
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         autoLogout = new AutoLogout(config);
-        authenticationGroupExtension = new AuthenticationGroupExtension(Constants.NETWORK_PARAMETERS);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
             int activityCount = 0;
@@ -362,41 +362,47 @@ public class WalletApplication extends MultiDexApplication
         blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
     }
 
-    /**
-     * called before the wallet is encrypted during onboarding
-     */
-    public void setWallet(Wallet newWallet) {
+    // only used by onboarding after creating or restoring a wallet
+    public void setWallet(Wallet newWallet) throws GeneralSecurityException, IOException {
+        EnumSet<AuthenticationKeyChain.KeyChainType> authKeyTypes = EnumSet.of(
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+                AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
+                AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING
+        );
         this.wallet = newWallet;
         // TODO: move to a wallet creation class
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
             wallet.addKeyChain(Constants.BIP44_PATH);
         }
-        if (!authenticationGroupExtension.hasKeyChains()) {
-            authenticationGroupExtension.addKeyChains(
-                    wallet.getParams(),
-                    wallet.getKeyChainSeed(),
-                    EnumSet.of(
-                            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
-                            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
-                            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
-                            AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING,
-                            AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
-                            AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
-                            AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
-                            AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR
-                    )
-            );
 
-            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
-            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
-            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
-            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING);
+        if (wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID)) {
+            AuthenticationGroupExtension authenticationGroupExtension = (AuthenticationGroupExtension) wallet.getKeyChainExtensions().get(AuthenticationGroupExtension.EXTENSION_ID);
+            if (authKeyTypes.stream().anyMatch(keyType -> authenticationGroupExtension.getKeyChain(keyType) == null)) {
+                // if the wallet is encrypted, don't add these keys
+                if (!wallet.isEncrypted()) {
+                    authenticationGroupExtension.addKeyChains(
+                            wallet.getParams(),
+                            wallet.getKeyChainSeed(),
+                            authKeyTypes
+                    );
 
-            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
-            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
-            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
-            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
-            authenticationGroupExtension.setWallet(wallet);
+                    authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
+                    authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
+                    authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
+                    authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING);
+
+                    authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
+                    authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
+                    authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
+                    authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
+                    authenticationGroupExtension.setWallet(wallet);
+                }
+            }
         }
         WalletEx walletEx = (WalletEx) wallet;
         if (walletEx.getCoinJoin() != null) {
@@ -639,7 +645,7 @@ public class WalletApplication extends MultiDexApplication
         try {
             final Stopwatch watch = Stopwatch.createStarted();
             walletStream = new FileInputStream(walletFile);
-            wallet = new WalletProtobufSerializer().readWallet(walletStream, authenticationGroupExtension);
+            wallet = new WalletProtobufSerializer().readWallet(walletStream, false, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
 
             if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
                 throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
@@ -686,7 +692,7 @@ public class WalletApplication extends MultiDexApplication
 
         try {
             is = openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
-            final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, getWalletExtensions());
+            final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
 
             if (!wallet.isConsistent())
                 throw new Error("inconsistent backup");
@@ -813,14 +819,15 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void resetBlockchainState() {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            blockchainStateDao.save(new BlockchainState(true));
-        });
+        blockchainStateDataProvider.resetBlockchainState();
     }
 
     public void resetBlockchain() {
         // reset the extensions
-        authenticationGroupExtension.reset();
+        if (wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID)) {
+            AuthenticationGroupExtension authenticationGroupExtension = (AuthenticationGroupExtension) wallet.getKeyChainExtensions().get(AuthenticationGroupExtension.EXTENSION_ID);
+            authenticationGroupExtension.reset();
+        }
         // implicitly stops blockchain service
         resetBlockchainState();
         Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
@@ -829,20 +836,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void resetBlockchainSyncProgress() {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            BlockchainState blockchainState;
-
-            try {
-                 blockchainState = blockchainStateDao.loadSync();
-            } catch (SQLiteException ex) {
-                blockchainState = null;
-            }
-
-            if (blockchainState != null) {
-                blockchainState.setPercentageSync(0);
-                blockchainStateDao.save(blockchainState);
-            }
-        });
+        blockchainStateDataProvider.resetBlockchainSyncProgress();
     }
 
     public void replaceWallet(final Wallet newWallet) {
@@ -1001,7 +995,6 @@ public class WalletApplication extends MultiDexApplication
         // wallet must be null for the OnboardingActivity flow
         log.info("removing wallet from memory during wipe");
         wallet = null;
-        clearExtensions();
     }
 
     public AnalyticsService getAnalyticsService() {
@@ -1103,10 +1096,10 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<List<AuthenticationKeyUsage>> observeAuthenticationKeyUsage() {
-        if (wallet == null) {
+        if (wallet == null || !wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID)) {
             return FlowKt.emptyFlow();
         }
-
+        AuthenticationGroupExtension authenticationGroupExtension = (AuthenticationGroupExtension) wallet.getKeyChainExtensions().get(AuthenticationGroupExtension.EXTENSION_ID);
         return new MasternodeObserver(authenticationGroupExtension).observeAuthenticationKeyUsage();
     }
 
@@ -1190,31 +1183,6 @@ public class WalletApplication extends MultiDexApplication
                 amount,
                 crowdNodeConfig
         );
-    }
-
-    public void clearExtensions() {
-        log.info("clearing extensions: authentication");
-        authenticationGroupExtension = new AuthenticationGroupExtension(Constants.NETWORK_PARAMETERS);
-    }
-
-    public WalletExtension[] getWalletExtensions() {
-        return new WalletExtension[] {authenticationGroupExtension};
-    }
-
-    @NonNull
-    @Override
-    public AuthenticationGroupExtension addOrGetAuthenticationGroupExtension() {
-        if (wallet.hasExtension(AuthenticationGroupExtension.EXTENSION_ID)) {
-            return (AuthenticationGroupExtension) wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
-        } else {
-            wallet.addOrUpdateExtension(authenticationGroupExtension);
-            authenticationGroupExtension.setWallet(wallet);
-            return authenticationGroupExtension;
-        }
-    }
-
-    public void add(AuthenticationGroupExtension authenticationGroupExtension) {
-        this.authenticationGroupExtension = authenticationGroupExtension;
     }
 
     @Override

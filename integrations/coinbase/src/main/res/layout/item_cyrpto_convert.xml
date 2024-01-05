@@ -19,7 +19,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    tools:context="org.dash.wallet.integration.coinbase_integration.ui.convert_currency.CryptoConvertItem"
+    tools:context="org.dash.wallet.integrations.coinbase.ui.convert_currency.CryptoConvertItem"
     tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
 
     <androidx.constraintlayout.widget.ConstraintLayout

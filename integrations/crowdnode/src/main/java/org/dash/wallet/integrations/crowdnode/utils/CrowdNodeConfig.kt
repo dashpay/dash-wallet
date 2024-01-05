@@ -46,5 +46,6 @@ open class CrowdNodeConfig @Inject constructor(
         val WITHDRAWAL_LIMIT_PER_TX = longPreferencesKey("withdrawal_limit_per_tx")
         val WITHDRAWAL_LIMIT_PER_HOUR = longPreferencesKey("withdrawal_limit_per_hour")
         val WITHDRAWAL_LIMIT_PER_DAY = longPreferencesKey("withdrawal_limit_per_day")
+        val LAST_WITHDRAWAL_BLOCK = intPreferencesKey("last_withdrawal_block")
     }
 }

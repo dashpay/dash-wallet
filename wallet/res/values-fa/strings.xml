@@ -378,13 +378,26 @@
     <string name="reason">دلیل</string>
     <string name="link_account">به حساب‌تان متصل کنید</string>
     <string name="buy_no_account_needed">دش بخرید - بدون نیاز به حساب</string>
-    <string name="your_coinbase_session_has_expired">حساب کوینبیس‌ شما منقضی شده است</string>
-    <string name="please_log_in_to_your_coinbase_account">لطفا وارد حساب کوینبیس‌تان شوید</string>
-    <string name="log_in">ورود</string>
 
     <string name="recipient_address">نشانی دریافت‌کننده</string>
     <string name="show_clipboard">نشان دادن اطلاعات در کلیپ‌برد</string>
     <string name="tap_to_paste">روی نشانی موجود در کلیپ‌برد لمس کنید تا چسبانده شود</string>
     <string name="not_dash_address">نشانی دش و یا نشانی وب درخواستی معتبر نیست</string>
     <string name="send_to_address">ارسال به نشانی</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">بهینه‌سازی مصرف باتری</string>
+    <string name="battery_optimization_subtitle_optimized">بهینه‌شده</string>
+    <string name="battery_optimization_subtitle_unrestricted">بدون محدودیت</string>
+
+    <string name="battery_optimization_dialog_optimized_title">اجازه می‌دهید دش والت در پس‌زمینه فعال باشد؟</string>
+    <string name="battery_optimization_dialog_message_optimized">این اپلیکیشن به شکلی تنظیم شده که پس از مدتی که در دید نبود، دیگر کار نکند.
+این تنظیم سبب می‌شود اطلاعیه‌های واریزی تا زمانی که اپلیکیشن از پس‌زمینه فراخوانده نشده، برایتان نمایش داده نشود
+پیشنهاد می‌کنیم اجازه دهید این اپلیکیشن در پس‌زمینه همچنان کار کند. برای این تنظیم کافی است بهینه‌سازی باتری را به حالت «بهینه‌نشده» یا «بدون محدودیت» تغییر دهید.
+نگران نباشید! ما همیشه به مقدار مصرف باتری شما اهمیت می‌دهیم. </string>
+    <string name="battery_optimization_dialog_unrestricted_title">آیا می‌خواهید در پس‌زمینه،واریزی‌هایتان را دریافت کنید؟</string>
+    <string name="battery_optimization_dialog_message_not_optimized">این اپلیکیشن به شکلی تنظیم شده که پس از مدتی که در دید نبود، همچنان به کارکرد ادامه دهد. 
+پیشنهاد می‌کنیم اجازه دهید این اپلیکیشن همچنان با بلاکچین هماهنگ باشد، حتی در مواقعی که در پس‌زمینه فعال است. 
+نگران نباشید! ما همیشه به مقدار مصرف باتری شما اهمیت می‌دهیم. </string>
+    <string name="battery_optimization_dialog_button_change">باز کردن تنظیمات</string>
 </resources>

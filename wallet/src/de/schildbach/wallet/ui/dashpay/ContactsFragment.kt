@@ -58,6 +58,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 
 enum class ContactsScreenMode {

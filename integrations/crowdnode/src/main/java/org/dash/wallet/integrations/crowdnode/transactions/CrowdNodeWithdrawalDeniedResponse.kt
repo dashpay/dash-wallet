@@ -23,8 +23,9 @@ import org.dash.wallet.common.transactions.filters.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class CrowdNodeWithdrawalDeniedResponse(networkParams: NetworkParameters): CoinsFromAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(networkParams), WITHDRAWAL_DENIED_RESPONSE_CODE
+class CrowdNodeWithdrawalDeniedResponse(networkParams: NetworkParameters) : CoinsFromAddressTxFilter(
+    CrowdNodeConstants.getCrowdNodeAddress(networkParams),
+    WITHDRAWAL_DENIED_RESPONSE_CODE
 ) {
     companion object {
         val WITHDRAWAL_DENIED_RESPONSE_CODE: Coin =

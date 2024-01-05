@@ -1,10 +1,10 @@
 -keepattributes Exceptions, InnerClasses
--keep class org.dash.wallet.integration.coinbase_integration.** {
+-keep class org.dash.wallet.integrations.coinbase_integration.** {
     public protected private *;
 }
--keep interface org.dash.wallet.integration.coinbase_integration.** {*;}
+-keep interface org.dash.wallet.integrations.coinbase_integration.** {*;}
 
--keep class org.dash.wallet.integration.uphold.** {
+-keep class org.dash.wallet.integrations.uphold.** {
     public protected private *;
 }
 

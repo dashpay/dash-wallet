@@ -378,12 +378,11 @@
     <string name="reason">سبب</string>
     <string name="link_account">قم بايصال حسابك</string>
     <string name="buy_no_account_needed">قم بشراء داش - لا حساب لازم</string>
-    <string name="your_coinbase_session_has_expired">تم انتهاء صلاحية جلسة اتصالك بكوين اكس </string>
-    <string name="please_log_in_to_your_coinbase_account">الرجاء تسجيل الدخول الى حساب كوين اكس </string>
-    <string name="log_in">تسجيل الدخول </string>
 
+    <string name="recipient_address">عنوان المستلم</string>
     <string name="show_clipboard">اظهر المحتوى في لوحة الملاحظات </string>
     <string name="tap_to_paste">اضغط على العنوان من لوحة الملاحظات للصقه</string>
     <string name="not_dash_address">ليس عنوان داش صالح او الاتصال عبر الرابط غير صالح</string>
     <string name="send_to_address">إرسال إلى عنوان</string>
-</resources>
+
+    </resources>

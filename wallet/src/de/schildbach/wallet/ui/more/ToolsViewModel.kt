@@ -42,7 +42,7 @@ class ToolsViewModel @Inject constructor(
     val blockchainStateDao: BlockchainStateDao,
 ) : ViewModel() {
 
-    val blockchainState = blockchainStateDao.load()
+    val blockchainState = blockchainStateDao.observeState()
 
     val xpub: String
     val xpubWithCreationDate: String

@@ -555,7 +555,7 @@ class PlatformRepo @Inject constructor(
     suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, useCoinJoin: Boolean) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
-            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin, false)
+            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin, true)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
         }
     }
@@ -1025,7 +1025,7 @@ class PlatformRepo @Inject constructor(
             Constants.DASH_PAY_FEE,
             keyParameter,
             useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE,
-            returnChange = false
+            returnChange = true
         )
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())

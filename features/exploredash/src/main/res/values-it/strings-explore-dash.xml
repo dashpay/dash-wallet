@@ -50,7 +50,7 @@
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d commercianti</item>
         <item quantity="many">%d </item>
-        <item quantity="other">%d </item>
+        <item quantity="other">%d commercianti</item>
     </plurals>
 
     <plurals name="explore_atm_amount">

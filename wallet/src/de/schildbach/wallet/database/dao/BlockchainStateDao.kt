@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.database.dao
 
-import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -32,9 +31,9 @@ import org.dash.wallet.common.data.entity.BlockchainState
 abstract class BlockchainStateDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    protected abstract fun insert(blockchainState: BlockchainState)
+    protected abstract suspend fun insert(blockchainState: BlockchainState)
 
-    fun save(blockchainState: BlockchainState) {
+    suspend fun saveState(blockchainState: BlockchainState) {
         if (blockchainState.replaying && blockchainState.percentageSync == 100) {
             blockchainState.replaying = false
         }
@@ -42,13 +41,7 @@ abstract class BlockchainStateDao {
     }
 
     @Query("SELECT * FROM blockchain_state LIMIT 1")
-    abstract fun load(): LiveData<BlockchainState?>
-
-    @Query("SELECT * FROM blockchain_state LIMIT 1")
-    abstract fun loadSync(): BlockchainState?
-
-    @Query("SELECT * FROM blockchain_state LIMIT 1")
-    abstract suspend fun get(): BlockchainState?
+    abstract suspend fun getState(): BlockchainState?
 
     @Query("SELECT * FROM blockchain_state LIMIT 1")
     abstract fun observeState(): Flow<BlockchainState?>

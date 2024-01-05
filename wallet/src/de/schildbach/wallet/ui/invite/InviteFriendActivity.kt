@@ -65,7 +65,7 @@ class InviteFriendActivity : LockScreenActivity() {
             }
         }
 
-        fun createIntentExistingInvite(context: Context, userId: String, inviteIndex: Int, startedByHistory: Boolean = true): Intent? {
+        fun createIntentExistingInvite(context: Context, userId: String, inviteIndex: Int, startedByHistory: Boolean = true): Intent {
             val intent = Intent(context, InviteFriendActivity::class.java)
             intent.putExtra(ARG_IDENTITY_ID, userId)
             intent.putExtra(ARG_STARTED_BY_HISTORY, startedByHistory)

@@ -412,7 +412,7 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
-    fun getCrowdNodeAPY() : Double {
+    fun getCrowdNodeAPY(): Double {
         return 0.85 * getMasternodeAPY()
     }
 }

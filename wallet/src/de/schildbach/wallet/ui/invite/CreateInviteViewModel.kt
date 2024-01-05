@@ -17,8 +17,10 @@
 
 package de.schildbach.wallet.ui.invite
 
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.BlockchainStateDao
@@ -30,6 +32,7 @@ import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.observe
 import javax.inject.Inject
 
 @HiltViewModel
@@ -42,9 +45,9 @@ class CreateInviteViewModel @Inject constructor(
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
-    val blockchainStateData = blockchainStateDao.load()
-    val blockchainState: BlockchainState?
-        get() = blockchainStateData.value
+    val blockchainStateData = blockchainStateDao.observeState().asLiveData(viewModelScope.coroutineContext)
+    //val blockchainState: LiveData<BlockchainState>
+    //    get() = blockchainStateData.asLiveData(viewModelScope)
 
     val isAbleToCreateInviteLiveData = MediatorLiveData<Boolean>().apply {
         addSource(blockchainStateData) {

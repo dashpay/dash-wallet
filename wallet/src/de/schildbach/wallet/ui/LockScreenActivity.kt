@@ -58,6 +58,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.LockScreenBroadcaster
+import org.dash.wallet.common.ui.LockScreenAware
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
@@ -496,7 +497,7 @@ open class LockScreenActivity : SecureActivity() {
             alertDialog.dismissDialog()
         }
         lockScreenBroadcaster.activatingLockScreen.call()
-        dismissDialogFragments(supportFragmentManager)
+        notifyAndDismissFragments(supportFragmentManager)
         onLockScreenActivated()
     }
 
@@ -504,16 +505,20 @@ open class LockScreenActivity : SecureActivity() {
 
     open fun onLockScreenDeactivated() { }
 
-    private fun dismissDialogFragments(fragmentManager: FragmentManager) {
+    private fun notifyAndDismissFragments(fragmentManager: FragmentManager) {
         fragmentManager.fragments
             .takeIf { it.isNotEmpty() }
             ?.forEach { fragment ->
                 // check to see if the activity is valid and fragment is added to its activity
                 if (fragment.activity != null && fragment.isAdded) {
+                    if (fragment is LockScreenAware) {
+                        fragment.onLockScreenActivated()
+                    }
+
                     if (fragment is DialogFragment) {
                         fragment.dismissAllowingStateLoss()
                     } else if (fragment is NavHostFragment) {
-                        dismissDialogFragments(fragment.childFragmentManager)
+                        notifyAndDismissFragments(fragment.childFragmentManager)
                     }
                 }
             }

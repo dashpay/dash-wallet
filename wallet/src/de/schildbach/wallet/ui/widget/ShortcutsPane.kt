@@ -87,15 +87,6 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : FlexboxLayout(conte
             this
         )
     }
-    val configButton: ShortcutButton by lazy {
-        ShortcutButton(
-            context,
-            R.drawable.ic_shortcut_add,
-            R.string.shortcut_add_shortcut,
-            this
-        )
-    }
-
     val explore: ShortcutButton by lazy {
         ShortcutButton(
             context,
@@ -177,7 +168,10 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : FlexboxLayout(conte
     private fun addShortcut(shortcut: ShortcutButton) {
         if (!children.contains(shortcut)) {
             val index = min(childCount, shortcuts.indexOf(shortcut))
-            val layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            val layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
             addView(shortcut, index, layoutParams)
         }
     }

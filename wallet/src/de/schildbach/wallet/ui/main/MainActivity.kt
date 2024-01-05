@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui.main
 
 import android.Manifest
-import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -27,6 +26,7 @@ import android.nfc.NdefMessage
 import android.nfc.NfcAdapter
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.view.MenuItem
 import android.view.WindowManager
@@ -52,6 +52,7 @@ import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
 import de.schildbach.wallet.ui.main.WalletActivityExt.checkTimeSkew
 import de.schildbach.wallet.ui.main.WalletActivityExt.handleFirebaseAction
+import de.schildbach.wallet.ui.main.WalletActivityExt.requestDisableBatteryOptimisation
 import de.schildbach.wallet.ui.main.WalletActivityExt.setupBottomNavigation
 import de.schildbach.wallet.ui.main.WalletActivityExt.showFiatCurrencyChangeDetectedDialog
 import de.schildbach.wallet.ui.util.InputParser
@@ -105,6 +106,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private var showBackupWalletDialog = false
     private var retryCreationIfInProgress = true
     private var pendingInvite: InvitationLinkData? = null
+
+    val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
+        requestDisableBatteryOptimisation()
+    };
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -297,7 +302,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     override fun onNewKeyChainEncrypted() {
-        //TODO: can we remove this?
+        // TODO: can we remove this?
     }
 
     private fun showRestoreWalletFromSeedDialog() {
@@ -399,7 +404,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                         applicationInfo,
                         packageInfoProvider,
                         configuration,
-                        walletData.wallet
+                        walletData.wallet,
+                        walletApplication.getSystemService(PowerManager::class.java)
                     )
                     return applicationInfo
                 }
@@ -453,7 +459,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                             this@MainActivity,
                             packageInfoProvider,
                             configuration,
-                            walletData.wallet
+                            walletData.wallet,
+                            walletApplication
                         ).buildAlertDialog()
                         alertDialog.show()
                     } else {
@@ -566,10 +573,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             explainPushNotifications()
         }
     }
-
-    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        // do nothing
-    };
 
     /**
      * Android 13 - Show system dialog to get notification permission from user, if not granted

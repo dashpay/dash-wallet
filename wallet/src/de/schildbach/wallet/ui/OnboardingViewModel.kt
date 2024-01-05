@@ -17,9 +17,8 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Application
+import androidx.lifecycle.ViewModel
 import android.content.Intent
-import androidx.lifecycle.AndroidViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -27,6 +26,7 @@ import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.WalletFactory
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.MnemonicException
@@ -34,19 +34,21 @@ import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.Configuration
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
-    application: Application,
+    private val walletApplication: WalletApplication,
+    private val walletFactory: WalletFactory,
+    private val configuration: Configuration,
     val analytics: AnalyticsService,
     val platformRepo: PlatformRepo
-) : AndroidViewModel(application) {
+) : ViewModel() {
+
 
     private val log = LoggerFactory.getLogger(OnboardingViewModel::class.java)
-
-    private val walletApplication = application as WalletApplication
 
     internal val showToastAction = SingleLiveEvent<String>()
     internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
@@ -56,17 +58,14 @@ class OnboardingViewModel @Inject constructor(
 
     fun createNewWallet(onboardingInvite: InvitationLinkData?) {
         walletApplication.initEnvironmentIfNeeded()
-        val wallet = WalletEx.createDeterministic(Constants.NETWORK_PARAMETERS, Script.ScriptType.P2PKH)
-        for (extension in walletApplication.getWalletExtensions()) {
-            wallet.addExtension(extension)
-        }
+        val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS)
         log.info("successfully created new wallet")
         walletApplication.setWallet(wallet)
-        walletApplication.configuration.armBackupSeedReminder()
+        configuration.armBackupSeedReminder()
 
         if (onboardingInvite != null) {
             analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
-            startActivityAction.call(AcceptInviteActivity.createIntent(getApplication(), onboardingInvite, true))
+            startActivityAction.call(AcceptInviteActivity.createIntent(walletApplication, onboardingInvite, true))
         } else {
             finishCreateNewWalletAction.call(Unit)
         }
@@ -79,7 +78,7 @@ class OnboardingViewModel @Inject constructor(
             if (!walletApplication.isWalletUpgradedToBIP44) {
                 walletApplication.wallet!!.addKeyChain(Constants.BIP44_PATH)
             }
-            walletApplication.configuration.armBackupSeedReminder()
+            configuration.armBackupSeedReminder()
 
             finishUnecryptedWalletUpgradeAction.call(Unit)
         }

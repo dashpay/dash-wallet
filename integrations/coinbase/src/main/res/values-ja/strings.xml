@@ -37,7 +37,7 @@
     <string name="coinbase_fee">Coinbaseの手数料</string>
     <string name="total">合計</string>
     <string name="order_preview">注文プレビュー</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">この端末のDashウォレットで%sDashを受け取ります。送金完了まで2-3分ほどかかることがあります。 </string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">この端末のDashウォレットで~ %sDashを受け取ります。送金が完了するまでに2～3分かかる場合があります。</string>
     <string name="amount_in_dash">金額(Dash)</string>
     <string name="cancel">キャンセル</string>
     <string name="confirm_sec">確認 (%s秒)</string>
@@ -57,11 +57,10 @@
     <string name="purchase_failed">購入に失敗しました</string>
     <string name="transfer_failed">取引に失敗しました</string>
     <string name="conversion_failed">変換に失敗しました</string>
-    <string name="transfer_failed_msg">Dashはお客様のCoinbaseアカウントに正常に入金されました。しかし、この端末でDashウォレットに送金する際に問題が発生しました。</string>
-    <string name="purchase_failed_msg">問題が発生しました</string>
+    <string name="transfer_failed_msg">Dashは正常にお客様のCoinbaseアカウントに入金されました。しかし、この端末のDashウォレットへの送金には問題がありました。</string>
     <string name="it_could_take_up_to_2_3_minutes">この端末のDashウォレットにDashが送金されるのに、2-3分かかることがあります。</string>
     <string name="it_could_take_up_to_5_minutes">この端末では、Coinbaseのアカウント内の%sからDashウォレット内のDashに変換するのに最大5分かかることがあります。</string>
-    <string name="it_could_take_up_to_5_minutes_to_coinbase">この端末では、Dashウォレット内のDashからCoinbaseのアカウント内の%sに変換するのに最大で5分かかることがあります。</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">この端末上のDashウォレットからお客様のCoinbaseアカウントの%sにDashを変換するには、最大5分かかります。</string>
     <string name="contact_coinbase_support">Coinbaseサポートに問い合わせる</string>
     <string name="fees_in_crypto_purchase">仮想通貨購入の手数料</string>
     <string name="coinbase_fee_info_msg_content">表示されているCoinbaseの手数料に加え、スプレッドもその価格に含まれています。仮想通貨市場は変動が激しいため、このようにすることで取引執行のための価格を一時的に固定することができます。</string>
@@ -77,9 +76,9 @@
     <string name="to_your_coinbase_account">Coinbaseのアカウントへ</string>
     <string name="from_dash_wallet_on_this_device">この端末のDashウォレットから</string>
     <string name="you_will_receive">入金できます</string>
-    <string name="we_didnt_find_any_assets" >お客様のCoinbaseアカウントに資金が見つかりませんでした。</string>
-    <string name="you_dont_own_any_crypto" >お客様は仮想通貨をお持ちではありません。仮想通貨を購入して始めましょう。</string>
-    <string name="buy_crypto_on_coinbase" >Coinbaseで仮想通貨を購入する</string>
+    <string name="we_didnt_find_any_assets">お客様のCoinbaseアカウントに資産は見つかりませんでした。</string>
+    <string name="you_dont_own_any_crypto">お客様は仮想通貨をお持ちではありません。仮想通貨を買って始めましょう。</string>
+    <string name="buy_crypto_on_coinbase">Coinbaseで仮想通貨を購入する</string>
     <string name="auth_limit_description">Coinbaseの認証制限を超えてしまいました。</string>
     <string name="debit_money">口座からお金を引き落とす</string>
     <string name="change_limit">この制限を変更する</string>
@@ -98,11 +97,10 @@
     <string name="verify_continue">検証する</string>
     <string name="enter_auth_code">Coinbaseの2FAコードを入力する</string>
     <string name="extra_steps_label">この追加ステップは、お客様が本当に取引を行おうとしていることを証明するために行われます。</string>
-    <string name="need_help">お困りですか?</string>
+    <string name="need_help">何かお困りですか。</string>
     <string name="coinbase_fa_code_hint">Coinbaseの2FAコード</string>
     <string name="enter_code_details">これは、お使いの携帯電話のSMSに記載されたコードだと思われます。該当しない場合は、認証アプリからコードを入力してください。</string>
     <string name="two_fa_code_incorrect">コードが正しくありません。ご確認の上、再度ご入力ください。</string>
-    <string name="invalid_code">そのコードは無効になっています。もう一度お試しください。</string>
     <string name="verify_code">検証する</string>
     <string name="you_dont_have_enough_balance">残高が不足しています</string>
     <string name="transfer_amount">送金する</string>
@@ -112,8 +110,11 @@
     <string name="transfer_dash_successful">送金に成功しました</string>
     <string name="it_could_take_up_to_10_minutes">Coinbaseからこの端末のDashウォレットにDashを送金するのに、最長10分かかる場合があります。</string>
     <string name="it_could_take_up_to_10_minutes_to_coinbase">この端末のDashウォレットからCoinbaseのアカウントにDashを転送するのに、最大10分かかることがあります。</string>
-    <string name="transfer_dash_failed_msg">この端末のDashウォレットに送金する際に問題が発生しました。</string>
+    <string name="transfer_dash_failed_msg">この端末のDashウォレットへの送金中に問題がありました。</string>
     <string name="insufficient_money_to_transfer">ウォレット内の通貨の金額が不足しているため、送金できません。</string>
     <string name="amount_to_transfer">%s %s %sを入金できます</string>
     <string name="amount_to_transfer_dash">%sを入金します</string>
+    <string name="your_coinbase_session_has_expired">お客様のCoinbaseのセッションは有効期限切れです</string>
+    <string name="please_log_in_to_your_coinbase_account">お客様のCoinbaseアカウントにログインしてください</string>
+    <string name="coinbase_use_bank_account">リンクされた銀行口座を使用して購入代金を入金しますか。</string>
     </resources>

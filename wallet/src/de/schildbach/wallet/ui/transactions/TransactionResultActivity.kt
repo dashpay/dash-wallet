@@ -226,7 +226,8 @@ class TransactionResultActivity : LockScreenActivity() {
             this,
             packageInfoProvider,
             configuration,
-            viewModel.walletData.wallet
+            viewModel.walletData.wallet,
+            walletApplication
         ).buildAlertDialog().show()
     }
 

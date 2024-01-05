@@ -16,9 +16,14 @@
 
 package de.schildbach.wallet.ui
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.viewModels
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
@@ -28,6 +33,7 @@ import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.AboutActivity
+import de.schildbach.wallet.ui.more.SettingsViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySettingsBinding
 import kotlinx.coroutines.flow.filterNotNull
@@ -81,6 +87,48 @@ class SettingsActivity : LockScreenActivity() {
 
         binding.rescanBlockchain.setOnClickListener { resetBlockchain() }
         binding.notifications.setOnClickListener { systemActions.openNotificationSettings() }
+        binding.batteryOptimization.setOnClickListener {
+            if (ContextCompat.checkSelfPermission(
+                    walletApplication,
+                    Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                ) == PackageManager.PERMISSION_GRANTED &&
+                !viewModel.isIgnoringBatteryOptimizations
+            ) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_bolt_border,
+                    getString(R.string.battery_optimization_dialog_optimized_title),
+                    getString(R.string.battery_optimization_dialog_message_optimized),
+                    getString(R.string.permission_deny),
+                    getString(R.string.permission_allow)
+                ).show(this) { allow ->
+                    if (allow == true) {
+                        startActivity(
+                            Intent(
+                                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                Uri.parse("package:$packageName")
+                            )
+                        )
+                    }
+                }
+            } else {
+                AdaptiveDialog.create(
+                    R.drawable.ic_transaction_received_border,
+                    getString(R.string.battery_optimization_dialog_unrestricted_title),
+                    getString(R.string.battery_optimization_dialog_message_not_optimized),
+                    getString(R.string.close),
+                    getString(R.string.battery_optimization_dialog_button_change)
+                ).show(this) { allow ->
+                    if (allow == true) {
+                        // Show the list of non-optimized apps
+                        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        if (intent.resolveActivity(packageManager) != null) {
+                            startActivity(intent)
+                        }
+                    }
+                }
+            }
+        }
+        setBatteryOptimizationText()
         binding.coinjoin.setOnClickListener {
             lifecycleScope.launch {
                 val shouldShowFirstTimeInfo = viewModel.shouldShowCoinJoinInfo()
@@ -125,6 +173,21 @@ class SettingsActivity : LockScreenActivity() {
                 }
             }
         }
+    }
+
+    private fun setBatteryOptimizationText() {
+        binding.batterySettingsSubtitle.text = getString(
+            if (viewModel.isIgnoringBatteryOptimizations) {
+                R.string.battery_optimization_subtitle_unrestricted
+            } else {
+                R.string.battery_optimization_subtitle_optimized
+            }
+        )
+    }
+
+    override fun onResume() {
+        super.onResume()
+        setBatteryOptimizationText()
     }
 
     private fun resetBlockchain() {
