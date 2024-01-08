@@ -22,7 +22,6 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.service.CoinJoinService
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -35,7 +34,6 @@ import javax.inject.Inject
 @HiltViewModel
 open class CoinJoinLevelViewModel @Inject constructor(
     private val analytics: AnalyticsService,
-    private val coinJoinService: CoinJoinService,
     private val coinJoinConfig: CoinJoinConfig,
     private var networkState: NetworkStateInt
 ) : ViewModel() {
@@ -43,7 +41,7 @@ open class CoinJoinLevelViewModel @Inject constructor(
     val isMixing: Boolean
         get() = _mixingMode.value != CoinJoinMode.NONE
 
-    val _mixingMode = MutableStateFlow<CoinJoinMode>(CoinJoinMode.NONE)
+    private val _mixingMode = MutableStateFlow(CoinJoinMode.NONE)
 
     val mixingMode: Flow<CoinJoinMode>
         get() = _mixingMode

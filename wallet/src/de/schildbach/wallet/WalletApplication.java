@@ -391,23 +391,23 @@ public class WalletApplication extends MultiDexApplication
                             authKeyTypes
                     );
 
-            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
-            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
-            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
-            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING);
+                    authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
+                    authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
+                    authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
+                    authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING);
 
                     authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
                     authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
                     authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
                     authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
-            authenticationGroupExtension.setWallet(wallet);
+                    authenticationGroupExtension.setWallet(wallet);
+                }
+            }
         }
         WalletEx walletEx = (WalletEx) wallet;
         if (walletEx.getCoinJoin() != null) {
             // this wallet is not encrypted yet
             walletEx.initializeCoinJoin(null, 0);
-                }
-            }
         }
     }
 
