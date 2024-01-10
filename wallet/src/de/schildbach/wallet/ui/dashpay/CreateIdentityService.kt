@@ -27,7 +27,7 @@ import kotlinx.coroutines.*
 import org.bitcoinj.core.RejectMessage
 import org.bitcoinj.core.RejectedTransactionException
 import org.bitcoinj.core.TransactionConfidence
-import org.bitcoinj.evolution.CreditFundingTransaction
+import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
@@ -265,10 +265,10 @@ class CreateIdentityService : LifecycleService() {
         when {
             (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring) -> {
                 // TODO: handle case when blockchain reset has happened and the cftx was not found yet
-                val cftx = blockchainIdentityDataTmp.findCreditFundingTransaction(walletApplication.wallet)
+                val cftx = blockchainIdentityDataTmp.findAssetLockTransaction(walletApplication.wallet)
                         ?: throw IllegalStateException()
 
-                restoreIdentity(cftx.creditBurnIdentityIdentifier.bytes)
+                restoreIdentity(cftx.identityId.bytes)
                 return
             }
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
@@ -325,10 +325,10 @@ class CreateIdentityService : LifecycleService() {
         val authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
         // look for the credit funding tx in case there was an error in the next step previously
-        for (tx in authenticationGroupExtension.creditFundingTransactions) {
-            tx as CreditFundingTransaction
-            if (authenticationGroupExtension.identityFundingKeyChain.findKeyFromPubHash(tx.creditBurnPublicKeyId.bytes) != null) {
-                blockchainIdentity.initializeCreditFundingTransaction(tx)
+        for (tx in authenticationGroupExtension.assetLockTransactions) {
+            tx as AssetLockTransaction
+            if (authenticationGroupExtension.identityFundingKeyChain.findKeyFromPubHash(tx.assetLockPublicKeyId.bytes) != null) {
+                blockchainIdentity.initializeAssetLockTransaction(tx)
             }
         }
 
@@ -338,9 +338,9 @@ class CreateIdentityService : LifecycleService() {
             // Step 2: Create and send the credit funding transaction
             //
             // check to see if the funding transaction exists
-            if (blockchainIdentity.creditFundingTransaction == null) {
+            if (blockchainIdentity.assetLockTransaction == null) {
                 val useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE
-                platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey, useCoinJoin)
+                platformRepo.createAssetLockTransactionAsync(blockchainIdentity, encryptionKey, useCoinJoin)
             }
         }
 
@@ -348,12 +348,12 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_SENDING)
             val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_ISLOCK)
             // check to see if the funding transaction has been sent previously
-            val sent = blockchainIdentity.creditFundingTransaction!!.confidence?.let {
+            val sent = blockchainIdentity.assetLockTransaction!!.confidence?.let {
                 it.isSent || it.isIX || it.numBroadcastPeers() > 0 || it.confidenceType == TransactionConfidence.ConfidenceType.BUILDING
             } ?: false
 
             if (!sent) {
-                sendTransaction(blockchainIdentity.creditFundingTransaction!!)
+                sendTransaction(blockchainIdentity.assetLockTransaction!!)
             }
             timerIsLock.logTiming()
         }
@@ -407,10 +407,10 @@ class CreateIdentityService : LifecycleService() {
 
         when {
             (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring) -> {
-                val cftx = blockchainIdentityDataTmp.findCreditFundingTransaction(walletApplication.wallet)
+                val cftx = blockchainIdentityDataTmp.findAssetLockTransaction(walletApplication.wallet)
                         ?: throw IllegalStateException()
 
-                restoreIdentity(cftx.creditBurnIdentityIdentifier.bytes)
+                restoreIdentity(cftx.identityId.bytes)
                 return
             }
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
@@ -474,10 +474,10 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 2: Create and send the credit funding transaction
             //
-            platformRepo.obtainCreditFundingTransactionAsync(blockchainIdentity, blockchainIdentityData.invite!!)
+            platformRepo.obtainAssetLockTransactionAsync(blockchainIdentity, blockchainIdentityData.invite!!)
         } else {
             // if we are retrying, then we need to initialize the credit funding tx
-            platformRepo.obtainCreditFundingTransactionAsync(blockchainIdentity, blockchainIdentityData.invite!!)
+            platformRepo.obtainAssetLockTransactionAsync(blockchainIdentity, blockchainIdentityData.invite!!)
         }
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_SENDING) {
@@ -647,24 +647,24 @@ class CreateIdentityService : LifecycleService() {
 
         val authExtension = walletApplication.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
         //authExtension.setWallet(walletApplication.wallet!!) // why is the wallet not set?  we didn't deserialize it probably!
-        val cftxs = authExtension.creditFundingTransactions
+        val cftxs = authExtension.assetLockTransactions
 
-        val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { it.creditBurnIdentityIdentifier.bytes!!.contentEquals(identity) }
+        val creditFundingTransaction: AssetLockTransaction? = cftxs.find { it.identityId.bytes!!.contentEquals(identity) }
 
         val existingBlockchainIdentityData = blockchainIdentityDataDao.load()
         if (existingBlockchainIdentityData != null) {
             log.info("Attempting restore of existing identity and username; save credit funding txid")
             val blockchainIdentity = platformRepo.blockchainIdentity
-            blockchainIdentity.creditFundingTransaction = creditFundingTransaction
+            blockchainIdentity.assetLockTransaction = creditFundingTransaction
             existingBlockchainIdentityData.creditFundingTxId = creditFundingTransaction!!.txId
             platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
             return
         }
 
-        val loadingFromCreditFundingTransaction = creditFundingTransaction != null
+        val loadingFromAssetLockTransaction = creditFundingTransaction != null
         val existingIdentity: Identity?
 
-        if (!loadingFromCreditFundingTransaction) {
+        if (!loadingFromAssetLockTransaction) {
             existingIdentity = platformRepo.getIdentityFromPublicKeyId()
             if (existingIdentity == null) {
                 throw IllegalArgumentException("identity $identity does not match a credit funding transaction or it doesn't exist on the network")
@@ -690,7 +690,7 @@ class CreateIdentityService : LifecycleService() {
         // Step 3: Find the identity
         //
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERING)
-        if (loadingFromCreditFundingTransaction) {
+        if (loadingFromAssetLockTransaction) {
             platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
         } else {
             val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
@@ -746,7 +746,7 @@ class CreateIdentityService : LifecycleService() {
      * @param cftx The credit funding transaction to send
      * @return True if successful
      */
-    private suspend fun sendTransaction(cftx: CreditFundingTransaction): Boolean {
+    private suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
         log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
             cftx.confidence.addEventListener(object : TransactionConfidence.Listener {

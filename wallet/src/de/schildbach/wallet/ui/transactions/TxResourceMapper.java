@@ -28,7 +28,7 @@ import org.bitcoinj.core.Context;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.evolution.CreditFundingTransaction;
+import org.bitcoinj.evolution.AssetLockTransaction;
 import org.bitcoinj.wallet.AuthenticationKeyChainGroup;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
@@ -71,13 +71,13 @@ public class TxResourceMapper {
                     }
                     CoinJoinTransactionType coinJoinType = CoinJoinTransactionType.fromTx(tx, wallet);
 
-                    if (dashPayWallet != null && CreditFundingTransaction.isCreditFundingTransaction(tx)) {
+                    if (dashPayWallet != null && AssetLockTransaction.isAssetLockTransaction(tx)) {
                         AuthenticationGroupExtension authExtension =
                                 (AuthenticationGroupExtension) dashPayWallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
-                        CreditFundingTransaction cftx = authExtension.getCreditFundingTransaction(tx);
+                        AssetLockTransaction cftx = authExtension.getAssetLockTransaction(tx);
 
                         AuthenticationKeyChainGroup group = ((AuthenticationKeyChainGroup)authExtension.getKeyChainGroup());
-                        switch (group.getKeyChainType(cftx.getCreditBurnPublicKeyId().getBytes())) {
+                        switch (group.getKeyChainType(cftx.getAssetLockPublicKeyId().getBytes())) {
                             case INVITATION_FUNDING:
                                 typeId = R.string.dashpay_invite_fee;
                                 break;
