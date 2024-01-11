@@ -572,7 +572,7 @@ class PlatformRepo @Inject constructor(
                 cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
             val cftx = AssetLockTransaction(platform.params, cftxData!!.transaction)
             val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
-            cftx.assetLockPublicKey = privateKey
+            cftx.setAssetLockPublicKey(privateKey)
 
             // TODO: when all instantsend locks are deterministic, we don't need the catch block
             val instantSendLock = try {
