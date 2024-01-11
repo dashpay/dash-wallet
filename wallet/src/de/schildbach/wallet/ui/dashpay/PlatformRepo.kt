@@ -570,9 +570,9 @@ class PlatformRepo @Inject constructor(
             //TODO: remove when iOS uses big endian
             if (cftxData == null)
                 cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
-            val cftx = AssetLockTransaction(platform.params, cftxData!!.transaction)
+            val assetLockTx = AssetLockTransaction(platform.params, cftxData!!.transaction)
             val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
-            cftx.addAssetLockPublicKey(privateKey)
+            assetLockTx.addAssetLockPublicKey(privateKey)
 
             // TODO: when all instantsend locks are deterministic, we don't need the catch block
             val instantSendLock = try {
@@ -581,8 +581,8 @@ class PlatformRepo @Inject constructor(
                 InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISLOCK_VERSION)
             }
 
-            cftx.confidence.setInstantSendLock(instantSendLock)
-            blockchainIdentity.initializeAssetLockTransaction(cftx)
+            assetLockTx.confidence.setInstantSendLock(instantSendLock)
+            blockchainIdentity.initializeAssetLockTransaction(assetLockTx)
         }
     }
 
