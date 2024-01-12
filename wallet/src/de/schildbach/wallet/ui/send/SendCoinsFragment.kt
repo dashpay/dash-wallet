@@ -175,7 +175,13 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             errorMessage = when (dryRunException) {
                 is Wallet.DustySendRequested -> getString(R.string.send_coins_error_dusty_send)
                 is InsufficientMoneyException -> if (!requirePinForBalance || userAuthorizedDuring) {
-                    getString(R.string.send_coins_error_insufficient_money)
+                    getString(
+                        if (viewModel.isCoinJoinInsufficentMoneyException) {
+                            R.string.send_coins_error_insufficient_mixed_money
+                        } else {
+                            R.string.send_coins_error_insufficient_money
+                        }
+                    )
                 } else {
                     ""
                 }
