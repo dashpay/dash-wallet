@@ -1,4 +1,33 @@
 Dash Wallet
+v10.0.2
+* Fix Syncing... issue
+* Fix CrowdNode and Masternode APY calculation
+* Update to dashj 20.0.2 (block reward fix)
+* Fix Rescan Blockchain failure on older wallets
+
+v10.0.1
+* Fix crash with InactivityService with no wallet
+* Fix crash on Android 13 and 14 when requesting notification permissions
+
+v10.0.0
+* Support Dash Core v20 network protocol
+* Update translations
+* Coinbase: hide buy swap features and information
+* Crowdnode: add per block withdrawal limit
+* Fix crash when dismissing Battery Optimization info dialog
+
+v9.1.1
+* Import Private Key Image Crash Fix
+* Add support to change battery optimization
+* Decrease shortcut fonts for some languages
+* Fix bug where MN keys remained from previous wallet
+* Update Coinbase Buy API
+* CrowdNode: Increase precision of Withdrawals
+* CrowdNode: Fix grammar on How staking works page
+
+v9.1.0
+* Add Topper Integration
+
 v9.0.6
 * Update to dashj 19.0.6
 * Fix stuck Crowdnode Signup

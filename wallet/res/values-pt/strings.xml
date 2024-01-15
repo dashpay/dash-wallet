@@ -367,7 +367,6 @@
     <string name="activity_security_hide_balance">Auto-esconder Saldo</string>
     <string name="reset_to_default">Restaurar ao Padrão</string>
 
-    <string name="payment_protocol_default_error_title">Erro no pagamento</string>
     <string name="payment_protocol_insufficient_funds_error_title">Saldo Insuficiente</string>
     <string name="payment_protocol_insufficient_funds_error_message">Você não tem fundos suficientes para completar esta transação</string>
 
@@ -375,17 +374,24 @@
     <string name="select_a_service">Selecione um serviço</string>
     <string name="activity_buy_and_sell_dash_filter">Filtro</string>
     <string name="clear_filter">Limpar Filtro</string>
-    <string name="select_currency">Selecione a moeda</string>
     <string name="reason">Razão</string>
     <string name="link_account">Conectar sua conta</string>
     <string name="buy_no_account_needed">Compre Dash · Não é necessário ter uma conta</string>
-    <string name="your_coinbase_session_has_expired">Sua sessão na Coinbase expirou</string>
-    <string name="please_log_in_to_your_coinbase_account">Por favor, faça login em sua conta Coinbase</string>
-    <string name="log_in">Entrar</string>
 
-    <string name="recipient_address">Endereço da carteira</string>
+    <string name="recipient_address">Endereço do Destinatário</string>
     <string name="show_clipboard">Exibir conteúdo na área de transferência </string>
     <string name="tap_to_paste">Toque no endereço da área de transferência para colá-lo</string>
     <string name="not_dash_address">Endereço Dash inválido ou solicitação de URL inválida</string>
     <string name="send_to_address">Enviar para Endereço</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Otimização de bateria</string>
+    <string name="battery_optimization_subtitle_optimized">Otimizado</string>
+    <string name="battery_optimization_subtitle_unrestricted">Sem restrições</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Permitir que a Carteira Dash seja executada em segundo plano?</string>
+    <string name="battery_optimization_dialog_message_optimized">Este aplicativo está configurado para parar de ser executado após algum tempo sem estar visível.\n\nIsso resultará na falta de recebimento de notificações de pagamento até que o aplicativo retorne ao primeiro plano.\n\nRecomendamos permitir que este aplicativo seja executado em segundo plano, configurando a otimização de bateria para \"Não Otimizado\" ou \"Sem Restrições\".\n\nNão se preocupe, sempre cuidaremos do uso da sua bateria.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Você deseja receber pagamentos em segundo plano? </string>
+    <string name="battery_optimization_dialog_message_not_optimized">Este aplicativo está configurado para continuar em execução mesmo após algum tempo sem estar visível.\n\nSugerimos permitir que este aplicativo esteja sempre atualizado com a blockchain, mesmo em segundo plano.\n\nNão se preocupe, sempre cuidaremos do uso da sua bateria.</string>
+    <string name="battery_optimization_dialog_button_change">Abrir Configurações</string>
 </resources>

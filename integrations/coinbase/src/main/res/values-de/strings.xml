@@ -37,7 +37,7 @@
     <string name="coinbase_fee">Coinbase Gebühr</string>
     <string name="total">Gesamt</string>
     <string name="order_preview">Vorschau bestellen</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Du erhältst %s Dash auf die Dash Wallet dieses Gerätes. Bitte beachte, dass es 2-3 Minuten dauern kann bis der Transfer vollzogen ist.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Du wirst ~ %s Dash auf der Dash Wallet auf diesem Gerät erhalten. Bitte beachte, dass es 2-3 Minuten dauern kann, bis der Transfer abgeschlossen ist.</string>
     <string name="amount_in_dash">Betrag in Dash</string>
     <string name="cancel">Abbrechen</string>
     <string name="confirm_sec">Bestätigen (%ss)</string>
@@ -57,11 +57,10 @@
     <string name="purchase_failed">Kauf fehlgeschlagen</string>
     <string name="transfer_failed">Übertragung fehlgeschlagen</string>
     <string name="conversion_failed">Konvertierung fehlgeschlagen</string>
-    <string name="transfer_failed_msg">Die Dash wurden deinem Coinbase Konto erfolgreich gutgeschrieben. Es gab aber ein Problem beim Übertragen auf die Dash Wallet dieses Gerätes.</string>
-    <string name="purchase_failed_msg">Es ist etwas schiefgelaufen</string>
+    <string name="transfer_failed_msg">Die Dash wurden erfolgreich in dein Coinbase Konto eingezahlt. Aber es entstand ein Problem diese auf die Dash Wallet auf diesem Gerät zu transferieren.</string>
     <string name="it_could_take_up_to_2_3_minutes">Es kann 2-3 Minuten dauern, bis die Dash auf die Dash Wallet dieses Gerätes transferiert werden.</string>
     <string name="it_could_take_up_to_5_minutes">Es kann bis zu 5 Minuten dauern, um die %s von deinem Coinbase Konto in Dash auf die Dash Wallet deines Gerätes umzuwandeln.</string>
-    <string name="it_could_take_up_to_5_minutes_to_coinbase">Es kann bis zu 5 Minuten dauern, um die Dash von der Dash Wallet dieses Gerätes in %s auf deinem Coinbase Konto umzuwandeln.</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">Es kann bis zu 5 Minuten dauern, damit die Dash von der Dash Wallet auf diesem Gerät zu %s auf dein Coinbase Konto übertragen sind.</string>
     <string name="contact_coinbase_support">Coinbase Support kontaktieren</string>
     <string name="fees_in_crypto_purchase">Gebühren bei Kryptowährungskäufen</string>
     <string name="coinbase_fee_info_msg_content">Zusätzlich zu der angezeigten Coinbase-Gebühr schließen wir einen Spread in den Preis ein. Kryptowährungsmärkte sind volatil, und dies ermöglicht es uns, einen Preis für die Handelsausführung vorübergehend festzulegen.</string>
@@ -77,9 +76,9 @@
     <string name="to_your_coinbase_account">auf dein Coinbase Konto</string>
     <string name="from_dash_wallet_on_this_device">Von der Dash Wallet auf diesem Gerät</string>
     <string name="you_will_receive">Du erhälst</string>
-    <string name="we_didnt_find_any_assets" >Es befindet sich kein Guthaben auf deinem Coinbase Konto.</string>
-    <string name="you_dont_own_any_crypto" >Du besitzt keine Kryptowährung. Kaufe welche um loszulegen..</string>
-    <string name="buy_crypto_on_coinbase" >Kauf Kryptowährung auf Coinbase</string>
+    <string name="we_didnt_find_any_assets">Wir konnten kein Guthaben auf deinem Coinbase Konto entdecken.</string>
+    <string name="you_dont_own_any_crypto">Du besitzt keine Kryptowährung. Leg los und kaufe welche.</string>
+    <string name="buy_crypto_on_coinbase">Kauf Kryptowährung auf Coinbase</string>
     <string name="auth_limit_description">Du hast den Berechtigungsrahmen von Coinbase überschritten.</string>
     <string name="debit_money">Geld von deinem Konto abbuchen</string>
     <string name="change_limit">Ändere dieses Limit</string>
@@ -102,7 +101,6 @@
     <string name="coinbase_fa_code_hint">Coinbase 2FA Code</string>
     <string name="enter_code_details">Es könnte ein Code aus einer SMS auf deinem Telefon sein. Wenn nicht, trage den Code von deiner Authentifizierung-App ein.</string>
     <string name="two_fa_code_incorrect">Diese Code ist falsch. Bitte kontrollieren und erneut versuchen!</string>
-    <string name="invalid_code">Diese Code ist ungültig. Bitte erneut versuchen</string>
     <string name="verify_code">Verifizieren</string>
     <string name="you_dont_have_enough_balance">Du hast nicht genug Guthaben</string>
     <string name="transfer_amount">Transferieren</string>
@@ -112,8 +110,11 @@
     <string name="transfer_dash_successful">Transfer erfolgreich</string>
     <string name="it_could_take_up_to_10_minutes">Es kann bis zu 10 Minuten dauern bis Dash von Coinbase auf die Dash Wallet  dieses Gerätes übertragen werden.</string>
     <string name="it_could_take_up_to_10_minutes_to_coinbase">Es kann bis zu 10 Minuten dauern bis Dash von der Dash Wallet dieses Gerätes  auf Coinbase übertragen werden.</string>
-    <string name="transfer_dash_failed_msg">Es gab ein Problem bei dem Übertragen auf die Dash Wallet dieses Gerätes.</string>
+    <string name="transfer_dash_failed_msg">Es entstand ein Problem bei dem Überweisen auf die Dash Wallet dieses Gerätes.</string>
     <string name="insufficient_money_to_transfer">Die Menge an Coins in der Wallet ist zu klein um sie zu versenden.</string>
     <string name="amount_to_transfer">Du erhältst %s %s %s</string>
     <string name="amount_to_transfer_dash">Du wirst %s erhalten.</string>
+    <string name="your_coinbase_session_has_expired">Deine Coinbase Session ist abgelaufen.</string>
+    <string name="please_log_in_to_your_coinbase_account">Bitte logge dich in deinen Coinbase Account ein.</string>
+    <string name="coinbase_use_bank_account">Möchtest du eine Einzahlung mit dem hinterlegten Bankkonto durchführen?</string>
     </resources>

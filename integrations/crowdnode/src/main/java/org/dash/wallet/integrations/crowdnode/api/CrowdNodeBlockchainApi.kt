@@ -129,7 +129,9 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         val selector = ByAddressCoinSelector(accountAddress)
 
         return paymentService.sendCoins(
-            crowdNodeAddress, requestValue, selector,
+            crowdNodeAddress,
+            requestValue,
+            selector,
             emptyWallet = false,
             checkBalanceConditions = false
         )
@@ -145,7 +147,6 @@ open class CrowdNodeBlockchainApi @Inject constructor(
             errorResponse
         ).first()
 
-
         if (deniedResponse.matches(tx) || errorResponse.matches(tx)) {
             throw CrowdNodeException(CrowdNodeException.WITHDRAWAL_ERROR)
         }
@@ -156,8 +157,8 @@ open class CrowdNodeBlockchainApi @Inject constructor(
     suspend fun waitForSignUpResponse(): Transaction {
         val acceptFilter = CrowdNodeAcceptTermsResponse(params)
         val errorFilter = CrowdNodeErrorResponse(params, CrowdNodeSignUpTx.SIGNUP_REQUEST_CODE)
-        val tx = walletData.getTransactions(acceptFilter, errorFilter).firstOrNull() ?:
-            walletData.observeTransactions(true, acceptFilter, errorFilter).first()
+        val tx = walletData.getTransactions(acceptFilter, errorFilter).firstOrNull()
+            ?: walletData.observeTransactions(true, acceptFilter, errorFilter).first()
 
         if (errorFilter.matches(tx)) {
             throw CrowdNodeException("SignUp request returned an error")
@@ -170,8 +171,8 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         val welcomeFilter = CrowdNodeWelcomeToApiResponse(params)
         val errorFilter = CrowdNodeErrorResponse(params, CrowdNodeAcceptTermsTx.ACCEPT_TERMS_REQUEST_CODE)
 
-        val tx = walletData.getTransactions(welcomeFilter, errorFilter).firstOrNull() ?:
-            walletData.observeTransactions(true, welcomeFilter, errorFilter).first()
+        val tx = walletData.getTransactions(welcomeFilter, errorFilter).firstOrNull()
+            ?: walletData.observeTransactions(true, welcomeFilter, errorFilter).first()
 
         if (errorFilter.matches(tx)) {
             throw CrowdNodeException("AcceptTerms request returned an error")

@@ -18,12 +18,17 @@
 package de.schildbach.wallet.service
 
 import android.content.Context
+import android.database.sqlite.SQLiteException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.BlockchainStateDao
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Block
+import org.bitcoinj.core.BlockChain
 import org.bitcoinj.core.CheckpointManager
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
@@ -32,10 +37,14 @@ import org.bitcoinj.store.BlockStoreException
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.data.entity.BlockchainState.Impediment
 import org.dash.wallet.common.services.BlockchainStateProvider
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
+import java.util.EnumSet
+import java.util.concurrent.Executors
 import javax.inject.Inject
 import kotlin.math.min
 
@@ -67,12 +76,68 @@ class BlockchainStateDataProvider @Inject constructor(
         const val MASTERNODE_COUNT = 3800
     }
 
+    // this coroutineScope should execute all jobs sequentially
+    private val coroutineScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
+
     override suspend fun getState(): BlockchainState? {
-        return blockchainStateDao.loadSync()
+        return blockchainStateDao.getState()
     }
 
     override fun observeState(): Flow<BlockchainState?> {
         return blockchainStateDao.observeState().distinctUntilChanged()
+    }
+
+    fun updateImpediments(impediments: Set<Impediment>) {
+        coroutineScope.launch {
+            val blockchainState = blockchainStateDao.getState()
+            if (blockchainState != null) {
+                blockchainState.impediments.clear()
+                blockchainState.impediments.addAll(impediments)
+                blockchainStateDao.saveState(blockchainState)
+            }
+        }
+    }
+
+    fun updateBlockchainState(blockChain: BlockChain, impediments: Set<Impediment>, percentageSync: Int) {
+        coroutineScope.launch {
+            var blockchainState = blockchainStateDao.getState()
+            if (blockchainState == null) {
+                blockchainState = BlockchainState()
+            }
+            val chainHead: StoredBlock = blockChain.chainHead
+            val chainLockHeight = walletDataProvider.wallet!!.context.chainLockHandler.bestChainLockBlockHeight
+            val mnListHeight: Int =
+                walletDataProvider.wallet!!.context.masternodeListManager.listAtChainTip.height.toInt()
+            blockchainState.bestChainDate = chainHead.header.time
+            blockchainState.bestChainHeight = chainHead.height
+            blockchainState.impediments = EnumSet.copyOf(impediments)
+            blockchainState.chainlockHeight = chainLockHeight
+            blockchainState.mnlistHeight = mnListHeight
+            blockchainState.percentageSync = percentageSync
+            blockchainStateDao.saveState(blockchainState)
+        }
+    }
+
+    fun resetBlockchainState() {
+        coroutineScope.launch {
+            blockchainStateDao.saveState(
+                BlockchainState(true)
+            )
+        }
+    }
+
+    fun resetBlockchainSyncProgress() {
+        coroutineScope.launch {
+            val blockchainState: BlockchainState? = try {
+                blockchainStateDao.getState()
+            } catch (ex: SQLiteException) {
+                null
+            }
+            if (blockchainState != null) {
+                blockchainState.percentageSync = 0
+                blockchainStateDao.saveState(blockchainState)
+            }
+        }
     }
 
     override fun getLastMasternodeAPY(): Double {
@@ -101,7 +166,11 @@ class BlockchainStateDataProvider @Inject constructor(
                 }
 
                 val validMNsCount = if (mnlist.size() != 0) {
-                    mnlist.validMNsCount
+                    var virtualMNCount = 0
+                    mnlist.forEachMN(true) { entry ->
+                        virtualMNCount += if (entry.isHPMN) 4 else 1
+                    }
+                    virtualMNCount
                 } else {
                     MASTERNODE_COUNT
                 }
@@ -206,6 +275,14 @@ class BlockchainStateDataProvider @Inject constructor(
             // Activated but we have to wait for the next cycle to start realocation, nothing to do
             return ret
         }
+
+        if (Constants.NETWORK_PARAMETERS.isV20Active(height)) {
+            // Once MNRewardReallocated activates, block reward is 80% of block subsidy (+ tx fees) since treasury is 20%
+            // Since the MN reward needs to be equal to 60% of the block subsidy (according to the proposal), MN reward is set to 75% of the block reward.
+            // Previous reallocation periods are dropped.
+            return blockValue * 3 / 4
+        }
+
         val reallocCycle = superblockCycle * 3
         val nCurrentPeriod: Int =
             min((height - reallocStart) / reallocCycle, periods.size - 1)

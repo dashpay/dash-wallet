@@ -57,11 +57,10 @@
     <string name="purchase_failed">Zakup się nie udał</string>
     <string name="transfer_failed">Transfer nie zoastała wysłana</string>
     <string name="conversion_failed">Konwersja nie udała się</string>
-    <string name="transfer_failed_msg">Dash został pomyślnie przelany na twoje konto Coinbase, ale wystąpił błąd podczas transferu do twojego portfela Dash na tym urządzeniu. </string>
-    <string name="purchase_failed_msg">Coś poszło nie tak</string>
+    <string name="transfer_failed_msg">Dash został pomyślnie przesłany na twoje konto Coinbase, ale wystąpił błąd podczas transferu do twojego portfela Dash na tym urządzeniu. </string>
     <string name="it_could_take_up_to_2_3_minutes">Transfer Dash do porfela na tym urządzeniu może zająć do 2-3 minut.</string>
     <string name="it_could_take_up_to_5_minutes">Przekonwertowanie %s środków z konta na Coinbase do portfela Dash może zająć do 5 minut.</string>
-    <string name="it_could_take_up_to_5_minutes_to_coinbase">\"Przekonwertowanie Dash z twojego portfela,  na %s konto Coinbase, może zająć do 5 minut.</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">Przekonwertowanie Dash z twojego portfela,  na %s konto Coinbase, może zająć do 5 minut.</string>
     <string name="contact_coinbase_support">Skontaktuj się z pomocą Coibase</string>
     <string name="fees_in_crypto_purchase">Opłaty w kupowaniu krypto</string>
     <string name="coinbase_fee_info_msg_content">Oprócz pokazanej opłaty Coinbase, wliczamy również mały margines błędu. Rynki Kryptowalut są dosyć zmienne, więc ten margines pozwala nam na gwarancje ceny podczas transakcji. </string>
@@ -77,9 +76,9 @@
     <string name="to_your_coinbase_account">Na twoje konto Coinbase</string>
     <string name="from_dash_wallet_on_this_device">Z portfela Dash na tym urządzeniu</string>
     <string name="you_will_receive">Otrzymasz</string>
-    <string name="we_didnt_find_any_assets" >Nie znaleźliśmy żadnych aktywów na twoim koncie Coinbase</string>
-    <string name="you_dont_own_any_crypto" >Nie posiadasz żadnych krypto monet. Kup trochę aby rozpocząć przygodę z krypto..</string>
-    <string name="buy_crypto_on_coinbase" >Kup Krypto na Coinbase</string>
+    <string name="we_didnt_find_any_assets">Nie znaleźliśmy żadnych środków na twoim koncie Coinbase</string>
+    <string name="you_dont_own_any_crypto">Nie posiadasz żadnych krypto-monet. Kup trochę aby rozpocząć przygodę z krypto.</string>
+    <string name="buy_crypto_on_coinbase">Kup Krypto na Coinbase</string>
     <string name="auth_limit_description">Przekroczyłeś limit autoryzacji na Coinbase.</string>
     <string name="debit_money">Obciąż swoje konto</string>
     <string name="change_limit">Zmień ten limit</string>
@@ -98,11 +97,10 @@
     <string name="verify_continue">Zweryfikuj</string>
     <string name="enter_auth_code">Wprowadź kod 2FA </string>
     <string name="extra_steps_label">Ten dodatkowy krok potwierdza, że to naprawdę ty dokonujesz  tej transakcji. </string>
-    <string name="need_help">Potrzebujesz Pomocy?</string>
+    <string name="need_help">Potrzebujesz pomocy?</string>
     <string name="coinbase_fa_code_hint">Kod 2FA</string>
     <string name="enter_code_details">Może to być kod z SMS-a na Twoim telefonie. Jeśli nie, wprowadź kod z aplikacji uwierzytelniającej.</string>
     <string name="two_fa_code_incorrect">Kod jest nieprawidłowy. Spróbuj ponownie!</string>
-    <string name="invalid_code">Ten kod był nieprawidłowy. Proszę spróbuj ponownie</string>
     <string name="verify_code">Zweryfikuj</string>
     <string name="you_dont_have_enough_balance">Nie masz wystarczająco środków</string>
     <string name="transfer_amount">Przelej</string>
@@ -112,8 +110,11 @@
     <string name="transfer_dash_successful">Transfer został dokonany pomyślnie</string>
     <string name="it_could_take_up_to_10_minutes">Wysłanie Dash z Coinbase do portfela Dash na tym urządzeniu może potrwać do 10 minut.</string>
     <string name="it_could_take_up_to_10_minutes_to_coinbase">Przesłanie Dash z twojego portfela na konto Coinbase może zająć do 10 minut.</string>
-    <string name="transfer_dash_failed_msg">Wystąpił problem podczas transferu Dash.</string>
+    <string name="transfer_dash_failed_msg">Wystąpił problem podczas transferu Dash do portfela na tym urządzeniu.</string>
     <string name="insufficient_money_to_transfer">Niewystarczająca ilość monet do przelania.</string>
     <string name="amount_to_transfer">Otrzymasz %s %s %s</string>
     <string name="amount_to_transfer_dash">Otrzymasz %s</string>
+    <string name="your_coinbase_session_has_expired">Twoja sesja Coinbase wygasła</string>
+    <string name="please_log_in_to_your_coinbase_account">Zaloguj się na  konto Coinbase</string>
+    <string name="coinbase_use_bank_account">Czy chcesz dokonać depozytu na twój zakup z połączonego konta bankowego?</string>
     </resources>

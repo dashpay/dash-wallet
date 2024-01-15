@@ -18,7 +18,7 @@
     <!-- Explore screen -->
     <string name="explore_dash">探索Dash</string>
     <string name="explore_title">探索</string>
-    <string name="explore_subtitle">使用您的Dash在超过155,000个地点和在线商户轻松购物</string>
+    <string name="explore_subtitle">寻找接受 Dash 的商家, 可以在哪里购买 Dash 以及如何通过它获得收益.</string>
     <string name="explore_merchants_title">在哪里消费?</string>
     <string name="explore_merchants_subtitle">查找接受Dash支付方式的商户.</string>
     <string name="explore_atms_title">自动提款机</string>
@@ -74,6 +74,7 @@
     <string name="explore_payment_method">支付方式</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">礼品卡</string>
+    <string name="explore_filter_gift_cards">礼品卡</string>
     <string name="explore_radius">半径</string>
     <string name="explore_location">位置</string>
     <string name="explore_current_location">当前位置</string>
@@ -149,10 +150,12 @@
     <string name="redeem_gift_card_text">在线上或收银台几秒内兑换您的礼品卡.</string>
 
     <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">同步中... 结果可能不完整.</string>
+    <string name="sync_in_progress_not_complete">同步中… 结果可能不完整.</string>
     <string name="sync_in_progress_error">同步中... 出现一个错误.</string>
     <string name="sync_in_progress_canceled">同步已取消... 稍后将进行另一次尝试.</string>
 
     <string name="sync_in_progress_file_not_found">构建错误: 未找到数据库!</string>
     <string name="sync_in_progress_network_error">同步中断... 网络未连接或无法访问</string>
-</resources>
+
+
+    </resources>

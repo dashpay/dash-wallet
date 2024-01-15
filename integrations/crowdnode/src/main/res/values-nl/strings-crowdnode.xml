@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Om te beginnen met staking, maak een account aan op CrowdNode of maak verbinding met een bestaande.</string>
     <string name="crowdnode_account">CrowdNode account </string>
     <string name="new_account">Nieuw account CrowdNode</string>
-    <string name="account_create">Maak account aan</string>
     <string name="accept_terms_response">Accepteer de voorwaarden</string>
     <string name="accept_terms">Voorwaarden accepteren</string>
     <string name="welcome_response">Account aangemaakt</string>
@@ -95,7 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">Stort %s om te beginnen met verdienen</string>
     <string name="crowdnode_first_deposit">Eerste storting moet meer zijn dan %s</string>
     <string name="crowdnode_staking_info_title">Hoe staking bij CrowdNode werkt</string>
-    <string name="crowdnode_staking_info_message_first">Het Dash Netwerk wordt aangedreven door \'Masternodes\', wat een essentieel onderdeel is voor het faciliteren van betalingen.</string>
+    <string name="crowdnode_staking_info_message_first">Het Dash netwerk wordt aangedreven door een aantal Masternodes, welke een essentieel onderdeel zijn voor het faciliteren van betalingen.</string>
     <string name="crowdnode_staking_info_message_second">Een Masternode heeft 1000 Dash nodig als onderpand. Elke Masternode wordt momenteel ongeveer met %s%% per jaar beloond.</string>
     <string name="crowdnode_staking_apy_title">Huidig jaarlijks rendement = %s%%</string>
     <string name="crowdnode_staking_info_message">Je begint te verdienen als je CrowdNode account meer heeft dan %s</string>
@@ -108,7 +107,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">Beloningen ontvangen</string>
     <string name="crowdnode_staking_receiving_rewards_message">U ontvangt automatisch fractionele betalingen en deze worden standaard opnieuw geïnvesteerd. Het is ook mogelijk om automatische opnames in te stellen om terugkerende uitbetalingen te ontvangen.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">Eerste minimale storting</string>
-    <string name="crowdnode_staking_join_pool_message">Omdat de meeste mensen geen 1000 Dash bij de hand hebben, heeft CrowdNode een service gemaakt waarbij ze door stortingen van leden te bundelen de voordelen van het bezitten van een Masternode kunnen bereiken.</string>
+    <string name="crowdnode_staking_join_pool_message">Omdat de meeste mensen geen 1000 Dash bezitten, biedt CrowdNode een service waarbij de stortingen van leden worden gebundeld tot masternodes, om zo de voordelen van het bezitten hiervan te kunnen bereiken.</string>
     <string name="crowdnode_staking_join_pool_title">Deelnemen aan de pool</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">CrowdNode voordelen</string>
     <string name="crowdnode_staking_connected_dash_address_title">Verbonden Dash adres</string>
@@ -144,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Vanwege de servicevoorwaarden van CrowdNode kunnen gebruikers niet meer opnemen dan:</string>
     <string name="crowdnode_withdraw_without_limits_online">Neem onbeperkt geld op met een online account via de CrowdNode website.</string>
     <string name="crowdnode_withdrawal_limits_error">Deze fout is hoogstwaarschijnlijk te wijten aan het overschrijden van het opnamelimiet van CrowdNode. Probeer het later opnieuw.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Wacht voordat je de volgende opname uitvoert</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Je moet 5 minuten wachten voordat je een nieuwe opname kunt uitvoeren</string>
     <string name="per_transaction">per transactie</string>
     <string name="per_hour">per uur</string>
     <string name="per_day">per 24 uur</string>

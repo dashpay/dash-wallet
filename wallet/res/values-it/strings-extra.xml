@@ -270,7 +270,7 @@
     <string name="menu_contact_support_title">Contatta il Supporto</string>
     <string name="menu_contact_support_subtitle">Segnala un problema</string>
     <string name="menu_explore_title">Esplora</string>
-    <string name="menu_explore_subtitle">Acquista con DASH presso oltre 155.000 commercianti</string>
+    <string name="menu_explore_subtitle">Trova commercianti che accettano DASH</string>
 
     <string name="tools_address_book">Rubrica degli indirizzi</string>
     <string name="tools_import_private_key">Importa chiave privata</string>
@@ -348,8 +348,6 @@
     <string name="payment_request_unable_to_send">Impossibile inviare</string>
     <string name="payment_request_please_try_again">Per favore riprova</string>
     <string name="payment_request_try_again">Prova Ancora</string>
-    <string name="payment_request_problem_title">Il pagamento non è stato riconosciuto</string>
-    <string name="payment_request_problem_message">Non è stato possibile processare il tuo pagamento dal server, per favore informati col commerciante</string>
     <string name="payment_request_expired_title">Richiesta di pagamento scaduta</string>
     <string name="payment_request_close">Chiudi</string>
     <string name="payment_request_skip">Salta</string>
@@ -400,7 +398,7 @@
     <string name="masternode_key_type_owner">Chiavi proprietario</string>
     <string name="masternode_key_type_voting">Chiavi  di Voto</string>
     <string name="masternode_key_type_operator">Chiavi operatore</string>
-    <string name="masternode_key_type_platform">Tasti operatore HPMN</string>
+    <string name="masternode_key_type_platform">ID Keys del nodo Evolution</string>
     <string name="masternode_key_type_total">%d chiavi</string>
     <string name="masternode_key_type_used">%d usata</string>
     <string name="masternode_key_pair_index">Coppia di chiavi%d</string>

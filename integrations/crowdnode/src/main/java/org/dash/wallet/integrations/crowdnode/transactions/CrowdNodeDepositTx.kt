@@ -25,7 +25,7 @@ import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class CrowdNodeDepositTx(private val accountAddress: Address): TransactionFilter {
+class CrowdNodeDepositTx(private val accountAddress: Address) : TransactionFilter {
     override fun matches(tx: Transaction): Boolean {
         val networkParams = accountAddress.parameters
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(networkParams)
@@ -34,8 +34,8 @@ class CrowdNodeDepositTx(private val accountAddress: Address): TransactionFilter
             val script = it.outpoint.connectedOutput?.scriptPubKey
 
             script != null &&
-            (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-            script.getToAddress(networkParams) == accountAddress
+                (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
+                script.getToAddress(networkParams) == accountAddress
         }
 
         if (!allFromAccount) {

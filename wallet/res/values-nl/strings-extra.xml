@@ -267,7 +267,7 @@
     <string name="menu_contact_support_title">Neem contact op</string>
     <string name="menu_contact_support_subtitle">Meld een probleem</string>
     <string name="menu_explore_title">Verken</string>
-    <string name="menu_explore_subtitle">Winkel met DASH bij meer dan 155.000 acceptanten</string>
+    <string name="menu_explore_subtitle">Vind winkeliers die Dash accepteren</string>
 
     <string name="tools_address_book">Adresboek</string>
     <string name="tools_import_private_key">Importeer persoonlijke sleutel</string>
@@ -345,8 +345,6 @@
     <string name="payment_request_unable_to_send">Verzenden niet mogelijk</string>
     <string name="payment_request_please_try_again">Probeer a.u.b. opnieuw</string>
     <string name="payment_request_try_again">Probeer opnieuw</string>
-    <string name="payment_request_problem_title">Betaling werd niet bevestigd</string>
-    <string name="payment_request_problem_message">Je betaling kon niet door de server worden verwerkt, doe a.u.b. navraag bij de winkelier</string>
     <string name="payment_request_expired_title">Betaalverzoek is verlopen</string>
     <string name="payment_request_close">Sluiten</string>
     <string name="payment_request_skip">Overslaan</string>
@@ -397,7 +395,7 @@
     <string name="masternode_key_type_owner">Eigenaar sleutels</string>
     <string name="masternode_key_type_voting">Stem sleutels</string>
     <string name="masternode_key_type_operator">Operator sleutels</string>
-    <string name="masternode_key_type_platform">HPMN Operator sleutels</string>
+    <string name="masternode_key_type_platform">Evolution Node ID sleutels</string>
     <string name="masternode_key_type_total">%d sleutels</string>
     <string name="masternode_key_type_used">%dgebruikt</string>
     <string name="masternode_key_pair_index">Sleutelpaar %d</string>

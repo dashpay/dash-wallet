@@ -37,7 +37,7 @@
     <string name="coinbase_fee">Bayad sa Coinbase</string>
     <string name="total">Kabuuan</string>
     <string name="order_preview">Preview ng Order</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Makakatanggap ka ng %s Dash sa iyong Dash Wallet sa device na ito. Pakitandaan na maaaring tumagal ng hanggang 2-3 minuto upang makumpleto ang isang paglipat.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Makakatanggap ka ng ~ %s Dash sa iyong Dash Wallet sa device na ito. Pakitandaan na maaaring tumagal ng hanggang 2-3 minuto upang makumpleto ang isang paglipat.</string>
     <string name="amount_in_dash">Halaga sa Dash</string>
     <string name="cancel">Kanselahin</string>
     <string name="confirm_sec">Kumpirmahin ang (%ss)</string>
@@ -58,10 +58,9 @@
     <string name="transfer_failed">Nabigo ang Paglipat</string>
     <string name="conversion_failed">Nabigo ang Conversion</string>
     <string name="transfer_failed_msg">Ang Dash ay matagumpay na nadeposito sa iyong Coinbase account. Ngunit nagkaroon ng problema sa paglilipat nito sa Dash Wallet sa device na ito.</string>
-    <string name="purchase_failed_msg">May maling nangyari</string>
     <string name="it_could_take_up_to_2_3_minutes">Maaaring tumagal nang hanggang 2-3 minuto bago mailipat ang Dash sa iyong Dash Wallet sa device na ito.</string>
     <string name="it_could_take_up_to_5_minutes">Maaaring tumagal nang hanggang 5 minuto upang ma-convert %s mula sa Coinbase account patungo sa Dash sa iyong Dash Wallet sa device na ito..</string>
-    <string name="it_could_take_up_to_5_minutes_to_coinbase">“Maaaring tumagal nang hanggang 5 minuto upang ma-convert ang Dash mula sa Dash Wallet sa device na ito sa %s sa iyong Coinbase account.</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">Maaaring tumagal nang hanggang 5 minuto upang ma-convert ang Dash mula sa Dash Wallet sa device na ito sa %s sa iyong Coinbase account.</string>
     <string name="contact_coinbase_support">Makipag-ugnayan sa Suporta sa Coinbase</string>
     <string name="fees_in_crypto_purchase">Mga bayarin sa mga pagbili ng crypto</string>
     <string name="coinbase_fee_info_msg_content">Bilang karagdagan sa ipinapakitang bayad sa Coinbase, nagsasama kami ng spread sa presyo. Ang mga merkado ng Cryptocurrency ay pabagu-bago, at nagbibigay-daan ito sa amin na pansamantalang i-lock ang isang presyo para sa pagpapatupad ng kalakalan.</string>
@@ -77,9 +76,9 @@
     <string name="to_your_coinbase_account">sa iyong Coinbase account</string>
     <string name="from_dash_wallet_on_this_device">Mula sa Dash wallet sa device na ito</string>
     <string name="you_will_receive">Matatanggap mo</string>
-    <string name="we_didnt_find_any_assets" >Wala kaming nakitang anumang asset sa iyong Coinbase account.</string>
-    <string name="you_dont_own_any_crypto" >Wala kang anumang crypto. Bumili ng ilang crypto para makapagsimula..</string>
-    <string name="buy_crypto_on_coinbase" >Bumili ng Crypto sa Coinbase</string>
+    <string name="we_didnt_find_any_assets">Wala kaming nakitang anumang asset sa iyong Coinbase account.</string>
+    <string name="you_dont_own_any_crypto">Wala kang anumang crypto. Bumili ng ilang crypto para makapagsimula..</string>
+    <string name="buy_crypto_on_coinbase">Bumili ng Crypto sa Coinbase</string>
     <string name="auth_limit_description">Lumampas ka sa limitasyon ng awtorisasyon sa Coinbase.</string>
     <string name="debit_money">Mag-debit ng pera mula sa iyong account</string>
     <string name="change_limit">Baguhin ang limitasyong ito</string>
@@ -102,7 +101,6 @@
     <string name="coinbase_fa_code_hint">Coinbase 2FA code</string>
     <string name="enter_code_details">Maaaring ito ay ang code mula sa SMS sa iyong telepono. Kung hindi, ilagay ang code mula sa authentication app.</string>
     <string name="two_fa_code_incorrect">Mali ang code. Pakisuri at subukang muli!</string>
-    <string name="invalid_code">Di-wasto ang code na iyon. Pakisubukang muli</string>
     <string name="verify_code">Kumpirmahin</string>
     <string name="you_dont_have_enough_balance">Wala kang sapat na balanse</string>
     <string name="transfer_amount">Ipadala</string>
@@ -116,4 +114,7 @@
     <string name="insufficient_money_to_transfer">Ang halaga ng mga barya sa wallet ay masyadong maliit upang ilipat.</string>
     <string name="amount_to_transfer">Matatanggap mo %s %s %s</string>
     <string name="amount_to_transfer_dash">Matatanggap mo %s</string>
+    <string name="your_coinbase_session_has_expired">Ang iyong session sa Coinbase ay nag-expire na</string>
+    <string name="please_log_in_to_your_coinbase_account">Mangyaring mag-log in sa iyong Coinbase account</string>
+    <string name="coinbase_use_bank_account">Gusto mo bang magdeposito para sa iyong pagbili gamit ang isang naka-link na bank account?</string>
     </resources>

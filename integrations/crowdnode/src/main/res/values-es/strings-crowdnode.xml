@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Para comenzar a hacer staking, crea una cuenta en CrowdNode o conéctate a una existente.</string>
     <string name="crowdnode_account">Cuenta de CrowdNode</string>
     <string name="new_account">Nueva cuenta de CrowdNode </string>
-    <string name="account_create">Crear una cuenta</string>
     <string name="accept_terms_response">Por favor, acepta los términos</string>
     <string name="accept_terms">Aceptar términos</string>
     <string name="welcome_response">Cuenta creada</string>
@@ -95,7 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">Deposita %s para empezar a ganar</string>
     <string name="crowdnode_first_deposit">El primer depósito debe ser más de %s</string>
     <string name="crowdnode_staking_info_title">Cómo funciona el staking de CrowdNode</string>
-    <string name="crowdnode_staking_info_message_first">La red de Dash está impulsada por una serie de Masternodes, que es una parte esencial para facilitar los pagos.</string>
+    <string name="crowdnode_staking_info_message_first">Dash Network está impulsada por una serie de Masternodes que son una parte esencial para facilitar los pagos.</string>
     <string name="crowdnode_staking_info_message_second">Un Masternode necesita 1000 Dash como garantía y cada Masternode actualmente es recompensado aproximadamente %s%% por año.</string>
     <string name="crowdnode_staking_apy_title">El rendimiento anual aproximado actual es %s%%</string>
     <string name="crowdnode_staking_info_message">Empiezas a ganar si tu cuenta de CrowdNode tiene más de %s</string>
@@ -108,7 +107,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">Recibir recompensas</string>
     <string name="crowdnode_staking_receiving_rewards_message">Recibirás pagos fraccionados automáticamente y se reinvertirán de manera predeterminada; sin embargo, también es fácil configurar retiros automáticos para recibir pagos recurrentes.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">Primer Depósito Mínimo</string>
-    <string name="crowdnode_staking_join_pool_message">Como la mayoría de las personas no tienen exactamente 1000 Dash a mano, CrowdNode ha creado un servicio en el que al agrupar los depósitos de los miembros, estos pueden obtener los beneficios de poseer un Masternode.</string>
+    <string name="crowdnode_staking_join_pool_message">Como la mayoría de las personas no tienen exactamente 1000 Dash a mano, CrowdNode ha creado un servicio donde, al agrupar los depósitos de los miembros, pueden lograr los beneficios de poseer un Masternode.</string>
     <string name="crowdnode_staking_join_pool_title">Entrar al grupo</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">Beneficios de CrowdNode</string>
     <string name="crowdnode_staking_connected_dash_address_title">Dirección de Dash conectada</string>
@@ -144,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Debido a los términos de servicio de CrowdNode, los usuarios no pueden retirar más de:</string>
     <string name="crowdnode_withdraw_without_limits_online">Retira sin límites con una cuenta en línea en el sitio web de CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Lo más probable es que este error se deba a que se excedieron los límites de retiro de CrowdNode. Vuelve a intentarlo más tarde.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Espera antes de iniciar el próximo retiro.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Debes esperar 5 minutos antes de iniciar otro retiro.</string>
     <string name="per_transaction">por transacción</string>
     <string name="per_hour">por hora</string>
     <string name="per_day">por 24 horas</string>

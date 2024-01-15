@@ -52,11 +52,14 @@ object CrowdNodeConstants {
     }
 
     fun getCrowdNodeAddress(params: NetworkParameters): Address {
-        return Address.fromBase58(params, if (params == MainNetParams.get()) {
-            CROWDNODE_MAINNET_ADDRESS
-        } else {
-            CROWDNODE_TESTNET_ADDRESS
-        })
+        return Address.fromBase58(
+            params,
+            if (params == MainNetParams.get()) {
+                CROWDNODE_MAINNET_ADDRESS
+            } else {
+                CROWDNODE_TESTNET_ADDRESS
+            }
+        )
     }
 
     fun getCrowdNodeBaseUrl(params: NetworkParameters): String {

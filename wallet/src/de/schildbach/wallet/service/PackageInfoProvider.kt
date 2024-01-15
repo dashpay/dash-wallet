@@ -21,10 +21,14 @@ import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import com.google.common.hash.HashCode
+import com.google.common.hash.Hashing
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import org.bitcoinj.core.VersionMessage
 import org.slf4j.LoggerFactory
+import java.io.FileInputStream
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -81,5 +85,16 @@ class PackageInfoProvider @Inject constructor(
             log.error("Failed to get installer package name", ex)
             null
         }
+    }
+
+    @Throws(IOException::class)
+    fun apkHash(): HashCode {
+        val hasher = Hashing.sha256().newHasher()
+        val inputStream: FileInputStream = FileInputStream(context.packageCodePath)
+        val buf = ByteArray(4096)
+        var read: Int
+        while (-1 != inputStream.read(buf).also { read = it }) hasher.putBytes(buf, 0, read)
+        inputStream.close()
+        return hasher.hash()
     }
 }

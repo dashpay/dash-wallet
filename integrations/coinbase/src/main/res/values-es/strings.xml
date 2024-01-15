@@ -37,7 +37,7 @@
     <string name="coinbase_fee">Comisión de Coinbase</string>
     <string name="total">Total</string>
     <string name="order_preview">Vista previa del pedido</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Tu recibirás %s Dash en tu billetera de Dash en este dispositivo. Ten en cuenta que puede tomar hasta 2-3 minutos completar una transferencia.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Tu vas a recibir ~ %s Dash en tu billetera de Dash en este dispositivo. Ten en cuenta que completar una transferencia puede tardar entre 2 y 3 minutos.</string>
     <string name="amount_in_dash">Monto en Dash</string>
     <string name="cancel">Cancelar</string>
     <string name="confirm_sec">Confirmar (%ss)</string>
@@ -57,11 +57,10 @@
     <string name="purchase_failed">Compra fallida</string>
     <string name="transfer_failed">Transacción fallida</string>
     <string name="conversion_failed">Conversión fallida</string>
-    <string name="transfer_failed_msg">Los Dash se depositaron con éxito en tu cuenta de Coinbase. Pero hubo un problema al transferirlo a la billetera de Dash en este dispositivo.</string>
-    <string name="purchase_failed_msg">Algo salió mal</string>
+    <string name="transfer_failed_msg">Los Dash se depositaron exitosamente en tu cuenta Coinbase. Pero hubo un problema al transferirlo a la billetera de Dash en este dispositivo.</string>
     <string name="it_could_take_up_to_2_3_minutes">Los Dash podrían demorar entre 2-3 minutos en transferirse a tu billetera de Dash en este dispositivo.</string>
     <string name="it_could_take_up_to_5_minutes">Podría tomar hasta 5 minutos convertir %s desde la cuenta de Coinbase a Dash en tu billetera de Dash en este dispositivo..</string>
-    <string name="it_could_take_up_to_5_minutes_to_coinbase">“Podría tomar hasta 5 minutos convertir Dash de la billetera de Dash en este dispositivo a %s en tu cuenta de Coinbase.</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">Podría tomar hasta 5 minutos convertir Dash de la billetera de Dash en este dispositivo a %s en tu cuenta de Coinbase.</string>
     <string name="contact_coinbase_support">Ponte en contacto con el soporte de Coinbase</string>
     <string name="fees_in_crypto_purchase">Comisiones en compras de criptomonedas</string>
     <string name="coinbase_fee_info_msg_content">Además de la tarifa de Coinbase mostrada, incluimos un diferencial en el precio. Los mercados de criptomonedas son volátiles y esto nos permite fijar temporalmente un precio para la ejecución de operaciones.</string>
@@ -77,9 +76,9 @@
     <string name="to_your_coinbase_account">a tu cuenta de Coinbase</string>
     <string name="from_dash_wallet_on_this_device">Desde la billetera de Dash en este dispositivo</string>
     <string name="you_will_receive">Tu recibirás</string>
-    <string name="we_didnt_find_any_assets" >No encontramos ningún activo en tu cuenta de Coinbase.</string>
-    <string name="you_dont_own_any_crypto" >No posees ninguna criptomoneda. Compra algunas criptomonedas para comenzar.</string>
-    <string name="buy_crypto_on_coinbase" >Comprar criptomonedas en Coinbase</string>
+    <string name="we_didnt_find_any_assets">No encontramos ningún activo en tu cuenta de Coinbase.</string>
+    <string name="you_dont_own_any_crypto">No posees ninguna cripto. Compra algunas criptomonedas para comenzar.</string>
+    <string name="buy_crypto_on_coinbase">Comprar criptomonedas en Coinbase</string>
     <string name="auth_limit_description">Excediste el límite de autorización en Coinbase.</string>
     <string name="debit_money">Debitar dinero de tu cuenta</string>
     <string name="change_limit">Cambiar este límite</string>
@@ -98,11 +97,10 @@
     <string name="verify_continue">Verificar</string>
     <string name="enter_auth_code">Ingresa el código 2FA para Coinbase</string>
     <string name="extra_steps_label">Este paso adicional muestra que realmente eres tú quien intenta realizar una transacción.</string>
-    <string name="need_help">Necesitas ayuda ?</string>
+    <string name="need_help">Necesitas ayuda?</string>
     <string name="coinbase_fa_code_hint">Código 2FA para Coinbase</string>
     <string name="enter_code_details">Podría ser el código del SMS en tu teléfono. De lo contrario, ingresa el código de la aplicación de autenticación.</string>
     <string name="two_fa_code_incorrect">El código es incorrecto. ¡Por favor revisa e intenta de nuevo!</string>
-    <string name="invalid_code">Ese código no era válido. Inténtalo de nuevo</string>
     <string name="verify_code">Verificar</string>
     <string name="you_dont_have_enough_balance">No tienes saldo suficiente</string>
     <string name="transfer_amount">Transferir</string>
@@ -116,4 +114,7 @@
     <string name="insufficient_money_to_transfer">La cantidad de monedas en la billetera es demasiado pequeña para transferir.</string>
     <string name="amount_to_transfer">Tu recibirás %s %s %s</string>
     <string name="amount_to_transfer_dash">Vas a recibir %s</string>
+    <string name="your_coinbase_session_has_expired">Tu sesión de Coinbase ha expirado</string>
+    <string name="please_log_in_to_your_coinbase_account">Inicia sesión en tu cuenta de Coinbase</string>
+    <string name="coinbase_use_bank_account">¿Te gustaría realizar un depósito para tu compra utilizando una cuenta bancaria vinculada?</string>
     </resources>

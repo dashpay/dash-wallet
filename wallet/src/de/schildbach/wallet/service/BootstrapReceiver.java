@@ -138,7 +138,7 @@ public class BootstrapReceiver extends BroadcastReceiver {
         WalletExtension extension = extensions.get(AuthenticationGroupExtension.EXTENSION_ID);
         if (extension != null) {
             // reset will rescan existing transactions and rebuild the authentication usage info
-            ((AuthenticationGroupExtension) extension).reset();
+            ((AuthenticationGroupExtension) extension).rescanWallet();
         }
 
         // Maybe upgrade wallet to secure chain
@@ -155,6 +155,11 @@ public class BootstrapReceiver extends BroadcastReceiver {
             return;
 
         final Wallet wallet = walletDataProvider.getWallet();
+        if (wallet == null) {
+            // with version 7.0 and above it is possible to have the app installed without a wallet
+            log.info("wallet does not exist, not showing inactivity warning");
+            return;
+        }
         final Coin estimatedBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE);
         if (!estimatedBalance.isPositive())
             return;

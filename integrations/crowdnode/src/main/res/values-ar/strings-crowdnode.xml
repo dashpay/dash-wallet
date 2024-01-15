@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">لبدء التخزين ، أنشئ حسابًا على CrowdNode أو اتصل بحساب موجود.</string>
     <string name="crowdnode_account">حساب CrowdNode </string>
     <string name="new_account">حساب CrowdNode جديد</string>
-    <string name="account_create">إنشاء حساب</string>
     <string name="accept_terms_response">الرجاء قبول الشروط</string>
     <string name="accept_terms">قبول الشروط</string>
     <string name="welcome_response">تم إنشاء الحساب</string>
@@ -95,7 +94,6 @@
     <string name="crowdnode_minimum_deposit_difference">قم بإيداع %s  لبدء الكسب</string>
     <string name="crowdnode_first_deposit">يجب أن يكون الإيداع الأول أكثر من %s</string>
     <string name="crowdnode_staking_info_title">كيف يعمل CrowdNode Staking</string>
-    <string name="crowdnode_staking_info_message_first">يتم تشغيل شبكة داش بواسطة عدد من Masternodes والتي تعد جزءًا أساسيًا من تسهيل المدفوعات.</string>
     <string name="crowdnode_staking_info_message_second">يحتاج Masternode إلى 1000 داش كضمان ويتم حاليًا مكافأة كل Masternode %s%% سنويًا تقريبًا.</string>
     <string name="crowdnode_staking_apy_title">APY الحالي هو %s%%</string>
     <string name="crowdnode_staking_info_message">تبدأ في الكسب إذا كان حساب CrowdNode الخاص بك يحتوي على أكثر من %s</string>
@@ -108,7 +106,6 @@
     <string name="crowdnode_staking_receiving_rewards_title">استلام المكافآت</string>
     <string name="crowdnode_staking_receiving_rewards_message">ستتلقى مدفوعات جزئية تلقائيًا وسيتم إعادة استثمارها افتراضيًا ، ومع ذلك ، من السهل أيضًا إعداد عمليات سحب تلقائية لتلقي دفعات متكررة.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">الحد الأدنى للإيداع الأول</string>
-    <string name="crowdnode_staking_join_pool_message">نظرًا لأن معظم الأشخاص ليس لديهم 1000 داش بالضبط في متناول اليد ، فقد قدم CrowdNode خدمة حيث يمكنهم من خلال تجميع الودائع من الأعضاء تحقيق فوائد امتلاك Masternode.</string>
     <string name="crowdnode_staking_join_pool_title">الانضمام إلى المجموعة</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">فوائد CrowdNode</string>
     <string name="crowdnode_staking_connected_dash_address_title">عنوان داش متصل</string>

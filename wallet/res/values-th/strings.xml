@@ -367,7 +367,6 @@
     <string name="activity_security_hide_balance">สมดุลอัตโนมัติ</string>
     <string name="reset_to_default">ตั้งค่าเป็นค่าเริ่มต้น</string>
 
-    <string name="payment_protocol_default_error_title">การชำระเงินผิดพลาด</string>
     <string name="payment_protocol_insufficient_funds_error_title">กองทุนไม่เพียงพอ</string>
     <string name="payment_protocol_insufficient_funds_error_message">คุณมีเงินทุนไม่เพียงพอที่จะดำเนินการทางธุรกรรมได้สำเร็จ</string>
 
@@ -375,17 +374,24 @@
     <string name="select_a_service">เลือกบริการ</string>
     <string name="activity_buy_and_sell_dash_filter">กรอง</string>
     <string name="clear_filter">ล้างตัวกรอง</string>
-    <string name="select_currency">เลือกสกุลเงิน</string>
     <string name="reason">เหตุผล</string>
     <string name="link_account">เชื่อมโยงบัญชีของคุณ</string>
     <string name="buy_no_account_needed">ซื้อ Dash · ไม่ต้องใช้บัญชี</string>
-    <string name="your_coinbase_session_has_expired">เซสชั่น Coinbase ของคุณหมดอายุแล้ว</string>
-    <string name="please_log_in_to_your_coinbase_account">กรุณาเข้าสู่ระบบบัญชี Coinbase ของคุณ</string>
-    <string name="log_in">เข้าสู่ระบบ</string>
 
-    <string name="recipient_address">ที่อยู่กระเป๋าเงิน</string>
+    <string name="recipient_address">ที่อยู่ผู้รับ</string>
     <string name="show_clipboard">แสดงเนื้อหาในคลิปบอร์ด</string>
     <string name="tap_to_paste">แตะที่อยู่จากคลิปบอร์ดเพื่อวาง</string>
     <string name="not_dash_address">ไม่ใช่ที่อยู่ Dash หรือคำขอ URL ที่ถูกต้อง</string>
     <string name="send_to_address">ส่งไปยังที่อยู่</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">การเพิ่มประสิทธิภาพแบตเตอรี่</string>
+    <string name="battery_optimization_subtitle_optimized">ปรับให้เหมาะสม</string>
+    <string name="battery_optimization_subtitle_unrestricted">ไม่จำกัด</string>
+
+    <string name="battery_optimization_dialog_optimized_title">ให้ Dash Wallet ทำงานอยู่เบื้องหลังใช่ไหม</string>
+    <string name="battery_optimization_dialog_message_optimized">แอปนี้ได้รับการกำหนดค่าให้หยุดทำงานหลังจากไม่ปรากฏให้เห็นมาระยะหนึ่งแล้ว \n\n ซึ่งจะทำให้ไม่ได้รับการแจ้งเตือนการชำระเงินจนกว่าแอปจะกลับสู่ส่วนหน้า \n\n เราขอแนะนำให้อนุญาตให้แอปนี้ทำงานในพื้นหลังโดยการตั้งค่าแบตเตอรี่ การเพิ่มประสิทธิภาพเป็น \"ไม่เพิ่มประสิทธิภาพ\" หรือ \"ไม่จำกัด\" \n\n ไม่ต้องกังวล เราจะคำนึงถึงการใช้งานแบตเตอรี่ของคุณเสมอ</string>
+    <string name="battery_optimization_dialog_unrestricted_title">คุณต้องการรับการชำระเงินในเบื้องหลังหรือไม่?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">แอปนี้ได้รับการกำหนดค่าให้ทำงานต่อไปหลังจากที่ไม่ปรากฏให้เห็นมาระยะหนึ่งแล้ว \n\n เราขอแนะนำให้อนุญาตให้แอปนี้อัปเดตบล็อกเชนอยู่เสมอ แม้จะอยู่เบื้องหลังก็ตาม \n\n อย่ากังวล เราจะ คำนึงถึงการใช้งานแบตเตอรี่ของคุณเสมอ</string>
+    <string name="battery_optimization_dialog_button_change">เปิดการตั้งค่า</string>
 </resources>

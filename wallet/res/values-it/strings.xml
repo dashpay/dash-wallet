@@ -358,7 +358,7 @@
     <string name="transaction_fragment_confirmations_label">Conferme</string>
 
     <string name="dash_slogan">Immediato - Privato - Sicuro</string>
-    <string name="dash_wallet">Portafoglio</string>
+    <string name="dash_wallet">Wallet</string>
 
     <string name="activity_security_backup_wallet">Eseguire il backup del portafoglio su file</string>
     <string name="activity_security_view_recovery_phrase">Visualizza la frase di recupero</string>
@@ -367,7 +367,6 @@
     <string name="activity_security_hide_balance">Mascheramento Automatico Bilancio </string>
     <string name="reset_to_default">Riportare alle condizioni originali</string>
 
-    <string name="payment_protocol_default_error_title">Errore di pagamento</string>
     <string name="payment_protocol_insufficient_funds_error_title">Fondi insufficenti</string>
     <string name="payment_protocol_insufficient_funds_error_message">Non hai fondi sufficienti per completare questa transazione</string>
 
@@ -375,17 +374,24 @@
     <string name="select_a_service">Seleziona un servizio</string>
     <string name="activity_buy_and_sell_dash_filter">Filtro</string>
     <string name="clear_filter">Filtro pulito</string>
-    <string name="select_currency">Seleziona Valuta</string>
     <string name="reason">Motivo</string>
     <string name="link_account">Collega il tuo account</string>
     <string name="buy_no_account_needed">Acquista Dash · Nessun account necessario</string>
-    <string name="your_coinbase_session_has_expired">Your Coinbase session has expired</string>
-    <string name="please_log_in_to_your_coinbase_account">Accedi al tuo account Coinbase</string>
-    <string name="log_in">Accedi</string>
 
-    <string name="recipient_address">Indirizzo del portafoglio</string>
+    <string name="recipient_address">Indirizzo del destinatario</string>
     <string name="show_clipboard">Mostra il contenuto negli appunti</string>
     <string name="tap_to_paste">Tocca l\'indirizzo dagli appunti per incollarlo</string>
     <string name="not_dash_address">Indirizzo Dash o richiesta URL non validi</string>
     <string name="send_to_address">Invia all\'indirizzo</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Ottimizzazione della batteria</string>
+    <string name="battery_optimization_subtitle_optimized">Ottimizzata</string>
+    <string name="battery_optimization_subtitle_unrestricted">Senza restrizioni</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Lasciare che Dash Wallet funzioni in background?</string>
+    <string name="battery_optimization_dialog_message_optimized">Questa app è configurata per interrompere l\'esecuzione dopo non essere stata visibile per un po\' di tempo.\n\nCiò comporterà la mancata ricezione delle notifiche di pagamento finché l\'app non torna in primo piano.\n\nSi consiglia di consentire l\'esecuzione di questa app in background spuntando ottimizzazione batteria su \"Non ottimizzato\" o \"Illimitato\".\n\nMa non preoccuparti, ci occuperemo sempre di monitorare il consumo della batteria.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Vuoi ricevere pagamenti in background?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Questa app è configurata per continuare a funzionare anche dopo non essere stata visibile per un po\' di tempo.\n\nSuggeriamo di consentire a questa app di rimanere sempre aggiornata con la blockchain, anche in background.\n\nNon preoccuparti,  faremo sempre attenzione al consumo della batteria.</string>
+    <string name="battery_optimization_dialog_button_change">Apri Impostazioni</string>
 </resources>

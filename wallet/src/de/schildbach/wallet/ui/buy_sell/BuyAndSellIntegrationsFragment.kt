@@ -17,10 +17,8 @@
 
 package de.schildbach.wallet.ui.buy_sell
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -29,14 +27,12 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.adapter.BuyAndSellDashServicesAdapter
 import de.schildbach.wallet.data.ServiceType
-import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentBuySellIntegrationsBinding
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
@@ -59,14 +55,6 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
                 ServiceType.COINBASE -> onCoinbaseItemClicked()
                 ServiceType.MAYA -> onMayaItemClicked()
             }
-        }
-    }
-
-    private val coinbaseLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Constants.RESULT_CODE_GO_HOME) {
-            findNavController().popBackStack(R.id.walletFragment, false)
         }
     }
 
@@ -116,7 +104,7 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         viewModel.logEnterCoinbase()
 
         if (viewModel.isCoinbaseAuthenticated) {
-            coinbaseLauncher.launch(Intent(requireContext(), CoinbaseActivity::class.java))
+            safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToCoinbase())
         } else {
             safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToOverview(ServiceType.COINBASE))
         }

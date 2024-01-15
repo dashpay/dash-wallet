@@ -367,7 +367,6 @@
     <string name="activity_security_hide_balance">Авто-скрытие баланса</string>
     <string name="reset_to_default">Установить по умолчанию</string>
 
-    <string name="payment_protocol_default_error_title">Ошибка оплаты</string>
     <string name="payment_protocol_insufficient_funds_error_title">Недостаточно средств</string>
     <string name="payment_protocol_insufficient_funds_error_message">У вас недостаточно средств для завершения этой транзакции</string>
 
@@ -375,17 +374,24 @@
     <string name="select_a_service">Выберите сервис</string>
     <string name="activity_buy_and_sell_dash_filter">Фильтр</string>
     <string name="clear_filter">Очистить фильтр</string>
-    <string name="select_currency">Выберите валюту</string>
     <string name="reason">Причина</string>
     <string name="link_account">Привязать аккаунт</string>
     <string name="buy_no_account_needed">Купить Dash · Без учётной записи</string>
-    <string name="your_coinbase_session_has_expired">Время сессии Coinbase истекло</string>
-    <string name="please_log_in_to_your_coinbase_account">Пожалуйста, войдите в свой аккаунт Coinbase</string>
-    <string name="log_in">Войти</string>
 
     <string name="recipient_address">Адрес получателя</string>
     <string name="show_clipboard">Показать содержимое буфера обмена</string>
     <string name="tap_to_paste">Чтобы вставить адрес из буфера обмена, нажмите на него</string>
     <string name="not_dash_address">Некорректный адрес Dash или URL запрос</string>
     <string name="send_to_address">Отправить на адрес</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Оптимизация расхода батареи</string>
+    <string name="battery_optimization_subtitle_optimized">Оптимизировано</string>
+    <string name="battery_optimization_subtitle_unrestricted">Не ограничено</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Разрешить Dash Wallet работать в фоновом режиме?</string>
+    <string name="battery_optimization_dialog_message_optimized">Это приложение настроено на автоматическое завершение работы спустя некоторое время после сворачивания.\n\nТаким образом, вы не будете получать платёжные уведомления, пока приложение не вернется к работе в активном режиме.\n\nМы рекомендуем разрешить приложению работу в фоновом режиме, переключив настройку режима питания на \"Не оптимизировано\" или \"Не ограничено\".\n\nНе волнуйтесь, мы всегда помним о расходе батареи.  </string>
+    <string name="battery_optimization_dialog_unrestricted_title">Хотите получать переводы в фоновом режиме?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Это приложение настроено на продолжение работы спустя некоторое время после сворачивания.\n\nМы рекомендуем разрешить приложению всегда проверять обновления блокчейна, даже в при работе в фоновом режиме.\n\nНе волнуйтесь, мы всегда помним о расходе батареи. </string>
+    <string name="battery_optimization_dialog_button_change">Открыть настройки</string>
 </resources>

@@ -273,7 +273,7 @@
     <string name="menu_contact_support_title">Связаться с поддержкой</string>
     <string name="menu_contact_support_subtitle">Сообщить о проблеме</string>
     <string name="menu_explore_title">Исследовать</string>
-    <string name="menu_explore_subtitle">Покупайте за DASH в более чем 155 000 магазинах</string>
+    <string name="menu_explore_subtitle">Найти магазины, где принимают DASH</string>
 
     <string name="tools_address_book">Адресная книга</string>
     <string name="tools_import_private_key">Импортировать приватный ключ</string>
@@ -351,8 +351,6 @@
     <string name="payment_request_unable_to_send">Невозможно отправить</string>
     <string name="payment_request_please_try_again">Попробуйте еще раз</string>
     <string name="payment_request_try_again">Попробуйте ещё раз</string>
-    <string name="payment_request_problem_title">Платёж не был подтверждён</string>
-    <string name="payment_request_problem_message">Ваш платёж не может быть обработан сервером. Пожалуйста, свяжитесь с продавцом</string>
     <string name="payment_request_expired_title">Запрос на оплату истёк</string>
     <string name="payment_request_close">Закрыть</string>
     <string name="payment_request_skip">Пропустить</string>
@@ -403,7 +401,7 @@
     <string name="masternode_key_type_owner">Ключи владельца</string>
     <string name="masternode_key_type_voting">Ключи голосования</string>
     <string name="masternode_key_type_operator">Ключи оператора</string>
-    <string name="masternode_key_type_platform">HPMN Ключи оператора</string>
+    <string name="masternode_key_type_platform">Ключи идентификаторов Evolution нод</string>
     <string name="masternode_key_type_total">ключи</string>
     <string name="masternode_key_type_used">%d использовано</string>
     <string name="masternode_key_pair_index">Ключи %d</string>

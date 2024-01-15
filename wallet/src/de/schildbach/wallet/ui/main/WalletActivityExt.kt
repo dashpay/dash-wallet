@@ -17,13 +17,20 @@
 
 package de.schildbach.wallet.ui.main
 
+import android.Manifest
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.os.storage.StorageManager
 import android.provider.Settings
 import android.view.MenuItem
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
@@ -36,6 +43,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog.Companion.create
 import org.dash.wallet.common.util.openCustomTab
 
 object WalletActivityExt {
@@ -191,6 +199,63 @@ object WalletActivityExt {
         ).show(this) { openSettings ->
             if (openSettings == true && hasStorageManager) {
                 startActivity(storageManagerIntent)
+            }
+        }
+    }
+
+    /**
+     * Android 13 - Show system dialog to get notification permission from user, if not granted
+     * ask again with each app upgrade if not granted.  This logic is handled by
+     * [.onLockScreenDeactivated] and [.onStart].
+     * Android 12 and below - show a explainer dialog once only.
+     */
+    fun WalletActivity.explainPushNotifications() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else if (configuration.showNotificationsExplainer) {
+            val dialog = create(
+                R.drawable.ic_info_blue,
+                getString(R.string.notification_explainer_title),
+                getString(R.string.notification_explainer_message),
+                "",
+                getString(R.string.button_okay)
+            )
+            dialog.show(this) {
+                requestDisableBatteryOptimisation()
+            }
+        }
+        // only show either the permissions dialog (Android >= 13) or the explainer (Android <= 12) once
+        configuration.showNotificationsExplainer = false
+    }
+
+    fun WalletActivity.requestDisableBatteryOptimisation() {
+        val powerManager: PowerManager = getSystemService(PowerManager::class.java)
+        if (ContextCompat.checkSelfPermission(
+                walletApplication,
+                Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+            ) == PackageManager.PERMISSION_GRANTED &&
+            !powerManager.isIgnoringBatteryOptimizations(walletApplication.packageName)
+        ) {
+            create(
+                R.drawable.ic_bolt_border,
+                getString(R.string.battery_optimization_dialog_optimized_title),
+                getString(R.string.battery_optimization_dialog_message_optimized),
+                getString(R.string.permission_deny),
+                getString(R.string.permission_allow)
+            ).show(this) { allow: Boolean? ->
+                if (allow == true) {
+                    startActivity(
+                        Intent(
+                            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                            Uri.parse("package:$packageName")
+                        )
+                    )
+                }
             }
         }
     }

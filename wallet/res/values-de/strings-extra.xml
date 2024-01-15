@@ -267,7 +267,7 @@
     <string name="menu_contact_support_title">Support kontaktieren</string>
     <string name="menu_contact_support_subtitle">Ein Problem melden</string>
     <string name="menu_explore_title">Explore</string>
-    <string name="menu_explore_subtitle">Bei über 155.000 Händlern mit DASH einkaufen</string>
+    <string name="menu_explore_subtitle">Finde Händler die DASH akzeptieren</string>
 
     <string name="tools_address_book">Adressbuch</string>
     <string name="tools_import_private_key">Privaten Schlüssel importieren</string>
@@ -345,8 +345,6 @@
     <string name="payment_request_unable_to_send">Senden nicht möglich</string>
     <string name="payment_request_please_try_again">Bitte erneut versuchen</string>
     <string name="payment_request_try_again">Erneut versuchen</string>
-    <string name="payment_request_problem_title">Zahlung nicht anerkannt</string>
-    <string name="payment_request_problem_message">Deine Zahlung konnte nicht vom Server verarbeitet werden, wende dich bitte an den Händler.</string>
     <string name="payment_request_expired_title">Zahlungsanforderung abgelaufen</string>
     <string name="payment_request_close">Schließen</string>
     <string name="payment_request_skip">Überspringen</string>
@@ -397,7 +395,7 @@
     <string name="masternode_key_type_owner">Besitzer-Schlüssel (Owner Keys)</string>
     <string name="masternode_key_type_voting">Abstimmungs-Schlüssel</string>
     <string name="masternode_key_type_operator">Betreiber-Schlüssel (Operator Keys)</string>
-    <string name="masternode_key_type_platform">HPMN Betreiber-Schlüssel</string>
+    <string name="masternode_key_type_platform">Evolution Node ID Keys</string>
     <string name="masternode_key_type_total">%d Schlüssel</string>
     <string name="masternode_key_type_used">%d verwendet</string>
     <string name="masternode_key_pair_index">Schlüsselpaar %d</string>

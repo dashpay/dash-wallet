@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Για να ξεκινήσετε το staking, δημιουργήστε έναν λογαριασμό στο CrowdNode ή συνδεθείτε σε έναν ήδη υπάρχοντα.</string>
     <string name="crowdnode_account">Λογαριασμός CrowdNode</string>
     <string name="new_account">Νέος λογαριασμός CrowdNode</string>
-    <string name="account_create">Δημιουργία λογαριασμού</string>
     <string name="accept_terms_response">Παρακαλούμε αποδεχτείτε τους όρους</string>
     <string name="accept_terms">Αποδοχή όρων</string>
     <string name="welcome_response">Ο λογαριασμός δημιουργήθηκε</string>
@@ -95,7 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">Καταθέστε %s για να αρχίσετε να κερδίζετε</string>
     <string name="crowdnode_first_deposit">Η πρώτη κατάθεση πρέπει να είναι μεγαλύτερη από %s</string>
     <string name="crowdnode_staking_info_title">Πώς λειτουργεί το staking στο CrowdNode </string>
-    <string name="crowdnode_staking_info_message_first">Το δίκτυο Dash καθοδηγείται από έναν αριθμό Masternodes, ο οποίος αποτελεί ενα βασικό μέρος της διεκπεραίωσης των πληρωμών.</string>
+    <string name="crowdnode_staking_info_message_first">Το δίκτυο Dash διευθύνεται από έναν αριθμό Masternodes, οι οποίοι αποτελούν βασικό μέρος της διεξαγωγής των πληρωμών.</string>
     <string name="crowdnode_staking_info_message_second">Ένα Masternode χρειάζεται 1000 Dash ως εγγύηση και κάθε Masternode ανταμείβεται προς το παρόν με περίπου %s%% ετησίως.</string>
     <string name="crowdnode_staking_apy_title">Το τρέχον APY είναι %s%%</string>
     <string name="crowdnode_staking_info_message">Αρχίζετε να κερδίζετε αν ο λογαριασμός σας στο CrowdNode έχει πάνω από %s</string>
@@ -144,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Σύμφωνα με τους όρους παροχής υπηρεσιών της CrowdNode οι χρήστες δεν μπορούν να αποσύρουν περισσότερα από:</string>
     <string name="crowdnode_withdraw_without_limits_online">Κάντε ανάληψη χωρίς όρια με έναν online λογαριασμό στον ιστότοπο της CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Αυτό το σφάλμα οφείλεται πιθανότατα στην υπέρβαση των ορίων ανάληψης της CrowdNode. Δοκιμάστε ξανά αργότερα.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Παρακαλώ περιμένετε πριν ξεκινήσετε την επόμενη ανάληψη</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Πρέπει να περιμένετε 5 λεπτά πριν ξεκινήσετε άλλη ανάληψη.</string>
     <string name="per_transaction">ανά συναλλαγή</string>
     <string name="per_hour">ανά ώρα</string>
     <string name="per_day">ανά 24 ώρες</string>

@@ -58,6 +58,7 @@
     <string name="share_address">分享位址</string>
     <string name="verify">檢查</string>
     <string name="receive_enter_amount_button">指定金額</string>
+    <string name="account_create">創建帳號</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">搜索</string>
@@ -75,12 +76,19 @@
     <string name="select_currency">選擇貨幣</string>
     <string name="send_coins_error_dusty_send">這個金額太小，無法發送。</string>
     <string name="send_coins_error_insufficient_money">餘額不足</string>
+    <string name="syncing">同步中</string>
     <string name="no_connection">沒有網絡連接</string>
     <string name="rate_not_available">無法使用</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">看來你正在清空你的達世幣錢包</string>
     <string name="empty_wallet_crowdnode_warning">請注意，在您的餘額增加到 0.0003 Dash 之前，您將無法將資金從 CrowdNode 提款到此錢包。</string>
-    <string name="syncing">同步中</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">付款未得到確認</string>
+    <string name="payment_protocol_default_error_title">付款錯誤</string>
+    <string name="payment_request_problem_message">服務器無法處理您的付款，請向商家查詢</string>
+    <string name="exchange_rate_not_found">無法找到匯率</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">直接在達世幣錢包上收款</string>
@@ -89,4 +97,5 @@
     <string name="disconnected">斷開連接</string>
     <string name="enter_amount_available">可用的</string>
     <string name="transaction_row_rate_not_available">無法使用</string>
+    <string name="log_in">登入</string>
 </resources>

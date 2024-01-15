@@ -45,6 +45,7 @@
     <string name="button_share">Sdílet</string>
     <string name="verify">Ověřit</string>
     <string name="receive_enter_amount_button">Uvést částku</string>
+    <string name="account_create">Vytvořit účet</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Vyhledávání</string>
@@ -55,11 +56,16 @@
     <string name="select_currency">Vybrat měnu</string>
     <string name="send_coins_error_dusty_send">Částka je příliš nízká pro odeslání</string>
     <string name="send_coins_error_insufficient_money">Nedostatečný zůstatek</string>
+    <string name="syncing">Synchronizace</string>
     <string name="rate_not_available">Není dostupný</string>
 
-    <string name="syncing">Synchronizace</string>
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">Platba nebyla potvrzena</string>
+    <string name="payment_protocol_default_error_title">Chyba platby</string>
+    <string name="payment_request_problem_message">Vaše platba nemohla být serverem zpracována, informujte se prosím u obchodníka.</string>
+    <string name="exchange_rate_not_found">Nelze najít směnný kurz.</string>
 
     <string name="disconnected">Odpojeno</string>
     <string name="enter_amount_available">k dispozici</string>
     <string name="transaction_row_rate_not_available">Není dostupný</string>
-</resources>
+    </resources>

@@ -58,6 +58,7 @@
     <string name="share_address">Ibahagi ang Address</string>
     <string name="verify">Kumpirmahin</string>
     <string name="receive_enter_amount_button">Tukuyin ang halaga</string>
+    <string name="account_create">Lumikha ng Account</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Maghanap</string>
@@ -75,12 +76,19 @@
     <string name="select_currency">Piliin ang Pera</string>
     <string name="send_coins_error_dusty_send">Ang halaga ay sobrang liit para maipadala</string>
     <string name="send_coins_error_insufficient_money">Hindi sapat na pondo</string>
+    <string name="syncing">Nagsi-sync</string>
     <string name="no_connection">Walang koneksyon sa internet</string>
     <string name="rate_not_available">Hindi available</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">Mukhang inubos mo ang laman ng iyong Dash Wallet</string>
     <string name="empty_wallet_crowdnode_warning">Pakitandaan, hindi mo mai-withdraw ang iyong mga pondo mula sa CrowdNode patungo sa wallet na ito hanggang sa mapataas mo ang iyong balanse sa 0.0003 Dash.</string>
-    <string name="syncing">Nagsi-sync</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">Ang pagbabayad ay hindi kinilala</string>
+    <string name="payment_protocol_default_error_title">May mali sa bayad</string>
+    <string name="payment_request_problem_message">Ang iyong pagbabayad ay hindi maproseso ng server, mangyaring magtanong sa merchant</string>
+    <string name="exchange_rate_not_found">Hindi makita ang halaga ng palitan</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Direktang tumanggap sa Dash Wallet.</string>
@@ -89,4 +97,5 @@
     <string name="disconnected">Idiskonekta</string>
     <string name="enter_amount_available">magagamit</string>
     <string name="transaction_row_rate_not_available">Hindi available</string>
+    <string name="log_in">Mag log in</string>
 </resources>

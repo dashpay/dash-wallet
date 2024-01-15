@@ -58,6 +58,7 @@
     <string name="share_address">Zdieľať adresu</string>
     <string name="verify">Overiť</string>
     <string name="receive_enter_amount_button">Zadať množstvo</string>
+    <string name="account_create">Vytvoriť účet</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Hľadať</string>
@@ -75,12 +76,19 @@
     <string name="select_currency">Vyberte menu</string>
     <string name="send_coins_error_dusty_send">Čiastka je príliš nízka pre odoslanie</string>
     <string name="send_coins_error_insufficient_money">Nedostatok prostriedkov</string>
+    <string name="syncing">Synchronizuje sa</string>
     <string name="no_connection">Žiadne pripojenie k internetu</string>
     <string name="rate_not_available">Nie je k dispozícií</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">Zdá sa, že vyprázdňujete svoju Dash peňaženku</string>
     <string name="empty_wallet_crowdnode_warning">Upozorňujeme, že nebudete môcť vybrať svoje prostriedky z CrowdNode do tejto peňaženky, kým nezvýšite svoj zostatok na 0,0003 Dash.</string>
-    <string name="syncing">Synchronizuje sa</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">Platba nebola uznaná</string>
+    <string name="payment_protocol_default_error_title">Chyba platby</string>
+    <string name="payment_request_problem_message">Vaša platba nemohla byť spracovaná serverom, prosím informujte sa u obchodníka</string>
+    <string name="exchange_rate_not_found">Nepodarilo sa nájsť výmenný kurz.</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Obdržať priamo do Dash peňaženky</string>
@@ -89,4 +97,5 @@
     <string name="disconnected">Odpojený</string>
     <string name="enter_amount_available">dostupné</string>
     <string name="transaction_row_rate_not_available">Nie je k dispozícií</string>
+    <string name="log_in">Prihlásiť sa</string>
 </resources>

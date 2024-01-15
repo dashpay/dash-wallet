@@ -48,7 +48,7 @@ data class BuyAndSellDashServicesModel(
 ): Parcelable {
     companion object {
         fun getBuyAndSellDashServicesList() = listOf(
-//            BuyAndSellDashServicesModel(ServiceType.TOPPER, ServiceStatus.IDLE), TODO: re-enable
+            BuyAndSellDashServicesModel(ServiceType.TOPPER, ServiceStatus.IDLE),
             BuyAndSellDashServicesModel(ServiceType.UPHOLD, ServiceStatus.IDLE),
             BuyAndSellDashServicesModel(ServiceType.COINBASE, ServiceStatus.IDLE),
             BuyAndSellDashServicesModel(ServiceType.MAYA, ServiceStatus.IDLE)

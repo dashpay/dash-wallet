@@ -53,6 +53,7 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.CheckpointManager;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.FilteredBlock;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
@@ -87,6 +88,7 @@ import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.transactions.TransactionUtils;
+import org.dash.wallet.common.util.FlowExtKt;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi;
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositReceivedResponse;
@@ -132,6 +134,9 @@ import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
+import kotlin.coroutines.Continuation;
+import kotlinx.coroutines.flow.FlowCollector;
 
 import static org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO;
 
@@ -148,6 +153,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject CrowdNodeBlockchainApi crowdNodeBlockchainApi;
     @Inject CrowdNodeConfig crowdNodeConfig;
     @Inject BlockchainStateDao blockchainStateDao;
+    @Inject BlockchainStateDataProvider blockchainStateDataProvider;
     @Inject ExchangeRatesDao exchangeRatesDao;
     @Inject TransactionMetadataProvider transactionMetadataProvider;
     @Inject PackageInfoProvider packageInfoProvider;
@@ -176,6 +182,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private Coin notificationAccumulatedAmount = Coin.ZERO;
     private final List<Address> notificationAddresses = new LinkedList<Address>();
     private AtomicInteger transactionsReceived = new AtomicInteger();
+    private AtomicInteger mnListDiffsReceived = new AtomicInteger();
     private long serviceCreatedAt;
     private boolean resetBlockchainOnShutdown = false;
     private boolean deleteWalletFileOnShutdown = false;
@@ -187,6 +194,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private final static int MINIMUM_PEER_COUNT = 16;
 
     private static final int MIN_COLLECT_HISTORY = 2;
+    private static final int IDLE_HEADER_TIMEOUT_MIN = 2;
+    private static final int IDLE_MNLIST_TIMEOUT_MIN = 2;
     private static final int IDLE_BLOCK_TIMEOUT_MIN = 2;
     private static final int IDLE_TRANSACTION_TIMEOUT_MIN = 9;
     private static final int MAX_HISTORY_SIZE = Math.max(IDLE_TRANSACTION_TIMEOUT_MIN, IDLE_BLOCK_TIMEOUT_MIN);
@@ -493,6 +502,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         protected void progress(double pct, int blocksLeft, Date date) {
             super.progress(pct, blocksLeft, date);
             syncPercentage = pct > 0.0 ? (int)pct : 0;
+            log.info("progress {}", syncPercentage);
             if (syncPercentage > 100) {
                 syncPercentage = 100;
             }
@@ -505,9 +515,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         @Override
         protected void doneDownload() {
             super.doneDownload();
-            updateBlockchainState();
+            log.info("DoneDownload {}", syncPercentage);
+            // if the chain is already synced from a previous session, then syncPercentage = 0
+            // set to 100% so that observers will see that sync is completed
             syncPercentage = 100;
-            setBlockchainDownloaded();
+            updateBlockchainState();
         }
 
         @Override
@@ -516,6 +528,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             if(peerGroup != null && peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST) {
                 super.onMasterNodeListDiffDownloaded(stage, mnlistdiff);
                 startPreBlockPercent = syncPercentage;
+                mnListDiffsReceived.incrementAndGet();
                 postOrPostDelayed();
             }
         }
@@ -700,6 +713,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                     log.info("DMN peer discovery returned less than 16 nodes.  Adding default DMN peers to the list to increase connections");
                                     MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(defaultMNList, Constants.NETWORK_PARAMETERS.getPort());
                                     peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
+
+                                    // use EvoNodes if the network is small
+                                    if (peers.size() < MINIMUM_PEER_COUNT) {
+                                        String [] defaultEvoNodeList = Constants.NETWORK_PARAMETERS.getDefaultHPMasternodeList();
+                                        MasternodePeerDiscovery discoveryEvo = new MasternodePeerDiscovery(defaultEvoNodeList, Constants.NETWORK_PARAMETERS.getPort());
+                                        peers.addAll(Arrays.asList(discoveryEvo.getPeers(services, timeoutValue, timeoutUnit)));
+                                    }
                                 } else {
                                     log.info("DNS peer discovery returned less than 16 nodes.  Unable to add seed peers (it is not specified for this network).");
                                 }
@@ -772,32 +792,42 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private final static class ActivityHistoryEntry {
         public final int numTransactionsReceived;
         public final int numBlocksDownloaded;
+        public final int numHeadersDownloaded;
+        public final int numMnListDiffsDownloaded;
 
-        public ActivityHistoryEntry(final int numTransactionsReceived, final int numBlocksDownloaded) {
+        public ActivityHistoryEntry(final int numTransactionsReceived, final int numBlocksDownloaded,
+                                    final int numHeadersDownloaded, final int numMnListDiffsDownloaded) {
             this.numTransactionsReceived = numTransactionsReceived;
             this.numBlocksDownloaded = numBlocksDownloaded;
+            this.numHeadersDownloaded = numHeadersDownloaded;
+            this.numMnListDiffsDownloaded = numMnListDiffsDownloaded;
         }
 
         @Override
         public String toString() {
-            return numTransactionsReceived + "/" + numBlocksDownloaded;
+            return numTransactionsReceived + "/" + numBlocksDownloaded + "/" + numHeadersDownloaded + "/" + numMnListDiffsDownloaded;
         }
     }
 
     private final BroadcastReceiver tickReceiver = new BroadcastReceiver() {
         private int lastChainHeight = 0;
+        private int lastHeaderHeight = 0;
         private final List<ActivityHistoryEntry> activityHistory = new LinkedList<ActivityHistoryEntry>();
 
         @Override
         public void onReceive(final Context context, final Intent intent) {
             final int chainHeight = blockChain.getBestChainHeight();
+            final int headerHeight = headerChain.getBestChainHeight();
 
-            if (lastChainHeight > 0) {
+            if (lastChainHeight > 0 || lastHeaderHeight > 0) {
                 final int numBlocksDownloaded = chainHeight - lastChainHeight;
                 final int numTransactionsReceived = transactionsReceived.getAndSet(0);
+                // instead of counting headers, count header messages which contain up to 2000 headers
+                final int numHeadersDownloaded = headerHeight - lastHeaderHeight;
+                final int numMnListDiffsDownloaded = mnListDiffsReceived.getAndSet(0);
 
                 // push history
-                activityHistory.add(0, new ActivityHistoryEntry(numTransactionsReceived, numBlocksDownloaded));
+                activityHistory.add(0, new ActivityHistoryEntry(numTransactionsReceived, numBlocksDownloaded, numHeadersDownloaded, numMnListDiffsDownloaded));
 
                 // trim
                 while (activityHistory.size() > MAX_HISTORY_SIZE)
@@ -810,7 +840,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         builder.append(", ");
                     builder.append(entry);
                 }
-                log.info("History of transactions/blocks: " + builder);
+                log.info("History of transactions/blocks/headers/mnlistdiff: " + builder);
 
                 // determine if block and transaction activity is idling
                 boolean isIdle = false;
@@ -821,8 +851,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         final boolean blocksActive = entry.numBlocksDownloaded > 0 && i <= IDLE_BLOCK_TIMEOUT_MIN;
                         final boolean transactionsActive = entry.numTransactionsReceived > 0
                                 && i <= IDLE_TRANSACTION_TIMEOUT_MIN;
+                        final boolean headersActive = entry.numHeadersDownloaded > 0 && i <= IDLE_HEADER_TIMEOUT_MIN;
+                        final boolean mnListDiffsActive = entry.numMnListDiffsDownloaded > 0 && i <= IDLE_MNLIST_TIMEOUT_MIN;
 
-                        if (blocksActive || transactionsActive) {
+                        if (blocksActive || transactionsActive || headersActive || mnListDiffsActive) {
                             isIdle = false;
                             break;
                         }
@@ -837,6 +869,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             }
 
             lastChainHeight = chainHeight;
+            lastHeaderHeight = headerHeight;
         }
     };
 
@@ -959,7 +992,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         peerDiscoveryList.add(dnsDiscovery);
         updateAppWidget();
-        blockchainStateDao.load().observe(this, this::handleBlockchainStateNotification);
+        FlowExtKt.observe(blockchainStateDao.observeState(), this, (blockchainState, continuation) -> {
+            handleBlockchainStateNotification((BlockchainState) blockchainState);
+            return null;
+        });
         registerCrowdNodeConfirmedAddressFilter();
     }
 
@@ -1043,7 +1079,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     @Override
     public void onDestroy() {
-        log.debug(".onDestroy()");
+        log.info(".onDestroy()");
 
         WalletApplication.scheduleStartBlockchainService(this);  //disconnect feature
 
@@ -1137,47 +1173,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private void updateBlockchainStateImpediments() {
-        executor.execute(() -> {
-            BlockchainState blockchainState = blockchainStateDao.loadSync();
-            if (blockchainState != null) {
-                blockchainState.getImpediments().clear();
-                blockchainState.getImpediments().addAll(impediments);
-                blockchainStateDao.save(blockchainState);
-            }
-        });
+        blockchainStateDataProvider.updateImpediments(impediments);
     }
 
     private void updateBlockchainState() {
-        executor.execute(() -> {
-            BlockchainState blockchainState = blockchainStateDao.loadSync();
-            if (blockchainState == null) {
-                blockchainState = new BlockchainState();
-            }
-
-            StoredBlock chainHead = blockChain.getChainHead();
-            StoredBlock block = application.getWallet().getContext().chainLockHandler.getBestChainLockBlock();
-            int chainLockHeight = block != null ? block.getHeight() : 0;
-            int mnListHeight = (int) application.getWallet().getContext().masternodeListManager.getListAtChainTip().getHeight();
-
-            blockchainState.setBestChainDate(chainHead.getHeader().getTime());
-            blockchainState.setBestChainHeight(chainHead.getHeight());
-            blockchainState.setImpediments(EnumSet.copyOf(impediments));
-            blockchainState.setChainlockHeight(chainLockHeight);
-            blockchainState.setMnlistHeight(mnListHeight);
-            blockchainState.setPercentageSync(percentageSync());
-
-            blockchainStateDao.save(blockchainState);
-        });
-    }
-
-    public void setBlockchainDownloaded() {
-        executor.execute(() -> {
-            BlockchainState blockchainState = blockchainStateDao.loadSync();
-            if (blockchainState != null && blockchainState.getPercentageSync() != 100) {
-                blockchainState.setPercentageSync(100);
-                blockchainStateDao.save(blockchainState);
-            }
-        });
+        blockchainStateDataProvider.updateBlockchainState(blockChain, impediments, percentageSync());
     }
 
     @Override

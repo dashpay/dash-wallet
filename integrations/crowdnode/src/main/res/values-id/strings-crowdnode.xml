@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Untuk memulai staking, buat akun di CrowdNode atau hubungkan ke akun yang sudah ada.</string>
     <string name="crowdnode_account">Akun CrowdNode</string>
     <string name="new_account">Akun CrowdNode Baru</string>
-    <string name="account_create">Buat Akun</string>
     <string name="accept_terms_response">Harap Terima Persyaratan</string>
     <string name="accept_terms">Terima Persyaratan</string>
     <string name="welcome_response">Akun dibuat</string>
@@ -108,7 +107,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">Menerima imbalan</string>
     <string name="crowdnode_staking_receiving_rewards_message">Anda akan menerima pembayaran pecahan secara otomatis dan secara default akan diinvestasikan kembali, namun,mudah juga untuk mengatur penarikan otomatis untuk menerima pembayaran berulang.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">Setoran Minimum Pertama</string>
-    <string name="crowdnode_staking_join_pool_message">Karena kebanyakan orang tidak memiliki 1000 Dash, CrowdNode telah membuat layanan di mana mereka dengan mengumpulkan deposit dari anggota sehingga dapat mencapai manfaat memiliki Masternode.</string>
+    <string name="crowdnode_staking_join_pool_message">Karena kebanyakan orang tidak memiliki 1000 Dash, CrowdNode telah membuat layanan di mana, dengan mengumpulkan simpanan dari anggota, mereka dapat memperoleh keuntungan dari memiliki Masternode.</string>
     <string name="crowdnode_staking_join_pool_title">Bergabung ke pool</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">Manfaat CrowdNode</string>
     <string name="crowdnode_staking_connected_dash_address_title">Alamat Dash terhubung</string>

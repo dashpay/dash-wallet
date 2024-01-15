@@ -367,7 +367,6 @@
     <string name="activity_security_hide_balance">自动隐藏余额</string>
     <string name="reset_to_default">重置为默认</string>
 
-    <string name="payment_protocol_default_error_title">支付错误</string>
     <string name="payment_protocol_insufficient_funds_error_title">资金不足</string>
     <string name="payment_protocol_insufficient_funds_error_message">您没有足够的资金来完成此次交易</string>
 
@@ -375,17 +374,24 @@
     <string name="select_a_service">选择服务</string>
     <string name="activity_buy_and_sell_dash_filter">过滤</string>
     <string name="clear_filter">清除过滤</string>
-    <string name="select_currency">选择货币</string>
     <string name="reason">理由</string>
     <string name="link_account">关联您的账户</string>
     <string name="buy_no_account_needed">购买Dash · 无需账户</string>
-    <string name="your_coinbase_session_has_expired">您的Coinbase对话已过期</string>
-    <string name="please_log_in_to_your_coinbase_account">请登录您的 Coinbase 账户</string>
-    <string name="log_in">登录</string>
 
-    <string name="recipient_address">钱包地址</string>
+    <string name="recipient_address">收款人地址</string>
     <string name="show_clipboard">显示剪切板中的内容</string>
     <string name="tap_to_paste">点击剪切板中的地址进行粘贴</string>
     <string name="not_dash_address">不是有效的Dash地址或 URL 请求</string>
     <string name="send_to_address">发送至地址</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">电池优化</string>
+    <string name="battery_optimization_subtitle_optimized">已优化</string>
+    <string name="battery_optimization_subtitle_unrestricted">无限制</string>
+
+    <string name="battery_optimization_dialog_optimized_title">允许 Dash Wallet 后台运行?</string>
+    <string name="battery_optimization_dialog_message_optimized">此 app 被设置为在后台运行一段时间后则停止运行.\n\n这使切换到程序前将无法接收到支付通知.\n\n我们推荐允许此 app 以“未优化” 或 “无限制”的电池优化设置在后台运行.\n\n无需担心, 我们将经常提醒您电池用量.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">您想要在后台接收支付推送么?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">此 app 被设置为在后台运行一段时间后仍继续运行.\n\n我们推荐允许此 app 一直保持更新最新状态, 即便是在后台运行.\n\n无需担心, 我们将经常提醒您电池用量.</string>
+    <string name="battery_optimization_dialog_button_change">打开设置</string>
 </resources>

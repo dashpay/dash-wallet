@@ -269,7 +269,7 @@
     <string name="menu_contact_support_title">تماس با پشتیبانی</string>
     <string name="menu_contact_support_subtitle">گزارش مشکل</string>
     <string name="menu_explore_title">کاوش</string>
-    <string name="menu_explore_subtitle">از بیش از ۱۵۵،۰۰۰ فروشنده با دش خرید کنید</string>
+    <string name="menu_explore_subtitle">فروشنده‌ای بیابید که دش می‌پذیرد</string>
 
     <string name="tools_address_book">دفترچه نشانی‌ها</string>
     <string name="tools_import_private_key">وارد کردن کلید خصوصی</string>
@@ -347,8 +347,6 @@
     <string name="payment_request_unable_to_send">امکان ارسال وجود ندارد</string>
     <string name="payment_request_please_try_again">لطفا دوباره امتحان کنید</string>
     <string name="payment_request_try_again">دوباره امتحان کنید</string>
-    <string name="payment_request_problem_title">پرداخت، پذیرفته نشد</string>
-    <string name="payment_request_problem_message">امکان پردازش پرداخت‌تان توسط سرور وجود ندارد. لطفا با فروشنده تماس بگیرید. </string>
     <string name="payment_request_expired_title">درخواست پرداخت منقضی شد</string>
     <string name="payment_request_close">بستن</string>
     <string name="payment_request_skip">رد کردن</string>
@@ -399,7 +397,7 @@
     <string name="masternode_key_type_owner">کلیدهای مالک</string>
     <string name="masternode_key_type_voting">کلیدهای رای‌دهی</string>
     <string name="masternode_key_type_operator">کلیدهای اپراتور</string>
-    <string name="masternode_key_type_platform">کلیدهای اپراتور اچ‌پی‌ام‌ان</string>
+    <string name="masternode_key_type_platform">کلیدهای شناسه اولوشن نود</string>
     <string name="masternode_key_type_total">%dعدد کلید</string>
     <string name="masternode_key_type_used">%dعدد استفاده شده</string>
     <string name="masternode_key_pair_index">%dعدد جفت‌کلید</string>

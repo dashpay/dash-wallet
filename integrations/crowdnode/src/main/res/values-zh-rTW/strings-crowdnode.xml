@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">要開始質押，請在 CrowdNode 上創建一個帳戶或連接到現有帳戶。</string>
     <string name="crowdnode_account">CrowdNode 帳戶</string>
     <string name="new_account">新建 CrowdNode 帳戶</string>
-    <string name="account_create">創建帳號</string>
     <string name="accept_terms_response">請接受條款</string>
     <string name="accept_terms">接受條款</string>
     <string name="welcome_response">已創建帳戶</string>
@@ -144,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">由於 CrowdNode 的服務條款，用戶的提款額不能超過:</string>
     <string name="crowdnode_withdraw_without_limits_online">使用 CrowdNode 網站上的在線帳戶可以無限制地提款。</string>
     <string name="crowdnode_withdrawal_limits_error">此錯誤很可能是由於超出了 CrowdNode 提款上限。請稍後再試。</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">請稍候片刻然後再開始下次提款</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">您需要等待5分鐘才能再次發起提款</string>
     <string name="per_transaction">每筆交易</string>
     <string name="per_hour">每小時</string>
     <string name="per_day">每 24 小時</string>

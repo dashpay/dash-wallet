@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">开始质押前, 需要创建一个CrowdNode账户或连接到现有账户.</string>
     <string name="crowdnode_account">CrowdNode 账户</string>
     <string name="new_account">新的CrowdNode账户</string>
-    <string name="account_create">创建账户</string>
     <string name="accept_terms_response">请接受条款</string>
     <string name="accept_terms">接受条款</string>
     <string name="welcome_response">已创建账户</string>
@@ -95,7 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">存入 %s 来开始赚取收益</string>
     <string name="crowdnode_first_deposit">首次存款应该超过 %s</string>
     <string name="crowdnode_staking_info_title">CrowdNode 质押的运作原理</string>
-    <string name="crowdnode_staking_info_message_first">Dash网络由众多主节点驱动, 这是令支付更便捷的重要组成部分.</string>
+    <string name="crowdnode_staking_info_message_first">Dash 网络由众多主节点驱动, 这是令支付更便捷的重要组成部分.</string>
     <string name="crowdnode_staking_info_message_second">一个主节点需要 1000 Dash作为抵押, 每个主节点目前每年获得大约%s%%的奖励.</string>
     <string name="crowdnode_staking_apy_title">目前的年利率是%s%%</string>
     <string name="crowdnode_staking_info_message">如果您的CrowdNode账户拥有超过%s就会开始赚取收益</string>
@@ -144,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">由于 CrowdNode的服务条款, 用户的提款额不能超过:</string>
     <string name="crowdnode_withdraw_without_limits_online">使用 CrowdNode网站上的在线账户可以无限制地提款.</string>
     <string name="crowdnode_withdrawal_limits_error">此错误很可能是由于超出了 CrowdNode提款上限. 请稍后再试.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">请稍等片刻再开始下次提现</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">您需要等待5分钟才能再次发起提现</string>
     <string name="per_transaction">每笔交易</string>
     <string name="per_hour">每小时</string>
     <string name="per_day">每24小时</string>

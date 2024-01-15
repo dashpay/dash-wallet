@@ -17,42 +17,32 @@
 
 package de.schildbach.wallet.ui.main;
 
-import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.LocaleList;
-import android.telephony.TelephonyManager;
-
+import android.os.PowerManager;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.common.collect.ImmutableList;
 
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Currency;
-import java.util.Locale;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.EncryptKeysDialogFragment;
@@ -88,6 +78,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private BaseAlertDialogBuilder baseAlertDialogBuilder;
     private MainViewModel viewModel;
 
+    ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), result -> WalletActivityExt.INSTANCE.requestDisableBatteryOptimisation(WalletActivity.this));
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -128,7 +119,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         super.onStart();
 
         if (!getLockScreenDisplayed() && configuration.getShowNotificationsExplainer()) {
-            explainPushNotifications();
+            WalletActivityExt.INSTANCE.explainPushNotifications(this);
         }
     }
 
@@ -222,7 +213,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                             applicationInfo,
                             packageInfoProvider,
                             configuration,
-                            walletData.getWallet()
+                            walletData.getWallet(),
+                            walletApplication.getSystemService(PowerManager.class)
                     );
                     return applicationInfo;
                 }
@@ -296,7 +288,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                             WalletActivity.this,
                             packageInfoProvider,
                             configuration,
-                            walletData.getWallet()
+                            walletData.getWallet(),
+                            walletApplication
                         ).buildAlertDialog();
                         alertDialog.show();
                     } else {
@@ -369,37 +362,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     public void onLockScreenDeactivated() {
         if (configuration.getShowNotificationsExplainer()) {
-            explainPushNotifications();
+            WalletActivityExt.INSTANCE.explainPushNotifications(this);
         }
-    }
-
-    private final ActivityResultLauncher<String> requestPermissionLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
-                // do nothing
-            });
-
-    /**
-     * Android 13 - Show system dialog to get notification permission from user, if not granted
-     *              ask again with each app upgrade if not granted.  This logic is handled by
-     *              {@link #onLockScreenDeactivated} and {@link #onStart}.
-     * Android 12 and below - show a explainer dialog once only.
-     */
-    private void explainPushNotifications() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
-        } else if (configuration.getShowNotificationsExplainer()) {
-            AdaptiveDialog dialog = AdaptiveDialog.create(
-                    R.drawable.ic_info_blue,
-                    getString(R.string.notification_explainer_title),
-                    getString(R.string.notification_explainer_message),
-                    "",
-                    getString(R.string.button_okay)
-            );
-
-            dialog.show(this, result -> Unit.INSTANCE);
-        }
-        // only show either the permissions dialog (Android >= 13) or the explainer (Android <= 12) once
-        configuration.setShowNotificationsExplainer(false);
     }
 }

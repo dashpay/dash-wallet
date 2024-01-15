@@ -17,23 +17,38 @@
 
 package org.dash.wallet.integrations.crowdnode.api
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.ensureSuccessful
 import org.dash.wallet.integrations.crowdnode.model.*
 import org.slf4j.LoggerFactory
+import retrofit2.HttpException
 import retrofit2.Response
 import retrofit2.http.*
 import java.io.IOException
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.net.URLEncoder
 import javax.inject.Inject
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
+
+enum class CrowdNodeMessageType(val value: Int) {
+    RegisterEmail(1),
+    Withdrawal(4);
+
+    override fun toString(): String {
+        return value.toString()
+    }
+}
 
 interface CrowdNodeEndpoint {
     @GET("odata/apifundings/GetFunds(address='{address}')")
@@ -66,11 +81,15 @@ interface CrowdNodeEndpoint {
         @Path("address") address: String
     ): Response<IsDefaultEmail>
 
-    @GET("odata/apimessages/SendMessage(address='{address}',message='{message}',signature='{signature}',messagetype=1)")
+    @GET(
+        "odata/apimessages/SendMessage(address='{address}',message='{message}'," +
+            "signature='{signature}',messagetype={messagetype})"
+    )
     suspend fun sendSignedMessage(
         @Path("address") address: String,
         @Path("message") message: String,
-        @Path("signature") signature: String
+        @Path("signature") signature: String,
+        @Path("messagetype") messageType: CrowdNodeMessageType
     ): Response<MessageStatus>
 
     @GET("odata/apimessages/GetMessages(address='{address}')")
@@ -81,6 +100,7 @@ interface CrowdNodeEndpoint {
 
 open class CrowdNodeWebApi @Inject constructor(
     private val endpoint: CrowdNodeEndpoint,
+    private val securityFunctions: AuthenticationManager,
     private val analyticsService: AnalyticsService
 ) {
     companion object {
@@ -90,11 +110,43 @@ open class CrowdNodeWebApi @Inject constructor(
         private const val MAX_PER_24H_KEY = "AmountApiWithdrawal24hMax"
     }
 
-    // TODO: these methods are just mappers right now. Move more logic in here from the aggregator class
-    suspend fun sendSignedMessage(address: String, email: String, encodedSignature: String): Response<MessageStatus> {
-        return endpoint.sendSignedMessage(address, email, encodedSignature)
+    suspend fun registerEmail(address: Address, email: String): MessageStatus {
+        val signature = securityFunctions.signMessage(address, email)
+        val encodedSignature = withContext(Dispatchers.IO) {
+            URLEncoder.encode(signature, "utf-8")
+        }
+        val response = endpoint.sendSignedMessage(
+            address.toBase58(),
+            email,
+            encodedSignature,
+            CrowdNodeMessageType.RegisterEmail
+        )
+        response.ensureSuccessful()
+
+        return response.body() ?: throw HttpException(response)
     }
 
+    suspend fun requestWithdrawal(address: Address, amount: Coin): MessageStatus {
+        val amountStr = amount.value.toString()
+        val signature = securityFunctions.signMessage(address, amountStr)
+        val encodedSignature = withContext(Dispatchers.IO) {
+            URLEncoder.encode(signature, "utf-8")
+        }
+        val response = endpoint.sendSignedMessage(
+            address.toBase58(),
+            amountStr,
+            encodedSignature,
+            CrowdNodeMessageType.Withdrawal
+        )
+        response.ensureSuccessful()
+
+        val message = response.body()
+        requireNotNull(message)
+
+        return message
+    }
+
+    // TODO: these methods are just mappers right now. Move more logic in here from the aggregator class
     suspend fun getMessages(address: String): Response<List<MessageStatus>> {
         return endpoint.getMessages(address)
     }

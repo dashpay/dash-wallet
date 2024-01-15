@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Ak chcete začať stávkovať, vytvorte si účet na CrowdNode alebo sa pripojte k existujúcemu účtu.</string>
     <string name="crowdnode_account">Účet CrowdNode</string>
     <string name="new_account">Nový CrowdNode účet</string>
-    <string name="account_create">Vytvoriť účet</string>
     <string name="accept_terms_response">Prijmite podmienky</string>
     <string name="accept_terms">Prijať podmienky</string>
     <string name="welcome_response">Účet vytvorený</string>
@@ -95,7 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">Aby ste mohli začať zarábať, vložte %s</string>
     <string name="crowdnode_first_deposit">Prvý vklad by mal byť vyšší ako %s</string>
     <string name="crowdnode_staking_info_title">Ako funguje stávkovanie na CrowdNode</string>
-    <string name="crowdnode_staking_info_message_first">Sieť Dash je riadená množstvom Masternódov, čo je nevyhnutná súčasť pre uskutočnenie platieb.</string>
+    <string name="crowdnode_staking_info_message_first">Sieť Dash je riadená množstvom Masternodov, ktoré sú nevyhnutnou súčasťou uskutočnenia platieb.</string>
     <string name="crowdnode_staking_info_message_second">Masternód potrebuje 1000 Dash ako záruku a každý Masternód je v súčasnosti odmeňovaný približne %s%% ročne.</string>
     <string name="crowdnode_staking_apy_title">Aktuálny APY je %s%%</string>
     <string name="crowdnode_staking_info_message">Zarábať začnete, ak má váš účet CrowdNode viac ako %s</string>
@@ -108,7 +107,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">Prijímané odmeny</string>
     <string name="crowdnode_staking_receiving_rewards_message">Čiastkové platby budete dostávať automaticky a štandardne budú reinvestované, ale je tiež jednoduché nastaviť automatické výbery pre prijímanie opakujúcich sa platieb.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">Prvý minimálny vklad</string>
-    <string name="crowdnode_staking_join_pool_message">Keďže väčšina ľudí nemá po ruke presne 1000 Dash, CrowdNode vytvoril službu, kde môžete združovaním vkladov od členov dosiahnuť výhody vlastníctva Masternódu.</string>
+    <string name="crowdnode_staking_join_pool_message">Keďže väčšina ľudí nemá po ruke presne 1000 Dash, CrowdNode vytvoril službu, kde môžu združovaním vkladov od členov dosiahnuť výhody vlastníctva Masternode.</string>
     <string name="crowdnode_staking_join_pool_title">Pripojenie k členstvu</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">Výhody CrowdNode</string>
     <string name="crowdnode_staking_connected_dash_address_title">Pripojená Dash adresa</string>
@@ -144,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Vzhľadom na zmluvné podmienky CrowdNode môžu používatelia vybrať maximálne:</string>
     <string name="crowdnode_withdraw_without_limits_online">Výber bez obmedzení s online účtom na webe CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Táto chyba je s najväčšou pravdepodobnosťou spôsobená prekročením limitov výberu CrowdNode. Skúste to neskôr.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Pred spustením ďalšieho výberu prosím počkajte</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Pred ďalším výberom musíte počkať 5 minút</string>
     <string name="per_transaction">za transakciu</string>
     <string name="per_hour">za hodinu</string>
     <string name="per_day">za 24 hodín</string>

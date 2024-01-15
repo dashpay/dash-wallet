@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Aby otworzyć lokatę, stwórz konto na CrowdNode lub zaloguj się do już istniejącego konta.</string>
     <string name="crowdnode_account">Konto CrowdNode</string>
     <string name="new_account">Nowe Konto CrowdNode</string>
-    <string name="account_create">Stwórz Konto</string>
     <string name="accept_terms_response">Zaakceptuj warunki</string>
     <string name="accept_terms">Zaakceptuj Zasady</string>
     <string name="welcome_response">Konto zostało stworzone</string>
@@ -95,7 +94,7 @@
     <string name="crowdnode_minimum_deposit_difference">Wpłać %saby zacząć zarabiać</string>
     <string name="crowdnode_first_deposit">Pierwsza wpłata powinna być większa niż %s</string>
     <string name="crowdnode_staking_info_title">Jak działa lokata procentowa na CrowdNode</string>
-    <string name="crowdnode_staking_info_message_first">Sieć Dash jest kierowana przez Masternody które są niezbędne do wysyłania transakcji. </string>
+    <string name="crowdnode_staking_info_message_first">Sieć Dash jest kierowana przez Masternody które są niezbędną częscią infrastruktury przeznaczonej do dokonywania transakcji. </string>
     <string name="crowdnode_staking_info_message_second">Jeden Masternode musi mieć 1000 Dash jako zabezpieczenie, oraz jest za to wynagradzany około %s%% na rok.</string>
     <string name="crowdnode_staking_apy_title">Obecne oprocentowanie w skali roku jest %s%%</string>
     <string name="crowdnode_staking_info_message">Zaczniesz otrzymywać wynagrodznie jeśli twoje konto na CrowdNode będzię miało więcej niż %s</string>
@@ -108,7 +107,7 @@
     <string name="crowdnode_staking_receiving_rewards_title">Otrzymywanie wynagrodzenia</string>
     <string name="crowdnode_staking_receiving_rewards_message">Będziesz otrzymywać częściowe płatności automatycznie i domyślnie będą one reinwestowane, jednak jęsli chcesz możesz też ustawić automatyczne wypłaty.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">Pierwszy Minimalna Wielkość Depozytu</string>
-    <string name="crowdnode_staking_join_pool_message">Ponieważ większość ludzi nie ma pod ręką dokładnie 1000 Dash, CrowdNode stworzył usługę, w której  wszyscy mogą czerpać korzyści z posiadania Masternode poprzez kimulacje mniejszych kwot od wielu użytkowników. </string>
+    <string name="crowdnode_staking_join_pool_message">Ponieważ większość ludzi nie ma pod ręką dokładnie 1000 Dash, CrowdNode stworzył usługę, w której  wszyscy mogą czerpać korzyści z posiadania Masternode poprzez kumulacje mniejszych kwot od wielu użytkowników. </string>
     <string name="crowdnode_staking_join_pool_title">Dołączanie do Puli CrowdNode</string>
     <string name="crowdnode_staking_crowdnode_benefits_title">Korzyści CrowdNode</string>
     <string name="crowdnode_staking_connected_dash_address_title">Połączony adres Dash</string>
@@ -144,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Zgodnie z warunkami korzystania z usługi CrowdNode użytkownicy mogą wypłacić nie więcej niż:</string>
     <string name="crowdnode_withdraw_without_limits_online">Wypłacaj bez ograniczeń za pomocą konta online na stronie CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Ten błąd jest najprawdopodobniej spowodowany przekroczeniem limitów wypłat CrowdNode. Spróbuj ponownie później.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Proszę poczekać przed rozpoczęciem kolejnej wypłaty</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Musisz odczekać 5 minut przed rozpoczęciem kolejnej wypłaty</string>
     <string name="per_transaction">w jednej transakcji</string>
     <string name="per_hour">na godzinę</string>
     <string name="per_day">na 24 godzin</string>

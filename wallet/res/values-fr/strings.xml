@@ -367,7 +367,6 @@
     <string name="activity_security_hide_balance">Cacher autom. le solde</string>
     <string name="reset_to_default">Retour aux valeurs par défaut</string>
 
-    <string name="payment_protocol_default_error_title">Erreur de paiement</string>
     <string name="payment_protocol_insufficient_funds_error_title">Fonds insuffisants</string>
     <string name="payment_protocol_insufficient_funds_error_message">Vous n\'avez pas assez de fonds pour terminer cette transaction</string>
 
@@ -375,17 +374,24 @@
     <string name="select_a_service">Choisissez un service</string>
     <string name="activity_buy_and_sell_dash_filter">Filtre</string>
     <string name="clear_filter">Effacer le filtre</string>
-    <string name="select_currency">Choisir la monnaie</string>
     <string name="reason">Raison</string>
     <string name="link_account">Relier votre compte</string>
     <string name="buy_no_account_needed">Achetez des dashs · Aucun compte requis</string>
-    <string name="your_coinbase_session_has_expired">Votre session Coinbase a expiré</string>
-    <string name="please_log_in_to_your_coinbase_account">Veuillez vous connecter à votre compte Coinbase</string>
-    <string name="log_in">Se connecter</string>
 
-    <string name="recipient_address">Adresse du portefeuille</string>
+    <string name="recipient_address">Adresse du destinataire</string>
     <string name="show_clipboard">Voir le contenu du presse-papiers</string>
     <string name="tap_to_paste">Touchez l\'adresse du presse-papiers pour la coller</string>
     <string name="not_dash_address">Adresse Dash ou requête URL non valides</string>
     <string name="send_to_address">Envoyer à l\'adresse</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Optimisation de la batterie</string>
+    <string name="battery_optimization_subtitle_optimized">Optimisée</string>
+    <string name="battery_optimization_subtitle_unrestricted">Sans restriction</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Autoriser Dash Wallet à fonctionner en arrière-plan ?</string>
+    <string name="battery_optimization_dialog_message_optimized">Cette application est configurée pour arrêter de fonctionner si elle n\'est pas visible et consultée pendant un certain temps.\n\nCela empêchera de recevoir des notifications de paiement avant que l\'application ne soit à nouveau consultée.\n\nNous conseillons d\'autoriser cette application à fonctionner en arrière-plan, en réglant l\'optimisation de batterie sur \"Non optimisée\" ou \"Sans restriction\".\n\nNe vous inquiétez pas, nous prendrons soin de l\'utilisation de la batterie.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Souhaitez-vous pouvoir recevoir des paiements en arrière-plan ?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Cette application est configurée pour continuer à fonctionner après n\'avoir pas été visible ou consultée pendant un certain temps.\n\nNous conseillons d\'autoriser cette application à toujours rester à jour de la blockchain, même en arrière-plan.\n\nNe vous inquiétez pas, nous prendrons soin de l\'utilisation de la batterie.</string>
+    <string name="battery_optimization_dialog_button_change">Ouvrir les Réglages</string>
 </resources>

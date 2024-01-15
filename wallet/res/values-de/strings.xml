@@ -368,7 +368,6 @@
     <string name="activity_security_hide_balance">Guthaben automatisch verstecken</string>
     <string name="reset_to_default">Auf Standard setzen</string>
 
-    <string name="payment_protocol_default_error_title">Zahlungsfehler</string>
     <string name="payment_protocol_insufficient_funds_error_title">Guthaben nicht ausreichend</string>
     <string name="payment_protocol_insufficient_funds_error_message">Dein Guthaben reicht nicht aus, um diese Transaktion zu tätigen</string>
 
@@ -376,17 +375,24 @@
     <string name="select_a_service">Dienst auswählen</string>
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Filter leeren</string>
-    <string name="select_currency">Währung auswählen</string>
     <string name="reason">Ursache</string>
     <string name="link_account">Konto verknüpfen</string>
     <string name="buy_no_account_needed">Dash kaufen. Es wird kein Konto benötigt.</string>
-    <string name="your_coinbase_session_has_expired">Deine Coinbase Session ist abgelaufen.</string>
-    <string name="please_log_in_to_your_coinbase_account">Bitte logge dich in deinen Coinbase Account ein.</string>
-    <string name="log_in">Einloggen</string>
 
-    <string name="recipient_address">Adresse der Wallet</string>
+    <string name="recipient_address">Adresse des Empfängers</string>
     <string name="show_clipboard">Inhalt der Zwischenablage anzeigen</string>
     <string name="tap_to_paste">Tippe auf die Adresse in der Zwischenablage, um sie einzufügen.</string>
     <string name="not_dash_address">Keine gültige Dash Adresse oder URL-Anfrage</string>
     <string name="send_to_address">An Adresse senden</string>
+
+    <!-- Battery Optimization-->
+    <string name="battery_optimization_title">Akku-Optimierung</string>
+    <string name="battery_optimization_subtitle_optimized">Optimiert</string>
+    <string name="battery_optimization_subtitle_unrestricted">Unbeschränkt</string>
+
+    <string name="battery_optimization_dialog_optimized_title">Dash Wallet im Hintergrund laufen lassen?</string>
+    <string name="battery_optimization_dialog_message_optimized">Diese App wurde so eingestellt, dass sie endet, wenn sie seit langem nicht mehr angeschaut wurde.\n\nDies führt dazu, dass Zahlungsbenachrichtigungen nicht erhalten werden bis die App wieder im Vordergrund erscheint.\n\nWir empfehlen diese App im Hintergrund laufen zu lassen und die Akkuoptimierung zu \"Nicht optimiert\" oder \"Unbeschränkt\" zu ändern.\n\nMach dir keine Sorgen. Wir achten immer auf ausgewogene Akkunutzung.</string>
+    <string name="battery_optimization_dialog_unrestricted_title">Möchtest du Zahlungen im Hintergrund erhalten?</string>
+    <string name="battery_optimization_dialog_message_not_optimized">Diese App wurde so eingestellt, dass sie endet, wenn sie seit langem nicht mehr angeschaut wurde.\n\nWir empfehlen, diese App immer up-to-date mit der Blockchain zu halten, selbst wenn sie im Hintergrund läuft.\n\nMach dir keine Sorgen. Wir achten immer auf ausgewogene Akkunutzung.</string>
+    <string name="battery_optimization_dialog_button_change">Einstellungen öffnen</string>
 </resources>

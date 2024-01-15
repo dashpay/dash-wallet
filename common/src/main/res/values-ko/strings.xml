@@ -58,6 +58,7 @@
     <string name="share_address">주소 공유하기</string>
     <string name="verify">인증하기</string>
     <string name="receive_enter_amount_button">금액 특정하기</string>
+    <string name="account_create">계정 생성하기</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">검색</string>
@@ -75,12 +76,19 @@
     <string name="select_currency">통화 선택</string>
     <string name="send_coins_error_dusty_send">송금액이 너무 적어 전송할 수 없습니다</string>
     <string name="send_coins_error_insufficient_money">잔액 부족</string>
+    <string name="syncing">동기화 중</string>
     <string name="no_connection">인터넷 연결 없음</string>
     <string name="rate_not_available">이용할 수 없음</string>
 
+    <!-- CrowdNode warning -->
     <string name="empty_wallet_warning_title">대시 지갑을 비우고 있는 것 같군요</string>
     <string name="empty_wallet_crowdnode_warning">한 가지 주의하셔야 할 점은, 당신의 잔고가 0.0003 대시가 되기 전에는 크라우드노드에서 이 지갑으로 자금을 인출할 수 없다는 것입니다.</string>
-    <string name="syncing">동기화 중</string>
+
+    <!-- Send coins -->
+    <string name="payment_request_problem_title">지불이 인식되지 않았습니다</string>
+    <string name="payment_protocol_default_error_title">지불 오류</string>
+    <string name="payment_request_problem_message">서버가 귀하의 지불을 처리하지 못했습니다. 판매자에게 문의해주십시오.</string>
+    <string name="exchange_rate_not_found">환율 정보를 찾지 못했습니다.</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">대시 지갑으로 직접 받기</string>
@@ -89,4 +97,5 @@
     <string name="disconnected">연결 해제</string>
     <string name="enter_amount_available">가능</string>
     <string name="transaction_row_rate_not_available">이용할 수 없음</string>
+    <string name="log_in">로그인</string>
 </resources>

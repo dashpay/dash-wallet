@@ -19,7 +19,6 @@
     <string name="crowdnode_get_started_hint">Para simulan ang staking, gumawa ng account sa CrowdNode o kumonekta sa mayroon na.</string>
     <string name="crowdnode_account">CrowdNode Account</string>
     <string name="new_account">Bagong CrowdNode Account</string>
-    <string name="account_create">Lumikha ng Account</string>
     <string name="accept_terms_response">Mangyaring Tanggapin ang Mga Tuntunin</string>
     <string name="accept_terms">Tanggapin ang Mga Tuntunin</string>
     <string name="welcome_response">Nakagawa na ng account</string>
@@ -144,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Dahil sa mga tuntunin ng serbisyo ng CrowdNode, ang mga user ay maaaring mag-withdraw ng hindi hihigit sa:</string>
     <string name="crowdnode_withdraw_without_limits_online">Mag-withdraw nang walang limitasyon gamit ang isang online na account sa website ng CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Ang error na ito ay malamang na dahil sa paglampas sa mga limitasyon sa pag-withdraw ng CrowdNode. Subukan ulit mamaya.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Mangyaring maghintay bago simulan ang susunod na withdrawal</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Kailangan mong maghintay ng 5 minuto bago simulan ang isa pang withdrawal</string>
     <string name="per_transaction">bawat transaksyon</string>
     <string name="per_hour">bawat oras</string>
     <string name="per_day">bawat 24 na oras</string>
