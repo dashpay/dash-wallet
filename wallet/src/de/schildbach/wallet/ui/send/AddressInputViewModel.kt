@@ -21,12 +21,13 @@ import android.content.ClipDescription
 import android.content.ClipboardManager
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.payments.parsers.AddressParser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.dash.wallet.common.payments.parsers.AddressParser
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.Constants
 import javax.inject.Inject
 
 data class AddressInputUIState(
@@ -56,7 +57,7 @@ class AddressInputViewModel @Inject constructor(
 
     fun showClipboardContent() {
         val text = getClipboardInput()
-        val addressRanges = AddressParser.findAll(text)
+        val addressRanges = AddressParser.getDashAddressParser(Constants.NETWORK_PARAMETERS).findAll(text)
         _uiState.value = _uiState.value.copy(clipboardText = text, addressRanges = addressRanges)
         analyticsService.logEvent(AnalyticsConstants.AddressInput.SHOW_CLIPBOARD, mapOf())
     }

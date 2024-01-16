@@ -21,6 +21,7 @@ import com.google.common.io.BaseEncoding
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.utils.MonetaryFormat
 import org.slf4j.Logger
@@ -67,7 +68,12 @@ object Constants {
             HttpLoggingInterceptor { log.debug(it) }.setLevel(HttpLoggingInterceptor.Level.BASIC)
         )
         .build()
-
     @JvmField
     val HEX: BaseEncoding = BaseEncoding.base16().lowerCase()
+    @JvmField
+    val NETWORK_PARAMETERS: NetworkParameters = MainNetParams.get()
+    @JvmField
+    var ANYPAY_SCHEME = "pay"
+    @JvmField
+    var DASH_SCHEME = "dash"
 }

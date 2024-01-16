@@ -38,10 +38,11 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.payments.parsers.PaymentIntentParser
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentAddressInputBinding
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.viewBinding
@@ -157,7 +158,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
             val input = binding.addressInput.text.toString().trim()
 
             try {
-                val paymentIntent = PaymentIntentParser.parse(input, true)
+                val paymentIntent = DashPaymentIntentParser(Constants.NETWORK_PARAMETERS).parse(input, true)
                 binding.inputWrapper.isErrorEnabled = false
                 binding.errorText.isVisible = false
                 SendCoinsActivity.start(requireContext(), paymentIntent)

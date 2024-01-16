@@ -30,10 +30,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.integration.android.BitcoinIntegration
-import de.schildbach.wallet.payments.parsers.PaymentIntentParser
-import de.schildbach.wallet.payments.parsers.PaymentIntentParserException
+import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.util.Nfc
@@ -42,6 +40,8 @@ import de.schildbach.wallet_test.databinding.ActivitySendCoinsBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bitcoinj.protocols.payments.PaymentProtocol
+import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.ResourceString
 import java.io.FileNotFoundException
@@ -125,7 +125,7 @@ open class SendCoinsActivity : LockScreenActivity() {
         return if ((action == Intent.ACTION_VIEW || action == NfcAdapter.ACTION_NDEF_DISCOVERED) &&
             intentUri?.hasValidScheme() == true
         ) {
-            PaymentIntentParser.parse(intentUri.toString(), true)
+            DashPaymentIntentParser(Constants.NETWORK_PARAMETERS).parse(intentUri.toString(), true)
         } else if (action == NfcAdapter.ACTION_NDEF_DISCOVERED && mimeType == PaymentProtocol.MIMETYPE_PAYMENTREQUEST) {
             val ndefMessage = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)?.get(0) as? NdefMessage
             val ndefMessagePayload = ndefMessage?.let {
@@ -230,5 +230,5 @@ open class SendCoinsActivity : LockScreenActivity() {
     }
 
     private fun Uri.hasValidScheme() =
-        this.scheme == Constants.DASH_SCHEME || this.scheme == Constants.ANYPAY_SCHEME
+        this.scheme == org.dash.wallet.common.util.Constants.DASH_SCHEME || this.scheme == org.dash.wallet.common.util.Constants.ANYPAY_SCHEME
 }

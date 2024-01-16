@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,19 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.payments.parsers
+package org.dash.wallet.common.payments.parsers
 
 import com.google.common.hash.Hashing
 import com.google.protobuf.InvalidProtocolBufferException
 import com.google.protobuf.UninitializedMessageException
-import de.schildbach.wallet.Constants
-import org.dash.wallet.common.data.PaymentIntent
-import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoin.protocols.payments.Protos.PaymentRequest
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.crypto.TrustStoreLoader.DefaultTrustStoreLoader
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.protocols.payments.PaymentProtocolException
@@ -37,8 +35,11 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentUR
 import org.bitcoinj.protocols.payments.PaymentProtocolException.PkiVerificationException
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
+import org.dash.wallet.common.R
+import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.util.AddressUtil
 import org.dash.wallet.common.util.Base43
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.Io
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
@@ -49,14 +50,13 @@ import java.io.InputStream
 import java.security.KeyStoreException
 import java.util.*
 
-class PaymentIntentParserException(
-    innerException: Exception,
-    val localizedMessage: ResourceString
-) : Exception(innerException)
-
-object PaymentIntentParser {
+class DashPaymentIntentParser(params: NetworkParameters) : PaymentIntentParser("dash", params) {
     private val log = LoggerFactory.getLogger(PaymentIntentParser::class.java)
+    private val addressParser = AddressParser.getDashAddressParser(params)
 
+    override suspend fun parse(input: String): PaymentIntent {
+        return parse(input, true)
+    }
     suspend fun parse(input: String, supportAnypayUrls: Boolean): PaymentIntent = withContext(Dispatchers.Default) {
         var inputStr = input
 
@@ -103,7 +103,7 @@ object PaymentIntentParser {
                     )
                 )
             }
-        } else if (AddressParser.exactMatch(inputStr)) {
+        } else if (addressParser.exactMatch(inputStr)) {
             try {
                 val address = Address.fromString(Constants.NETWORK_PARAMETERS, inputStr)
                 return@withContext PaymentIntent.fromAddress(address, null)
