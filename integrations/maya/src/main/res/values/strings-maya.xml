@@ -31,10 +31,16 @@
     <string name="cryptocurrency_tether_code" translatable="false">USDT</string>
     <string name="cryptocurrency_ethereum_network">Ethereum</string>
     <string name="cryptocurrency_usdcoin_network">USD Coin</string>
-    <string name="cryptocurrency_tether_network">USDT</string>
+    <string name="cryptocurrency_tether_network">Tether</string>
+    <string name="cryptocurrency_kuji_code" translatable="false">KUJI</string>
+    <string name="cryptocurrency_kuji_network">Kujira</string>
+    <string name="cryptocurrency_usk_code" translatable="false">USK</string>
+    <string name="cryptocurrency_usk_network">USK</string>
+    <string name="cryptocurrency_wsteth_code" translatable="false">WSTETH</string>
+    <string name="cryptocurrency_wsteth_network">Wrapped stETH</string>
 
     <string name="maya_error">Maya Error</string>
     <string name="maya_error_not_available">The Maya service is not available.  Please try again later.</string>
     <string name="maya_error_report_issue">Please report this issue to the Dash Wallet support team using "Report Issue" from the main menu.</string>
-
+    <string name="maya_error_address_not_valid"></string>
 </resources>
