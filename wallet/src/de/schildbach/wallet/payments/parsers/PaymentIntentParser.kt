@@ -22,8 +22,6 @@ import com.google.protobuf.InvalidProtocolBufferException
 import com.google.protobuf.UninitializedMessageException
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.util.AddressUtil
-import de.schildbach.wallet.util.Io
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -39,7 +37,9 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentUR
 import org.bitcoinj.protocols.payments.PaymentProtocolException.PkiVerificationException
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
+import org.dash.wallet.common.util.AddressUtil
 import org.dash.wallet.common.util.Base43
+import org.dash.wallet.common.util.Io
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
@@ -86,7 +86,7 @@ object PaymentIntentParser {
         } else if (inputStr.startsWith(Constants.DASH_SCHEME + ":")) {
             try {
                 val bitcoinUri = BitcoinURI(null, inputStr)
-                val address = AddressUtil.getCorrectAddress(bitcoinUri)
+                val address = AddressUtil.getCorrectAddress(bitcoinUri, Constants.NETWORK_PARAMETERS)
 
                 if (address != null && Constants.NETWORK_PARAMETERS != address.parameters) {
                     throw BitcoinURIParseException("mismatched network")

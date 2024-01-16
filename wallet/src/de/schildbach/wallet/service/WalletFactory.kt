@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.Crypto
-import de.schildbach.wallet.util.Io
 import de.schildbach.wallet.util.Iso8601Format
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.DumpedPrivateKey
@@ -39,6 +38,7 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletExtension
 import org.bitcoinj.wallet.WalletProtobufSerializer
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.dash.wallet.common.util.Io
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.BufferedReader

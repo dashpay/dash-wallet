@@ -41,7 +41,9 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.protocols.payments.PaymentSession;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
+import org.dash.wallet.common.util.AddressUtil;
 import org.dash.wallet.common.util.Base43;
+import org.dash.wallet.common.util.Io;
 import org.dash.wallet.common.util.Qr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,8 +62,6 @@ import java.util.regex.Pattern;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
-import de.schildbach.wallet.util.AddressUtil;
-import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -108,7 +108,7 @@ public abstract class InputParser {
             } else if (input.startsWith(Constants.DASH_SCHEME + ":")) {
                 try {
                     final BitcoinURI bitcoinUri = new BitcoinURI(null, input);
-                    final Address address = AddressUtil.getCorrectAddress(bitcoinUri);
+                    final Address address = AddressUtil.getCorrectAddress(bitcoinUri, Constants.NETWORK_PARAMETERS);
                     if (address != null && !Constants.NETWORK_PARAMETERS.equals(address.getParameters()))
                         throw new BitcoinURIParseException("mismatched network");
 

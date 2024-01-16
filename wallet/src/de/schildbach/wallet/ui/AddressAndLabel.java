@@ -22,11 +22,11 @@ import javax.annotation.Nullable;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.NetworkParameters;
+import org.dash.wallet.common.util.AddressUtil;
 
 import com.google.common.base.Objects;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.util.AddressUtil;
 
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -45,7 +45,7 @@ public class AddressAndLabel implements Parcelable {
 
     public AddressAndLabel(final NetworkParameters addressParams, final String address, @Nullable final String label)
             throws AddressFormatException.WrongNetwork {
-        this(AddressUtil.fromString(addressParams, address), label);
+        this(AddressUtil.fromString(addressParams, address, Constants.NETWORK_PARAMETERS), label);
     }
 
     @Override
@@ -87,7 +87,7 @@ public class AddressAndLabel implements Parcelable {
     };
 
     private AddressAndLabel(final Parcel in) {
-        address = AddressUtil.fromString(Constants.NETWORK_PARAMETERS, in.readString());
+        address = AddressUtil.fromString(Constants.NETWORK_PARAMETERS, in.readString(), Constants.NETWORK_PARAMETERS);
         label = in.readString();
     }
 }
