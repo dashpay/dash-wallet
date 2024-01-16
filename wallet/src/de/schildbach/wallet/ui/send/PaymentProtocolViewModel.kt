@@ -27,7 +27,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.PaymentIntent
+import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.offline.DirectPaymentTask
 import de.schildbach.wallet.offline.DirectPaymentTask.HttpPaymentTask
@@ -145,7 +145,7 @@ class PaymentProtocolViewModel @Inject constructor(
 
         val requestCallback = object : RequestPaymentRequestTask.ResultCallback {
             override fun onPaymentIntent(paymentIntent: PaymentIntent) {
-                if (basePaymentIntent.isExtendedBy(paymentIntent, true)) {
+                if (basePaymentIntent.isExtendedBy(paymentIntent, true, Constants.NETWORK_PARAMETERS)) {
                     finalPaymentIntent = paymentIntent
                     createBaseSendRequest(paymentIntent)
                 } else {

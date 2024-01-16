@@ -30,7 +30,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.dash.wallet.common.ui.scan.ScanActivity;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.PaymentIntent;
+import org.dash.wallet.common.data.PaymentIntent;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.ShortcutComponentActivity;
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser;

@@ -60,8 +60,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
+import org.dash.wallet.common.data.PaymentIntent;
+
 import de.schildbach.wallet_test.R;
 
 /**

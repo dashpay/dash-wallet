@@ -21,7 +21,7 @@ import com.google.common.hash.Hashing
 import com.google.protobuf.InvalidProtocolBufferException
 import com.google.protobuf.UninitializedMessageException
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.PaymentIntent
+import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

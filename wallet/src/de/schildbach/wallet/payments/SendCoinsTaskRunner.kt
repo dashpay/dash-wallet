@@ -17,8 +17,9 @@
 package de.schildbach.wallet.payments
 
 import androidx.annotation.VisibleForTesting
+import de.schildbach.wallet.Constants.NETWORK_PARAMETERS
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.PaymentIntent
+import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.payments.parsers.PaymentIntentParser
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
@@ -142,7 +143,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
         val paymentIntent = PaymentIntentParser.parse(byteStream, contentType)
 
-        if (!basePaymentIntent.isExtendedBy(paymentIntent, true)) {
+        if (!basePaymentIntent.isExtendedBy(paymentIntent, true, NETWORK_PARAMETERS)) {
             log.info("BIP72 trust check failed")
             throw IllegalStateException("BIP72 trust check failed: $requestUrl")
         }
@@ -236,7 +237,7 @@ class SendCoinsTaskRunner @Inject constructor(
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         // to make sure the correct instance of Transaction class is used in toSendRequest() method
         paymentIntent.setInstantX(false)
-        val sendRequest = paymentIntent.toSendRequest()
+        val sendRequest = paymentIntent.toSendRequest(NETWORK_PARAMETERS)
         sendRequest.coinSelector = ZeroConfCoinSelector.get()
         sendRequest.useInstantSend = false
         sendRequest.feePerKb = Constants.ECONOMIC_FEE

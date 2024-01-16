@@ -30,7 +30,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.PaymentIntent
+import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.integration.android.BitcoinIntegration
 import de.schildbach.wallet.payments.parsers.PaymentIntentParser
 import de.schildbach.wallet.payments.parsers.PaymentIntentParserException
