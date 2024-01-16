@@ -21,7 +21,7 @@ import android.os.Parcelable
 import de.schildbach.wallet.Constants
 import kotlinx.android.parcel.IgnoredOnParcel
 import kotlinx.android.parcel.Parcelize
-import org.bitcoinj.evolution.CreditFundingTransaction
+import org.bitcoinj.evolution.AssetLockTransaction
 import org.bouncycastle.crypto.params.KeyParameter
 
 @Parcelize
@@ -38,8 +38,8 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
         private const val PARAM_IS_LOCK = "islock"
         private const val PARAM_IS_LOCK_2 = "is-lock"
 
-        fun create(username: String, displayName: String, avatarUrl: String, cftx: CreditFundingTransaction, aesKeyParameter: KeyParameter): InvitationLinkData {
-            val privateKey = cftx.creditBurnPublicKey.decrypt(aesKeyParameter)
+        fun create(username: String, displayName: String, avatarUrl: String, cftx: AssetLockTransaction, aesKeyParameter: KeyParameter): InvitationLinkData {
+            val privateKey = cftx.assetLockPublicKey.decrypt(aesKeyParameter)
             val linkBuilder = Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
                     .appendQueryParameter(PARAM_USER, username)
                     .appendQueryParameter(PARAM_CFTX, cftx.txId.toString())

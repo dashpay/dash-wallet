@@ -33,7 +33,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
-import org.bitcoinj.evolution.CreditFundingTransaction
+import org.bitcoinj.evolution.AssetLockTransaction
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -100,14 +100,14 @@ class SendInviteWorker @AssistedInject constructor(
             val dashPayProfile = platformRepo.getLocalUserProfile()
             val dynamicLink = createDynamicLink(dashPayProfile!!, cftx, encryptionKey)
             val shortDynamicLink = buildShortDynamicLink(dynamicLink)
-            val invitation = platformRepo.getInvitation(cftx.creditBurnIdentityIdentifier.toStringBase58())!!
+            val invitation = platformRepo.getInvitation(cftx.identityId.toStringBase58())!!
             invitation.shortDynamicLink = shortDynamicLink.shortLink.toString()
             invitation.dynamicLink = dynamicLink.uri.toString()
             platformRepo.updateInvitation(invitation)
             Result.success(workDataOf(
                     KEY_TX_ID to cftx.txId.bytes,
-                    KEY_USER_ID to cftx.creditBurnIdentityIdentifier.toStringBase58(),
-                    KEY_INVITE_ID to Address.fromPubKeyHash(wallet.params, cftx.creditBurnPublicKeyId.bytes).toBase58(),
+                    KEY_USER_ID to cftx.identityId.toStringBase58(),
+                    KEY_INVITE_ID to Address.fromPubKeyHash(wallet.params, cftx.identityId.bytes).toBase58(),
                     KEY_DYNAMIC_LINK to dynamicLink.uri.toString(),
                     KEY_SHORT_DYNAMIC_LINK to shortDynamicLink.shortLink.toString()
             ))
@@ -118,7 +118,7 @@ class SendInviteWorker @AssistedInject constructor(
         }
     }
 
-    private fun createDynamicLink(dashPayProfile: DashPayProfile, cftx: CreditFundingTransaction, aesKeyParameter: KeyParameter): DynamicLink {
+    private fun createDynamicLink(dashPayProfile: DashPayProfile, cftx: AssetLockTransaction, aesKeyParameter: KeyParameter): DynamicLink {
         log.info("creating dynamic link for invitation")
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context

@@ -46,7 +46,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
-import org.bitcoinj.evolution.CreditFundingTransaction
+import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
@@ -552,27 +552,27 @@ class PlatformRepo @Inject constructor(
     //
     // Step 2 is to create the credit funding transaction
     //
-    suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, useCoinJoin: Boolean) {
+    suspend fun createAssetLockTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, useCoinJoin: Boolean) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
-            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin, true)
-            blockchainIdentity.initializeCreditFundingTransaction(cftx)
+            val cftx = blockchainIdentity.createAssetLockTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin, true)
+            blockchainIdentity.initializeAssetLockTransaction(cftx)
         }
     }
 
     //
     // Step 2 is to obtain the credit funding transaction for invites
     //
-    suspend fun obtainCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, invite: InvitationLinkData) {
+    suspend fun obtainAssetLockTransactionAsync(blockchainIdentity: BlockchainIdentity, invite: InvitationLinkData) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
             var cftxData = platform.client.getTransaction(invite.cftx)
             //TODO: remove when iOS uses big endian
             if (cftxData == null)
                 cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
-            val cftx = CreditFundingTransaction(platform.params, cftxData!!.transaction)
+            val assetLockTx = AssetLockTransaction(platform.params, cftxData!!.transaction)
             val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
-            cftx.setCreditBurnPublicKeyAndIndex(privateKey, 0)
+            assetLockTx.addAssetLockPublicKey(privateKey)
 
             // TODO: when all instantsend locks are deterministic, we don't need the catch block
             val instantSendLock = try {
@@ -581,8 +581,8 @@ class PlatformRepo @Inject constructor(
                 InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISLOCK_VERSION)
             }
 
-            cftx.confidence.setInstantSendLock(instantSendLock)
-            blockchainIdentity.initializeCreditFundingTransaction(cftx)
+            assetLockTx.confidence.setInstantSendLock(instantSendLock)
+            blockchainIdentity.initializeAssetLockTransaction(assetLockTx)
         }
     }
 
@@ -621,7 +621,7 @@ class PlatformRepo @Inject constructor(
     //
     // Step 3: Find the identity in the case of recovery
     //
-    suspend fun recoverIdentityAsync(blockchainIdentity: BlockchainIdentity, creditFundingTransaction: CreditFundingTransaction) {
+    suspend fun recoverIdentityAsync(blockchainIdentity: BlockchainIdentity, creditFundingTransaction: AssetLockTransaction) {
         withContext(Dispatchers.IO) {
             blockchainIdentity.recoverIdentity(creditFundingTransaction)
         }
@@ -702,7 +702,7 @@ class PlatformRepo @Inject constructor(
     }
 
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
-        val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
+        val creditFundingTransaction = blockchainIdentityData.findAssetLockTransaction(wallet)
         val blockchainIdentity = if (creditFundingTransaction != null) {
             // the blockchain is synced past the point when the credit funding tx was found
             BlockchainIdentity(
@@ -754,7 +754,7 @@ class PlatformRepo @Inject constructor(
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
         blockchainIdentityData.apply {
-            creditFundingTxId = blockchainIdentity.creditFundingTransaction?.txId
+            creditFundingTxId = blockchainIdentity.assetLockTransaction?.txId
             userId = if (blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED)
                 blockchainIdentity.uniqueIdString
             else null
@@ -1017,7 +1017,7 @@ class PlatformRepo @Inject constructor(
     // Step 2 is to create the credit funding transaction
     //
     suspend fun createInviteFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?)
-            : CreditFundingTransaction {
+            : AssetLockTransaction {
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)
@@ -1027,7 +1027,7 @@ class PlatformRepo @Inject constructor(
             useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE,
             returnChange = true
         )
-        val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
+        val invitation = Invitation(cftx.identityId.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())
         // update database
         updateInvitation(invitation)
@@ -1047,7 +1047,7 @@ class PlatformRepo @Inject constructor(
         return invitationsDao.loadByUserId(userId)
     }
 
-    private suspend fun sendTransaction(cftx: CreditFundingTransaction): Boolean {
+    private suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
         log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
             cftx.confidence.addEventListener(object : TransactionConfidence.Listener {
@@ -1121,8 +1121,8 @@ class PlatformRepo @Inject constructor(
                 platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
         }
         if (tx != null) {
-            val cfTx = CreditFundingTransaction(Constants.NETWORK_PARAMETERS, tx.transaction)
-            val identity = platform.identities.get(cfTx.creditBurnIdentityIdentifier.toStringBase58())
+            val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx.transaction)
+            val identity = platform.identities.get(cfTx.identityId.toStringBase58())
             if (identity == null) {
                 // determine if the invite has enough credits
                 if (cfTx.lockedOutput.value < Constants.DASH_PAY_INVITE_MIN) {
@@ -1174,16 +1174,16 @@ class PlatformRepo @Inject constructor(
         }
     }
 
-    fun handleSentCreditFundingTransaction(cftx: CreditFundingTransaction, blockTimestamp: Long) {
+    fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long) {
         val extension = authenticationGroupExtension
 
         if (this::blockchainIdentity.isInitialized && extension != null) {
             GlobalScope.launch(Dispatchers.IO) {
                 // Context.getOrCreate(platform.params)
-                val isInvite = extension.invitationFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
-                val isTopup = extension.identityTopupKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
-                val isIdentity = extension.identityFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
-                val identityId = cftx.creditBurnIdentityIdentifier.toStringBase58()
+                val isInvite = extension.invitationFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
+                val isTopup = extension.identityTopupKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
+                val isIdentity = extension.identityFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
+                val identityId = cftx.identityId.toStringBase58()
                 if (isInvite && !isTopup && !isIdentity && invitationsDao.loadByUserId(identityId) == null) {
                     // this is not in our database
                     val invite = Invitation(

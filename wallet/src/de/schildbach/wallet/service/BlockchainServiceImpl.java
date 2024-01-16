@@ -64,7 +64,7 @@ import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.core.listeners.PreBlocksDownloadListener;
-import org.bitcoinj.evolution.CreditFundingTransaction;
+import org.bitcoinj.evolution.AssetLockTransaction;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
@@ -329,14 +329,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             log.info("onCoinsSent: {}", tx.getTxId());
 
 
-            if(CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
+            if(AssetLockTransaction.isAssetLockTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
                 // Handle credit function transactions (username creation, topup, invites)
                 AuthenticationGroupExtension authExtension =
                         (AuthenticationGroupExtension) wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
-                CreditFundingTransaction cftx = authExtension.getCreditFundingTransaction(tx);
+                AssetLockTransaction cftx = authExtension.getAssetLockTransaction(tx);
 
                 long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
-                platformRepo.handleSentCreditFundingTransaction(cftx, blockChainHeadTime);
+                platformRepo.handleSentAssetLockTransaction(cftx, blockChainHeadTime);
 
                 // TODO: if we detect a username creation that we haven't processed, should we?
             }

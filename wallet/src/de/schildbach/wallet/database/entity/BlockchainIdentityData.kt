@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.evolution.CreditFundingTransaction
+import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.WalletDataProvider
@@ -75,22 +75,22 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
         }
 
     @Ignore
-    private var creditFundingTransactionCache: CreditFundingTransaction? = null
+    private var creditFundingTransactionCache: AssetLockTransaction? = null
 
-    fun findCreditFundingTransaction(wallet: Wallet?): CreditFundingTransaction? {
+    fun findAssetLockTransaction(wallet: Wallet?): AssetLockTransaction? {
         if (creditFundingTxId == null) {
             return null
         }
         if (wallet != null) {
             creditFundingTransactionCache = wallet.getTransaction(creditFundingTxId)?.run {
                 val authExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
-                authExtension.getCreditFundingTransaction(this)
+                authExtension.getAssetLockTransaction(this)
             }
         }
         return creditFundingTransactionCache
     }
 
-    fun getIdentity(wallet: Wallet?): String? = findCreditFundingTransaction(wallet)?.let { it.creditBurnIdentityIdentifier.toStringBase58() }
+    fun getIdentity(wallet: Wallet?): String? = findAssetLockTransaction(wallet)?.let { it.identityId.toStringBase58() }
 
     fun getErrorMetadata() = creationStateErrorMessage?.let {
             val metadataIndex = it.indexOf("Metadata(")
