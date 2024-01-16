@@ -15,42 +15,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.scan;
-
-import java.util.EnumMap;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-import javax.inject.Inject;
-
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
-import org.dash.wallet.common.ui.BaseDialogFragment;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.zxing.BinaryBitmap;
-import com.google.zxing.DecodeHintType;
-import com.google.zxing.LuminanceSource;
-import com.google.zxing.PlanarYUVLuminanceSource;
-import com.google.zxing.ReaderException;
-import com.google.zxing.Result;
-import com.google.zxing.ResultPoint;
-import com.google.zxing.ResultPointCallback;
-import com.google.zxing.common.HybridBinarizer;
-import com.google.zxing.qrcode.QRCodeReader;
-
-import dagger.hilt.android.AndroidEntryPoint;
-import de.schildbach.wallet.ui.LockScreenActivity;
-import de.schildbach.wallet.util.OnFirstPreDraw;
-import de.schildbach.wallet_test.R;
-import kotlin.Unit;
+package org.dash.wallet.common.ui.scan;
 
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.ActivityOptions;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -88,12 +59,38 @@ import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.DecodeHintType;
+import com.google.zxing.LuminanceSource;
+import com.google.zxing.PlanarYUVLuminanceSource;
+import com.google.zxing.ReaderException;
+import com.google.zxing.Result;
+import com.google.zxing.ResultPoint;
+import com.google.zxing.ResultPointCallback;
+import com.google.zxing.common.HybridBinarizer;
+import com.google.zxing.qrcode.QRCodeReader;
+
+import org.dash.wallet.common.R;
+import org.dash.wallet.common.SecureActivity;
+import org.dash.wallet.common.ui.BaseDialogFragment;
+import org.dash.wallet.common.util.OnFirstPreDraw;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.EnumMap;
+import java.util.Map;
+
+import javax.annotation.Nullable;
+
+import dagger.hilt.android.AndroidEntryPoint;
+import kotlin.Unit;
+
 /**
  * @author Andreas Schildbach
  */
 @SuppressWarnings("deprecation")
 @AndroidEntryPoint
-public final class ScanActivity extends LockScreenActivity
+public final class ScanActivity extends SecureActivity
         implements SurfaceTextureListener, ActivityCompat.OnRequestPermissionsResultCallback {
     private static final String INTENT_EXTRA_SCENE_TRANSITION_X = "scene_transition_x";
     private static final String INTENT_EXTRA_SCENE_TRANSITION_Y = "scene_transition_y";
@@ -185,7 +182,7 @@ public final class ScanActivity extends LockScreenActivity
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
 
-        getIntent().putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true);
+        turnOffAutoLogout();
         setContentView(R.layout.scan_activity);
         contentView = findViewById(android.R.id.content);
         scannerView = (ScannerView) findViewById(R.id.scan_activity_mask);
@@ -267,6 +264,7 @@ public final class ScanActivity extends LockScreenActivity
         // We're removing the requested orientation because if we don't, somehow the requested orientation is
         // bleeding through to the calling activity, forcing it into a locked state until it is restarted.
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        turnOnAutoLogout();
         super.onDestroy();
     }
 

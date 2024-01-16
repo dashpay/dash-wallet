@@ -15,19 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.scan;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.zxing.PlanarYUVLuminanceSource;
+package org.dash.wallet.common.ui.scan;
 
 import android.annotation.SuppressLint;
 import android.graphics.Rect;
@@ -36,6 +24,18 @@ import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.PreviewCallback;
 import android.view.TextureView;
+
+import com.google.zxing.PlanarYUVLuminanceSource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * @author Andreas Schildbach
@@ -80,9 +80,9 @@ public final class CameraManager {
                 displayOrientation);
         camera = Camera.open(cameraId);
 
-        if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT)
+        if (cameraInfo.facing == CameraInfo.CAMERA_FACING_FRONT)
             camera.setDisplayOrientation((720 - displayOrientation - cameraInfo.orientation) % 360);
-        else if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK)
+        else if (cameraInfo.facing == CameraInfo.CAMERA_FACING_BACK)
             camera.setDisplayOrientation((720 - displayOrientation + cameraInfo.orientation) % 360);
         else
             throw new IllegalStateException("facing: " + cameraInfo.facing);
@@ -146,14 +146,14 @@ public final class CameraManager {
         // prefer back-facing camera
         for (int i = 0; i < cameraCount; i++) {
             Camera.getCameraInfo(i, cameraInfo);
-            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK)
+            if (cameraInfo.facing == CameraInfo.CAMERA_FACING_BACK)
                 return i;
         }
 
         // fall back to front-facing camera
         for (int i = 0; i < cameraCount; i++) {
             Camera.getCameraInfo(i, cameraInfo);
-            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT)
+            if (cameraInfo.facing == CameraInfo.CAMERA_FACING_FRONT)
                 return i;
         }
 

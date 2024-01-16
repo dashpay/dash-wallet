@@ -15,13 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.scan;
-
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-
-import com.google.zxing.ResultPoint;
+package org.dash.wallet.common.ui.scan;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -35,7 +29,13 @@ import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
 
-import de.schildbach.wallet_test.R;
+import com.google.zxing.ResultPoint;
+
+import org.dash.wallet.common.R;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * @author Andreas Schildbach
