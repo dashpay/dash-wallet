@@ -38,7 +38,6 @@ import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
-import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
@@ -56,6 +55,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory

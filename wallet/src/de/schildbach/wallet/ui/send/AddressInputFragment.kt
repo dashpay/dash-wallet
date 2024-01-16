@@ -39,11 +39,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.payments.parsers.PaymentIntentParser
-import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentAddressInputBinding
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
