@@ -97,7 +97,7 @@ password.
 
 We need wallet-tool from dashj. First, in a working directory, let's get dashj:
 
-	git clone -b release-19 https://github.com/HashEngineering/dashj.git
+	git clone -b master https://github.com/HashEngineering/dashj.git
 
 Make sure everything is compiled and ready to go by using once:
 
@@ -135,6 +135,42 @@ Then to get the private keys use:
 
 Look for `priv WIF=<...>`, where `<...>` will be your private keys in wallet import format. Be careful where you put them, as anybody getting access to them will be able to steal your coins. Consider securely deleting the decrypted wallet once you get your private keys.
 
+
+## RECOVERING FROM A RECOVERY PHRASE (BIP39 MNEMONIC)
+
+There are two accounts on the BIP39 mnemonic phrase.  One follows the BIP44 standard with path 
+m/44'/5'/0' and the second follows the BIP32 standard with path m/0'.  Dash Wallet 5.18 (May 2018) 
+and higher use the BIP44 path as the default but maintain the BIP32 path for backward compatibility.
+
+We need wallet-tool from dashj. First, in a working directory, let's get dashj:
+
+	git clone -b release-20 https://github.com/HashEngineering/dashj.git
+
+Make sure everything is compiled and ready to go by using once:
+
+	cd dashj/tools
+	./wallet-tool
+
+Now use wallet-tool to create a wallet using your recovery phrase:
+
+	./wallet-tool create --seed="<enter the 12 word recovery phrase here>" --wallet=recoveredwallet
+
+Now use wallet-tool to sync the wallet from your backup:
+
+	./wallet-tool reset --wallet=recoveredwallet
+	./wallet-tool sync --wallet=recoveredwallet --debuglog
+
+The sync process will take anywhere from a few minutes to hours. Wallet-tool will return to the
+shell prompt if its finished syncing. Have a look at the wallet:
+
+	./wallet-tool dump --wallet=recoveredwallet
+
+Does the balance look right? You can see all transactions that ever touched your wallet. Now empty
+your entire wallet to the desired destination wallet:
+
+	./wallet-tool send --wallet=recoveredwallet --output=<receiving address of destination wallet>:ALL
+
+
 ## RECOVERING FROM BASE58 KEY FORMAT
 
 Have a deeper look at the backup file (these files were produced by Darkcoin Wallet):
@@ -145,8 +181,7 @@ You'll see each line contains a key in WIF (wallet import format), technically B
 datetime string after each key is the birthdate of that key which you can ignore for the purpose
 of this one-time recovery.
 
-Another option is importing each individual key into one of [Electrum Dash] (https://electrum.dash.org/#download)
-or [Dash Core] (https://www.dash.org/downloads/).
+Another option is importing each individual key into [Dash Core] (https://www.dash.org/downloads/).
 
 As soon as you see your whole balance again, empty your entire wallet to the desired destination
 wallet. Please do not continue to use the imported wallet. Remember you just operated on
