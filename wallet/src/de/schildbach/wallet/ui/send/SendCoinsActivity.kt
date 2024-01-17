@@ -54,10 +54,12 @@ open class SendCoinsActivity : LockScreenActivity() {
         const val ACTION_SEND_FROM_WALLET_URI = "de.schildbach.wallet.action.SEND_FROM_WALLET_URI"
         const val INTENT_EXTRA_PAYMENT_INTENT = "paymentIntent"
 
+        @JvmStatic
         fun start(context: Context, paymentIntent: PaymentIntent?) {
             start(context, null, paymentIntent, false)
         }
 
+        @JvmStatic
         fun start(context: Context, action: String?, paymentIntent: PaymentIntent?, keepUnlocked: Boolean) {
             val intent = Intent(context, SendCoinsActivity::class.java)
 

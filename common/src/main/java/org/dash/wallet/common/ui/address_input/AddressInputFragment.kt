@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.send
+package org.dash.wallet.common.ui.address_input
 
 import android.app.Activity
 import android.os.Build
@@ -34,15 +34,13 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
-import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.FragmentAddressInputBinding
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
+import org.dash.wallet.common.R
+import org.dash.wallet.common.databinding.FragmentAddressInputBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.viewBinding
@@ -52,7 +50,7 @@ import org.dash.wallet.common.util.observe
 @AndroidEntryPoint
 class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
     private val binding by viewBinding(FragmentAddressInputBinding::bind)
-    private val viewModel by viewModels<AddressInputViewModel>()
+    private val viewModel by activityViewModels<AddressInputViewModel>()
 
     private val scanLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -67,10 +65,24 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        viewModel.clearInput()
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
+
+        // the view model defaults to using Dash as the currency
+        requireArguments().getString("currency")?.let {
+            viewModel.currency = it
+            binding.errorText.text = getString(R.string.not_valid_address, it)
+        }
+        requireArguments().getString("title")?.let {
+            binding.toolbarTitle.text = it
+        }
+        requireArguments().getString("hint")?.let {
+            binding.inputWrapper.hint = it
+        }
+        viewModel.nextAction = requireArguments().getInt("nextAction")
 
         binding.addressInput.doOnTextChanged { text, _, _, _ ->
             viewModel.setInput(text.toString())
@@ -158,13 +170,13 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
             val input = binding.addressInput.text.toString().trim()
 
             try {
-                val paymentIntent = DashPaymentIntentParser(Constants.NETWORK_PARAMETERS).parse(input, true)
+                viewModel.parsePaymentIntent(input)
+                viewModel.setAddressResult(input)
                 binding.inputWrapper.isErrorEnabled = false
                 binding.errorText.isVisible = false
-                SendCoinsActivity.start(requireContext(), paymentIntent)
-                viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE)
-                requireActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
             } catch (ex: Exception) {
+                println(ex)
+                ex.printStackTrace()
                 binding.inputWrapper.isErrorEnabled = true
                 binding.errorText.isVisible = true
             }

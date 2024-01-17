@@ -23,7 +23,7 @@
     android:background="@color/background_primary"
     android:orientation="vertical"
     android:fitsSystemWindows="true"
-    tools:context="de.schildbach.wallet.ui.send.AddressInputFragment">
+    tools:context="org.dash.wallet.common.ui.address_input.AddressInputFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
@@ -34,11 +34,12 @@
         app:theme="@style/ThemeOverlay.AppCompat.ActionBar">
 
         <TextView
+            android:id="@+id/toolbar_title"
             style="@style/Subtitle2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="@string/send_coins_activity_title"
+            android:text="@string/address_input_title"
             android:textAlignment="gravity" />
     </androidx.appcompat.widget.Toolbar>
 
@@ -75,7 +76,7 @@
         android:layout_marginHorizontal="30dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/not_dash_address"
+        android:text="@string/not_valid_address"
         android:visibility="gone"
         tools:visibility="visible" />
 

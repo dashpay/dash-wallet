@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.send
+package org.dash.wallet.common.ui.address_input
 
 import android.content.ClipDescription
 import android.content.ClipboardManager
@@ -24,7 +24,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.payments.parsers.AddressParser
+import org.dash.wallet.common.payments.parsers.PaymentIntentParsers
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
@@ -37,14 +40,38 @@ data class AddressInputUIState(
     val addressInput: String = ""
 )
 
+data class AddressInputResult(
+    val valid: Boolean = false,
+    val addressInput: String = "",
+    val paymentIntent: PaymentIntent? = null,
+    val currency: String = Constants.DASH_CURRENCY,
+    val nextAction: Int = 0
+)
+
 @HiltViewModel
 class AddressInputViewModel @Inject constructor(
     private val clipboardManager: ClipboardManager,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    private val walletDataProvider: WalletDataProvider
 ): ViewModel() {
+    private var addressParser: AddressParser = AddressParser.getDashAddressParser(walletDataProvider.networkParameters)
+    var currency: String = "Dash"
+        set(value) {
+            field = value
+            addressParser = AddressParser.get(
+                field,
+                if (value.lowercase() == "dash") walletDataProvider.networkParameters else null
+            )
+        }
+    var nextAction: Int = -1
 
     private val _uiState = MutableStateFlow(AddressInputUIState())
     val uiState: StateFlow<AddressInputUIState> = _uiState.asStateFlow()
+
+    private var paymentIntent: PaymentIntent? = null
+    private val _addressResult = MutableStateFlow(AddressInputResult())
+    val addressResult: StateFlow<AddressInputResult?>
+        get() = _addressResult
 
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
         _uiState.value = _uiState.value.copy(hasClipboardText = hasClipboardInput())
@@ -57,14 +84,29 @@ class AddressInputViewModel @Inject constructor(
 
     fun showClipboardContent() {
         val text = getClipboardInput()
-        val addressRanges = AddressParser.getDashAddressParser(Constants.NETWORK_PARAMETERS).findAll(text)
+        val addressRanges = addressParser.findAll(text)
         _uiState.value = _uiState.value.copy(clipboardText = text, addressRanges = addressRanges)
         analyticsService.logEvent(AnalyticsConstants.AddressInput.SHOW_CLIPBOARD, mapOf())
+    }
+
+    fun clearInput() {
+        _uiState.value = AddressInputUIState(hasClipboardText = hasClipboardInput())
+        currency = "dash"
+        addressParser = AddressParser.getDashAddressParser(walletDataProvider.networkParameters)
+        _addressResult.value = AddressInputResult()
     }
 
     fun setInput(text: String) {
         _uiState.value = _uiState.value.copy(addressInput = text)
         analyticsService.logEvent(AnalyticsConstants.AddressInput.ADDRESS_TAP, mapOf())
+    }
+
+    suspend fun parsePaymentIntent(input: String) {
+        paymentIntent = PaymentIntentParsers.get(currency)!!.parse(input)
+    }
+
+    fun setAddressResult(input: String) {
+        _addressResult.value = AddressInputResult(true, input, paymentIntent, currency, nextAction)
     }
 
     private fun hasClipboardInput(): Boolean {
@@ -104,5 +146,9 @@ class AddressInputViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         clipboardManager.removePrimaryClipChangedListener(clipboardListener)
+    }
+
+    fun clearResult() {
+        _addressResult.value = AddressInputResult()
     }
 }
