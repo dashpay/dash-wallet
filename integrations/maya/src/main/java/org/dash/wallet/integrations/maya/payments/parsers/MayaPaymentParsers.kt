@@ -18,11 +18,13 @@
 package org.dash.wallet.integrations.maya.payments.parsers
 
 import org.dash.wallet.common.payments.parsers.AddressParser
+import org.dash.wallet.common.payments.parsers.BitcoinAddressParser
+import org.dash.wallet.common.payments.parsers.BitcoinMainNetParams
 import org.dash.wallet.common.payments.parsers.PaymentParsers
 
 class MayaPaymentParsers : PaymentParsers() {
     init {
-        add("bitcoin", "btc", BitcoinPaymentIntentParser(), AddressParser.getBitcoinAddressParser())
+        add("bitcoin", "btc", BitcoinPaymentIntentParser(), BitcoinAddressParser(BitcoinMainNetParams()))
         add("ethereum", "eth", EthereumPaymentIntentParser("ETH.ETH"), AddressParser.getEthereumAddressParser())
         add("usdc", "usdc", EthereumPaymentIntentParser("ETH.USDC"), AddressParser.getEthereumAddressParser())
         add("tether", "usdt", EthereumPaymentIntentParser("ETH.USDC"), AddressParser.getEthereumAddressParser())

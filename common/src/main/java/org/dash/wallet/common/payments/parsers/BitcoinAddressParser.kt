@@ -12,23 +12,26 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 package org.dash.wallet.common.payments.parsers
 
-import org.bitcoinj.params.AbstractBitcoinNetParams
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.AddressFormatException
+import org.bitcoinj.core.NetworkParameters
 
-open class SegwitNetworkParams() : AbstractBitcoinNetParams() {
-    override fun getPaymentProtocolId(): String {
-        return PAYMENT_PROTOCOL_ID_MAINNET
-    }
-}
-
-class BitcoinMainNetParams : SegwitNetworkParams() {
-    init {
-        addressHeader = 0 // addresses starting with 1
-        p2shHeader = 5 // addresses starting with 3
-        segwitAddressHrp = "bc"
+class BitcoinAddressParser(params: NetworkParameters) : AddressParser(
+    "$PATTERN_BITCOIN_ADDRESS|${params.segwitAddressHrp}$PATTERN_BECH32_ADDRESS",
+    params
+) {
+    override fun verifyAddress(addressCandidate: String) {
+        params?.let {
+            try {
+                Address.fromString(params, addressCandidate)
+            } catch (e: AddressFormatException) {
+                SegwitAddress.fromBech32(params, addressCandidate)
+            }
+        }
     }
 }

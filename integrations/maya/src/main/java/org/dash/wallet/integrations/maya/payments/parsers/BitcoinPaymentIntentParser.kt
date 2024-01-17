@@ -21,19 +21,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
-import org.dash.wallet.common.payments.parsers.AddressParser
+import org.dash.wallet.common.payments.parsers.BitcoinAddressParser
 import org.dash.wallet.common.payments.parsers.BitcoinMainNetParams
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
+import org.dash.wallet.common.payments.parsers.SegwitAddress
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 
 class BitcoinPaymentIntentParser : MayaPaymentIntentParser("BTC", "BTC.BTC", BitcoinMainNetParams()) {
     private val log = LoggerFactory.getLogger(BitcoinPaymentIntentParser::class.java)
-    private val addressParser = AddressParser.getBitcoinAddressParser()
+    private val addressParser = BitcoinAddressParser(params as NetworkParameters)
 
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
         if (input.startsWith("$currency:") || input.startsWith("${currency.uppercase()}:")) {
@@ -61,14 +63,19 @@ class BitcoinPaymentIntentParser : MayaPaymentIntentParser("BTC", "BTC.BTC", Bit
                 val address = Address.fromString(params, input)
                 return@withContext createPaymentIntent(address.toString())
             } catch (ex: AddressFormatException) {
-                log.info("got invalid address", ex)
-                throw PaymentIntentParserException(
-                    ex,
-                    ResourceString(
-                        R.string.error,
-                        listOf()
+                try {
+                    val address = SegwitAddress.fromBech32(params, input)
+                    return@withContext createPaymentIntent(address.toString())
+                } catch (ex: AddressFormatException) {
+                    log.info("got invalid address", ex)
+                    throw PaymentIntentParserException(
+                        ex,
+                        ResourceString(
+                            R.string.error,
+                            listOf()
+                        )
                     )
-                )
+                }
             }
         }
 

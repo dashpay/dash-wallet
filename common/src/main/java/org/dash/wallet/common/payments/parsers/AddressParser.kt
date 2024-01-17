@@ -23,14 +23,15 @@ import org.bitcoinj.core.NetworkParameters
 
 open class AddressParser(pattern: String, val params: NetworkParameters?) {
     companion object {
-        private val PATTERN_BITCOIN_ADDRESS = "[${Base58.ALPHABET.joinToString(separator = "")}]{20,40}"
+        val PATTERN_BITCOIN_ADDRESS = "[${Base58.ALPHABET.joinToString(separator = "")}]{20,40}"
         private const val PATTERN_ETHEREUM_ADDRESS = "0x[a-fA-F0-9]{40}"
+        const val PATTERN_BECH32_ADDRESS = "1[a-z0-9]{25,39}"
         fun getDashAddressParser(params: NetworkParameters): AddressParser {
             return AddressParser(PATTERN_BITCOIN_ADDRESS, params)
         }
 
-        fun getBitcoinAddressParser(): AddressParser {
-            return AddressParser(PATTERN_BITCOIN_ADDRESS, BitcoinMainNetParams())
+        fun getBase58AddressParser(params: NetworkParameters? = null): AddressParser {
+            return AddressParser(PATTERN_BITCOIN_ADDRESS, params)
         }
 
         fun getEthereumAddressParser(): AddressParser {
@@ -58,6 +59,7 @@ open class AddressParser(pattern: String, val params: NetworkParameters?) {
                 validRanges.add(startIndex..endIndex)
             } catch (e: Exception) {
                 // Invalid address, skipping
+                println(e)
             }
         }
 
