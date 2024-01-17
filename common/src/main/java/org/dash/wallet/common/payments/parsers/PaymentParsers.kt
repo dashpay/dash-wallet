@@ -17,34 +17,27 @@
 
 package org.dash.wallet.common.payments.parsers
 
-// TODO: this may need to be a class, so we can define a custom set of parsers
-// that a #[AddressInputViewModel] can use to parse addresses and payments intents
-// for Maya, there may be custom parsers that generate the correct PaymentIntent
-// that we don't want used or visible to the wallet module. Currently this has global scope.
+/**
+ * Payment parsers include PaymentIntentParsers and AddressParsers for a list of coins
+ *
+ * @constructor Create empty object with no parsers
+ */
 
-object Parsers {
+open class PaymentParsers {
     private val paymentIntentParsers = hashMapOf<String, PaymentIntentParser>()
     private val addressParsers = hashMapOf<String, AddressParser>()
 
-    init {
-        add("bitcoin", "btc", BitcoinPaymentIntentParser(), AddressParser.getBitcoinAddressParser())
-        add("ethereum", "eth", EthereumPaymentIntentParser(), AddressParser.getEthereumAddressParser())
-    }
-
-    @JvmStatic
     fun add(currency: String, code: String, paymentIntentParser: PaymentIntentParser, addressParser: AddressParser) {
-        paymentIntentParsers[currency] = paymentIntentParser
-        paymentIntentParsers[code] = paymentIntentParser
-        addressParsers[currency] = addressParser
-        addressParsers[code] = addressParser
+        paymentIntentParsers[currency.lowercase()] = paymentIntentParser
+        paymentIntentParsers[code.lowercase()] = paymentIntentParser
+        addressParsers[currency.lowercase()] = addressParser
+        addressParsers[code.lowercase()] = addressParser
     }
 
-    @JvmStatic
     fun getPaymentIntentParser(currency: String): PaymentIntentParser? {
         return paymentIntentParsers[currency.lowercase()]
     }
 
-    @JvmStatic
     fun getAddressParser(currency: String): AddressParser? {
         return addressParsers[currency.lowercase()]
     }

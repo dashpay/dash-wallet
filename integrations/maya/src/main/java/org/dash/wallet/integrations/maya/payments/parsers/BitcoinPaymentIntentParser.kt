@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,45 +12,54 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.payments.parsers
+package org.dash.wallet.integrations.maya.payments.parsers
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
-import org.bitcoinj.core.Coin
-import org.bitcoinj.script.ScriptBuilder
+import org.bitcoinj.uri.BitcoinURI
+import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.AddressParser
+import org.dash.wallet.common.payments.parsers.BitcoinMainNetParams
+import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 
-class EthereumPaymentIntentParser : PaymentIntentParser("ethereum", null) {
-    private val log = LoggerFactory.getLogger(EthereumPaymentIntentParser::class.java)
-    private val addressParser = AddressParser.getEthereumAddressParser()
+class BitcoinPaymentIntentParser : MayaPaymentIntentParser("BTC", "BTC.BTC", BitcoinMainNetParams()) {
+    private val log = LoggerFactory.getLogger(BitcoinPaymentIntentParser::class.java)
+    private val addressParser = AddressParser.getBitcoinAddressParser()
 
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
-        var inputStr = input
-
-        if (inputStr.startsWith("$currency:") || inputStr.startsWith("${currency.uppercase()}:")) {
+        if (input.startsWith("$currency:") || input.startsWith("${currency.uppercase()}:")) {
             try {
-                val hexAddress = inputStr.substring(currency.length)
-                return@withContext createPaymentIntent(hexAddress)
-            } catch (ex: Exception) {
-                log.info("got invalid uri: '$inputStr'", ex)
+                val bitcoinUri = BitcoinURI(params, input)
+                val address = bitcoinUri.address
+
+                if (address != null && params != null && params != address.parameters) {
+                    throw BitcoinURIParseException("mismatched network")
+                }
+
+                return@withContext createPaymentIntent(bitcoinUri.address.toString())
+            } catch (ex: BitcoinURIParseException) {
+                log.info("got invalid bitcoin uri: '$input'", ex)
                 throw PaymentIntentParserException(
                     ex,
                     ResourceString(
                         R.string.error,
-                        listOf(inputStr)
+                        listOf(input)
                     )
                 )
             }
-        } else if (addressParser.exactMatch(inputStr)) {
+        } else if (addressParser.exactMatch(input)) {
             try {
-                return@withContext createPaymentIntent(inputStr)
+                val address = Address.fromString(params, input)
+                return@withContext createPaymentIntent(address.toString())
             } catch (ex: AddressFormatException) {
                 log.info("got invalid address", ex)
                 throw PaymentIntentParserException(
@@ -70,15 +79,6 @@ class EthereumPaymentIntentParser : PaymentIntentParser("ethereum", null) {
                 R.string.error,
                 listOf(input)
             )
-        )
-    }
-
-    private fun createPaymentIntent(inputStr: String): PaymentIntent {
-        val metadata = "SWAP:ETH.ETH:${inputStr.substring(2)}"
-        return PaymentIntent(
-            null, "ethereum", null,
-            arrayOf(PaymentIntent.Output(Coin.ZERO, ScriptBuilder.createOpReturnScript(metadata.toByteArray()))),
-            "ethereum network", null, null, null, null
         )
     }
 }

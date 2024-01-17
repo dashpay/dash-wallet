@@ -12,13 +12,21 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 package org.dash.wallet.common.payments.parsers
 
 import org.bitcoinj.core.NetworkParameters
-import org.dash.wallet.common.data.PaymentIntent
-abstract class PaymentIntentParser(val currency: String, val params: NetworkParameters?) {
-    abstract suspend fun parse(input: String): PaymentIntent
+import org.dash.wallet.common.util.Constants
+
+class DashPaymentParsers(val params: NetworkParameters) : PaymentParsers() {
+    init {
+        add(
+            Constants.DASH_CURRENCY,
+            Constants.DASH_CURRENCY,
+            DashPaymentIntentParser(params),
+            AddressParser.getDashAddressParser(params)
+        )
+    }
 }

@@ -26,8 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.PaymentIntent
-import org.dash.wallet.common.payments.parsers.AddressParser
-import org.dash.wallet.common.payments.parsers.Parsers
+import org.dash.wallet.common.payments.parsers.PaymentParsers
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
@@ -53,11 +52,13 @@ class AddressInputViewModel @Inject constructor(
     private val analyticsService: AnalyticsService,
     walletDataProvider: WalletDataProvider
 ): ViewModel() {
-    private var addressParser: AddressParser = AddressParser.getDashAddressParser(walletDataProvider.networkParameters)
+    lateinit var paymentParsers: PaymentParsers
+    //private lateinit var addressParser: AddressParser// = AddressParser.getDashAddressParser(walletDataProvider.networkParameters)
+    //private lateinit var paymentIntentParser: PaymentIntentParser
     var currency: String = Constants.DASH_CURRENCY
         set(value) {
             field = value
-            addressParser = Parsers.getAddressParser(field)!!
+            //addressParser = paymentParsers.getAddressParser(field)!!
         }
 
     private val _uiState = MutableStateFlow(AddressInputUIState())
@@ -79,7 +80,7 @@ class AddressInputViewModel @Inject constructor(
 
     fun showClipboardContent() {
         val text = getClipboardInput()
-        val addressRanges = addressParser.findAll(text)
+        val addressRanges = paymentParsers.getAddressParser(currency)!!.findAll(text)
         _uiState.value = _uiState.value.copy(clipboardText = text, addressRanges = addressRanges)
         analyticsService.logEvent(AnalyticsConstants.AddressInput.SHOW_CLIPBOARD, mapOf())
     }
@@ -90,7 +91,7 @@ class AddressInputViewModel @Inject constructor(
     }
 
     suspend fun parsePaymentIntent(input: String) {
-        paymentIntent = Parsers.getPaymentIntentParser(currency)!!.parse(input)
+        paymentIntent = paymentParsers.getPaymentIntentParser(currency)!!.parse(input)
     }
 
     fun setAddressResult(input: String) {

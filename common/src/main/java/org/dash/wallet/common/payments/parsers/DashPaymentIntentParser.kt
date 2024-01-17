@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,7 +12,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 package org.dash.wallet.common.payments.parsers
@@ -51,7 +51,7 @@ import java.security.KeyStoreException
 import java.util.*
 
 class DashPaymentIntentParser(params: NetworkParameters) : PaymentIntentParser("dash", params) {
-    private val log = LoggerFactory.getLogger(PaymentIntentParser::class.java)
+    private val log = LoggerFactory.getLogger(DashPaymentIntentParser::class.java)
     private val addressParser = AddressParser.getDashAddressParser(params)
 
     override suspend fun parse(input: String): PaymentIntent {
@@ -86,9 +86,9 @@ class DashPaymentIntentParser(params: NetworkParameters) : PaymentIntentParser("
         } else if (inputStr.startsWith(Constants.DASH_SCHEME + ":")) {
             try {
                 val bitcoinUri = BitcoinURI(null, inputStr)
-                val address = AddressUtil.getCorrectAddress(bitcoinUri, Constants.NETWORK_PARAMETERS)
+                val address = AddressUtil.getCorrectAddress(bitcoinUri, params)
 
-                if (address != null && Constants.NETWORK_PARAMETERS != address.parameters) {
+                if (address != null && params != address.parameters) {
                     throw BitcoinURIParseException("mismatched network")
                 }
 
@@ -105,7 +105,7 @@ class DashPaymentIntentParser(params: NetworkParameters) : PaymentIntentParser("
             }
         } else if (addressParser.exactMatch(inputStr)) {
             try {
-                val address = Address.fromString(Constants.NETWORK_PARAMETERS, inputStr)
+                val address = Address.fromString(params, inputStr)
                 return@withContext PaymentIntent.fromAddress(address, null)
             } catch (ex: AddressFormatException) {
                 log.info("got invalid address", ex)
@@ -216,7 +216,7 @@ class DashPaymentIntentParser(params: NetworkParameters) : PaymentIntentParser("
                 )
             }
 
-            if (paymentSession.networkParameters != Constants.NETWORK_PARAMETERS) {
+            if (paymentSession.networkParameters != params) {
                 throw InvalidNetwork(
                     "cannot handle payment request network: " + paymentSession.networkParameters
                 )

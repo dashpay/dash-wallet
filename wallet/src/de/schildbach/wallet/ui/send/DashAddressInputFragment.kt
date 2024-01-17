@@ -20,29 +20,21 @@ package de.schildbach.wallet.ui.send
 import android.os.Bundle
 import android.view.View
 import com.google.common.base.Preconditions
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.payments.parsers.AddressParser.Companion.getDashAddressParser
-import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
-import org.dash.wallet.common.payments.parsers.Parsers
+import org.dash.wallet.common.payments.parsers.DashPaymentParsers
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.address_input.AddressInputFragment
-import org.dash.wallet.common.util.Constants
-
+import org.dash.wallet.common.util.Constants.DASH_CURRENCY
 class DashAddressInputFragment : AddressInputFragment() {
 
-    init {
-        if (Parsers.getAddressParser(Constants.DASH_CURRENCY) == null) {
-            Parsers.add(
-                "dash",
-                "DASH",
-                DashPaymentIntentParser(de.schildbach.wallet.Constants.NETWORK_PARAMETERS),
-                getDashAddressParser(de.schildbach.wallet.Constants.NETWORK_PARAMETERS)
-            )
-        }
+    companion object {
+        private val paymentParsers = DashPaymentParsers(Constants.NETWORK_PARAMETERS)
     }
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        Preconditions.checkState(viewModel.currency == Constants.DASH_CURRENCY)
+        viewModel.paymentParsers = paymentParsers
+        Preconditions.checkState(viewModel.currency == DASH_CURRENCY)
     }
     override fun continueAction() {
         SendCoinsActivity.start(requireActivity(), viewModel.addressResult.paymentIntent!!)

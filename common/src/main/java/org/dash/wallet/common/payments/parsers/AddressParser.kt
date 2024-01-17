@@ -21,7 +21,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Base58
 import org.bitcoinj.core.NetworkParameters
 
-class AddressParser(pattern: String, val params: NetworkParameters?) {
+open class AddressParser(pattern: String, val params: NetworkParameters?) {
     companion object {
         private val PATTERN_BITCOIN_ADDRESS = "[${Base58.ALPHABET.joinToString(separator = "")}]{20,40}"
         private const val PATTERN_ETHEREUM_ADDRESS = "0x[a-fA-F0-9]{40}"
@@ -35,14 +35,6 @@ class AddressParser(pattern: String, val params: NetworkParameters?) {
 
         fun getEthereumAddressParser(): AddressParser {
             return AddressParser(PATTERN_ETHEREUM_ADDRESS, null)
-        }
-
-        fun get(currency: String, params: NetworkParameters? = null): AddressParser {
-            return when (currency) {
-                "bitcoin" -> getBitcoinAddressParser()
-                "dash" -> getDashAddressParser(params!!)
-                else -> getEthereumAddressParser()
-            }
         }
     }
 
@@ -60,7 +52,7 @@ class AddressParser(pattern: String, val params: NetworkParameters?) {
             val addressCandidate = match.value
 
             try {
-                params?.let { Address.fromString(params, addressCandidate) }
+                verifyAddress(addressCandidate)
                 val startIndex = match.range.first
                 val endIndex = match.range.last + 1
                 validRanges.add(startIndex..endIndex)
@@ -70,5 +62,9 @@ class AddressParser(pattern: String, val params: NetworkParameters?) {
         }
 
         return validRanges
+    }
+
+    protected open fun verifyAddress(addressCandidate: String) {
+        params?.let { Address.fromString(params, addressCandidate) }
     }
 }
