@@ -17,9 +17,11 @@
 
 package org.dash.wallet.integrations.maya.ui
 
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
+import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentMayaEnterAmountBinding
@@ -28,6 +30,11 @@ class MayaEnterAmountFragment : Fragment(R.layout.fragment_maya_enter_amount) {
     private val binding by viewBinding(FragmentMayaEnterAmountBinding::bind)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.currency.text = requireArguments().getString("currency")
+        val paymentIntent: PaymentIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requireArguments().getParcelable("paymentIntent", PaymentIntent::class.java)
+        } else {
+            requireArguments().getParcelable("paymentIntent")
+        }
+        binding.currency.text = requireArguments().getString("currency") + ": " + paymentIntent?.toString()
     }
 }

@@ -288,7 +288,7 @@
 
     <fragment
         android:id="@+id/addressInputFragment"
-        android:name="org.dash.wallet.common.ui.address_input.AddressInputFragment"
+        android:name="de.schildbach.wallet.ui.send.DashAddressInputFragment"
         android:label="Address Input"
         tools:layout="@layout/fragment_address_input" />
 

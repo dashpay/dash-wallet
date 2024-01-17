@@ -33,7 +33,7 @@
 
     <fragment
         android:id="@+id/mayaAddressInputFragment"
-        android:name="org.dash.wallet.common.ui.address_input.AddressInputFragment"
+        android:name="org.dash.wallet.integrations.maya.ui.MayaAddressInputFragment"
         android:label="Address Input"
         tools:layout="@layout/fragment_address_input" >
         <argument

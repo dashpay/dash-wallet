@@ -15,23 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.payments.parsers
+package org.dash.wallet.integrations.maya.ui
 
-object PaymentIntentParsers {
-    private val processors = hashMapOf<String, PaymentIntentParser>()
+import org.dash.wallet.common.ui.address_input.AddressInputFragment
+import org.dash.wallet.common.util.safeNavigate
 
-    init {
-        add("bitcoin", "btc", BitcoinPaymentIntentParser())
-    }
-
-    @JvmStatic
-    fun add(currency: String, code: String, parser: PaymentIntentParser) {
-        processors[currency] = parser
-        processors[code] = parser
-    }
-
-    @JvmStatic
-    fun get(currency: String): PaymentIntentParser? {
-        return processors[currency.lowercase()]
+class MayaAddressInputFragment : AddressInputFragment() {
+    override fun continueAction() {
+        safeNavigate(
+            MayaAddressInputFragmentDirections.mayaAddressInputToEnterAmount(
+                viewModel.currency,
+                viewModel.addressResult.value?.paymentIntent!!
+            )
+        )
+        // TODO: add event monitoring here
+        // viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE)
     }
 }

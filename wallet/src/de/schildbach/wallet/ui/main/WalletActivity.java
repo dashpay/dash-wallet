@@ -30,19 +30,13 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.navigation.ActivityKt;
-import androidx.navigation.NavController;
-import androidx.navigation.NavDirections;
-
 import com.google.common.collect.ImmutableList;
 
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.address_input.AddressInputViewModel;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
-import org.dash.wallet.common.util.FlowExtKt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +50,6 @@ import de.schildbach.wallet.ui.EncryptKeysDialogFragment;
 import de.schildbach.wallet.ui.EncryptNewKeyChainDialogFragment;
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
 import de.schildbach.wallet.ui.RestoreWalletFromSeedDialogFragment;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.ui.util.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
@@ -122,37 +115,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 currencies.component2()
             )
         );
-
-        FlowExtKt.observe(addressInputViewModel.getAddressResult(), this, (addressInputResult, continuation) -> {
-            if (addressInputResult.getValid()) {
-                if (addressInputViewModel.getCurrency().equals("dash")) {
-                    SendCoinsActivity.Companion.start(this, addressInputResult.getPaymentIntent());
-                    viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE);
-                    overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay);
-                    addressInputViewModel.clearResult();
-                } else if (addressInputResult.getNextAction() > 0){
-                    NavController nav = ActivityKt.findNavController(this, R.id.nav_host_fragment);
-                    nav.navigate(new NavDirections() {
-                        @Override
-                        public int getActionId() {
-                            return addressInputResult.getNextAction();
-                        }
-
-                        @NonNull
-                        @Override
-                        public Bundle getArguments() {
-                            Bundle bundle = new Bundle();
-                            bundle.putParcelable("paymentIntent", addressInputResult.getPaymentIntent());
-                            bundle.putString("currency", addressInputResult.toString());
-                            return bundle;
-                        }
-                    });
-                }
-                addressInputViewModel.clearResult();
-
-            }
-            return Unit.INSTANCE;
-        });
     }
 
     @Override

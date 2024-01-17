@@ -73,8 +73,6 @@ import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
-import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser;
-import org.dash.wallet.common.payments.parsers.PaymentIntentParsers;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
@@ -108,7 +106,6 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -211,7 +208,6 @@ public class WalletApplication extends MultiDexApplication
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);
-        PaymentIntentParsers.add("dash", "DASH", new DashPaymentIntentParser(Constants.NETWORK_PARAMETERS));
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
             @Override
             public void onActivityCreated(@NonNull Activity activity, Bundle savedInstanceState) {

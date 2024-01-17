@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.payments.parsers.AddressParser
-import org.dash.wallet.common.payments.parsers.PaymentIntentParsers
+import org.dash.wallet.common.payments.parsers.Parsers
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
@@ -55,13 +55,10 @@ class AddressInputViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider
 ): ViewModel() {
     private var addressParser: AddressParser = AddressParser.getDashAddressParser(walletDataProvider.networkParameters)
-    var currency: String = "Dash"
+    var currency: String = Constants.DASH_CURRENCY
         set(value) {
             field = value
-            addressParser = AddressParser.get(
-                field,
-                if (value.lowercase() == "dash") walletDataProvider.networkParameters else null
-            )
+            addressParser = Parsers.getAddressParser(field)!!
         }
     var nextAction: Int = -1
 
@@ -89,12 +86,12 @@ class AddressInputViewModel @Inject constructor(
         analyticsService.logEvent(AnalyticsConstants.AddressInput.SHOW_CLIPBOARD, mapOf())
     }
 
-    fun clearInput() {
-        _uiState.value = AddressInputUIState(hasClipboardText = hasClipboardInput())
-        currency = "dash"
-        addressParser = AddressParser.getDashAddressParser(walletDataProvider.networkParameters)
-        _addressResult.value = AddressInputResult()
-    }
+//    fun clearInput() {
+//        _uiState.value = AddressInputUIState(hasClipboardText = hasClipboardInput())
+//        currency = "dash"
+//        addressParser = AddressParser.getDashAddressParser(walletDataProvider.networkParameters)
+//        _addressResult.value = AddressInputResult()
+//    }
 
     fun setInput(text: String) {
         _uiState.value = _uiState.value.copy(addressInput = text)
@@ -102,7 +99,7 @@ class AddressInputViewModel @Inject constructor(
     }
 
     suspend fun parsePaymentIntent(input: String) {
-        paymentIntent = PaymentIntentParsers.get(currency)!!.parse(input)
+        paymentIntent = Parsers.getPaymentIntentParser(currency)!!.parse(input)
     }
 
     fun setAddressResult(input: String) {
@@ -148,7 +145,7 @@ class AddressInputViewModel @Inject constructor(
         clipboardManager.removePrimaryClipChangedListener(clipboardListener)
     }
 
-    fun clearResult() {
-        _addressResult.value = AddressInputResult()
-    }
+//    fun clearResult() {
+//        _addressResult.value = AddressInputResult()
+//    }
 }

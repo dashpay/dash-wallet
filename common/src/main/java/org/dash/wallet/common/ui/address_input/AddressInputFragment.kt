@@ -34,7 +34,7 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
@@ -47,10 +47,18 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 
+/**
+ * Address input fragment
+ *
+ * This is an abstract class with a continueAction funciton that must be overridden in any derived class
+ *
+ * By default this class, through the view model #[AddressInputViewModel], will be using DASH as the currency.
+ *
+ */
 @AndroidEntryPoint
-class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
-    private val binding by viewBinding(FragmentAddressInputBinding::bind)
-    private val viewModel by activityViewModels<AddressInputViewModel>()
+abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
+    protected val binding by viewBinding(FragmentAddressInputBinding::bind)
+    protected val viewModel by viewModels<AddressInputViewModel>()
 
     private val scanLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -65,7 +73,6 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.clearInput()
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
@@ -117,7 +124,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
         }
 
         binding.continueBtn.setOnClickListener {
-            continueAction()
+            doContinueAction()
         }
 
         binding.showClipboardBtn.setOnClickListener {
@@ -164,17 +171,18 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
 
         KeyboardUtil.showSoftKeyboard(requireContext(), binding.addressInput)
     }
-
-    private fun continueAction() {
+    abstract fun continueAction()
+    private fun doContinueAction() {
         lifecycleScope.launch {
             val input = binding.addressInput.text.toString().trim()
-
             try {
                 viewModel.parsePaymentIntent(input)
                 viewModel.setAddressResult(input)
+                continueAction()
                 binding.inputWrapper.isErrorEnabled = false
                 binding.errorText.isVisible = false
             } catch (ex: Exception) {
+                // TODO: remove this before completing PR
                 println(ex)
                 ex.printStackTrace()
                 binding.inputWrapper.isErrorEnabled = true
