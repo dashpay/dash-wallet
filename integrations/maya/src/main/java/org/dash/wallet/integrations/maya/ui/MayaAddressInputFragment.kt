@@ -25,7 +25,7 @@ class MayaAddressInputFragment : AddressInputFragment() {
         safeNavigate(
             MayaAddressInputFragmentDirections.mayaAddressInputToEnterAmount(
                 viewModel.currency,
-                viewModel.addressResult.value?.paymentIntent!!
+                viewModel.addressResult.paymentIntent!!
             )
         )
         // TODO: add event monitoring here

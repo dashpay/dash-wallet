@@ -45,7 +45,7 @@ class DashAddressInputFragment : AddressInputFragment() {
         Preconditions.checkState(viewModel.currency == Constants.DASH_CURRENCY)
     }
     override fun continueAction() {
-        SendCoinsActivity.start(requireActivity(), viewModel.addressResult.value?.paymentIntent!!)
+        SendCoinsActivity.start(requireActivity(), viewModel.addressResult.paymentIntent!!)
         viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE)
         requireActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
     }

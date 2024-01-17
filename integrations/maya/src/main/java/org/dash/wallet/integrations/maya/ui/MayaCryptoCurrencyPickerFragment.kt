@@ -168,9 +168,8 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
         safeNavigate(
             MayaCryptoCurrencyPickerFragmentDirections.mayaCurrencyPickerToAddressInput(
                 pool.currencyCode,
-                "Convert DASH to BTC",
-                "BTC Address",
-                R.id.mayaAddressInput_to_EnterAmount
+                getString(R.string.maya_address_input_title, pool.currencyCode),
+                getString(R.string.maya_address_input_hint, pool.currencyCode)
             )
         )
 

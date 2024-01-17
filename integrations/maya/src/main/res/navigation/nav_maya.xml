@@ -47,9 +47,6 @@
             android:name="hint"
             app:argType="string"
             />
-        <argument android:name="nextAction"
-            app:argType="integer"
-            android:defaultValue="0"/>
 
         <action android:id="@+id/mayaAddressInput_to_EnterAmount"
             app:destination="@id/mayaEnterAmountFragment"

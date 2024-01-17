@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -89,7 +89,6 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
         requireArguments().getString("hint")?.let {
             binding.inputWrapper.hint = it
         }
-        viewModel.nextAction = requireArguments().getInt("nextAction")
 
         binding.addressInput.doOnTextChanged { text, _, _, _ ->
             viewModel.setInput(text.toString())

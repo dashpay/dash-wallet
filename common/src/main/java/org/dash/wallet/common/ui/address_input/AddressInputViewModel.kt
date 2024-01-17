@@ -44,15 +44,14 @@ data class AddressInputResult(
     val valid: Boolean = false,
     val addressInput: String = "",
     val paymentIntent: PaymentIntent? = null,
-    val currency: String = Constants.DASH_CURRENCY,
-    val nextAction: Int = 0
+    val currency: String = Constants.DASH_CURRENCY
 )
 
 @HiltViewModel
 class AddressInputViewModel @Inject constructor(
     private val clipboardManager: ClipboardManager,
     private val analyticsService: AnalyticsService,
-    private val walletDataProvider: WalletDataProvider
+    walletDataProvider: WalletDataProvider
 ): ViewModel() {
     private var addressParser: AddressParser = AddressParser.getDashAddressParser(walletDataProvider.networkParameters)
     var currency: String = Constants.DASH_CURRENCY
@@ -60,14 +59,13 @@ class AddressInputViewModel @Inject constructor(
             field = value
             addressParser = Parsers.getAddressParser(field)!!
         }
-    var nextAction: Int = -1
 
     private val _uiState = MutableStateFlow(AddressInputUIState())
     val uiState: StateFlow<AddressInputUIState> = _uiState.asStateFlow()
 
     private var paymentIntent: PaymentIntent? = null
-    private val _addressResult = MutableStateFlow(AddressInputResult())
-    val addressResult: StateFlow<AddressInputResult?>
+    private var _addressResult = AddressInputResult()
+    val addressResult: AddressInputResult
         get() = _addressResult
 
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
@@ -86,13 +84,6 @@ class AddressInputViewModel @Inject constructor(
         analyticsService.logEvent(AnalyticsConstants.AddressInput.SHOW_CLIPBOARD, mapOf())
     }
 
-//    fun clearInput() {
-//        _uiState.value = AddressInputUIState(hasClipboardText = hasClipboardInput())
-//        currency = "dash"
-//        addressParser = AddressParser.getDashAddressParser(walletDataProvider.networkParameters)
-//        _addressResult.value = AddressInputResult()
-//    }
-
     fun setInput(text: String) {
         _uiState.value = _uiState.value.copy(addressInput = text)
         analyticsService.logEvent(AnalyticsConstants.AddressInput.ADDRESS_TAP, mapOf())
@@ -103,7 +94,7 @@ class AddressInputViewModel @Inject constructor(
     }
 
     fun setAddressResult(input: String) {
-        _addressResult.value = AddressInputResult(true, input, paymentIntent, currency, nextAction)
+        _addressResult = AddressInputResult(true, input, paymentIntent, currency)
     }
 
     private fun hasClipboardInput(): Boolean {
@@ -144,8 +135,4 @@ class AddressInputViewModel @Inject constructor(
         super.onCleared()
         clipboardManager.removePrimaryClipChangedListener(clipboardListener)
     }
-
-//    fun clearResult() {
-//        _addressResult.value = AddressInputResult()
-//    }
 }

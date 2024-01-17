@@ -103,6 +103,8 @@ public final class PaymentIntent implements Parcelable {
                 builder.append(Constants.HEX.encode(ScriptPattern.extractKeyFromP2PK(script)));
             else if (ScriptPattern.isSentToMultisig(script))
                 builder.append("multisig");
+            else if (ScriptPattern.isOpReturn(script))
+                builder.append(script);
             else
                 builder.append("unknown");
             builder.append(']');

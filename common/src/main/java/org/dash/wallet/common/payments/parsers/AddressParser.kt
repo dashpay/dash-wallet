@@ -24,12 +24,12 @@ import org.bitcoinj.core.NetworkParameters
 class AddressParser(pattern: String, val params: NetworkParameters?) {
     companion object {
         private val PATTERN_BITCOIN_ADDRESS = "[${Base58.ALPHABET.joinToString(separator = "")}]{20,40}"
-        private val PATTERN_ETHEREUM_ADDRESS = "0x[a-fA-F0-9]{40}"
+        private const val PATTERN_ETHEREUM_ADDRESS = "0x[a-fA-F0-9]{40}"
         fun getDashAddressParser(params: NetworkParameters): AddressParser {
             return AddressParser(PATTERN_BITCOIN_ADDRESS, params)
         }
 
-        fun getBitcoinAddressParser(): AddressParser  {
+        fun getBitcoinAddressParser(): AddressParser {
             return AddressParser(PATTERN_BITCOIN_ADDRESS, BitcoinMainNetParams())
         }
 

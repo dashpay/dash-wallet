@@ -28,6 +28,7 @@ object Parsers {
 
     init {
         add("bitcoin", "btc", BitcoinPaymentIntentParser(), AddressParser.getBitcoinAddressParser())
+        add("ethereum", "eth", EthereumPaymentIntentParser(), AddressParser.getEthereumAddressParser())
     }
 
     @JvmStatic
