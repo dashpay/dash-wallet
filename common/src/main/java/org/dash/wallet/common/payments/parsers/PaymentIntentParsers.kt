@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,13 +21,16 @@ object PaymentIntentParsers {
     private val processors = hashMapOf<String, PaymentIntentParser>()
 
     init {
-        add("bitcoin", BitcoinPaymentIntentParser())
-        add("dash", BitcoinPaymentIntentParser())
-    }
-    fun add(currency: String, parser: PaymentIntentParser) {
-        processors[currency] = parser
+        add("bitcoin", "btc", BitcoinPaymentIntentParser())
     }
 
+    @JvmStatic
+    fun add(currency: String, code: String, parser: PaymentIntentParser) {
+        processors[currency] = parser
+        processors[code] = parser
+    }
+
+    @JvmStatic
     fun get(currency: String): PaymentIntentParser? {
         return processors[currency.lowercase()]
     }

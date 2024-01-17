@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ import org.bitcoinj.params.MainNetParams
 
 class BitcoinMainNetParams : MainNetParams() {
     init {
-        addressHeader = 1
-        p2shHeader = 3
+        addressHeader = 0 // addresses starting with 1
+        p2shHeader = 5 // addresses starting with 3
     }
 }

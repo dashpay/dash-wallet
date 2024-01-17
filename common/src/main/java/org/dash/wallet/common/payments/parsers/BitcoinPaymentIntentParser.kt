@@ -37,18 +37,10 @@ class BitcoinPaymentIntentParser : PaymentIntentParser("bitcoin", BitcoinMainNet
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
         var inputStr = input
 
-//        if (supportAnypayUrls) {
-//            // replaces Anypay scheme with the Dash one
-//            // ie "pay:?r=https://(...)" become "dash:?r=https://(...)"
-//            if (input.startsWith(Constants.ANYPAY_SCHEME + ":")) {
-//                inputStr = input.replaceFirst(Constants.ANYPAY_SCHEME.toRegex(), Constants.DASH_SCHEME)
-//            }
-//        }
-
         if (inputStr.startsWith("$currency:") || inputStr.startsWith("${currency.uppercase()}:")) {
             try {
-                val bitcoinUri = BitcoinURI(null, inputStr)
-                val address = bitcoinUri.address; // AddressUtil.getCorrectAddress(bitcoinUri)
+                val bitcoinUri = BitcoinURI(params, inputStr)
+                val address = bitcoinUri.address
 
                 if (address != null && params != null && params != address.parameters) {
                     throw BitcoinURIParseException("mismatched network")
