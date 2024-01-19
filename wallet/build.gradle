@@ -187,7 +187,7 @@ android {
 
     defaultConfig {
         compileSdk 33
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion 33
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 100021
         versionName project.hasProperty('versionName') ? project.property('versionName') : "10.0.2"
