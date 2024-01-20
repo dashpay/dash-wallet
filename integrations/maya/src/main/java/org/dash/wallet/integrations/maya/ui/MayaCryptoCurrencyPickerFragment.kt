@@ -24,7 +24,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.navGraphViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
@@ -61,8 +60,6 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                 clickListener(it)
             }
         }
-
-        // val adapter1 = ListAdapter<IconifiedViewItem, RadioButtonViewHolder>(RadioGroupAdapter.DiffCallback())
 
         val divider = ContextCompat.getDrawable(requireContext(), org.dash.wallet.common.R.drawable.list_divider)!!
         val decorator = ListDividerDecorator(

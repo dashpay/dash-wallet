@@ -53,13 +53,8 @@ class AddressInputViewModel @Inject constructor(
     walletDataProvider: WalletDataProvider
 ): ViewModel() {
     lateinit var paymentParsers: PaymentParsers
-    //private lateinit var addressParser: AddressParser// = AddressParser.getDashAddressParser(walletDataProvider.networkParameters)
-    //private lateinit var paymentIntentParser: PaymentIntentParser
     var currency: String = Constants.DASH_CURRENCY
-        set(value) {
-            field = value
-            //addressParser = paymentParsers.getAddressParser(field)!!
-        }
+    val addressSources = arrayListOf<AddressSource>()
 
     private val _uiState = MutableStateFlow(AddressInputUIState())
     val uiState: StateFlow<AddressInputUIState> = _uiState.asStateFlow()
