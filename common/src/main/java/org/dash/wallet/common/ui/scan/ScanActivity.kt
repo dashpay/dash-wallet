@@ -21,8 +21,6 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.Dialog
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -44,12 +42,11 @@ import android.view.ViewAnimationUtils
 import android.view.WindowManager
 import android.view.animation.AccelerateInterpolator
 import androidx.activity.addCallback
+import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
-import androidx.lifecycle.ViewModelProviders
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
 import com.google.zxing.ReaderException
@@ -61,8 +58,7 @@ import com.google.zxing.qrcode.QRCodeReader
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.R
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.ui.BaseDialogFragment
-import org.dash.wallet.common.ui.scan.ScanActivity.WarnDialogFragment
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.OnFirstPreDraw
 import org.slf4j.LoggerFactory
 import java.util.EnumMap
@@ -88,25 +84,26 @@ class ScanActivity() :
 
     @Volatile
     private var cameraHandler: Handler? = null
-    private var viewModel: ScanViewModel? = null
+    private val viewModel by viewModels<ScanViewModel>()
     @SuppressLint("WrongConstant")
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
-        viewModel = ViewModelProviders.of(this).get(ScanViewModel::class.java)
-        viewModel!!.showPermissionWarnDialog.observe(this) {
-            WarnDialogFragment.show(
-                supportFragmentManager,
-                R.string.scan_camera_permission_dialog_title,
-                getString(R.string.scan_camera_permission_dialog_message)
-            )
+        viewModel.showPermissionWarnDialog.observe(this) {
+            AdaptiveDialog.create(
+                null,
+                getString(R.string.scan_camera_permission_dialog_title),
+                getString(R.string.scan_camera_permission_dialog_message),
+                getString(R.string.button_dismiss)
+            ).show(this)
         }
-        viewModel!!.showProblemWarnDialog.observe(this) {
-            WarnDialogFragment.show(
-                supportFragmentManager,
-                R.string.scan_camera_problem_dialog_title,
-                getString(R.string.scan_camera_problem_dialog_message)
-            )
+        viewModel.showProblemWarnDialog.observe(this) {
+            AdaptiveDialog.create(
+                null,
+                getString(R.string.scan_camera_permission_dialog_title),
+                getString(R.string.scan_camera_problem_dialog_message),
+                getString(R.string.button_dismiss)
+            ).show(this)
         }
 
         // Stick to the orientation the activity was started with. We cannot declare this in the
@@ -220,7 +217,7 @@ class ScanActivity() :
         if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             maybeOpenCamera()
         } else {
-            viewModel!!.showPermissionWarnDialog.call()
+            viewModel.showPermissionWarnDialog.call()
         }
     }
 
@@ -311,7 +308,7 @@ class ScanActivity() :
                 cameraHandler!!.post(fetchAndDecodeRunnable)
             } catch (x: Exception) {
                 log.info("problem opening camera", x)
-                viewModel!!.showProblemWarnDialog.postCall()
+                viewModel.showProblemWarnDialog.postCall()
             }
         }
 
