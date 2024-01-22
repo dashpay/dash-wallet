@@ -341,13 +341,10 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
             }
         }
 
-        private val autoFocusCallback: Camera.AutoFocusCallback =
-            object : Camera.AutoFocusCallback {
-                override fun onAutoFocus(success: Boolean, camera: Camera) {
-                    // schedule again
-                    cameraHandler!!.postDelayed(this@AutoFocusRunnable, AUTO_FOCUS_INTERVAL_MS)
-                }
-            }
+        private val autoFocusCallback = Camera.AutoFocusCallback { success: Boolean, camera: Camera ->
+            // schedule again
+            cameraHandler!!.postDelayed(this@AutoFocusRunnable, AUTO_FOCUS_INTERVAL_MS)
+        }
     }
 
     private val fetchAndDecodeRunnable: Runnable = object : Runnable {
@@ -357,11 +354,9 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
         )
 
         override fun run() {
-            cameraManager.requestPreviewFrame(object : Camera.PreviewCallback {
-                override fun onPreviewFrame(data: ByteArray, camera: Camera) {
-                    decode(data)
-                }
-            })
+            cameraManager.requestPreviewFrame() { data, _ ->
+                decode(data)
+            }
         }
 
         private fun decode(data: ByteArray) {
