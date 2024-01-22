@@ -42,8 +42,8 @@ import android.view.ViewAnimationUtils
 import android.view.WindowManager
 import android.view.animation.AccelerateInterpolator
 import androidx.activity.addCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -66,10 +66,7 @@ import java.util.EnumMap
  * @author Andreas Schildbach
  */
 @AndroidEntryPoint
-class ScanActivity :
-    SecureActivity(),
-    TextureView.SurfaceTextureListener,
-    ActivityCompat.OnRequestPermissionsResultCallback {
+class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
     private val cameraManager = CameraManager()
     private lateinit var contentView: View
     private var scannerView: ScannerView? = null
@@ -84,25 +81,29 @@ class ScanActivity :
     @Volatile
     private var cameraHandler: Handler? = null
     private val viewModel by viewModels<ScanViewModel>()
+
+    private val requestCameraPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Permission is granted. Continue the action or workflow in your app.
+            maybeOpenCamera()
+        } else {
+            // Explain to the user that the feature is unavailable because the
+            // features requires a permission that the user has denied.
+            // At the same time, respect the user's decision.
+            viewModel.showPermissionWarnDialog.postCall()
+        }
+    }
     @SuppressLint("WrongConstant")
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
         viewModel.showPermissionWarnDialog.observe(this) {
-            AdaptiveDialog.create(
-                null,
-                getString(R.string.scan_camera_permission_dialog_title),
-                getString(R.string.scan_camera_permission_dialog_message),
-                getString(R.string.button_dismiss)
-            ).show(this)
+            showPermissionWarnDialog()
         }
         viewModel.showProblemWarnDialog.observe(this) {
-            AdaptiveDialog.create(
-                null,
-                getString(R.string.scan_camera_permission_dialog_title),
-                getString(R.string.scan_camera_problem_dialog_message),
-                getString(R.string.button_dismiss)
-            ).show(this)
+            showProblemWarnDialog()
         }
 
         // Stick to the orientation the activity was started with. We cannot declare this in the
@@ -123,18 +124,9 @@ class ScanActivity :
         cameraThread = HandlerThread("cameraThread", Process.THREAD_PRIORITY_BACKGROUND)
         cameraThread!!.start()
         cameraHandler = Handler(cameraThread!!.looper)
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.CAMERA
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(
-                    Manifest.permission.CAMERA
-                ),
-                0
-            )
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestCameraPermission()
         }
 
         onBackPressedDispatcher.addCallback(this) {
@@ -168,6 +160,28 @@ class ScanActivity :
                 }
             }
         }
+    }
+
+    private fun showProblemWarnDialog() {
+        AdaptiveDialog.create(
+            null,
+            getString(R.string.scan_camera_permission_dialog_title),
+            getString(R.string.scan_camera_problem_dialog_message),
+            getString(R.string.button_dismiss)
+        ).show(this)
+    }
+
+    private fun showPermissionWarnDialog() {
+        AdaptiveDialog.create(
+            null,
+            getString(R.string.scan_camera_permission_dialog_title),
+            getString(R.string.scan_camera_permission_dialog_message),
+            getString(R.string.button_dismiss)
+        ).show(this)
+    }
+
+    private fun requestCameraPermission() {
+        requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
     private fun maybeTriggerSceneTransition() {
@@ -205,19 +219,6 @@ class ScanActivity :
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         turnOnAutoLogout()
         super.onDestroy()
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            maybeOpenCamera()
-        } else {
-            viewModel.showPermissionWarnDialog.call()
-        }
     }
 
     private fun maybeOpenCamera() {
