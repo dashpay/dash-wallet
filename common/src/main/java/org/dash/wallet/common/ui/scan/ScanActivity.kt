@@ -1,5 +1,6 @@
 /*
  * Copyright the original author or authors.
+ * Copyright 2024 Dash Core Group
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +34,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
+import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.KeyEvent
 import android.view.Surface
@@ -57,30 +59,32 @@ import com.google.zxing.qrcode.QRCodeReader
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.R
 import org.dash.wallet.common.SecureActivity
+import org.dash.wallet.common.databinding.ScanActivityBinding
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.OnFirstPreDraw
 import org.slf4j.LoggerFactory
 import java.util.EnumMap
 
 /**
- * @author Andreas Schildbach
+ * @author Andreas Schildbach (original Java source)
  */
 @AndroidEntryPoint
 class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
     private val cameraManager = CameraManager()
     private lateinit var contentView: View
-    private var scannerView: ScannerView? = null
-    private var previewView: TextureView? = null
+    private lateinit var scannerView: ScannerView
+    private lateinit var previewView: TextureView
 
     @Volatile
     private var surfaceCreated = false
     private var sceneTransition: Animator? = null
-    private var vibrator: Vibrator? = null
-    private var cameraThread: HandlerThread? = null
+    private lateinit var vibrator: Vibrator
+    private lateinit var cameraThread: HandlerThread
 
     @Volatile
-    private var cameraHandler: Handler? = null
+    private lateinit var cameraHandler: Handler
     private val viewModel by viewModels<ScanViewModel>()
+    private lateinit var binding: ScanActivityBinding
 
     private val requestCameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -116,21 +120,23 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
         )
         turnOffAutoLogout()
-        setContentView(R.layout.scan_activity)
-        contentView = findViewById(android.R.id.content)
-        scannerView = findViewById<View>(R.id.scan_activity_mask) as ScannerView
-        previewView = findViewById<View>(R.id.scan_activity_preview) as TextureView
-        previewView!!.surfaceTextureListener = this
+
+        binding = ScanActivityBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        contentView = binding.root
+        scannerView = binding.scanActivityMask
+        previewView = binding.scanActivityPreview
+        previewView.surfaceTextureListener = this
         cameraThread = HandlerThread("cameraThread", Process.THREAD_PRIORITY_BACKGROUND)
-        cameraThread!!.start()
-        cameraHandler = Handler(cameraThread!!.looper)
+        cameraThread.start()
+        cameraHandler = Handler(cameraThread.looper)
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestCameraPermission()
         }
 
         onBackPressedDispatcher.addCallback(this) {
-            scannerView!!.visibility = View.GONE
+            scannerView.visibility = View.GONE
             setResult(RESULT_CANCELED)
             finish()
         }
@@ -204,15 +210,15 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
     }
 
     override fun onPause() {
-        cameraHandler!!.post(closeRunnable)
+        cameraHandler.post(closeRunnable)
         super.onPause()
     }
 
     override fun onDestroy() {
         // cancel background thread
-        cameraHandler!!.removeCallbacksAndMessages(null)
-        cameraThread!!.quit()
-        previewView!!.surfaceTextureListener = null
+        cameraHandler.removeCallbacksAndMessages(null)
+        cameraThread.quit()
+        previewView.surfaceTextureListener = null
 
         // We're removing the requested orientation because if we don't, somehow the requested orientation is
         // bleeding through to the calling activity, forcing it into a locked state until it is restarted.
@@ -227,7 +233,7 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
                 Manifest.permission.CAMERA
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            cameraHandler!!.post(openRunnable)
+            cameraHandler.post(openRunnable)
         }
     }
 
@@ -255,16 +261,25 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
                 return true
 
             KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_VOLUME_UP -> {
-                cameraHandler!!.post { cameraManager.setTorch(keyCode == KeyEvent.KEYCODE_VOLUME_UP) }
+                cameraHandler.post { cameraManager.setTorch(keyCode == KeyEvent.KEYCODE_VOLUME_UP) }
                 return true
             }
         }
         return super.onKeyDown(keyCode, event)
     }
 
+    private fun vibrate() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val effect = VibrationEffect.createOneShot(VIBRATE_DURATION, VibrationEffect.DEFAULT_AMPLITUDE)
+            vibrator.vibrate(effect)
+        } else {
+            vibrator.vibrate(VIBRATE_DURATION)
+        }
+    }
+
     fun handleResult(scanResult: Result) {
-        vibrator!!.vibrate(VIBRATE_DURATION)
-        scannerView!!.setIsResult(true)
+        vibrate()
+        scannerView.setIsResult(true)
         val result = Intent()
         result.putExtra(INTENT_EXTRA_RESULT, scanResult.text)
         setResult(RESULT_OK, result)
@@ -288,7 +303,7 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
                 val cameraFlip = cameraManager.facing == Camera.CameraInfo.CAMERA_FACING_FRONT
                 val cameraRotation = cameraManager.orientation
                 runOnUiThread {
-                    scannerView!!.setFraming(
+                    scannerView.setFraming(
                         framingRect,
                         framingRectInPreview,
                         displayRotation(),
@@ -299,9 +314,9 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
                 val focusMode = camera.parameters.focusMode
                 val nonContinuousAutoFocus =
                     ((Camera.Parameters.FOCUS_MODE_AUTO == focusMode) || (Camera.Parameters.FOCUS_MODE_MACRO == focusMode))
-                if (nonContinuousAutoFocus) cameraHandler!!.post(AutoFocusRunnable(camera))
+                if (nonContinuousAutoFocus) cameraHandler.post(AutoFocusRunnable(camera))
                 runOnUiThread { maybeTriggerSceneTransition() }
-                cameraHandler!!.post(fetchAndDecodeRunnable)
+                cameraHandler.post(fetchAndDecodeRunnable)
             } catch (x: Exception) {
                 log.info("problem opening camera", x)
                 viewModel.showProblemWarnDialog.postCall()
@@ -328,7 +343,7 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
         }
     }
     private val closeRunnable: Runnable = Runnable {
-        cameraHandler!!.removeCallbacksAndMessages(null)
+        cameraHandler.removeCallbacksAndMessages(null)
         cameraManager.close()
     }
 
@@ -343,7 +358,7 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
 
         private val autoFocusCallback = Camera.AutoFocusCallback { success: Boolean, camera: Camera ->
             // schedule again
-            cameraHandler!!.postDelayed(this@AutoFocusRunnable, AUTO_FOCUS_INTERVAL_MS)
+            cameraHandler.postDelayed(this@AutoFocusRunnable, AUTO_FOCUS_INTERVAL_MS)
         }
     }
 
@@ -365,7 +380,7 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
             try {
                 hints[DecodeHintType.NEED_RESULT_POINT_CALLBACK] = ResultPointCallback { dot ->
                     runOnUiThread {
-                        scannerView!!.addDot(dot)
+                        scannerView.addDot(dot)
                     }
                 }
                 try {
@@ -380,7 +395,7 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
                 }
             } catch (x: ReaderException) {
                 // retry
-                cameraHandler!!.post(this)
+                cameraHandler.post(this)
             } finally {
                 reader.reset()
             }
