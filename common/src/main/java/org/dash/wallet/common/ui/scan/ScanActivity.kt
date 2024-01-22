@@ -51,7 +51,6 @@ import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
 import com.google.zxing.ReaderException
 import com.google.zxing.Result
-import com.google.zxing.ResultPoint
 import com.google.zxing.ResultPointCallback
 import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeReader
@@ -67,7 +66,7 @@ import java.util.EnumMap
  * @author Andreas Schildbach
  */
 @AndroidEntryPoint
-class ScanActivity() :
+class ScanActivity :
     SecureActivity(),
     TextureView.SurfaceTextureListener,
     ActivityCompat.OnRequestPermissionsResultCallback {
@@ -173,7 +172,7 @@ class ScanActivity() :
 
     private fun maybeTriggerSceneTransition() {
         if (sceneTransition != null) {
-            contentView!!.alpha = 1f
+            contentView.alpha = 1f
             sceneTransition!!.addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     window
@@ -300,11 +299,7 @@ class ScanActivity() :
                 val nonContinuousAutoFocus =
                     ((Camera.Parameters.FOCUS_MODE_AUTO == focusMode) || (Camera.Parameters.FOCUS_MODE_MACRO == focusMode))
                 if (nonContinuousAutoFocus) cameraHandler!!.post(AutoFocusRunnable(camera))
-                runOnUiThread(object : Runnable {
-                    override fun run() {
-                        maybeTriggerSceneTransition()
-                    }
-                })
+                runOnUiThread { maybeTriggerSceneTransition() }
                 cameraHandler!!.post(fetchAndDecodeRunnable)
             } catch (x: Exception) {
                 log.info("problem opening camera", x)
@@ -314,14 +309,14 @@ class ScanActivity() :
 
         private fun displayRotation(): Int {
             val rotation = windowManager.defaultDisplay.rotation
-            if (rotation == Surface.ROTATION_0) {
-                return 0
+            return if (rotation == Surface.ROTATION_0) {
+                0
             } else if (rotation == Surface.ROTATION_90) {
-                return 90
+                90
             } else if (rotation == Surface.ROTATION_180) {
-                return 180
+                180
             } else {
-                return if (rotation == Surface.ROTATION_270) {
+                if (rotation == Surface.ROTATION_270) {
                     270
                 } else {
                     throw IllegalStateException(
@@ -331,11 +326,9 @@ class ScanActivity() :
             }
         }
     }
-    private val closeRunnable: Runnable = object : Runnable {
-        override fun run() {
-            cameraHandler!!.removeCallbacksAndMessages(null)
-            cameraManager.close()
-        }
+    private val closeRunnable: Runnable = Runnable {
+        cameraHandler!!.removeCallbacksAndMessages(null)
+        cameraManager.close()
     }
 
     private inner class AutoFocusRunnable(private val camera: Camera) : Runnable {
@@ -374,24 +367,20 @@ class ScanActivity() :
             val source = cameraManager.buildLuminanceSource(data)
             val bitmap = BinaryBitmap(HybridBinarizer(source))
             try {
-                hints[DecodeHintType.NEED_RESULT_POINT_CALLBACK] = object : ResultPointCallback {
-                    override fun foundPossibleResultPoint(dot: ResultPoint) {
-                        runOnUiThread(object : Runnable {
-                            override fun run() {
-                                scannerView!!.addDot(dot)
-                            }
-                        })
+                hints[DecodeHintType.NEED_RESULT_POINT_CALLBACK] = ResultPointCallback { dot ->
+                    runOnUiThread {
+                        scannerView!!.addDot(dot)
                     }
                 }
                 try {
                     val scanResult = reader.decode(bitmap, hints)
-                    runOnUiThread({ handleResult(scanResult) })
+                    runOnUiThread { handleResult(scanResult) }
                 } catch (x: ReaderException) {
                     // Invert and check for a code
                     val invertedSource = source.invert()
                     val invertedBitmap = BinaryBitmap(HybridBinarizer(invertedSource))
                     val invertedScanResult = reader.decode(invertedBitmap, hints)
-                    runOnUiThread({ handleResult(invertedScanResult) })
+                    runOnUiThread { handleResult(invertedScanResult) }
                 }
             } catch (x: ReaderException) {
                 // retry
@@ -402,43 +391,11 @@ class ScanActivity() :
         }
     }
 
-    @AndroidEntryPoint
-    class WarnDialogFragment() : BaseDialogFragment() {
-        override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-            val args = arguments
-            baseAlertDialogBuilder.title = getString(args!!.getInt("title"))
-            baseAlertDialogBuilder.message = (args.getString("message"))
-            baseAlertDialogBuilder.neutralText = getString(R.string.button_dismiss)
-            baseAlertDialogBuilder.neutralAction = {
-                requireActivity().finish()
-                Unit
-            }
-            baseAlertDialogBuilder.showIcon = true
-            alertDialog = baseAlertDialogBuilder.buildAlertDialog()
-            return super.onCreateDialog(savedInstanceState)
-        }
-
-        override fun onCancel(dialog: DialogInterface) {
-            requireActivity().finish()
-        }
-
-        companion object {
-            private val FRAGMENT_TAG = WarnDialogFragment::class.java.name
-            fun show(fm: FragmentManager?, titleResId: Int, message: String?) {
-                val newFragment = WarnDialogFragment()
-                val args = Bundle()
-                args.putInt("title", titleResId)
-                args.putString("message", message)
-                newFragment.arguments = args
-                newFragment.show((fm)!!, FRAGMENT_TAG)
-            }
-        }
-    }
-
     companion object {
         private const val INTENT_EXTRA_SCENE_TRANSITION_X = "scene_transition_x"
         private const val INTENT_EXTRA_SCENE_TRANSITION_Y = "scene_transition_y"
         const val INTENT_EXTRA_RESULT = "result"
+        @JvmStatic
         fun startForResult(activity: Activity, clickView: View?, requestCode: Int) {
             if (clickView != null) {
                 val options = getLaunchOptions(activity, clickView)
