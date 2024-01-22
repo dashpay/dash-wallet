@@ -14,524 +14,478 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+package org.dash.wallet.common.ui.scan
 
-package org.dash.wallet.common.ui.scan;
-
-import android.Manifest;
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.app.Dialog;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
-import android.graphics.Rect;
-import android.graphics.RectF;
-import android.graphics.SurfaceTexture;
-import android.graphics.drawable.ColorDrawable;
-import android.hardware.Camera;
-import android.hardware.Camera.CameraInfo;
-import android.hardware.Camera.PreviewCallback;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Process;
-import android.os.Vibrator;
-import android.view.KeyEvent;
-import android.view.Surface;
-import android.view.TextureView;
-import android.view.TextureView.SurfaceTextureListener;
-import android.view.View;
-import android.view.ViewAnimationUtils;
-import android.view.WindowManager;
-import android.view.animation.AccelerateInterpolator;
-
-import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.core.app.ActivityOptionsCompat;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModelProviders;
-
-import com.google.zxing.BinaryBitmap;
-import com.google.zxing.DecodeHintType;
-import com.google.zxing.LuminanceSource;
-import com.google.zxing.PlanarYUVLuminanceSource;
-import com.google.zxing.ReaderException;
-import com.google.zxing.Result;
-import com.google.zxing.ResultPoint;
-import com.google.zxing.ResultPointCallback;
-import com.google.zxing.common.HybridBinarizer;
-import com.google.zxing.qrcode.QRCodeReader;
-
-import org.dash.wallet.common.R;
-import org.dash.wallet.common.SecureActivity;
-import org.dash.wallet.common.ui.BaseDialogFragment;
-import org.dash.wallet.common.util.OnFirstPreDraw;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.EnumMap;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
-import dagger.hilt.android.AndroidEntryPoint;
-import kotlin.Unit;
+import android.Manifest
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.app.Dialog
+import android.content.DialogInterface
+import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
+import android.graphics.RectF
+import android.graphics.SurfaceTexture
+import android.graphics.drawable.ColorDrawable
+import android.hardware.Camera
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Process
+import android.os.Vibrator
+import android.view.KeyEvent
+import android.view.Surface
+import android.view.TextureView
+import android.view.View
+import android.view.ViewAnimationUtils
+import android.view.WindowManager
+import android.view.animation.AccelerateInterpolator
+import androidx.activity.addCallback
+import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityOptionsCompat
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.ViewModelProviders
+import com.google.zxing.BinaryBitmap
+import com.google.zxing.DecodeHintType
+import com.google.zxing.ReaderException
+import com.google.zxing.Result
+import com.google.zxing.ResultPoint
+import com.google.zxing.ResultPointCallback
+import com.google.zxing.common.HybridBinarizer
+import com.google.zxing.qrcode.QRCodeReader
+import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.R
+import org.dash.wallet.common.SecureActivity
+import org.dash.wallet.common.ui.BaseDialogFragment
+import org.dash.wallet.common.ui.scan.ScanActivity.WarnDialogFragment
+import org.dash.wallet.common.util.OnFirstPreDraw
+import org.slf4j.LoggerFactory
+import java.util.EnumMap
 
 /**
  * @author Andreas Schildbach
  */
-@SuppressWarnings("deprecation")
 @AndroidEntryPoint
-public final class ScanActivity extends SecureActivity
-        implements SurfaceTextureListener, ActivityCompat.OnRequestPermissionsResultCallback {
-    private static final String INTENT_EXTRA_SCENE_TRANSITION_X = "scene_transition_x";
-    private static final String INTENT_EXTRA_SCENE_TRANSITION_Y = "scene_transition_y";
-    public static final String INTENT_EXTRA_RESULT = "result";
+class ScanActivity() :
+    SecureActivity(),
+    TextureView.SurfaceTextureListener,
+    ActivityCompat.OnRequestPermissionsResultCallback {
+    private val cameraManager = CameraManager()
+    private lateinit var contentView: View
+    private var scannerView: ScannerView? = null
+    private var previewView: TextureView? = null
 
-    public static void startForResult(final Activity activity, @Nullable final View clickView, final int requestCode) {
-        if (clickView != null) {
-            ActivityOptionsCompat options = getLaunchOptions(activity, clickView);
-            Intent intent = getTransitionIntent(activity, clickView);
-            activity.startActivityForResult(intent, requestCode, options.toBundle());
-        } else {
-            Intent intent = getIntent(activity);
-            activity.startActivityForResult(intent, requestCode);
-        }
-    }
+    @Volatile
+    private var surfaceCreated = false
+    private var sceneTransition: Animator? = null
+    private var vibrator: Vibrator? = null
+    private var cameraThread: HandlerThread? = null
 
-    public static Intent getIntent(final Activity activity) {
-        return new Intent(activity, ScanActivity.class);
-    }
-
-    public static Intent getTransitionIntent(final Activity activity, @NonNull final View clickView) {
-        final Intent intent = new Intent(activity, ScanActivity.class);
-
-        final int[] clickViewLocation = new int[2];
-        clickView.getLocationOnScreen(clickViewLocation);
-        intent.putExtra(ScanActivity.INTENT_EXTRA_SCENE_TRANSITION_X,
-                clickViewLocation[0] + clickView.getWidth() / 2);
-        intent.putExtra(ScanActivity.INTENT_EXTRA_SCENE_TRANSITION_Y,
-                clickViewLocation[1] + clickView.getHeight() / 2);
-
-        return intent;
-    }
-
-    public static ActivityOptionsCompat getLaunchOptions(final Activity activity, @NonNull final View clickView) {
-        return ActivityOptionsCompat.makeSceneTransitionAnimation(activity, clickView, "transition");
-    }
-
-    public static void startForResult(final Fragment fragment, final Activity activity, final int resultCode) {
-        fragment.startActivityForResult(new Intent(activity, ScanActivity.class), resultCode);
-    }
-
-    private static final long VIBRATE_DURATION = 50L;
-    private static final long AUTO_FOCUS_INTERVAL_MS = 2500L;
-
-    private final CameraManager cameraManager = new CameraManager();
-
-    private View contentView;
-    private ScannerView scannerView;
-    private TextureView previewView;
-
-    private volatile boolean surfaceCreated = false;
-    private Animator sceneTransition = null;
-
-    private Vibrator vibrator;
-    private HandlerThread cameraThread;
-    private volatile Handler cameraHandler;
-
-    private ScanViewModel viewModel;
-
-    private static final Logger log = LoggerFactory.getLogger(ScanActivity.class);
-
+    @Volatile
+    private var cameraHandler: Handler? = null
+    private var viewModel: ScanViewModel? = null
     @SuppressLint("WrongConstant")
-    @Override
-    public void onCreate(final Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-
-        viewModel = ViewModelProviders.of(this).get(ScanViewModel.class);
-        viewModel.showPermissionWarnDialog.observe(this, new Observer<Void>() {
-            @Override
-            public void onChanged(final Void v) {
-                WarnDialogFragment.show(getSupportFragmentManager(), R.string.scan_camera_permission_dialog_title,
-                        getString(R.string.scan_camera_permission_dialog_message));
-            }
-        });
-        viewModel.showProblemWarnDialog.observe(this, new Observer<Void>() {
-            @Override
-            public void onChanged(final Void v) {
-                WarnDialogFragment.show(getSupportFragmentManager(), R.string.scan_camera_problem_dialog_title,
-                        getString(R.string.scan_camera_problem_dialog_message));
-            }
-        });
+    public override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
+        viewModel = ViewModelProviders.of(this).get(ScanViewModel::class.java)
+        viewModel!!.showPermissionWarnDialog.observe(this) {
+            WarnDialogFragment.show(
+                supportFragmentManager,
+                R.string.scan_camera_permission_dialog_title,
+                getString(R.string.scan_camera_permission_dialog_message)
+            )
+        }
+        viewModel!!.showProblemWarnDialog.observe(this) {
+            WarnDialogFragment.show(
+                supportFragmentManager,
+                R.string.scan_camera_problem_dialog_title,
+                getString(R.string.scan_camera_problem_dialog_message)
+            )
+        }
 
         // Stick to the orientation the activity was started with. We cannot declare this in the
         // AndroidManifest.xml, because it's not allowed in combination with the windowIsTranslucent=true
         // theme attribute.
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LOCKED);
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LOCKED
         // Draw under navigation and status bars.
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        )
+        turnOffAutoLogout()
+        setContentView(R.layout.scan_activity)
+        contentView = findViewById(android.R.id.content)
+        scannerView = findViewById<View>(R.id.scan_activity_mask) as ScannerView
+        previewView = findViewById<View>(R.id.scan_activity_preview) as TextureView
+        previewView!!.surfaceTextureListener = this
+        cameraThread = HandlerThread("cameraThread", Process.THREAD_PRIORITY_BACKGROUND)
+        cameraThread!!.start()
+        cameraHandler = Handler(cameraThread!!.looper)
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CAMERA
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.CAMERA
+                ),
+                0
+            )
+        }
 
-        turnOffAutoLogout();
-        setContentView(R.layout.scan_activity);
-        contentView = findViewById(android.R.id.content);
-        scannerView = (ScannerView) findViewById(R.id.scan_activity_mask);
-        previewView = (TextureView) findViewById(R.id.scan_activity_preview);
-        previewView.setSurfaceTextureListener(this);
-
-        cameraThread = new HandlerThread("cameraThread", Process.THREAD_PRIORITY_BACKGROUND);
-        cameraThread.start();
-        cameraHandler = new Handler(cameraThread.getLooper());
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)
-            ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.CAMERA }, 0);
+        onBackPressedDispatcher.addCallback(this) {
+            scannerView!!.visibility = View.GONE
+            setResult(RESULT_CANCELED)
+            finish()
+        }
 
         if (savedInstanceState == null) {
-            final Intent intent = getIntent();
-            final int x = intent.getIntExtra(INTENT_EXTRA_SCENE_TRANSITION_X, -1);
-            final int y = intent.getIntExtra(INTENT_EXTRA_SCENE_TRANSITION_Y, -1);
+            val intent = intent
+            val x = intent.getIntExtra(INTENT_EXTRA_SCENE_TRANSITION_X, -1)
+            val y = intent.getIntExtra(INTENT_EXTRA_SCENE_TRANSITION_Y, -1)
             if (x != -1 || y != -1) {
                 // Using alpha rather than visibility because 'invisible' will cause the surface view to never
                 // start up, so the animation will never start.
-                contentView.setAlpha(0);
-                getWindow()
-                        .setBackgroundDrawable(new ColorDrawable(getResources().getColor(android.R.color.transparent)));
-                OnFirstPreDraw.listen(contentView, new OnFirstPreDraw.Callback() {
-                    @Override
-                    public boolean onFirstPreDraw() {
-                        float finalRadius = (float) (Math.max(contentView.getWidth(), contentView.getHeight()));
-                        final int duration = getResources().getInteger(android.R.integer.config_mediumAnimTime);
-                        sceneTransition = ViewAnimationUtils.createCircularReveal(contentView, x, y, 0, finalRadius);
-                        sceneTransition.setDuration(duration);
-                        sceneTransition.setInterpolator(new AccelerateInterpolator());
-                        // TODO Here, the transition should start in a paused state, showing the first frame
-                        // of the animation. Sadly, RevealAnimator doesn't seem to support this, unlike
-                        // (subclasses of) ValueAnimator.
-                        return false;
-                    }
-                });
+                contentView.alpha = 0f
+                window
+                    .setBackgroundDrawable(ColorDrawable(resources.getColor(android.R.color.transparent)))
+                OnFirstPreDraw.listen(contentView) {
+                    val finalRadius =
+                        (contentView.width.coerceAtLeast(contentView.height)).toFloat()
+                    val duration = resources.getInteger(android.R.integer.config_mediumAnimTime)
+                    sceneTransition =
+                        ViewAnimationUtils.createCircularReveal(contentView, x, y, 0f, finalRadius)
+                    sceneTransition!!.duration = duration.toLong()
+                    sceneTransition!!.interpolator = AccelerateInterpolator()
+                    // TODO Here, the transition should start in a paused state, showing the first frame
+                    // of the animation. Sadly, RevealAnimator doesn't seem to support this, unlike
+                    // (subclasses of) ValueAnimator.
+                    false
+                }
             }
         }
     }
 
-    private void maybeTriggerSceneTransition() {
+    private fun maybeTriggerSceneTransition() {
         if (sceneTransition != null) {
-            contentView.setAlpha(1);
-            sceneTransition.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    getWindow()
-                            .setBackgroundDrawable(new ColorDrawable(getResources().getColor(android.R.color.black)));
+            contentView!!.alpha = 1f
+            sceneTransition!!.addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    window
+                        .setBackgroundDrawable(ColorDrawable(resources.getColor(android.R.color.black)))
                 }
-            });
-            sceneTransition.start();
-            sceneTransition = null;
+            })
+            sceneTransition!!.start()
+            sceneTransition = null
         }
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        maybeOpenCamera();
+    override fun onResume() {
+        super.onResume()
+        maybeOpenCamera()
     }
 
-    @Override
-    protected void onPause() {
-        cameraHandler.post(closeRunnable);
-
-        super.onPause();
+    override fun onPause() {
+        cameraHandler!!.post(closeRunnable)
+        super.onPause()
     }
 
-    @Override
-    protected void onDestroy() {
+    override fun onDestroy() {
         // cancel background thread
-        cameraHandler.removeCallbacksAndMessages(null);
-        cameraThread.quit();
-
-        previewView.setSurfaceTextureListener(null);
+        cameraHandler!!.removeCallbacksAndMessages(null)
+        cameraThread!!.quit()
+        previewView!!.surfaceTextureListener = null
 
         // We're removing the requested orientation because if we don't, somehow the requested orientation is
         // bleeding through to the calling activity, forcing it into a locked state until it is restarted.
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-        turnOnAutoLogout();
-        super.onDestroy();
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        turnOnAutoLogout()
+        super.onDestroy()
     }
 
-    @Override
-    public void onRequestPermissionsResult(final int requestCode, final String[] permissions,
-            final int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-            maybeOpenCamera();
-        else
-            viewModel.showPermissionWarnDialog.call();
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            maybeOpenCamera()
+        } else {
+            viewModel!!.showPermissionWarnDialog.call()
+        }
     }
 
-    private void maybeOpenCamera() {
-        if (surfaceCreated && ContextCompat.checkSelfPermission(this,
-                Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
-            cameraHandler.post(openRunnable);
+    private fun maybeOpenCamera() {
+        if (surfaceCreated && ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            cameraHandler!!.post(openRunnable)
+        }
     }
 
-    @Override
-    public void onSurfaceTextureAvailable(final SurfaceTexture surface, final int width, final int height) {
-        surfaceCreated = true;
-        maybeOpenCamera();
+    override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+        surfaceCreated = true
+        maybeOpenCamera()
     }
 
-    @Override
-    public boolean onSurfaceTextureDestroyed(final SurfaceTexture surface) {
-        surfaceCreated = false;
-        return true;
+    override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+        surfaceCreated = false
+        return true
     }
 
-    @Override
-    public void onSurfaceTextureSizeChanged(final SurfaceTexture surface, final int width, final int height) {
-    }
-
-    @Override
-    public void onSurfaceTextureUpdated(final SurfaceTexture surface) {
-    }
-
-    @Override
-    public void onAttachedToWindow() {
+    override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
+    override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
+    override fun onAttachedToWindow() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true);
+            setShowWhenLocked(true)
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        scannerView.setVisibility(View.GONE);
-        setResult(RESULT_CANCELED);
-        finish();
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_FOCUS, KeyEvent.KEYCODE_CAMERA -> // don't launch camera app
+                return true
+
+            KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_VOLUME_UP -> {
+                cameraHandler!!.post { cameraManager.setTorch(keyCode == KeyEvent.KEYCODE_VOLUME_UP) }
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
-    @Override
-    public boolean onKeyDown(final int keyCode, final KeyEvent event) {
-        switch (keyCode) {
-        case KeyEvent.KEYCODE_FOCUS:
-        case KeyEvent.KEYCODE_CAMERA:
-            // don't launch camera app
-            return true;
-        case KeyEvent.KEYCODE_VOLUME_DOWN:
-        case KeyEvent.KEYCODE_VOLUME_UP:
-            cameraHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    cameraManager.setTorch(keyCode == KeyEvent.KEYCODE_VOLUME_UP);
+    fun handleResult(scanResult: Result) {
+        vibrator!!.vibrate(VIBRATE_DURATION)
+        scannerView!!.setIsResult(true)
+        val result = Intent()
+        result.putExtra(INTENT_EXTRA_RESULT, scanResult.text)
+        setResult(RESULT_OK, result)
+        postFinish()
+    }
+
+    private fun postFinish() {
+        Handler().postDelayed(
+            { finish() },
+            50
+        )
+    }
+
+    private val openRunnable: Runnable = object : Runnable {
+        override fun run() {
+            try {
+                val camera = cameraManager.open(previewView, displayRotation())
+                val framingRect = cameraManager.frame
+                val framingRectInPreview = RectF(cameraManager.framePreview)
+                framingRectInPreview.offsetTo(0f, 0f)
+                val cameraFlip = cameraManager.facing == Camera.CameraInfo.CAMERA_FACING_FRONT
+                val cameraRotation = cameraManager.orientation
+                runOnUiThread {
+                    scannerView!!.setFraming(
+                        framingRect,
+                        framingRectInPreview,
+                        displayRotation(),
+                        cameraRotation,
+                        cameraFlip
+                    )
                 }
-            });
-            return true;
-        }
-
-        return super.onKeyDown(keyCode, event);
-    }
-
-    public void handleResult(final Result scanResult) {
-        vibrator.vibrate(VIBRATE_DURATION);
-
-        scannerView.setIsResult(true);
-
-        final Intent result = new Intent();
-        result.putExtra(INTENT_EXTRA_RESULT, scanResult.getText());
-        setResult(RESULT_OK, result);
-        postFinish();
-    }
-
-    private void postFinish() {
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                finish();
-            }
-        }, 50);
-    }
-
-    private final Runnable openRunnable = new Runnable() {
-        @Override
-        public void run() {
-            try {
-                final Camera camera = cameraManager.open(previewView, displayRotation());
-
-                final Rect framingRect = cameraManager.getFrame();
-                final RectF framingRectInPreview = new RectF(cameraManager.getFramePreview());
-                framingRectInPreview.offsetTo(0, 0);
-                final boolean cameraFlip = cameraManager.getFacing() == CameraInfo.CAMERA_FACING_FRONT;
-                final int cameraRotation = cameraManager.getOrientation();
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        scannerView.setFraming(framingRect, framingRectInPreview, displayRotation(), cameraRotation,
-                                cameraFlip);
+                val focusMode = camera.parameters.focusMode
+                val nonContinuousAutoFocus =
+                    ((Camera.Parameters.FOCUS_MODE_AUTO == focusMode) || (Camera.Parameters.FOCUS_MODE_MACRO == focusMode))
+                if (nonContinuousAutoFocus) cameraHandler!!.post(AutoFocusRunnable(camera))
+                runOnUiThread(object : Runnable {
+                    override fun run() {
+                        maybeTriggerSceneTransition()
                     }
-                });
-
-                final String focusMode = camera.getParameters().getFocusMode();
-                final boolean nonContinuousAutoFocus = Camera.Parameters.FOCUS_MODE_AUTO.equals(focusMode)
-                        || Camera.Parameters.FOCUS_MODE_MACRO.equals(focusMode);
-
-                if (nonContinuousAutoFocus)
-                    cameraHandler.post(new AutoFocusRunnable(camera));
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        maybeTriggerSceneTransition();
-                    }
-                });
-                cameraHandler.post(fetchAndDecodeRunnable);
-            } catch (final Exception x) {
-                log.info("problem opening camera", x);
-                viewModel.showProblemWarnDialog.postCall();
+                })
+                cameraHandler!!.post(fetchAndDecodeRunnable)
+            } catch (x: Exception) {
+                log.info("problem opening camera", x)
+                viewModel!!.showProblemWarnDialog.postCall()
             }
         }
 
-        private int displayRotation() {
-            final int rotation = getWindowManager().getDefaultDisplay().getRotation();
-            if (rotation == Surface.ROTATION_0)
-                return 0;
-            else if (rotation == Surface.ROTATION_90)
-                return 90;
-            else if (rotation == Surface.ROTATION_180)
-                return 180;
-            else if (rotation == Surface.ROTATION_270)
-                return 270;
-            else
-                throw new IllegalStateException("rotation: " + rotation);
-        }
-    };
-
-    private final Runnable closeRunnable = new Runnable() {
-        @Override
-        public void run() {
-            cameraHandler.removeCallbacksAndMessages(null);
-            cameraManager.close();
-        }
-    };
-
-    private final class AutoFocusRunnable implements Runnable {
-        private final Camera camera;
-
-        public AutoFocusRunnable(final Camera camera) {
-            this.camera = camera;
-        }
-
-        @Override
-        public void run() {
-            try {
-                camera.autoFocus(autoFocusCallback);
-            } catch (final Exception x) {
-                log.info("problem with auto-focus, will not schedule again", x);
-            }
-        }
-
-        private final Camera.AutoFocusCallback autoFocusCallback = new Camera.AutoFocusCallback() {
-            @Override
-            public void onAutoFocus(final boolean success, final Camera camera) {
-                // schedule again
-                cameraHandler.postDelayed(AutoFocusRunnable.this, AUTO_FOCUS_INTERVAL_MS);
-            }
-        };
-    }
-
-    private final Runnable fetchAndDecodeRunnable = new Runnable() {
-        private final QRCodeReader reader = new QRCodeReader();
-        private final Map<DecodeHintType, Object> hints = new EnumMap<DecodeHintType, Object>(DecodeHintType.class);
-
-        @Override
-        public void run() {
-            cameraManager.requestPreviewFrame(new PreviewCallback() {
-                @Override
-                public void onPreviewFrame(final byte[] data, final Camera camera) {
-                    decode(data);
+        private fun displayRotation(): Int {
+            val rotation = windowManager.defaultDisplay.rotation
+            if (rotation == Surface.ROTATION_0) {
+                return 0
+            } else if (rotation == Surface.ROTATION_90) {
+                return 90
+            } else if (rotation == Surface.ROTATION_180) {
+                return 180
+            } else {
+                return if (rotation == Surface.ROTATION_270) {
+                    270
+                } else {
+                    throw IllegalStateException(
+                        "rotation: $rotation"
+                    )
                 }
-            });
+            }
+        }
+    }
+    private val closeRunnable: Runnable = object : Runnable {
+        override fun run() {
+            cameraHandler!!.removeCallbacksAndMessages(null)
+            cameraManager.close()
+        }
+    }
+
+    private inner class AutoFocusRunnable(private val camera: Camera) : Runnable {
+        override fun run() {
+            try {
+                camera.autoFocus(autoFocusCallback)
+            } catch (x: Exception) {
+                log.info("problem with auto-focus, will not schedule again", x)
+            }
         }
 
-        private void decode(final byte[] data) {
-            final PlanarYUVLuminanceSource source = cameraManager.buildLuminanceSource(data);
-            final BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+        private val autoFocusCallback: Camera.AutoFocusCallback =
+            object : Camera.AutoFocusCallback {
+                override fun onAutoFocus(success: Boolean, camera: Camera) {
+                    // schedule again
+                    cameraHandler!!.postDelayed(this@AutoFocusRunnable, AUTO_FOCUS_INTERVAL_MS)
+                }
+            }
+    }
 
+    private val fetchAndDecodeRunnable: Runnable = object : Runnable {
+        private val reader = QRCodeReader()
+        private val hints: MutableMap<DecodeHintType, Any?> = EnumMap(
+            DecodeHintType::class.java
+        )
+
+        override fun run() {
+            cameraManager.requestPreviewFrame(object : Camera.PreviewCallback {
+                override fun onPreviewFrame(data: ByteArray, camera: Camera) {
+                    decode(data)
+                }
+            })
+        }
+
+        private fun decode(data: ByteArray) {
+            val source = cameraManager.buildLuminanceSource(data)
+            val bitmap = BinaryBitmap(HybridBinarizer(source))
             try {
-                hints.put(DecodeHintType.NEED_RESULT_POINT_CALLBACK, new ResultPointCallback() {
-                    @Override
-                    public void foundPossibleResultPoint(final ResultPoint dot) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                scannerView.addDot(dot);
+                hints[DecodeHintType.NEED_RESULT_POINT_CALLBACK] = object : ResultPointCallback {
+                    override fun foundPossibleResultPoint(dot: ResultPoint) {
+                        runOnUiThread(object : Runnable {
+                            override fun run() {
+                                scannerView!!.addDot(dot)
                             }
-                        });
+                        })
                     }
-                });
-                try {
-                    final Result scanResult = reader.decode(bitmap, hints);
-
-                    runOnUiThread(() -> handleResult(scanResult));
-                } catch (ReaderException x) {
-                    // Invert and check for a code
-                    LuminanceSource invertedSource = source.invert();
-                    BinaryBitmap invertedBitmap = new BinaryBitmap(new HybridBinarizer(invertedSource));
-
-                    final Result invertedScanResult = reader.decode(invertedBitmap, hints);
-
-                    runOnUiThread(() -> handleResult(invertedScanResult));
                 }
-
-            } catch (final ReaderException x) {
+                try {
+                    val scanResult = reader.decode(bitmap, hints)
+                    runOnUiThread({ handleResult(scanResult) })
+                } catch (x: ReaderException) {
+                    // Invert and check for a code
+                    val invertedSource = source.invert()
+                    val invertedBitmap = BinaryBitmap(HybridBinarizer(invertedSource))
+                    val invertedScanResult = reader.decode(invertedBitmap, hints)
+                    runOnUiThread({ handleResult(invertedScanResult) })
+                }
+            } catch (x: ReaderException) {
                 // retry
-                cameraHandler.post(fetchAndDecodeRunnable);
+                cameraHandler!!.post(this)
             } finally {
-                reader.reset();
+                reader.reset()
             }
         }
-    };
+    }
 
     @AndroidEntryPoint
-    public static class WarnDialogFragment extends BaseDialogFragment {
-        private static final String FRAGMENT_TAG = WarnDialogFragment.class.getName();
-        public static void show(final FragmentManager fm, final int titleResId, final String message) {
-            final WarnDialogFragment newFragment = new WarnDialogFragment();
-            final Bundle args = new Bundle();
-            args.putInt("title", titleResId);
-            args.putString("message", message);
-            newFragment.setArguments(args);
-            newFragment.show(fm, FRAGMENT_TAG);
+    class WarnDialogFragment() : BaseDialogFragment() {
+        override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+            val args = arguments
+            baseAlertDialogBuilder.title = getString(args!!.getInt("title"))
+            baseAlertDialogBuilder.message = (args.getString("message"))
+            baseAlertDialogBuilder.neutralText = getString(R.string.button_dismiss)
+            baseAlertDialogBuilder.neutralAction = {
+                requireActivity().finish()
+                Unit
+            }
+            baseAlertDialogBuilder.showIcon = true
+            alertDialog = baseAlertDialogBuilder.buildAlertDialog()
+            return super.onCreateDialog(savedInstanceState)
         }
 
-        @Override
-        public Dialog onCreateDialog(final Bundle savedInstanceState) {
-            final Bundle args = getArguments();
-            baseAlertDialogBuilder.setTitle(getString(args.getInt("title")));
-            baseAlertDialogBuilder.setMessage((args.getString("message")));
-            baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-            baseAlertDialogBuilder.setNeutralAction(
-                    () -> {
-                        getActivity().finish();
-                        return Unit.INSTANCE;
-                    }
-            );
-            baseAlertDialogBuilder.setShowIcon(true);
-            alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-            return super.onCreateDialog(savedInstanceState);
+        override fun onCancel(dialog: DialogInterface) {
+            requireActivity().finish()
         }
 
-        @Override
-        public void onCancel(final DialogInterface dialog) {
-            getActivity().finish();
+        companion object {
+            private val FRAGMENT_TAG = WarnDialogFragment::class.java.name
+            fun show(fm: FragmentManager?, titleResId: Int, message: String?) {
+                val newFragment = WarnDialogFragment()
+                val args = Bundle()
+                args.putInt("title", titleResId)
+                args.putString("message", message)
+                newFragment.arguments = args
+                newFragment.show((fm)!!, FRAGMENT_TAG)
+            }
         }
+    }
+
+    companion object {
+        private const val INTENT_EXTRA_SCENE_TRANSITION_X = "scene_transition_x"
+        private const val INTENT_EXTRA_SCENE_TRANSITION_Y = "scene_transition_y"
+        const val INTENT_EXTRA_RESULT = "result"
+        fun startForResult(activity: Activity, clickView: View?, requestCode: Int) {
+            if (clickView != null) {
+                val options = getLaunchOptions(activity, clickView)
+                val intent = getTransitionIntent(activity, clickView)
+                activity.startActivityForResult(intent, requestCode, options.toBundle())
+            } else {
+                val intent = getIntent(activity)
+                activity.startActivityForResult(intent, requestCode)
+            }
+        }
+
+        fun getIntent(activity: Activity?): Intent {
+            return Intent(activity, ScanActivity::class.java)
+        }
+
+        fun getTransitionIntent(activity: Activity?, clickView: View): Intent {
+            val intent = Intent(activity, ScanActivity::class.java)
+            val clickViewLocation = IntArray(2)
+            clickView.getLocationOnScreen(clickViewLocation)
+            intent.putExtra(
+                INTENT_EXTRA_SCENE_TRANSITION_X,
+                clickViewLocation[0] + clickView.width / 2
+            )
+            intent.putExtra(
+                INTENT_EXTRA_SCENE_TRANSITION_Y,
+                clickViewLocation[1] + clickView.height / 2
+            )
+            return intent
+        }
+
+        fun getLaunchOptions(activity: Activity?, clickView: View): ActivityOptionsCompat {
+            return ActivityOptionsCompat.makeSceneTransitionAnimation(
+                (activity)!!,
+                clickView,
+                "transition"
+            )
+        }
+
+        fun startForResult(fragment: Fragment, activity: Activity?, resultCode: Int) {
+            fragment.startActivityForResult(Intent(activity, ScanActivity::class.java), resultCode)
+        }
+
+        private const val VIBRATE_DURATION = 50L
+        private const val AUTO_FOCUS_INTERVAL_MS = 2500L
+        private val log = LoggerFactory.getLogger(ScanActivity::class.java)
     }
 }
