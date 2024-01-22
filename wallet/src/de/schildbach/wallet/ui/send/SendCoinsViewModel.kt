@@ -57,6 +57,7 @@ import javax.inject.Inject
 import kotlin.math.min
 
 class SendException(message: String) : Exception(message)
+class InsufficientCoinJoinMoneyException(ex: InsufficientMoneyException) : InsufficientMoneyException(ex.missing, "${ex.message} [coinjoin]")
 
 @HiltViewModel
 class SendCoinsViewModel @Inject constructor(
@@ -123,11 +124,6 @@ class SendCoinsViewModel @Inject constructor(
         get() = _contactData
 
     private var coinJoinMode: CoinJoinMode = CoinJoinMode.NONE
-
-    val isCoinJoinInsufficentMoneyException: Boolean
-        get() {
-            return coinJoinMode != CoinJoinMode.NONE && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))
-        }
 
     init {
         blockchainStateDao.observeState()
@@ -303,7 +299,11 @@ class SendCoinsViewModel @Inject constructor(
             dryrunSendRequest = sendRequest
             _dryRunSuccessful.value = true
         } catch (ex: Exception) {
-            dryRunException = ex
+            dryRunException = if (ex is InsufficientMoneyException && coinJoinMode != CoinJoinMode.NONE && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
+                 InsufficientCoinJoinMoneyException(ex)
+            } else {
+                ex
+            }
             _dryRunSuccessful.value = false
         }
     }

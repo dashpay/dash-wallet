@@ -24,6 +24,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -174,17 +175,8 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         } else if (dryRunException != null) {
             errorMessage = when (dryRunException) {
                 is Wallet.DustySendRequested -> getString(R.string.send_coins_error_dusty_send)
-                is InsufficientMoneyException -> if (!requirePinForBalance || userAuthorizedDuring) {
-                    getString(
-                        if (viewModel.isCoinJoinInsufficentMoneyException) {
-                            R.string.send_coins_error_insufficient_mixed_money
-                        } else {
-                            R.string.send_coins_error_insufficient_money
-                        }
-                    )
-                } else {
-                    ""
-                }
+                is InsufficientCoinJoinMoneyException -> getErrorMessage(R.string.send_coins_error_insufficient_mixed_money)
+                is InsufficientMoneyException -> getErrorMessage(R.string.send_coins_error_insufficient_money)
                 is Wallet.CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
                 else -> dryRunException.toString()
             }
@@ -205,6 +197,12 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 }
             )
         )
+    }
+
+    private fun getErrorMessage(@StringRes errorMessage: Int) = if (!requirePinForBalance || userAuthorizedDuring) {
+        getString(errorMessage)
+    } else {
+        ""
     }
 
     private suspend fun authenticateOrConfirm() {
