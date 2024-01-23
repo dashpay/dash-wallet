@@ -21,10 +21,20 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.NetworkParameters
 
-class BitcoinAddressParser(params: NetworkParameters) : AddressParser(
-    "$PATTERN_BITCOIN_ADDRESS|${params.segwitAddressHrp}$PATTERN_BECH32_ADDRESS",
-    params
-) {
+class BitcoinAddressParser(params: NetworkParameters) : AddressParser(PATTERN_BITCOIN_ADDRESS, params) {
+    private val bech32Parser = Bech32AddressParser(39, 59, params)
+
+    override fun exactMatch(inputText: String): Boolean {
+        return super.exactMatch(inputText) || bech32Parser.exactMatch(inputText)
+    }
+
+    override fun findAll(inputText: String): List<IntRange> {
+        val result = arrayListOf<IntRange>()
+        result.addAll(super.findAll(inputText))
+        result.addAll(bech32Parser.findAll(inputText))
+        return result
+    }
+
     override fun verifyAddress(addressCandidate: String) {
         params?.let {
             try {

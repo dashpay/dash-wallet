@@ -25,7 +25,7 @@ open class AddressParser(pattern: String, val params: NetworkParameters?) {
     companion object {
         val PATTERN_BITCOIN_ADDRESS = "[${Base58.ALPHABET.joinToString(separator = "")}]{20,40}"
         private const val PATTERN_ETHEREUM_ADDRESS = "0x[a-fA-F0-9]{40}"
-        const val PATTERN_BECH32_ADDRESS = "1[a-z0-9]{25,39}"
+        const val PATTERN_BECH32_ADDRESS = "1[a-z0-9]{39,59}" // taproot goes to 59
         fun getDashAddressParser(params: NetworkParameters): AddressParser {
             return AddressParser(PATTERN_BITCOIN_ADDRESS, params)
         }
@@ -41,16 +41,17 @@ open class AddressParser(pattern: String, val params: NetworkParameters?) {
 
     private val addressPattern = Regex(pattern)
 
-    fun exactMatch(inputText: String): Boolean {
+    open fun exactMatch(inputText: String): Boolean {
         return addressPattern.matches(inputText)
     }
 
-    fun findAll(inputText: String): List<IntRange> {
+    open fun findAll(inputText: String): List<IntRange> {
         val matches = addressPattern.findAll(inputText)
         val validRanges = mutableListOf<IntRange>()
 
         for (match in matches) {
             val addressCandidate = match.value
+            println("candidate ${match.value}")
 
             try {
                 verifyAddress(addressCandidate)

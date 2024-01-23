@@ -22,15 +22,16 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.AddressFormatException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.Bech32AddressParser
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 
-open class BEP2PaymentIntentParser(currency: String, prefix: String, asset: String) :
+open class Bech32PaymentIntentParser(currency: String, prefix: String, length: Int, asset: String) :
     MayaPaymentIntentParser(currency, asset, null) {
 
-    private val log = LoggerFactory.getLogger(BEP2PaymentIntentParser::class.java)
-    private val addressParser = BEP2AddressParser(prefix)
+    private val log = LoggerFactory.getLogger(Bech32PaymentIntentParser::class.java)
+    private val addressParser = Bech32AddressParser(prefix, length, null)
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
         if (input.startsWith("$currency:") || input.startsWith("${currency.uppercase()}:")) {
             try {

@@ -17,11 +17,19 @@
 
 package org.dash.wallet.common.payments.parsers
 
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.NetworkParameters
+import org.checkerframework.checker.units.qual.Length
 
-class Bech32AddressParser(hrp: String, params: NetworkParameters?) : AddressParser(
-    "${hrp}$PATTERN_BECH32_ADDRESS",
+open class Bech32AddressParser(hrp: String, regex: String, params: NetworkParameters? = null) : AddressParser(
+    "${hrp}$regex",
     params
 ) {
-    constructor(params: NetworkParameters) : this(params.segwitAddressHrp, params)
+    constructor(hrp: String, length: Int, params: NetworkParameters?) : this(hrp, "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{$length}", params)
+    constructor(length: Int, params: NetworkParameters) : this(params.segwitAddressHrp, "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{$length}", params)
+    constructor(min: Int, max: Int, params: NetworkParameters) : this(params.segwitAddressHrp, "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{$min,$max}", params)
+
+    override fun verifyAddress(addressCandidate: String) {
+        params?.let { SegwitAddress.fromBech32(params, addressCandidate) }
+    }
 }
