@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.maya.payments.parsers
 
 import org.dash.wallet.common.payments.parsers.AddressParser
+import org.dash.wallet.common.payments.parsers.Bech32AddressParser
 import org.dash.wallet.common.payments.parsers.BitcoinAddressParser
 import org.dash.wallet.common.payments.parsers.BitcoinMainNetParams
 import org.dash.wallet.common.payments.parsers.PaymentParsers
@@ -35,7 +36,17 @@ class MayaPaymentParsers : PaymentParsers() {
             AddressParser.getEthereumAddressParser()
         )
         add("rune", "rune", RunePaymentIntentProcessor(), RuneAddressParser())
-        add("kujira", "kuji", BEP2PaymentIntentParser("kuji", "kujira", "KIJI.KUJI"), BEP2AddressParser("kujira"))
-        add("usk", "usk", BEP2PaymentIntentParser("usk", "usk", "KUJI.USK"), BEP2AddressParser("usk"))
+        add(
+            "kujira",
+            "kuji",
+            Bech32PaymentIntentParser("kuji", "kujira", 38, "KIJI.KUJI"),
+            Bech32AddressParser("kujira", 38, null)
+        )
+        add(
+            "usk",
+            "usk",
+            Bech32PaymentIntentParser("usk", "usk", 38, "KUJI.USK"),
+            Bech32AddressParser("usk", 38, null)
+        )
     }
 }
