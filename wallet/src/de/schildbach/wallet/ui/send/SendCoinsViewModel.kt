@@ -39,9 +39,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
-import org.bitcoinj.coinjoin.CoinJoinCoinSelector
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
@@ -59,6 +57,7 @@ import javax.inject.Inject
 import kotlin.math.min
 
 class SendException(message: String) : Exception(message)
+class InsufficientCoinJoinMoneyException(ex: InsufficientMoneyException) : InsufficientMoneyException(ex.missing, "${ex.message} [coinjoin]")
 
 @HiltViewModel
 class SendCoinsViewModel @Inject constructor(
@@ -124,6 +123,8 @@ class SendCoinsViewModel @Inject constructor(
     val contactData: LiveData<UsernameSearchResult>
         get() = _contactData
 
+    private var coinJoinMode: CoinJoinMode = CoinJoinMode.NONE
+
     init {
         blockchainStateDao.observeState()
             .filterNotNull()
@@ -134,11 +135,11 @@ class SendCoinsViewModel @Inject constructor(
 
         coinJoinConfig.observeMode()
             .map { mode ->
+                coinJoinMode = mode
                 if (mode == CoinJoinMode.NONE) {
                     MaxOutputAmountCoinSelector()
                 } else {
                     MaxOutputAmountCoinJoinCoinSelector(wallet)
-                    // MaxOutputAmountCoinSelector()
                 }
             }
             .flatMapLatest { coinSelector ->
@@ -298,7 +299,11 @@ class SendCoinsViewModel @Inject constructor(
             dryrunSendRequest = sendRequest
             _dryRunSuccessful.value = true
         } catch (ex: Exception) {
-            dryRunException = ex
+            dryRunException = if (ex is InsufficientMoneyException && coinJoinMode != CoinJoinMode.NONE && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
+                 InsufficientCoinJoinMoneyException(ex)
+            } else {
+                ex
+            }
             _dryRunSuccessful.value = false
         }
     }
