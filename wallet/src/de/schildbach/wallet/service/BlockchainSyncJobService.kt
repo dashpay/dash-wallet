@@ -22,14 +22,10 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.Build
 import android.os.Handler
 import android.os.IBinder
-import androidx.annotation.RequiresApi
 import org.slf4j.LoggerFactory
 
-
-@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 class BlockchainSyncJobService : JobService() {
 
     private val log = LoggerFactory.getLogger(BlockchainSyncJobService::class.java)
