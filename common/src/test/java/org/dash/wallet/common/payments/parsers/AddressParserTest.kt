@@ -57,7 +57,7 @@ class AddressParserTest {
             4,
             parser.findAll(
                 "Here is the first address 183axN6F7ZjwayiJPjjwJgWGas6J9mtfi" +
-                    "and the second: 34Me5SAG8W8Bf2LxGfPiqVZRKKV1VL1hmW" +
+                    " and the second: 34Me5SAG8W8Bf2LxGfPiqVZRKKV1VL1hmW" +
                     "\n\n bc1qxhgnnp745zryn2ud8hm6k3mygkkpkm35020js0 " +
                     "\n bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297"
             ).size
