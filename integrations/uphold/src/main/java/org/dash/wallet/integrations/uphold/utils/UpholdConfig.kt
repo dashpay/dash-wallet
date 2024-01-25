@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,26 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.integrations
+package org.dash.wallet.integrations.uphold.utils
 
-import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
-// import kotlinx.coroutines.flow.Flow
+import android.content.Context
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ExchangeConfig
+import javax.inject.Inject
+import javax.inject.Singleton
 
-data class ExchangeIntegration(
-    val id: String,
-    val isConnected: Boolean,
-    val address: String?,
-    val currency: String?,
-    @StringRes
-    val name: Int,
-    @DrawableRes
-    val iconId: Int
-)
-
-interface ExchangeIntegrationProvider {
-
-    suspend fun getDepositAddresses(currency: String): List<ExchangeIntegration>
-    // fun observeDepositAddresses(currency: String) : Flow<List<ExchangeIntegration>>
-    fun connectToIntegration(name: String)
+@Singleton
+class UpholdConfig @Inject constructor(
+    context: Context,
+    walletDataProvider: WalletDataProvider
+): ExchangeConfig(
+    context,
+    PREFERENCES_NAME,
+    walletDataProvider
+) {
+    companion object {
+        const val PREFERENCES_NAME = "uphold"
+    }
 }

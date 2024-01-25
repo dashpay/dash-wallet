@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider
 import org.dash.wallet.common.ui.address_input.AddressSource
@@ -25,10 +26,29 @@ class MayaAddressInputViewModel @Inject constructor(
         get() = _addressSources
 
     init {
+
+//        inputCurrency
+//            .filterNotNull()
+//            .flatMapLatest(exchangeIntegrationProvider::observeDepositAddresses)
+//            .onEach { a -> print(a) }
+//            .onEach {
+//                val sources = it.map {
+//                        integration ->
+//                    AddressSource(
+//                        integration.id,
+//                        integration.name,
+//                        integration.iconId,
+//                        integration.address,
+//                        integration.currency
+//                    )
+//                }
+//                _addressSources.value = sources
+//            }
+//            .launchIn(viewModelScope)
+
         inputCurrency
             .filterNotNull()
-            .flatMapLatest(exchangeIntegrationProvider::observeDepositAddresses)
-            .onEach { a -> print(a) }
+            .mapLatest(exchangeIntegrationProvider::getDepositAddresses)
             .onEach {
                 val sources = it.map {
                         integration ->
@@ -55,6 +75,8 @@ class MayaAddressInputViewModel @Inject constructor(
 //            }
 //            .launchIn(viewModelScope)
     }
+
+
 
     fun setCurrency(currency: String) {
         inputCurrency.value = currency

@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.uphold.api
 import org.dash.wallet.integrations.uphold.data.UpholdAccessToken
 import org.dash.wallet.integrations.uphold.data.UpholdCapability
 import org.dash.wallet.integrations.uphold.data.UpholdCard
+import org.dash.wallet.integrations.uphold.data.UpholdCardAddressList
 import org.dash.wallet.integrations.uphold.data.UpholdCryptoCardAddress
 import org.dash.wallet.integrations.uphold.data.UpholdTransaction
 import retrofit2.Call
@@ -55,6 +56,9 @@ interface UpholdService {
 
     @POST("v0/me/cards/{id}/addresses")
     fun createCardAddress(@Path("id") cardId: String, @Body body: Map<String, String>): Call<UpholdCryptoCardAddress?>
+
+    @GET("v0/me/cards/{id}/addresses")
+    fun listCardAddresses(@Path("id") cardId: String): Call<List<UpholdCardAddressList>?>
 
     @POST("v0/me/cards/{cardId}/transactions")
     @JvmSuppressWildcards

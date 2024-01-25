@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentAddressInputBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.radio_group.IconSelectMode
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
 import org.dash.wallet.common.ui.recyclerview.IconifiedListAdapter
 import org.dash.wallet.common.ui.scan.ScanActivity
@@ -204,7 +205,8 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
                     IconifiedViewItem(
                         getString(R.string.address_input_paste_from, getString(it.name)),
                         it.address ?: "",
-                        it.icon
+                        it.icon,
+                        iconSelectMode = IconSelectMode.None
                     )
                 }
             )

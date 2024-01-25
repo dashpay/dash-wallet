@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.uphold.api
 import android.content.SharedPreferences
 import org.dash.wallet.common.util.ensureSuccessful
 import org.dash.wallet.integrations.uphold.data.UpholdCard
+import org.dash.wallet.integrations.uphold.data.UpholdCardAddressList
 import org.dash.wallet.integrations.uphold.data.UpholdConstants
 import org.dash.wallet.integrations.uphold.data.UpholdCryptoCardAddress
 import org.dash.wallet.integrations.uphold.data.UpholdException
@@ -133,6 +134,36 @@ fun UpholdClient.getCards(
     })
 }
 
+fun UpholdClient.getAllCards(
+    getAllCardsCb: UpholdClient.Callback<List<UpholdCard>>?
+) {
+    service.cards.enqueue(object : Callback<List<UpholdCard>> {
+        override fun onResponse(call: Call<List<UpholdCard>>, response: Response<List<UpholdCard>>) {
+            val body = response.body()
+
+            if (response.isSuccessful && body != null) {
+                UpholdClient.log.info("get all cards success")
+                getAllCardsCb?.onSuccess(body)
+            } else {
+                UpholdClient.log.error("Error obtaining cards " + response.message() + " code: " + response.code())
+                getAllCardsCb?.onError(
+                    UpholdException(
+                        "Error obtaining cards",
+                        response.message(),
+                        response.code()
+                    ),
+                    false
+                )
+            }
+        }
+
+        override fun onFailure(call: Call<List<UpholdCard>>, t: Throwable) {
+            UpholdClient.log.error("Error obtaining cards: " + t.message)
+            getAllCardsCb?.onError(java.lang.Exception(t), false)
+        }
+    })
+}
+
 suspend fun UpholdClient.revokeAccessToken() {
     val response = service.revokeAccessToken(accessToken)
     response.ensureSuccessful()
@@ -202,6 +233,44 @@ fun UpholdClient.createDashAddress(cardId: String) {
 
         override fun onFailure(call: Call<UpholdCryptoCardAddress?>, t: Throwable) {
             UpholdClient.log.error("Error creating Dash Card address: " + t.message)
+        }
+    })
+}
+
+fun UpholdClient.createCardAddress(cardId: String, network: String, callback: UpholdClient.Callback<String>) {
+    val body: MutableMap<String, String> = HashMap()
+    body["network"] = network
+    service.createCardAddress(cardId, body).enqueue(object : Callback<UpholdCryptoCardAddress?> {
+        override fun onResponse(call: Call<UpholdCryptoCardAddress?>, response: Response<UpholdCryptoCardAddress?>) {
+            UpholdClient.log.info("Card address created")
+            if (response.body() == null) {
+                callback.onError(UpholdException("Error creating address:", response.errorBody().toString(), response.code()), false)
+            } else {
+                callback.onSuccess(response.body()?.address)
+            }
+        }
+
+        override fun onFailure(call: Call<UpholdCryptoCardAddress?>, t: Throwable) {
+            UpholdClient.log.error("Error creating Dash Card address: " + t.message)
+            callback.onError(UpholdException("Error creating Dash Card address", t.message, 0), false)
+        }
+    })
+}
+
+fun UpholdClient.listCardAddress(cardId: String, callback: UpholdClient.Callback<List<UpholdCardAddressList>?>) {
+    service.listCardAddresses(cardId).enqueue(object : Callback<List<UpholdCardAddressList>?> {
+        override fun onResponse(call: Call<List<UpholdCardAddressList>?>, response: Response<List<UpholdCardAddressList>?>) {
+            UpholdClient.log.info("Card address listed")
+            if (response.body() == null) {
+                callback.onError(UpholdException("Error listing addresses:", response.errorBody().toString(), response.code()), false)
+            } else {
+                callback.onSuccess(response.body())
+            }
+        }
+
+        override fun onFailure(call: Call<List<UpholdCardAddressList>?>, t: Throwable) {
+            UpholdClient.log.error("Error listing addresses: " + t.message)
+            callback.onError(UpholdException("Error listing addresses", t.message, 0), false)
         }
     })
 }

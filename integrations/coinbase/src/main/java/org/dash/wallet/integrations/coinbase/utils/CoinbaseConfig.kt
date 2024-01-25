@@ -20,8 +20,11 @@ package org.dash.wallet.integrations.coinbase.utils
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.*
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
+import org.dash.wallet.common.data.ExchangeConfig
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +32,7 @@ import javax.inject.Singleton
 class CoinbaseConfig @Inject constructor(
     context: Context,
     walletDataProvider: WalletDataProvider
-): BaseConfig(
+): ExchangeConfig(
     context,
     PREFERENCES_NAME,
     walletDataProvider,
@@ -58,5 +61,29 @@ class CoinbaseConfig @Inject constructor(
         val AUTH_INFO_SHOWN = booleanPreferencesKey("coinbase_auth_info_shown")
         val USER_WITHDRAWAL_LIMIT = stringPreferencesKey("withdrawal_limit")
         val SEND_LIMIT_CURRENCY = stringPreferencesKey("send_limit_currency")
+        //val ACCOUNT_LIST = stringPreferencesKey("crypto_currency_account_list")
+        //val ACCOUNT_ADDRESS_MAP = stringPreferencesKey("account_address_list")
     }
+
+//    suspend fun getAccounts(): Map<String, String> {
+//        val hashMapString = get(ACCOUNT_LIST) ?: ""
+//        return Gson().fromJson(hashMapString, object : TypeToken<HashMap<String, String>>() {}.type)
+//    }
+//
+//    suspend fun setAccounts(accountMap: Map<String, String>) {
+//        set(ACCOUNT_LIST, Gson().toJson(accountMap))
+//    }
+//
+//    suspend fun getAddressMap(): Map<String, String> {
+//        val hashMapString = get(ACCOUNT_ADDRESS_MAP)
+//        return if (hashMapString == null) {
+//            mapOf()
+//        } else {
+//            Gson().fromJson(hashMapString, object : TypeToken<HashMap<String, String>>() {}.type)
+//        }
+//    }
+//
+//    suspend fun setAddressMap(accountMap: Map<String, String>) {
+//        set(ACCOUNT_ADDRESS_MAP, Gson().toJson(accountMap))
+//    }
 }

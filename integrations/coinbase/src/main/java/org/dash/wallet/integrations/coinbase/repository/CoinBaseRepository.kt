@@ -37,6 +37,7 @@ import org.dash.wallet.integrations.coinbase.service.CoinBaseServicesApi
 import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
 import org.dash.wallet.integrations.coinbase.viewmodels.toDoubleOrZero
 import java.math.BigDecimal
+import java.util.UUID
 import javax.inject.Inject
 
 interface CoinBaseRepositoryInt {
@@ -44,12 +45,14 @@ interface CoinBaseRepositoryInt {
     val isAuthenticated: Boolean
 
     suspend fun getUserAccount(): CoinbaseAccount
+    suspend fun getUserAccount(cryptoCurrency: String): CoinbaseAccount?
     suspend fun getUserAccounts(exchangeCurrencyCode: String): List<CoinBaseUserAccountDataUIModel>
     suspend fun getFiatAccount(): CoinbaseAccount
     suspend fun getBaseIdForUSDModel(baseCurrency: String): ResponseResource<BaseIdForUSDModel?>
     suspend fun getExchangeRates(currencyCode: String): Map<String, String>
     suspend fun disconnectCoinbaseAccount()
     suspend fun createAddress(): ResponseResource<String>
+    suspend fun createAddress(account: UUID): ResponseResource<String>
     suspend fun getUserAccountAddress(): ResponseResource<String>
     suspend fun getActivePaymentMethods(): List<PaymentMethodsData>
     suspend fun depositToFiatAccount(paymentMethodId: String, amountUSD: String)
@@ -91,6 +94,23 @@ class CoinBaseRepository @Inject constructor(
             .launchIn(configScope)
     }
 
+    private suspend fun saveUserAccountInfo() {
+        val accountMap = userAccountInfo.associateBy({ it.currency }, { it.uuid.toString() })
+        config.setAccounts(accountMap)
+    }
+
+    private suspend fun saveAddressInfo(account: UUID, address: String) {
+        val accountMap = config.getAddressMap().toMutableMap()
+        accountMap[account.toString()] = address
+        config.setAddressMap(accountMap)
+    }
+
+    private suspend fun clearAddressInfo(account: UUID) {
+        val accountMap = config.getAddressMap().toMutableMap()
+        accountMap.remove(account.toString())
+        config.setAddressMap(accountMap)
+    }
+
     override suspend fun getUserAccount(): CoinbaseAccount {
         val accountsResponse = servicesApi.getAccounts()
         userAccountInfo = accountsResponse.accounts
@@ -98,10 +118,28 @@ class CoinBaseRepository @Inject constructor(
             it.currency == Constants.DASH_CURRENCY
         } ?: throw IllegalStateException("No DASH account found")
 
+        saveUserAccountInfo()
+
         return userAccountData.also {
             config.set(CoinbaseConfig.USER_ACCOUNT_ID, it.uuid.toString())
             config.set(CoinbaseConfig.LAST_BALANCE, Coin.parseCoin(it.availableBalance.value).value)
         }
+    }
+
+    override suspend fun getUserAccount(cryptoCurrency: String): CoinbaseAccount {
+        val account = config.getAccounts()[cryptoCurrency]
+
+        if (account == null || userAccountInfo.isEmpty()) {
+            val accountsResponse = servicesApi.getAccounts()
+            userAccountInfo = accountsResponse.accounts
+            saveUserAccountInfo()
+        }
+
+        val userAccountData = userAccountInfo.firstOrNull {
+            it.currency == cryptoCurrency
+        } ?: throw IllegalStateException("No $cryptoCurrency account found")
+
+        return userAccountData
     }
 
     override suspend fun getUserAccounts(exchangeCurrencyCode: String): List<CoinBaseUserAccountDataUIModel> {
@@ -264,6 +302,17 @@ class CoinBaseRepository @Inject constructor(
         servicesApi.createAddress(accountId = userAccountId)?.addresses?.address ?: ""
     }
 
+    override suspend fun createAddress(accountId: UUID) = safeApiCall {
+        var lastAddress = config.getAddressMap()[accountId.toString()]
+
+        if (lastAddress == null) {
+            lastAddress = servicesApi.createAddress(accountId = accountId.toString())?.addresses?.address
+            lastAddress?.run { saveAddressInfo(accountId, this) }
+        }
+
+        lastAddress ?: ""
+    }
+
     override suspend fun getWithdrawalLimitInDash(): Double {
         val withdrawalLimit = config.get(CoinbaseConfig.USER_WITHDRAWAL_LIMIT)
         val withdrawalLimitCurrency = config.get(CoinbaseConfig.SEND_LIMIT_CURRENCY)
@@ -287,4 +336,3 @@ class CoinBaseRepository @Inject constructor(
         }
     }
 }
-
