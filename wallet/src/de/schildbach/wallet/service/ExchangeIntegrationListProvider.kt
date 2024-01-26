@@ -17,12 +17,9 @@
 
 package de.schildbach.wallet.service
 
-import android.content.Context
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.dash.wallet.common.data.ExchangeConfig
 import org.dash.wallet.common.data.unwrap
 import org.dash.wallet.common.integrations.ExchangeIntegration
@@ -34,42 +31,30 @@ import org.dash.wallet.integrations.uphold.api.createCardAddress
 import org.dash.wallet.integrations.uphold.api.getAllCards
 import org.dash.wallet.integrations.uphold.api.isAuthenticated
 import org.dash.wallet.integrations.uphold.api.listCardAddress
-import org.dash.wallet.integrations.uphold.data.UpholdCard
-import org.dash.wallet.integrations.uphold.data.UpholdCardAddressList
 import org.dash.wallet.integrations.uphold.utils.UpholdConfig
 import javax.inject.Inject
-import kotlin.coroutines.suspendCoroutine
 
 class ExchangeIntegrationListProvider @Inject constructor(
-    private val context: Context,
     private val coinBaseRepository: CoinBaseRepository,
     private val coinbaseConfig: CoinbaseConfig,
     private val upholdConfig: UpholdConfig,
-    private val securityFunctions: SecurityFunctions
+    private val upholdClient: UpholdClient
 ) : ExchangeIntegrationProvider {
-
-    private val exchangeList = MutableStateFlow(listOf<ExchangeIntegration>())
-    companion object {
-        private val networks = mapOf(
-            "DASH" to "dash",
-            "BTC" to "bitcoin",
-            "ETH" to "ethereum",
-            "USDC" to "ethereum",
-            "USDT" to "ethereum"
-        )
-    }
-
-    init {
-        val list = listOf(
-            ExchangeIntegration("coinbase", false, null, null, R.string.coinbase, R.drawable.ic_coinbase),
-            ExchangeIntegration("uphold", false, null, null, R.string.uphold_account, R.drawable.ic_uphold)
-        )
-        exchangeList.value = list
-    }
 
     override suspend fun getDepositAddresses(currency: String): List<ExchangeIntegration> {
         val exchangeIntegrations = arrayListOf<ExchangeIntegration>()
         // coinbase
+        processCoinbase(currency, exchangeIntegrations)
+        // uphold
+        processUphold(currency, exchangeIntegrations)
+
+        return exchangeIntegrations
+    }
+
+    private suspend fun processCoinbase(
+        currency: String,
+        exchangeIntegrations: ArrayList<ExchangeIntegration>
+    ) {
         try {
             if (!lookUpAddress(
                     "coinbase",
@@ -115,10 +100,6 @@ class ExchangeIntegrationListProvider @Inject constructor(
             // another error? not connected?
             e.printStackTrace()
         }
-        // uphold
-        processUphold(currency, exchangeIntegrations)
-
-        return exchangeIntegrations
     }
 
     private suspend fun processUphold(
@@ -135,73 +116,21 @@ class ExchangeIntegrationListProvider @Inject constructor(
             )
         ) {
             try {
-                val client = UpholdClient.init(context, securityFunctions.getAuthenticationHash())
                 // determine if we are connected
 
-                if (client.isAuthenticated) {
-                    val cards: List<UpholdCard>? = suspendCoroutine {
-                        client.getAllCards(
-                            object : UpholdClient.Callback<List<UpholdCard>> {
-                                override fun onSuccess(data: List<UpholdCard>?) {
-                                    it.resumeWith(Result.success(data))
-                                }
+                if (upholdClient.isAuthenticated) {
+                    val cards = upholdClient.getAllCards()
 
-                                override fun onError(e: java.lang.Exception?, otpRequired: Boolean) {
-                                    it.resumeWith(Result.failure(e!!))
-                                }
-                            }
-                        )
-                    }
                     if (cards != null) {
-                        val accountMap = hashMapOf<String, String>()
-                        // perform associateBy, duplicate keys will use the first value
-                        cards.forEach {
-                            if (!accountMap.containsKey(it.currency)) {
-                                accountMap[it.currency] = it.id
-                            }
-                        }
-                        upholdConfig.setAccounts(accountMap)
                         val card = cards.find { it.currency == currency }
                         if (card != null) {
-                            val addresses = suspendCoroutine {
-                                client.listCardAddress(
+                            val cardAddress = upholdClient.listCardAddress(card.id, currency)
+
+                            val address = cardAddress?.value
+                                ?: upholdClient.createCardAddress(
                                     card.id,
-                                    object : UpholdClient.Callback<List<UpholdCardAddressList>?> {
-                                        override fun onSuccess(data: List<UpholdCardAddressList>?) {
-                                            it.resumeWith(Result.success(data))
-                                        }
-
-                                        override fun onError(e: java.lang.Exception?, otpRequired: Boolean) {
-                                            it.resumeWith(Result.failure(e!!))
-                                        }
-                                    }
+                                    currency
                                 )
-                            }
-
-                            val addressMap = upholdConfig.getAddressMap().toMutableMap()
-                            val address = if (addresses.isNullOrEmpty()) {
-                                suspendCoroutine {
-                                    client.createCardAddress(
-                                        card.id,
-                                        networks[currency]!!,
-                                        object : UpholdClient.Callback<String> {
-                                            override fun onSuccess(data: String?) {
-                                                it.resumeWith(Result.success(data))
-                                            }
-
-                                            override fun onError(e: java.lang.Exception?, otpRequired: Boolean) {
-                                                it.resumeWith(Result.failure(e!!))
-                                            }
-                                        }
-                                    )
-                                }
-                            } else {
-                                addresses.find { it.type == networks[currency] }?.firstOrNull()?.value
-                            }
-                            address?.let {
-                                addressMap[card.id] = it
-                                upholdConfig.setAddressMap(addressMap)
-                            }
 
                             exchangeIntegrations.add(
                                 ExchangeIntegration(
@@ -221,9 +150,7 @@ class ExchangeIntegrationListProvider @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                // exchangeIntegrations.add(
-                //    ExchangeIntegration("uphold", false, null, null, R.string.uphold_account, R.drawable.ic_uphold)
-                // )
+                e.printStackTrace()
             }
         }
     }
@@ -236,48 +163,22 @@ class ExchangeIntegrationListProvider @Inject constructor(
         @DrawableRes iconId: Int,
         exchangeIntegrations: ArrayList<ExchangeIntegration>
     ): Boolean {
-        val accountId = config.getAccounts()[currency]
-        if (accountId != null) {
-            val address = config.getAddressMap()[accountId]
-            if (address != null) {
-                exchangeIntegrations.add(
-                    ExchangeIntegration(
-                        serviceName,
-                        true,
-                        address,
-                        null,
-                        nameId,
-                        iconId
-                    )
+        val address = config.getCurrencyAddress(currency)
+        if (address != null) {
+            exchangeIntegrations.add(
+                ExchangeIntegration(
+                    serviceName,
+                    true,
+                    address,
+                    null,
+                    nameId,
+                    iconId
                 )
-                return true
-            }
+            )
+            return true
         }
         return false
     }
-
-//    override fun observeDepositAddresses(currency: String): Flow<List<ExchangeIntegration>> {
-//        val list = listOf(
-//            ExchangeIntegration(
-//                "coinbase",
-//                false,
-//                "183axN6F7ZjwayiJPjjwJgWGas6J9mtfi",
-//                currency,
-//                R.string.coinbase,
-//                R.drawable.ic_coinbase
-//            ),
-//            ExchangeIntegration(
-//                "uphold",
-//                false,
-//                "bc1qxhgnnp745zryn2ud8hm6k3mygkkpkm35020js0",
-//                currency,
-//                R.string.uphold_account,
-//                R.drawable.ic_uphold
-//            )
-//        )
-//        exchangeList.value = list
-//        return exchangeList
-//    }
 
     override fun connectToIntegration(name: String) {
         TODO("Not yet implemented")

@@ -7,7 +7,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
@@ -75,8 +74,6 @@ class MayaAddressInputViewModel @Inject constructor(
 //            }
 //            .launchIn(viewModelScope)
     }
-
-
 
     fun setCurrency(currency: String) {
         inputCurrency.value = currency

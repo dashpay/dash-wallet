@@ -48,4 +48,15 @@ open class ExchangeConfig(
     suspend fun setAddressMap(accountMap: Map<String, String>) {
         set(ACCOUNT_ADDRESS_MAP, Gson().toJson(accountMap))
     }
+
+    suspend fun getCurrencyAddress(currency: String): String? {
+        val accountId = getAccounts()[currency]
+        return accountId?.let { getAddressMap()[accountId] }
+    }
+
+    suspend fun setAccountAddress(accountId: String, address: String) {
+        val accountMap = getAddressMap().toMutableMap()
+        accountMap[accountId] = address
+        setAddressMap(accountMap)
+    }
 }

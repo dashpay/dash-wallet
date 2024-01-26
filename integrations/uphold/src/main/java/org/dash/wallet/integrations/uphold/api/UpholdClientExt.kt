@@ -20,7 +20,7 @@ package org.dash.wallet.integrations.uphold.api
 import android.content.SharedPreferences
 import org.dash.wallet.common.util.ensureSuccessful
 import org.dash.wallet.integrations.uphold.data.UpholdCard
-import org.dash.wallet.integrations.uphold.data.UpholdCardAddressList
+import org.dash.wallet.integrations.uphold.data.UpholdCardAddress2
 import org.dash.wallet.integrations.uphold.data.UpholdConstants
 import org.dash.wallet.integrations.uphold.data.UpholdCryptoCardAddress
 import org.dash.wallet.integrations.uphold.data.UpholdException
@@ -31,6 +31,14 @@ import java.math.BigDecimal
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+
+val upholdNetworks: Map<String, String> = mapOf(
+    "DASH" to "dash",
+    "BTC" to "bitcoin",
+    "ETH" to "ethereum",
+    "USDC" to "ethereum",
+    "USDT" to "ethereum"
+)
 
 val UpholdClient.hasValidCredentials
     get() = UpholdConstants.hasValidCredentials()
@@ -134,34 +142,19 @@ fun UpholdClient.getCards(
     })
 }
 
-fun UpholdClient.getAllCards(
-    getAllCardsCb: UpholdClient.Callback<List<UpholdCard>>?
-) {
-    service.cards.enqueue(object : Callback<List<UpholdCard>> {
-        override fun onResponse(call: Call<List<UpholdCard>>, response: Response<List<UpholdCard>>) {
-            val body = response.body()
+suspend fun UpholdClient.getAllCards(): List<UpholdCard>? {
+    val cards = service.getCards()
 
-            if (response.isSuccessful && body != null) {
-                UpholdClient.log.info("get all cards success")
-                getAllCardsCb?.onSuccess(body)
-            } else {
-                UpholdClient.log.error("Error obtaining cards " + response.message() + " code: " + response.code())
-                getAllCardsCb?.onError(
-                    UpholdException(
-                        "Error obtaining cards",
-                        response.message(),
-                        response.code()
-                    ),
-                    false
-                )
+    // perform associateBy, duplicate keys will use the first
+    return cards?.apply {
+        val accountMap = hashMapOf<String, String>()
+        forEach {
+            if (!accountMap.containsKey(it.currency)) {
+                accountMap[it.currency] = it.id
             }
         }
-
-        override fun onFailure(call: Call<List<UpholdCard>>, t: Throwable) {
-            UpholdClient.log.error("Error obtaining cards: " + t.message)
-            getAllCardsCb?.onError(java.lang.Exception(t), false)
-        }
-    })
+        config.setAccounts(accountMap)
+    }
 }
 
 suspend fun UpholdClient.revokeAccessToken() {
@@ -236,15 +229,25 @@ fun UpholdClient.createDashAddress(cardId: String) {
         }
     })
 }
-
-fun UpholdClient.createCardAddress(cardId: String, network: String, callback: UpholdClient.Callback<String>) {
+suspend fun UpholdClient.createCardAddress(cardId: String, currency: String): String? {
+    val body = mapOf(
+        "network" to upholdNetworks[currency]!!
+    )
+    return service.createCardAddressAsync(cardId, body)?.address?.apply {
+        config.setAccountAddress(cardId, this)
+    }
+}
+fun UpholdClient.createCardAddress2(cardId: String, network: String, callback: UpholdClient.Callback<String>) {
     val body: MutableMap<String, String> = HashMap()
     body["network"] = network
     service.createCardAddress(cardId, body).enqueue(object : Callback<UpholdCryptoCardAddress?> {
         override fun onResponse(call: Call<UpholdCryptoCardAddress?>, response: Response<UpholdCryptoCardAddress?>) {
             UpholdClient.log.info("Card address created")
             if (response.body() == null) {
-                callback.onError(UpholdException("Error creating address:", response.errorBody().toString(), response.code()), false)
+                callback.onError(
+                    UpholdException("Error creating address:", response.errorBody().toString(), response.code()),
+                    false
+                )
             } else {
                 callback.onSuccess(response.body()?.address)
             }
@@ -257,22 +260,13 @@ fun UpholdClient.createCardAddress(cardId: String, network: String, callback: Up
     })
 }
 
-fun UpholdClient.listCardAddress(cardId: String, callback: UpholdClient.Callback<List<UpholdCardAddressList>?>) {
-    service.listCardAddresses(cardId).enqueue(object : Callback<List<UpholdCardAddressList>?> {
-        override fun onResponse(call: Call<List<UpholdCardAddressList>?>, response: Response<List<UpholdCardAddressList>?>) {
-            UpholdClient.log.info("Card address listed")
-            if (response.body() == null) {
-                callback.onError(UpholdException("Error listing addresses:", response.errorBody().toString(), response.code()), false)
-            } else {
-                callback.onSuccess(response.body())
-            }
-        }
-
-        override fun onFailure(call: Call<List<UpholdCardAddressList>?>, t: Throwable) {
-            UpholdClient.log.error("Error listing addresses: " + t.message)
-            callback.onError(UpholdException("Error listing addresses", t.message, 0), false)
-        }
-    })
+suspend fun UpholdClient.listCardAddress(cardId: String, currency: String): UpholdCardAddress2? {
+    val addressList = service.listCardAddresses(cardId)
+    val upholdAddresses = addressList?.find { it.type == upholdNetworks[currency] }
+    val address = upholdAddresses?.addresses?.first { it.format == "pubkeyhash" }
+    return address?.apply {
+        config.setAccountAddress(cardId, value)
+    }
 }
 
 fun UpholdClient.getWithdrawalRequirements(): List<String> {

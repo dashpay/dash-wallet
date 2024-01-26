@@ -104,11 +104,11 @@ class CoinBaseRepository @Inject constructor(
         config.setAccounts(accountMap)
     }
 
-    private suspend fun saveAddressInfo(account: UUID, address: String) {
-        val accountMap = config.getAddressMap().toMutableMap()
-        accountMap[account.toString()] = address
-        config.setAddressMap(accountMap)
-    }
+//    private suspend fun saveAddressInfo(account: UUID, address: String) {
+//        val accountMap = config.getAddressMap().toMutableMap()
+//        accountMap[account.toString()] = address
+//        config.setAddressMap(accountMap)
+//    }
 
     private suspend fun clearAddressInfo(account: UUID) {
         val accountMap = config.getAddressMap().toMutableMap()
@@ -313,7 +313,7 @@ class CoinBaseRepository @Inject constructor(
 
         if (lastAddress == null) {
             lastAddress = servicesApi.createAddress(accountId = accountId.toString())?.addresses?.address
-            lastAddress?.run { saveAddressInfo(accountId, this) }
+            lastAddress?.run { config.setAccountAddress(accountId.toString(), this) }
         }
 
         lastAddress ?: ""

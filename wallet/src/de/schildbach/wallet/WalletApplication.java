@@ -90,6 +90,7 @@ import org.dash.wallet.integrations.uphold.api.UpholdClient;
 import org.dash.wallet.integrations.uphold.data.UpholdConstants;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
+import org.dash.wallet.integrations.uphold.utils.UpholdConfig;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -186,6 +187,8 @@ public class WalletApplication extends MultiDexApplication
     TransactionMetadataProvider transactionMetadataProvider;
     @Inject
     PackageInfoProvider packageInfoProvider;
+    @Inject
+    UpholdConfig upholdConfig;
     @Inject
     WalletFactory walletFactory;
 
@@ -393,7 +396,7 @@ public class WalletApplication extends MultiDexApplication
         UpholdConstants.CLIENT_ID = BuildConfig.UPHOLD_CLIENT_ID;
         UpholdConstants.CLIENT_SECRET = BuildConfig.UPHOLD_CLIENT_SECRET;
         UpholdConstants.INSTANCE.initialize(Constants.NETWORK_PARAMETERS.getId().contains("test"));
-        UpholdClient.init(getApplicationContext(), authenticationHash);
+        UpholdClient.init(getApplicationContext(), authenticationHash, upholdConfig);
         LiquidClient.Companion.init(getApplicationContext(), authenticationHash);
     }
 

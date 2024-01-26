@@ -27,7 +27,7 @@ import javax.inject.Singleton
 class UpholdConfig @Inject constructor(
     context: Context,
     walletDataProvider: WalletDataProvider
-): ExchangeConfig(
+) : ExchangeConfig(
     context,
     PREFERENCES_NAME,
     walletDataProvider

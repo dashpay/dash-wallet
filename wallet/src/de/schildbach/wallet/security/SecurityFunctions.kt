@@ -29,7 +29,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
-import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.wallet.DeterministicSeed
@@ -185,12 +184,5 @@ class SecurityFunctions @Inject constructor(
 
         // Hand back the (possibly changed) encryption key.
         return key
-    }
-
-    fun getAuthenticationHash() : String {
-        // Uses Sha256 hash of excerpt of xpub as Uphold authentication salt
-        val xpub: String = walletData.wallet!!.watchingKey.serializePubB58(Constants.NETWORK_PARAMETERS)
-        val xpubExcerptHash = Sha256Hash.hash(xpub.substring(4, 15).toByteArray())
-        return Sha256Hash.wrap(xpubExcerptHash).toString()
     }
 }

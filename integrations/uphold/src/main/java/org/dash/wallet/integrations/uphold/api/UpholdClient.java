@@ -26,6 +26,7 @@ import org.dash.wallet.integrations.uphold.data.UpholdApiException;
 import org.dash.wallet.integrations.uphold.data.UpholdCard;
 import org.dash.wallet.integrations.uphold.data.UpholdConstants;
 import org.dash.wallet.integrations.uphold.data.UpholdTransaction;
+import org.dash.wallet.integrations.uphold.utils.UpholdConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +34,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.inject.Inject;
 
 import kotlin.Deprecated;
 import okhttp3.Interceptor;
@@ -61,6 +64,7 @@ public class UpholdClient {
     private static final String OTP_REQUIRED_KEY = "OTP-Token";
     private static final String OTP_REQUIRED_VALUE = "required";
 
+    protected UpholdConfig config;
     private Interceptor headerInterceptor = new Interceptor() {
 
         @Override
@@ -77,7 +81,7 @@ public class UpholdClient {
         }
     };
 
-    private UpholdClient(Context context, String prefsEncryptionKey) {
+    private UpholdClient(Context context, String prefsEncryptionKey, UpholdConfig config) {
         this.encryptionKey = prefsEncryptionKey;
         this.prefs = new SecurePreferences(context, prefsEncryptionKey, UPHOLD_PREFS);
         this.accessToken = UpholdClientExtKt.getStoredAccessToken(this);
@@ -92,10 +96,11 @@ public class UpholdClient {
                 .build();
 
         this.service = new RemoteDataSource().buildApi(UpholdService.class, baseUrl, okClient);
+        this.config = config;
     }
 
-    public static UpholdClient init(Context context, String prefsEncryptionKey) {
-        instance = new UpholdClient(context, prefsEncryptionKey);
+    public static UpholdClient init(Context context, String prefsEncryptionKey, UpholdConfig config) {
+        instance = new UpholdClient(context, prefsEncryptionKey, config);
         return instance;
     }
 
