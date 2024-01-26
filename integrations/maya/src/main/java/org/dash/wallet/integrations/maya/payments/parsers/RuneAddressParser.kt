@@ -17,4 +17,6 @@
 
 package org.dash.wallet.integrations.maya.payments.parsers
 
-class RunePaymentIntentProcessor : Bech32PaymentIntentParser("RUNE", "thor", 38, "THOR.RUNE")
+import org.dash.wallet.common.payments.parsers.Bech32AddressParser
+
+class RuneAddressParser : Bech32AddressParser("thor", 38, null)
