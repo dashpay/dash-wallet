@@ -165,6 +165,8 @@ suspend fun UpholdClient.revokeAccessToken() {
         UpholdClient.log.info("Uphold access token revoked")
         accessToken = null
         storeAccessToken()
+        // clear config data
+        config.clearAll()
     } else {
         UpholdClient.log.error(
             "Error revoking Uphold access token: " + response.message() + " code: " + response.code()
@@ -236,28 +238,6 @@ suspend fun UpholdClient.createCardAddress(cardId: String, currency: String): St
     return service.createCardAddressAsync(cardId, body)?.address?.apply {
         config.setAccountAddress(cardId, this)
     }
-}
-fun UpholdClient.createCardAddress2(cardId: String, network: String, callback: UpholdClient.Callback<String>) {
-    val body: MutableMap<String, String> = HashMap()
-    body["network"] = network
-    service.createCardAddress(cardId, body).enqueue(object : Callback<UpholdCryptoCardAddress?> {
-        override fun onResponse(call: Call<UpholdCryptoCardAddress?>, response: Response<UpholdCryptoCardAddress?>) {
-            UpholdClient.log.info("Card address created")
-            if (response.body() == null) {
-                callback.onError(
-                    UpholdException("Error creating address:", response.errorBody().toString(), response.code()),
-                    false
-                )
-            } else {
-                callback.onSuccess(response.body()?.address)
-            }
-        }
-
-        override fun onFailure(call: Call<UpholdCryptoCardAddress?>, t: Throwable) {
-            UpholdClient.log.error("Error creating Dash Card address: " + t.message)
-            callback.onError(UpholdException("Error creating Dash Card address", t.message, 0), false)
-        }
-    })
 }
 
 suspend fun UpholdClient.listCardAddress(cardId: String, currency: String): UpholdCardAddress2? {
