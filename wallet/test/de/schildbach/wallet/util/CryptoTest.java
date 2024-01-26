@@ -24,11 +24,11 @@ import static org.junit.Assert.assertTrue;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
 import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.dash.wallet.common.util.Io;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;

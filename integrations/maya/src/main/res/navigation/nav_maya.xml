@@ -21,6 +21,51 @@
         android:id="@+id/mayaCurrencyPickerFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaCryptoCurrencyPickerFragment"
         android:label="mayaPortalFragment"
-        tools:layout="@layout/fragment_currency_picker" />
+        tools:layout="@layout/fragment_currency_picker" >
+        <action android:id="@+id/mayaCurrencyPicker_to_addressInput"
+            app:destination="@id/mayaAddressInputFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"/>
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/mayaAddressInputFragment"
+        android:name="org.dash.wallet.integrations.maya.ui.MayaAddressInputFragment"
+        android:label="Address Input"
+        tools:layout="@layout/fragment_address_input" >
+        <argument
+            android:name="currency"
+            app:argType="string" />
+        <argument
+            android:name="title"
+            app:argType="string" />
+
+        <argument
+            android:name="hint"
+            app:argType="string"
+            />
+
+        <action android:id="@+id/mayaAddressInput_to_EnterAmount"
+            app:destination="@id/mayaEnterAmountFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment android:id="@+id/mayaEnterAmountFragment"
+        android:name="org.dash.wallet.integrations.maya.ui.MayaEnterAmountFragment"
+        android:label="Enter Amount"
+        tools:layout="@layout/fragment_maya_enter_amount">
+
+        <argument android:name="currency"
+            app:argType="string" />
+        <argument android:name="paymentIntent"
+            app:argType="org.dash.wallet.common.data.PaymentIntent" />
+
+    </fragment>
 
 </navigation>

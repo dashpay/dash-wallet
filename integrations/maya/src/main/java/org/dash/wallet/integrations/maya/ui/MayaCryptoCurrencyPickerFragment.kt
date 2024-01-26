@@ -34,6 +34,7 @@ import org.dash.wallet.common.ui.recyclerview.IconifiedListAdapter
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentCurrencyPickerBinding
 import org.dash.wallet.integrations.maya.model.PoolInfo
@@ -82,6 +83,14 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                 requireContext().getString(R.string.cryptocurrency_ethereum_code),
                 requireContext().getString(R.string.cryptocurrency_ethereum_network)
             ),
+            "KUJI.KUJI" to IconifiedViewItem(
+                requireContext().getString(R.string.cryptocurrency_kuji_code),
+                requireContext().getString(R.string.cryptocurrency_kuji_network)
+            ),
+            "KUJI.USK" to IconifiedViewItem(
+                requireContext().getString(R.string.cryptocurrency_usk_code),
+                requireContext().getString(R.string.cryptocurrency_usk_network)
+            ),
             "DASH.DASH" to IconifiedViewItem(
                 requireContext().getString(R.string.cryptocurrency_dash_code),
                 requireContext().getString(R.string.cryptocurrency_dash_network)
@@ -93,6 +102,10 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
             "ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7" to IconifiedViewItem(
                 requireContext().getString(R.string.cryptocurrency_tether_code),
                 requireContext().getString(R.string.cryptocurrency_tether_network)
+            ),
+            "ETH.WSTETH-0X7F39C581F595B53C5CB19BD0B3F8DA6C935E2CA0" to IconifiedViewItem(
+                requireContext().getString(R.string.cryptocurrency_wsteth_code),
+                requireContext().getString(R.string.cryptocurrency_wsteth_network)
             ),
             "THOR.RUNE" to IconifiedViewItem(
                 requireContext().getString(R.string.cryptocurrency_rune_code),
@@ -151,8 +164,16 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
         }
     }
 
-    fun clickListener(pool: PoolInfo) {
-        AdaptiveDialog.simple("${pool.currencyCode} was chosen", "Close").show(requireActivity()) {
-        }
+    private fun clickListener(pool: PoolInfo) {
+        safeNavigate(
+            MayaCryptoCurrencyPickerFragmentDirections.mayaCurrencyPickerToAddressInput(
+                pool.currencyCode,
+                getString(R.string.maya_address_input_title, pool.currencyCode),
+                getString(R.string.maya_address_input_hint, pool.currencyCode)
+            )
+        )
+
+        // AdaptiveDialog.simple("${pool.currencyCode} was chosen", "Close").show(requireActivity()) {
+        // }
     }
 }

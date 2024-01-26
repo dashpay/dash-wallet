@@ -106,7 +106,6 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;

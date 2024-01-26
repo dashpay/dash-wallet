@@ -15,18 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.send
+package org.dash.wallet.common.ui.address_input
 
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.payments.parsers.AddressParser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.PaymentParsers
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.Constants
 import javax.inject.Inject
 
 data class AddressInputUIState(
@@ -36,14 +39,29 @@ data class AddressInputUIState(
     val addressInput: String = ""
 )
 
+data class AddressInputResult(
+    val valid: Boolean = false,
+    val addressInput: String = "",
+    val paymentIntent: PaymentIntent? = null,
+    val currency: String = Constants.DASH_CURRENCY
+)
+
 @HiltViewModel
 class AddressInputViewModel @Inject constructor(
     private val clipboardManager: ClipboardManager,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    walletDataProvider: WalletDataProvider
 ): ViewModel() {
+    lateinit var paymentParsers: PaymentParsers
+    var currency: String = Constants.DASH_CURRENCY
 
     private val _uiState = MutableStateFlow(AddressInputUIState())
     val uiState: StateFlow<AddressInputUIState> = _uiState.asStateFlow()
+
+    private var paymentIntent: PaymentIntent? = null
+    private var _addressResult = AddressInputResult()
+    val addressResult: AddressInputResult
+        get() = _addressResult
 
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
         _uiState.value = _uiState.value.copy(hasClipboardText = hasClipboardInput())
@@ -56,7 +74,7 @@ class AddressInputViewModel @Inject constructor(
 
     fun showClipboardContent() {
         val text = getClipboardInput()
-        val addressRanges = AddressParser.findAll(text)
+        val addressRanges = paymentParsers.getAddressParser(currency)!!.findAll(text)
         _uiState.value = _uiState.value.copy(clipboardText = text, addressRanges = addressRanges)
         analyticsService.logEvent(AnalyticsConstants.AddressInput.SHOW_CLIPBOARD, mapOf())
     }
@@ -64,6 +82,14 @@ class AddressInputViewModel @Inject constructor(
     fun setInput(text: String) {
         _uiState.value = _uiState.value.copy(addressInput = text)
         analyticsService.logEvent(AnalyticsConstants.AddressInput.ADDRESS_TAP, mapOf())
+    }
+
+    suspend fun parsePaymentIntent(input: String) {
+        paymentIntent = paymentParsers.getPaymentIntentParser(currency)!!.parse(input)
+    }
+
+    fun setAddressResult(input: String) {
+        _addressResult = AddressInputResult(true, input, paymentIntent, currency)
     }
 
     private fun hasClipboardInput(): Boolean {

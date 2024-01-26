@@ -27,14 +27,15 @@ import android.os.Handler;
 import android.os.PowerManager;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.ViewModelProvider;
-
 import com.google.common.collect.ImmutableList;
 
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.ui.address_input.AddressInputViewModel;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +44,7 @@ import java.io.IOException;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.data.PaymentIntent;
+import org.dash.wallet.common.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.EncryptKeysDialogFragment;
 import de.schildbach.wallet.ui.EncryptNewKeyChainDialogFragment;
@@ -77,6 +78,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private BaseAlertDialogBuilder baseAlertDialogBuilder;
     private MainViewModel viewModel;
+    private AddressInputViewModel addressInputViewModel;
 
     ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), result -> WalletActivityExt.INSTANCE.requestDisableBatteryOptimisation(WalletActivity.this));
 
@@ -86,6 +88,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         baseAlertDialogBuilder = new BaseAlertDialogBuilder(this);
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
+        addressInputViewModel = new ViewModelProvider(this).get(AddressInputViewModel.class);
 
         setContentView(R.layout.activity_main);
         WalletActivityExt.INSTANCE.setupBottomNavigation(this, viewModel);

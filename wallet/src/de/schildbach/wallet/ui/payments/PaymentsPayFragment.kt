@@ -26,16 +26,17 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.FragmentNavigator
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.payments.parsers.PaymentIntentParser
-import de.schildbach.wallet.payments.parsers.PaymentIntentParserException
-import de.schildbach.wallet.ui.scan.ScanActivity
+import de.schildbach.wallet.Constants
+import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsPayBinding
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
 
@@ -82,7 +83,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay) {
     private fun handleString(input: String) {
         lifecycleScope.launch {
             try {
-                val paymentIntent = PaymentIntentParser.parse(input, true)
+                val paymentIntent = DashPaymentIntentParser(Constants.NETWORK_PARAMETERS).parse(input, true)
                 SendCoinsActivity.start(requireContext(), paymentIntent)
             } catch (ex: PaymentIntentParserException) {
                 AdaptiveDialog.create(

@@ -25,7 +25,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.data.PaymentIntent
+import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet_test.R

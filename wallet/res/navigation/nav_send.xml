@@ -28,7 +28,7 @@
 
         <argument
             android:name="paymentIntent"
-            app:argType="de.schildbach.wallet.data.PaymentIntent" />
+            app:argType="org.dash.wallet.common.data.PaymentIntent" />
     </fragment>
 
     <fragment
@@ -39,6 +39,6 @@
 
         <argument
             android:name="paymentIntent"
-            app:argType="de.schildbach.wallet.data.PaymentIntent" />
+            app:argType="org.dash.wallet.common.data.PaymentIntent" />
     </fragment>
 </navigation>

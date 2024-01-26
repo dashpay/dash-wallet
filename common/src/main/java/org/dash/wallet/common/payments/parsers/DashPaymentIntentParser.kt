@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,24 +12,20 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.payments.parsers
+package org.dash.wallet.common.payments.parsers
 
 import com.google.common.hash.Hashing
 import com.google.protobuf.InvalidProtocolBufferException
 import com.google.protobuf.UninitializedMessageException
-import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.util.AddressUtil
-import de.schildbach.wallet.util.Io
-import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoin.protocols.payments.Protos.PaymentRequest
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.crypto.TrustStoreLoader.DefaultTrustStoreLoader
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.protocols.payments.PaymentProtocolException
@@ -39,7 +35,12 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentUR
 import org.bitcoinj.protocols.payments.PaymentProtocolException.PkiVerificationException
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
+import org.dash.wallet.common.R
+import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.util.AddressUtil
 import org.dash.wallet.common.util.Base43
+import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.Io
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
@@ -49,14 +50,13 @@ import java.io.InputStream
 import java.security.KeyStoreException
 import java.util.*
 
-class PaymentIntentParserException(
-    innerException: Exception,
-    val localizedMessage: ResourceString
-) : Exception(innerException)
+class DashPaymentIntentParser(params: NetworkParameters) : PaymentIntentParser("dash", params) {
+    private val log = LoggerFactory.getLogger(DashPaymentIntentParser::class.java)
+    private val addressParser = AddressParser.getDashAddressParser(params)
 
-object PaymentIntentParser {
-    private val log = LoggerFactory.getLogger(PaymentIntentParser::class.java)
-
+    override suspend fun parse(input: String): PaymentIntent {
+        return parse(input, true)
+    }
     suspend fun parse(input: String, supportAnypayUrls: Boolean): PaymentIntent = withContext(Dispatchers.Default) {
         var inputStr = input
 
@@ -86,9 +86,9 @@ object PaymentIntentParser {
         } else if (inputStr.startsWith(Constants.DASH_SCHEME + ":")) {
             try {
                 val bitcoinUri = BitcoinURI(null, inputStr)
-                val address = AddressUtil.getCorrectAddress(bitcoinUri)
+                val address = AddressUtil.getCorrectAddress(bitcoinUri, params)
 
-                if (address != null && Constants.NETWORK_PARAMETERS != address.parameters) {
+                if (address != null && params != address.parameters) {
                     throw BitcoinURIParseException("mismatched network")
                 }
 
@@ -103,9 +103,9 @@ object PaymentIntentParser {
                     )
                 )
             }
-        } else if (AddressParser.exactMatch(inputStr)) {
+        } else if (addressParser.exactMatch(inputStr)) {
             try {
-                val address = Address.fromString(Constants.NETWORK_PARAMETERS, inputStr)
+                val address = Address.fromString(params, inputStr)
                 return@withContext PaymentIntent.fromAddress(address, null)
             } catch (ex: AddressFormatException) {
                 log.info("got invalid address", ex)
@@ -216,7 +216,7 @@ object PaymentIntentParser {
                 )
             }
 
-            if (paymentSession.networkParameters != Constants.NETWORK_PARAMETERS) {
+            if (paymentSession.networkParameters != params) {
                 throw InvalidNetwork(
                     "cannot handle payment request network: " + paymentSession.networkParameters
                 )

@@ -17,9 +17,9 @@
 package de.schildbach.wallet.payments
 
 import androidx.annotation.VisibleForTesting
+import de.schildbach.wallet.Constants.NETWORK_PARAMETERS
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.payments.parsers.PaymentIntentParser
+import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.PackageInfoProvider
@@ -41,6 +41,7 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentRe
 import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.*
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
@@ -61,6 +62,8 @@ class SendCoinsTaskRunner @Inject constructor(
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
         private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
     }
+
+    private val paymentIntentParser = DashPaymentIntentParser(Constants.NETWORK_PARAMETERS)
 
     @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
@@ -120,7 +123,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
     override suspend fun payWithDashUrl(dashUri: String): Transaction {
         return withContext(Dispatchers.IO) {
-            val paymentIntent = PaymentIntentParser.parse(dashUri, false)
+            val paymentIntent = paymentIntentParser.parse(dashUri, false)
             createPaymentRequest(paymentIntent)
         }
     }
@@ -140,9 +143,9 @@ class SendCoinsTaskRunner @Inject constructor(
             throw IOException("Null response for the payment request: $requestUrl")
         }
 
-        val paymentIntent = PaymentIntentParser.parse(byteStream, contentType)
+        val paymentIntent = paymentIntentParser.parse(byteStream, contentType)
 
-        if (!basePaymentIntent.isExtendedBy(paymentIntent, true)) {
+        if (!basePaymentIntent.isExtendedBy(paymentIntent, true, NETWORK_PARAMETERS)) {
             log.info("BIP72 trust check failed")
             throw IllegalStateException("BIP72 trust check failed: $requestUrl")
         }
@@ -236,7 +239,7 @@ class SendCoinsTaskRunner @Inject constructor(
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         // to make sure the correct instance of Transaction class is used in toSendRequest() method
         paymentIntent.setInstantX(false)
-        val sendRequest = paymentIntent.toSendRequest()
+        val sendRequest = paymentIntent.toSendRequest(NETWORK_PARAMETERS)
         sendRequest.coinSelector = ZeroConfCoinSelector.get()
         sendRequest.useInstantSend = false
         sendRequest.feePerKb = Constants.ECONOMIC_FEE

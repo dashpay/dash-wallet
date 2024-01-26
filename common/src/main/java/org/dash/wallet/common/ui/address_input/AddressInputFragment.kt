@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.send
+package org.dash.wallet.common.ui.address_input
 
 import android.app.Activity
 import android.os.Build
@@ -38,20 +38,27 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.payments.parsers.PaymentIntentParser
-import de.schildbach.wallet.ui.scan.ScanActivity
-import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.FragmentAddressInputBinding
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.R
+import org.dash.wallet.common.databinding.FragmentAddressInputBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 
+/**
+ * Address input fragment
+ *
+ * This is an abstract class with a continueAction funciton that must be overridden in any derived class
+ *
+ * By default this class, through the view model #[AddressInputViewModel], will be using DASH as the currency.
+ *
+ */
 @AndroidEntryPoint
-class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
-    private val binding by viewBinding(FragmentAddressInputBinding::bind)
-    private val viewModel by viewModels<AddressInputViewModel>()
+abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
+    protected val binding by viewBinding(FragmentAddressInputBinding::bind)
+    protected val viewModel by viewModels<AddressInputViewModel>()
 
     private val scanLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -69,6 +76,18 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
+        }
+
+        // the view model defaults to using Dash as the currency
+        requireArguments().getString("currency")?.let {
+            viewModel.currency = it
+            binding.errorText.text = getString(R.string.not_valid_address, it)
+        }
+        requireArguments().getString("title")?.let {
+            binding.toolbarTitle.text = it
+        }
+        requireArguments().getString("hint")?.let {
+            binding.inputWrapper.hint = it
         }
 
         binding.addressInput.doOnTextChanged { text, _, _, _ ->
@@ -104,7 +123,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
         }
 
         binding.continueBtn.setOnClickListener {
-            continueAction()
+            doContinueAction()
         }
 
         binding.showClipboardBtn.setOnClickListener {
@@ -151,19 +170,20 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
 
         KeyboardUtil.showSoftKeyboard(requireContext(), binding.addressInput)
     }
-
-    private fun continueAction() {
+    abstract fun continueAction()
+    private fun doContinueAction() {
         lifecycleScope.launch {
             val input = binding.addressInput.text.toString().trim()
-
             try {
-                val paymentIntent = PaymentIntentParser.parse(input, true)
+                viewModel.parsePaymentIntent(input)
+                viewModel.setAddressResult(input)
+                continueAction()
                 binding.inputWrapper.isErrorEnabled = false
                 binding.errorText.isVisible = false
-                SendCoinsActivity.start(requireContext(), paymentIntent)
-                viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE)
-                requireActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
             } catch (ex: Exception) {
+                // TODO: remove this before completing PR
+                println(ex)
+                ex.printStackTrace()
                 binding.inputWrapper.isErrorEnabled = true
                 binding.errorText.isVisible = true
             }

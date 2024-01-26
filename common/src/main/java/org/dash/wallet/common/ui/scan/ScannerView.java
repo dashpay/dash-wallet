@@ -15,13 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.scan;
-
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-
-import com.google.zxing.ResultPoint;
+package org.dash.wallet.common.ui.scan;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -35,7 +29,13 @@ import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
 
-import de.schildbach.wallet_test.R;
+import com.google.zxing.ResultPoint;
+
+import org.dash.wallet.common.R;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * @author Andreas Schildbach
@@ -55,16 +55,17 @@ public class ScannerView extends View {
     private final Map<float[], Long> dots = new HashMap<float[], Long>(16);
     private Rect frame;
     private final Matrix matrix = new Matrix();
+    private final float[] point = new float[2];
 
     public ScannerView(final Context context, final AttributeSet attrs) {
         super(context, attrs);
 
         final Resources res = getResources();
-        maskColor = res.getColor(R.color.scan_mask);
-        maskResultColor = res.getColor(R.color.scan_result_view);
-        laserColor = res.getColor(R.color.scan_laser);
-        dotColor = res.getColor(R.color.scan_dot);
-        dotResultColor = res.getColor(R.color.scan_result_dots);
+        maskColor = context.getColor(R.color.scan_mask);
+        maskResultColor = context.getColor(R.color.scan_result_view);
+        laserColor = context.getColor(R.color.scan_laser);
+        dotColor = context.getColor(R.color.scan_dot);
+        dotResultColor = context.getColor(R.color.scan_result_dots);
 
         maskPaint = new Paint();
         maskPaint.setStyle(Style.FILL);
@@ -110,10 +111,8 @@ public class ScannerView extends View {
 
         final long now = System.currentTimeMillis();
 
-        final int width = canvas.getWidth();
-        final int height = canvas.getHeight();
-
-        final float[] point = new float[2];
+        final int width = getWidth();
+        final int height = getHeight();
 
         // draw mask darkened
         maskPaint.setColor(isResult ? maskResultColor : maskColor);

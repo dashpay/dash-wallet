@@ -31,7 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.util.Bluetooth;
+import org.dash.wallet.common.util.Bluetooth;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothServerSocket;

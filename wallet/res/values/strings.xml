@@ -225,17 +225,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Encrypting…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Decrypting…</string>
     <string name="encrypt_keys_dialog_state_done">Done</string>
-    <string name="scan_camera_problem_dialog_title">Sorry</string>
-    <string name="scan_camera_problem_dialog_message">The camera has a problem. You probably need to restart the device.</string>
-    <string name="scan_camera_permission_dialog_title">Camera permission</string>
-    <string name="scan_camera_permission_dialog_message">In order to scan QR codes, you need to grant permission to use the camera.</string>
-    <string name="input_parser_io_error">Cannot read data:\n%s</string>
-    <string name="input_parser_cannot_classify">Cannot recognize input:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Invalid Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">Got invalid Dash address!\n(Mixing up mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Cannot verify payment request:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Invalid payment request:\n%s</string>
-    <string name="input_parser_invalid_transaction">Invalid transaction:\n%s</string>
     <string name="preferences_activity_title">Settings</string>
     <string name="preferences_category_diagnostics">Diagnostics</string>
     <string name="preferences_category_labs">Labs</string>
@@ -380,8 +369,6 @@
     <string name="convert_no_account_needed">Convert Dash · No account needed</string>
 
     <string name="recipient_address">Recipient Address</string>
-    <string name="show_clipboard">Show content in the clipboard</string>
-    <string name="tap_to_paste">Tap the address from the clipboard to paste it</string>
     <string name="not_dash_address">Not a valid Dash Address or URL request</string>
     <string name="send_to_address">Send to Address</string>
 

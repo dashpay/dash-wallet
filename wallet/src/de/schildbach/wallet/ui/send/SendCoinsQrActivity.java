@@ -27,13 +27,13 @@ import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
+import org.dash.wallet.common.ui.scan.ScanActivity;
 
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.PaymentIntent;
+import org.dash.wallet.common.data.PaymentIntent;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.ShortcutComponentActivity;
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.payments.SweepWalletActivity;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;

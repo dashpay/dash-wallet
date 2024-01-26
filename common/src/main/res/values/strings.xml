@@ -101,4 +101,26 @@
     <string name="enter_amount_available">available</string>
     <string name="transaction_row_rate_not_available">Not available</string>
     <string name="log_in">Log In</string>
+
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Sorry</string>
+    <string name="scan_camera_problem_dialog_message">The camera has a problem. You probably need to restart the device.</string>
+    <string name="scan_camera_permission_dialog_title">Camera permission</string>
+    <string name="scan_camera_permission_dialog_message">In order to scan QR codes, you need to grant permission to use the camera.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Send Dash</string>
+    <string name="show_clipboard">Show content in the clipboard</string>
+    <string name="tap_to_paste">Tap the address from the clipboard to paste it</string>
+    <string name="not_valid_address">Not a valid %s Address or URL request</string>
+    <string name="recipient_address">Recipient Address</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">Cannot read data:\n%s</string>
+    <string name="input_parser_cannot_classify">Cannot recognize input:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Invalid Dash URI:\n%s</string>
+    <string name="input_parser_invalid_address">Got invalid Dash address!\n(Mixing up mainnet/testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Cannot verify payment request:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Invalid payment request:\n%s</string>
+    <string name="input_parser_invalid_transaction">Invalid transaction:\n%s</string>
 </resources>

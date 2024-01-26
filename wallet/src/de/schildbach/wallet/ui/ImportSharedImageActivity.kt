@@ -26,7 +26,7 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.google.zxing.*
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.PaymentIntent
+import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser

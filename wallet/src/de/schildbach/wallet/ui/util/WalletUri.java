@@ -24,9 +24,9 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
+import org.dash.wallet.common.util.AddressUtil;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.util.AddressUtil;
 
 public class WalletUri {
 
@@ -70,7 +70,7 @@ public class WalletUri {
             String rawAddress = input.getQueryParameter(FIELD_PAY);
             Address address;
             try {
-                address = AddressUtil.fromString(null, rawAddress);
+                address = AddressUtil.fromString(null, rawAddress, Constants.NETWORK_PARAMETERS);
             } catch (Exception e) {
                 throw new BitcoinURIParseException(e.getMessage());
             }
@@ -120,7 +120,7 @@ public class WalletUri {
 
     public Address getPayAddress() {
         String pay = sourceUri.getQueryParameter(FIELD_PAY);
-        return (pay != null) ? AddressUtil.fromString(null, pay) : null;
+        return (pay != null) ? AddressUtil.fromString(null, pay, Constants.NETWORK_PARAMETERS) : null;
     }
 
     public Coin getAmount() {

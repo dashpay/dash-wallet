@@ -29,6 +29,7 @@ import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.ui.scan.ScanActivity;
 import org.dash.wallet.common.util.Qr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,9 +37,8 @@ import org.slf4j.LoggerFactory;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.data.PaymentIntent;
+import org.dash.wallet.common.data.PaymentIntent;
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.Toast;
@@ -164,7 +164,7 @@ public final class SendingAddressesFragment extends FancyListFragment
                         @Override
                         public void run() {
                             if (paymentIntent.hasAddress()) {
-                                final Address address = paymentIntent.getAddress();
+                                final Address address = paymentIntent.getAddress(Constants.NETWORK_PARAMETERS);
                                 if (!wallet.isPubKeyHashMine(address.getHash160()))
                                     EditAddressBookEntryFragment.edit(getFragmentManager(), address);
                                 else {
@@ -330,7 +330,7 @@ public final class SendingAddressesFragment extends FancyListFragment
     }
 
     private void handleSend(final String address) {
-        SendCoinsActivity.Companion.start(activity, PaymentIntent.fromAddress(address, null));
+        SendCoinsActivity.Companion.start(activity, PaymentIntent.fromAddress(address, null, Constants.NETWORK_PARAMETERS));
     }
 
     private void handleRemove(final String address) {

@@ -60,10 +60,10 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.services.ExchangeRatesProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
+import org.dash.wallet.common.ui.scan.ScanActivity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,13 +74,12 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.StaticFeeLoader;
-import de.schildbach.wallet.data.PaymentIntent;
+import org.dash.wallet.common.data.PaymentIntent;
 
 import de.schildbach.wallet.payments.DecodePrivateKeyTask;
 import de.schildbach.wallet.data.FeeCategory;
@@ -88,7 +87,6 @@ import de.schildbach.wallet.payments.RequestWalletBalanceTask;
 import de.schildbach.wallet.payments.SendCoinsOfflineTask;
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity;
-import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;

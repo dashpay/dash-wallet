@@ -19,12 +19,12 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.Constants
+import org.dash.wallet.common.data.PaymentIntent
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.util.Constants
 import javax.inject.Inject
 
 @HiltViewModel
@@ -47,7 +47,7 @@ open class SendCoinsBaseViewModel @Inject constructor(
         basePaymentIntent = paymentIntent
 
         if (paymentIntent.hasAddress()) { // avoid the exception for a missing address in a BIP70 payment request
-            _address.value = paymentIntent.address.toBase58()
+            _address.value = paymentIntent.getAddress(Constants.NETWORK_PARAMETERS).toBase58()
         }
     }
 

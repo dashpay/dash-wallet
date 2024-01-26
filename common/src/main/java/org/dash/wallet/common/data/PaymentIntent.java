@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.data;
+package org.dash.wallet.common.data;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -27,6 +27,8 @@ import javax.annotation.Nullable;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
@@ -36,17 +38,19 @@ import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.wallet.SendRequest;
+import org.dash.wallet.common.util.Bluetooth;
 import org.dash.wallet.common.util.GenericUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.io.BaseEncoding;
+import org.dash.wallet.common.util.Constants;
 
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.util.Bluetooth;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+
+import androidx.annotation.NonNull;
 
 /**
  * @author Andreas Schildbach
@@ -80,8 +84,13 @@ public final class PaymentIntent implements Parcelable {
             return amount != null && amount.signum() != 0;
         }
 
+        @NonNull
         @Override
         public String toString() {
+            return toString(MainNetParams.get());
+        }
+
+        public String toString(NetworkParameters params) {
             final StringBuilder builder = new StringBuilder();
 
             builder.append(getClass().getSimpleName());
@@ -89,11 +98,13 @@ public final class PaymentIntent implements Parcelable {
             builder.append(hasAmount() ? amount.toPlainString() : "null");
             builder.append(',');
             if (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script))
-                builder.append(script.getToAddress(Constants.NETWORK_PARAMETERS));
+                builder.append(script.getToAddress(params));
             else if (ScriptPattern.isP2PK(script))
                 builder.append(Constants.HEX.encode(ScriptPattern.extractKeyFromP2PK(script)));
             else if (ScriptPattern.isSentToMultisig(script))
                 builder.append("multisig");
+            else if (ScriptPattern.isOpReturn(script))
+                builder.append(script);
             else
                 builder.append("unknown");
             builder.append(']');
@@ -223,15 +234,15 @@ public final class PaymentIntent implements Parcelable {
         return new PaymentIntent(address, addressLabel);
     }
 
-    public static PaymentIntent fromAddress(final String address, @Nullable final String addressLabel)
+    public static PaymentIntent fromAddress(final String address, @Nullable final String addressLabel, NetworkParameters params)
             throws AddressFormatException {
-        return new PaymentIntent(Address.fromString(Constants.NETWORK_PARAMETERS, address), addressLabel);
+        return new PaymentIntent(Address.fromString(params, address), addressLabel);
     }
 
     public static PaymentIntent from(final String address, @Nullable final String addressLabel,
-            @Nullable final Coin amount) throws AddressFormatException {
+            @Nullable final Coin amount, NetworkParameters params) throws AddressFormatException {
         return new PaymentIntent(null, null, null,
-                buildSimplePayTo(amount, Address.fromString(Constants.NETWORK_PARAMETERS, address)), addressLabel, null,
+                buildSimplePayTo(amount, Address.fromString(params, address)), addressLabel, null,
                 null, null, null);
     }
 
@@ -283,8 +294,8 @@ public final class PaymentIntent implements Parcelable {
         return new PaymentIntent(standard, payeeName, payeeVerifiedBy, outputs, memo, null, payeeData, null, null, useInstantX);
     }
 
-    public SendRequest toSendRequest() {
-        final Transaction transaction = new Transaction(Constants.NETWORK_PARAMETERS);
+    public SendRequest toSendRequest(NetworkParameters params) {
+        final Transaction transaction = new Transaction(params);
         for (final PaymentIntent.Output output : outputs)
             transaction.addOutput(output.amount, output.script);
         return SendRequest.forTx(transaction);
@@ -310,12 +321,12 @@ public final class PaymentIntent implements Parcelable {
         return script.isSentToAddress() || script.isPayToScriptHash() || script.isSentToRawPubKey();
     }
 
-    public Address getAddress() {
+    public Address getAddress(NetworkParameters params) {
         if (!hasAddress())
             throw new IllegalStateException();
 
         final Script script = outputs[0].script;
-        return script.getToAddress(Constants.NETWORK_PARAMETERS, true);
+        return script.getToAddress(params, true);
     }
 
     public boolean mayEditAddress() {
@@ -393,13 +404,13 @@ public final class PaymentIntent implements Parcelable {
      *            payment intent that is checked if it extends this one
      * @return true if it extends
      */
-    public boolean isExtendedBy(final PaymentIntent other, boolean ignoreDetails) {
+    public boolean isExtendedBy(final PaymentIntent other, boolean ignoreDetails, NetworkParameters params) {
         // shortcut via hash
         if (standard == Standard.BIP21 && other.standard == Standard.BIP70)
             if (paymentRequestHash != null && Arrays.equals(paymentRequestHash, other.paymentRequestHash))
                 return true;
 
-        return ignoreDetails || (equalsAmount(other) && equalsAddress(other));
+        return ignoreDetails || (equalsAmount(other) && equalsAddress(other, params));
     }
 
     public boolean equalsAmount(final PaymentIntent other) {
@@ -411,11 +422,11 @@ public final class PaymentIntent implements Parcelable {
         return true;
     }
 
-    public boolean equalsAddress(final PaymentIntent other) {
+    public boolean equalsAddress(final PaymentIntent other, NetworkParameters params) {
         final boolean hasAddress = hasAddress();
         if (hasAddress != other.hasAddress())
             return false;
-        if (hasAddress && !getAddress().equals(other.getAddress()))
+        if (hasAddress && !getAddress(params).equals(other.getAddress(params)))
             return false;
         return true;
     }
