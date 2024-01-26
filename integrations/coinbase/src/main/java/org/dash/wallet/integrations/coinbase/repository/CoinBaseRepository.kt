@@ -95,7 +95,12 @@ class CoinBaseRepository @Inject constructor(
     }
 
     private suspend fun saveUserAccountInfo() {
-        val accountMap = userAccountInfo.associateBy({ it.currency }, { it.uuid.toString() })
+        val accountMap = hashMapOf<String, String>()
+        userAccountInfo.forEach {
+            if (it.name.contains("Wallet")) {
+                accountMap[it.currency] = it.uuid.toString()
+            }
+        }
         config.setAccounts(accountMap)
     }
 
@@ -135,8 +140,9 @@ class CoinBaseRepository @Inject constructor(
             saveUserAccountInfo()
         }
 
+        // for BTC, exclude "My Vault"
         val userAccountData = userAccountInfo.firstOrNull {
-            it.currency == cryptoCurrency
+            it.currency == cryptoCurrency && it.name.contains("Wallet")
         } ?: throw IllegalStateException("No $cryptoCurrency account found")
 
         return userAccountData

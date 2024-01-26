@@ -28,7 +28,7 @@ open class ExchangeConfig(
     }
 
     suspend fun getAccounts(): Map<String, String> {
-        val hashMapString = get(ACCOUNT_LIST) ?: ""
+        val hashMapString = get(ACCOUNT_LIST) ?: "{}"
         return Gson().fromJson(hashMapString, object : TypeToken<HashMap<String, String>>() {}.type)
     }
 
