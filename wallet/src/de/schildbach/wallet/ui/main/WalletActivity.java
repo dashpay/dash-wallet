@@ -78,7 +78,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private BaseAlertDialogBuilder baseAlertDialogBuilder;
     private MainViewModel viewModel;
-    private AddressInputViewModel addressInputViewModel;
 
     ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), result -> WalletActivityExt.INSTANCE.requestDisableBatteryOptimisation(WalletActivity.this));
 
@@ -88,8 +87,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         baseAlertDialogBuilder = new BaseAlertDialogBuilder(this);
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
-        addressInputViewModel = new ViewModelProvider(this).get(AddressInputViewModel.class);
-
         setContentView(R.layout.activity_main);
         WalletActivityExt.INSTANCE.setupBottomNavigation(this, viewModel);
 
