@@ -73,12 +73,6 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
                 }
             }
 
-            // TODO: this does not work, how can we tell this activity to close itself
-            if (action == LOGIN_AND_CLOSE) {
-                intent.extras?.putString(INTENT_ACTION, action)
-            }
-            println("auth: $intent")
-            println("auth: extras ${intent.extras}")
             startActivity(intent)
         }
     }
@@ -145,6 +139,10 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
 
             if (uiState.isUserLoggedIn) {
                 setConnectedState(true)
+                if (action == LOGIN_AND_CLOSE) {
+                    action = null
+                    findNavController().popBackStack()
+                }
             } else if (binding.connectedGroup.isVisible) {
                 // The screen thinks it's still connected. Show the dialog and change the state.
                 showNotLoggedInDialog()
@@ -166,9 +164,6 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
             lifecycleScope.launch {
                 viewModel.refreshBalance()
                 viewModel.checkCapabilities()
-                if (action == LOGIN_AND_CLOSE) {
-                    findNavController().popBackStack()
-                }
             }
         } else if (action == LOGIN_AND_CLOSE) {
             // TODO: what is logged here?
