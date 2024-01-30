@@ -104,18 +104,6 @@ class CoinBaseRepository @Inject constructor(
         config.setAccounts(accountMap)
     }
 
-//    private suspend fun saveAddressInfo(account: UUID, address: String) {
-//        val accountMap = config.getAddressMap().toMutableMap()
-//        accountMap[account.toString()] = address
-//        config.setAddressMap(accountMap)
-//    }
-
-    private suspend fun clearAddressInfo(account: UUID) {
-        val accountMap = config.getAddressMap().toMutableMap()
-        accountMap.remove(account.toString())
-        config.setAddressMap(accountMap)
-    }
-
     override suspend fun getUserAccount(): CoinbaseAccount {
         val accountsResponse = servicesApi.getAccounts()
         userAccountInfo = accountsResponse.accounts

@@ -27,14 +27,6 @@
         android:label="CoinbaseServicesFragment"
         tools:layout="@layout/fragment_integration_portal">
 
-        <argument
-            android:name="action"
-            app:argType="string"
-            app:nullable="true"
-            android:defaultValue="@null"/>
-
-        <deepLink app:uri="android-app://hashengineering.darkcoin.wallet/exchange/coinbase/{action}"/>
-
         <action
             android:id="@+id/services_to_buyDash"
             app:destination="@id/coinbaseBuyDashFragment"
