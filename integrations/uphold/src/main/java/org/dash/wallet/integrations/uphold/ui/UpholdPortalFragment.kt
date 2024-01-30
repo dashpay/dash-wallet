@@ -166,7 +166,7 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
                 viewModel.checkCapabilities()
             }
         } else if (action == LOGIN_AND_CLOSE) {
-            // TODO: what is logged here?
+            // TODO: what event should be logged here?
             linkAccount()
         }
 
