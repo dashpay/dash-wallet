@@ -21,11 +21,13 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.R
 import org.dash.wallet.common.ui.address_input.AddressInputFragment
 import org.dash.wallet.common.ui.address_input.AddressSource
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.recyclerview.IconifiedListAdapter
+import org.dash.wallet.common.util.DeepLinkDestination
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 
@@ -59,6 +61,9 @@ class MayaAddressInputFragment : AddressInputFragment() {
     private fun clickListener(item: AddressSource) {
         if (item.address != null && item.address != "") {
             binding.addressInput.setText(item.address!!)
+        } else {
+            // exchange login
+            findNavController().navigate(DeepLinkDestination.Exchange(item.id, "login_and_close").deepLink)
         }
     }
 
@@ -71,5 +76,10 @@ class MayaAddressInputFragment : AddressInputFragment() {
         )
         // TODO: add event monitoring here
         // viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mayaAddressInputViewModel.refreshAddressSources()
     }
 }

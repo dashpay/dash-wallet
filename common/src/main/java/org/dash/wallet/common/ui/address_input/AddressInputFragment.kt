@@ -210,7 +210,6 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
                     )
                 }
             )
-            notifyItemRangeInserted(0, source.size)
         }
     }
 }

@@ -50,11 +50,14 @@ import org.dash.wallet.integrations.uphold.data.UpholdConstants
 class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
     companion object {
         const val AUTH_RESULT_ACTION = "UpholdPortalFragment.AUTH_RESULT"
+        const val INTENT_ACTION = "action"
+        const val LOGIN_AND_CLOSE = "login_and_close"
     }
 
     private val binding by viewBinding(FragmentIntegrationPortalBinding::bind)
     private val viewModel by viewModels<UpholdViewModel>()
     private var balanceAnimator: ObjectAnimator? = null
+    private var action: String? = null
 
     private val authResultReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -70,12 +73,21 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
                 }
             }
 
+            // TODO: this does not work, how can we tell this activity to close itself
+            if (action == LOGIN_AND_CLOSE) {
+                intent.extras?.putString(INTENT_ACTION, action)
+            }
+            println("auth: $intent")
+            println("auth: extras ${intent.extras}")
             startActivity(intent)
         }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        println(requireArguments())
+        action = requireArguments().getString(INTENT_ACTION)
 
         binding.balanceDash.setFormat(viewModel.balanceFormat)
         binding.balanceDash.setApplyMarkup(false)
@@ -154,7 +166,13 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
             lifecycleScope.launch {
                 viewModel.refreshBalance()
                 viewModel.checkCapabilities()
+                if (action == LOGIN_AND_CLOSE) {
+                    findNavController().popBackStack()
+                }
             }
+        } else if (action == LOGIN_AND_CLOSE) {
+            // TODO: what is logged here?
+            linkAccount()
         }
 
         LocalBroadcastManager.getInstance(requireContext()).registerReceiver(
