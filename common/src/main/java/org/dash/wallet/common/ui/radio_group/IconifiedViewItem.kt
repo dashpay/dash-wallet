@@ -35,4 +35,5 @@ data class IconifiedViewItem(
     @DrawableRes
     val subtitleDrawable: Int? = null,
     val subtitleAdditionalInfo: String? = null,
+    val actionText: String? = null
 )

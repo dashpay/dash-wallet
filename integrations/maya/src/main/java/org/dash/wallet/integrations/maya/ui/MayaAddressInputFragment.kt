@@ -54,7 +54,7 @@ class MayaAddressInputFragment : AddressInputFragment() {
         binding.contentList.adapter = adapter
 
         mayaAddressInputViewModel.addressSources.observe(viewLifecycleOwner) {
-            setAddressSources(it)
+            setAddressSources(it, getString(R.string.input_connect))
         }
     }
 

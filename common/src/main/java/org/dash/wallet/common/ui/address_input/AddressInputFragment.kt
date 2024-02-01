@@ -196,7 +196,10 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
         }
     }
 
-    fun setAddressSources(source: List<AddressSource>) {
+    /**
+     * uses actionText if the address for a source is null
+     */
+    fun setAddressSources(source: List<AddressSource>, actionText: String?) {
         viewModel.addressSources.addAll(source)
         binding.addressSourceContainer.isVisible = source.isNotEmpty()
         adapter?.run {
@@ -206,7 +209,8 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
                         getString(R.string.address_input_paste_from, getString(it.name)),
                         it.address ?: "",
                         it.icon,
-                        iconSelectMode = IconSelectMode.None
+                        iconSelectMode = IconSelectMode.None,
+                        actionText = if (it.address == null) actionText else null
                     )
                 }
             )
