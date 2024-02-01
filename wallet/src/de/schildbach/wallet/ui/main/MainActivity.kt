@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.main
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -50,6 +51,7 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
+import de.schildbach.wallet.ui.main.WalletActivityExt.checkLowStorageAlert
 import de.schildbach.wallet.ui.main.WalletActivityExt.checkTimeSkew
 import de.schildbach.wallet.ui.main.WalletActivityExt.handleFirebaseAction
 import de.schildbach.wallet.ui.main.WalletActivityExt.requestDisableBatteryOptimisation
@@ -109,7 +111,16 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
         requestDisableBatteryOptimisation()
-    };
+    }
+
+    private val timeChangedReceiver = object: BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_TIME_CHANGED) {
+                // Time has changed, handle the change here
+               checkTimeSkew(viewModel)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -129,9 +140,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
         handleIntent(intent)
 
-        //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
+        // Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
         if (savedInstanceState == null) {
-            //Add BIP44 support and PIN if missing
+            // Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false)
         }
 
@@ -143,6 +154,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 currencies.component1()!!, currencies.component2()!!
             )
         }
+        val timeChangedFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_TIME_CHANGED)
+        }
+        registerReceiver(timeChangedReceiver, timeChangedFilter)
     }
 
     override fun onStart() {
@@ -532,12 +547,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    private fun checkLowStorageAlert() {
-        val stickyIntent = registerReceiver(null, IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW))
-        if (stickyIntent != null) {
-            showLowStorageAlertDialog()
-        }
-    }
+//    private fun checkLowStorageAlert() {
+//        val stickyIntent = registerReceiver(null, IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW))
+//        if (stickyIntent != null) {
+//            showLowStorageAlertDialog()
+//        }
+//    }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
@@ -563,6 +578,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onDestroy() {
         super.onDestroy()
         viewModel.platformRepo.onIdentityResolved = null
+        unregisterReceiver(timeChangedReceiver)
     }
 
     override fun onLockScreenDeactivated() {

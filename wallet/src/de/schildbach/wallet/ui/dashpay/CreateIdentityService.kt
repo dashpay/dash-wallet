@@ -130,7 +130,7 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private val walletApplication by lazy { application as WalletApplication }
-    @Inject lateinit var platformRepo: PlatformRepo// by lazy { PlatformRepo.getInstance() }
+    @Inject lateinit var platformRepo: PlatformRepo
     @Inject lateinit var platformSyncService: PlatformSyncService
     @Inject lateinit var userAlertDao: UserAlertDao
     @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityConfig

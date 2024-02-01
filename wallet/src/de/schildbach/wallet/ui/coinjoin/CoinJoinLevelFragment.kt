@@ -17,7 +17,9 @@
 
 package de.schildbach.wallet.ui.coinjoin
 
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -81,7 +83,7 @@ class CoinJoinLevelFragment : Fragment(R.layout.fragment_coinjoin_level) {
         }
     }
 
-    private fun showConnectionWaringDialog(mode: CoinJoinMode) {
+    private fun showConnectionWarningDialog(mode: CoinJoinMode) {
         AdaptiveDialog.create(
             R.drawable.ic_warning,
             getString(
@@ -123,9 +125,27 @@ class CoinJoinLevelFragment : Fragment(R.layout.fragment_coinjoin_level) {
                 }
             }
         } else if (viewModel.isWifiConnected()) {
-            setMode(mode)
+            val settingsIntent = Intent(Settings.ACTION_DATE_SETTINGS)
+            val hasSettings = requireActivity().packageManager.resolveActivity(settingsIntent, 0) != null
+            lifecycleScope.launch {
+                if (viewModel.isTimeSkewed()) {
+                    AdaptiveDialog.create(
+                        R.drawable.ic_coinjoin,
+                        getString(R.string.coinjoin),
+                        getString(R.string.settings_coinjoin_timeskew_dialog_msg),
+                        getString(R.string.cancel),
+                        if (hasSettings) getString(R.string.button_settings) else null
+                    ).show(requireActivity()) { openSettings ->
+                        if (openSettings == true && hasSettings) {
+                            startActivity(settingsIntent)
+                        }
+                    }
+                } else {
+                    setMode(mode)
+                }
+            }
         } else {
-            showConnectionWaringDialog(mode)
+            showConnectionWarningDialog(mode)
         }
     }
 

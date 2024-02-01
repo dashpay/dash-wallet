@@ -27,9 +27,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.head
 import javax.inject.Inject
+import kotlin.math.abs
 
 @HiltViewModel
 open class CoinJoinLevelViewModel @Inject constructor(
@@ -63,5 +67,17 @@ open class CoinJoinLevelViewModel @Inject constructor(
 
     fun logEvent(event: String) {
         analytics.logEvent(event, mapOf())
+    }
+
+     suspend fun isTimeSkewed(): Boolean {
+        val systemTimeMillis = System.currentTimeMillis()
+        var result = Constants.HTTP_CLIENT.head("https://www.dash.org/")
+        var networkTime = result.headers.getDate("date")?.time
+        if (networkTime == null) {
+            result = Constants.HTTP_CLIENT.head("https://insight.dash.org/insight")
+            networkTime = result.headers.getDate("date")?.time
+        }
+        requireNotNull(networkTime)
+        return abs(systemTimeMillis - networkTime) > 2000L
     }
 }
