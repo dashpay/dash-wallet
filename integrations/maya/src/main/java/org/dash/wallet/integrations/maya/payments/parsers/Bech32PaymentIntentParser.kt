@@ -27,13 +27,13 @@ import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 
-open class Bech32PaymentIntentParser(currency: String, prefix: String, length: Int, asset: String) :
-    MayaPaymentIntentParser(currency, asset, null) {
+open class Bech32PaymentIntentParser(currency: String, uriPrefix: String, prefix: String, length: Int, asset: String) :
+    MayaPaymentIntentParser(currency, uriPrefix, asset, null) {
 
     private val log = LoggerFactory.getLogger(Bech32PaymentIntentParser::class.java)
     private val addressParser = Bech32AddressParser(prefix, length, null)
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
-        if (input.startsWith("$currency:") || input.startsWith("${currency.uppercase()}:")) {
+        if (input.startsWith("$uriPrefix:") || input.startsWith("${uriPrefix.uppercase()}:")) {
             try {
                 val hexAddress = input.substring(currency.length)
                 return@withContext createPaymentIntent(hexAddress)

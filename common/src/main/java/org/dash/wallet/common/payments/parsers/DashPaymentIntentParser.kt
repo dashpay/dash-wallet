@@ -50,7 +50,7 @@ import java.io.InputStream
 import java.security.KeyStoreException
 import java.util.*
 
-class DashPaymentIntentParser(params: NetworkParameters) : PaymentIntentParser("dash", params) {
+class DashPaymentIntentParser(params: NetworkParameters) : PaymentIntentParser("dash", "dash", params) {
     private val log = LoggerFactory.getLogger(DashPaymentIntentParser::class.java)
     private val addressParser = AddressParser.getDashAddressParser(params)
 

@@ -17,4 +17,4 @@
 
 package org.dash.wallet.integrations.maya.payments.parsers
 
-class RunePaymentIntentProcessor : Bech32PaymentIntentParser("RUNE", "thor", 38, "THOR.RUNE")
+class RunePaymentIntentProcessor : Bech32PaymentIntentParser("RUNE", "thor", "thor", 38, "THOR.RUNE")

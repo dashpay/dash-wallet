@@ -22,9 +22,15 @@ import org.bitcoinj.script.ScriptBuilder
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.payments.parsers.PaymentIntentParser
 
-abstract class MayaPaymentIntentParser(currency: String, val asset: String, params: NetworkParameters?) :
+abstract class MayaPaymentIntentParser(
+    currency: String,
+    uriPrefix: String,
+    val asset: String,
+    params: NetworkParameters?
+) :
     PaymentIntentParser(
         currency,
+        uriPrefix,
         params
     ) {
     fun createPaymentIntent(inputStr: String): PaymentIntent {

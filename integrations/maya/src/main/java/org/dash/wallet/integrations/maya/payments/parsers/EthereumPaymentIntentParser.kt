@@ -27,12 +27,17 @@ import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 
-class EthereumPaymentIntentParser(asset: String) : MayaPaymentIntentParser("ethereum", asset, null) {
+class EthereumPaymentIntentParser(uriPrefix: String, asset: String) : MayaPaymentIntentParser(
+    "ethereum",
+    uriPrefix,
+    asset,
+    null
+) {
     private val log = LoggerFactory.getLogger(EthereumPaymentIntentParser::class.java)
     private val addressParser = AddressParser.getEthereumAddressParser()
 
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
-        if (input.startsWith("$currency:") || input.startsWith("${currency.uppercase()}:")) {
+        if (input.startsWith("$uriPrefix:") || input.startsWith("${uriPrefix.uppercase()}:")) {
             try {
                 val hexAddress = input.substring(currency.length)
                 return@withContext createPaymentIntent(hexAddress)

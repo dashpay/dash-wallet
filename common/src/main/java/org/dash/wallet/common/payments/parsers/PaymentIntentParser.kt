@@ -19,6 +19,6 @@ package org.dash.wallet.common.payments.parsers
 
 import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.data.PaymentIntent
-abstract class PaymentIntentParser(val currency: String, val params: NetworkParameters?) {
+abstract class PaymentIntentParser(val currency: String, val uriPrefix: String, val params: NetworkParameters?) {
     abstract suspend fun parse(input: String): PaymentIntent
 }
