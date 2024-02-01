@@ -547,13 +547,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-//    private fun checkLowStorageAlert() {
-//        val stickyIntent = registerReceiver(null, IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW))
-//        if (stickyIntent != null) {
-//            showLowStorageAlertDialog()
-//        }
-//    }
-
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
