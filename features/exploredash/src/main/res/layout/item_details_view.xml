@@ -235,7 +235,7 @@
         </LinearLayout>
 
         <TextView
-            android:id="@+id/login_dash_direct_user"
+            android:id="@+id/login_explore_user"
             style="@style/Overline.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -257,7 +257,7 @@
             android:layout_marginTop="28dp"
             android:orientation="horizontal"
             android:layout_marginBottom="10dp"
-            app:layout_constraintBottom_toTopOf="@+id/login_dash_direct_user"
+            app:layout_constraintBottom_toTopOf="@+id/login_explore_user"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             android:layout_height="wrap_content">

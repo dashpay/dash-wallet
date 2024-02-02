@@ -28,13 +28,11 @@ import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.services.analytics.AnalyticsService
 
 @HiltWorker
 class SendContactRequestWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
-    val analytics: AnalyticsService,
     val platformBroadcastService: PlatformBroadcastService
 ) : BaseWorker(context, parameters) {
 
@@ -62,7 +60,6 @@ class SendContactRequestWorker @AssistedInject constructor(
         try {
             encryptionKey = WalletApplication.getInstance().wallet!!.keyCrypter!!.deriveKey(password)
         } catch (ex: KeyCrypterException) {
-            analytics.logError(ex, "Contact Request: failed to derive encryption key")
             val msg = formatExceptionMessage("derive encryption key", ex)
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
         }
@@ -74,7 +71,6 @@ class SendContactRequestWorker @AssistedInject constructor(
                     KEY_TO_USER_ID to sendContactRequestResult.toUserId
             ))
         } catch (ex: Exception) {
-            analytics.logError(ex, "Contact Request: failed to send contact request")
             Result.failure(workDataOf(
                     KEY_ERROR_MESSAGE to formatExceptionMessage("send contact request", ex)))
         }

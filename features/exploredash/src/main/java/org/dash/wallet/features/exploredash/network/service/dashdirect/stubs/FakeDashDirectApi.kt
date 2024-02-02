@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.network.service.stubs
+package org.dash.wallet.features.exploredash.network.service.dashdirect.stubs
 
 import kotlinx.coroutines.delay
 import org.bitcoinj.core.Coin
@@ -31,7 +31,7 @@ import org.dash.wallet.features.exploredash.data.dashdirect.model.paymentstatus.
 import org.dash.wallet.features.exploredash.data.dashdirect.model.purchase.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.dashdirect.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.network.service.DashDirectServicesApi
-import org.dash.wallet.features.exploredash.network.service.stubs.FakeDashDirectSendService.Companion.DASH_DIRECT_SCHEMA
+import org.dash.wallet.features.exploredash.network.service.dashdirect.stubs.FakeDashDirectSendService.Companion.DASH_DIRECT_SCHEMA
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 

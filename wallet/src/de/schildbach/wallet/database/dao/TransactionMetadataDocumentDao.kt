@@ -167,6 +167,16 @@ interface TransactionMetadataDocumentDao {
     """)
     suspend fun getMerchantUrl(txId: Sha256Hash): String?
 
+    @Query("""
+        SELECT giftCardId 
+        FROM transaction_metadata_platform 
+        WHERE txId = :txId 
+            AND merchantUrl is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
+    suspend fun getGiftCardId(txId: Sha256Hash): String?
+
     @Query("SELECT MAX(timestamp) FROM transaction_metadata_platform")
     suspend fun getLastTimestamp() : Long
 

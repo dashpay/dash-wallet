@@ -37,15 +37,15 @@ import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
-import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseGiftCardBinding
+import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseDashdirectGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.PurchaseGiftCardConfirmDialog
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 @AndroidEntryPoint
-class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) {
-    private val binding by viewBinding(FragmentPurchaseGiftCardBinding::bind)
+class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_dashdirect_gift_card) {
+    private val binding by viewBinding(FragmentPurchaseDashdirectGiftCardBinding::bind)
     private var enterAmountFragment: EnterAmountFragment? = null
     private val viewModel by exploreViewModels<DashDirectViewModel>()
     private val exploreViewModel by exploreViewModels<ExploreViewModel>()

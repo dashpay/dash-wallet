@@ -45,7 +45,7 @@ import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.decodeBitmap
-import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
+import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.io.ByteArrayOutputStream
@@ -147,6 +147,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 }
             }
 
+            val giftCardId = transactionMetadataDocumentDao.getGiftCardId(txId)
             val giftCardNumber = transactionMetadataDocumentDao.getGiftCardNumber(txId)
             val giftCardPin = transactionMetadataDocumentDao.getGiftCardPin(txId)
             val merchantName = transactionMetadataDocumentDao.getMerchantName(txId)
@@ -157,6 +158,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
 
             val giftCard = GiftCard(
                 txId,
+                giftCardId,
                 merchantName ?: "",
                 giftCardPrice ?: 0.0,
                 giftCardNumber,

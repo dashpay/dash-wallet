@@ -37,11 +37,10 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
+import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.dashdirect.model.merchant.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.dashdirect.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
@@ -60,7 +59,6 @@ class DashDirectViewModel @Inject constructor(
     private val transactionMetadata: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
     networkState: NetworkStateInt,
-    private val analyticsService: AnalyticsService
 ) : ViewModel() {
 
     companion object {
@@ -110,7 +108,7 @@ class DashDirectViewModel @Inject constructor(
             val amountValue = giftCardPaymentValue
             repository.getDashDirectEmail()?.let { email ->
                 val response = repository.purchaseGiftCard(
-                    merchantId = it,
+                    merchantId = it.toLong(),
                     amountUSD = amountValue.toBigDecimal().toDouble(),
                     paymentCurrency = Constants.DASH_CURRENCY,
                     userEmail = email
@@ -149,7 +147,7 @@ class DashDirectViewModel @Inject constructor(
             return
         }
 
-        val response = getMerchantById(merchant.merchantId!!)
+        val response = getMerchantById(merchant.merchantId!!.toLong())
 
         if (response is ResponseResource.Success) {
             response.value?.data?.merchant?.let {
@@ -224,6 +222,5 @@ class DashDirectViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analyticsService.logEvent(event, mapOf())
     }
 }

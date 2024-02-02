@@ -25,7 +25,6 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
@@ -34,11 +33,9 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.data.unwrap
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
+import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.dashdirect.model.Barcode
 import org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashdirect.model.paymentstatus.PaymentStatusResponse
@@ -56,7 +53,6 @@ import kotlin.time.Duration.Companion.seconds
 class GiftCardDetailsViewModel @Inject constructor(
     private val giftCardDao: GiftCardDao,
     private val metadataProvider: TransactionMetadataProvider,
-    private val analyticsService: AnalyticsService,
     private val repository: DashDirectRepository,
     private val walletData: WalletDataProvider
 ) : ViewModel() {
@@ -231,30 +227,9 @@ class GiftCardDetailsViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analyticsService.logEvent(event, mapOf())
     }
 
     private fun logOnPurchaseEvents(giftCard: GiftCard) {
-        analyticsService.logEvent(AnalyticsConstants.DashDirect.SUCCESSFUL_PURCHASE, mapOf())
-        analyticsService.logEvent(
-            AnalyticsConstants.DashDirect.MERCHANT_NAME,
-            mapOf(AnalyticsConstants.Parameter.VALUE to giftCard.merchantName)
-        )
-
-        exchangeRate?.let {
-            val transaction = walletData.getTransaction(transactionId)
-            val fiatValue = it.coinToFiat(transaction?.getValue(walletData.transactionBag) ?: Coin.ZERO)
-
-            analyticsService.logEvent(
-                AnalyticsConstants.DashDirect.PURCHASE_AMOUNT,
-                mapOf(AnalyticsConstants.Parameter.VALUE to giftCard.price)
-            )
-
-            analyticsService.logEvent(
-                AnalyticsConstants.DashDirect.DISCOUNT_AMOUNT,
-                mapOf(AnalyticsConstants.Parameter.VALUE to fiatValue.toFriendlyString())
-            )
-        }
     }
 
     private fun cancelTicker() {

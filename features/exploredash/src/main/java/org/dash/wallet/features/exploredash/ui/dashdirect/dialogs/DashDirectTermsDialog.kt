@@ -26,12 +26,13 @@ import org.dash.wallet.common.ui.wiggle
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.DialogDashdirectTermsBinding
+import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
 import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 class DashDirectTermsDialog : OffsetDialogFragment(R.layout.dialog_dashdirect_terms) {
     override val forceExpand: Boolean = true
-    private val viewModel by exploreViewModels<DashDirectViewModel>()
+    private val viewModel by exploreViewModels<CTXSpendViewModel>()
     private val binding by viewBinding(DialogDashdirectTermsBinding::bind)
     private var onResultListener: (() -> Unit)? = null
 
@@ -44,12 +45,12 @@ class DashDirectTermsDialog : OffsetDialogFragment(R.layout.dialog_dashdirect_te
         }
 
         binding.termsLink.setOnClickListener {
-            viewModel.openedIoniaTermsAndConditions = true
+            viewModel.openedCTXSpendTermsAndConditions = true
             requireActivity().openCustomTab(getString(R.string.dash_direct_terms))
         }
 
         binding.acceptTermsCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked && !viewModel.openedIoniaTermsAndConditions) {
+            if (isChecked && !viewModel.openedCTXSpendTermsAndConditions) {
                 binding.acceptTermsCheckbox.isChecked = false
                 binding.termsLink.wiggle()
             }
@@ -69,7 +70,7 @@ class DashDirectTermsDialog : OffsetDialogFragment(R.layout.dialog_dashdirect_te
     }
 
     private fun reloadDialogMessage() {
-        binding.dialogMessage.text = if (viewModel.openedIoniaTermsAndConditions) {
+        binding.dialogMessage.text = if (viewModel.openedCTXSpendTermsAndConditions) {
             getString(R.string.accept_to_proceed)
         } else {
             getString(R.string.tap_link_to_proceed)

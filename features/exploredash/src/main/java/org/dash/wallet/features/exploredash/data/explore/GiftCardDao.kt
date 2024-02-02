@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.data.dashdirect
+package org.dash.wallet.features.exploredash.data.explore
 
 import androidx.room.Dao
 import androidx.room.Insert

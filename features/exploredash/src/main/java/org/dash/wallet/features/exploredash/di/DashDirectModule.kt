@@ -24,10 +24,10 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.features.exploredash.network.RemoteDataSource
+import org.dash.wallet.features.exploredash.network.DashDirectDataSource
 import org.dash.wallet.features.exploredash.network.service.DashDirectAuthApi
 import org.dash.wallet.features.exploredash.network.service.DashDirectServicesApi
-import org.dash.wallet.features.exploredash.network.service.stubs.FakeDashDirectApi
+import org.dash.wallet.features.exploredash.network.service.dashdirect.stubs.FakeDashDirectApi
 import org.dash.wallet.features.exploredash.repository.*
 import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 import javax.inject.Singleton
@@ -37,19 +37,19 @@ import javax.inject.Singleton
 abstract class DashDirectModule {
     companion object {
         @Provides
-        fun provideRemoteDataSource(config: DashDirectConfig): RemoteDataSource {
-            return RemoteDataSource(config)
+        fun provideRemoteDataSource(config: DashDirectConfig): DashDirectDataSource {
+            return DashDirectDataSource(config)
         }
 
         @Provides
-        fun provideAuthApi(remoteDataSource: RemoteDataSource): DashDirectAuthApi {
+        fun provideAuthApi(remoteDataSource: DashDirectDataSource): DashDirectAuthApi {
             return remoteDataSource.buildApi(DashDirectAuthApi::class.java)
         }
 
         @Provides
         @Singleton
         fun provideDashDirectApi(
-            remoteDataSource: RemoteDataSource,
+            remoteDataSource: DashDirectDataSource,
             exchangeRatesProvider: ExchangeRatesProvider
         ): DashDirectServicesApi {
             val realApi = remoteDataSource.buildApi(DashDirectServicesApi::class.java)

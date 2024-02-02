@@ -14,14 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.network
+package org.dash.wallet.features.exploredash.network.service.ctxspend
 
-import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import org.dash.wallet.features.exploredash.network.interceptor.HeadersInterceptor
-import org.dash.wallet.features.exploredash.utils.DashDirectConfig
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.features.exploredash.repository.remote.CTXSpendAuthInterceptor
+import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -29,34 +29,44 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
-class RemoteDataSource @Inject constructor(private val config: DashDirectConfig) {
+class CTXSpendDataSource @Inject constructor(
+    private val userPreferences: Configuration,
+    private val config: CTXSpendConfig,
+) {
     companion object {
-        private val log = LoggerFactory.getLogger(RemoteDataSource::class.java)
+        private val log = LoggerFactory.getLogger(CTXSpendDataSource::class.java)
     }
 
     fun <Api> buildApi(api: Class<Api>): Api {
+        val authInterceptor = CTXSpendAuthInterceptor(buildTokenApi(), userPreferences, config)
+        val client = getOkHttpClientBuilder().addInterceptor(authInterceptor).build()
+
         return Retrofit.Builder()
-            .baseUrl(DashDirectConstants.BASE_URL)
-            .client(getOkHttpClient())
+            .baseUrl(CTXSpendConstants.BASE_URL)
+            .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(api)
     }
 
-    private fun getOkHttpClient(authenticator: Authenticator? = null): OkHttpClient {
+    private fun buildTokenApi(): CTXSpendTokenApi {
+        return Retrofit.Builder()
+            .baseUrl(CTXSpendConstants.BASE_URL)
+            .client(getOkHttpClientBuilder().build())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(CTXSpendTokenApi::class.java)
+    }
+
+    private fun getOkHttpClientBuilder(): OkHttpClient.Builder {
         return OkHttpClient.Builder()
-            .addInterceptor(HeadersInterceptor(config))
             .connectTimeout(20.seconds.toJavaDuration())
             .callTimeout(20.seconds.toJavaDuration())
             .readTimeout(20.seconds.toJavaDuration())
             .also { client ->
-                authenticator?.let { client.authenticator(it) }
-                //                if (BuildConfig.DEBUG) { TODO
                 val logging = HttpLoggingInterceptor { message -> log.info(message) }
                 logging.level = HttpLoggingInterceptor.Level.BODY
                 client.addInterceptor(logging)
-                //                }
             }
-            .build()
     }
 }

@@ -32,6 +32,7 @@ class TransactionMetadataDocument(
     var memo: String? = null,
     var service: String? = null,
     var customIconUrl: String? = null,
+    var giftCardId: String? = null,
     var giftCardNumber: String? = null,
     var giftCardPin: String? = null,
     var merchantName: String? = null,

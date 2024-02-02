@@ -269,6 +269,20 @@ object AnalyticsConstants {
         const val DETAILS_GIFT_CARD = "home_transaction_details_gift_card"
     }
 
+    object CTXSpend {
+        const val CREATE_ACCOUNT = "ctxspend_btn_create"
+        const val LOGIN = "ctxspend_btn_login"
+        const val SUCCESSFUL_LOGIN = "ctxspend_success_login"
+        const val UNSUCCESSFUL_LOGIN = "ctxspend_not_success_login"
+        const val SUCCESSFUL_PURCHASE = "ctxspend_success_purchase"
+        const val PURCHASE_AMOUNT = "ctxspend_purchase_amount"
+        const val DISCOUNT_AMOUNT = "ctxspend_discount_amount"
+        const val MERCHANT_NAME = "ctxspend_merchant_name"
+        const val HOW_TO_USE = "ctxspend_btn_how_to_use"
+        const val FILTER_GIFT_CARD = "home_transaction_filter_gift_card"
+        const val DETAILS_GIFT_CARD = "home_transaction_details_gift_card"
+    }
+
     object CrowdNode {
         const val STAKING_ENTRY = "explore__staking"
 

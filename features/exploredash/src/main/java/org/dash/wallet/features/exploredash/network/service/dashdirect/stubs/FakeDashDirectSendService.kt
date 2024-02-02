@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.network.service.stubs
+package org.dash.wallet.features.exploredash.network.service.dashdirect.stubs
 
 import android.net.Uri
 import org.bitcoinj.core.Address

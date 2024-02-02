@@ -37,7 +37,6 @@ class SendContactRequestOperation(val application: Application) {
 
                     if (it.size > 1) {
                         val e = RuntimeException("there should never be more than one unique work ${uniqueWorkName(toUserId)}")
-                        analytics.logError(e)
                         throw e
                     }
 
@@ -53,11 +52,9 @@ class SendContactRequestOperation(val application: Application) {
                             val errorMessage = BaseWorker.extractError(workInfo.outputData)
                             emit(if (errorMessage != null) {
                                 val exception = SendContactRequestOperationException(errorMessage)
-                                analytics.logError(exception)
                                 Resource.error(errorMessage, null)
                             } else {
                                 val exception = SendContactRequestOperationException("Unknown error")
-                                analytics.logError(exception)
                                 Resource.error(exception)
                             })
                             log.error("send contact request operation failed: $errorMessage")
