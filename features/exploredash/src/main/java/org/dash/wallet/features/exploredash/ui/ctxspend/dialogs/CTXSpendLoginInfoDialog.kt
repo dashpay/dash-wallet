@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.dashdirect.dialogs
+package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
 
 import android.os.Bundle
 import android.view.View
@@ -24,16 +24,17 @@ import androidx.fragment.app.FragmentActivity
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.databinding.DialogDashdirectLoginInfoBinding
+import org.dash.wallet.features.exploredash.databinding.DialogCtxSpendLoginInfoBinding
 
-class DashDirectLoginInfoDialog : OffsetDialogFragment(R.layout.dialog_dashdirect_login_info) {
+class CTXSpendLoginInfoDialog : OffsetDialogFragment(R.layout.dialog_ctx_spend_login_info) {
 
     private var onExtraMessageListener: (() -> Unit)? = null
     private var onResultListener: ((Boolean?) -> Unit)? = null
 
-    @StyleRes override val backgroundStyle = R.style.PrimaryBackground
+    @StyleRes
+    override val backgroundStyle = R.style.PrimaryBackground
 
-    private val binding by viewBinding(DialogDashdirectLoginInfoBinding::bind)
+    private val binding by viewBinding(DialogCtxSpendLoginInfoBinding::bind)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

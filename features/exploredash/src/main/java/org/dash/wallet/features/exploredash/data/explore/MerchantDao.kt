@@ -34,7 +34,7 @@ interface MerchantDao : BaseDao<Merchant> {
         """
         SELECT *
         FROM merchant
-        WHERE (:merchantId = -1 OR merchantId = :merchantId)
+        WHERE (:merchantId = '' OR merchantId = :merchantId)
             AND (:source = '' OR source = :source COLLATE NOCASE)
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
@@ -46,7 +46,7 @@ interface MerchantDao : BaseDao<Merchant> {
     """
     )
     suspend fun getByTerritory(
-        merchantId: Long,
+        merchantId: String,
         source: String,
         territoryFilter: String,
         types: List<String>,
@@ -326,7 +326,7 @@ interface MerchantDao : BaseDao<Merchant> {
         """
         SELECT * 
         FROM merchant
-        WHERE (:merchantId = -1 OR merchantId = :merchantId)
+        WHERE (:merchantId = '' OR merchantId = :merchantId)
             AND (:source = '' OR source = :source COLLATE NOCASE)
             AND (:excludeType = '' OR type != :excludeType)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
@@ -338,7 +338,7 @@ interface MerchantDao : BaseDao<Merchant> {
     """
     )
     fun observe(
-        merchantId: Long,
+        merchantId: String,
         source: String,
         excludeType: String,
         paymentMethod: String,
@@ -377,7 +377,7 @@ interface MerchantDao : BaseDao<Merchant> {
         """
         SELECT * 
         FROM merchant 
-        WHERE (:merchantId = -1 OR merchantId = :merchantId)
+        WHERE (:merchantId = '' OR merchantId = :merchantId)
             AND (:source = '' OR source = :source COLLATE NOCASE) 
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
@@ -386,7 +386,7 @@ interface MerchantDao : BaseDao<Merchant> {
     """
     )
     fun observeByTerritory(
-        merchantId: Long,
+        merchantId: String,
         source: String,
         territoryFilter: String,
         excludeType: String,

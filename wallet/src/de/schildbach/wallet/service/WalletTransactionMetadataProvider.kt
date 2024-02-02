@@ -42,7 +42,7 @@ import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.decodeBitmap
-import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
+import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import java.io.IOException

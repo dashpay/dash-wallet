@@ -20,7 +20,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_primary"
-    tools:context="org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment">
+    tools:context="org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/title_bar"
@@ -149,9 +149,9 @@
             style="@style/Widget.Material3.CircularProgressIndicator.ExtraSmall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:indeterminate="true"
             android:visibility="gone"
-            android:layout_gravity="center"
             app:indicatorColor="@color/white"
             app:trackThickness="3dp" />
     </FrameLayout>

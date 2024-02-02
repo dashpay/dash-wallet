@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.dashdirect
+package org.dash.wallet.features.exploredash.ui.ctxspend
 
 import android.os.Bundle
 import android.view.View
@@ -37,17 +37,17 @@ import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
-import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseGiftCardBinding
-import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.PurchaseGiftCardConfirmDialog
+import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseCtxspendGiftCardBinding
+import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.PurchaseGiftCardConfirmDialog
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants.DEFAULT_DISCOUNT
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 @AndroidEntryPoint
-class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) {
-    private val binding by viewBinding(FragmentPurchaseGiftCardBinding::bind)
+class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gift_card) {
+    private val binding by viewBinding(FragmentPurchaseCtxspendGiftCardBinding::bind)
     private var enterAmountFragment: EnterAmountFragment? = null
-    private val viewModel by exploreViewModels<DashDirectViewModel>()
+    private val viewModel by exploreViewModels<CTXSpendViewModel>()
     private val exploreViewModel by exploreViewModels<ExploreViewModel>()
     private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
 

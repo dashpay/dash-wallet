@@ -27,7 +27,7 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.IconBitmap
 import org.dash.wallet.common.data.entity.TransactionMetadata
-import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
+import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.common.data.entity.GiftCard
 
 @Database(
@@ -40,7 +40,7 @@ import org.dash.wallet.common.data.entity.GiftCard
         IconBitmap::class,
         GiftCard::class
     ],
-    version = 12 // if increasing version, we need migrations to preserve tx/addr metadata
+    version = 13 // if increasing version, we need migrations to preserve tx/addr metadata
 )
 @TypeConverters(RoomConverters::class, BlockchainStateRoomConverters::class)
 abstract class AppDatabase : RoomDatabase() {

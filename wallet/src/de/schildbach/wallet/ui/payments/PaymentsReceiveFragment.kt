@@ -32,8 +32,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsReceiveBinding
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
 
@@ -57,22 +55,18 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
     }
 
     private val args by navArgs<PaymentsReceiveFragmentArgs>()
-    @Inject lateinit var analytics: AnalyticsService
     @Inject lateinit var walletDataProvider: WalletDataProvider
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        analytics.logEvent(AnalyticsConstants.SendReceive.SHOW_QR_CODE, mapOf())
+
 
         binding.receiveInfo.setOnSpecifyAmountClicked {
-            analytics.logEvent(AnalyticsConstants.SendReceive.SPECIFY_AMOUNT, mapOf())
             findNavController().navigate(PaymentsFragmentDirections.paymentsToReceive())
         }
         binding.receiveInfo.setOnAddressClicked {
-            analytics.logEvent(AnalyticsConstants.SendReceive.COPY_ADDRESS, mapOf())
         }
         binding.receiveInfo.setOnShareClicked {
-            analytics.logEvent(AnalyticsConstants.SendReceive.SHARE, mapOf())
         }
 
         binding.receiveInfo.setInfo(walletDataProvider.freshReceiveAddress(), null)

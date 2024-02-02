@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.dashdirect
+package org.dash.wallet.features.exploredash.ui.ctxspend
 
 import android.os.Build
 import android.os.Bundle
@@ -39,22 +39,23 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.databinding.FragmentDashDirectUserAuthBinding
+import org.dash.wallet.features.exploredash.databinding.FragmentCtxSpendUserAuthBinding
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
-class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_auth) {
-    private val binding by viewBinding(FragmentDashDirectUserAuthBinding::bind)
-    private val viewModel by exploreViewModels<DashDirectViewModel>()
-    private val args by navArgs<DashDirectUserAuthFragmentArgs>()
+class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth) {
+    private val binding by viewBinding(FragmentCtxSpendUserAuthBinding::bind)
+    private val viewModel by exploreViewModels<CTXSpendViewModel>()
+    private val args by navArgs<CTXSpendUserAuthFragmentArgs>()
 
-    enum class DashDirectUserAuthType(
+    enum class CTXSpendUserAuthType(
         @StringRes val screenTitle: Int,
         @StringRes val screenSubtitle: Int,
         @StringRes val textInputHint: Int
     ) {
-        CREATE_ACCOUNT(R.string.create_dash_direct_account, R.string.log_in_to_dashdirect_account_desc, R.string.email),
-        SIGN_IN(R.string.log_in_to_dashdirect_account, R.string.log_in_to_dashdirect_account_desc, R.string.email),
+        CREATE_ACCOUNT(R.string.create_ctx_spend_account, R.string.log_in_to_ctxspend_account_desc, R.string.email),
+        SIGN_IN(R.string.log_in_to_ctxspend_account, R.string.log_in_to_ctxspend_account_desc, R.string.email),
         OTP(R.string.enter_verification_code, R.string.verification_check_email, R.string.password)
     }
 
@@ -66,7 +67,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         }
         binding.continueButton.isEnabled = false
 
-        val authType = args.dashDirectUserAuthType
+        val authType = args.ctxSpendUserAuthType
         binding.title.setText(authType.screenTitle)
         binding.descLabel.setText(authType.screenSubtitle)
         binding.inputWrapper.setHint(authType.textInputHint)
@@ -75,7 +76,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             binding.inputWrapper.isErrorEnabled = false
             binding.inputErrorTv.isVisible = false
 
-            if (authType != DashDirectUserAuthType.OTP) {
+            if (authType != CTXSpendUserAuthType.OTP) {
                 binding.continueButton.isEnabled = isEmail(text)
             } else {
                 binding.continueButton.isEnabled = !text.isNullOrEmpty()
@@ -98,8 +99,8 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         }
 
         when (authType) {
-            DashDirectUserAuthType.SIGN_IN,
-            DashDirectUserAuthType.CREATE_ACCOUNT -> {
+            CTXSpendUserAuthType.SIGN_IN,
+            CTXSpendUserAuthType.CREATE_ACCOUNT -> {
                 binding.bottomCard.isVisible = false
                 binding.input.postDelayed({ showKeyboard() }, 100)
                 binding.input.showSoftInputOnFocus = true
@@ -108,7 +109,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
                     binding.input.setAutofillHints(View.AUTOFILL_HINT_EMAIL_ADDRESS)
                 }
             }
-            DashDirectUserAuthType.OTP -> {
+            CTXSpendUserAuthType.OTP -> {
                 binding.bottomCard.isVisible = true
                 binding.input.showSoftInputOnFocus = false
                 binding.input.requestFocus()
@@ -158,10 +159,10 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
     private fun continueAction() {
         showLoading()
         val input = binding.input.text.toString()
-        when (args.dashDirectUserAuthType) {
-            DashDirectUserAuthType.SIGN_IN -> authUserToDashDirect(input, true)
-            DashDirectUserAuthType.CREATE_ACCOUNT -> authUserToDashDirect(input, false)
-            DashDirectUserAuthType.OTP -> verifyEmail(input)
+        when (args.ctxSpendUserAuthType) {
+            CTXSpendUserAuthType.SIGN_IN -> authUserToCTXSpend(input, true)
+            CTXSpendUserAuthType.CREATE_ACCOUNT -> authUserToCTXSpend(input, false)
+            CTXSpendUserAuthType.OTP -> verifyEmail(input)
             else -> {}
         }
     }
@@ -178,26 +179,21 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         binding.continueButton.isClickable = true
     }
 
-    private fun authUserToDashDirect(email: String, isSignIn: Boolean) {
+    private fun authUserToCTXSpend(email: String, isSignIn: Boolean) {
         lifecycleScope.launch {
             when (
-                val response = if (isSignIn) {
-                    viewModel.signInToDashDirect(email)
-                } else {
-                    viewModel.createUserToDashDirect(email)
-                }
-            ) {
+                val response = viewModel.signInToCTXSpend(email)) {
                 is ResponseResource.Success -> {
                     if (response.value) {
                         safeNavigate(
-                            DashDirectUserAuthFragmentDirections.authToDashDirectUserAuthFragment(
-                                DashDirectUserAuthType.OTP
+                            CTXSpendUserAuthFragmentDirections.authToCtxSpendUserAuthFragment(
+                                CTXSpendUserAuthType.OTP
                             )
                         )
                     }
                 }
                 is ResponseResource.Failure -> {
-                    viewModel.logEvent(AnalyticsConstants.DashDirect.UNSUCCESSFUL_LOGIN)
+                    viewModel.logEvent(AnalyticsConstants.CTXSpend.UNSUCCESSFUL_LOGIN)
                     binding.inputWrapper.isErrorEnabled = true
                     binding.inputErrorTv.text =
                         if (response.errorBody.isNullOrEmpty()) getString(R.string.error) else response.errorBody
@@ -213,9 +209,9 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             when (val response = viewModel.verifyEmail(code)) {
                 is ResponseResource.Success -> {
                     if (response.value) {
-                        viewModel.logEvent(AnalyticsConstants.DashDirect.SUCCESSFUL_LOGIN)
+                        viewModel.logEvent(AnalyticsConstants.CTXSpend.SUCCESSFUL_LOGIN)
                         hideKeyboard()
-                        safeNavigate(DashDirectUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
+                        safeNavigate(CTXSpendUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
                     }
                 }
                 is ResponseResource.Failure -> {

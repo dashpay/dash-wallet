@@ -29,14 +29,18 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.explore.MerchantAtmDataSource
 import org.dash.wallet.features.exploredash.network.RemoteDataSource
 import org.dash.wallet.features.exploredash.network.service.DashDirectAuthApi
 import org.dash.wallet.features.exploredash.network.service.DashDirectServicesApi
+import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
+import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendDataSource
 import org.dash.wallet.features.exploredash.repository.*
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
+import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 
 @Module
@@ -57,19 +61,31 @@ abstract class ExploreDashModule {
 
         @Provides fun provideFirebaseStorage() = Firebase.storage
 
+        // TODO use RemoteDataSource
         @Provides
+        fun provideRemoteDataSource(
+            userConfiguration: Configuration,
+            config: CTXSpendConfig
+        ): CTXSpendDataSource {
+            return CTXSpendDataSource(userConfiguration, config)
+        }
+
         fun provideRemoteDataSource(config: DashDirectConfig): RemoteDataSource {
             return RemoteDataSource(config)
         }
 
+        @Provides
+        fun provideDashDirectApi(remoteDataSource: RemoteDataSource): DashDirectServicesApi {
+            return remoteDataSource.buildApi(DashDirectServicesApi::class.java)
+        }
         @Provides
         fun provideAuthApi(remoteDataSource: RemoteDataSource): DashDirectAuthApi {
             return remoteDataSource.buildApi(DashDirectAuthApi::class.java)
         }
 
         @Provides
-        fun provideDashDirectApi(remoteDataSource: RemoteDataSource): DashDirectServicesApi {
-            return remoteDataSource.buildApi(DashDirectServicesApi::class.java)
+        fun provideApi(ctxSpendDataSource: CTXSpendDataSource): CTXSpendApi {
+            return ctxSpendDataSource.buildApi(CTXSpendApi::class.java)
         }
     }
 
@@ -84,6 +100,9 @@ abstract class ExploreDashModule {
 
     @Binds
     abstract fun bindDataSyncService(exploreDatabase: ExploreDataSyncStatus): DataSyncStatusService
+
+    @Binds
+    abstract fun provideCTXSpendRepository(ctxSpendRepository: CTXSpendRepository): CTXSpendRepositoryInt
 
     @Binds
     abstract fun provideDashDirectRepository(dashDirectRepository: DashDirectRepository): DashDirectRepositoryInt

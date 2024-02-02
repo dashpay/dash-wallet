@@ -80,6 +80,12 @@ public class Configuration {
 
     public static final String PREFS_KEY_LAST_UPHOLD_BALANCE = "last_uphold_balance";
 
+    // DashSpend (move to DataStore)
+    public static final String PREFS_KEY_LAST_DASHDIRECT_ACCESS_TOKEN = "last_dashdirect_access_token";
+    public static final String PREFS_KEY_LAST_DASHDIRECT_REFRESH_TOKEN = "last_dashdirect_refresh_token";
+    public static final String PREFS_KEY_LAST_CTXSPEND_ACCESS_TOKEN = "last_ctxspend_access_token";
+    public static final String PREFS_KEY_LAST_CTXSPEND_REFRESH_TOKEN = "last_ctxspend_refresh_token";
+
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     public static final int PREFS_DEFAULT_BTC_PRECISION = 8;
     public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
@@ -464,5 +470,22 @@ public class Configuration {
 
     public void setPrefsKeyCrowdNodeStakingApy(float apy) {
         prefs.edit().putFloat(PREFS_KEY_CROWDNODE_STAKING_APY, apy).apply();
+    }
+
+    // DashSpend (move to DataStore)
+    public void setLastCTXSpendAccessToken(String token) {
+        prefs.edit().putString(PREFS_KEY_LAST_CTXSPEND_ACCESS_TOKEN, token).apply();
+    }
+
+    public String getLastCTXSpendAccessToken() {
+        return prefs.getString(PREFS_KEY_LAST_CTXSPEND_ACCESS_TOKEN, "");
+    }
+
+    public void setLastCTXSpendRefreshToken(String token) {
+        prefs.edit().putString(PREFS_KEY_LAST_CTXSPEND_REFRESH_TOKEN, token).apply();
+    }
+
+    public String getLastCTXSpendRefreshToken() {
+        return prefs.getString(PREFS_KEY_LAST_CTXSPEND_REFRESH_TOKEN, null);
     }
 }

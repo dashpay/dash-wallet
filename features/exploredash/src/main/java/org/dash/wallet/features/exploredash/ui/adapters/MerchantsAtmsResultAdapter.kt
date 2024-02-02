@@ -28,11 +28,14 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.AtmRowBinding
 import org.dash.wallet.features.exploredash.databinding.MerchantRowBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
+import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import java.util.*
 
 open class ExploreViewHolder(root: View) : RecyclerView.ViewHolder(root) {
@@ -113,6 +116,10 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
         binding.title.text = merchant?.name
         binding.subtitle.text = getDistanceText(resources, merchant)
         binding.subtitle.isVisible = merchant?.type != MerchantType.ONLINE && binding.subtitle.text.isNotEmpty()
+
+        if (merchant?.source?.lowercase() == ServiceName.CTXSpend) {
+            merchant.logoLocation = CTXSpendConstants.BASE_URL + "merchants/" + merchant.merchantId + "/logo"
+        }
 
         binding.logoImg.load(merchant?.logoLocation) {
             crossfade(200)

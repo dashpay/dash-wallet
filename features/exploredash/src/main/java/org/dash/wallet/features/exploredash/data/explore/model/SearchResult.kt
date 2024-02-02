@@ -37,7 +37,7 @@ open class SearchResult(
     var territory: String? = "",
     var city: String? = "",
     var source: String? = "",
-    var sourceId: Int? = -1,
+    var sourceId: String? = "",
     var logoLocation: String? = "",
     var googleMaps: String? = "",
     var coverImage: String? = "",
