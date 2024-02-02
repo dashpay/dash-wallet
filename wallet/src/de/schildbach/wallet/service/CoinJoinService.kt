@@ -223,8 +223,6 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateBalance(balance: Coin) {
-        // leave this ui scope
-        // Context.propagate(walletDataProvider.wallet!!.context)
         CoinJoinClientOptions.setAmount(balance)
         log.info("coinjoin: total balance: ${balance.toFriendlyString()}")
         val walletEx = walletDataProvider.wallet as WalletEx
@@ -523,7 +521,6 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun startMixing(): Boolean {
-        // Context.propagate(walletDataProvider.wallet!!.context)
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_TIME_CHANGED)
         }
@@ -535,7 +532,6 @@ class CoinJoinMixingService @Inject constructor(
         } else {
             // run this on a different thread?
             val asyncStart = coroutineScope.async(Dispatchers.IO) {
-                // Context.propagate(walletDataProvider.wallet!!.context)
                 coinJoinManager?.initMasternodeGroup(blockChain)
                 clientManager.doAutomaticDenominating()
             }
