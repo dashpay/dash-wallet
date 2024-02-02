@@ -52,7 +52,7 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.GiftCardDetailsDialog
+import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.GiftCardDetailsDialog
 import java.time.Instant
 import java.time.ZoneId
 

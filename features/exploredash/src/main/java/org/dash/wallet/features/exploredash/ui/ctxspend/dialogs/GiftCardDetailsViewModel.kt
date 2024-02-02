@@ -64,6 +64,7 @@ class GiftCardDetailsViewModel @Inject constructor(
     private var tickerJob: Job? = null
 
     private var exchangeRate: ExchangeRate? = null
+    private var retries = 3
 
     private val _giftCard: MutableLiveData<GiftCard?> = MutableLiveData()
     val giftCard: LiveData<GiftCard?>
@@ -118,7 +119,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }
 
                 if (giftCard.number == null && giftCard.note != null) {
-                    tickerJob = TickerFlow(period = 1.seconds, initialDelay = 0.5.seconds)
+                    tickerJob = TickerFlow(period = 1.5.seconds, initialDelay = 1.seconds)
                         .cancellable()
                         .onEach { fetchGiftCardInfo(giftCard.txId.toStringBase58()) }
                         .launchIn(viewModelScope)
@@ -138,26 +139,36 @@ class GiftCardDetailsViewModel @Inject constructor(
             return
         }
 
-        when (val response = getGiftCardByTxid(txid)) {
-            is ResponseResource.Success -> {
-                val giftCard = response.value!!
-                if (giftCard.status == "paid") {
-                    if (!giftCard.cardNumber.isNullOrEmpty()) {
-                        cancelTicker()
-                        updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
-                        if (!giftCard.barcodeUrl.isNullOrEmpty()) {
-                            saveBarcode(giftCard.barcodeUrl)
+        try {
+            when (val response = getGiftCardByTxid(txid)) {
+                is ResponseResource.Success -> {
+                    val giftCard = response.value!!
+                    if (giftCard.status == "paid") {
+                        if (!giftCard.cardNumber.isNullOrEmpty()) {
+                            cancelTicker()
+                            updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
+                            if (!giftCard.barcodeUrl.isNullOrEmpty()) {
+                                saveBarcode(giftCard.barcodeUrl)
+                            }
                         }
                     }
                 }
-            }
 
-            is ResponseResource.Failure -> {
-                cancelTicker()
-                val message = response.errorBody
-                log.error("CTXSpend returned error: $message")
-                error.postValue(CTXSpendException(message!!))
+                is ResponseResource.Failure -> {
+                    if (retries > 0) {
+                        retries--
+                        return
+                    }
+                    cancelTicker()
+                    val message = response.errorBody
+                    log.error("CTXSpend returned error: $message")
+                    error.postValue(CTXSpendException(message!!))
+                }
             }
+        } catch (ex: Exception) {
+            cancelTicker()
+            log.error("Failed to fetch gift card info", ex)
+            error.postValue(ex)
         }
     }
 
@@ -213,5 +224,6 @@ class GiftCardDetailsViewModel @Inject constructor(
     private fun cancelTicker() {
         tickerJob?.cancel()
         tickerJob = null
+        retries = 0
     }
 }

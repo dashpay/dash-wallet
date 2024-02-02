@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.dashdirect.dialogs
+package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
 
 import android.os.Bundle
 import android.view.View
@@ -27,7 +27,6 @@ import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.DialogDashdirectTermsBinding
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
-import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 class DashDirectTermsDialog : OffsetDialogFragment(R.layout.dialog_dashdirect_terms) {

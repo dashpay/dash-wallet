@@ -86,11 +86,9 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
         binding.input.setOnEditorActionListener { _, actionId, _ ->
             when (actionId) {
                 EditorInfo.IME_ACTION_NEXT -> {
-                    val log = LoggerFactory.getLogger(CTXSpendUserAuthFragment::class.java)
                     continueAction()
                     true
                 }
-
                 else -> false
             }
         }
@@ -111,7 +109,6 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
                     binding.input.setAutofillHints(View.AUTOFILL_HINT_EMAIL_ADDRESS)
                 }
             }
-
             CTXSpendUserAuthType.OTP -> {
                 binding.bottomCard.isVisible = true
                 binding.input.showSoftInputOnFocus = false
@@ -121,7 +118,6 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
                     binding.input.setAutofillHints("")
                 }
             }
-
             else -> {}
         }
 
@@ -196,7 +192,6 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
                         )
                     }
                 }
-
                 is ResponseResource.Failure -> {
                     viewModel.logEvent(AnalyticsConstants.CTXSpend.UNSUCCESSFUL_LOGIN)
                     binding.inputWrapper.isErrorEnabled = true
@@ -219,7 +214,6 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
                         safeNavigate(CTXSpendUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
                     }
                 }
-
                 is ResponseResource.Failure -> {
                     binding.inputWrapper.isErrorEnabled = true
                     binding.inputErrorTv.text = getString(R.string.invaild_code)

@@ -62,10 +62,8 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapte
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
-import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment
-import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
-import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.DashDirectLoginInfoDialog
-import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.DashDirectTermsDialog
+import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendLoginInfoDialog
+import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.DashDirectTermsDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
@@ -352,7 +350,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun showLoginDialog() {
-        DashDirectLoginInfoDialog().show(
+        CTXSpendLoginInfoDialog().show(
             requireActivity(),
             onResult = {
                 if (it == true) {

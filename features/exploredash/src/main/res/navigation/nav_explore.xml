@@ -47,13 +47,6 @@
             app:popExitAnim="@anim/slide_out_left" />
 
         <action
-            android:id="@+id/search_to_dashDirectUserAuthFragment"
-            app:destination="@id/dashDirectUserAuthFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left" />
-
-        <action
             android:id="@+id/search_to_ctxSpendUserAuthFragment"
             app:destination="@id/ctxSpendUserAuthFragment"
             app:enterAnim="@anim/slide_in_right"
@@ -87,38 +80,6 @@
             android:name="ctxSpendUserAuthType"
             app:argType="org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment$CTXSpendUserAuthType" />
     </fragment>
-
-    <fragment
-        android:id="@+id/dashDirectUserAuthFragment"
-        android:name="org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment"
-        android:label="fragment_dashDirectUserAuthFragment"
-        tools:layout="@layout/fragment_dash_direct_user_auth">
-
-        <action
-            android:id="@+id/auth_to_dashDirectUserAuthFragment"
-            app:destination="@id/dashDirectUserAuthFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left" />
-
-        <action
-            android:id="@+id/auth_to_purchaseGiftCardFragment"
-            app:popUpTo="@id/searchFragment"
-            app:destination="@id/purchaseDashDirectGiftCardFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left" />
-
-        <argument
-            android:name="dashDirectUserAuthType"
-            app:argType="org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment$DashDirectUserAuthType" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/purchaseDashDirectGiftCardFragment"
-        android:name="org.dash.wallet.features.exploredash.ui.dashdirect.PurchaseGiftCardFragment"
-        android:label="fragment_purchase_gift_card"
-        tools:layout="@layout/fragment_purchase_dashdirect_gift_card"/>
 
     <fragment
         android:id="@+id/purchaseCTXSpendGiftCardFragment"
