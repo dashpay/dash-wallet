@@ -42,5 +42,12 @@ class AppDatabaseMigrations {
                     )
                 }
             }
+        val migration12to13 = object : Migration(12, 13) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE gift_cards ADD COLUMN id TEXT"
+                )
+            }
+        }
     }
 }
