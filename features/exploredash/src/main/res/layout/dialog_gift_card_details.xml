@@ -22,7 +22,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:background="@color/background_primary"
-    tools:context="org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.GiftCardDetailsDialog">
+    tools:context="org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.GiftCardDetailsDialog">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/header"

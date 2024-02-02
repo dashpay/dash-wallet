@@ -37,6 +37,7 @@ import org.dash.wallet.features.exploredash.network.service.DashDirectAuthApi
 import org.dash.wallet.features.exploredash.network.service.DashDirectServicesApi
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendDataSource
+import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendTokenApi
 import org.dash.wallet.features.exploredash.repository.*
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
@@ -70,7 +71,7 @@ abstract class ExploreDashModule {
             return CTXSpendDataSource(userConfiguration, config)
         }
 
-        fun provideRemoteDataSource(config: DashDirectConfig): RemoteDataSource {
+        fun provideRemoteDataSource(config: CTXSpendConfig): RemoteDataSource {
             return RemoteDataSource(config)
         }
 
@@ -86,6 +87,11 @@ abstract class ExploreDashModule {
         @Provides
         fun provideApi(ctxSpendDataSource: CTXSpendDataSource): CTXSpendApi {
             return ctxSpendDataSource.buildApi(CTXSpendApi::class.java)
+        }
+
+        @Provides
+        fun provideCTXAuthApi(remoteDataSource: RemoteDataSource): CTXSpendTokenApi {
+            return remoteDataSource.buildApi(CTXSpendTokenApi::class.java)
         }
     }
 

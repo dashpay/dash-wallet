@@ -19,11 +19,11 @@ package org.dash.wallet.features.exploredash.network.interceptor
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
-import org.dash.wallet.features.exploredash.utils.DashDirectConfig
+import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import javax.inject.Inject
 
-class HeadersInterceptor @Inject constructor(private val config: DashDirectConfig) : Interceptor {
+class HeadersInterceptor @Inject constructor(private val config: CTXSpendConfig) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
@@ -32,7 +32,7 @@ class HeadersInterceptor @Inject constructor(private val config: DashDirectConfi
         requestBuilder.header(DashDirectConstants.CLIENT_ID_PARAM_NAME, DashDirectConstants.CLIENT_ID)
 
         val accessToken = runBlocking {
-            config.getSecuredData(DashDirectConfig.PREFS_KEY_ACCESS_TOKEN)
+            config.getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)
         }
 
         if (accessToken?.isNotEmpty() == true) {
