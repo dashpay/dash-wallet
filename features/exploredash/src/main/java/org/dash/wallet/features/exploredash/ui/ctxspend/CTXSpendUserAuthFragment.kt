@@ -41,7 +41,6 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentCtxSpendUserAuthBinding
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
-import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth) {
@@ -193,7 +192,7 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
                     }
                 }
                 is ResponseResource.Failure -> {
-                    viewModel.logEvent(AnalyticsConstants.CTXSpend.UNSUCCESSFUL_LOGIN)
+                    viewModel.logEvent(AnalyticsConstants.DashSpend.UNSUCCESSFUL_LOGIN)
                     binding.inputWrapper.isErrorEnabled = true
                     binding.inputErrorTv.text =
                         if (response.errorBody.isNullOrEmpty()) getString(R.string.error) else response.errorBody
@@ -209,7 +208,7 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
             when (val response = viewModel.verifyEmail(code)) {
                 is ResponseResource.Success -> {
                     if (response.value) {
-                        viewModel.logEvent(AnalyticsConstants.CTXSpend.SUCCESSFUL_LOGIN)
+                        viewModel.logEvent(AnalyticsConstants.DashSpend.SUCCESSFUL_LOGIN)
                         hideKeyboard()
                         safeNavigate(CTXSpendUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
                     }

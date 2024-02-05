@@ -87,7 +87,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         }
 
         binding.howToUseButton.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.CTXSpend.HOW_TO_USE)
+            viewModel.logEvent(AnalyticsConstants.DashSpend.HOW_TO_USE)
             binding.howToUseButton.isVisible = false
             binding.howToUseInfo.isVisible = true
         }

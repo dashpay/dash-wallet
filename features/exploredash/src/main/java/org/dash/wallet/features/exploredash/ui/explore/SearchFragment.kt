@@ -363,7 +363,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         )
                     }
                 } else {
-                    viewModel.logEvent(AnalyticsConstants.CTXSpend.LOGIN)
+                    viewModel.logEvent(AnalyticsConstants.DashSpend.LOGIN)
                     safeNavigate(
                         SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
                             CTXSpendUserAuthFragment.CTXSpendUserAuthType.SIGN_IN

@@ -25,6 +25,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
@@ -33,6 +34,8 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.ctxspend.model.Barcode
@@ -52,6 +55,7 @@ import kotlin.time.Duration.Companion.seconds
 class GiftCardDetailsViewModel @Inject constructor(
     private val giftCardDao: GiftCardDao,
     private val metadataProvider: TransactionMetadataProvider,
+    private val analyticsService: AnalyticsService,
     private val repository: CTXSpendRepository,
     private val walletData: WalletDataProvider
 ) : ViewModel() {
@@ -216,9 +220,30 @@ class GiftCardDetailsViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
+        analyticsService.logEvent(event, mapOf())
     }
 
     private fun logOnPurchaseEvents(giftCard: GiftCard) {
+        analyticsService.logEvent(AnalyticsConstants.DashSpend.SUCCESSFUL_PURCHASE, mapOf())
+        analyticsService.logEvent(
+            AnalyticsConstants.DashSpend.MERCHANT_NAME,
+            mapOf(AnalyticsConstants.Parameter.VALUE to giftCard.merchantName)
+        )
+
+        exchangeRate?.let {
+            val transaction = walletData.getTransaction(transactionId)
+            val fiatValue = it.coinToFiat(transaction?.getValue(walletData.transactionBag) ?: Coin.ZERO)
+
+            analyticsService.logEvent(
+                AnalyticsConstants.DashSpend.PURCHASE_AMOUNT,
+                mapOf(AnalyticsConstants.Parameter.VALUE to giftCard.price)
+            )
+
+            analyticsService.logEvent(
+                AnalyticsConstants.DashSpend.DISCOUNT_AMOUNT,
+                mapOf(AnalyticsConstants.Parameter.VALUE to fiatValue.toFriendlyString())
+            )
+        }
     }
 
     private fun cancelTicker() {
