@@ -25,14 +25,14 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.ui.wiggle
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.databinding.DialogDashdirectTermsBinding
+import org.dash.wallet.features.exploredash.databinding.DialogDashspendTermsBinding
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
-class DashDirectTermsDialog : OffsetDialogFragment(R.layout.dialog_dashdirect_terms) {
+class CTXSpendTermsDialog : OffsetDialogFragment(R.layout.dialog_dashspend_terms) {
     override val forceExpand: Boolean = true
     private val viewModel by exploreViewModels<CTXSpendViewModel>()
-    private val binding by viewBinding(DialogDashdirectTermsBinding::bind)
+    private val binding by viewBinding(DialogDashspendTermsBinding::bind)
     private var onResultListener: (() -> Unit)? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -45,7 +45,7 @@ class DashDirectTermsDialog : OffsetDialogFragment(R.layout.dialog_dashdirect_te
 
         binding.termsLink.setOnClickListener {
             viewModel.openedCTXSpendTermsAndConditions = true
-            requireActivity().openCustomTab(getString(R.string.dash_direct_terms))
+            requireActivity().openCustomTab(getString(R.string.dashspend_terms))
         }
 
         binding.acceptTermsCheckbox.setOnCheckedChangeListener { _, isChecked ->

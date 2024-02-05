@@ -63,7 +63,7 @@ import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
 import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendLoginInfoDialog
-import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.DashDirectTermsDialog
+import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendTermsDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
@@ -354,8 +354,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             requireActivity(),
             onResult = {
                 if (it == true) {
-                    DashDirectTermsDialog().show(requireActivity()) {
-                        viewModel.logEvent(AnalyticsConstants.DashDirect.CREATE_ACCOUNT)
+                    CTXSpendTermsDialog().show(requireActivity()) {
+                        viewModel.logEvent(AnalyticsConstants.DashSpend.CREATE_ACCOUNT)
                         safeNavigate(
                         SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
                             CTXSpendUserAuthFragment.CTXSpendUserAuthType.CREATE_ACCOUNT
@@ -372,7 +372,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             },
             onExtraMessageAction = {
-                requireActivity().openCustomTab(getString(R.string.dash_direct_url))
+                requireActivity().openCustomTab(getString(R.string.dashspend_url))
             }
         )
     }

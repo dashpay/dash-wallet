@@ -42,7 +42,7 @@
         android:layout_marginTop="22dp"
         android:gravity="center"
         android:textAlignment="gravity"
-        android:text="@string/dashdirect_terms_conditions" />
+        android:text="@string/dashspend_terms_conditions" />
 
     <TextView
         android:id="@+id/dialog_message"
