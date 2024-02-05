@@ -260,12 +260,6 @@
             "notNull": true
           },
           {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
             "fieldPath": "merchantName",
             "columnName": "merchantName",
             "affinity": "TEXT",
