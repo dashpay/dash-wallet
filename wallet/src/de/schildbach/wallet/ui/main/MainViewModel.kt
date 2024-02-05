@@ -356,7 +356,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
-        return metadata[transactions.first().txId]?.service == ServiceName.DashDirect
+        return metadata[transactions.first().txId]?.service == ServiceName.CTXSpend
     }
 
     /**

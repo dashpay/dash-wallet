@@ -219,18 +219,11 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                 payBtnTxt.text = context.getText(R.string.explore_pay_with_dash)
                 payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Blue)
                 payBtn.setOnClickListener { onSendDashClicked?.invoke(true) }
-            } else if (merchant.source!!.lowercase() == ServiceName.DashDirect.lowercase()) {
-                // DashDirect allows payments via API, other sources require a deeplink
-                payBtn.isVisible = !merchant.deeplink.isNullOrBlank()
-                payBtnTxt.text = context.getText(R.string.explore_buy_gift_card)
-                payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Orange)
-                payBtn.setOnClickListener { onBuyGiftCardButtonClicked?.invoke() }
-            } else  if (merchant.source!!.lowercase() == ServiceName.CTXSpend.lowercase()) {
+            } else if (merchant.source!!.lowercase() == ServiceName.CTXSpend.lowercase()) {
                 payBtn.isVisible = true
                 payBtnTxt.text = context.getText(R.string.explore_buy_gift_card)
                 payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Orange)
                 payBtn.setOnClickListener { onBuyGiftCardButtonClicked?.invoke() }
-
             }
 
             showAllBtn.setOnClickListener { onShowAllLocationsClicked?.invoke() }

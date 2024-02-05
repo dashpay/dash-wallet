@@ -99,7 +99,7 @@ data class TransactionRowView(
                 icon = R.drawable.ic_transaction_failed
                 iconBackground = R.style.TxErrorBackground
                 title = ResourceString(resourceMapper.getErrorName(tx))
-            } else if (metadata?.service == ServiceName.DashDirect) {
+            } else if (metadata?.service == ServiceName.CTXSpend) {
                 icon = R.drawable.ic_gift_card_tx
                 iconBackground = R.style.TxOrangeBackground
                 title = ResourceString(

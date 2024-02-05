@@ -154,7 +154,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         var transactionMetadata: TransactionMetadata
         updateAndInsertIfNotExist(txId) {
             transactionMetadata = it.copy(
-                service = ServiceName.DashDirect,
+                service = ServiceName.CTXSpend,
                 taxCategory = TaxCategory.Expense
             )
             transactionMetadataDao.update(transactionMetadata)
@@ -336,7 +336,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                                     metadata.icon = bitmaps[iconId]
                                 }
 
-                                if (metadata.service == ServiceName.DashDirect) {
+                                if (metadata.service == ServiceName.CTXSpend) {
                                     metadata.title = giftCards[metadata.txId]?.merchantName
                                 }
                             }
