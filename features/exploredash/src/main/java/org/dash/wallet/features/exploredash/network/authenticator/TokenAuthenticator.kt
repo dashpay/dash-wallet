@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.repository.remote
+package org.dash.wallet.features.exploredash.network.authenticator
 
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -44,8 +44,8 @@ class TokenAuthenticator @Inject constructor(
                 when (val tokenResponse = getUpdatedToken()) {
                     is ResponseResource.Success -> {
                         tokenResponse.value?.let {
-                            config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken?: "")
-                            config.set(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken?: "")
+                            config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
+                            config.set(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
                             response.request.newBuilder()
                                 .header("Authorization", "Bearer ${it.accessToken}")
                                 .build()

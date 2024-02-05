@@ -20,7 +20,7 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import javax.inject.Inject
 
 class HeadersInterceptor @Inject constructor(private val config: CTXSpendConfig) : Interceptor {
@@ -29,7 +29,7 @@ class HeadersInterceptor @Inject constructor(private val config: CTXSpendConfig)
         val original = chain.request()
         val requestBuilder = original.newBuilder()
         requestBuilder.header("Accept", "application/json")
-        requestBuilder.header(DashDirectConstants.CLIENT_ID_PARAM_NAME, DashDirectConstants.CLIENT_ID)
+        requestBuilder.header(CTXSpendConstants.CLIENT_ID_PARAM_NAME, CTXSpendConstants.CLIENT_ID)
 
         val accessToken = runBlocking {
             config.getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)

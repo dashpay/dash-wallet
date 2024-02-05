@@ -78,7 +78,7 @@ import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants;
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants;
 import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
@@ -404,7 +404,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void initDashDirect() {
-        DashDirectConstants.CLIENT_ID = BuildConfig.DASHDIRECT_CLIENT_ID;
+        CTXSpendConstants.CLIENT_ID = BuildConfig.CTXSPEND_CLIENT_ID;
     }
 
     @TargetApi(Build.VERSION_CODES.O)

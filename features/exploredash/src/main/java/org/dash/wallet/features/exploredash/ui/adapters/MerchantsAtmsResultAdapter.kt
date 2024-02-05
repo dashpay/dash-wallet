@@ -35,7 +35,6 @@ import org.dash.wallet.features.exploredash.databinding.AtmRowBinding
 import org.dash.wallet.features.exploredash.databinding.MerchantRowBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import java.util.*
 
 open class ExploreViewHolder(root: View) : RecyclerView.ViewHolder(root) {

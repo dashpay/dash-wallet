@@ -21,7 +21,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.dash.wallet.features.exploredash.network.interceptor.HeadersInterceptor
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendTokenApi
-import org.dash.wallet.features.exploredash.repository.remote.TokenAuthenticator
+import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
