@@ -181,7 +181,8 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
     private fun authUserToCTXSpend(email: String, isSignIn: Boolean) {
         lifecycleScope.launch {
             when (
-                val response = viewModel.signInToCTXSpend(email)) {
+                val response = viewModel.signInToCTXSpend(email)
+            ) {
                 is ResponseResource.Success -> {
                     if (response.value) {
                         safeNavigate(

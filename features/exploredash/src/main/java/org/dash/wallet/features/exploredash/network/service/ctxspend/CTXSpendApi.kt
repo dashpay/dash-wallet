@@ -16,11 +16,11 @@
  */
 package org.dash.wallet.features.exploredash.network.service.ctxspend
 
-import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
-import org.dash.wallet.features.exploredash.data.ctxspend.model.RefreshTokenResponse
-import org.dash.wallet.features.exploredash.data.ctxspend.model.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
+import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.LoginRequest
+import org.dash.wallet.features.exploredash.data.ctxspend.model.PurchaseGiftCardRequest
+import org.dash.wallet.features.exploredash.data.ctxspend.model.RefreshTokenResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.VerifyEmailRequest
 import retrofit2.Response
 import retrofit2.http.Body

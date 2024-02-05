@@ -17,7 +17,6 @@
 
 package org.dash.wallet.features.exploredash
 
-import androidx.room.PrimaryKey
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
@@ -26,70 +25,69 @@ class ExploreDatabaseMigrations {
         val migration1To2 =
             object : Migration(1, 2) {
                 override fun migrate(database: SupportSQLiteDatabase) {
-
                     // Change `merchantId` and `sourceId` in `merchant` table
                     // column types from INTEGER to TEXT.
 
                     database.execSQL(
                         "CREATE TABLE `temp` AS SELECT " +
-                                "deeplink, " +
-                                "plusCode, " +
-                                "addDate, " +
-                                "updateDate, " +
-                                "paymentMethod, " +
-                                "CAST(merchantId AS TEXT) AS merchantId, " +
-                                "id, " +
-                                "active, " +
-                                "name, " +
-                                "address1, " +
-                                "address2, " +
-                                "address3, " +
-                                "address4, " +
-                                "latitude, " +
-                                "longitude, " +
-                                "website, " +
-                                "phone, " +
-                                "territory, " +
-                                "city, " +
-                                "source, " +
-                                "CAST(sourceId AS TEXT) AS sourceId, " +
-                                "logoLocation, " +
-                                "googleMaps, " +
-                                "coverImage, " +
-                                "type " +
-                                "FROM merchant"
+                            "deeplink, " +
+                            "plusCode, " +
+                            "addDate, " +
+                            "updateDate, " +
+                            "paymentMethod, " +
+                            "CAST(merchantId AS TEXT) AS merchantId, " +
+                            "id, " +
+                            "active, " +
+                            "name, " +
+                            "address1, " +
+                            "address2, " +
+                            "address3, " +
+                            "address4, " +
+                            "latitude, " +
+                            "longitude, " +
+                            "website, " +
+                            "phone, " +
+                            "territory, " +
+                            "city, " +
+                            "source, " +
+                            "CAST(sourceId AS TEXT) AS sourceId, " +
+                            "logoLocation, " +
+                            "googleMaps, " +
+                            "coverImage, " +
+                            "type " +
+                            "FROM merchant"
                     )
                     database.execSQL(
                         "DROP TABLE merchant"
                     )
                     database.execSQL(
                         "CREATE TABLE merchant (" +
-                                "deeplink TEXT, " +
-                                "plusCode TEXT, " +
-                                "addDate TEXT, " +
-                                "updateDate TEXT, " +
-                                "paymentMethod TEXT, " +
-                                "merchantId TEXT, " +
-                                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-                                "active INTEGER DEFAULT 1, " +
-                                "name TEXT, " +
-                                "address1 TEXT, " +
-                                "address2 TEXT, " +
-                                "address3 TEXT, " +
-                                "address4 TEXT, " +
-                                "latitude REAL, " +
-                                "longitude REAL, " +
-                                "website TEXT, " +
-                                "phone TEXT, " +
-                                "territory TEXT, " +
-                                "city TEXT, " +
-                                "source TEXT, " +
-                                "sourceId TEXT, " +
-                                "logoLocation TEXT, " +
-                                "googleMaps TEXT, " +
-                                "coverImage TEXT, " +
-                                "type TEXT " +
-                                ")"
+                            "deeplink TEXT, " +
+                            "plusCode TEXT, " +
+                            "addDate TEXT, " +
+                            "updateDate TEXT, " +
+                            "paymentMethod TEXT, " +
+                            "merchantId TEXT, " +
+                            "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                            "active INTEGER DEFAULT 1, " +
+                            "name TEXT, " +
+                            "address1 TEXT, " +
+                            "address2 TEXT, " +
+                            "address3 TEXT, " +
+                            "address4 TEXT, " +
+                            "latitude REAL, " +
+                            "longitude REAL, " +
+                            "website TEXT, " +
+                            "phone TEXT, " +
+                            "territory TEXT, " +
+                            "city TEXT, " +
+                            "source TEXT, " +
+                            "sourceId TEXT, " +
+                            "logoLocation TEXT, " +
+                            "googleMaps TEXT, " +
+                            "coverImage TEXT, " +
+                            "type TEXT " +
+                            ")"
                     )
                     database.execSQL(
                         "CREATE INDEX index_merchant_latitude ON merchant (latitude ASC)"
@@ -109,56 +107,56 @@ class ExploreDatabaseMigrations {
 
                     database.execSQL(
                         "CREATE TABLE `temp` AS SELECT " +
-                                "postcode, " +
-                                "manufacturer, " +
-                                "id, " +
-                                "active, " +
-                                "name, " +
-                                "address1, " +
-                                "address2, " +
-                                "address3, " +
-                                "address4, " +
-                                "latitude, " +
-                                "longitude, " +
-                                "website, " +
-                                "phone, " +
-                                "territory, " +
-                                "city, " +
-                                "source, " +
-                                "CAST(sourceId AS TEXT) AS sourceId, " +
-                                "logoLocation, " +
-                                "googleMaps, " +
-                                "coverImage, " +
-                                "type " +
-                                "FROM atm"
+                            "postcode, " +
+                            "manufacturer, " +
+                            "id, " +
+                            "active, " +
+                            "name, " +
+                            "address1, " +
+                            "address2, " +
+                            "address3, " +
+                            "address4, " +
+                            "latitude, " +
+                            "longitude, " +
+                            "website, " +
+                            "phone, " +
+                            "territory, " +
+                            "city, " +
+                            "source, " +
+                            "CAST(sourceId AS TEXT) AS sourceId, " +
+                            "logoLocation, " +
+                            "googleMaps, " +
+                            "coverImage, " +
+                            "type " +
+                            "FROM atm"
                     )
                     database.execSQL(
                         "DROP TABLE atm"
                     )
                     database.execSQL(
                         "CREATE TABLE atm (" +
-                                "postcode TEXT, " +
-                                "manufacturer TEXT, " +
-                                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-                                "active INTEGER DEFAULT 1, " +
-                                "name TEXT, " +
-                                "address1 TEXT, " +
-                                "address2 TEXT, " +
-                                "address3 TEXT, " +
-                                "address4 TEXT, " +
-                                "latitude REAL, " +
-                                "longitude REAL, " +
-                                "website TEXT, " +
-                                "phone TEXT, " +
-                                "territory TEXT, " +
-                                "city TEXT, " +
-                                "source TEXT, " +
-                                "sourceId TEXT, " +
-                                "logoLocation TEXT, " +
-                                "googleMaps TEXT, " +
-                                "coverImage TEXT, " +
-                                "type TEXT " +
-                                ")"
+                            "postcode TEXT, " +
+                            "manufacturer TEXT, " +
+                            "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                            "active INTEGER DEFAULT 1, " +
+                            "name TEXT, " +
+                            "address1 TEXT, " +
+                            "address2 TEXT, " +
+                            "address3 TEXT, " +
+                            "address4 TEXT, " +
+                            "latitude REAL, " +
+                            "longitude REAL, " +
+                            "website TEXT, " +
+                            "phone TEXT, " +
+                            "territory TEXT, " +
+                            "city TEXT, " +
+                            "source TEXT, " +
+                            "sourceId TEXT, " +
+                            "logoLocation TEXT, " +
+                            "googleMaps TEXT, " +
+                            "coverImage TEXT, " +
+                            "type TEXT " +
+                            ")"
                     )
                     database.execSQL(
                         "CREATE INDEX index_atm_latitude ON atm (latitude ASC)"

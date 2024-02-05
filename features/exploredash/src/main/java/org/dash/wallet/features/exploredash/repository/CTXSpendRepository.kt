@@ -21,8 +21,8 @@ import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
 import org.dash.wallet.common.util.ResourceString
-import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
+import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.LoginRequest
 import org.dash.wallet.features.exploredash.data.ctxspend.model.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.ctxspend.model.VerifyEmailRequest
@@ -82,7 +82,7 @@ class CTXSpendRepository @Inject constructor(
         cryptoCurrency: String,
         fiatCurrency: String,
         fiatAmount: String,
-        merchantId: String,
+        merchantId: String
     ) = safeApiCall {
         api.purchaseGiftCard(
             purchaseGiftCardRequest = PurchaseGiftCardRequest(
@@ -90,7 +90,7 @@ class CTXSpendRepository @Inject constructor(
                 fiatCurrency = "USD",
                 fiatAmount = fiatAmount,
                 merchantId = merchantId
-            ),
+            )
         )
     }
 
@@ -114,7 +114,7 @@ interface CTXSpendRepositoryInt {
         cryptoCurrency: String,
         fiatCurrency: String,
         fiatAmount: String,
-        merchantId: String,
+        merchantId: String
     ): ResponseResource<GiftCardResponse?>
 
     suspend fun getMerchant(merchantId: String): ResponseResource<GetMerchantResponse?>

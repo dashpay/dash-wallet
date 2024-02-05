@@ -19,5 +19,5 @@ package org.dash.wallet.features.exploredash.data.ctxspend.model
 import com.google.gson.annotations.SerializedName
 
 data class LoginRequest(
-    @SerializedName("email") val email: String? = null,
+    @SerializedName("email") val email: String? = null
 )

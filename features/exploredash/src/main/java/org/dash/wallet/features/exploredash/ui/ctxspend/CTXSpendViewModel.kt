@@ -40,8 +40,8 @@ import org.dash.wallet.common.services.*
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
+import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
@@ -58,7 +58,7 @@ class CTXSpendViewModel @Inject constructor(
     private val repository: CTXSpendRepositoryInt,
     private val transactionMetadata: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
-    networkState: NetworkStateInt,
+    networkState: NetworkStateInt
 ) : ViewModel() {
 
     companion object {
@@ -111,7 +111,7 @@ class CTXSpendViewModel @Inject constructor(
                 merchantId = it,
                 fiatAmount = amountValue.toBigDecimal().toDouble().toString(),
                 fiatCurrency = "USD",
-                cryptoCurrency = Constants.DASH_CURRENCY,
+                cryptoCurrency = Constants.DASH_CURRENCY
             )
 
             when (response) {

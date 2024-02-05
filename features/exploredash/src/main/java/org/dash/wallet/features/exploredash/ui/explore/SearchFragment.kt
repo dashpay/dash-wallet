@@ -357,8 +357,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     CTXSpendTermsDialog().show(requireActivity()) {
                         viewModel.logEvent(AnalyticsConstants.DashSpend.CREATE_ACCOUNT)
                         safeNavigate(
-                        SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
-                            CTXSpendUserAuthFragment.CTXSpendUserAuthType.CREATE_ACCOUNT
+                            SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
+                                CTXSpendUserAuthFragment.CTXSpendUserAuthType.CREATE_ACCOUNT
                             )
                         )
                     }
