@@ -49,7 +49,7 @@ interface TransactionMetadataProvider {
     fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?>
 
     /**
-     * Mark a transaction as DashDirect gift card expense with an icon
+     * Mark a transaction as DashSpend gift card expense with an icon
      */
     suspend fun markGiftCardTransaction(txId: Sha256Hash, iconUrl: String?)
     suspend fun updateGiftCardMetadata(giftCard: GiftCard)

@@ -31,7 +31,7 @@
         android:layout_height="60dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginHorizontal="20dp"
-        android:src="@drawable/ic_ctxspend_logo" />
+        android:src="@drawable/ic_dashspend_logo" />
 
     <TextView
         android:id="@+id/dialog_title"
@@ -67,7 +67,7 @@
         android:drawablePadding="8dp"
         android:drawableEnd="@drawable/ic_open_link"
         android:layout_marginBottom="40dp"
-        android:text="@string/dashspend_url" />
+        android:text="@string/terms_conditions" />
 
     <Button
         android:id="@+id/dialog_positive_button"

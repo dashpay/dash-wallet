@@ -213,11 +213,12 @@
     <string name="try_again">Try Again</string>
     <string name="cancel">Cancel</string>
     <string name="gift_card_error">For some reason we were not able to buy a gift card. Please, try again.</string>
-    <string name="dashspend_terms_conditions">Accept DashDirect terms and conditions</string>
-    <string name="accept_terms_conditions">I accept DashDirect terms and conditions</string>
-    <string name="tap_link_to_proceed">To create an account at DashDirect you must tap on the link bellow to proceed</string>
-    <string name="accept_to_proceed">To create an account at DashDirect you have to accept DashDirect terms and conditions</string>
+    <string name="dashspend_terms_conditions">Accept DashSpend terms and conditions</string>
+    <string name="accept_terms_conditions">I accept DashSpend terms and conditions</string>
+    <string name="tap_link_to_proceed">To create an account at DashSpend you must tap on the link bellow to proceed</string>
+    <string name="accept_to_proceed">To create an account at DashSpend you have to accept DashSpend terms and conditions</string>
     <string name="view_terms_conditions">View Terms &amp; Conditions</string>
+    <string name="terms_conditions">Terms &amp; Conditions</string>
 
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Create DashSpend account</string>

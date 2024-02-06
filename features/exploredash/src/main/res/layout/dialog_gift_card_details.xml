@@ -490,7 +490,7 @@
                 android:layout_gravity="center"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="40dp"
-                android:src="@drawable/logo_dashspend" />
+                android:src="@drawable/ic_dashspend_logo" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
