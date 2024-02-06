@@ -200,6 +200,7 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
      * uses actionText if the address for a source is null
      */
     fun setAddressSources(source: List<AddressSource>, actionText: String?) {
+        viewModel.addressSources.clear()
         viewModel.addressSources.addAll(source)
         binding.addressSourceContainer.isVisible = source.isNotEmpty()
         adapter?.run {
