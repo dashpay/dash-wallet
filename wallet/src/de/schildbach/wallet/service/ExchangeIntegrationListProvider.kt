@@ -179,8 +179,4 @@ class ExchangeIntegrationListProvider @Inject constructor(
         }
         return false
     }
-
-    override fun connectToIntegration(name: String) {
-        TODO("Not yet implemented")
-    }
 }

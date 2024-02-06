@@ -33,8 +33,5 @@ data class ExchangeIntegration(
 )
 
 interface ExchangeIntegrationProvider {
-
     suspend fun getDepositAddresses(currency: String): List<ExchangeIntegration>
-    // fun observeDepositAddresses(currency: String) : Flow<List<ExchangeIntegration>>
-    fun connectToIntegration(name: String)
 }
