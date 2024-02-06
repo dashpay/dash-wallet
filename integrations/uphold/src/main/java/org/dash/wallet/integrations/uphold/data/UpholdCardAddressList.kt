@@ -4,14 +4,14 @@ import com.google.gson.annotations.SerializedName
 
 class UpholdCardAddressList(
     @SerializedName("formats")
-    val addresses: List<UpholdCardAddress2>,
+    val addresses: List<UpholdAddress>,
     val type: String
 ) {
     fun isEmpty() = addresses.isEmpty()
     fun firstOrNull() = addresses.firstOrNull()
 }
 
-data class UpholdCardAddress2(
+data class UpholdAddress(
     val format: String,
     val value: String
 )

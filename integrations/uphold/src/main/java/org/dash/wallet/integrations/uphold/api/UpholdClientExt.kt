@@ -19,8 +19,8 @@ package org.dash.wallet.integrations.uphold.api
 
 import android.content.SharedPreferences
 import org.dash.wallet.common.util.ensureSuccessful
+import org.dash.wallet.integrations.uphold.data.UpholdAddress
 import org.dash.wallet.integrations.uphold.data.UpholdCard
-import org.dash.wallet.integrations.uphold.data.UpholdCardAddress2
 import org.dash.wallet.integrations.uphold.data.UpholdConstants
 import org.dash.wallet.integrations.uphold.data.UpholdCryptoCardAddress
 import org.dash.wallet.integrations.uphold.data.UpholdException
@@ -240,7 +240,7 @@ suspend fun UpholdClient.createCardAddress(cardId: String, currency: String): St
     }
 }
 
-suspend fun UpholdClient.listCardAddress(cardId: String, currency: String): UpholdCardAddress2? {
+suspend fun UpholdClient.listCardAddress(cardId: String, currency: String): UpholdAddress? {
     val addressList = service.listCardAddresses(cardId)
     val upholdAddresses = addressList?.find { it.type == upholdNetworks[currency] }
     val address = upholdAddresses?.addresses?.first { it.format == "pubkeyhash" }
