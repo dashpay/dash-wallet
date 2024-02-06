@@ -10,8 +10,3 @@ class UpholdCardAddressList(
     fun isEmpty() = addresses.isEmpty()
     fun firstOrNull() = addresses.firstOrNull()
 }
-
-data class UpholdAddress(
-    val format: String,
-    val value: String
-)
