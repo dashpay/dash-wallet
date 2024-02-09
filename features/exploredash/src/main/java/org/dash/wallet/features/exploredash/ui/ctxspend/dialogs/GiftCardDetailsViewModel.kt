@@ -147,7 +147,7 @@ class GiftCardDetailsViewModel @Inject constructor(
             when (val response = getGiftCardByTxid(txid)) {
                 is ResponseResource.Success -> {
                     val giftCard = response.value!!
-                    if (giftCard.status == "paid") {
+                    if (giftCard.status == "paid" || giftCard.status == "fulfilled") {
                         if (!giftCard.cardNumber.isNullOrEmpty()) {
                             cancelTicker()
                             updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
@@ -156,6 +156,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                             }
                         }
                     }
+                    // TODO: would status: "rejected" be handled here or in the .Failure section below?
                 }
 
                 is ResponseResource.Failure -> {

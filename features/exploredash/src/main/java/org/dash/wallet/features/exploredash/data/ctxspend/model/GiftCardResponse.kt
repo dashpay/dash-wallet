@@ -20,10 +20,10 @@ import com.google.gson.annotations.SerializedName
 
 data class GiftCardResponse(
     @SerializedName("id") val id: String,
-    @SerializedName("status") val status: String,
+    @SerializedName("status") val status: String, // unpaid, paid, fulfilled, rejected
     @SerializedName("barcodeUrl") val barcodeUrl: String? = "",
-    @SerializedName("cardNumber") val cardNumber: String? = "",
-    @SerializedName("cardPin") val cardPin: String? = "",
+    @SerializedName("number") val cardNumber: String? = "",
+    @SerializedName("pin") val cardPin: String? = "",
 
     @SerializedName("cryptoAmount") val cryptoAmount: String? = "",
     @SerializedName("cryptoCurrency") val cryptoCurrency: String? = "",
