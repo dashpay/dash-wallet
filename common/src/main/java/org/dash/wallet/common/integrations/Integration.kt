@@ -15,10 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.payments.parsers
+package org.dash.wallet.common.integrations
 
-import org.bitcoinj.core.NetworkParameters
-import org.dash.wallet.common.data.PaymentIntent
-abstract class PaymentIntentParser(val currency: String, val uriPrefix: String, val params: NetworkParameters?) {
-    abstract suspend fun parse(input: String): PaymentIntent
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+// import kotlinx.coroutines.flow.Flow
+
+data class ExchangeIntegration(
+    val id: String,
+    val isConnected: Boolean,
+    val address: String?,
+    val currency: String?,
+    @StringRes
+    val name: Int,
+    @DrawableRes
+    val iconId: Int
+)
+
+interface ExchangeIntegrationProvider {
+    suspend fun getDepositAddresses(currency: String): List<ExchangeIntegration>
 }

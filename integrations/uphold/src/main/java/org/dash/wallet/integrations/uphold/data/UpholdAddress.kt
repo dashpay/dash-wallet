@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Dash Core Group.
+ * Copyright 2015-present the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,11 +14,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package org.dash.wallet.integrations.uphold.data
 
-package org.dash.wallet.common.payments.parsers
-
-import org.bitcoinj.core.NetworkParameters
-import org.dash.wallet.common.data.PaymentIntent
-abstract class PaymentIntentParser(val currency: String, val uriPrefix: String, val params: NetworkParameters?) {
-    abstract suspend fun parse(input: String): PaymentIntent
-}
+data class UpholdAddress(
+    val format: String,
+    val value: String
+)

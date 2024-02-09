@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.uphold.api
 
 import android.content.SharedPreferences
 import org.dash.wallet.common.util.ensureSuccessful
+import org.dash.wallet.integrations.uphold.data.UpholdAddress
 import org.dash.wallet.integrations.uphold.data.UpholdCard
 import org.dash.wallet.integrations.uphold.data.UpholdConstants
 import org.dash.wallet.integrations.uphold.data.UpholdCryptoCardAddress
@@ -30,6 +31,14 @@ import java.math.BigDecimal
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+
+val upholdNetworks: Map<String, String> = mapOf(
+    "DASH" to "dash",
+    "BTC" to "bitcoin",
+    "ETH" to "ethereum",
+    "USDC" to "ethereum",
+    "USDT" to "ethereum"
+)
 
 val UpholdClient.hasValidCredentials
     get() = UpholdConstants.hasValidCredentials()
@@ -133,6 +142,21 @@ fun UpholdClient.getCards(
     })
 }
 
+suspend fun UpholdClient.getAllCards(): List<UpholdCard>? {
+    val cards = service.getCards()
+
+    // perform associateBy, duplicate keys will use the first
+    return cards?.apply {
+        val accountMap = hashMapOf<String, String>()
+        forEach {
+            if (!accountMap.containsKey(it.currency)) {
+                accountMap[it.currency] = it.id
+            }
+        }
+        config.setAccounts(accountMap)
+    }
+}
+
 suspend fun UpholdClient.revokeAccessToken() {
     val response = service.revokeAccessToken(accessToken)
     response.ensureSuccessful()
@@ -141,6 +165,8 @@ suspend fun UpholdClient.revokeAccessToken() {
         UpholdClient.log.info("Uphold access token revoked")
         accessToken = null
         storeAccessToken()
+        // clear config data
+        config.clearAll()
     } else {
         UpholdClient.log.error(
             "Error revoking Uphold access token: " + response.message() + " code: " + response.code()
@@ -204,6 +230,23 @@ fun UpholdClient.createDashAddress(cardId: String) {
             UpholdClient.log.error("Error creating Dash Card address: " + t.message)
         }
     })
+}
+suspend fun UpholdClient.createCardAddress(cardId: String, currency: String): String? {
+    val body = mapOf(
+        "network" to upholdNetworks[currency]!!
+    )
+    return service.createCardAddressAsync(cardId, body)?.address?.apply {
+        config.setAccountAddress(cardId, this)
+    }
+}
+
+suspend fun UpholdClient.listCardAddress(cardId: String, currency: String): UpholdAddress? {
+    val addressList = service.listCardAddresses(cardId)
+    val upholdAddresses = addressList?.find { it.type == upholdNetworks[currency] }
+    val address = upholdAddresses?.addresses?.first { it.format == "pubkeyhash" }
+    return address?.apply {
+        config.setAccountAddress(cardId, value)
+    }
 }
 
 fun UpholdClient.getWithdrawalRequirements(): List<String> {

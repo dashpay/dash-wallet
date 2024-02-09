@@ -190,6 +190,13 @@ open class RadioButtonViewHolder(
                 )
             )
         }
+
+        if (option.actionText != null) {
+            binding.action.isVisible = true
+            binding.action.text = option.actionText
+        } else {
+            binding.action.isVisible = false
+        }
     }
 }
 

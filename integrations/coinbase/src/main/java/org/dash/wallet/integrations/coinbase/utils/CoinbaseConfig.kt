@@ -21,7 +21,7 @@ import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.*
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.BaseConfig
+import org.dash.wallet.common.data.ExchangeConfig
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +29,7 @@ import javax.inject.Singleton
 class CoinbaseConfig @Inject constructor(
     context: Context,
     walletDataProvider: WalletDataProvider
-): BaseConfig(
+): ExchangeConfig(
     context,
     PREFERENCES_NAME,
     walletDataProvider,

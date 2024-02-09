@@ -239,6 +239,15 @@
             android:defaultValue="COINBASE"
             app:argType="de.schildbach.wallet.data.ServiceType" />
 
+        <argument
+            android:name="action"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null"/>
+
+        <deepLink app:uri="android-app://hashengineering.darkcoin.wallet/exchange/coinbase/{action}"/>
+
+
         <action
             android:id="@+id/overview_to_coinbase"
             app:popUpTo="@id/buySellFragment"
@@ -252,7 +261,16 @@
         android:id="@+id/upholdPortalFragment"
         android:name="org.dash.wallet.integrations.uphold.ui.UpholdPortalFragment"
         android:label="upholdPortalFragment"
-        tools:layout="@layout/fragment_integration_portal" />
+        tools:layout="@layout/fragment_integration_portal" >
+
+        <argument
+            android:name="action"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null"/>
+
+        <deepLink app:uri="android-app://hashengineering.darkcoin.wallet/exchange/uphold/{action}"/>
+    </fragment>
 
     <fragment
         android:id="@+id/securityFragment"

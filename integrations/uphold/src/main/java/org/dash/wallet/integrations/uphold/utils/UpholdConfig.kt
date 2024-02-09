@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present the original author or authors.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,27 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.uphold.data;
+package org.dash.wallet.integrations.uphold.utils
 
-public class UpholdAddress {
+import android.content.Context
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ExchangeConfig
+import javax.inject.Inject
+import javax.inject.Singleton
 
-    private String line1;
-    private String line2;
-
-    public String getLine1() {
-        return line1;
+@Singleton
+class UpholdConfig @Inject constructor(
+    context: Context,
+    walletDataProvider: WalletDataProvider
+) : ExchangeConfig(
+    context,
+    PREFERENCES_NAME,
+    walletDataProvider
+) {
+    companion object {
+        const val PREFERENCES_NAME = "uphold"
     }
-
-    public void setLine1(String line1) {
-        this.line1 = line1;
-    }
-
-    public String getLine2() {
-        return line2;
-    }
-
-    public void setLine2(String line2) {
-        this.line2 = line2;
-    }
-
 }

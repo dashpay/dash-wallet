@@ -123,4 +123,6 @@
     <string name="input_parser_unverifyable_paymentrequest">Cannot verify payment request:\n%s</string>
     <string name="input_parser_invalid_paymentrequest">Invalid payment request:\n%s</string>
     <string name="input_parser_invalid_transaction">Invalid transaction:\n%s</string>
+    <string name="address_input_paste_from">Paste from %s</string>
+    <string name="input_connect">Connect</string>
 </resources>

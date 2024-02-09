@@ -19,15 +19,52 @@ package org.dash.wallet.integrations.maya.ui
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import org.dash.wallet.common.R
 import org.dash.wallet.common.ui.address_input.AddressInputFragment
+import org.dash.wallet.common.ui.address_input.AddressSource
+import org.dash.wallet.common.ui.decorators.ListDividerDecorator
+import org.dash.wallet.common.ui.recyclerview.IconifiedListAdapter
+import org.dash.wallet.common.util.DeepLinkDestination
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 
 class MayaAddressInputFragment : AddressInputFragment() {
     private val mayaViewModel by viewModels<MayaViewModel>()
+    private val mayaAddressInputViewModel by viewModels<MayaAddressInputViewModel>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.paymentParsers = mayaViewModel.paymentParsers
+        mayaAddressInputViewModel.setCurrency(viewModel.currency)
+        adapter = IconifiedListAdapter() { _, index ->
+            val item = viewModel.addressSources[index]
+            clickListener(item)
+        }
+
+        val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
+        val decorator = ListDividerDecorator(
+            divider,
+            showAfterLast = false,
+            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal),
+            marginEnd = resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal)
+        )
+        binding.contentList.addItemDecoration(decorator)
+        binding.contentList.adapter = adapter
+
+        mayaAddressInputViewModel.addressSources.observe(viewLifecycleOwner) {
+            setAddressSources(it, getString(R.string.input_connect))
+        }
+    }
+
+    private fun clickListener(item: AddressSource) {
+        if (item.address != null && item.address != "") {
+            binding.addressInput.setText(item.address!!)
+        } else {
+            // exchange login
+            findNavController().navigate(DeepLinkDestination.Exchange(item.id, "login_and_close").deepLink)
+        }
     }
 
     override fun continueAction() {
@@ -39,5 +76,10 @@ class MayaAddressInputFragment : AddressInputFragment() {
         )
         // TODO: add event monitoring here
         // viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mayaAddressInputViewModel.refreshAddressSources()
     }
 }

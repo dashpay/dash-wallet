@@ -61,8 +61,6 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
             }
         }
 
-        // val adapter1 = ListAdapter<IconifiedViewItem, RadioButtonViewHolder>(RadioGroupAdapter.DiffCallback())
-
         val divider = ContextCompat.getDrawable(requireContext(), org.dash.wallet.common.R.drawable.list_divider)!!
         val decorator = ListDividerDecorator(
             divider,

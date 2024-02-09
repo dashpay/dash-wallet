@@ -42,6 +42,9 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentAddressInputBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.radio_group.IconSelectMode
+import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
+import org.dash.wallet.common.ui.recyclerview.IconifiedListAdapter
 import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
@@ -57,6 +60,7 @@ import org.dash.wallet.common.util.observe
  */
 @AndroidEntryPoint
 abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
+    var adapter: IconifiedListAdapter? = null
     protected val binding by viewBinding(FragmentAddressInputBinding::bind)
     protected val viewModel by viewModels<AddressInputViewModel>()
 
@@ -89,6 +93,8 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
         requireArguments().getString("hint")?.let {
             binding.inputWrapper.hint = it
         }
+
+        binding.addressSourceContainer.isVisible = viewModel.addressSources.isNotEmpty()
 
         binding.addressInput.doOnTextChanged { text, _, _, _ ->
             viewModel.setInput(text.toString())
@@ -187,6 +193,28 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
                 binding.inputWrapper.isErrorEnabled = true
                 binding.errorText.isVisible = true
             }
+        }
+    }
+
+    /**
+     * uses actionText if the address for a source is null
+     */
+    fun setAddressSources(source: List<AddressSource>, actionText: String?) {
+        viewModel.addressSources.clear()
+        viewModel.addressSources.addAll(source)
+        binding.addressSourceContainer.isVisible = source.isNotEmpty()
+        adapter?.run {
+            submitList(
+                source.map {
+                    IconifiedViewItem(
+                        getString(R.string.address_input_paste_from, getString(it.name)),
+                        it.address ?: "",
+                        it.icon,
+                        iconSelectMode = IconSelectMode.None,
+                        actionText = if (it.address == null) actionText else null
+                    )
+                }
+            )
         }
     }
 }

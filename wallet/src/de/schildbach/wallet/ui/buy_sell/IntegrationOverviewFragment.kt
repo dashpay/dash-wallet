@@ -38,9 +38,13 @@ import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
 class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overview) {
+    companion object {
+        const val INTENT_ACTION = "action"
+        const val LOGIN_AND_CLOSE = "login_and_close"
+    }
     private val binding by viewBinding(FragmentIntegrationOverviewBinding::bind)
     private val viewModel by viewModels<IntegrationOverviewViewModel>()
-
+    private var action: String? = null
     private val coinbaseAuthLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -55,6 +59,7 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        action = requireArguments().getString(INTENT_ACTION)
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
@@ -62,6 +67,11 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
 
         binding.continueBtn.setOnClickListener {
             continueCoinbase()
+        }
+        action?.let {
+            if (it == LOGIN_AND_CLOSE) {
+                continueCoinbase()
+            }
         }
         // the convert or buy swap feature should be hidden
         // as there are not enough supported currencies with the v3 API
@@ -98,7 +108,12 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
             }
 
             if (success) {
-                safeNavigate(IntegrationOverviewFragmentDirections.overviewToCoinbase())
+                if (action == LOGIN_AND_CLOSE) {
+                    action = null
+                    findNavController().popBackStack()
+                } else {
+                    safeNavigate(IntegrationOverviewFragmentDirections.overviewToCoinbase())
+                }
             } else {
                 AdaptiveDialog.create(
                     R.drawable.ic_error,

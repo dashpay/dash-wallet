@@ -45,7 +45,9 @@ class IconifiedListAdapter(
         holder.bind(item)
 
         holder.binding.root.setOnClickListener {
-            clickListener.invoke(item, position)
+            // item may have changed
+            val updatedItem = getItem(position)
+            clickListener.invoke(updatedItem, position)
         }
     }
 }

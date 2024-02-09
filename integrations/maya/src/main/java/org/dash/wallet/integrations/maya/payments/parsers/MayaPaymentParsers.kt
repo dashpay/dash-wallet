@@ -26,26 +26,31 @@ import org.dash.wallet.common.payments.parsers.PaymentParsers
 class MayaPaymentParsers : PaymentParsers() {
     init {
         add("bitcoin", "btc", BitcoinPaymentIntentParser(), BitcoinAddressParser(BitcoinMainNetParams()))
-        add("ethereum", "eth", EthereumPaymentIntentParser("ETH.ETH"), AddressParser.getEthereumAddressParser())
-        add("usdc", "usdc", EthereumPaymentIntentParser("ETH.USDC"), AddressParser.getEthereumAddressParser())
-        add("tether", "usdt", EthereumPaymentIntentParser("ETH.USDC"), AddressParser.getEthereumAddressParser())
+        add(
+            "ethereum",
+            "eth",
+            EthereumPaymentIntentParser("etherium", "ETH.ETH"),
+            AddressParser.getEthereumAddressParser()
+        )
+        add("usdc", "usdc", EthereumPaymentIntentParser("usdc", "ETH.USDC"), AddressParser.getEthereumAddressParser())
+        add("tether", "usdt", EthereumPaymentIntentParser("usdt", "ETH.USDC"), AddressParser.getEthereumAddressParser())
         add(
             "Wrapped stETH",
             "wsteth",
-            EthereumPaymentIntentParser("ETH.WSTETH"),
+            EthereumPaymentIntentParser("wsteth", "ETH.WSTETH"),
             AddressParser.getEthereumAddressParser()
         )
         add("rune", "rune", RunePaymentIntentProcessor(), RuneAddressParser())
         add(
             "kujira",
             "kuji",
-            Bech32PaymentIntentParser("kuji", "kujira", 38, "KIJI.KUJI"),
+            Bech32PaymentIntentParser("kuji", "kujira", "kujira", 38, "KIJI.KUJI"),
             Bech32AddressParser("kujira", 38, null)
         )
         add(
             "usk",
             "usk",
-            Bech32PaymentIntentParser("usk", "usk", 38, "KUJI.USK"),
+            Bech32PaymentIntentParser("usk", "usk", "usk", 38, "KUJI.USK"),
             Bech32AddressParser("usk", 38, null)
         )
     }

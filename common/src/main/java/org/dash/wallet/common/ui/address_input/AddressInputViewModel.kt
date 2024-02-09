@@ -54,6 +54,7 @@ class AddressInputViewModel @Inject constructor(
 ): ViewModel() {
     lateinit var paymentParsers: PaymentParsers
     var currency: String = Constants.DASH_CURRENCY
+    val addressSources = arrayListOf<AddressSource>()
 
     private val _uiState = MutableStateFlow(AddressInputUIState())
     val uiState: StateFlow<AddressInputUIState> = _uiState.asStateFlow()
