@@ -50,6 +50,8 @@
     <string name="button_continue">Continue</string>
     <string name="get_quote">Get Quote</string>
     <string name="button_close">Close</string>
+    <string name="button_cancel">Cancel</string>
+    <string name="button_confirm">Confirm</string>
     <string name="button_retry">Retry</string>
     <string name="button_send_report">Send Report</string>
     <string name="button_info">info</string>

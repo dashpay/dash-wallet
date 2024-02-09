@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    tools:context="org.dash.wallet.integrations.maya.ui.convert_currency.ConverterView"
+    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/root_container"
+        android:background="@drawable/selectable_round_corners"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="15dp"
+        android:paddingVertical="8dp">
+
+        <TextView
+            android:id="@+id/from_label"
+            style="@style/Overline.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/from"
+            android:textAllCaps="true"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/convert_from_btn"
+            app:layout_constraintTop_toTopOf="@+id/convert_from_btn"
+            app:layout_constraintBottom_toBottomOf="@+id/convert_from_btn" />
+
+        <ImageView
+            android:id="@+id/swap_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="7dp"
+            android:src="@drawable/ic_swap_blue"
+            app:layout_constraintBottom_toTopOf="@+id/to_label"
+            app:layout_constraintStart_toStartOf="@id/from_label"
+            app:layout_constraintEnd_toEndOf="@id/from_label"
+            app:layout_constraintTop_toBottomOf="@+id/from_label" />
+
+        <ImageView
+            android:id="@+id/buy_swap_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="7dp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:src="@drawable/ic_grey_buy_swap"
+            app:layout_constraintTop_toBottomOf="@+id/from_label"
+            app:layout_constraintStart_toStartOf="@id/from_label"
+            app:layout_constraintEnd_toEndOf="@id/from_label"
+            app:layout_constraintBottom_toTopOf="@+id/to_label" />
+
+        <org.dash.wallet.integrations.maya.ui.convert_currency.CryptoCurrencyItem
+            android:id="@+id/convert_from_btn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="61dp"
+            android:background="@color/background_secondary"
+            app:is_crypto_convert_item_arrow_visible="true"
+            app:is_crypto_convert_item_group_visible="false"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <RelativeLayout
+            android:id="@+id/wallet_balance_loading_container"
+            android:layout_width="0dp"
+            android:layout_height="18dp"
+            android:layout_marginTop="7dp"
+            android:layout_marginStart="45dp"
+            app:layout_constraintTop_toBottomOf="@+id/convert_from_btn"
+            app:layout_constraintStart_toStartOf="@+id/convert_from_btn"
+            app:layout_constraintEnd_toEndOf="@+id/convert_from_btn"
+            tools:visibility="visible"
+            >
+
+            <LinearLayout
+                android:id="@+id/wallet_balance_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/wallet_icon"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginEnd="5dp"
+                    android:src="@drawable/ic_wallet"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+            <org.dash.wallet.common.ui.CurrencyTextView
+                android:id="@+id/convert_from_dash_balance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="0dp"
+                android:layout_gravity="center_vertical"
+                android:lineSpacingExtra="2sp"
+                android:textColor="@color/dash_black"
+                android:textSize="10sp"
+                tools:text="Dash Wallet"
+                tools:visibility="visible" />
+
+            <org.dash.wallet.common.ui.CurrencyTextView
+                android:id="@+id/convert_from_dash_fiat_amount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:layout_gravity="center_vertical"
+                android:includeFontPadding="false"
+                android:textColor="@color/dash_gray"
+                android:textSize="10sp"
+                tools:text="USD 0.00"
+                tools:visibility="visible" />
+            </LinearLayout>
+
+
+            <LinearLayout
+                android:id="@+id/loading_progress_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toEndOf="@id/wallet_balance_container"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <ProgressBar
+                    android:id="@+id/progress_ring"
+                    style="?android:attr/progressBarStyle"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp" />
+
+                <TextView
+                    style="@style/Overline"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="@string/loading" />
+            </LinearLayout>
+
+            <!-- keep the container taking up space-->
+            <View
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_toEndOf="@+id/loading_progress_container"
+                android:visibility="invisible"
+                />
+        </RelativeLayout>
+
+        <TextView
+            android:id="@+id/to_label"
+            style="@style/Overline.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/to"
+            android:textAllCaps="true"
+            app:layout_constraintBottom_toBottomOf="@+id/convert_to_btn"
+            app:layout_constraintStart_toStartOf="@+id/from_label"
+            app:layout_constraintEnd_toEndOf="@+id/from_label"
+            app:layout_constraintTop_toTopOf="@+id/convert_to_btn" />
+
+        <org.dash.wallet.integrations.maya.ui.convert_currency.CryptoCurrencyItem
+            android:id="@+id/convert_to_btn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@color/background_secondary"
+            app:crypto_convert_item_icon="@drawable/ic_dash_blue_filled"
+            tools:crypto_convert_item_service_title="@string/dash_wallet_name"
+            tools:crypto_convert_item_title="@string/dash"
+            app:is_crypto_convert_item_arrow_visible="false"
+            app:is_crypto_convert_item_group_visible="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/convert_from_btn"
+            app:layout_constraintTop_toBottomOf="@+id/wallet_balance_loading_container" />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/wallet_guideline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.38"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</merge>

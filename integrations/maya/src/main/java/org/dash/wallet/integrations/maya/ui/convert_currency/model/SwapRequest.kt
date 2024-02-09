@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,23 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.maya.utils
+package org.dash.wallet.integrations.maya.ui.convert_currency.model
 
-import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.Fiat
 
-object MayaConstants {
-    const val DEFAULT_EXCHANGE_CURRENCY = "USD"
-
-    private const val MAINNET_BASE_URL = "https://midgard.mayachain.info/v2/"
-
-    /**
-     * https://exchangerate.host/#/docs
-     */
-    const val EXCHANGERATE_BASE_URL = "https://api.exchangerate.host/"
-
-    fun getBaseUrl(params: NetworkParameters): String {
-        return MAINNET_BASE_URL
-    }
-    const val VALUE_ZERO = "0"
-    const val MIN_USD_AMOUNT = "2"
-}
+data class SwapRequest(
+    val dashToCrypto: Boolean,
+    val amount: Coin?,
+    val fiatAmount: Fiat?
+)

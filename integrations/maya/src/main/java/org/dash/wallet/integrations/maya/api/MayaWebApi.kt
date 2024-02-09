@@ -17,12 +17,20 @@
 
 package org.dash.wallet.integrations.maya.api
 
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.integrations.maya.model.Account
+import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.PoolInfo
+import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dash.wallet.integrations.maya.model.TradesRequest
 import org.slf4j.LoggerFactory
 import retrofit2.Response
 import retrofit2.http.GET
 import java.io.IOException
+import java.math.BigDecimal
+import java.util.UUID
 import javax.inject.Inject
 
 /**
@@ -64,5 +72,25 @@ open class MayaWebApi @Inject constructor(
 
             listOf()
         }
+    }
+
+    suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel> {
+        return ResponseResource.Success(
+            SwapTradeUIModel(
+                inputAmount = tradesRequest.amount,
+                inputCurrency = tradesRequest.amount_asset
+            )
+        )
+    }
+
+    suspend fun getUserAccounts(currency: String): List<AccountDataUIModel> {
+        return listOf(
+            AccountDataUIModel(
+                Account(UUID.randomUUID(), currency, currency, Balance("0", currency), true, true, "", true),
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO
+            )
+        )
     }
 }

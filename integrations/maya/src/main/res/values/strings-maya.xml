@@ -45,4 +45,51 @@
     <string name="maya_error_not_available">The Maya service is not available.  Please try again later.</string>
     <string name="maya_error_report_issue">Please report this issue to the Dash Wallet support team using "Report Issue" from the main menu.</string>
     <string name="maya_error_address_not_valid"></string>
+
+    <!-- taken from Coinbase -->
+    <string name="entered_amount_is_too_low">The minimum transaction amount is</string>
+    <string name="entered_amount_is_too_high">The maximum transaction amount is</string>
+    <string name="we_didnt_find_any_assets">We didn’t find any assets on your Coinbase account.</string>
+    <string name="something_wrong_title">Something went wrong!</string>
+    <string name="dont_have_any_dash"> You don\'t have any Dash in your Dash Wallet.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">You will receive ~ %s Dash on your Dash Wallet on this device. Please note that it can take up to 2–3 minutes to complete a transfer.</string>
+    <string name="you_dont_have_enough_balance">You don’t have enough balance</string>
+    <string name="you_dont_own_any_crypto">You don’t own any crypto. Buy some crypto to get started.</string>
+    <string name="buy_crypto_on_coinbase">Buy Crypto on Coinbase</string>
+    <string name="coinbase_website" translatable="false">https://www.coinbase.com/</string>
+    <string name="purchase_failed">Purchase Failed</string>
+    <string name="transfer_failed">Transfer Failed</string>
+    <string name="transfer_failed_msg">The Dash was successfully deposited to your Coinbase account. But there was a problem transferring it to Dash Wallet on this device.</string>
+    <string name="send_to_wallet_error">Cannot send this amount without going over application limit</string>
+    <string name="purchase_successful">Purchase successful</string>
+    <string name="it_could_take_up_to_2_3_minutes">It could take up to 2–3 minutes for the Dash to be transferred to your Dash Wallet on this device.</string>
+    <string name="it_could_take_up_to_5_minutes">It could take up to 5 minutes to convert %s from Coinbase account to Dash in your Dash Wallet on this device..</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">It could take up to 5 minutes to convert Dash from Dash Wallet on this device to %s in your Coinbase account.</string>
+    <string name="conversion_failed">Conversion Failed</string>
+    <string name="transfer_dash_successful">Transfer successful</string>
+    <string name="it_could_take_up_to_10_minutes">It could take up to 10 minutes to transfer Dash from Coinbase to the Dash wallet of this device.</string>
+    <string name="it_could_take_up_to_10_minutes_to_coinbase">It could take up to 10 minutes to transfer Dash from Dash Wallet on this device to your Coinbase account.</string>
+    <string name="you_will_receive_dash" translatable="false">%s DASH</string>
+    <string name="conversion_successful">Conversion successful</string>
+    <string name="transfer_dash_failed_msg">There was a problem transferring it to Dash Wallet on this device.</string>
+    <string name="auth_limit_description">You exceeded the authorization limit on Coinbase.</string>
+    <string name="you_will_receive">You will receive</string>
+    <string name="contact_coinbase_support">Contact Coinbase Support</string>
+    <string name="fees_in_crypto_purchase">Fees in crypto purchases</string>
+    <string name="coinbase_fee_info_msg_content">In addition to the displayed Coinbase fee, we include a spread in the price. Cryptocurrency markets are volatile, and this allows us to temporary lock in a price for trade execution.</string>
+    <string name="learn_more">Learn More</string>
+    <string name="debit_money">Debit money from your account</string>
+    <string name="change_limit">Change this limit</string>
+    <string name="set_auth_limit">Make sure you set up the right authorization limit on Coinbase</string>
+    <string name="change_withdrawal_limit">You can change it anytime by logging out of your Coinbase account in Dash Wallet and logging back in.</string>
+    <string name="got_it">I got it</string>
+    <string name="conversion_preview">Conversion Preview</string>
+    <string name="you_send">you send</string>
+    <string name="from_your_coinbase_account">From your Coinbase account</string>
+    <string name="you_receive">you receive</string>
+    <string name="to_dash_wallet_on_this_device">To Dash wallet on this device</string>
+    <string name="to_your_coinbase_account">to your Coinbase account</string>
+    <string name="purchase">Purchase</string>
+    <string name="coinbase_fee">Coinbase Fee</string>
+    <string name="total">Total</string>
 </resources>

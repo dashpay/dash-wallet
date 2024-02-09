@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,24 +14,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package org.dash.wallet.integrations.maya.ui.convert_currency.model
 
-package org.dash.wallet.integrations.maya.utils
+import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 
-import org.bitcoinj.core.NetworkParameters
-
-object MayaConstants {
-    const val DEFAULT_EXCHANGE_CURRENCY = "USD"
-
-    private const val MAINNET_BASE_URL = "https://midgard.mayachain.info/v2/"
-
-    /**
-     * https://exchangerate.host/#/docs
-     */
-    const val EXCHANGERATE_BASE_URL = "https://api.exchangerate.host/"
-
-    fun getBaseUrl(params: NetworkParameters): String {
-        return MAINNET_BASE_URL
-    }
-    const val VALUE_ZERO = "0"
-    const val MIN_USD_AMOUNT = "2"
+sealed class PaymentMethodsUiState {
+    data class Success(val paymentMethodsList: List<PaymentMethod>): PaymentMethodsUiState()
+    data class Error(val isError:Boolean): PaymentMethodsUiState()
+    data class LoadingState(val isLoading:Boolean): PaymentMethodsUiState()
 }
