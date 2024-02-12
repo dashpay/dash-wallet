@@ -147,16 +147,26 @@ class GiftCardDetailsViewModel @Inject constructor(
             when (val response = getGiftCardByTxid(txid)) {
                 is ResponseResource.Success -> {
                     val giftCard = response.value!!
-                    if (giftCard.status == "paid" || giftCard.status == "fulfilled") {
-                        if (!giftCard.cardNumber.isNullOrEmpty()) {
-                            cancelTicker()
-                            updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
-                            if (!giftCard.barcodeUrl.isNullOrEmpty()) {
-                                saveBarcode(giftCard.barcodeUrl)
+                    when (giftCard.status) {
+                        "unpaid" -> {
+                            // TODO: handle
+                        }
+                        "paid" -> {
+                            // TODO: handle
+                        }
+                        "fulfilled" -> {
+                            if (!giftCard.cardNumber.isNullOrEmpty()) {
+                                cancelTicker()
+                                updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
+                                if (!giftCard.barcodeUrl.isNullOrEmpty()) {
+                                    saveBarcode(giftCard.barcodeUrl)
+                                }
                             }
                         }
+                        "rejected" -> {
+                            // TODO: handle
+                        }
                     }
-                    // TODO: would status: "rejected" be handled here or in the .Failure section below?
                 }
 
                 is ResponseResource.Failure -> {
