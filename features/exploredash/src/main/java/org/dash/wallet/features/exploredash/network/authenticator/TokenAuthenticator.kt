@@ -45,8 +45,8 @@ class TokenAuthenticator @Inject constructor(
                 when (val tokenResponse = getUpdatedToken()) {
                     is ResponseResource.Success -> {
                         tokenResponse.value?.let {
-                            config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
-                            config.set(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
+                            config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
+                            config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
                             response.request.newBuilder()
                                 .header("Authorization", "Bearer ${it.accessToken}")
                                 .build()
@@ -54,8 +54,8 @@ class TokenAuthenticator @Inject constructor(
                     }
 
                     else -> {
-                        config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
-                        config.set(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
+                        config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
+                        config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
                         null
                     }
                 }
@@ -64,7 +64,7 @@ class TokenAuthenticator @Inject constructor(
     }
 
     private suspend fun getUpdatedToken(): ResponseResource<RefreshTokenResponse?> {
-        val refreshToken = config.get(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN) ?: ""
+        val refreshToken = config.getSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN) ?: ""
         return safeApiCall { tokenApi.refreshToken(RefreshTokenRequest(refreshToken = refreshToken)) }
     }
 }
