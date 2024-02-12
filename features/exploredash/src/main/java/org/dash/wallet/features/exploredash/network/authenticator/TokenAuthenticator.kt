@@ -25,6 +25,7 @@ import okhttp3.Response
 import okhttp3.Route
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
+import org.dash.wallet.features.exploredash.data.ctxspend.model.RefreshTokenRequest
 import org.dash.wallet.features.exploredash.data.ctxspend.model.RefreshTokenResponse
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendTokenApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
@@ -63,8 +64,7 @@ class TokenAuthenticator @Inject constructor(
     }
 
     private suspend fun getUpdatedToken(): ResponseResource<RefreshTokenResponse?> {
-        val accessToken = config.get(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN) ?: ""
         val refreshToken = config.get(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN) ?: ""
-        return safeApiCall { tokenApi.refreshToken(refreshToken = refreshToken) }
+        return safeApiCall { tokenApi.refreshToken(RefreshTokenRequest(refreshToken = refreshToken)) }
     }
 }
