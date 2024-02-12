@@ -56,6 +56,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.transactions.TransactionRowView
+import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -136,8 +137,8 @@ class MainViewModel @Inject constructor(
     companion object {
         private const val THROTTLE_DURATION = 500L
         private const val DIRECTION_KEY = "tx_direction"
-        private const val TIME_SKEW_TOLERANCE = 3600 // seconds (1 hour)
-        private const val TIME_SKEW_TOLERANCE_COINJOIN = 2 // seconds
+        private const val TIME_SKEW_TOLERANCE = 3600000 // seconds (1 hour)
+        private const val TIME_SKEW_TOLERANCE_COINJOIN = 4000 // seconds
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
 
@@ -387,16 +388,13 @@ class MainViewModel @Inject constructor(
 
     suspend fun getDeviceTimeSkew(): Pair<Boolean, Long> {
         return try {
-            val systemTimeMillis = System.currentTimeMillis()
-            val result = HTTP_CLIENT.head("https://www.dash.org/")
-            val networkTime = result.headers.getDate("date")?.time
-            requireNotNull(networkTime)
+            val timeSkew = getTimeSkew()
             val maxAllowedTimeSkew = if (coinJoinConfig.getMode() == CoinJoinMode.NONE) {
                 TIME_SKEW_TOLERANCE
             } else {
                 TIME_SKEW_TOLERANCE_COINJOIN
             }
-            val timeSkew = abs(systemTimeMillis - networkTime) / 1000
+            coinJoinService.updateTimeSkew(timeSkew)
             return Pair(timeSkew > maxAllowedTimeSkew, timeSkew)
         } catch (ex: Exception) {
             // Ignore errors

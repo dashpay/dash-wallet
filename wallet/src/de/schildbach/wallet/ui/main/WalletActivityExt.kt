@@ -100,7 +100,8 @@ object WalletActivityExt {
             val coinJoinOn = viewModel.getCoinJoinMode() != CoinJoinMode.NONE
             if (isTimeSkewed && (!timeSkewDialogShown || coinJoinOn)) {
                 timeSkewDialogShown = true
-                showTimeSkewAlertDialog(timeSkew, coinJoinOn)
+                // add 1 to round up so 2.2 seconds appears as 3
+                showTimeSkewAlertDialog(1 + timeSkew / 1000, coinJoinOn)
             }
         }
     }

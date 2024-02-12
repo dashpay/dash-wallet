@@ -25,6 +25,7 @@ import com.google.common.base.Stopwatch
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -66,15 +67,12 @@ import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.services.BlockchainStateProvider
-import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.head
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.abs
 
 enum class CoinJoinMode {
     NONE,
@@ -91,6 +89,7 @@ interface CoinJoinService {
     suspend fun getMixingState(): MixingStatus
     fun observeMixingState(): Flow<MixingStatus>
     fun observeMixingProgress(): Flow<Double>
+    fun updateTimeSkew(timeSkew: Long)
 }
 
 enum class MixingStatus {
@@ -117,7 +116,7 @@ class CoinJoinMixingService @Inject constructor(
         const val DEFAULT_SESSIONS = 4
         const val DEFAULT_DENOMINATIONS_GOAL = 50
         const val DEFAULT_DENOMINATIONS_HARDCAP = 300
-        const val MAX_ALLOWED_TIMESKEW = 2000L // 2 seconds
+        const val MAX_ALLOWED_TIMESKEW = 4000L // 4 seconds
 
         // these are not for production
         val FAST_MIXING_DENOMINATIONS_REMOVE = listOf<Denomination>() // Denomination.THOUSANDTH)
@@ -162,7 +161,7 @@ class CoinJoinMixingService @Inject constructor(
                 // Time has changed, handle the change here
                 log.info("Time or Time Zone changed")
                 coroutineScope.launch {
-                    updateTimeSkew(getTimeSkew())
+                    updateTimeSkewInternal(getTimeSkew())
                 }
             }
         }
@@ -218,7 +217,14 @@ class CoinJoinMixingService @Inject constructor(
             .launchIn(coroutineScope)
     }
 
-    private suspend fun updateTimeSkew(timeSkew: Long) {
+    /** updates timeSkew in #[coroutineScope] */
+    override fun updateTimeSkew(timeSkew: Long) {
+        coroutineScope.launch {
+            updateTimeSkewInternal(timeSkew)
+        }
+    }
+
+     suspend fun updateTimeSkewInternal(timeSkew: Long) {
         updateState(config.getMode(), timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
     }
 
@@ -247,10 +253,14 @@ class CoinJoinMixingService @Inject constructor(
             else -> false
         }
 
-        log.info("coinjoin: mixing can occur: $hasBalanceLeftToMix = balance: (${anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())} && canDenominate: $canDenominate) || partially-mixed: $hasPartiallyMixedCoins")
+        log.info(
+            "coinjoin: mixing can occur: $hasBalanceLeftToMix = balance: (${anonBalance.isGreaterThan(
+                CoinJoin.getSmallestDenomination()
+            )} && canDenominate: $canDenominate) || partially-mixed: $hasPartiallyMixedCoins"
+        )
         updateState(
             config.getMode(),
-            timeSkew,
+            getTimeSkew(),
             hasBalanceLeftToMix,
             networkStatus,
             isSynced,
@@ -268,13 +278,14 @@ class CoinJoinMixingService @Inject constructor(
     ) {
         updateMutex.lock()
         log.info(
-            "coinjoin-old-state: ${this.mode}, ${this.timeSkew / 1000}s, ${this.hasAnonymizableBalance}, ${this.networkStatus}, synced: ${this.isSynced} ${blockChain != null}"
+            "coinjoin-old-state: ${this.mode}, ${this.timeSkew}ms, ${this.hasAnonymizableBalance}, ${this.networkStatus}, synced: ${this.isSynced} ${blockChain != null}"
         )
         try {
             setBlockchain(blockChain)
             log.info(
-                "coinjoin-new-state: $mode, ${timeSkew / 1000}s, $hasAnonymizableBalance, $networkStatus, synced: $isSynced, ${blockChain != null}"
+                "coinjoin-new-state: $mode, $timeSkew ms, $hasAnonymizableBalance, $networkStatus, synced: $isSynced, ${blockChain != null}"
             )
+            log.info("coinjoin-Current timeskew: ${getTimeSkew()}")
             this.networkStatus = networkStatus
             this.hasAnonymizableBalance = hasAnonymizableBalance
             this.isSynced = isSynced
@@ -334,24 +345,6 @@ class CoinJoinMixingService @Inject constructor(
 
     private suspend fun updateNetworkStatus(networkStatus: NetworkStatus) {
         updateState(mode, timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
-    }
-
-    private suspend fun getTimeSkew(): Long {
-        val systemTimeMillis = System.currentTimeMillis()
-        var result = Constants.HTTP_CLIENT.head("https://www.dash.org/")
-        var networkTime = result.headers.getDate("date")?.time
-        if (networkTime == null) {
-            result = Constants.HTTP_CLIENT.head("https://insight.dash.org/insight")
-            networkTime = result.headers.getDate("date")?.time
-        }
-        requireNotNull(networkTime)
-        if (networkStatus == NetworkStatus.CONNECTED) {
-            val peerList = walletDataProvider.wallet!!.context.peerGroup.connectedPeers
-            peerList.forEach { peer ->
-                peer.lastPingTime
-            }
-        }
-        return abs(systemTimeMillis - networkTime)
     }
 
     private suspend fun updateMode(mode: CoinJoinMode) {
@@ -532,6 +525,8 @@ class CoinJoinMixingService @Inject constructor(
         } else {
             // run this on a different thread?
             val asyncStart = coroutineScope.async(Dispatchers.IO) {
+                // though coroutineScope is on a Context propogated thread, we still need this
+                org.bitcoinj.core.Context.propagate(walletDataProvider.wallet!!.context)
                 coinJoinManager?.initMasternodeGroup(blockChain)
                 clientManager.doAutomaticDenominating()
             }
