@@ -163,7 +163,6 @@
 
 
     <!-- purchase_gift_card -->
-    <!-- TODO: marked as non-translatable until gift cards are re-integrated -->
     <string name="purchase_gift_card_at">at</string>
     <string name="purchase_gift_card_min">Min: %s</string>
     <string name="purchase_gift_card_max">Max: %s</string>

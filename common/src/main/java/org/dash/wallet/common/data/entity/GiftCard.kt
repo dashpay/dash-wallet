@@ -21,7 +21,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.google.zxing.BarcodeFormat
 import org.bitcoinj.core.Sha256Hash
-// TODO: need migration for 12->13 for addition of id column?
+
 @Entity(tableName = "gift_cards")
 data class GiftCard(
     @PrimaryKey var txId: Sha256Hash,
