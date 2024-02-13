@@ -25,6 +25,7 @@ import org.bitcoinj.core.Sha256Hash
 @Entity(tableName = "gift_cards")
 data class GiftCard(
     @PrimaryKey var txId: Sha256Hash,
+    var id: String? = "",
     var merchantName: String = "",
     var price: Double = 0.0,
     var number: String? = null,

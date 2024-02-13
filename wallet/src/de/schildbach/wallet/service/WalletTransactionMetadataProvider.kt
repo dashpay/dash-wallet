@@ -42,7 +42,7 @@ import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.decodeBitmap
-import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
+import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -154,7 +154,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         var transactionMetadata: TransactionMetadata
         updateAndInsertIfNotExist(txId) {
             transactionMetadata = it.copy(
-                service = ServiceName.DashDirect,
+                service = ServiceName.CTXSpend,
                 taxCategory = TaxCategory.Expense
             )
             transactionMetadataDao.update(transactionMetadata)
@@ -336,7 +336,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                                     metadata.icon = bitmaps[iconId]
                                 }
 
-                                if (metadata.service == ServiceName.DashDirect) {
+                                if (metadata.service == ServiceName.CTXSpend) {
                                     metadata.title = giftCards[metadata.txId]?.merchantName
                                 }
                             }

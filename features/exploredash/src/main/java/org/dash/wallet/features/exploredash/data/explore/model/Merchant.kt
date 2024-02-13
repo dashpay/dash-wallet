@@ -46,7 +46,7 @@ data class Merchant(
     var addDate: String? = "",
     var updateDate: String? = "",
     var paymentMethod: String? = "",
-    var merchantId: Long? = null,
+    var merchantId: String? = null,
     @Ignore var minCardPurchase: Double? = null,
     @Ignore var maxCardPurchase: Double? = null,
     @Ignore var savingsPercentage: Double? = null,

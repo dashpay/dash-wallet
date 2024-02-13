@@ -220,7 +220,7 @@ class MainViewModel @Inject constructor(
         )
 
         if (direction == TxFilterType.GIFT_CARD) {
-            analytics.logEvent(AnalyticsConstants.DashDirect.FILTER_GIFT_CARD, mapOf())
+            analytics.logEvent(AnalyticsConstants.DashSpend.FILTER_GIFT_CARD, mapOf())
         }
     }
 
@@ -356,7 +356,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
-        return metadata[transactions.first().txId]?.service == ServiceName.DashDirect
+        return metadata[transactions.first().txId]?.service == ServiceName.CTXSpend
     }
 
     /**

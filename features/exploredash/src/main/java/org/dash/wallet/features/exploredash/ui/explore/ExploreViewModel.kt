@@ -447,7 +447,7 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun openAllMerchantLocations(merchantId: Long, source: String) {
+    fun openAllMerchantLocations(merchantId: String?, source: String) {
         logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_SHOW_ALL_LOCATIONS)
         _screenState.postValue(ScreenState.MerchantLocations)
         this.allMerchantLocationsJob?.cancel()
@@ -464,7 +464,7 @@ class ExploreViewModel @Inject constructor(
                     val limitResults = _isLocationEnabled.value != true || selectedTerritory.value?.isNotEmpty() == true
                     val limit = if (limitResults) 100 else -1
                     exploreData.observeMerchantLocations(
-                        merchantId,
+                        merchantId!!,
                         source,
                         selectedTerritory.value!!,
                         "",

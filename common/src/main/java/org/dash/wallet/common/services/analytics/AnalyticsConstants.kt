@@ -184,16 +184,16 @@ object AnalyticsConstants {
         const val MERCHANT_DETAILS_SCROLL_UP = "explore_merchant_details_scroll_up"
     }
 
-    object DashDirect {
-        const val CREATE_ACCOUNT = "dashdirect_btn_create"
-        const val LOGIN = "dashdirect_btn_login"
-        const val SUCCESSFUL_LOGIN = "dashdirect_success_login"
-        const val UNSUCCESSFUL_LOGIN = "dashdirect_not_success_login"
-        const val SUCCESSFUL_PURCHASE = "dashdirect_success_purchase"
-        const val PURCHASE_AMOUNT = "dashdirect_purchase_amount"
-        const val DISCOUNT_AMOUNT = "dashdirect_discount_amount"
-        const val MERCHANT_NAME = "dashdirect_merchant_name"
-        const val HOW_TO_USE = "dashdirect_btn_how_to_use"
+    object DashSpend {
+        const val CREATE_ACCOUNT = "dashspend_btn_create"
+        const val LOGIN = "dashspend_btn_login"
+        const val SUCCESSFUL_LOGIN = "dashspend_success_login"
+        const val UNSUCCESSFUL_LOGIN = "dashspend_not_success_login"
+        const val SUCCESSFUL_PURCHASE = "dashspend_success_purchase"
+        const val PURCHASE_AMOUNT = "dashspend_purchase_amount"
+        const val DISCOUNT_AMOUNT = "dashspend_discount_amount"
+        const val MERCHANT_NAME = "dashspend_merchant_name"
+        const val HOW_TO_USE = "dashspend_btn_how_to_use"
         const val FILTER_GIFT_CARD = "home_transaction_filter_gift_card"
         const val DETAILS_GIFT_CARD = "home_transaction_details_gift_card"
     }

@@ -78,7 +78,7 @@ import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants;
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants;
 import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
@@ -106,7 +106,6 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -382,7 +381,7 @@ public class WalletApplication extends MultiDexApplication
 
         initUphold();
         initCoinbase();
-        initDashDirect();
+        initDashSpend();
     }
 
     private void initUphold() {
@@ -403,8 +402,8 @@ public class WalletApplication extends MultiDexApplication
         CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
     }
 
-    private void initDashDirect() {
-        DashDirectConstants.CLIENT_ID = BuildConfig.DASHDIRECT_CLIENT_ID;
+    private void initDashSpend() {
+        CTXSpendConstants.CLIENT_ID = BuildConfig.CTXSPEND_CLIENT_ID;
     }
 
     @TargetApi(Build.VERSION_CODES.O)
