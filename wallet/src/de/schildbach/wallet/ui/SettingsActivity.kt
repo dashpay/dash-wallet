@@ -27,6 +27,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
@@ -172,6 +173,10 @@ class SettingsActivity : LockScreenActivity() {
                     binding.coinjoinSubtitleIcon.isVisible = true
                 }
             }
+        }
+
+        if (Constants.DASHPAY_DISABLED) {
+            binding.votingDashPay.isVisible = false
         }
     }
 

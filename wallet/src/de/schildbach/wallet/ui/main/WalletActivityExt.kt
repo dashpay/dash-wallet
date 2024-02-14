@@ -37,6 +37,7 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI.onNavDestinationSelected
 import androidx.navigation.ui.NavigationUI.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet_test.R
@@ -92,6 +93,9 @@ object WalletActivityExt {
         }
         navController.addOnDestinationChangedListener { _, _, arguments ->
             navView.isVisible = arguments?.getBoolean("ShowNavBar", false) == true
+        }
+        if (Constants.DASHPAY_DISABLED) {
+            navView.menu.findItem(R.id.contactsFragment).isEnabled = false
         }
     }
 
