@@ -116,10 +116,19 @@ class CoinJoinMixingService @Inject constructor(
         const val DEFAULT_SESSIONS = 4
         const val DEFAULT_DENOMINATIONS_GOAL = 50
         const val DEFAULT_DENOMINATIONS_HARDCAP = 300
-        const val MAX_ALLOWED_TIMESKEW = 4000L // 4 seconds
+        const val MAX_ALLOWED_AHEAD_TIMESKEW = 5000L // 5 seconds
+        const val MAX_ALLOWED_BEHIND_TIMESKEW = 20000L // 20 seconds
 
         // these are not for production
-        val FAST_MIXING_DENOMINATIONS_REMOVE = listOf<Denomination>() // Denomination.THOUSANDTH)
+        val FAST_MIXING_DENOMINATIONS_REMOVE = listOf<Denomination>() // Denomination.THOUSANDTH
+
+        fun isInsideTimeSkewBounds(timeSkew: Long): Boolean {
+            return if (timeSkew > 0) {
+                timeSkew < MAX_ALLOWED_AHEAD_TIMESKEW
+            } else {
+                (-timeSkew) < MAX_ALLOWED_BEHIND_TIMESKEW
+            }
+        }
     }
 
     private val coinJoinManager: CoinJoinManager?
@@ -148,7 +157,7 @@ class CoinJoinMixingService @Inject constructor(
     private var networkStatus: NetworkStatus = NetworkStatus.UNKNOWN
     private var isSynced = false
     private var hasAnonymizableBalance: Boolean = false
-    private var timeSkew: Long = Long.MIN_VALUE
+    private var timeSkew: Long = 0L
 
     // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
     private val updateMutex = Mutex(locked = false)
@@ -292,7 +301,7 @@ class CoinJoinMixingService @Inject constructor(
             this.mode = mode
             this.timeSkew = timeSkew
 
-            if (mode == CoinJoinMode.NONE || timeSkew > MAX_ALLOWED_TIMESKEW) {
+            if (mode == CoinJoinMode.NONE || !isInsideTimeSkewBounds(timeSkew)) {
                 updateMixingState(MixingStatus.NOT_STARTED)
             } else {
                 configureMixing()

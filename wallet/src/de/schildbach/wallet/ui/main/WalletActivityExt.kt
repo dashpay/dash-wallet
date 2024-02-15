@@ -45,6 +45,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog.Companion.create
 import org.dash.wallet.common.util.openCustomTab
+import kotlin.math.abs
 
 object WalletActivityExt {
     private const val STORAGE_TOLERANCE = 500 // MB
@@ -101,7 +102,7 @@ object WalletActivityExt {
             if (isTimeSkewed && (!timeSkewDialogShown || coinJoinOn)) {
                 timeSkewDialogShown = true
                 // add 1 to round up so 2.2 seconds appears as 3
-                showTimeSkewAlertDialog(1 + timeSkew / 1000, coinJoinOn)
+                showTimeSkewAlertDialog((if (timeSkew > 0) 1 else -1) + timeSkew / 1000L, coinJoinOn)
             }
         }
     }
@@ -179,7 +180,8 @@ object WalletActivityExt {
             R.drawable.ic_warning,
             getString(R.string.wallet_timeskew_dialog_title),
             if (coinJoin) {
-                getString(R.string.wallet_coinjoin_timeskew_dialog_msg, diffSeconds)
+                val position = getString(if (diffSeconds > 0) R.string.timeskew_ahead else R.string.timeskew_behind)
+                getString(R.string.wallet_coinjoin_timeskew_dialog_msg, position, abs(diffSeconds))
             } else {
                 getString(R.string.wallet_timeskew_dialog_msg, diffSeconds / 1000)
             },

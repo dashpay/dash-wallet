@@ -54,5 +54,5 @@ suspend fun getTimeSkew(): Long {
         requireNotNull(networkTime)
     }
     val systemTimeMillis = System.currentTimeMillis()
-    return abs(systemTimeMillis - networkTime)
+    return systemTimeMillis - networkTime
 }

@@ -97,17 +97,15 @@ import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
-import org.dash.wallet.common.util.Constants.HTTP_CLIENT
-import org.dash.wallet.common.util.head
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.slf4j.LoggerFactory
+import java.lang.Math.abs
 import java.text.DecimalFormat
 import java.util.Currency
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.collections.set
-import kotlin.math.abs
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
@@ -138,7 +136,9 @@ class MainViewModel @Inject constructor(
         private const val THROTTLE_DURATION = 500L
         private const val DIRECTION_KEY = "tx_direction"
         private const val TIME_SKEW_TOLERANCE = 3600000 // seconds (1 hour)
-        private const val TIME_SKEW_TOLERANCE_COINJOIN = 4000 // seconds
+        private const val TIME_SKEW_AHEAD_TOLERANCE_COINJOIN = 5000 // 5 seconds
+        private const val TIME_SKEW_BEHIND_TOLERANCE_COINJOIN = 20000 // 20 seconds
+
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
 
@@ -392,10 +392,11 @@ class MainViewModel @Inject constructor(
             val maxAllowedTimeSkew = if (coinJoinConfig.getMode() == CoinJoinMode.NONE) {
                 TIME_SKEW_TOLERANCE
             } else {
-                TIME_SKEW_TOLERANCE_COINJOIN
+                if (timeSkew > 0) TIME_SKEW_AHEAD_TOLERANCE_COINJOIN else TIME_SKEW_BEHIND_TOLERANCE_COINJOIN
             }
             coinJoinService.updateTimeSkew(timeSkew)
-            return Pair(timeSkew > maxAllowedTimeSkew, timeSkew)
+            log.info("timeskew: {} ms", timeSkew)
+            return Pair(kotlin.math.abs(timeSkew) > maxAllowedTimeSkew, timeSkew)
         } catch (ex: Exception) {
             // Ignore errors
             Pair(false, 0)
