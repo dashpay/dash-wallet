@@ -45,6 +45,8 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.MAX_ALLOWED_AHEAD_TIMESKEW
+import de.schildbach.wallet.service.MAX_ALLOWED_BEHIND_TIMESKEW
 import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
@@ -100,7 +102,7 @@ import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.slf4j.LoggerFactory
-import java.lang.Math.abs
+import kotlin.math.abs
 import java.text.DecimalFormat
 import java.util.Currency
 import java.util.Locale
@@ -135,9 +137,7 @@ class MainViewModel @Inject constructor(
     companion object {
         private const val THROTTLE_DURATION = 500L
         private const val DIRECTION_KEY = "tx_direction"
-        private const val TIME_SKEW_TOLERANCE = 3600000 // seconds (1 hour)
-        private const val TIME_SKEW_AHEAD_TOLERANCE_COINJOIN = 5000 // 5 seconds
-        private const val TIME_SKEW_BEHIND_TOLERANCE_COINJOIN = 20000 // 20 seconds
+        private const val TIME_SKEW_TOLERANCE = 3600000L // seconds (1 hour)
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
@@ -389,14 +389,14 @@ class MainViewModel @Inject constructor(
     suspend fun getDeviceTimeSkew(): Pair<Boolean, Long> {
         return try {
             val timeSkew = getTimeSkew()
-            val maxAllowedTimeSkew = if (coinJoinConfig.getMode() == CoinJoinMode.NONE) {
+            val maxAllowedTimeSkew: Long = if (coinJoinConfig.getMode() == CoinJoinMode.NONE) {
                 TIME_SKEW_TOLERANCE
             } else {
-                if (timeSkew > 0) TIME_SKEW_AHEAD_TOLERANCE_COINJOIN else TIME_SKEW_BEHIND_TOLERANCE_COINJOIN
+                if (timeSkew > 0) MAX_ALLOWED_AHEAD_TIMESKEW else MAX_ALLOWED_BEHIND_TIMESKEW
             }
             coinJoinService.updateTimeSkew(timeSkew)
             log.info("timeskew: {} ms", timeSkew)
-            return Pair(kotlin.math.abs(timeSkew) > maxAllowedTimeSkew, timeSkew)
+            return Pair(abs(timeSkew) > maxAllowedTimeSkew, timeSkew)
         } catch (ex: Exception) {
             // Ignore errors
             Pair(false, 0)

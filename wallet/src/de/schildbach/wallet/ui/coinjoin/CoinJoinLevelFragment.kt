@@ -128,7 +128,7 @@ class CoinJoinLevelFragment : Fragment(R.layout.fragment_coinjoin_level) {
             val settingsIntent = Intent(Settings.ACTION_DATE_SETTINGS)
             val hasSettings = requireActivity().packageManager.resolveActivity(settingsIntent, 0) != null
             lifecycleScope.launch {
-                if (viewModel.isTimeSkewed()) {
+                if (viewModel.isTimeSkewedForCoinJoin()) {
                     AdaptiveDialog.create(
                         R.drawable.ic_coinjoin,
                         getString(R.string.coinjoin),

@@ -5,6 +5,7 @@ import org.dash.wallet.common.util.head
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.net.SocketTimeoutException
 import kotlin.math.abs
 
 private fun queryNtpTime(server: String): Long? {
@@ -42,7 +43,12 @@ private fun queryNtpTime(server: String): Long? {
 }
 
 suspend fun getTimeSkew(): Long {
-    var networkTime = queryNtpTime("pool.ntp.org")
+    var networkTime: Long? = null
+    try {
+        networkTime = queryNtpTime("pool.ntp.org")
+    } catch (e: SocketTimeoutException) {
+        // swallow, the next block will use alternate method
+    }
     if (networkTime == null) {
         var result = Constants.HTTP_CLIENT.head("https://www.dash.org/")
 

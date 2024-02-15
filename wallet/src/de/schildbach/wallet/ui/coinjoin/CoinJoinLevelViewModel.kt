@@ -22,23 +22,24 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.MAX_ALLOWED_AHEAD_TIMESKEW
+import de.schildbach.wallet.service.MAX_ALLOWED_BEHIND_TIMESKEW
+import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.head
 import javax.inject.Inject
-import kotlin.math.abs
 
 @HiltViewModel
 open class CoinJoinLevelViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val coinJoinConfig: CoinJoinConfig,
+    private val coinJoinService: CoinJoinService,
     private var networkState: NetworkStateInt
 ) : ViewModel() {
 
@@ -69,15 +70,17 @@ open class CoinJoinLevelViewModel @Inject constructor(
         analytics.logEvent(event, mapOf())
     }
 
-     suspend fun isTimeSkewed(): Boolean {
-        val systemTimeMillis = System.currentTimeMillis()
-        var result = Constants.HTTP_CLIENT.head("https://www.dash.org/")
-        var networkTime = result.headers.getDate("date")?.time
-        if (networkTime == null) {
-            result = Constants.HTTP_CLIENT.head("https://insight.dash.org/insight")
-            networkTime = result.headers.getDate("date")?.time
+    suspend fun isTimeSkewedForCoinJoin(): Boolean {
+        return try {
+            val timeSkew = getTimeSkew()
+            coinJoinService.updateTimeSkew(timeSkew)
+            if (timeSkew > 0) {
+                timeSkew > MAX_ALLOWED_AHEAD_TIMESKEW
+            } else {
+                -timeSkew > MAX_ALLOWED_BEHIND_TIMESKEW
+            }
+        } catch (e: Exception) {
+            false
         }
-        requireNotNull(networkTime)
-        return abs(systemTimeMillis - networkTime) > 2000L
     }
 }

@@ -100,6 +100,9 @@ enum class MixingStatus {
     ERROR // An error stopped the mixing process
 }
 
+const val MAX_ALLOWED_AHEAD_TIMESKEW = 5000L // 5 seconds
+const val MAX_ALLOWED_BEHIND_TIMESKEW = 20000L // 20 seconds
+
 @Singleton
 class CoinJoinMixingService @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -116,8 +119,6 @@ class CoinJoinMixingService @Inject constructor(
         const val DEFAULT_SESSIONS = 4
         const val DEFAULT_DENOMINATIONS_GOAL = 50
         const val DEFAULT_DENOMINATIONS_HARDCAP = 300
-        const val MAX_ALLOWED_AHEAD_TIMESKEW = 5000L // 5 seconds
-        const val MAX_ALLOWED_BEHIND_TIMESKEW = 20000L // 20 seconds
 
         // these are not for production
         val FAST_MIXING_DENOMINATIONS_REMOVE = listOf<Denomination>() // Denomination.THOUSANDTH
@@ -233,7 +234,7 @@ class CoinJoinMixingService @Inject constructor(
         }
     }
 
-     suspend fun updateTimeSkewInternal(timeSkew: Long) {
+    suspend fun updateTimeSkewInternal(timeSkew: Long) {
         updateState(config.getMode(), timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
     }
 
