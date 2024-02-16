@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "3c7ef641db3c5fb727eeffe5859fdc8c",
+    "identityHash": "17032e7bcfa85e024acb40f45fe56ab6",
     "entities": [
       {
         "tableName": "merchant",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deeplink` TEXT, `plusCode` TEXT, `addDate` TEXT, `updateDate` TEXT, `paymentMethod` TEXT, `merchantId` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `website` TEXT, `phone` TEXT, `territory` TEXT, `city` TEXT, `source` TEXT, `sourceId` TEXT, `logoLocation` TEXT, `googleMaps` TEXT, `coverImage` TEXT, `type` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deeplink` TEXT, `plusCode` TEXT, `addDate` TEXT, `updateDate` TEXT, `paymentMethod` TEXT, `merchantId` TEXT, `redeemType` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `website` TEXT, `phone` TEXT, `territory` TEXT, `city` TEXT, `source` TEXT, `sourceId` TEXT, `logoLocation` TEXT, `googleMaps` TEXT, `coverImage` TEXT, `type` TEXT)",
         "fields": [
           {
             "fieldPath": "deeplink",
@@ -41,6 +41,12 @@
           {
             "fieldPath": "merchantId",
             "columnName": "merchantId",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "redeemType",
+            "columnName": "redeemType",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -428,7 +434,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3c7ef641db3c5fb727eeffe5859fdc8c')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '17032e7bcfa85e024acb40f45fe56ab6')"
     ]
   }
 }
