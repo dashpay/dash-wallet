@@ -190,7 +190,7 @@
     <string name="purchase_in_the_payment_section">In the payment section, enter your digital gift card number into the gift card field.</string>
     <string name="purchase_powered_by">Powered by</string>
     <string name="insufficient_money_title">Not enough coins</string>
-    <string name="insufficient_money_msg">The amount of coins in the wallet is too small for sweeping.</string>
+    <string name="insufficient_money_msg">Insufficient funds</string>
     <string name="send_coins_error_msg">Problem sending coins!</string>
     <string name="gift_card_barcode_failed">Failed to load the barcode</string>
     <string name="gift_card_tx_title">Gift card · %s</string>

@@ -43,6 +43,10 @@ import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants.DEFAULT_DISCOUNT
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
+fun min(a: Coin, b: Coin?): Coin {
+    return if (b == null || a < b) a else b
+}
+
 @AndroidEntryPoint
 class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gift_card) {
     private val binding by viewBinding(FragmentPurchaseCtxspendGiftCardBinding::bind)
@@ -103,7 +107,12 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             setCardPurchaseLimits()
             setDiscountHint()
             enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseCoin, true)
-            enterAmountViewModel.setMaxAmount(viewModel.maxCardPurchaseCoin)
+            enterAmountViewModel.setMaxAmount(
+                min(
+                    viewModel.maxCardPurchaseCoin,
+                    viewModel.balanceWithDiscount
+                )
+            )
         }
 
         viewModel.isNetworkAvailable.observe(viewLifecycleOwner) { isConnected ->
@@ -114,13 +123,20 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     private fun setCardPurchaseLimits() {
         viewModel.refreshMinMaxCardPurchaseValues()
         enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseCoin, true)
-        enterAmountViewModel.setMaxAmount(viewModel.maxCardPurchaseCoin)
+        enterAmountViewModel.setMaxAmount(min(viewModel.maxCardPurchaseCoin, viewModel.balanceWithDiscount))
         showCardPurchaseLimits()
     }
 
     private fun showCardPurchaseLimits() {
         val purchaseAmount = enterAmountViewModel.amount.value
         purchaseAmount?.let {
+            val balance = viewModel.balanceWithDiscount
+            balance ?.let {
+                if (purchaseAmount.isGreaterThan(balance)) {
+                    showBalanceError(purchaseAmount.isGreaterThan(balance))
+                    return
+                }
+            }
             if (purchaseAmount.isLessThan(viewModel.minCardPurchaseCoin) ||
                 purchaseAmount.isGreaterThan(viewModel.maxCardPurchaseCoin)
             ) {
@@ -133,6 +149,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 hideDiscountHint()
                 return
             }
+            showBalanceError(purchaseAmount.isGreaterThan(viewModel.balance.value))
         }
 
         binding.minValue.isVisible = false
@@ -159,12 +176,25 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                         )?.toFormattedStringRoundUp() ?: "",
                         GenericUtils.formatPercent(savingsPercentage)
                     )
+                binding.discountValue.setTextColor(resources.getColor(R.color.content_primary))
                 binding.discountValue.isVisible = true
             } else {
                 hideDiscountHint()
             }
         } else {
             hideDiscountHint()
+        }
+    }
+
+    private fun showBalanceError(show: Boolean) {
+        if (show) {
+            binding.discountValue.text = getString(R.string.insufficient_money_msg)
+            binding.discountValue.setTextColor(resources.getColor(R.color.error_red))
+            binding.discountValue.isVisible = true
+            binding.minValue.isVisible = false
+            binding.maxValue.isVisible = false
+        } else {
+            setDiscountHint()
         }
     }
 
