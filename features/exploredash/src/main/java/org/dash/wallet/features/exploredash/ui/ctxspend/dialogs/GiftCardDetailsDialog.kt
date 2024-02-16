@@ -42,7 +42,6 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
