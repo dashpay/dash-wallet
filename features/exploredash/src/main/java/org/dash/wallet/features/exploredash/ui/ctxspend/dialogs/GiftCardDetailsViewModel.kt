@@ -138,6 +138,7 @@ class GiftCardDetailsViewModel @Inject constructor(
         val email = repository.getCTXSpendEmail()
 
         if (!repository.isUserSignedIn() || email.isNullOrEmpty()) {
+            log.error("not logged in to DashSpend while attempting to fetch gift card info")
             error.postValue(CTXSpendException(ResourceString(R.string.log_in_to_ctxspend_account)))
             cancelTicker()
             return
@@ -161,10 +162,29 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 if (!giftCard.barcodeUrl.isNullOrEmpty()) {
                                     saveBarcode(giftCard.barcodeUrl)
                                 }
+                            } else if (!giftCard.redeemUrl.isNullOrEmpty()) {
+                                log.error("CTXSpend returned a redeem url card: not supported")
+                                error.postValue(
+                                    CTXSpendException(
+                                        ResourceString(
+                                            R.string.gift_card_redeem_url_not_supported,
+                                            listOf(giftCard.id, giftCard.paymentId, txid)
+                                        )
+                                    )
+                                )
                             }
                         }
                         "rejected" -> {
                             // TODO: handle
+                            log.error("CTXSpend returned error: rejected")
+                            error.postValue(
+                                CTXSpendException(
+                                    ResourceString(
+                                        R.string.gift_card_rejected,
+                                        listOf(giftCard.id, giftCard.paymentId, txid)
+                                    )
+                                )
+                            )
                         }
                     }
                 }
@@ -177,7 +197,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                     cancelTicker()
                     val message = response.errorBody
                     log.error("CTXSpend returned error: $message")
-                    error.postValue(CTXSpendException(message!!))
+                    error.postValue(CTXSpendException(ResourceString(R.string.gift_card_unknown_error, listOf(txid))))
                 }
             }
         } catch (ex: Exception) {
