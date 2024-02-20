@@ -26,12 +26,11 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@android:color/white"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
-        <LinearLayout
+        <!--LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginRight="68dp"
@@ -52,16 +51,27 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_marginTop="3dp" />
-        </LinearLayout>
+        </LinearLayout-->
+
     </androidx.appcompat.widget.Toolbar>
+
+    <TextView
+        android:id="@+id/title"
+        style="@style/Headline3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:text="@string/maya_crypto_convert_title" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/amount_view_guide"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@id/limit_desc"
-        app:layout_constraintGuide_percent="@dimen/coinbase_convert_amount_top_guide" />
+        app:layout_constraintGuide_percent="0.32" />
 
     <LinearLayout
         android:id="@+id/enter_amount_fragment_placeholder"
@@ -119,13 +129,13 @@
         android:textSize="12sp"
         android:visibility="gone"
         tools:visibility="visible"
-        app:layout_constraintTop_toBottomOf="@id/toolbar" />
+        app:layout_constraintTop_toBottomOf="@id/title" />
 
     <include
         android:id="@+id/auth_limit_banner"
         android:layout_height="46dp"
         android:layout_width="match_parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintTop_toBottomOf="@id/title"
         layout="@layout/authorization_limit_banner"
         android:visibility="gone"
         />

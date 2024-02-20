@@ -30,7 +30,7 @@
         android:clickable="true"
         android:focusable="true">
 
-        <TextView
+        <!--TextView
             android:id="@+id/select_the_coin_title"
             style="@style/Body2.Medium"
             android:layout_width="wrap_content"
@@ -42,9 +42,9 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            tools:visibility="visible" />
+            tools:visibility="visible" /-->
 
-        <ImageView
+        <!--ImageView
             android:id="@+id/convert_form_dash_arrow"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -52,7 +52,7 @@
             android:src="@drawable/ic_grey_200_arrow"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent" /-->
 
         <LinearLayout
             android:id="@+id/syncing_progress_container"
@@ -111,6 +111,25 @@
             app:layout_constraintStart_toStartOf="@+id/convertFromDash_title"
             app:layout_constraintTop_toBottomOf="@+id/convertFromDash_title"
             tools:text="Dash Wallet" />
+
+        <TextView
+            android:id="@+id/amount_crypto"
+            style="@style/Body2.Medium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="1.00 DASH" />
+
+        <TextView
+            android:id="@+id/amount_fiat"
+            style="@style/Caption.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/amount_crypto"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:text="$31.00" />
 
         <androidx.constraintlayout.widget.Group
             android:id="@+id/from_data_group"

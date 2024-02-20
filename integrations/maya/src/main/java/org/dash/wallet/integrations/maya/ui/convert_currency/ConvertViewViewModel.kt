@@ -61,7 +61,7 @@ class ConvertViewViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
-
+    var destinationCurrency: String? = null
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
 
@@ -211,10 +211,10 @@ class ConvertViewViewModel @Inject constructor(
 
     fun setOnSwapDashFromToCryptoClicked(dashToCrypto: Boolean) {
         if (dashToCrypto) {
-            if (walletDataProvider.getWalletBalance().isZero) {
-                userDashAccountEmptyError.call()
-                return
-            }
+//            if (walletDataProvider.getWalletBalance().isZero) {
+//                userDashAccountEmptyError.call()
+//                return
+//            }
         }
         _dashToCrypto.value = dashToCrypto
     }

@@ -76,11 +76,11 @@ class CryptoCurrencyItem @JvmOverloads constructor(
     }
 
     fun setCryptoItemArrowVisibility(isGroupVisible: Boolean) {
-        binding.convertFormDashArrow.isVisible = isGroupVisible
+        // binding.convertFormDashArrow.isVisible = isGroupVisible
     }
     fun setCryptoItemGroupVisibility(isGroupVisible: Boolean) {
         binding.fromDataGroup.isVisible = isGroupVisible
-        binding.selectTheCoinTitle.isVisible = !isGroupVisible
+        // binding.selectTheCoinTitle.isVisible = !isGroupVisible
     }
 
     fun setSyncingVisibility(isGroupVisible: Boolean) {
@@ -101,6 +101,13 @@ class CryptoCurrencyItem @JvmOverloads constructor(
 
     fun setConvertItemServiceName(@StringRes name: Int) {
         binding.convertFromDashSubtitle.setText(name)
+    }
+
+    fun setConvertItemAmounts(amountCrypto: String, amountFiat: String) {
+        binding.amountFiat.isVisible = true
+        binding.amountCrypto.isVisible = true
+        binding.amountFiat.text = amountFiat
+        binding.amountCrypto.text = amountCrypto
     }
 
     fun setConvertItemIcon(url: String?) {
@@ -138,8 +145,8 @@ class CryptoCurrencyItem @JvmOverloads constructor(
 
     fun hideComponents() {
         binding.convertFromDashSubtitle.isVisible = false
-        binding.selectTheCoinTitle.isVisible = false
-        binding.convertFormDashArrow.isVisible = false
+        // binding.selectTheCoinTitle.isVisible = false
+        // binding.convertFormDashArrow.isVisible = false
     }
 
     override fun setEnabled(enabled: Boolean) {

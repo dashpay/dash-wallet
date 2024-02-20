@@ -30,6 +30,7 @@ import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
@@ -45,16 +46,20 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integrations.maya.ui.dialogs.crypto_wallets.CryptoWalletsDialog
 import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewFragment
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentMayaConvertCryptoBinding
+import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.getCoinBaseExchangeRateConversion
-import org.dash.wallet.integrations.maya.ui.convert_currency.model.BaseIdForFiatData
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
+import java.math.BigDecimal
+import java.util.UUID
 
 @AndroidEntryPoint
 class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto) {
@@ -62,6 +67,8 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
     private val viewModel by viewModels<MayaConvertCryptoViewModel>()
     private val convertViewModel by mayaViewModels<ConvertViewViewModel>()
     private val sharedViewModel by mayaViewModels<CoinbaseViewModel>()
+    private val mayaViewModel by viewModels<MayaViewModel>()
+    private val args by navArgs<MayaConvertCryptoFragmentArgs>()
 
     private var loadingDialog: AdaptiveDialog? = null
     private var cryptoWalletsDialog: CryptoWalletsDialog? = null
@@ -77,7 +84,8 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
-        binding.convertView.isSellSwapEnabled = false
+        binding.convertView.isSellSwapEnabled = true
+        convertViewModel.setOnSwapDashFromToCryptoClicked(true)
 
         if (savedInstanceState == null) {
             fragment = ConvertViewFragment.newInstance()
@@ -94,25 +102,25 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             binding.convertView.isEnabled = hasInternet
         }
 
-        viewModel.showLoading.observe(
-            viewLifecycleOwner
-        ) {
-            if (it) {
-                showProgress(R.string.loading)
-            } else {
-                dismissProgress()
-            }
-        }
+//        viewModel.showLoading.observe(
+//            viewLifecycleOwner
+//        ) {
+//            if (it) {
+//                showProgress(R.string.loading)
+//            } else {
+//                dismissProgress()
+//            }
+//        }
 
-        convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) { rate ->
-            rate?.let {
-                binding.toolbarSubtitle.text = getString(
-                    R.string.exchange_rate_template,
-                    Coin.COIN.toPlainString(),
-                    rate.fiat.toFormattedString()
-                )
-            }
-        }
+//        convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) { rate ->
+//            rate?.let {
+//                binding.toolbarSubtitle.text = getString(
+//                    R.string.exchange_rate_template,
+//                    Coin.COIN.toPlainString(),
+//                    rate.fiat.toFormattedString()
+//                )
+//            }
+//        }
 
         convertViewModel.dashToCrypto.value?.let {
             if (it) {
@@ -141,7 +149,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             )
         }
 
-
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
             val message = if (it.isNullOrBlank()) {
                 requireContext().getString(R.string.something_wrong_title)
@@ -166,35 +173,75 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             ).show(requireActivity())
         }
 
-        binding.convertView.setOnCurrencyChooserClicked {
-            lifecycleScope.launch {
-                var list = listOf<AccountDataUIModel>()
-                val selectedCurrencyCode = convertViewModel.selectedCryptoCurrencyAccount.value
-                    ?.coinbaseAccount?.currency ?: convertViewModel.selectedLocalCurrencyCode
+        val poolInfo = mayaViewModel.getPoolInfo(args.currency)
+        val dashPoolInfo = mayaViewModel.getPoolInfo("DASH")
+        convertViewModel.setSelectedCryptoCurrency(
+            AccountDataUIModel(
+                Account(
+                    UUID.nameUUIDFromBytes(args.currency.toByteArray()),
+                    args.currency,
+                    args.currency,
+                    Balance("0", args.currency),
+                    true,
+                    true,
+                    "Wallet",
+                    true
+                ),
+                BigDecimal.ONE,
+                (poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE) / (dashPoolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
+                poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE
+                )
+        )
 
-                cryptoWalletsDialog = CryptoWalletsDialog(selectedCurrencyCode) { index, dialog ->
-                    list.getOrNull(index)?.let {
-                        convertViewModel.setSelectedCryptoCurrency(it)
-                        setConvertViewInput()
-                    }
-                    dialog.dismiss()
-                }
+//        convertViewModel.setSelectedCryptoCurrency(
+//            AccountDataUIModel(
+//                Account(
+//                    UUID.nameUUIDFromBytes(args.currency.toByteArray()),
+//                    "Dash Wallet",
+//                    "DASH",
+//                    Balance("1", "DASH"),
+//                    true,
+//                    true,
+//                    "Wallet",
+//                    true
+//                ),
+//                BigDecimal.ONE,
+//                BigDecimal.ONE,
+//                BigDecimal.ONE
+//            )
+//        )
 
-                if (cryptoWalletsDialog?.isVisible == false) {
-                    cryptoWalletsDialog?.show(parentFragmentManager, "payment_method")
-                    list = viewModel.getUserWalletAccounts(binding.convertView.dashToCrypto)
+        convertViewModel.destinationCurrency = args.currency
 
-                    if (list.isEmpty()) {
-                        if (viewModel.isDeviceConnectedToInternet.value == true) {
-                            cryptoWalletsDialog?.dismissAllowingStateLoss()
-                            showNoAssetsError()
-                        }
-                    } else {
-                        cryptoWalletsDialog?.submitList(list)
-                    }
-                }
-            }
-        }
+//        binding.convertView.setOnCurrencyChooserClicked {
+//            lifecycleScope.launch {
+//                var list = listOf<AccountDataUIModel>()
+//                val selectedCurrencyCode = convertViewModel.selectedCryptoCurrencyAccount.value
+//                    ?.coinbaseAccount?.currency ?: convertViewModel.selectedLocalCurrencyCode
+//
+//                cryptoWalletsDialog = CryptoWalletsDialog(selectedCurrencyCode) { index, dialog ->
+//                    list.getOrNull(index)?.let {
+//                        convertViewModel.setSelectedCryptoCurrency(it)
+//                        setConvertViewInput()
+//                    }
+//                    dialog.dismiss()
+//                }
+//
+//                if (cryptoWalletsDialog?.isVisible == false) {
+//                    cryptoWalletsDialog?.show(parentFragmentManager, "payment_method")
+//                    list = viewModel.getUserWalletAccounts(binding.convertView.dashToCrypto)
+//
+//                    if (list.isEmpty()) {
+//                        if (viewModel.isDeviceConnectedToInternet.value == true) {
+//                            cryptoWalletsDialog?.dismissAllowingStateLoss()
+//                            showNoAssetsError()
+//                        }
+//                    } else {
+//                        cryptoWalletsDialog?.submitList(list)
+//                    }
+//                }
+//            }
+//        }
 
         binding.convertView.setOnSwapClicked {
             convertViewModel.setOnSwapDashFromToCryptoClicked(it)
@@ -209,6 +256,8 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             val hasAmount = !amount.isZero
             binding.youWillReceiveLabel.isVisible = hasAmount
             binding.youWillReceiveValue.isVisible = hasAmount
+            binding.convertView.amountCrypto = amount.toFriendlyString()
+            binding.convertView.amountFiat = "?"
 
             if (hasAmount && !binding.convertView.dashToCrypto) {
                 binding.youWillReceiveValue.text = context?.getString(
@@ -222,7 +271,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             binding.youWillReceiveLabel.isVisible = amount.second.isNotEmpty()
             binding.youWillReceiveValue.isVisible = amount.second.isNotEmpty()
 
-            if (binding.convertView.dashToCrypto) {
+                if (binding.convertView.dashToCrypto) {
                 binding.youWillReceiveValue.text = getString(
                     R.string.fiat_balance_with_currency,
                     amount.first,
@@ -239,32 +288,32 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
         convertViewModel.validSwapValue.observe(viewLifecycleOwner) {
             binding.limitDesc.isGone = true
-            // binding.authLimitBanner.root.isGone = true
+            binding.authLimitBanner.root.isGone = true
             setGuidelinePercent(true)
         }
 
         sharedViewModel.uiState.observe(viewLifecycleOwner) { uiState ->
-            if (uiState.isSessionExpired) {
-                findNavController().popBackStack()
-            } else {
-                // New value received
-                when (uiState.baseIdForFiatModel) {
-                    is BaseIdForFiatData.Success -> {
-                        dismissProgress()
-                        uiState.baseIdForFiatModel.baseIdForFaitDataList.let { list ->
-                            viewModel.setBaseIdForFaitModelCoinBase(list)
-                        }
-                    }
-                    is BaseIdForFiatData.LoadingState -> {
-                        showProgress(R.string.loading)
-                    }
-                    is BaseIdForFiatData.Error -> {
-                        dismissProgress()
-                        // Retry in case of error
-                        // sharedViewModel.getBaseIdForFiatModel()
-                    }
-                }
-            }
+//            if (uiState.isSessionExpired) {
+//                findNavController().popBackStack()
+//            } else {
+//                // New value received
+//                when (uiState.baseIdForFiatModel) {
+//                    is BaseIdForFiatData.Success -> {
+//                        dismissProgress()
+//                        uiState.baseIdForFiatModel.baseIdForFaitDataList.let { list ->
+//                            viewModel.setBaseIdForFaitModelCoinBase(list)
+//                        }
+//                    }
+//                    is BaseIdForFiatData.LoadingState -> {
+//                        showProgress(R.string.loading)
+//                    }
+//                    is BaseIdForFiatData.Error -> {
+//                        dismissProgress()
+//                        // Retry in case of error
+//                        // sharedViewModel.getBaseIdForFiatModel()
+//                    }
+//                }
+//            }
         }
     }
 
@@ -312,8 +361,8 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
     private fun showSwapValueErrorView(swapValueErrorType: SwapValueErrorType) {
         binding.limitDesc.isGone = swapValueErrorType == SwapValueErrorType.NOError
-        // binding.authLimitBanner.root.isVisible = swapValueErrorType == SwapValueErrorType.UnAuthorizedValue
-        // setGuidelinePercent(binding.limitDesc.isGone && binding.authLimitBanner.root.isGone)
+        binding.authLimitBanner.root.isVisible = swapValueErrorType == SwapValueErrorType.UnAuthorizedValue
+        setGuidelinePercent(binding.limitDesc.isGone && binding.authLimitBanner.root.isGone)
         when (swapValueErrorType) {
             SwapValueErrorType.LessThanMin -> setMinAmountErrorMessage()
             SwapValueErrorType.MoreThanMax -> setMaxAmountError()
@@ -376,7 +425,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
     }
 
     private fun setConvertViewInput() {
-        convertViewModel.selectedCryptoCurrencyAccount.value?.let {
+        convertViewModel.selectedCryptoCurrencyAccount.value?.let { it ->
             val accountData = it.coinbaseAccount
             val currency = accountData.currency.lowercase()
             val iconUrl = if (accountData.currency.isNotEmpty()) {
@@ -385,9 +434,16 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                 null
             }
 
+            val address = args.paymentIntent.outputs?.first().let { output ->
+                val memoChunk = output?.script?.chunks?.get(1)!!
+                var memo = String(memoChunk.data!!)
+                val index = memo.indexOfLast { ch -> ch == ':' }
+                memo = memo.substring(index + 1)
+                memo
+            }
             binding.convertView.input = ServiceWallet(
                 it.coinbaseAccount.name,
-                getString(R.string.maya_service_name),
+                address,
                 it.coinbaseAccount.availableBalance.value,
                 it.coinbaseAccount.currency,
                 convertViewModel.selectedLocalExchangeRate.value?.let { rate ->

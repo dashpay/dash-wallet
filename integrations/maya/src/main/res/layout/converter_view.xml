@@ -30,7 +30,7 @@
         android:layout_marginHorizontal="15dp"
         android:paddingVertical="8dp">
 
-        <TextView
+        <!--TextView
             android:id="@+id/from_label"
             style="@style/Overline.Secondary"
             android:layout_width="wrap_content"
@@ -41,45 +41,47 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/convert_from_btn"
             app:layout_constraintTop_toTopOf="@+id/convert_from_btn"
-            app:layout_constraintBottom_toBottomOf="@+id/convert_from_btn" />
+            app:layout_constraintBottom_toBottomOf="@+id/convert_from_btn" /-->
 
         <ImageView
             android:id="@+id/swap_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginVertical="7dp"
-            android:src="@drawable/ic_swap_blue"
-            app:layout_constraintBottom_toTopOf="@+id/to_label"
-            app:layout_constraintStart_toStartOf="@id/from_label"
-            app:layout_constraintEnd_toEndOf="@id/from_label"
-            app:layout_constraintTop_toBottomOf="@+id/from_label" />
+            android:src="@drawable/ic_down_arrow"
+            android:elevation="4dp"
+            app:layout_constraintStart_toStartOf="@id/convert_from_btn"
+            app:layout_constraintEnd_toEndOf="@id/convert_from_btn"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
-        <ImageView
+        <!--ImageView
             android:id="@+id/buy_swap_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginVertical="7dp"
+            android:layout_marginVertical="8dp"
+            android:layout_marginHorizontal="5dp"
             android:visibility="gone"
             tools:visibility="visible"
             android:src="@drawable/ic_grey_buy_swap"
-            app:layout_constraintTop_toBottomOf="@+id/from_label"
-            app:layout_constraintStart_toStartOf="@id/from_label"
-            app:layout_constraintEnd_toEndOf="@id/from_label"
-            app:layout_constraintBottom_toTopOf="@+id/to_label" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" /-->
 
         <org.dash.wallet.integrations.maya.ui.convert_currency.CryptoCurrencyItem
             android:id="@+id/convert_from_btn"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="61dp"
+            android:layout_marginStart="15dp"
             android:background="@color/background_secondary"
-            app:is_crypto_convert_item_arrow_visible="true"
-            app:is_crypto_convert_item_group_visible="false"
+            app:is_crypto_convert_item_arrow_visible="false"
+            app:is_crypto_convert_item_group_visible="true"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <RelativeLayout
+        <!--RelativeLayout
             android:id="@+id/wallet_balance_loading_container"
             android:layout_width="0dp"
             android:layout_height="18dp"
@@ -155,18 +157,18 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
                     android:text="@string/loading" />
-            </LinearLayout>
+            </LinearLayout-->
 
             <!-- keep the container taking up space-->
-            <View
+            <!--View
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:layout_toEndOf="@+id/loading_progress_container"
                 android:visibility="invisible"
                 />
-        </RelativeLayout>
+        </RelativeLayout-->
 
-        <TextView
+        <!--TextView
             android:id="@+id/to_label"
             style="@style/Overline.Secondary"
             android:layout_width="wrap_content"
@@ -176,7 +178,7 @@
             app:layout_constraintBottom_toBottomOf="@+id/convert_to_btn"
             app:layout_constraintStart_toStartOf="@+id/from_label"
             app:layout_constraintEnd_toEndOf="@+id/from_label"
-            app:layout_constraintTop_toTopOf="@+id/convert_to_btn" />
+            app:layout_constraintTop_toTopOf="@+id/convert_to_btn" /-->
 
         <org.dash.wallet.integrations.maya.ui.convert_currency.CryptoCurrencyItem
             android:id="@+id/convert_to_btn"
@@ -185,13 +187,14 @@
             android:layout_marginTop="12dp"
             android:background="@color/background_secondary"
             app:crypto_convert_item_icon="@drawable/ic_dash_blue_filled"
-            tools:crypto_convert_item_service_title="@string/dash_wallet_name"
-            tools:crypto_convert_item_title="@string/dash"
             app:is_crypto_convert_item_arrow_visible="false"
             app:is_crypto_convert_item_group_visible="true"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="1.0"
             app:layout_constraintStart_toStartOf="@+id/convert_from_btn"
-            app:layout_constraintTop_toBottomOf="@+id/wallet_balance_loading_container" />
+            app:layout_constraintTop_toBottomOf="@+id/convert_from_btn"
+            tools:crypto_convert_item_service_title="@string/dash_wallet_name"
+            tools:crypto_convert_item_title="@string/dash" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/wallet_guideline"

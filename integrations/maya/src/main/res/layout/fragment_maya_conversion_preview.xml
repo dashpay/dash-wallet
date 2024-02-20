@@ -16,7 +16,7 @@
         app:navigationIcon="@drawable/ic_arrow_back"
         app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
-        <LinearLayout
+        <!--LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginRight="68dp"
@@ -29,8 +29,18 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:text="@string/conversion_preview" />
-        </LinearLayout>
+        </LinearLayout-->
     </androidx.appcompat.widget.Toolbar>
+    <TextView
+        android:id="@+id/title"
+        style="@style/Headline3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:text="@string/maya_crypto_convert_title" />
 
     <include
         android:id="@+id/content_order_review"

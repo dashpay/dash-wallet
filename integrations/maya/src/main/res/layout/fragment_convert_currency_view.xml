@@ -46,19 +46,46 @@
         app:layout_constraintTop_toTopOf="@id/currency_options"
         tools:visibility="visible">
 
+         <TextView
+             android:id="@+id/front_currency_code"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             style="@style/Headline3.Medium"
+             android:visibility="gone"
+             tools:text="BTC"/>
+
+         <ImageView
+             android:id="@+id/front_symbol"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:src="@drawable/ic_dash_d_black"
+             android:visibility="gone"/>
+
         <me.grantland.widget.AutofitTextView
             android:id="@+id/input_amount"
             style="@style/Headline3"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="5dp"
             android:maxLines="1"
             android:singleLine="true"
-            tools:text="0"
+            tools:text="0.00 DASH"
             autofit:autoSizeMaxTextSize="48sp"
             android:gravity="center"
             android:layout_gravity="center|bottom"
             autofit:sizeToFit="true" />
 
+         <!--ImageView
+             android:id="@+id/end_symbol"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:src="@drawable/ic_dash_d_black" />
+         <TextView
+             android:id="@+id/end_currency_code"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             style="@style/Headline3.Medium"
+             tools:text="BTC"/-->
     </LinearLayout>
 
     <FrameLayout

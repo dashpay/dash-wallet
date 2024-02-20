@@ -127,4 +127,11 @@ class MayaViewModel @Inject constructor(
     fun logEvent(eventName: String) {
         analytics.logEvent(eventName, mapOf())
     }
+
+    fun getPoolInfo(currency: String): PoolInfo? {
+        if (poolList.value.isNotEmpty()) {
+            return poolList.value.find { it.currencyCode == currency }
+        }
+        return null
+    }
 }

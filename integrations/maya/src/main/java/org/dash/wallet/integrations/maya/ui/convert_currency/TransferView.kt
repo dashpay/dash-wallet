@@ -21,12 +21,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
-import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
-import androidx.core.view.isVisible
 import androidx.core.view.setPadding
-import androidx.core.view.updateLayoutParams
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
@@ -66,7 +63,7 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
 
     var isDeviceConnectedToInternet: Boolean = true
         set(value) {
-            if (field != value){
+            if (field != value) {
                 field = value
                 updateSymbols(value)
             }
@@ -110,10 +107,10 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
 
     fun setSyncing(isSyncing: Boolean) {
         binding.convertFromBtn.setSyncingVisibility(isSyncing)
-        binding.loadingProgressContainer.isVisible = isSyncing
-        binding.convertFromDashBalance.isVisible = !isSyncing
-        binding.convertFromDashFiatAmount.isVisible = !isSyncing
-        binding.walletIcon.isVisible = !isSyncing && binding.convertFromDashBalance.text.isNotEmpty()
+//        binding.loadingProgressContainer.isVisible = isSyncing
+//        binding.convertFromDashBalance.isVisible = !isSyncing
+//        binding.convertFromDashFiatAmount.isVisible = !isSyncing
+//        binding.walletIcon.isVisible = !isSyncing && binding.convertFromDashBalance.text.isNotEmpty()
         if (!isSyncing) {
             updateAmount()
         }
@@ -129,35 +126,35 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
         binding.convertFromBtn.setTitleConstraint()
         binding.convertToBtn.setIconConstraint()
         binding.convertToBtn.setTitleConstraint()
-        binding.walletIcon.visibility = View.INVISIBLE
+        // binding.walletIcon.visibility = View.INVISIBLE
 
         binding.rootContainer.setPadding(0)
 
         // constrain the walletBalanceLoadingContainer to the walletGuideline
-        binding.walletBalanceLoadingContainer.updateLayoutParams<LayoutParams> {
-            startToStart = LayoutParams.UNSET
-            topToBottom = LayoutParams.UNSET
-            bottomToTop = LayoutParams.UNSET
-            startToStart = binding.convertFromBtn.id
-            topToTop = binding.walletGuideline.id
-            bottomToBottom = binding.walletGuideline.id
-            topMargin = 0
-        }
+//        binding.walletBalanceLoadingContainer.updateLayoutParams<LayoutParams> {
+//            startToStart = LayoutParams.UNSET
+//            topToBottom = LayoutParams.UNSET
+//            bottomToTop = LayoutParams.UNSET
+//            startToStart = binding.convertFromBtn.id
+//            topToTop = binding.walletGuideline.id
+//            bottomToBottom = binding.walletGuideline.id
+//            topMargin = 0
+//        }
     }
 
     @SuppressLint("SetTextI18n")
     private fun updateAmount() {
         if (walletToCoinbase) {
             exchangeRate?.let { rate ->
-                val fiatAmount = rate.coinToFiat(inputInDash).toFormattedString()
-                binding.convertFromDashBalance.text = "${dashFormat
-                    .format(inputInDash)} ${Constants.DASH_CURRENCY}"
-                binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
-                if (inputInDash.isGreaterThan(Coin.ZERO)){
-                    binding.convertFromDashBalance.isVisible = true
-                    binding.convertFromDashFiatAmount.isVisible = true
-                    binding.walletIcon.isVisible = true
-                }
+//                val fiatAmount = rate.coinToFiat(inputInDash).toFormattedString()
+//                binding.convertFromDashBalance.text = "${dashFormat
+//                    .format(inputInDash)} ${Constants.DASH_CURRENCY}"
+//                binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
+//                if (inputInDash.isGreaterThan(Coin.ZERO)){
+//                    binding.convertFromDashBalance.isVisible = true
+//                    binding.convertFromDashFiatAmount.isVisible = true
+//                    binding.walletIcon.isVisible = true
+//                }
             }
         } else {
             balanceOnCoinbase?.let {
@@ -172,13 +169,13 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
 
                     val formatDash = dashFormat.minDecimals(2)
                         .format(coin).toString()
-                    binding.convertFromDashBalance.text = "$formatDash ${Constants.DASH_CURRENCY}"
-                    binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} ${it.faitAmount}"
-
-                    binding.convertFromDashBalance.isVisible = true
-                    binding.convertFromDashFiatAmount.isVisible = true
-
-                    binding.walletIcon.isVisible = balance.isNotEmpty()
+//                    binding.convertFromDashBalance.text = "$formatDash ${Constants.DASH_CURRENCY}"
+//                    binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} ${it.faitAmount}"
+//
+//                    binding.convertFromDashBalance.isVisible = true
+//                    binding.convertFromDashFiatAmount.isVisible = true
+//
+//                    binding.walletIcon.isVisible = balance.isNotEmpty()
 
                 }
             }

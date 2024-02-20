@@ -49,14 +49,14 @@
             />
 
         <action android:id="@+id/mayaAddressInput_to_EnterAmount"
-            app:destination="@id/mayaEnterAmountFragment"
+            app:destination="@id/mayaConvertCryptoFragment"
             app:enterAnim="@anim/slide_in_right"
             app:popEnterAnim="@anim/activity_stay"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
-    <fragment android:id="@+id/mayaEnterAmountFragment"
+    <fragment android:id="@+id/mayaConvertCryptoFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaConvertCryptoFragment"
         android:label="Enter Amount"
         tools:layout="@layout/fragment_maya_enter_amount">

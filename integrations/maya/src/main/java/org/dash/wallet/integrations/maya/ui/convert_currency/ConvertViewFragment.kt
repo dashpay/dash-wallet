@@ -37,7 +37,7 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.integrations.maya.R
-import org.dash.wallet.integrations.maya.databinding.FragmentConvertCurrencyBinding
+import org.dash.wallet.integrations.maya.databinding.FragmentConvertCurrencyViewBinding
 import org.dash.wallet.integrations.maya.ui.mayaViewModels
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -45,7 +45,7 @@ import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 
 @AndroidEntryPoint
-class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
+class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
     companion object {
         private const val ARG_DASH_TO_FIAT = "dash_to_fiat"
         private const val DECIMAL_SEPARATOR = '.'
@@ -56,7 +56,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
     }
 
-    private val binding by viewBinding(FragmentConvertCurrencyBinding::bind)
+    private val binding by viewBinding(FragmentConvertCurrencyViewBinding::bind)
     private val viewModel by mayaViewModels<ConvertViewViewModel>()
     private val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode()
     private val decimalSeparator =
