@@ -17,9 +17,15 @@
 
 package de.schildbach.wallet.service
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import com.google.common.base.Stopwatch
+import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -50,7 +56,6 @@ import org.bitcoinj.coinjoin.utils.CoinJoinManager
 import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.core.AbstractBlockChain
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Context
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.MasternodeAddress
 import org.bitcoinj.core.Transaction
@@ -84,6 +89,7 @@ interface CoinJoinService {
     suspend fun getMixingState(): MixingStatus
     fun observeMixingState(): Flow<MixingStatus>
     fun observeMixingProgress(): Flow<Double>
+    fun updateTimeSkew(timeSkew: Long)
 }
 
 enum class MixingStatus {
@@ -94,8 +100,12 @@ enum class MixingStatus {
     ERROR // An error stopped the mixing process
 }
 
+const val MAX_ALLOWED_AHEAD_TIMESKEW = 5000L // 5 seconds
+const val MAX_ALLOWED_BEHIND_TIMESKEW = 20000L // 20 seconds
+
 @Singleton
 class CoinJoinMixingService @Inject constructor(
+    @ApplicationContext private val context: Context,
     val walletDataProvider: WalletDataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
     private val config: CoinJoinConfig,
@@ -111,7 +121,15 @@ class CoinJoinMixingService @Inject constructor(
         const val DEFAULT_DENOMINATIONS_HARDCAP = 300
 
         // these are not for production
-        val FAST_MIXING_DENOMINATIONS_REMOVE = listOf<Denomination>() // Denomination.THOUSANDTH)
+        val FAST_MIXING_DENOMINATIONS_REMOVE = listOf<Denomination>() // Denomination.THOUSANDTH
+
+        fun isInsideTimeSkewBounds(timeSkew: Long): Boolean {
+            return if (timeSkew > 0) {
+                timeSkew < MAX_ALLOWED_AHEAD_TIMESKEW
+            } else {
+                (-timeSkew) < MAX_ALLOWED_BEHIND_TIMESKEW
+            }
+        }
     }
 
     private val coinJoinManager: CoinJoinManager?
@@ -140,11 +158,24 @@ class CoinJoinMixingService @Inject constructor(
     private var networkStatus: NetworkStatus = NetworkStatus.UNKNOWN
     private var isSynced = false
     private var hasAnonymizableBalance: Boolean = false
+    private var timeSkew: Long = 0L
 
     // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
     private val updateMutex = Mutex(locked = false)
     private val updateMixingStateMutex = Mutex(locked = false)
     private var exception: Throwable? = null
+
+    private val timeChangeReceiver = object: BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_TIME_CHANGED) {
+                // Time has changed, handle the change here
+                log.info("Time or Time Zone changed")
+                coroutineScope.launch {
+                    updateTimeSkewInternal(getTimeSkew())
+                }
+            }
+        }
+    }
 
     override fun observeMixingProgress(): Flow<Double> = _progressFlow
 
@@ -168,7 +199,7 @@ class CoinJoinMixingService @Inject constructor(
             .onEach { blockChainState ->
                 val isSynced = blockChainState.isSynced()
                 if (isSynced != this.isSynced) {
-                    updateState(config.getMode(), hasAnonymizableBalance, networkStatus, isSynced, blockChain)
+                    updateState(config.getMode(), timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
                 }
                 // this will trigger mixing as new blocks are mined and received tx's are confirmed
                 if (isSynced) {
@@ -196,9 +227,18 @@ class CoinJoinMixingService @Inject constructor(
             .launchIn(coroutineScope)
     }
 
+    /** updates timeSkew in #[coroutineScope] */
+    override fun updateTimeSkew(timeSkew: Long) {
+        coroutineScope.launch {
+            updateTimeSkewInternal(timeSkew)
+        }
+    }
+
+    suspend fun updateTimeSkewInternal(timeSkew: Long) {
+        updateState(config.getMode(), timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
+    }
+
     private suspend fun updateBalance(balance: Coin) {
-        // leave this ui scope
-        Context.propagate(walletDataProvider.wallet!!.context)
         CoinJoinClientOptions.setAmount(balance)
         log.info("coinjoin: total balance: ${balance.toFriendlyString()}")
         val walletEx = walletDataProvider.wallet as WalletEx
@@ -223,9 +263,14 @@ class CoinJoinMixingService @Inject constructor(
             else -> false
         }
 
-        log.info("coinjoin: mixing can occur: $hasBalanceLeftToMix = balance: (${anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())} && canDenominate: $canDenominate) || partially-mixed: $hasPartiallyMixedCoins")
+        log.info(
+            "coinjoin: mixing can occur: $hasBalanceLeftToMix = balance: (${anonBalance.isGreaterThan(
+                CoinJoin.getSmallestDenomination()
+            )} && canDenominate: $canDenominate) || partially-mixed: $hasPartiallyMixedCoins"
+        )
         updateState(
             config.getMode(),
+            getTimeSkew(),
             hasBalanceLeftToMix,
             networkStatus,
             isSynced,
@@ -235,6 +280,7 @@ class CoinJoinMixingService @Inject constructor(
 
     private suspend fun updateState(
         mode: CoinJoinMode,
+        timeSkew: Long,
         hasAnonymizableBalance: Boolean,
         networkStatus: NetworkStatus,
         isSynced: Boolean,
@@ -242,19 +288,21 @@ class CoinJoinMixingService @Inject constructor(
     ) {
         updateMutex.lock()
         log.info(
-            "coinjoin-old-state: ${this.mode}, ${this.hasAnonymizableBalance}, ${this.networkStatus}, synced: ${this.isSynced} ${blockChain != null}"
+            "coinjoin-old-state: ${this.mode}, ${this.timeSkew}ms, ${this.hasAnonymizableBalance}, ${this.networkStatus}, synced: ${this.isSynced} ${blockChain != null}"
         )
         try {
             setBlockchain(blockChain)
             log.info(
-                "coinjoin-new-state: $mode, $hasAnonymizableBalance, $networkStatus, synced: $isSynced, ${blockChain != null}"
+                "coinjoin-new-state: $mode, $timeSkew ms, $hasAnonymizableBalance, $networkStatus, synced: $isSynced, ${blockChain != null}"
             )
+            log.info("coinjoin-Current timeskew: ${getTimeSkew()}")
             this.networkStatus = networkStatus
             this.hasAnonymizableBalance = hasAnonymizableBalance
             this.isSynced = isSynced
             this.mode = mode
+            this.timeSkew = timeSkew
 
-            if (mode == CoinJoinMode.NONE) {
+            if (mode == CoinJoinMode.NONE || !isInsideTimeSkewBounds(timeSkew)) {
                 updateMixingState(MixingStatus.NOT_STARTED)
             } else {
                 configureMixing()
@@ -302,11 +350,11 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateBlockChain(blockChain: AbstractBlockChain?) {
-        updateState(mode, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
+        updateState(mode, timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
     }
 
     private suspend fun updateNetworkStatus(networkStatus: NetworkStatus) {
-        updateState(mode, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
+        updateState(mode, timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
     }
 
     private suspend fun updateMode(mode: CoinJoinMode) {
@@ -315,7 +363,8 @@ class CoinJoinMixingService @Inject constructor(
             configureMixing()
             updateBalance(walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.AVAILABLE))
         }
-        updateState(mode, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
+        val currentTimeSkew = getTimeSkew()
+        updateState(mode, currentTimeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
     }
 
     private var mixingProgressTracker: MixingProgressTracker = object : MixingProgressTracker() {
@@ -475,7 +524,10 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun startMixing(): Boolean {
-        Context.propagate(walletDataProvider.wallet!!.context)
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_TIME_CHANGED)
+        }
+        context.registerReceiver(timeChangeReceiver, filter)
         clientManager.setBlockChain(blockChain)
         return if (!clientManager.startMixing()) {
             log.info("Mixing has been started already.")
@@ -483,7 +535,8 @@ class CoinJoinMixingService @Inject constructor(
         } else {
             // run this on a different thread?
             val asyncStart = coroutineScope.async(Dispatchers.IO) {
-                Context.propagate(walletDataProvider.wallet!!.context)
+                // though coroutineScope is on a Context propogated thread, we still need this
+                org.bitcoinj.core.Context.propagate(walletDataProvider.wallet!!.context)
                 coinJoinManager?.initMasternodeGroup(blockChain)
                 clientManager.doAutomaticDenominating()
             }
@@ -511,6 +564,7 @@ class CoinJoinMixingService @Inject constructor(
         sessionCompleteListeners.forEach { coinJoinManager?.removeSessionCompleteListener(it) }
         clientManager.stopMixing()
         coinJoinManager?.stop()
+        context.unregisterReceiver(timeChangeReceiver)
     }
 
     private fun setBlockchain(blockChain: AbstractBlockChain?) {

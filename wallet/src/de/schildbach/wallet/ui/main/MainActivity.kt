@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.main
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -50,6 +51,7 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
+import de.schildbach.wallet.ui.main.WalletActivityExt.checkLowStorageAlert
 import de.schildbach.wallet.ui.main.WalletActivityExt.checkTimeSkew
 import de.schildbach.wallet.ui.main.WalletActivityExt.handleFirebaseAction
 import de.schildbach.wallet.ui.main.WalletActivityExt.requestDisableBatteryOptimisation
@@ -109,7 +111,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
         requestDisableBatteryOptimisation()
-    };
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -129,9 +131,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
         handleIntent(intent)
 
-        //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
+        // Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
         if (savedInstanceState == null) {
-            //Add BIP44 support and PIN if missing
+            // Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false)
         }
 
@@ -142,6 +144,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 viewModel,
                 currencies.component1()!!, currencies.component2()!!
             )
+        }
+        val timeChangedFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_TIME_CHANGED)
         }
     }
 
@@ -529,13 +534,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         if (showBackupWalletDialog) {
             BackupWalletDialogFragment.show(this)
             showBackupWalletDialog = false
-        }
-    }
-
-    private fun checkLowStorageAlert() {
-        val stickyIntent = registerReceiver(null, IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW))
-        if (stickyIntent != null) {
-            showLowStorageAlertDialog()
         }
     }
 

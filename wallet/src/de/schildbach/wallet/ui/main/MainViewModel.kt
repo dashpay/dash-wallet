@@ -45,6 +45,8 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.MAX_ALLOWED_AHEAD_TIMESKEW
+import de.schildbach.wallet.service.MAX_ALLOWED_BEHIND_TIMESKEW
 import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
@@ -56,6 +58,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.transactions.TransactionRowView
+import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -96,17 +99,15 @@ import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
-import org.dash.wallet.common.util.Constants.HTTP_CLIENT
-import org.dash.wallet.common.util.head
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.slf4j.LoggerFactory
+import kotlin.math.abs
 import java.text.DecimalFormat
 import java.util.Currency
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.collections.set
-import kotlin.math.abs
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
@@ -136,6 +137,8 @@ class MainViewModel @Inject constructor(
     companion object {
         private const val THROTTLE_DURATION = 500L
         private const val DIRECTION_KEY = "tx_direction"
+        private const val TIME_SKEW_TOLERANCE = 3600000L // seconds (1 hour)
+
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
 
@@ -379,16 +382,24 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    suspend fun getDeviceTimeSkew(): Long {
+    suspend fun getCoinJoinMode(): CoinJoinMode {
+        return coinJoinConfig.getMode()
+    }
+
+    suspend fun getDeviceTimeSkew(): Pair<Boolean, Long> {
         return try {
-            val systemTimeMillis = System.currentTimeMillis()
-            val result = HTTP_CLIENT.head("https://www.dash.org/")
-            val networkTime = result.headers.getDate("date")?.time
-            requireNotNull(networkTime)
-            abs(systemTimeMillis - networkTime)
+            val timeSkew = getTimeSkew()
+            val maxAllowedTimeSkew: Long = if (coinJoinConfig.getMode() == CoinJoinMode.NONE) {
+                TIME_SKEW_TOLERANCE
+            } else {
+                if (timeSkew > 0) MAX_ALLOWED_AHEAD_TIMESKEW else MAX_ALLOWED_BEHIND_TIMESKEW
+            }
+            coinJoinService.updateTimeSkew(timeSkew)
+            log.info("timeskew: {} ms", timeSkew)
+            return Pair(abs(timeSkew) > maxAllowedTimeSkew, timeSkew)
         } catch (ex: Exception) {
             // Ignore errors
-            0L
+            Pair(false, 0)
         }
     }
 

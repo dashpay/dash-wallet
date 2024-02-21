@@ -22,6 +22,10 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.MAX_ALLOWED_AHEAD_TIMESKEW
+import de.schildbach.wallet.service.MAX_ALLOWED_BEHIND_TIMESKEW
+import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -35,6 +39,7 @@ import javax.inject.Inject
 open class CoinJoinLevelViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val coinJoinConfig: CoinJoinConfig,
+    private val coinJoinService: CoinJoinService,
     private var networkState: NetworkStateInt
 ) : ViewModel() {
 
@@ -63,5 +68,19 @@ open class CoinJoinLevelViewModel @Inject constructor(
 
     fun logEvent(event: String) {
         analytics.logEvent(event, mapOf())
+    }
+
+    suspend fun isTimeSkewedForCoinJoin(): Boolean {
+        return try {
+            val timeSkew = getTimeSkew()
+            coinJoinService.updateTimeSkew(timeSkew)
+            if (timeSkew > 0) {
+                timeSkew > MAX_ALLOWED_AHEAD_TIMESKEW
+            } else {
+                -timeSkew > MAX_ALLOWED_BEHIND_TIMESKEW
+            }
+        } catch (e: Exception) {
+            false
+        }
     }
 }

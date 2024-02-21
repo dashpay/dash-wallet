@@ -697,4 +697,6 @@
     <string name="masternode_key_not_used">Not used</string>
     <string name="masternode_key_revoked">Revoked</string>
     <string name="masternode_key_private_public_base64">Private / Public Keys (base64)</string>
+    <string name="timeskew_ahead">ahead</string>
+    <string name="timeskew_behind">behind</string>
 </resources>
