@@ -21,9 +21,13 @@ import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants
 import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
+import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseViewModel
 import org.slf4j.LoggerFactory
+import java.lang.Exception
 import javax.inject.Inject
 
 @HiltViewModel
@@ -37,19 +41,12 @@ class IntegrationOverviewViewModel @Inject constructor(
     }
 
     suspend fun loginToCoinbase(code: String): Boolean {
-        when (val response = coinBaseRepository.completeCoinbaseAuthentication(code)) {
-            is ResponseResource.Success -> {
-                if (response.value) {
-                    return true
-                }
-            }
-
-            is ResponseResource.Failure -> {
-                log.error("Coinbase login error ${response.errorCode}: ${response.errorBody ?: "empty"}")
-            }
+        return try {
+            coinBaseRepository.completeCoinbaseAuthentication(code)
+        } catch (ex: Exception) {
+            log.error("Coinbase login error $ex")
+            false
         }
-
-        return false
     }
 
     suspend fun shouldShowCoinbaseInfoPopup(): Boolean {
@@ -62,5 +59,20 @@ class IntegrationOverviewViewModel @Inject constructor(
 
     fun logEvent(eventName: String) {
         analyticsService.logEvent(eventName, mapOf())
+    }
+
+    fun getCoinbaseLinkAccountUrl(): String {
+        return "https://www.coinbase.com/oauth/authorize?client_id=${CoinBaseClientConstants.CLIENT_ID}" +
+                "&redirect_uri=${CoinbaseConstants.REDIRECT_URL}&response_type" +
+                "=code&scope=wallet:accounts:read,wallet:user:read,wallet:payment-methods:read," +
+                "wallet:buys:read,wallet:buys:create,wallet:transactions:transfer," +
+                "wallet:sells:create,wallet:sells:read,wallet:deposits:create," +
+                "wallet:transactions:request,wallet:transactions:read,wallet:trades:create," +
+                "wallet:supported-assets:read,wallet:transactions:send," +
+                "wallet:addresses:read,wallet:addresses:create" +
+                "&meta[send_limit_amount]=10" +
+                "&meta[send_limit_currency]=USD" +
+                "&meta[send_limit_period]=month" +
+                "&account=all"
     }
 }

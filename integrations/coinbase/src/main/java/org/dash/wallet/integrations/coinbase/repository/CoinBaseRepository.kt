@@ -29,6 +29,7 @@ import org.dash.wallet.common.data.safeApiCall
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toCoin
 import org.dash.wallet.integrations.coinbase.*
 import org.dash.wallet.integrations.coinbase.model.*
 import org.dash.wallet.integrations.coinbase.service.CoinBaseAuthApi
@@ -37,6 +38,8 @@ import org.dash.wallet.integrations.coinbase.service.CoinBaseServicesApi
 import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
 import org.dash.wallet.integrations.coinbase.viewmodels.toDoubleOrZero
 import java.math.BigDecimal
+import java.math.MathContext
+import java.math.RoundingMode
 import javax.inject.Inject
 
 interface CoinBaseRepositoryInt {
@@ -60,7 +63,7 @@ interface CoinBaseRepositoryInt {
     ): ResponseResource<SendTransactionToWalletResponse?>
     suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel>
     suspend fun commitSwapTrade(buyOrderId: String): ResponseResource<SwapTradeUIModel>
-    suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean>
+    suspend fun completeCoinbaseAuthentication(authorizationCode: String): Boolean
     suspend fun refreshWithdrawalLimit()
     suspend fun getExchangeRateFromCoinbase(): ResponseResource<CoinbaseToDashExchangeRateUIModel>
     suspend fun getWithdrawalLimitInDash(): Double
@@ -98,10 +101,10 @@ class CoinBaseRepository @Inject constructor(
             it.currency == Constants.DASH_CURRENCY
         } ?: throw IllegalStateException("No DASH account found")
 
-        return userAccountData.also {
-            config.set(CoinbaseConfig.USER_ACCOUNT_ID, it.uuid.toString())
-            config.set(CoinbaseConfig.LAST_BALANCE, Coin.parseCoin(it.availableBalance.value).value)
-        }
+        config.set(CoinbaseConfig.USER_ACCOUNT_ID, userAccountData.uuid.toString())
+        config.set(CoinbaseConfig.LAST_BALANCE, userAccountData.coinBalance().value)
+
+        return userAccountData
     }
 
     override suspend fun getUserAccounts(exchangeCurrencyCode: String): List<CoinBaseUserAccountDataUIModel> {
@@ -217,15 +220,14 @@ class CoinBaseRepository @Inject constructor(
         )
     }
 
-    override suspend fun completeCoinbaseAuthentication(authorizationCode: String) = safeApiCall {
-        authApi.getToken(code = authorizationCode).also {
-            it?.let { tokenResponse ->
-                config.set(CoinbaseConfig.LAST_ACCESS_TOKEN, tokenResponse.accessToken)
-                config.set(CoinbaseConfig.LAST_REFRESH_TOKEN, tokenResponse.refreshToken)
-                getUserAccount()
-            }
+    override suspend fun completeCoinbaseAuthentication(authorizationCode: String): Boolean {
+        authApi.getToken(code = authorizationCode)?.let { tokenResponse ->
+            config.set(CoinbaseConfig.LAST_ACCESS_TOKEN, tokenResponse.accessToken)
+            config.set(CoinbaseConfig.LAST_REFRESH_TOKEN, tokenResponse.refreshToken)
+            getUserAccount()
         }
-        !config.get(CoinbaseConfig.LAST_ACCESS_TOKEN).isNullOrEmpty()
+
+        return !config.get(CoinbaseConfig.LAST_ACCESS_TOKEN).isNullOrEmpty()
     }
 
     override suspend fun refreshWithdrawalLimit() {

@@ -36,6 +36,7 @@ object CoinbaseConstants {
     const val MIN_USD_COINBASE_AMOUNT = "2"
     const val BASE_IDS_REQUEST_URL = "v2/assets/prices?filter=holdable&resolution=latest"
     const val BUY_FEE = 0.006
+    const val REDIRECT_URL = "dashwallet://brokers/coinbase/connect"
 
     fun getCacheDir(context: Context): File {
         return File(context.cacheDir, "coinbase")
