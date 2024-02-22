@@ -42,7 +42,6 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
@@ -137,17 +136,20 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             binding.infoLoadingIndicator.isVisible = false
 
             val message = if (it is CTXSpendException && it.resourceString != null) {
-                getString(it.resourceString!!.resourceId)
+                getString(it.resourceString!!.resourceId, *it.resourceString!!.args.toTypedArray())
             } else {
-                it?.message
+                null // This message is not localized so don't display it.  It will be in the logs
             }
 
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.error),
-                message ?: getString(R.string.gift_card_error),
-                getString(R.string.button_close)
-            ).show(requireActivity())
+            // TODO: remove this after we decide how to handle errors: put them in this OffsetDialog
+            // or use an adaptive dialog.  Currently, this dialog will popup many times.
+//            AdaptiveDialog.create(
+//                R.drawable.ic_error,
+//                getString(R.string.error),
+//                message ?: getString(R.string.gift_card_details_error),
+//                getString(R.string.button_close)
+//            ).show(requireActivity())
+            binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
         }
 
         (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let { transactionId ->

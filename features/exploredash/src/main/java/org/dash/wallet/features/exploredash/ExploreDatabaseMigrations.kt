@@ -170,6 +170,9 @@ class ExploreDatabaseMigrations {
                     database.execSQL(
                         "DROP TABLE `temp`"
                     )
+                    database.execSQL(
+                        "ALTER TABLE merchant ADD COLUMN redeemType TEXT DEFAULT 'barcode'"
+                    )
                 }
             }
     }

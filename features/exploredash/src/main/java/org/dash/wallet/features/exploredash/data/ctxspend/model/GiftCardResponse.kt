@@ -25,9 +25,14 @@ data class GiftCardResponse(
     @SerializedName("number") val cardNumber: String? = "",
     @SerializedName("pin") val cardPin: String? = "",
 
-    @SerializedName("cryptoAmount") val cryptoAmount: String? = "",
-    @SerializedName("cryptoCurrency") val cryptoCurrency: String? = "",
-    @SerializedName("fiatAmount") val fiatAmount: String? = "",
-    @SerializedName("fiatCurrency") val fiatCurrency: String? = "",
+    @SerializedName("paymentCryptoAmount") val cryptoAmount: String? = "",
+    @SerializedName("paymentCryptoCurrency") val cryptoCurrency: String? = "",
+    val paymentCryptoNetwork: String = "",
+    val paymentId: String = "",
+    val percentDiscount: String = "",
+    val rate: String = "",
+    val redeemUrl: String = "",
+    @SerializedName("paymentFiatAmount") val fiatAmount: String? = "",
+    @SerializedName("paymentFiatCurrency") val fiatCurrency: String? = "",
     @SerializedName("paymentUrls") val paymentUrls: Map<String, String>? = buildMap { }
 )

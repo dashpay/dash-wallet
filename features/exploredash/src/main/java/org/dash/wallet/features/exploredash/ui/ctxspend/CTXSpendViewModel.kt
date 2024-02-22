@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
@@ -71,6 +72,12 @@ class CTXSpendViewModel @Inject constructor(
     private val _balance = MutableLiveData<Coin>()
     val balance: LiveData<Coin>
         get() = _balance
+
+    val balanceWithDiscount: Coin?
+        get() = _balance.value?.let {
+            val d = (giftCardMerchant.savingsPercentage ?: 0.00) / 100
+            return Coin.valueOf((it.value / (1.0 - d)).toLong()).minus(Transaction.DEFAULT_TX_FEE.multiply(20))
+        }
 
     val userEmail = repository.userEmail.asLiveData()
 
