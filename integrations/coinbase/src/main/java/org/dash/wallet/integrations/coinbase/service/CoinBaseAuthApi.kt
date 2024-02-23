@@ -28,11 +28,12 @@ interface CoinBaseAuthApi {
     suspend fun getToken(
         @Field("client_id") clientId: String = CoinBaseClientConstants.CLIENT_ID,
         @Field("redirect_uri") redirectUri: String = CoinbaseConstants.REDIRECT_URL,
-        @Field("grant_type") grant_type: String = "authorization_code",
-        @Field("client_secret") client_secret: String = CoinBaseClientConstants.CLIENT_SECRET,
+        @Field("grant_type") grantType: String = "authorization_code",
+        @Field("client_secret") clientSecret: String = CoinBaseClientConstants.CLIENT_SECRET,
         @Field("code") code: String
     ): TokenResponse?
 
+    @FormUrlEncoded
     @POST("oauth/revoke")
     suspend fun revokeToken(@Field("token") token: String)
 }

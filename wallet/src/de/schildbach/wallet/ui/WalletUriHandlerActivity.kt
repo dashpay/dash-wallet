@@ -34,6 +34,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.formatString
+import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.uphold.ui.UpholdPortalFragment
 
 /**
@@ -82,7 +83,7 @@ class WalletUriHandlerActivity : AppCompatActivity() {
                         activityIntent.setAction(UpholdPortalFragment.AUTH_RESULT_ACTION)
                         LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent)
                     } else if (intentUri.path?.contains("coinbase") == true) {
-                        activityIntent.setAction(IntegrationOverviewFragment.AUTH_RESULT_ACTION)
+                        activityIntent.setAction(CoinbaseConstants.AUTH_RESULT_ACTION)
                         LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent)
                     }
                     finish()

@@ -17,6 +17,7 @@
 package org.dash.wallet.integrations.coinbase
 
 import android.content.Context
+import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants
 import java.io.File
 
 object CoinbaseConstants {
@@ -37,6 +38,19 @@ object CoinbaseConstants {
     const val BASE_IDS_REQUEST_URL = "v2/assets/prices?filter=holdable&resolution=latest"
     const val BUY_FEE = 0.006
     const val REDIRECT_URL = "dashwallet://brokers/coinbase/connect"
+    const val AUTH_RESULT_ACTION = "Coinbase.AUTH_RESULT"
+    val LINK_URL = "https://www.coinbase.com/oauth/authorize?client_id=${CoinBaseClientConstants.CLIENT_ID}" +
+            "&redirect_uri=${REDIRECT_URL}&response_type" +
+            "=code&scope=wallet:accounts:read,wallet:user:read,wallet:payment-methods:read," +
+            "wallet:buys:read,wallet:buys:create,wallet:transactions:transfer," +
+            "wallet:sells:create,wallet:sells:read,wallet:deposits:create," +
+            "wallet:transactions:request,wallet:transactions:read,wallet:trades:create," +
+            "wallet:supported-assets:read,wallet:transactions:send," +
+            "wallet:addresses:read,wallet:addresses:create" +
+            "&meta[send_limit_amount]=10" +
+            "&meta[send_limit_currency]=USD" +
+            "&meta[send_limit_period]=month" +
+            "&account=all"
 
     fun getCacheDir(context: Context): File {
         return File(context.cacheDir, "coinbase")
