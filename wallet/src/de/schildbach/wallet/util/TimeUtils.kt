@@ -50,12 +50,19 @@ suspend fun getTimeSkew(): Long {
         // swallow, the next block will use alternate method
     }
     if (networkTime == null) {
-        var result = Constants.HTTP_CLIENT.head("https://www.dash.org/")
-
-        networkTime = result.headers.getDate("date")?.time
-        if (networkTime == null) {
-            result = Constants.HTTP_CLIENT.head("https://insight.dash.org/insight")
+        try {
+            val result = Constants.HTTP_CLIENT.head("https://www.dash.org/")
             networkTime = result.headers.getDate("date")?.time
+        } catch (e: Exception) {
+            // swallow
+        }
+        if (networkTime == null) {
+            try {
+                val result = Constants.HTTP_CLIENT.head("https://insight.dash.org/insight")
+                networkTime = result.headers.getDate("date")?.time
+            } catch (e: Exception) {
+                // swallow
+            }
         }
         requireNotNull(networkTime)
     }
