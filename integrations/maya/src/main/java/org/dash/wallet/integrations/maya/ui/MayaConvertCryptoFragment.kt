@@ -194,23 +194,23 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 //            )
 //        )
 
-//        convertViewModel.setSelectedCryptoCurrency(
-//            AccountDataUIModel(
-//                Account(
-//                    UUID.nameUUIDFromBytes(args.currency.toByteArray()),
-//                    "Dash Wallet",
-//                    "DASH",
-//                    Balance("1", "DASH"),
-//                    true,
-//                    true,
-//                    "Wallet",
-//                    true
-//                ),
-//                BigDecimal.ONE,
-//                BigDecimal.ONE,
-//                BigDecimal.ONE
-//            )
-//        )
+        convertViewModel.setSelectedCryptoCurrency(
+            AccountDataUIModel(
+                Account(
+                    UUID.nameUUIDFromBytes(args.currency.toByteArray()),
+                    args.currency,
+                    args.currency,
+                    Balance("0", args.currency),
+                    true,
+                    true,
+                    "Wallet",
+                    true
+                ),
+                BigDecimal.ONE.setScale(8, RoundingMode.UP) / (poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
+                BigDecimal.ONE.setScale(8, RoundingMode.UP)  / (dashPoolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
+                BigDecimal.ONE
+            )
+        )
 
         convertViewModel.destinationCurrency = args.currency
 
