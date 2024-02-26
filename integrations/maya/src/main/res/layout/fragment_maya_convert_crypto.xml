@@ -71,7 +71,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.32" />
+        app:layout_constraintGuide_percent="0.23" />
 
     <LinearLayout
         android:id="@+id/enter_amount_fragment_placeholder"
@@ -92,27 +92,29 @@
 
     <TextView
         android:id="@+id/you_will_receive_label"
-        style="@style/Caption"
+        style="@style/Overline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="30dp"
+        android:layout_marginHorizontal="10dp"
         android:layout_marginTop="10dp"
         android:text="@string/you_will_receive"
         android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/convert_view"
         tools:visibility="visible" />
 
     <TextView
         android:id="@+id/you_will_receive_value"
-        style="@style/Caption"
+        style="@style/Body2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:layout_marginEnd="30dp"
+        android:layout_marginHorizontal="10dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/convert_view"
-        tools:text="111"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/you_will_receive_label"
+        tools:text="0.1234 BTC"
         tools:visibility="visible" />
 
     <TextView

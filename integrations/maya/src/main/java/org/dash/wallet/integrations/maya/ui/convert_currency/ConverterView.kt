@@ -42,7 +42,7 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
         .noCode().minDecimals(6).optionalDecimals()
 
     private var onCurrencyChooserClicked: (() -> Unit)? = null
-    private var onSwapClicked: ((Boolean) -> Unit)? = null
+//    private var onSwapClicked: ((Boolean) -> Unit)? = null
 
     private var _isSellSwapEnabled: Boolean = false
     var isSellSwapEnabled: Boolean
@@ -65,6 +65,7 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
         get() = _dashInput
         set(value) {
             _dashInput = value
+            updateUiWithSwap()
         }
 
     var exchangeRate: ExchangeRate? = null
@@ -72,15 +73,7 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
             field = value
         }
 
-    var dashToCrypto: Boolean = false
-        set(value) {
-            if (field != value) {
-                field = value
-                updateUiWithSwap()
-            }
-        }
-
-    var amountCrypto: String = "0 DASH"
+    var dashToCrypto: Boolean = true
         set(value) {
             if (field != value) {
                 field = value
@@ -147,7 +140,19 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
             binding.convertFromBtn.setConvertItemTitle(R.string.dash)
             ContextCompat.getDrawable(context, R.drawable.ic_dash_blue_filled)
                 ?.let { binding.convertFromBtn.setConvertItemIcon(it) }
-            binding.convertFromBtn.setConvertItemAmounts(amountCrypto, amountFiat)
+
+            exchangeRate?.let { currentExchangeRate ->
+                dashInput?.let { dash ->
+                    val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
+                    val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
+                    binding.convertFromBtn.setConvertItemAmounts("${dashFormat.minDecimals(0)
+                        .optionalDecimals(0,8).format(dash)} DASH", "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount")
+//                binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
+//                    .optionalDecimals(0,8).format(dash)} DASH"
+//
+//                binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
+                }
+            }
         } else {
             setFromBtnData()
         }
@@ -210,6 +215,8 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
             dashInput?.let { dash ->
                 val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
                 val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
+                binding.convertFromBtn.setConvertItemAmounts("${dashFormat.minDecimals(0)
+                    .optionalDecimals(0,8).format(dash)} DASH", "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount")
 //                binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
 //                    .optionalDecimals(0,8).format(dash)} DASH"
 //
@@ -222,9 +229,9 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
         onCurrencyChooserClicked = listener
     }
 
-    fun setOnSwapClicked(listener: (Boolean) -> Unit) {
-        onSwapClicked = listener
-    }
+//    fun setOnSwapClicked(listener: (Boolean) -> Unit) {
+//        onSwapClicked = listener
+//    }
 
     private fun updateAmount() {
         if (dashToCrypto) {

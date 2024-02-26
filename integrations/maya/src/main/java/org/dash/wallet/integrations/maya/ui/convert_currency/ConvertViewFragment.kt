@@ -114,7 +114,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
             }
         }
 
-        binding.currencyOptions.setOnOptionPickedListener { value, index ->
+        binding.currencyOptions.setOnOptionPickedListener { value, _ ->
             setAmountValue(value, viewModel.enteredConvertAmount)
             viewModel.selectedPickerCurrencyCode = value
         }

@@ -73,7 +73,7 @@
     <string name="conversion_successful">Conversion successful</string>
     <string name="transfer_dash_failed_msg">There was a problem transferring it to Dash Wallet on this device.</string>
     <string name="auth_limit_description">You exceeded the authorization limit on Coinbase.</string>
-    <string name="you_will_receive">You will receive</string>
+    <string name="you_will_receive">Receive amount</string>
     <string name="contact_coinbase_support">Contact Coinbase Support</string>
     <string name="fees_in_crypto_purchase">Fees in crypto purchases</string>
     <string name="coinbase_fee_info_msg_content">In addition to the displayed Coinbase fee, we include a spread in the price. Cryptocurrency markets are volatile, and this allows us to temporary lock in a price for trade execution.</string>

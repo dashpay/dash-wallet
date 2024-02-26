@@ -59,6 +59,7 @@ import org.dash.wallet.integrations.maya.model.getCoinBaseExchangeRateConversion
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.UUID
 
 @AndroidEntryPoint
@@ -175,23 +176,23 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
         val poolInfo = mayaViewModel.getPoolInfo(args.currency)
         val dashPoolInfo = mayaViewModel.getPoolInfo("DASH")
-        convertViewModel.setSelectedCryptoCurrency(
-            AccountDataUIModel(
-                Account(
-                    UUID.nameUUIDFromBytes(args.currency.toByteArray()),
-                    args.currency,
-                    args.currency,
-                    Balance("0", args.currency),
-                    true,
-                    true,
-                    "Wallet",
-                    true
-                ),
-                BigDecimal.ONE,
-                (poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE) / (dashPoolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
-                poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE
-                )
-        )
+//        convertViewModel.setSelectedCryptoCurrency(
+//            AccountDataUIModel(
+//                Account(
+//                    UUID.nameUUIDFromBytes(args.currency.toByteArray()),
+//                    args.currency,
+//                    args.currency,
+//                    Balance("0", args.currency),
+//                    true,
+//                    true,
+//                    "Wallet",
+//                    true
+//                ),
+//                BigDecimal.ONE,
+//                (poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE) / (dashPoolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
+//                poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE
+//            )
+//        )
 
 //        convertViewModel.setSelectedCryptoCurrency(
 //            AccountDataUIModel(
@@ -243,9 +244,9 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 //            }
 //        }
 
-        binding.convertView.setOnSwapClicked {
-            convertViewModel.setOnSwapDashFromToCryptoClicked(it)
-        }
+//        binding.convertView.setOnSwapClicked {
+//            convertViewModel.setOnSwapDashFromToCryptoClicked(it)
+//        }
 
         convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
             binding.convertView.exchangeRate = it?.let { ExchangeRate(Coin.COIN, it.fiat) }
@@ -256,8 +257,8 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             val hasAmount = !amount.isZero
             binding.youWillReceiveLabel.isVisible = hasAmount
             binding.youWillReceiveValue.isVisible = hasAmount
-            binding.convertView.amountCrypto = amount.toFriendlyString()
-            binding.convertView.amountFiat = "?"
+            binding.convertView.dashInput = amount
+            // binding.convertView.amountFiat = "?"
 
             if (hasAmount && !binding.convertView.dashToCrypto) {
                 binding.youWillReceiveValue.text = context?.getString(
@@ -271,7 +272,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             binding.youWillReceiveLabel.isVisible = amount.second.isNotEmpty()
             binding.youWillReceiveValue.isVisible = amount.second.isNotEmpty()
 
-                if (binding.convertView.dashToCrypto) {
+            if (binding.convertView.dashToCrypto) {
                 binding.youWillReceiveValue.text = getString(
                     R.string.fiat_balance_with_currency,
                     amount.first,
