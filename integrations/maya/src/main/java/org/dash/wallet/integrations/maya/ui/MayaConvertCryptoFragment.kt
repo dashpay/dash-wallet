@@ -353,9 +353,9 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         val guideLine = binding.amountViewGuide
         val params = guideLine.layoutParams as ConstraintLayout.LayoutParams
         if (isErrorHidden) {
-            params.guidePercent = 0.08f // 45% // range: 0 <-> 1
+            params.guidePercent = 0.15f // 45% // range: 0 <-> 1
         } else {
-            params.guidePercent = 0.15f
+            params.guidePercent = 0.22f
         }
         guideLine.layoutParams = params
     }
