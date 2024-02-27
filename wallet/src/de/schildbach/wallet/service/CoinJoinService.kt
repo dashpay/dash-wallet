@@ -234,6 +234,15 @@ class CoinJoinMixingService @Inject constructor(
         }
     }
 
+    suspend fun getCurrentTimeSkew(): Long {
+        return try {
+            getTimeSkew()
+        } catch (e: Exception) {
+            log.info("timeshew problem", e)
+            return 0L
+        }
+    }
+
     suspend fun updateTimeSkewInternal(timeSkew: Long) {
         updateState(config.getMode(), timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
     }
@@ -270,7 +279,7 @@ class CoinJoinMixingService @Inject constructor(
         )
         updateState(
             config.getMode(),
-            getTimeSkew(),
+            getCurrentTimeSkew(),
             hasBalanceLeftToMix,
             networkStatus,
             isSynced,
@@ -295,7 +304,7 @@ class CoinJoinMixingService @Inject constructor(
             log.info(
                 "coinjoin-new-state: $mode, $timeSkew ms, $hasAnonymizableBalance, $networkStatus, synced: $isSynced, ${blockChain != null}"
             )
-            log.info("coinjoin-Current timeskew: ${getTimeSkew()}")
+            log.info("coinjoin-Current timeskew: ${getCurrentTimeSkew()}")
             this.networkStatus = networkStatus
             this.hasAnonymizableBalance = hasAnonymizableBalance
             this.isSynced = isSynced
@@ -363,7 +372,7 @@ class CoinJoinMixingService @Inject constructor(
             configureMixing()
             updateBalance(walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.AVAILABLE))
         }
-        val currentTimeSkew = getTimeSkew()
+        val currentTimeSkew = getCurrentTimeSkew()
         updateState(mode, currentTimeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
     }
 
