@@ -98,7 +98,7 @@ class TopperClient @Inject constructor(
         }
     }
 
-    fun isSupportedAsset(asset: String): Boolean {
+    private fun isSupportedAsset(asset: String): Boolean {
         return supportedAssets.contains(asset)
     }
 
@@ -115,6 +115,7 @@ class TopperClient @Inject constructor(
             setProvider(BouncyCastleProvider())
         }.getPrivateKey(PrivateKeyInfo(algId, pKey))
 
+        // docs: https://docs.topperpay.com/flows/crypto-onramp
         return Jwts.builder()
             .setHeaderParam("kid", keyId)
             .setHeaderParam("typ", "JWT")
@@ -123,13 +124,15 @@ class TopperClient @Inject constructor(
             .setIssuedAt(Date())
             .claim(
                 "source",
-                mapOf("asset" to sourceAsset)
+                mapOf(
+                    "asset" to sourceAsset,
+                    "amount" to "100"
+                )
             )
             .claim(
                 "target",
                 mapOf(
                     "address" to receiverAddress.toString(),
-                    "amount" to "1",
                     "asset" to "DASH",
                     "network" to "dash",
                     "priority" to "fast",
