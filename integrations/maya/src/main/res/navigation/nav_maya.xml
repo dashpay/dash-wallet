@@ -89,5 +89,9 @@
         <argument
             android:name="swapModel"
             app:argType="org.dash.wallet.integrations.maya.model.SwapTradeUIModel" />
+        <argument android:name="currency"
+            app:argType="string" />
+        <argument android:name="paymentIntent"
+            app:argType="org.dash.wallet.common.data.PaymentIntent" />
     </fragment>
 </navigation>

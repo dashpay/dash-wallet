@@ -33,13 +33,12 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewModel
-import org.dash.wallet.integrations.maya.ui.convert_currency.model.ServiceWallet
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -48,16 +47,18 @@ import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFormattedString
-import org.dash.wallet.integrations.maya.ui.dialogs.crypto_wallets.CryptoWalletsDialog
-import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewFragment
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentMayaConvertCryptoBinding
 import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.getCoinBaseExchangeRateConversion
+import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewFragment
+import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewModel
+import org.dash.wallet.integrations.maya.ui.convert_currency.model.ServiceWallet
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
+import org.dash.wallet.integrations.maya.ui.dialogs.crypto_wallets.CryptoWalletsDialog
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.UUID
@@ -81,6 +82,8 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val poolInfo = mayaViewModel.getPoolInfo(args.currency)
+        val dashPoolInfo = mayaViewModel.getPoolInfo("DASH")
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
@@ -146,7 +149,19 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
             safeNavigate(
                 MayaConvertCryptoFragmentDirections
-                    .mayaConvertCryptoFragmentToMayaConversionPreviewFragment(it)
+                    .mayaConvertCryptoFragmentToMayaConversionPreviewFragment(
+                        it,
+                        convertViewModel.destinationCurrency!!,
+                        viewModel.getUpdatedPaymentIntent(
+                            convertViewModel.enteredConvertDashAmount.value!!,
+                            Address.fromBase58(
+                                null,
+                                mayaViewModel.inboundAddresses.find { inboundAddress ->
+                                    inboundAddress.chain == "DASH"
+                                }!!.address
+                            )
+                        )!!
+                    )
             )
         }
 
@@ -174,8 +189,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             ).show(requireActivity())
         }
 
-        val poolInfo = mayaViewModel.getPoolInfo(args.currency)
-        val dashPoolInfo = mayaViewModel.getPoolInfo("DASH")
 //        convertViewModel.setSelectedCryptoCurrency(
 //            AccountDataUIModel(
 //                Account(
@@ -207,12 +220,13 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                     true
                 ),
                 BigDecimal.ONE.setScale(8, RoundingMode.UP) / (poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
-                BigDecimal.ONE.setScale(8, RoundingMode.UP)  / (dashPoolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
+                BigDecimal.ONE.setScale(8, RoundingMode.UP) / (dashPoolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
                 BigDecimal.ONE
             )
         )
 
         convertViewModel.destinationCurrency = args.currency
+        viewModel.paymentIntent = args.paymentIntent
 
 //        binding.convertView.setOnCurrencyChooserClicked {
 //            lifecycleScope.launch {
@@ -316,6 +330,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 //                }
 //            }
         }
+        mayaViewModel.updateInboundAddresses()
     }
 
     private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {

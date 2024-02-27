@@ -36,6 +36,7 @@ import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.slf4j.LoggerFactory
@@ -53,6 +54,7 @@ interface MayaApi {
     suspend fun reset()
 
     fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>>
+    suspend fun getInboundAddresses(): List<InboundAddress>
 }
 
 class MayaApiAggregator @Inject constructor(
@@ -118,6 +120,10 @@ class MayaApiAggregator @Inject constructor(
         log.info("USD: {}", resultWithUSDRates.map { it.assetPriceFiat })
         log.info("Fiat: {}", resultWithFiatRates.map { it.assetPriceFiat })
         poolInfoList.value = resultWithFiatRates
+    }
+
+    override suspend fun getInboundAddresses(): List<InboundAddress> {
+        return webApi.getInboundAddresses()
     }
 
     override suspend fun reset() {

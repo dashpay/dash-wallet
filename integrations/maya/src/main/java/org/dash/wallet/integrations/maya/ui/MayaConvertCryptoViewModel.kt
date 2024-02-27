@@ -23,9 +23,12 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.script.ScriptBuilder
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
@@ -55,6 +58,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
     networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
+    var paymentIntent: PaymentIntent? = null
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -189,5 +193,22 @@ class MayaConvertCryptoViewModel @Inject constructor(
         return false
         //val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash()
         //return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
+    }
+
+    fun getUpdatedPaymentIntent(amountInDash: Coin, destination: Address): PaymentIntent? {
+        return paymentIntent?.let {
+            val outputList = it.outputs!!.toList().toMutableList()
+            outputList.add(PaymentIntent.Output(amountInDash, ScriptBuilder.createOutputScript(destination)))
+
+            PaymentIntent(
+                it.standard,
+                it.payeeName,
+                it.payeeVerifiedBy,
+                outputList.toTypedArray(),
+                it.memo, it.paymentUrl,
+                it.payeeData, it.paymentRequestUrl,
+                it.paymentRequestHash
+            )
+        }
     }
 }

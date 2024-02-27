@@ -117,15 +117,27 @@
             style="@style/Body2.Medium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="5dp"
             app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/dash_icon"
+            tools:text="1.00" />
+
+        <ImageView
+            android:id="@+id/dash_icon"
+            android:layout_width="12dp"
+            android:layout_height="10dp"
+            android:layout_marginEnd="15dp"
+            app:layout_constraintTop_toTopOf="@id/amount_crypto"
+            app:layout_constraintBottom_toBottomOf="@id/amount_crypto"
             app:layout_constraintEnd_toEndOf="parent"
-            tools:text="1.00 DASH" />
+            tools:src="@drawable/ic_dash_d_black" />
 
         <TextView
             android:id="@+id/amount_fiat"
             style="@style/Caption.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="15dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/amount_crypto"
             app:layout_constraintBottom_toBottomOf="parent"

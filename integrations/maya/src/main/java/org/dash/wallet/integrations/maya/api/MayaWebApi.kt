@@ -22,6 +22,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
+import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.TradesRequest
@@ -38,10 +39,13 @@ import javax.inject.Inject
  */
 interface MayaEndpoint {
     /**
-     * https://docs.mayaprotocol.com/dev-docs/mayachain/concepts/querying-mayachain
+     * old: https://docs.mayaprotocol.com/dev-docs/mayachain/concepts/querying-mayachain
+     * new: https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/querying-mayachain
      */
     @GET("pools")
     suspend fun getPoolInfo(): Response<List<PoolInfo>>
+    @GET("inbound_addresses")
+    suspend fun getInboundAddresses(): Response<List<InboundAddress>>
 }
 
 open class MayaWebApi @Inject constructor(
@@ -72,6 +76,44 @@ open class MayaWebApi @Inject constructor(
 
             listOf()
         }
+    }
+
+    suspend fun getInboundAddresses(): List<InboundAddress> {
+        return listOf(
+            InboundAddress(
+                    address = "XsPKvvrZqQB931M8EbFpB12W88QxjW9WnX",
+                    chain = "DASH",
+                    chain_lp_actions_paused = false,
+                    chain_trading_paused = false,
+                    dust_threshold = "10000",
+                    gas_rate = "12",
+                    gas_rate_units = "satsperbyte",
+                    global_trading_paused = false,
+                    halted = false,
+                    outbound_fee = "5412",
+                    outbound_tx_size = "451",
+                    pub_key = "mayapub1addwnpepq255x4s5ag6qu0s2hrj9kwnlqpuy5r33d5t50p9r00wgr2842zhvz74muvu"
+            )
+        )
+//        return try {
+//            val response = endpoint.getInboundAddresses()
+//            log.info("maya: response: {}", response)
+//        
+//            return if (response.isSuccessful && response.body()?.isNotEmpty() == true) {
+//                response.body()!!.toList()
+//            } else {
+//                log.error("getInboundAddresses not successful; ${response.code()} : ${response.message()}")
+//                listOf()
+//            }
+//        } catch (ex: Exception) {
+//            log.error("Error in getInboundAddresses: $ex")
+//        
+//            if (ex !is IOException) {
+//                analyticsService.logError(ex)
+//            }
+//        
+//            listOf()
+//      }
     }
 
     suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel> {
