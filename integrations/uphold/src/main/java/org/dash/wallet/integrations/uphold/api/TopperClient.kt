@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.uphold.api
 
+import androidx.annotation.VisibleForTesting
 import com.google.gson.Gson
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
@@ -49,12 +50,11 @@ class TopperClient @Inject constructor(
     private val httpClient: OkHttpClient
 ) {
     companion object {
-        private const val MINIMUM_MULTIPLIER = 10
-        private const val DEFAULT_FIAT_AMOUNT = 100
+        private const val DEFAULT_FIAT_AMOUNT = 100 // Target 100 USD, or similar in other currencies
         private const val BASE_URL = "https://app.topperpay.com/"
         private const val SANDBOX_URL = "https://app.sandbox.topperpay.com/"
         private const val SUPPORTED_ASSETS_URL = "https://api.topperpay.com/assets/crypto-onramp"
-        private const val SUPPORTED_PAYMENT_METHODS_URL = "https://api.topperpay.com/payment-methods/crypto-onramp"
+        const val SUPPORTED_PAYMENT_METHODS_URL = "https://api.topperpay.com/payment-methods/crypto-onramp"
         private val log = LoggerFactory.getLogger(TopperClient::class.java)
     }
 
@@ -135,28 +135,8 @@ class TopperClient @Inject constructor(
             setProvider(BouncyCastleProvider())
         }.getPrivateKey(PrivateKeyInfo(algId, pKey))
 
+        val defaultValue = getDefaultValue(sourceAsset, supportedPaymentMethods)
         // docs: https://docs.topperpay.com/flows/crypto-onramp
-        val defaultValue = if (supportedPaymentMethods.isNotEmpty()) {
-            val paymentMethod = supportedPaymentMethods.find { it.type == "credit-card" && it.billingAsset == "USD" }
-            val amount = paymentMethod?.limits?.find {
-                it.asset == sourceAsset
-            }?.minimum?.toBigDecimal()?.multiply(BigDecimal(MINIMUM_MULTIPLIER))
-            if (amount != null) {
-                // This section will round the amount up
-                // 1. amounts below 100 will be rounded up with a precision of 1: 92 becomes 90
-                // 2. amounts above 100 will be rounded up with a precision of 2: 15070 becomes 15000
-                val precision = if (amount > BigDecimal.valueOf(100)) {
-                    2
-                } else {
-                    1
-                }
-                amount.round(MathContext(precision, RoundingMode.HALF_UP)).toInt()
-            } else {
-                DEFAULT_FIAT_AMOUNT
-            }
-        } else {
-            DEFAULT_FIAT_AMOUNT
-        }
         return Jwts.builder()
             .setHeaderParam("kid", keyId)
             .setHeaderParam("typ", "JWT")
@@ -182,5 +162,45 @@ class TopperClient @Inject constructor(
             )
             .signWith(key, SignatureAlgorithm.ES256)
             .compact()
+    }
+
+    @VisibleForTesting
+    fun getDefaultValue(sourceAsset: String, paymentMethods: List<TopperPaymentMethod>): Int {
+        if (paymentMethods.isNotEmpty()) {
+            val paymentMethod = paymentMethods.find { it.type == "credit-card" && it.billingAsset == "USD" }
+
+            val minimumUSD = paymentMethod?.limits?.find {
+                it.asset == "USD"
+            }?.minimum?.toBigDecimal()
+            val minimumMultplier = minimumUSD?.let { BigDecimal(DEFAULT_FIAT_AMOUNT).setScale(3) / minimumUSD }
+
+            if (minimumMultplier != null) {
+                val minimum = paymentMethod.limits.find { it.asset == sourceAsset }?.minimum?.toBigDecimal()
+                // check if the minimum is greater than the default amount
+                val amount = if (minimumMultplier > BigDecimal.ONE) {
+                    minimum?.multiply(minimumMultplier)
+                } else {
+                    minimum?.round(MathContext(2, RoundingMode.CEILING))
+                }
+                if (minimum != null && amount != null) {
+                    // This section will round the amount up
+                    // 1. amounts below 100 will be rounded up with a precision of 1: 92 becomes 90
+                    // 2. amounts above 100 will be rounded up with a precision of 2: 15070 becomes 15000
+                    val precision = if (amount > BigDecimal.valueOf(100)) {
+                        2
+                    } else {
+                        1
+                    }
+                    log.info(
+                        "topper: amount:{};  mult:{} = {}",
+                        amount,
+                        minimumMultplier,
+                        amount.round(MathContext(precision, RoundingMode.HALF_UP)).toInt()
+                    )
+                    return amount.round(MathContext(precision, RoundingMode.HALF_UP)).toInt()
+                }
+            }
+        }
+        return DEFAULT_FIAT_AMOUNT
     }
 }

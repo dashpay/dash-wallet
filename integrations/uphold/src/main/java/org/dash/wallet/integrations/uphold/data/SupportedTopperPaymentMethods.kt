@@ -17,7 +17,6 @@
 
 package org.dash.wallet.integrations.uphold.data
 
-
 data class SupportedTopperPaymentMethods(
     val paymentMethods: List<TopperPaymentMethod>
 )
