@@ -167,6 +167,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 viewModel.mixedBalance,
                 viewModel.walletBalance
             )
+            mixingBinding.mixingPercent.text = getString(R.string.percent, progress.toInt())
             mixingBinding.mixingProgress.progress = progress.toInt()
         }
 
@@ -177,6 +178,25 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 MixingStatus.FINISHED -> false
                 else -> true
             }
+            when (mixingState) {
+                MixingStatus.MIXING -> {
+                    mixingBinding.mixingMode.text = getString(R.string.coinjoin_mixing)
+                    mixingBinding.progressBar.isVisible = true
+                }
+                MixingStatus.PAUSED -> {
+                    mixingBinding.mixingMode.text = getString(R.string.coinjoin_paused)
+                    mixingBinding.progressBar.isVisible = false
+                }
+                else -> {
+                    mixingBinding.mixingMode.text = getString(R.string.error)
+                    mixingBinding.progressBar.isVisible = false
+                }
+            }
+        }
+
+        viewModel.mixingSessions.observe(viewLifecycleOwner) {
+            val activeSessionsText = ".".repeat(it)
+            mixingBinding.mixingSessions.text = activeSessionsText
         }
     }
 

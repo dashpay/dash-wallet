@@ -130,29 +130,61 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_chainStyle="packed" />
 
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:paddingEnd="5dp"
+            style="@style/Widget.AppCompat.ProgressBar"
+            app:layout_constraintStart_toStartOf="@id/coinjoin_title"
+            app:layout_constraintTop_toTopOf="@id/coinjoin_subtitle"
+            app:layout_constraintBottom_toBottomOf="@id/coinjoin_subtitle"
+            android:indeterminate="true"
+            android:indeterminateDrawable="@drawable/animated_circular_progress_indictator"/>
+
         <TextView
             android:id="@+id/coinjoin_subtitle"
             style="@style/Overline.Tertiary"
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_marginStart="22dp"
             android:text="@string/turned_off"
-            app:layout_constraintStart_toEndOf="@id/coinjoin_icon"
+            app:layout_constraintStart_toEndOf="@id/progress_bar"
             app:layout_constraintTop_toBottomOf="@id/coinjoin_title"
             app:layout_constraintBottom_toBottomOf="parent" />
+
+        <TextView
+            android:id="@+id/coinjoin_progress"
+            style="@style/Overline.Tertiary"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            app:layout_constraintStart_toEndOf="@id/coinjoin_subtitle"
+            app:layout_constraintEnd_toStartOf="@id/balance"
+            app:layout_constraintBottom_toBottomOf="@id/coinjoin_subtitle"
+            tools:text="(10%)"/>
+
+        <TextView
+            android:id="@+id/balance"
+            style="@style/Overline.Tertiary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="3dp"
+            app:layout_constraintEnd_toStartOf="@id/coinjoin_subtitle_icon"
+            app:layout_constraintTop_toBottomOf="@id/coinjoin_title"
+            app:layout_constraintBottom_toBottomOf="@id/coinjoin_subtitle"
+            tools:text="0.012 of 0.028" />
 
         <ImageView
             android:id="@+id/coinjoin_subtitle_icon"
             android:layout_gravity="center_vertical"
             android:layout_width="12dp"
             android:layout_height="12dp"
-            android:layout_marginStart="3dp"
-            android:layout_marginTop="3dp"
-            android:visibility="gone"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="15dp"
             app:srcCompat="@drawable/ic_dash"
             app:tint="@color/content_tertiary"
             app:layout_constraintTop_toTopOf="@id/coinjoin_subtitle"
-            app:layout_constraintStart_toEndOf="@id/coinjoin_subtitle" />
+            app:layout_constraintBottom_toBottomOf="@id/coinjoin_subtitle"
+            app:layout_constraintEnd_toEndOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout

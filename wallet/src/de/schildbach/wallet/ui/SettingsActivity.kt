@@ -23,6 +23,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.viewModels
+import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
@@ -159,17 +160,35 @@ class SettingsActivity : LockScreenActivity() {
         viewModel.coinJoinMixingMode.observe(this) { mode ->
             if (mode == CoinJoinMode.NONE) {
                 binding.coinjoinSubtitle.text = getText(R.string.turned_off)
+                binding.coinjoinSubtitleIcon.isVisible = false
+                binding.progressBar.isVisible = false
+                binding.balance.isVisible = false
             } else {
                 if (viewModel.coinJoinMixingStatus == MixingStatus.FINISHED) {
                     binding.coinjoinSubtitle.text = getString(R.string.coinjoin_progress_finished)
                     binding.coinjoinSubtitleIcon.isVisible = false
+                    binding.progressBar.isVisible = false
                 } else {
-                    binding.coinjoinSubtitle.text = getString(
-                        R.string.coinjoin_progress,
-                        viewModel.mixedBalance,
-                        viewModel.walletBalance
-                    )
+                    @StringRes val statusId = when(viewModel.coinJoinMixingStatus) {
+                        MixingStatus.MIXING -> R.string.coinjoin_mixing
+                        MixingStatus.PAUSED -> R.string.coinjoin_paused
+                        MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
+                        else -> R.string.error
+                    }
+
+                    binding.coinjoinSubtitle.text = getString(statusId)
+//                        getString(
+//                        R.string.coinjoin_progress,
+//                        getString(statusId),
+//                        viewModel.mixingProgress.toInt(),
+//                        viewModel.mixedBalance,
+//                        viewModel.walletBalance
+//                    )
                     binding.coinjoinSubtitleIcon.isVisible = true
+                    binding.progressBar.isVisible = true
+                    binding.coinjoinProgress.text = getString(R.string.percent, viewModel.mixingProgress.toInt())
+                    binding.balance.isVisible = true
+                    binding.balance.text = getString(R.string.coinjoin_progress_balance, viewModel.mixedBalance, viewModel.walletBalance)
                 }
             }
         }

@@ -34,6 +34,8 @@ import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
@@ -123,7 +125,9 @@ class SendCoinsViewModel @Inject constructor(
     val contactData: LiveData<UsernameSearchResult>
         get() = _contactData
 
-    private var coinJoinMode: CoinJoinMode = CoinJoinMode.NONE
+    private var _coinJoinMode = MutableStateFlow(CoinJoinMode.NONE)
+    val coinJoinMode: Flow<CoinJoinMode>
+        get() = _coinJoinMode
 
     init {
         blockchainStateDao.observeState()
@@ -135,7 +139,7 @@ class SendCoinsViewModel @Inject constructor(
 
         coinJoinConfig.observeMode()
             .map { mode ->
-                coinJoinMode = mode
+                _coinJoinMode.value = mode
                 if (mode == CoinJoinMode.NONE) {
                     MaxOutputAmountCoinSelector()
                 } else {
@@ -299,7 +303,7 @@ class SendCoinsViewModel @Inject constructor(
             dryrunSendRequest = sendRequest
             _dryRunSuccessful.value = true
         } catch (ex: Exception) {
-            dryRunException = if (ex is InsufficientMoneyException && coinJoinMode != CoinJoinMode.NONE && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
+            dryRunException = if (ex is InsufficientMoneyException && _coinJoinMode.value != CoinJoinMode.NONE && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
                  InsufficientCoinJoinMoneyException(ex)
             } else {
                 ex
