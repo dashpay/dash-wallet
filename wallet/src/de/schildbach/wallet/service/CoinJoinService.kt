@@ -51,6 +51,7 @@ import org.bitcoinj.coinjoin.callbacks.RequestKeyParameter
 import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener
 import org.bitcoinj.coinjoin.listeners.MixingCompleteListener
 import org.bitcoinj.coinjoin.listeners.SessionCompleteListener
+import org.bitcoinj.coinjoin.listeners.SessionStartedListener
 import org.bitcoinj.coinjoin.progress.MixingProgressTracker
 import org.bitcoinj.coinjoin.utils.CoinJoinManager
 import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
@@ -86,8 +87,10 @@ enum class CoinJoinMode {
  * Monitor the status of the CoinJoin Mixing Service
  */
 interface CoinJoinService {
+    fun observeActiveSessions(): Flow<Int>
     suspend fun getMixingState(): MixingStatus
     fun observeMixingState(): Flow<MixingStatus>
+    suspend fun getMixingProgress(): Double
     fun observeMixingProgress(): Flow<Double>
     fun updateTimeSkew(timeSkew: Long)
 }
@@ -138,6 +141,7 @@ class CoinJoinMixingService @Inject constructor(
 
     private var mixingCompleteListeners: ArrayList<MixingCompleteListener> = arrayListOf()
     private var sessionCompleteListeners: ArrayList<SessionCompleteListener> = arrayListOf()
+    private var sessionStartedListeners: ArrayList<SessionStartedListener> = arrayListOf()
 
     var mode: CoinJoinMode = CoinJoinMode.NONE
     private val _mixingState = MutableStateFlow(MixingStatus.NOT_STARTED)
@@ -146,9 +150,8 @@ class CoinJoinMixingService @Inject constructor(
     override suspend fun getMixingState(): MixingStatus = _mixingState.value
     override fun observeMixingState(): Flow<MixingStatus> = _mixingState
 
-    private val coroutineScope = CoroutineScope(
-        Executors.newFixedThreadPool(2, ContextPropagatingThreadFactory("coinjoin-pool")).asCoroutineDispatcher()
-    )
+    private val executor = Executors.newFixedThreadPool(2, ContextPropagatingThreadFactory("coinjoin-pool"))
+    private val coroutineScope = CoroutineScope(executor.asCoroutineDispatcher())
 
     private val uiCoroutineScope = CoroutineScope(Dispatchers.Main)
 
@@ -159,6 +162,8 @@ class CoinJoinMixingService @Inject constructor(
     private var isSynced = false
     private var hasAnonymizableBalance: Boolean = false
     private var timeSkew: Long = 0L
+    private var activeSessions = 0
+    private val activeSessionsFlow = MutableStateFlow(0)
 
     // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
     private val updateMutex = Mutex(locked = false)
@@ -199,6 +204,7 @@ class CoinJoinMixingService @Inject constructor(
             .onEach { blockChainState ->
                 val isSynced = blockChainState.isSynced()
                 if (isSynced != this.isSynced) {
+                    val networkStatus = blockchainStateProvider.getNetworkStatus()
                     updateState(config.getMode(), timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
                 }
                 // this will trigger mixing as new blocks are mined and received tx's are confirmed
@@ -304,7 +310,7 @@ class CoinJoinMixingService @Inject constructor(
             log.info(
                 "coinjoin-new-state: $mode, $timeSkew ms, $hasAnonymizableBalance, $networkStatus, synced: $isSynced, ${blockChain != null}"
             )
-            log.info("coinjoin-Current timeskew: ${getCurrentTimeSkew()}")
+            // log.info("coinjoin-Current timeskew: ${getCurrentTimeSkew()}")
             this.networkStatus = networkStatus
             this.hasAnonymizableBalance = hasAnonymizableBalance
             this.isSynced = isSynced
@@ -370,8 +376,8 @@ class CoinJoinMixingService @Inject constructor(
         CoinJoinClientOptions.setEnabled(mode != CoinJoinMode.NONE)
         if (mode != CoinJoinMode.NONE && this.mode == CoinJoinMode.NONE) {
             configureMixing()
-            updateBalance(walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.AVAILABLE))
         }
+        updateBalance(walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.AVAILABLE))
         val currentTimeSkew = getCurrentTimeSkew()
         updateState(mode, currentTimeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
     }
@@ -389,7 +395,8 @@ class CoinJoinMixingService @Inject constructor(
             message: PoolMessage?
         ) {
             super.onSessionStarted(wallet, sessionId, denomination, message)
-            log.info("Session {} started.  {}% mixed", sessionId, progress)
+            log.info("Session started: {}.  {}% mixed. {} active sessions", sessionId, progress, activeSessions + 1)
+            updateActiveSessions()
         }
 
         override fun onSessionComplete(
@@ -402,7 +409,8 @@ class CoinJoinMixingService @Inject constructor(
             joined: Boolean
         ) {
             super.onSessionComplete(wallet, sessionId, denomination, state, message, address, joined)
-            log.info("Session {} complete. {} % mixed -- {}", sessionId, progress, message)
+            log.info("Session completed: {}.  {}% mixed. {} active sessions", sessionId, progress, activeSessions - 1)
+            updateActiveSessions()
         }
 
         override fun onTransactionProcessed(tx: Transaction?, type: CoinJoinTransactionType?, sessionId: Int) {
@@ -470,9 +478,6 @@ class CoinJoinMixingService @Inject constructor(
         log.info("coinjoin: Mixing preparation began")
         clear()
         val wallet = walletDataProvider.wallet!!
-        addMixingCompleteListener(mixingProgressTracker)
-        addSessionCompleteListener(mixingProgressTracker)
-        addTransationListener(mixingProgressTracker)
         coinJoinManager?.run {
             clientManager = CoinJoinClientManager(wallet)
             coinJoinClientManagers[wallet.description] = clientManager
@@ -482,6 +487,11 @@ class CoinJoinMixingService @Inject constructor(
             clientManager.addContinueMixingOnError(PoolStatus.ERR_NO_MASTERNODES_DETECTED)
             clientManager.setStopOnNothingToDo(true)
             val mixingFinished = clientManager.mixingFinishedFuture
+
+            addMixingCompleteListener(executor, mixingProgressTracker)
+            addSessionStartedListener(executor, mixingProgressTracker)
+            addSessionCompleteListener(executor, mixingProgressTracker)
+            addTransationListener(executor, mixingProgressTracker)
 
             val mixingCompleteListener =
                 MixingCompleteListener { _, statusList ->
@@ -522,8 +532,8 @@ class CoinJoinMixingService @Inject constructor(
                 }
             }, Threading.USER_THREAD)
 
-            addMixingCompleteListener(Threading.USER_THREAD, mixingCompleteListener)
-            addSessionCompleteListener(Threading.USER_THREAD, sessionCompleteListener)
+            addMixingCompleteListener(executor, mixingCompleteListener)
+            addSessionCompleteListener(executor, sessionCompleteListener)
             log.info("coinjoin: mixing preparation finished")
 
             setRequestKeyParameter(requestKeyParameter)
@@ -571,6 +581,7 @@ class CoinJoinMixingService @Inject constructor(
         // remove all listeners
         mixingCompleteListeners.forEach { coinJoinManager?.removeMixingCompleteListener(it) }
         sessionCompleteListeners.forEach { coinJoinManager?.removeSessionCompleteListener(it) }
+        sessionStartedListeners.forEach { coinJoinManager?.removeSessionStartedListener(it) }
         clientManager.stopMixing()
         coinJoinManager?.stop()
         context.unregisterReceiver(timeChangeReceiver)
@@ -585,6 +596,10 @@ class CoinJoinMixingService @Inject constructor(
         this.blockChain = blockChain
     }
 
+    private fun addSessionStartedListener(sessionStartedListener: SessionStartedListener) {
+        sessionStartedListeners.add(sessionStartedListener)
+        coinJoinManager?.addSessionStartedListener(Threading.USER_THREAD, sessionStartedListener)
+    }
     private fun addSessionCompleteListener(sessionCompleteListener: SessionCompleteListener) {
         sessionCompleteListeners.add(sessionCompleteListener)
         coinJoinManager?.addSessionCompleteListener(Threading.USER_THREAD, sessionCompleteListener)
@@ -604,20 +619,28 @@ class CoinJoinMixingService @Inject constructor(
         exception = null
     }
 
-    private suspend fun updateProgress() {
+    override suspend fun getMixingProgress(): Double {
         val wallet = walletDataProvider.wallet as WalletEx
-        val mixedBalance = wallet.coinJoinBalance
-        val anonymizableBalance = wallet.getAnonymizableBalance(false, false)
-        if (mixedBalance != Coin.ZERO && anonymizableBalance != Coin.ZERO) {
-            val progress = mixedBalance.value * 100.0 / (mixedBalance.value + anonymizableBalance.value)
-            log.info(
-                "coinjoin: progress {} = 100*{}/({} + {})",
-                progress,
-                mixedBalance.value,
-                mixedBalance.value,
-                anonymizableBalance.value
-            )
-            _progressFlow.emit(progress)
+        return wallet.coinJoin.mixingProgress * 100.0
+    }
+
+    private suspend fun updateProgress() {
+        val progress = getMixingProgress()
+        _progressFlow.emit(progress)
+    }
+
+    private fun updateActiveSessions() {
+        coroutineScope.launch {
+            activeSessions = if (this@CoinJoinMixingService::clientManager.isInitialized) {
+                clientManager.sessionsStatus?.count { poolStatus ->
+                    poolStatus == PoolStatus.CONNECTING || poolStatus == PoolStatus.CONNECTED || poolStatus == PoolStatus.MIXING
+                } ?: 0
+            } else {
+                0
+            }
+            log.info("coinjoin-activeSessions: {}", activeSessions)
+            activeSessionsFlow.emit(activeSessions)
         }
     }
+    override fun observeActiveSessions(): Flow<Int> = activeSessionsFlow
 }

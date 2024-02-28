@@ -106,4 +106,6 @@
     <string name="enter_amount_available">available</string>
     <string name="transaction_row_rate_not_available">Not available</string>
     <string name="log_in">Log In</string>
+    <!-- basic formats -->
+    <string name="percent" translatable="false">%d%%</string>
 </resources>

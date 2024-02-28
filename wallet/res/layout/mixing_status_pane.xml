@@ -21,6 +21,20 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="5dp"
+            style="@style/Widget.AppCompat.ProgressBar"
+            app:layout_constraintStart_toEndOf="@id/mixing_icon"
+            app:layout_constraintTop_toTopOf="@id/mixing_mode"
+            app:layout_constraintBottom_toBottomOf="@id/mixing_mode"
+            android:indeterminate="true"
+            android:indeterminateDrawable="@drawable/animated_circular_progress_indictator"/>
+
+
         <TextView
             android:id="@+id/mixing_mode"
             style="@style/Overline"
@@ -28,8 +42,28 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:text="@string/coinjoin_mixing"
-            app:layout_constraintStart_toEndOf="@id/mixing_icon"
+            app:layout_constraintStart_toEndOf="@id/progress_bar"
             app:layout_constraintTop_toTopOf="@id/mixing_icon" />
+
+        <TextView
+            android:id="@+id/mixing_sessions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toEndOf="@id/mixing_mode"
+            app:layout_constraintTop_toTopOf="@id/mixing_mode"
+            tools:text="...."
+            />
+
+        <TextView
+            android:id="@+id/mixing_percent"
+            style="@style/Overline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="3dp"
+            app:layout_constraintStart_toEndOf="@+id/mixing_mode"
+            app:layout_constraintEnd_toStartOf="@id/balance"
+            app:layout_constraintTop_toTopOf="@id/mixing_mode"
+            tools:text="50%" />
 
         <TextView
             android:id="@+id/balance"

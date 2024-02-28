@@ -214,6 +214,8 @@ class MainViewModel @Inject constructor(
         get() = coinJoinService.observeMixingState()
     val mixingProgress: Flow<Double>
         get() = coinJoinService.observeMixingProgress()
+    val mixingSessions: Flow<Int>
+        get() = coinJoinService.observeActiveSessions()
 
     var decimalFormat: DecimalFormat = DecimalFormat("0.000")
     val walletBalance: String
