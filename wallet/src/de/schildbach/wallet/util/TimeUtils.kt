@@ -2,12 +2,14 @@ package de.schildbach.wallet.util
 
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.head
+import org.slf4j.LoggerFactory
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketTimeoutException
-import kotlin.math.abs
+import kotlin.jvm.Throws
 
+private val log = LoggerFactory.getLogger("TimeUtils")
 private fun queryNtpTime(server: String): Long? {
     try {
         val address = InetAddress.getByName(server)
@@ -42,17 +44,32 @@ private fun queryNtpTime(server: String): Long? {
     return null
 }
 
+@Throws(NullPointerException::class)
 suspend fun getTimeSkew(): Long {
     var networkTime: Long? = null
-    try {
-        networkTime = queryNtpTime("pool.ntp.org")
-    } catch (e: SocketTimeoutException) {
-        // swallow, the next block will use alternate method
+    var timeSource = "NTP"
+
+    val networkTimes = arrayListOf<Long>()
+    for (i in 0..3) {
+        try {
+            val time = queryNtpTime("pool.ntp.org")
+            if (time != null && time > 0) { networkTimes.add(time) }
+        } catch (e: SocketTimeoutException) {
+            // swallow
+        }
     }
+    networkTimes.sort()
+    when (networkTimes.size) {
+        3 -> networkTime = networkTimes[2]
+        2 -> networkTime = (networkTimes[0] + networkTimes[1]) / 2
+        else -> { }
+    }
+
     if (networkTime == null) {
         try {
             val result = Constants.HTTP_CLIENT.head("https://www.dash.org/")
             networkTime = result.headers.getDate("date")?.time
+            timeSource = "dash.org"
         } catch (e: Exception) {
             // swallow
         }
@@ -60,12 +77,16 @@ suspend fun getTimeSkew(): Long {
             try {
                 val result = Constants.HTTP_CLIENT.head("https://insight.dash.org/insight")
                 networkTime = result.headers.getDate("date")?.time
+                timeSource = "insight"
             } catch (e: Exception) {
                 // swallow
             }
         }
+        log.info("timeskew: network time is $networkTime")
         requireNotNull(networkTime)
     }
+
     val systemTimeMillis = System.currentTimeMillis()
+    log.info("timeskew: $systemTimeMillis-$networkTime = ${systemTimeMillis - networkTime}; source: $timeSource")
     return systemTimeMillis - networkTime
 }
