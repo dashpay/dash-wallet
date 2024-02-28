@@ -26,6 +26,8 @@ import org.bitcoinj.core.Address
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.get
 import org.dash.wallet.integrations.uphold.data.SupportedTopperAssets
+import org.dash.wallet.integrations.uphold.data.SupportedTopperPaymentMethods
+import org.dash.wallet.integrations.uphold.data.TopperPaymentMethod
 import org.slf4j.LoggerFactory
 import org.spongycastle.asn1.ASN1Sequence
 import org.spongycastle.asn1.pkcs.PrivateKeyInfo
@@ -35,6 +37,9 @@ import org.spongycastle.asn1.x9.X9ObjectIdentifiers
 import org.spongycastle.jce.provider.BouncyCastleProvider
 import org.spongycastle.openssl.jcajce.JcaPEMKeyConverter
 import java.lang.Exception
+import java.math.BigDecimal
+import java.math.MathContext
+import java.math.RoundingMode
 import java.util.Date
 import java.util.SortedSet
 import java.util.UUID
@@ -44,9 +49,12 @@ class TopperClient @Inject constructor(
     private val httpClient: OkHttpClient
 ) {
     companion object {
+        private const val MINIMUM_MULTIPLIER = 10
+        private const val DEFAULT_FIAT_AMOUNT = 100
         private const val BASE_URL = "https://app.topperpay.com/"
         private const val SANDBOX_URL = "https://app.sandbox.topperpay.com/"
         private const val SUPPORTED_ASSETS_URL = "https://api.topperpay.com/assets/crypto-onramp"
+        private const val SUPPORTED_PAYMENT_METHODS_URL = "https://api.topperpay.com/payment-methods/crypto-onramp"
         private val log = LoggerFactory.getLogger(TopperClient::class.java)
     }
 
@@ -55,6 +63,7 @@ class TopperClient @Inject constructor(
     private lateinit var privateKey: String
     private var isSandbox: Boolean = false
     private var supportedAssets: SortedSet<String> = sortedSetOf<String>()
+    private var supportedPaymentMethods: List<TopperPaymentMethod> = listOf()
 
     val hasValidCredentials: Boolean
         get() = keyId.isNotEmpty() && widgetId.isNotEmpty() && privateKey.isNotEmpty()
@@ -98,6 +107,17 @@ class TopperClient @Inject constructor(
         }
     }
 
+    suspend fun refreshPaymentMethods() {
+        supportedPaymentMethods = try {
+            val response = httpClient.get(SUPPORTED_PAYMENT_METHODS_URL)
+            val root = Gson().fromJson(response.body?.string(), SupportedTopperPaymentMethods::class.java)
+            root.paymentMethods.filter { it.type == "credit-card" && it.billingAsset == "USD" }
+        } catch (ex: Exception) {
+            log.error("Failed to get supported assets from Topper", ex)
+            listOf()
+        }
+    }
+
     private fun isSupportedAsset(asset: String): Boolean {
         return supportedAssets.contains(asset)
     }
@@ -116,6 +136,27 @@ class TopperClient @Inject constructor(
         }.getPrivateKey(PrivateKeyInfo(algId, pKey))
 
         // docs: https://docs.topperpay.com/flows/crypto-onramp
+        val defaultValue = if (supportedPaymentMethods.isNotEmpty()) {
+            val paymentMethod = supportedPaymentMethods.find { it.type == "credit-card" && it.billingAsset == "USD" }
+            val amount = paymentMethod?.limits?.find {
+                it.asset == sourceAsset
+            }?.minimum?.toBigDecimal()?.multiply(BigDecimal(MINIMUM_MULTIPLIER))
+            if (amount != null) {
+                // This section will round the amount up
+                // 1. amounts below 100 will be rounded up with a precision of 1: 92 becomes 90
+                // 2. amounts above 100 will be rounded up with a precision of 2: 15070 becomes 15000
+                val precision = if (amount > BigDecimal.valueOf(100)) {
+                    2
+                } else {
+                    1
+                }
+                amount.round(MathContext(precision, RoundingMode.HALF_UP)).toInt()
+            } else {
+                DEFAULT_FIAT_AMOUNT
+            }
+        } else {
+            DEFAULT_FIAT_AMOUNT
+        }
         return Jwts.builder()
             .setHeaderParam("kid", keyId)
             .setHeaderParam("typ", "JWT")
@@ -126,7 +167,7 @@ class TopperClient @Inject constructor(
                 "source",
                 mapOf(
                     "asset" to sourceAsset,
-                    "amount" to "100"
+                    "amount" to defaultValue.toString()
                 )
             )
             .claim(
