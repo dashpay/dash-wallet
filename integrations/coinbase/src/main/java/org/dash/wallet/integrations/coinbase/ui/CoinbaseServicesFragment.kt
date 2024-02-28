@@ -18,7 +18,10 @@ package org.dash.wallet.integrations.coinbase.ui
 
 import android.animation.ObjectAnimator
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
@@ -27,8 +30,11 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withResumed
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -36,8 +42,10 @@ import org.dash.wallet.common.ui.blinkAnimator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.common.util.toFormattedString
+import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.R
 import org.dash.wallet.integrations.coinbase.model.CoinbaseErrorType
 import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseViewModel
@@ -51,17 +59,20 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
     private val sharedViewModel by coinbaseViewModels<CoinbaseViewModel>()
     private var balanceAnimator: ObjectAnimator? = null
 
-    private val coinbaseAuthLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val data = result.data
+    private val coinbaseAuthResultReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val uri = intent.extras?.get("uri") as Uri?
+            val code = uri?.getQueryParameter("code")
 
-        if (result.resultCode == Activity.RESULT_OK) {
-            data?.extras?.getString(CoinBaseWebClientActivity.RESULT_TEXT)?.let { code ->
-                lifecycleScope.launchWhenResumed {
-                    handleCoinbaseAuthResult(code)
+            if (code != null) {
+                lifecycleScope.launch {
+                    withResumed {
+                        handleCoinbaseAuthResult(code)
+                    }
                 }
             }
+
+            startActivity(intent)
         }
     }
 
@@ -125,9 +136,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
                     it.isCancelable = false
                 }.show(requireActivity()) { login ->
                     if (login == true) {
-                        coinbaseAuthLauncher.launch(
-                            Intent(requireContext(), CoinBaseWebClientActivity::class.java)
-                        )
+                        requireActivity().openCustomTab(CoinbaseConstants.LINK_URL)
                     } else {
                         findNavController().popBackStack()
                     }
@@ -170,6 +179,11 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
 
         viewModel.refreshBalance()
         sharedViewModel.getBaseIdForFiatModel()
+
+        LocalBroadcastManager.getInstance(requireContext()).registerReceiver(
+            coinbaseAuthResultReceiver,
+            IntentFilter(CoinbaseConstants.AUTH_RESULT_ACTION)
+        )
     }
 
     private fun setNetworkState(hasInternet: Boolean) {
@@ -186,28 +200,37 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
         startActivity(defaultBrowser)
     }
 
-    private suspend fun handleCoinbaseAuthResult(code: String) {
-        val success = AdaptiveDialog.withProgress(getString(R.string.loading), requireActivity()) {
-            sharedViewModel.loginToCoinbase(code)
-        }
+    private fun handleCoinbaseAuthResult(code: String) {
+        lifecycleScope.launch {
+            val success = AdaptiveDialog.withProgress(getString(R.string.loading), requireActivity()) {
+                sharedViewModel.loginToCoinbase(code)
+            }
 
-        if (success) {
-            return
-        }
+            if (success) {
+                return@launch
+            }
 
-        val retry = AdaptiveDialog.create(
-            R.drawable.ic_error,
-            getString(R.string.login_error_title, getString(R.string.coinbase)),
-            getString(R.string.login_error_message, getString(R.string.coinbase)),
-            getString(android.R.string.cancel),
-            getString(R.string.retry)
-        ).showAsync(requireActivity())
+            val retry = AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.login_error_title, getString(R.string.coinbase)),
+                getString(R.string.login_error_message, getString(R.string.coinbase)),
+                getString(android.R.string.cancel),
+                getString(R.string.retry)
+            ).showAsync(requireActivity())
 
-        if (retry == true) {
-            handleCoinbaseAuthResult(code)
-        } else {
-            findNavController().popBackStack()
+            if (retry == true) {
+                handleCoinbaseAuthResult(code)
+            } else {
+                findNavController().popBackStack()
+            }
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(
+            coinbaseAuthResultReceiver
+        )
     }
 
     override fun onDestroy() {

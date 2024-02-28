@@ -100,7 +100,7 @@ class CoinbaseServicesViewModel @Inject constructor(
                 val response = coinBaseRepository.getUserAccount()
                 config.set(
                     CoinbaseConfig.LAST_BALANCE,
-                    Coin.parseCoin(response.availableBalance.value).value
+                    response.coinBalance().value
                 )
             } catch (ex: IllegalStateException) {
                 _uiState.value = _uiState.value.copy(error = CoinbaseErrorType.USER_ACCOUNT_ERROR)
