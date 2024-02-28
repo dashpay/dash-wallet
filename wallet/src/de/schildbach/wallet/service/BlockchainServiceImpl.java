@@ -145,9 +145,6 @@ import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
-import kotlin.Unit;
-import kotlin.coroutines.Continuation;
-import kotlinx.coroutines.flow.FlowCollector;
 
 import static org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO;
 
@@ -224,7 +221,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
     private MixingStatus mixingStatus = MixingStatus.NOT_STARTED;
-    private boolean isForegroundService = false;
+    private Double mixingProgress = 0.0;
+    private ForegroundService foregroundService = ForegroundService.NONE;
 
     // Risk Analyser for Transactions that is PeerGroup Aware
     AllowLockTimeRiskAnalysis.Analyzer riskAnalyzer;
@@ -1042,25 +1040,46 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         updateAppWidget();
         FlowExtKt.observe(blockchainStateDao.observeState(), this, (blockchainState, continuation) -> {
-            handleBlockchainStateNotification((BlockchainState) blockchainState, mixingStatus);
+            handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress);
             return null;
         });
         registerCrowdNodeConfirmedAddressFilter();
 
         FlowExtKt.observe(coinJoinService.observeMixingState(), this, (mixingStatus, continuation) -> {
-            handleBlockchainStateNotification(blockchainState, mixingStatus);
+            handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress);
+            return null;
+        });
+
+        FlowExtKt.observe(coinJoinService.observeMixingProgress(), this, (mixingProgress, continuation) -> {
+            handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress);
             return null;
         });
     }
 
-    private Notification createCoinJoinNotification(Coin mixedBalance, Coin totalBalance) {
+    private Notification createCoinJoinNotification() {
+        Coin mixedBalance = ((WalletEx)application.getWallet()).getCoinJoinBalance();
+        Coin totalBalance = application.getWallet().getBalance();
         Intent notificationIntent = OnboardingActivity.createIntent(this);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
                 notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         DecimalFormat decimalFormat = new DecimalFormat("0.000");
+        int statusStringId = R.string.error;
+        switch(mixingStatus) {
+            case MIXING:
+                statusStringId = R.string.coinjoin_mixing;
+                break;
+            case PAUSED:
+                statusStringId = R.string.coinjoin_paused;
+                break;
+            case FINISHED:
+                statusStringId = R.string.coinjoin_progress_finished;
+                break;
+        }
         final String message = getString(
                 R.string.coinjoin_progress,
+                getString(statusStringId),
+                mixingProgress.intValue(),
                 decimalFormat.format(MonetaryExtKt.toBigDecimal(mixedBalance)),
                 decimalFormat.format(MonetaryExtKt.toBigDecimal(totalBalance))
         );
@@ -1156,7 +1175,15 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         //preventing it from being killed in Android 26 or later
         Notification notification = createNetworkSyncNotification(null);
         startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
-        isForegroundService = true;
+        foregroundService = ForegroundService.BLOCKCHAIN_SYNC;
+    }
+
+    private void startForegroundCoinJoin() {
+        // Shows ongoing notification promoting service to foreground service and
+        // preventing it from being killed in Android 26 or later
+        Notification notification = createCoinJoinNotification();
+        startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+        foregroundService = ForegroundService.COINJOIN_MIXING;
     }
 
     @Override
@@ -1308,12 +1335,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
     }
 
-    private void handleBlockchainStateNotification(BlockchainState blockchainState, MixingStatus mixingStatus) {
+    private void handleBlockchainStateNotification(BlockchainState blockchainState, MixingStatus mixingStatus, double mixingProgress) {
         // send this out for the Network Monitor, other activities observe the database
         final Intent broadcast = new Intent(ACTION_BLOCKCHAIN_STATE);
         broadcast.setPackage(getPackageName());
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
-
+        log.info("handle blockchain state notification: {}, {}", foregroundService, mixingStatus);
+        this.mixingProgress = mixingProgress;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && blockchainState != null
                 && blockchainState.getBestChainDate() != null) {
             //Handle Ongoing notification state
@@ -1321,21 +1349,25 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             if (!syncing && blockchainState.getBestChainHeight() == config.getBestChainHeightEver() && mixingStatus != MixingStatus.MIXING) {
                 //Remove ongoing notification if blockchain sync finished
                 stopForeground(true);
-                isForegroundService = false;
+                foregroundService = ForegroundService.NONE;
                 nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
             } else if (blockchainState.getReplaying() || syncing) {
                 //Shows ongoing notification when synchronizing the blockchain
                 Notification notification = createNetworkSyncNotification(blockchainState);
                 nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
-            } else if (mixingStatus == MixingStatus.MIXING) {
-                Notification notification = createCoinJoinNotification(
-                        ((WalletEx)application.getWallet()).getCoinJoinBalance(),
-                        application.getWallet().getBalance()
-                );
-                if (isForegroundService) {
-                    nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+            } else if (mixingStatus == MixingStatus.MIXING || mixingStatus == MixingStatus.PAUSED) {
+                log.info("foreground service: {}", foregroundService);
+                if (foregroundService == ForegroundService.NONE) {
+                    log.info("foreground service not active, create notification");
+                    startForegroundCoinJoin();
+                    //Notification notification = createCoinJoinNotification();
+                    //nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+                    foregroundService = ForegroundService.COINJOIN_MIXING;
                 } else {
-                    startForeground();
+                    log.info("foreground service active, update notification");
+                    Notification notification = createCoinJoinNotification();
+                    //nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
+                    nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
                 }
             }
         }
