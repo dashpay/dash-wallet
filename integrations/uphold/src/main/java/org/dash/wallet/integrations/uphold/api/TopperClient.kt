@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.uphold.api
 
+import android.util.Base64
 import androidx.annotation.VisibleForTesting
 import com.google.gson.Gson
 import io.jsonwebtoken.Jwts
@@ -162,7 +163,7 @@ class TopperClient @Inject constructor(
             )
             .signWith(key, SignatureAlgorithm.ES256)
             .compact()
-        log.info("topper: jwts.build: {}", str)
+        log.info("topper: jwts.build: {}", Base64.decode(str, Base64.DEFAULT))
         return str
     }
 
