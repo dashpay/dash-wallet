@@ -44,8 +44,15 @@ private fun queryNtpTime(server: String): Long? {
     return null
 }
 
+// check no more than once per minute
+private var lastTimeWhenSkewChecked = 0L
+private var lastTimeSkew = 0L
 @Throws(NullPointerException::class)
-suspend fun getTimeSkew(): Long {
+suspend fun getTimeSkew(force: Boolean = false): Long {
+    if (!force && (lastTimeWhenSkewChecked + 60 * 1000 > System.currentTimeMillis())) {
+        log.info("timeskew: {}; using last value", lastTimeSkew)
+        return lastTimeSkew
+    }
     var networkTime: Long? = null
     var timeSource = "NTP"
 
@@ -87,6 +94,8 @@ suspend fun getTimeSkew(): Long {
     }
 
     val systemTimeMillis = System.currentTimeMillis()
+    lastTimeWhenSkewChecked = systemTimeMillis
+    lastTimeSkew = systemTimeMillis - networkTime
     log.info("timeskew: $systemTimeMillis-$networkTime = ${systemTimeMillis - networkTime}; source: $timeSource")
     return systemTimeMillis - networkTime
 }

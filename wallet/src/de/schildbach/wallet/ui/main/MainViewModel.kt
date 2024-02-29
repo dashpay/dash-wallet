@@ -388,13 +388,13 @@ class MainViewModel @Inject constructor(
         return coinJoinConfig.getMode()
     }
 
-    suspend fun getDeviceTimeSkew(): Pair<Boolean, Long> {
+    suspend fun getDeviceTimeSkew(force: Boolean): Pair<Boolean, Long> {
         return try {
-            val timeSkew = getTimeSkew()
+            val timeSkew = getTimeSkew(force)
             val maxAllowedTimeSkew: Long = if (coinJoinConfig.getMode() == CoinJoinMode.NONE) {
                 TIME_SKEW_TOLERANCE
             } else {
-                if (timeSkew > 0) MAX_ALLOWED_AHEAD_TIMESKEW else MAX_ALLOWED_BEHIND_TIMESKEW
+                if (timeSkew > 0) MAX_ALLOWED_AHEAD_TIMESKEW * 3 else MAX_ALLOWED_BEHIND_TIMESKEW * 2
             }
             coinJoinService.updateTimeSkew(timeSkew)
             log.info("timeskew: {} ms", timeSkew)
