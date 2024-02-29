@@ -137,7 +137,7 @@ class TopperClient @Inject constructor(
 
         val defaultValue = getDefaultValue(sourceAsset, supportedPaymentMethods)
         // docs: https://docs.topperpay.com/flows/crypto-onramp
-        return Jwts.builder()
+        val str = Jwts.builder()
             .setHeaderParam("kid", keyId)
             .setHeaderParam("typ", "JWT")
             .setId(UUID.randomUUID().toString())
@@ -162,6 +162,8 @@ class TopperClient @Inject constructor(
             )
             .signWith(key, SignatureAlgorithm.ES256)
             .compact()
+        log.info("topper: jwts.build: {}", str)
+        return str
     }
 
     @VisibleForTesting
