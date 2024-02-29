@@ -171,6 +171,7 @@ class SettingsActivity : LockScreenActivity() {
                     binding.progressBar.isVisible = false
                 } else {
                     @StringRes val statusId = when(viewModel.coinJoinMixingStatus) {
+                        MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
                         MixingStatus.MIXING -> R.string.coinjoin_mixing
                         MixingStatus.PAUSED -> R.string.coinjoin_paused
                         MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
@@ -178,15 +179,8 @@ class SettingsActivity : LockScreenActivity() {
                     }
 
                     binding.coinjoinSubtitle.text = getString(statusId)
-//                        getString(
-//                        R.string.coinjoin_progress,
-//                        getString(statusId),
-//                        viewModel.mixingProgress.toInt(),
-//                        viewModel.mixedBalance,
-//                        viewModel.walletBalance
-//                    )
                     binding.coinjoinSubtitleIcon.isVisible = true
-                    binding.progressBar.isVisible = true
+                    binding.progressBar.isVisible = viewModel.coinJoinMixingStatus == MixingStatus.MIXING
                     binding.coinjoinProgress.text = getString(R.string.percent, viewModel.mixingProgress.toInt())
                     binding.balance.isVisible = true
                     binding.balance.text = getString(R.string.coinjoin_progress_balance, viewModel.mixedBalance, viewModel.walletBalance)

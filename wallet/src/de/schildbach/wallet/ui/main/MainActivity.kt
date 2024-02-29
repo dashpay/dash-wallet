@@ -113,6 +113,18 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         requestDisableBatteryOptimisation()
     }
 
+    private val timeChangeReceiver = object: BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_TIME_CHANGED) {
+                // Time has changed, handle the change here
+                log.info("Time or Time Zone changed")
+                lifecycleScope.launch {
+                    checkTimeSkew(viewModel, force = true)
+                }
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
@@ -148,6 +160,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         val timeChangedFilter = IntentFilter().apply {
             addAction(Intent.ACTION_TIME_CHANGED)
         }
+        registerReceiver(timeChangeReceiver, timeChangedFilter)
     }
 
     override fun onStart() {
@@ -561,6 +574,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onDestroy() {
         super.onDestroy()
         viewModel.platformRepo.onIdentityResolved = null
+        unregisterReceiver(timeChangeReceiver)
     }
 
     override fun onLockScreenDeactivated() {

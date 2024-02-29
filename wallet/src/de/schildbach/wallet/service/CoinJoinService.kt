@@ -176,7 +176,7 @@ class CoinJoinMixingService @Inject constructor(
                 // Time has changed, handle the change here
                 log.info("Time or Time Zone changed")
                 coroutineScope.launch {
-                    updateTimeSkewInternal(getTimeSkew())
+                    updateTimeSkewInternal(getTimeSkew(force = true))
                 }
             }
         }
