@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.coinbase.ui
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
 import androidx.annotation.ColorRes
 import androidx.annotation.StyleRes
@@ -52,7 +53,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     private var isRetrying = false
     private var transactionStateDialog: CoinBaseResultDialog? = null
     private var newSwapOrderId: String? = null
-
+    private var onBackPressedCallback: OnBackPressedCallback? = null
 
     private val countDownTimer by lazy {
         object : CountDownTimer(10000, 1000) {
@@ -360,9 +361,14 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
             findNavController().popBackStack()
         }
 
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+        onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
             viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_ANDROID_BACK)
             findNavController().popBackStack()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        onBackPressedCallback?.remove()
     }
 }
