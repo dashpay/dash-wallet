@@ -110,6 +110,7 @@ class BuyAndSellViewModel @Inject constructor(
 
         viewModelScope.launch {
             topperClient.refreshSupportedAssets()
+            topperClient.refreshPaymentMethods()
         }
     }
 

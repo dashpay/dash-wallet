@@ -1,0 +1,2070 @@
+{
+  "paymentMethods": [
+    {
+      "billingAsset": "EUR",
+      "countries": [
+        "AT",
+        "BE",
+        "BG",
+        "CY",
+        "CZ",
+        "DK",
+        "EE",
+        "ES",
+        "FI",
+        "FR",
+        "GR",
+        "HR",
+        "HU",
+        "IE",
+        "IS",
+        "IT",
+        "LI",
+        "LT",
+        "LU",
+        "LV",
+        "MC",
+        "MT",
+        "NO",
+        "PL",
+        "PT",
+        "RO",
+        "SE",
+        "SI",
+        "SK",
+        "SM"
+      ],
+      "limits": [
+        {
+          "asset": "AED",
+          "maximum": "9956.98",
+          "minimum": "39.83"
+        },
+        {
+          "asset": "ARS",
+          "maximum": "2280242.04",
+          "minimum": "9120.97"
+        },
+        {
+          "asset": "AUD",
+          "maximum": "4142.50",
+          "minimum": "16.58"
+        },
+        {
+          "asset": "BRL",
+          "maximum": "13375.19",
+          "minimum": "53.51"
+        },
+        {
+          "asset": "CAD",
+          "maximum": "3668.07",
+          "minimum": "14.68"
+        },
+        {
+          "asset": "CHF",
+          "maximum": "2383.33",
+          "minimum": "9.54"
+        },
+        {
+          "asset": "CNY",
+          "maximum": "19533.79",
+          "minimum": "78.14"
+        },
+        {
+          "asset": "CZK",
+          "maximum": "63308.55",
+          "minimum": "253.24"
+        },
+        {
+          "asset": "DKK",
+          "maximum": "18634.50",
+          "minimum": "74.54"
+        },
+        {
+          "asset": "EUR",
+          "maximum": "2500.00",
+          "minimum": "10.00"
+        },
+        {
+          "asset": "GBP",
+          "maximum": "2139.35",
+          "minimum": "8.56"
+        },
+        {
+          "asset": "HKD",
+          "maximum": "21216.41",
+          "minimum": "84.87"
+        },
+        {
+          "asset": "HUF",
+          "maximum": "977134.88",
+          "minimum": "3908.54"
+        },
+        {
+          "asset": "ILS",
+          "maximum": "9791.68",
+          "minimum": "39.17"
+        },
+        {
+          "asset": "INR",
+          "maximum": "224811.64",
+          "minimum": "899.25"
+        },
+        {
+          "asset": "JPY",
+          "maximum": "407956",
+          "minimum": "1632"
+        },
+        {
+          "asset": "KES",
+          "maximum": "395788.92",
+          "minimum": "1583.16"
+        },
+        {
+          "asset": "MXN",
+          "maximum": "46277.72",
+          "minimum": "185.12"
+        },
+        {
+          "asset": "NOK",
+          "maximum": "28559.77",
+          "minimum": "114.24"
+        },
+        {
+          "asset": "NZD",
+          "maximum": "4391.95",
+          "minimum": "17.57"
+        },
+        {
+          "asset": "PHP",
+          "maximum": "152050.35",
+          "minimum": "608.21"
+        },
+        {
+          "asset": "PLN",
+          "maximum": "10765.41",
+          "minimum": "43.07"
+        },
+        {
+          "asset": "RON",
+          "maximum": "12423.47",
+          "minimum": "49.70"
+        },
+        {
+          "asset": "SEK",
+          "maximum": "27943.90",
+          "minimum": "111.78"
+        },
+        {
+          "asset": "SGD",
+          "maximum": "3643.45",
+          "minimum": "14.58"
+        },
+        {
+          "asset": "USD",
+          "maximum": "2710.87",
+          "minimum": "10.85"
+        }
+      ],
+      "network": "apple-pay",
+      "type": "apple-pay"
+    },
+    {
+      "billingAsset": "GBP",
+      "countries": [
+        "GB"
+      ],
+      "limits": [
+        {
+          "asset": "AED",
+          "maximum": "11635.49",
+          "minimum": "46.55"
+        },
+        {
+          "asset": "ARS",
+          "maximum": "2664635.72",
+          "minimum": "10658.55"
+        },
+        {
+          "asset": "AUD",
+          "maximum": "4840.83",
+          "minimum": "19.37"
+        },
+        {
+          "asset": "BRL",
+          "maximum": "15629.92",
+          "minimum": "62.52"
+        },
+        {
+          "asset": "CAD",
+          "maximum": "4286.42",
+          "minimum": "17.15"
+        },
+        {
+          "asset": "CHF",
+          "maximum": "2785.10",
+          "minimum": "11.15"
+        },
+        {
+          "asset": "CNY",
+          "maximum": "22826.72",
+          "minimum": "91.31"
+        },
+        {
+          "asset": "CZK",
+          "maximum": "73980.84",
+          "minimum": "295.93"
+        },
+        {
+          "asset": "DKK",
+          "maximum": "21775.82",
+          "minimum": "87.11"
+        },
+        {
+          "asset": "EUR",
+          "maximum": "2921.43",
+          "minimum": "11.69"
+        },
+        {
+          "asset": "GBP",
+          "maximum": "2500.00",
+          "minimum": "10.00"
+        },
+        {
+          "asset": "HKD",
+          "maximum": "24792.98",
+          "minimum": "99.18"
+        },
+        {
+          "asset": "HUF",
+          "maximum": "1141856.20",
+          "minimum": "4567.43"
+        },
+        {
+          "asset": "ILS",
+          "maximum": "11442.32",
+          "minimum": "45.77"
+        },
+        {
+          "asset": "INR",
+          "maximum": "262709.44",
+          "minimum": "1050.84"
+        },
+        {
+          "asset": "JPY",
+          "maximum": "476728",
+          "minimum": "1907"
+        },
+        {
+          "asset": "KES",
+          "maximum": "462509.36",
+          "minimum": "1850.04"
+        },
+        {
+          "asset": "MXN",
+          "maximum": "54079.03",
+          "minimum": "216.32"
+        },
+        {
+          "asset": "NOK",
+          "maximum": "33374.25",
+          "minimum": "133.50"
+        },
+        {
+          "asset": "NZD",
+          "maximum": "5132.33",
+          "minimum": "20.53"
+        },
+        {
+          "asset": "PHP",
+          "maximum": "177682.37",
+          "minimum": "710.73"
+        },
+        {
+          "asset": "PLN",
+          "maximum": "12580.20",
+          "minimum": "50.33"
+        },
+        {
+          "asset": "RON",
+          "maximum": "14517.77",
+          "minimum": "58.08"
+        },
+        {
+          "asset": "SEK",
+          "maximum": "32654.56",
+          "minimum": "130.62"
+        },
+        {
+          "asset": "SGD",
+          "maximum": "4257.65",
+          "minimum": "17.04"
+        },
+        {
+          "asset": "USD",
+          "maximum": "3167.86",
+          "minimum": "12.68"
+        }
+      ],
+      "network": "apple-pay",
+      "type": "apple-pay"
+    },
+    {
+      "billingAsset": "USD",
+      "countries": [
+        "AE",
+        "AR",
+        "AU",
+        "BH",
+        "BR",
+        "CA",
+        "CH",
+        "CR",
+        "FO",
+        "GG",
+        "GL",
+        "HK",
+        "IL",
+        "IM",
+        "JE",
+        "JP",
+        "MO",
+        "MX",
+        "NZ",
+        "PE",
+        "QA",
+        "SA",
+        "SG",
+        "US",
+        "VA",
+        "ZA"
+      ],
+      "limits": [
+        {
+          "asset": "AED",
+          "maximum": "9182.44",
+          "minimum": "36.73"
+        },
+        {
+          "asset": "ARS",
+          "maximum": "2102865.38",
+          "minimum": "8411.47"
+        },
+        {
+          "asset": "AUD",
+          "maximum": "3820.26",
+          "minimum": "15.29"
+        },
+        {
+          "asset": "BRL",
+          "maximum": "12334.75",
+          "minimum": "49.34"
+        },
+        {
+          "asset": "CAD",
+          "maximum": "3382.73",
+          "minimum": "13.54"
+        },
+        {
+          "asset": "CHF",
+          "maximum": "2197.93",
+          "minimum": "8.80"
+        },
+        {
+          "asset": "CNY",
+          "maximum": "18014.29",
+          "minimum": "72.06"
+        },
+        {
+          "asset": "CZK",
+          "maximum": "58383.87",
+          "minimum": "233.54"
+        },
+        {
+          "asset": "DKK",
+          "maximum": "17184.95",
+          "minimum": "68.74"
+        },
+        {
+          "asset": "EUR",
+          "maximum": "2305.52",
+          "minimum": "9.23"
+        },
+        {
+          "asset": "GBP",
+          "maximum": "1972.93",
+          "minimum": "7.90"
+        },
+        {
+          "asset": "HKD",
+          "maximum": "19566.01",
+          "minimum": "78.27"
+        },
+        {
+          "asset": "HUF",
+          "maximum": "901125.00",
+          "minimum": "3604.51"
+        },
+        {
+          "asset": "ILS",
+          "maximum": "9030.00",
+          "minimum": "36.13"
+        },
+        {
+          "asset": "INR",
+          "maximum": "207323.87",
+          "minimum": "829.30"
+        },
+        {
+          "asset": "JPY",
+          "maximum": "376222",
+          "minimum": "1505"
+        },
+        {
+          "asset": "KES",
+          "maximum": "365001.08",
+          "minimum": "1460.01"
+        },
+        {
+          "asset": "MXN",
+          "maximum": "42677.85",
+          "minimum": "170.72"
+        },
+        {
+          "asset": "NOK",
+          "maximum": "26338.15",
+          "minimum": "105.36"
+        },
+        {
+          "asset": "NZD",
+          "maximum": "4050.31",
+          "minimum": "16.21"
+        },
+        {
+          "asset": "PHP",
+          "maximum": "140222.58",
+          "minimum": "560.90"
+        },
+        {
+          "asset": "PLN",
+          "maximum": "9927.98",
+          "minimum": "39.72"
+        },
+        {
+          "asset": "RON",
+          "maximum": "11457.07",
+          "minimum": "45.83"
+        },
+        {
+          "asset": "SEK",
+          "maximum": "25770.18",
+          "minimum": "103.09"
+        },
+        {
+          "asset": "SGD",
+          "maximum": "3360.03",
+          "minimum": "13.45"
+        },
+        {
+          "asset": "USD",
+          "maximum": "2500.00",
+          "minimum": "10.00"
+        }
+      ],
+      "network": "apple-pay",
+      "type": "apple-pay"
+    },
+    {
+      "billingAsset": "EUR",
+      "countries": [
+        "AD",
+        "AT",
+        "AX",
+        "BE",
+        "BG",
+        "BQ",
+        "BQ",
+        "CY",
+        "CZ",
+        "DK",
+        "EE",
+        "ES",
+        "FI",
+        "FR",
+        "GF",
+        "GP",
+        "GR",
+        "HR",
+        "HU",
+        "IE",
+        "IS",
+        "IT",
+        "LI",
+        "LT",
+        "LU",
+        "LV",
+        "MC",
+        "MF",
+        "MQ",
+        "MT",
+        "NO",
+        "PL",
+        "PT",
+        "RE",
+        "RO",
+        "SE",
+        "SI",
+        "SK",
+        "SM",
+        "YT"
+      ],
+      "limits": [
+        {
+          "asset": "AED",
+          "maximum": "9956.98",
+          "minimum": "39.83"
+        },
+        {
+          "asset": "ARS",
+          "maximum": "2280242.04",
+          "minimum": "9120.97"
+        },
+        {
+          "asset": "AUD",
+          "maximum": "4142.50",
+          "minimum": "16.58"
+        },
+        {
+          "asset": "BRL",
+          "maximum": "13375.19",
+          "minimum": "53.51"
+        },
+        {
+          "asset": "CAD",
+          "maximum": "3668.07",
+          "minimum": "14.68"
+        },
+        {
+          "asset": "CHF",
+          "maximum": "2383.33",
+          "minimum": "9.54"
+        },
+        {
+          "asset": "CNY",
+          "maximum": "19533.79",
+          "minimum": "78.14"
+        },
+        {
+          "asset": "CZK",
+          "maximum": "63308.55",
+          "minimum": "253.24"
+        },
+        {
+          "asset": "DKK",
+          "maximum": "18634.50",
+          "minimum": "74.54"
+        },
+        {
+          "asset": "EUR",
+          "maximum": "2500.00",
+          "minimum": "10.00"
+        },
+        {
+          "asset": "GBP",
+          "maximum": "2139.35",
+          "minimum": "8.56"
+        },
+        {
+          "asset": "HKD",
+          "maximum": "21216.41",
+          "minimum": "84.87"
+        },
+        {
+          "asset": "HUF",
+          "maximum": "977134.88",
+          "minimum": "3908.54"
+        },
+        {
+          "asset": "ILS",
+          "maximum": "9791.68",
+          "minimum": "39.17"
+        },
+        {
+          "asset": "INR",
+          "maximum": "224811.64",
+          "minimum": "899.25"
+        },
+        {
+          "asset": "JPY",
+          "maximum": "407956",
+          "minimum": "1632"
+        },
+        {
+          "asset": "KES",
+          "maximum": "395788.92",
+          "minimum": "1583.16"
+        },
+        {
+          "asset": "MXN",
+          "maximum": "46277.72",
+          "minimum": "185.12"
+        },
+        {
+          "asset": "NOK",
+          "maximum": "28559.77",
+          "minimum": "114.24"
+        },
+        {
+          "asset": "NZD",
+          "maximum": "4391.95",
+          "minimum": "17.57"
+        },
+        {
+          "asset": "PHP",
+          "maximum": "152050.35",
+          "minimum": "608.21"
+        },
+        {
+          "asset": "PLN",
+          "maximum": "10765.41",
+          "minimum": "43.07"
+        },
+        {
+          "asset": "RON",
+          "maximum": "12423.47",
+          "minimum": "49.70"
+        },
+        {
+          "asset": "SEK",
+          "maximum": "27943.90",
+          "minimum": "111.78"
+        },
+        {
+          "asset": "SGD",
+          "maximum": "3643.45",
+          "minimum": "14.58"
+        },
+        {
+          "asset": "USD",
+          "maximum": "2710.87",
+          "minimum": "10.85"
+        }
+      ],
+      "network": "card",
+      "type": "credit-card"
+    },
+    {
+      "billingAsset": "GBP",
+      "countries": [
+        "GB"
+      ],
+      "limits": [
+        {
+          "asset": "AED",
+          "maximum": "11635.49",
+          "minimum": "46.55"
+        },
+        {
+          "asset": "ARS",
+          "maximum": "2664635.72",
+          "minimum": "10658.55"
+        },
+        {
+          "asset": "AUD",
+          "maximum": "4840.83",
+          "minimum": "19.37"
+        },
+        {
+          "asset": "BRL",
+          "maximum": "15629.92",
+          "minimum": "62.52"
+        },
+        {
+          "asset": "CAD",
+          "maximum": "4286.42",
+          "minimum": "17.15"
+        },
+        {
+          "asset": "CHF",
+          "maximum": "2785.10",
+          "minimum": "11.15"
+        },
+        {
+          "asset": "CNY",
+          "maximum": "22826.72",
+          "minimum": "91.31"
+        },
+        {
+          "asset": "CZK",
+          "maximum": "73980.84",
+          "minimum": "295.93"
+        },
+        {
+          "asset": "DKK",
+          "maximum": "21775.82",
+          "minimum": "87.11"
+        },
+        {
+          "asset": "EUR",
+          "maximum": "2921.43",
+          "minimum": "11.69"
+        },
+        {
+          "asset": "GBP",
+          "maximum": "2500.00",
+          "minimum": "10.00"
+        },
+        {
+          "asset": "HKD",
+          "maximum": "24792.98",
+          "minimum": "99.18"
+        },
+        {
+          "asset": "HUF",
+          "maximum": "1141856.20",
+          "minimum": "4567.43"
+        },
+        {
+          "asset": "ILS",
+          "maximum": "11442.32",
+          "minimum": "45.77"
+        },
+        {
+          "asset": "INR",
+          "maximum": "262709.44",
+          "minimum": "1050.84"
+        },
+        {
+          "asset": "JPY",
+          "maximum": "476728",
+          "minimum": "1907"
+        },
+        {
+          "asset": "KES",
+          "maximum": "462509.36",
+          "minimum": "1850.04"
+        },
+        {
+          "asset": "MXN",
+          "maximum": "54079.03",
+          "minimum": "216.32"
+        },
+        {
+          "asset": "NOK",
+          "maximum": "33374.25",
+          "minimum": "133.50"
+        },
+        {
+          "asset": "NZD",
+          "maximum": "5132.33",
+          "minimum": "20.53"
+        },
+        {
+          "asset": "PHP",
+          "maximum": "177682.37",
+          "minimum": "710.73"
+        },
+        {
+          "asset": "PLN",
+          "maximum": "12580.20",
+          "minimum": "50.33"
+        },
+        {
+          "asset": "RON",
+          "maximum": "14517.77",
+          "minimum": "58.08"
+        },
+        {
+          "asset": "SEK",
+          "maximum": "32654.56",
+          "minimum": "130.62"
+        },
+        {
+          "asset": "SGD",
+          "maximum": "4257.65",
+          "minimum": "17.04"
+        },
+        {
+          "asset": "USD",
+          "maximum": "3167.86",
+          "minimum": "12.68"
+        }
+      ],
+      "network": "card",
+      "type": "credit-card"
+    },
+    {
+      "billingAsset": "USD",
+      "countries": [
+        "AE",
+        "AG",
+        "AR",
+        "AU",
+        "BH",
+        "BL",
+        "BM",
+        "BN",
+        "BO",
+        "BR",
+        "BS",
+        "BT",
+        "BW",
+        "BZ",
+        "CA",
+        "CC",
+        "CH",
+        "CK",
+        "CL",
+        "CR",
+        "CV",
+        "CW",
+        "CX",
+        "DJ",
+        "DM",
+        "EH",
+        "FK",
+        "FM",
+        "FO",
+        "GA",
+        "GD",
+        "GG",
+        "GL",
+        "GM",
+        "GS",
+        "GU",
+        "GY",
+        "HK",
+        "HN",
+        "IL",
+        "IM",
+        "IO",
+        "JE",
+        "JP",
+        "KI",
+        "KM",
+        "KN",
+        "KR",
+        "KW",
+        "KY",
+        "LC",
+        "LS",
+        "MG",
+        "MH",
+        "MO",
+        "MP",
+        "MS",
+        "MU",
+        "MV",
+        "MW",
+        "MX",
+        "MY",
+        "MZ",
+        "NA",
+        "NC",
+        "NE",
+        "NF",
+        "NR",
+        "NU",
+        "NZ",
+        "OM",
+        "PE",
+        "PF",
+        "PG",
+        "PH",
+        "PM",
+        "PN",
+        "PR",
+        "PY",
+        "QA",
+        "SA",
+        "SB",
+        "SC",
+        "SG",
+        "SH",
+        "SJ",
+        "SN",
+        "ST",
+        "SV",
+        "SX",
+        "SZ",
+        "TC",
+        "TH",
+        "TK",
+        "TL",
+        "TO",
+        "TV",
+        "US",
+        "UY",
+        "VA",
+        "VC",
+        "VG",
+        "WF",
+        "ZA",
+        "ZM"
+      ],
+      "limits": [
+        {
+          "asset": "AED",
+          "maximum": "9182.44",
+          "minimum": "36.73"
+        },
+        {
+          "asset": "ARS",
+          "maximum": "2102865.38",
+          "minimum": "8411.47"
+        },
+        {
+          "asset": "AUD",
+          "maximum": "3820.26",
+          "minimum": "15.29"
+        },
+        {
+          "asset": "BRL",
+          "maximum": "12334.75",
+          "minimum": "49.34"
+        },
+        {
+          "asset": "CAD",
+          "maximum": "3382.73",
+          "minimum": "13.54"
+        },
+        {
+          "asset": "CHF",
+          "maximum": "2197.93",
+          "minimum": "8.80"
+        },
+        {
+          "asset": "CNY",
+          "maximum": "18014.29",
+          "minimum": "72.06"
+        },
+        {
+          "asset": "CZK",
+          "maximum": "58383.87",
+          "minimum": "233.54"
+        },
+        {
+          "asset": "DKK",
+          "maximum": "17184.95",
+          "minimum": "68.74"
+        },
+        {
+          "asset": "EUR",
+          "maximum": "2305.52",
+          "minimum": "9.23"
+        },
+        {
+          "asset": "GBP",
+          "maximum": "1972.93",
+          "minimum": "7.90"
+        },
+        {
+          "asset": "HKD",
+          "maximum": "19566.01",
+          "minimum": "78.27"
+        },
+        {
+          "asset": "HUF",
+          "maximum": "901125.00",
+          "minimum": "3604.51"
+        },
+        {
+          "asset": "ILS",
+          "maximum": "9030.00",
+          "minimum": "36.13"
+        },
+        {
+          "asset": "INR",
+          "maximum": "207323.87",
+          "minimum": "829.30"
+        },
+        {
+          "asset": "JPY",
+          "maximum": "376222",
+          "minimum": "1505"
+        },
+        {
+          "asset": "KES",
+          "maximum": "365001.08",
+          "minimum": "1460.01"
+        },
+        {
+          "asset": "MXN",
+          "maximum": "42677.85",
+          "minimum": "170.72"
+        },
+        {
+          "asset": "NOK",
+          "maximum": "26338.15",
+          "minimum": "105.36"
+        },
+        {
+          "asset": "NZD",
+          "maximum": "4050.31",
+          "minimum": "16.21"
+        },
+        {
+          "asset": "PHP",
+          "maximum": "140222.58",
+          "minimum": "560.90"
+        },
+        {
+          "asset": "PLN",
+          "maximum": "9927.98",
+          "minimum": "39.72"
+        },
+        {
+          "asset": "RON",
+          "maximum": "11457.07",
+          "minimum": "45.83"
+        },
+        {
+          "asset": "SEK",
+          "maximum": "25770.18",
+          "minimum": "103.09"
+        },
+        {
+          "asset": "SGD",
+          "maximum": "3360.03",
+          "minimum": "13.45"
+        },
+        {
+          "asset": "USD",
+          "maximum": "2500.00",
+          "minimum": "10.00"
+        }
+      ],
+      "network": "card",
+      "type": "credit-card"
+    },
+    {
+      "billingAsset": "EUR",
+      "countries": [
+        "AD",
+        "AT",
+        "AX",
+        "BE",
+        "BG",
+        "BQ",
+        "CY",
+        "CZ",
+        "DK",
+        "EE",
+        "ES",
+        "FI",
+        "FR",
+        "GF",
+        "GP",
+        "GR",
+        "HR",
+        "HU",
+        "IE",
+        "IS",
+        "IT",
+        "LI",
+        "LT",
+        "LU",
+        "LV",
+        "MC",
+        "MF",
+        "MQ",
+        "MT",
+        "NO",
+        "PL",
+        "PT",
+        "RE",
+        "RO",
+        "SE",
+        "SI",
+        "SK",
+        "SM",
+        "YT"
+      ],
+      "limits": [
+        {
+          "asset": "AED",
+          "maximum": "9956.98",
+          "minimum": "39.83"
+        },
+        {
+          "asset": "ARS",
+          "maximum": "2280242.04",
+          "minimum": "9120.97"
+        },
+        {
+          "asset": "AUD",
+          "maximum": "4142.50",
+          "minimum": "16.58"
+        },
+        {
+          "asset": "BRL",
+          "maximum": "13375.19",
+          "minimum": "53.51"
+        },
+        {
+          "asset": "CAD",
+          "maximum": "3668.07",
+          "minimum": "14.68"
+        },
+        {
+          "asset": "CHF",
+          "maximum": "2383.33",
+          "minimum": "9.54"
+        },
+        {
+          "asset": "CNY",
+          "maximum": "19533.79",
+          "minimum": "78.14"
+        },
+        {
+          "asset": "CZK",
+          "maximum": "63308.55",
+          "minimum": "253.24"
+        },
+        {
+          "asset": "DKK",
+          "maximum": "18634.50",
+          "minimum": "74.54"
+        },
+        {
+          "asset": "EUR",
+          "maximum": "2500.00",
+          "minimum": "10.00"
+        },
+        {
+          "asset": "GBP",
+          "maximum": "2139.35",
+          "minimum": "8.56"
+        },
+        {
+          "asset": "HKD",
+          "maximum": "21216.41",
+          "minimum": "84.87"
+        },
+        {
+          "asset": "HUF",
+          "maximum": "977134.88",
+          "minimum": "3908.54"
+        },
+        {
+          "asset": "ILS",
+          "maximum": "9791.68",
+          "minimum": "39.17"
+        },
+        {
+          "asset": "INR",
+          "maximum": "224811.64",
+          "minimum": "899.25"
+        },
+        {
+          "asset": "JPY",
+          "maximum": "407956",
+          "minimum": "1632"
+        },
+        {
+          "asset": "KES",
+          "maximum": "395788.92",
+          "minimum": "1583.16"
+        },
+        {
+          "asset": "MXN",
+          "maximum": "46277.72",
+          "minimum": "185.12"
+        },
+        {
+          "asset": "NOK",
+          "maximum": "28559.77",
+          "minimum": "114.24"
+        },
+        {
+          "asset": "NZD",
+          "maximum": "4391.95",
+          "minimum": "17.57"
+        },
+        {
+          "asset": "PHP",
+          "maximum": "152050.35",
+          "minimum": "608.21"
+        },
+        {
+          "asset": "PLN",
+          "maximum": "10765.41",
+          "minimum": "43.07"
+        },
+        {
+          "asset": "RON",
+          "maximum": "12423.47",
+          "minimum": "49.70"
+        },
+        {
+          "asset": "SEK",
+          "maximum": "27943.90",
+          "minimum": "111.78"
+        },
+        {
+          "asset": "SGD",
+          "maximum": "3643.45",
+          "minimum": "14.58"
+        },
+        {
+          "asset": "USD",
+          "maximum": "2710.87",
+          "minimum": "10.85"
+        }
+      ],
+      "network": "card",
+      "type": "debit-card"
+    },
+    {
+      "billingAsset": "GBP",
+      "countries": [
+        "GB"
+      ],
+      "limits": [
+        {
+          "asset": "AED",
+          "maximum": "11635.49",
+          "minimum": "46.55"
+        },
+        {
+          "asset": "ARS",
+          "maximum": "2664635.72",
+          "minimum": "10658.55"
+        },
+        {
+          "asset": "AUD",
+          "maximum": "4840.83",
+          "minimum": "19.37"
+        },
+        {
+          "asset": "BRL",
+          "maximum": "15629.92",
+          "minimum": "62.52"
+        },
+        {
+          "asset": "CAD",
+          "maximum": "4286.42",
+          "minimum": "17.15"
+        },
+        {
+          "asset": "CHF",
+          "maximum": "2785.10",
+          "minimum": "11.15"
+        },
+        {
+          "asset": "CNY",
+          "maximum": "22826.72",
+          "minimum": "91.31"
+        },
+        {
+          "asset": "CZK",
+          "maximum": "73980.84",
+          "minimum": "295.93"
+        },
+        {
+          "asset": "DKK",
+          "maximum": "21775.82",
+          "minimum": "87.11"
+        },
+        {
+          "asset": "EUR",
+          "maximum": "2921.43",
+          "minimum": "11.69"
+        },
+        {
+          "asset": "GBP",
+          "maximum": "2500.00",
+          "minimum": "10.00"
+        },
+        {
+          "asset": "HKD",
+          "maximum": "24792.98",
+          "minimum": "99.18"
+        },
+        {
+          "asset": "HUF",
+          "maximum": "1141856.20",
+          "minimum": "4567.43"
+        },
+        {
+          "asset": "ILS",
+          "maximum": "11442.32",
+          "minimum": "45.77"
+        },
+        {
+          "asset": "INR",
+          "maximum": "262709.44",
+          "minimum": "1050.84"
+        },
+        {
+          "asset": "JPY",
+          "maximum": "476728",
+          "minimum": "1907"
+        },
+        {
+          "asset": "KES",
+          "maximum": "462509.36",
+          "minimum": "1850.04"
+        },
+        {
+          "asset": "MXN",
+          "maximum": "54079.03",
+          "minimum": "216.32"
+        },
+        {
+          "asset": "NOK",
+          "maximum": "33374.25",
+          "minimum": "133.50"
+        },
+        {
+          "asset": "NZD",
+          "maximum": "5132.33",
+          "minimum": "20.53"
+        },
+        {
+          "asset": "PHP",
+          "maximum": "177682.37",
+          "minimum": "710.73"
+        },
+        {
+          "asset": "PLN",
+          "maximum": "12580.20",
+          "minimum": "50.33"
+        },
+        {
+          "asset": "RON",
+          "maximum": "14517.77",
+          "minimum": "58.08"
+        },
+        {
+          "asset": "SEK",
+          "maximum": "32654.56",
+          "minimum": "130.62"
+        },
+        {
+          "asset": "SGD",
+          "maximum": "4257.65",
+          "minimum": "17.04"
+        },
+        {
+          "asset": "USD",
+          "maximum": "3167.86",
+          "minimum": "12.68"
+        }
+      ],
+      "network": "card",
+      "type": "debit-card"
+    },
+    {
+      "billingAsset": "USD",
+      "countries": [
+        "AE",
+        "AG",
+        "AR",
+        "AU",
+        "BH",
+        "BL",
+        "BM",
+        "BN",
+        "BO",
+        "BR",
+        "BS",
+        "BT",
+        "BW",
+        "BZ",
+        "CA",
+        "CC",
+        "CH",
+        "CK",
+        "CL",
+        "CR",
+        "CV",
+        "CW",
+        "CX",
+        "DJ",
+        "DM",
+        "EH",
+        "FK",
+        "FM",
+        "FO",
+        "GA",
+        "GD",
+        "GG",
+        "GL",
+        "GM",
+        "GS",
+        "GU",
+        "GY",
+        "HK",
+        "HN",
+        "IL",
+        "IM",
+        "IO",
+        "JE",
+        "JP",
+        "KI",
+        "KM",
+        "KN",
+        "KR",
+        "KW",
+        "KY",
+        "LC",
+        "LS",
+        "MG",
+        "MH",
+        "MO",
+        "MP",
+        "MS",
+        "MU",
+        "MV",
+        "MW",
+        "MX",
+        "MY",
+        "MZ",
+        "NA",
+        "NC",
+        "NE",
+        "NF",
+        "NR",
+        "NU",
+        "NZ",
+        "OM",
+        "PE",
+        "PF",
+        "PG",
+        "PH",
+        "PM",
+        "PN",
+        "PR",
+        "PY",
+        "QA",
+        "SA",
+        "SB",
+        "SC",
+        "SG",
+        "SH",
+        "SJ",
+        "SN",
+        "ST",
+        "SV",
+        "SX",
+        "SZ",
+        "TC",
+        "TH",
+        "TK",
+        "TL",
+        "TO",
+        "TV",
+        "US",
+        "UY",
+        "VA",
+        "VC",
+        "VG",
+        "WF",
+        "ZA",
+        "ZM"
+      ],
+      "limits": [
+        {
+          "asset": "AED",
+          "maximum": "9182.44",
+          "minimum": "36.73"
+        },
+        {
+          "asset": "ARS",
+          "maximum": "2102865.38",
+          "minimum": "8411.47"
+        },
+        {
+          "asset": "AUD",
+          "maximum": "3820.26",
+          "minimum": "15.29"
+        },
+        {
+          "asset": "BRL",
+          "maximum": "12334.75",
+          "minimum": "49.34"
+        },
+        {
+          "asset": "CAD",
+          "maximum": "3382.73",
+          "minimum": "13.54"
+        },
+        {
+          "asset": "CHF",
+          "maximum": "2197.93",
+          "minimum": "8.80"
+        },
+        {
+          "asset": "CNY",
+          "maximum": "18014.29",
+          "minimum": "72.06"
+        },
+        {
+          "asset": "CZK",
+          "maximum": "58383.87",
+          "minimum": "233.54"
+        },
+        {
+          "asset": "DKK",
+          "maximum": "17184.95",
+          "minimum": "68.74"
+        },
+        {
+          "asset": "EUR",
+          "maximum": "2305.52",
+          "minimum": "9.23"
+        },
+        {
+          "asset": "GBP",
+          "maximum": "1972.93",
+          "minimum": "7.90"
+        },
+        {
+          "asset": "HKD",
+          "maximum": "19566.01",
+          "minimum": "78.27"
+        },
+        {
+          "asset": "HUF",
+          "maximum": "901125.00",
+          "minimum": "3604.51"
+        },
+        {
+          "asset": "ILS",
+          "maximum": "9030.00",
+          "minimum": "36.13"
+        },
+        {
+          "asset": "INR",
+          "maximum": "207323.87",
+          "minimum": "829.30"
+        },
+        {
+          "asset": "JPY",
+          "maximum": "376222",
+          "minimum": "1505"
+        },
+        {
+          "asset": "KES",
+          "maximum": "365001.08",
+          "minimum": "1460.01"
+        },
+        {
+          "asset": "MXN",
+          "maximum": "42677.85",
+          "minimum": "170.72"
+        },
+        {
+          "asset": "NOK",
+          "maximum": "26338.15",
+          "minimum": "105.36"
+        },
+        {
+          "asset": "NZD",
+          "maximum": "4050.31",
+          "minimum": "16.21"
+        },
+        {
+          "asset": "PHP",
+          "maximum": "140222.58",
+          "minimum": "560.90"
+        },
+        {
+          "asset": "PLN",
+          "maximum": "9927.98",
+          "minimum": "39.72"
+        },
+        {
+          "asset": "RON",
+          "maximum": "11457.07",
+          "minimum": "45.83"
+        },
+        {
+          "asset": "SEK",
+          "maximum": "25770.18",
+          "minimum": "103.09"
+        },
+        {
+          "asset": "SGD",
+          "maximum": "3360.03",
+          "minimum": "13.45"
+        },
+        {
+          "asset": "USD",
+          "maximum": "2500.00",
+          "minimum": "10.00"
+        }
+      ],
+      "network": "card",
+      "type": "debit-card"
+    },
+    {
+      "billingAsset": "EUR",
+      "countries": [
+        "AT",
+        "BE",
+        "BG",
+        "CZ",
+        "DK",
+        "EE",
+        "ES",
+        "FI",
+        "FR",
+        "GR",
+        "HR",
+        "HU",
+        "IE",
+        "IT",
+        "LT",
+        "LU",
+        "LV",
+        "NO",
+        "PL",
+        "PT",
+        "RO",
+        "SE",
+        "SK"
+      ],
+      "limits": [
+        {
+          "asset": "AED",
+          "maximum": "9956.98",
+          "minimum": "39.83"
+        },
+        {
+          "asset": "ARS",
+          "maximum": "2280242.04",
+          "minimum": "9120.97"
+        },
+        {
+          "asset": "AUD",
+          "maximum": "4142.50",
+          "minimum": "16.58"
+        },
+        {
+          "asset": "BRL",
+          "maximum": "13375.19",
+          "minimum": "53.51"
+        },
+        {
+          "asset": "CAD",
+          "maximum": "3668.07",
+          "minimum": "14.68"
+        },
+        {
+          "asset": "CHF",
+          "maximum": "2383.33",
+          "minimum": "9.54"
+        },
+        {
+          "asset": "CNY",
+          "maximum": "19533.79",
+          "minimum": "78.14"
+        },
+        {
+          "asset": "CZK",
+          "maximum": "63308.55",
+          "minimum": "253.24"
+        },
+        {
+          "asset": "DKK",
+          "maximum": "18634.50",
+          "minimum": "74.54"
+        },
+        {
+          "asset": "EUR",
+          "maximum": "2500.00",
+          "minimum": "10.00"
+        },
+        {
+          "asset": "GBP",
+          "maximum": "2139.35",
+          "minimum": "8.56"
+        },
+        {
+          "asset": "HKD",
+          "maximum": "21216.41",
+          "minimum": "84.87"
+        },
+        {
+          "asset": "HUF",
+          "maximum": "977134.88",
+          "minimum": "3908.54"
+        },
+        {
+          "asset": "ILS",
+          "maximum": "9791.68",
+          "minimum": "39.17"
+        },
+        {
+          "asset": "INR",
+          "maximum": "224811.64",
+          "minimum": "899.25"
+        },
+        {
+          "asset": "JPY",
+          "maximum": "407956",
+          "minimum": "1632"
+        },
+        {
+          "asset": "KES",
+          "maximum": "395788.92",
+          "minimum": "1583.16"
+        },
+        {
+          "asset": "MXN",
+          "maximum": "46277.72",
+          "minimum": "185.12"
+        },
+        {
+          "asset": "NOK",
+          "maximum": "28559.77",
+          "minimum": "114.24"
+        },
+        {
+          "asset": "NZD",
+          "maximum": "4391.95",
+          "minimum": "17.57"
+        },
+        {
+          "asset": "PHP",
+          "maximum": "152050.35",
+          "minimum": "608.21"
+        },
+        {
+          "asset": "PLN",
+          "maximum": "10765.41",
+          "minimum": "43.07"
+        },
+        {
+          "asset": "RON",
+          "maximum": "12423.47",
+          "minimum": "49.70"
+        },
+        {
+          "asset": "SEK",
+          "maximum": "27943.90",
+          "minimum": "111.78"
+        },
+        {
+          "asset": "SGD",
+          "maximum": "3643.45",
+          "minimum": "14.58"
+        },
+        {
+          "asset": "USD",
+          "maximum": "2710.87",
+          "minimum": "10.85"
+        }
+      ],
+      "network": "google-pay",
+      "type": "google-pay"
+    },
+    {
+      "billingAsset": "GBP",
+      "countries": [
+        "GB"
+      ],
+      "limits": [
+        {
+          "asset": "AED",
+          "maximum": "11635.49",
+          "minimum": "46.55"
+        },
+        {
+          "asset": "ARS",
+          "maximum": "2664635.72",
+          "minimum": "10658.55"
+        },
+        {
+          "asset": "AUD",
+          "maximum": "4840.83",
+          "minimum": "19.37"
+        },
+        {
+          "asset": "BRL",
+          "maximum": "15629.92",
+          "minimum": "62.52"
+        },
+        {
+          "asset": "CAD",
+          "maximum": "4286.42",
+          "minimum": "17.15"
+        },
+        {
+          "asset": "CHF",
+          "maximum": "2785.10",
+          "minimum": "11.15"
+        },
+        {
+          "asset": "CNY",
+          "maximum": "22826.72",
+          "minimum": "91.31"
+        },
+        {
+          "asset": "CZK",
+          "maximum": "73980.84",
+          "minimum": "295.93"
+        },
+        {
+          "asset": "DKK",
+          "maximum": "21775.82",
+          "minimum": "87.11"
+        },
+        {
+          "asset": "EUR",
+          "maximum": "2921.43",
+          "minimum": "11.69"
+        },
+        {
+          "asset": "GBP",
+          "maximum": "2500.00",
+          "minimum": "10.00"
+        },
+        {
+          "asset": "HKD",
+          "maximum": "24792.98",
+          "minimum": "99.18"
+        },
+        {
+          "asset": "HUF",
+          "maximum": "1141856.20",
+          "minimum": "4567.43"
+        },
+        {
+          "asset": "ILS",
+          "maximum": "11442.32",
+          "minimum": "45.77"
+        },
+        {
+          "asset": "INR",
+          "maximum": "262709.44",
+          "minimum": "1050.84"
+        },
+        {
+          "asset": "JPY",
+          "maximum": "476728",
+          "minimum": "1907"
+        },
+        {
+          "asset": "KES",
+          "maximum": "462509.36",
+          "minimum": "1850.04"
+        },
+        {
+          "asset": "MXN",
+          "maximum": "54079.03",
+          "minimum": "216.32"
+        },
+        {
+          "asset": "NOK",
+          "maximum": "33374.25",
+          "minimum": "133.50"
+        },
+        {
+          "asset": "NZD",
+          "maximum": "5132.33",
+          "minimum": "20.53"
+        },
+        {
+          "asset": "PHP",
+          "maximum": "177682.37",
+          "minimum": "710.73"
+        },
+        {
+          "asset": "PLN",
+          "maximum": "12580.20",
+          "minimum": "50.33"
+        },
+        {
+          "asset": "RON",
+          "maximum": "14517.77",
+          "minimum": "58.08"
+        },
+        {
+          "asset": "SEK",
+          "maximum": "32654.56",
+          "minimum": "130.62"
+        },
+        {
+          "asset": "SGD",
+          "maximum": "4257.65",
+          "minimum": "17.04"
+        },
+        {
+          "asset": "USD",
+          "maximum": "3167.86",
+          "minimum": "12.68"
+        }
+      ],
+      "network": "google-pay",
+      "type": "google-pay"
+    },
+    {
+      "billingAsset": "USD",
+      "countries": [
+        "AE",
+        "AG",
+        "AR",
+        "AU",
+        "BH",
+        "BR",
+        "CA",
+        "CH",
+        "CL",
+        "HK",
+        "IL",
+        "JP",
+        "KW",
+        "MX",
+        "MY",
+        "NZ",
+        "OM",
+        "PE",
+        "PH",
+        "QA",
+        "SA",
+        "SG",
+        "TH",
+        "US",
+        "UY",
+        "ZA"
+      ],
+      "limits": [
+        {
+          "asset": "AED",
+          "maximum": "9182.44",
+          "minimum": "36.73"
+        },
+        {
+          "asset": "ARS",
+          "maximum": "2102865.38",
+          "minimum": "8411.47"
+        },
+        {
+          "asset": "AUD",
+          "maximum": "3820.26",
+          "minimum": "15.29"
+        },
+        {
+          "asset": "BRL",
+          "maximum": "12334.75",
+          "minimum": "49.34"
+        },
+        {
+          "asset": "CAD",
+          "maximum": "3382.73",
+          "minimum": "13.54"
+        },
+        {
+          "asset": "CHF",
+          "maximum": "2197.93",
+          "minimum": "8.80"
+        },
+        {
+          "asset": "CNY",
+          "maximum": "18014.29",
+          "minimum": "72.06"
+        },
+        {
+          "asset": "CZK",
+          "maximum": "58383.87",
+          "minimum": "233.54"
+        },
+        {
+          "asset": "DKK",
+          "maximum": "17184.95",
+          "minimum": "68.74"
+        },
+        {
+          "asset": "EUR",
+          "maximum": "2305.52",
+          "minimum": "9.23"
+        },
+        {
+          "asset": "GBP",
+          "maximum": "1972.93",
+          "minimum": "7.90"
+        },
+        {
+          "asset": "HKD",
+          "maximum": "19566.01",
+          "minimum": "78.27"
+        },
+        {
+          "asset": "HUF",
+          "maximum": "901125.00",
+          "minimum": "3604.51"
+        },
+        {
+          "asset": "ILS",
+          "maximum": "9030.00",
+          "minimum": "36.13"
+        },
+        {
+          "asset": "INR",
+          "maximum": "207323.87",
+          "minimum": "829.30"
+        },
+        {
+          "asset": "JPY",
+          "maximum": "376222",
+          "minimum": "1505"
+        },
+        {
+          "asset": "KES",
+          "maximum": "365001.08",
+          "minimum": "1460.01"
+        },
+        {
+          "asset": "MXN",
+          "maximum": "42677.85",
+          "minimum": "170.72"
+        },
+        {
+          "asset": "NOK",
+          "maximum": "26338.15",
+          "minimum": "105.36"
+        },
+        {
+          "asset": "NZD",
+          "maximum": "4050.31",
+          "minimum": "16.21"
+        },
+        {
+          "asset": "PHP",
+          "maximum": "140222.58",
+          "minimum": "560.90"
+        },
+        {
+          "asset": "PLN",
+          "maximum": "9927.98",
+          "minimum": "39.72"
+        },
+        {
+          "asset": "RON",
+          "maximum": "11457.07",
+          "minimum": "45.83"
+        },
+        {
+          "asset": "SEK",
+          "maximum": "25770.18",
+          "minimum": "103.09"
+        },
+        {
+          "asset": "SGD",
+          "maximum": "3360.03",
+          "minimum": "13.45"
+        },
+        {
+          "asset": "USD",
+          "maximum": "2500.00",
+          "minimum": "10.00"
+        }
+      ],
+      "network": "google-pay",
+      "type": "google-pay"
+    }
+  ]
+}
