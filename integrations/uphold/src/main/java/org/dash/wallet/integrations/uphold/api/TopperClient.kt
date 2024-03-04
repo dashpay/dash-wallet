@@ -17,7 +17,6 @@
 
 package org.dash.wallet.integrations.uphold.api
 
-import android.util.Base64
 import androidx.annotation.VisibleForTesting
 import com.google.gson.Gson
 import io.jsonwebtoken.Jwts
