@@ -17,7 +17,6 @@
 
 package org.dash.wallet.integrations.uphold.api
 
-import android.util.Base64
 import androidx.annotation.VisibleForTesting
 import com.google.gson.Gson
 import io.jsonwebtoken.Jwts
@@ -138,7 +137,7 @@ class TopperClient @Inject constructor(
 
         val defaultValue = getDefaultValue(sourceAsset, supportedPaymentMethods)
         // docs: https://docs.topperpay.com/flows/crypto-onramp
-        val str = Jwts.builder()
+        return Jwts.builder()
             .setHeaderParam("kid", keyId)
             .setHeaderParam("typ", "JWT")
             .setId(UUID.randomUUID().toString())
@@ -163,8 +162,6 @@ class TopperClient @Inject constructor(
             )
             .signWith(key, SignatureAlgorithm.ES256)
             .compact()
-        log.info("topper: jwts.build: {}", Base64.decode(str, Base64.DEFAULT))
-        return str
     }
 
     @VisibleForTesting
@@ -194,12 +191,6 @@ class TopperClient @Inject constructor(
                     } else {
                         1
                     }
-                    log.info(
-                        "topper: amount:{};  mult:{} = {}",
-                        amount,
-                        minimumMultplier,
-                        amount.round(MathContext(precision, RoundingMode.HALF_UP)).toInt()
-                    )
                     return amount.round(MathContext(precision, RoundingMode.HALF_UP)).toInt()
                 }
             }
