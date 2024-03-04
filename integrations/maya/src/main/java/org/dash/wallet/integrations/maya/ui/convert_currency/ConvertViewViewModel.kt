@@ -278,6 +278,7 @@ class ConvertViewViewModel @Inject constructor(
         return Pair(null, null)
     }
 
+    /** convert a value in a string (Fiat or Crypto) to DASH using exchange rates in #[userAccountData]*/
     fun toDashValue(
         valueToBind: String,
         userAccountData: AccountDataUIModel,
@@ -286,7 +287,7 @@ class ConvertViewViewModel @Inject constructor(
         val convertedValue = if (fromCrypto) {
             valueToBind.toBigDecimal() * userAccountData.getCryptoToDashExchangeRate()
         } else {
-            valueToBind.toBigDecimal() * userAccountData.getCryptoToDashExchangeRate()
+            valueToBind.toBigDecimal() * userAccountData.currencyToDashExchangeRate
         }.setScale(8, RoundingMode.HALF_UP)
         return convertedValue
     }

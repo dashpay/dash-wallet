@@ -145,8 +145,10 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
                 dashInput?.let { dash ->
                     val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
                     val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
-                    binding.convertFromBtn.setConvertItemAmounts("${dashFormat.minDecimals(0)
-                        .optionalDecimals(0,8).format(dash)} DASH", "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount")
+                    binding.convertFromBtn.setConvertItemAmounts(
+                        "${dashFormat.minDecimals(0).format(dash)}",
+                        "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
+                    )
 //                binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
 //                    .optionalDecimals(0,8).format(dash)} DASH"
 //
@@ -211,18 +213,18 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
             binding.convertToBtn.setConvertItemIcon(it.icon)
         }
 
-        exchangeRate?.let { currentExchangeRate ->
-            dashInput?.let { dash ->
-                val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
-                val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
-                binding.convertFromBtn.setConvertItemAmounts("${dashFormat.minDecimals(0)
-                    .optionalDecimals(0,8).format(dash)} DASH", "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount")
+//        exchangeRate?.let { currentExchangeRate ->
+ //           dashInput?.let { dash ->
+//                val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
+//                val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
+//                binding.convertFromBtn.setConvertItemAmounts("${dashFormat.minDecimals(0)
+//                    .optionalDecimals(0,8).format(dash)}", "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount")
 //                binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
 //                    .optionalDecimals(0,8).format(dash)} DASH"
 //
 //                binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
-            }
-        }
+//            }
+//        }
     }
 
     fun setOnCurrencyChooserClicked(listener: () -> Unit) {

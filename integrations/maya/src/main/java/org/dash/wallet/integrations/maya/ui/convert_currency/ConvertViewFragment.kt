@@ -173,6 +173,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                                 )
                                 .setScale(8, RoundingMode.HALF_UP).toString()
                         } else {
+                            // Crypto -> DASH
                             val bd = viewModel.toDashValue(valueToBind, userAccountData, true)
                             val coin = try {
                                 Coin.parseCoin(bd.toString())
@@ -188,9 +189,11 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                     }
                     (viewModel.selectedLocalCurrencyCode == viewModel.selectedPickerCurrencyCode) -> {
                         if (pickedCurrencyOption == userAccountData.coinbaseAccount.currency) {
+                            // Fiat -> Crypto
                             (valueToBind.toBigDecimal() * userAccountData.currencyToCryptoCurrencyExchangeRate)
                                 .setScale(8, RoundingMode.HALF_UP).toString()
                         } else {
+                            // Fiat -> DASH
                             val bd = viewModel.toDashValue(valueToBind, userAccountData)
                             val coin = try {
                                 Coin.parseCoin(bd.toString())
@@ -207,10 +210,11 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
 
                     else -> {
                         if (pickedCurrencyOption == userAccountData.coinbaseAccount.currency) {
-                            (valueToBind.toBigDecimal() / userAccountData.getCryptoToDashExchangeRate())
+                            (valueToBind.toBigDecimal().setScale(8, RoundingMode.HALF_UP) / userAccountData.getCryptoToDashExchangeRate())
                                 .setScale(8, RoundingMode.HALF_UP).toString()
                         } else {
-                            (valueToBind.toBigDecimal() / userAccountData.currencyToDashExchangeRate)
+                            // DASH -> Fiat
+                            (valueToBind.toBigDecimal().setScale(8, RoundingMode.HALF_UP) / userAccountData.currencyToDashExchangeRate)
                                 .setScale(8, RoundingMode.HALF_UP).toString()
                         }
                     }

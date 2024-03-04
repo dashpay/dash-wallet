@@ -20,6 +20,7 @@ package org.dash.wallet.common.util
 import android.os.Build
 import android.os.LocaleList
 import java.math.RoundingMode
+import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.*
 
@@ -92,5 +93,16 @@ object GenericUtils {
     fun formatPercent(percent: Double): String? {
         // the formatter translates 0.01 to 1.00%
         return percentFormat.format(percent / 100)
+    }
+
+    fun isCurrencySymbolFirst(): Boolean {
+        val locale = getDeviceLocale()
+        val currency: Currency = Currency.getInstance(locale)
+        val currencyFormat = NumberFormat.getCurrencyInstance(locale)
+
+        val pattern = (currencyFormat as DecimalFormat).toPattern()
+        println("Currency Pattern: $pattern")
+
+        return pattern.startsWith("¤")
     }
 }

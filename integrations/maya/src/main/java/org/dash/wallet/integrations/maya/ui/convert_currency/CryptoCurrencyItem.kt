@@ -29,6 +29,7 @@ import androidx.core.view.updateLayoutParams
 import coil.load
 import coil.size.Scale
 import coil.transform.CircleCropTransformation
+import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.CryptoConvertItemBinding
 
@@ -72,19 +73,41 @@ class CryptoCurrencyItem @JvmOverloads constructor(
             getBoolean(R.styleable.CryptoCurrencyItem_is_crypto_convert_item_arrow_visible, true).also {
                 setCryptoItemArrowVisibility(it)
             }
+
+            getBoolean(R.styleable.CryptoCurrencyItem_is_crypto_convert_item_amount_visible, true).also {
+                setCryptoItemAmountVisibility(it)
+            }
         }
     }
 
     fun setCryptoItemArrowVisibility(isGroupVisible: Boolean) {
         // binding.convertFormDashArrow.isVisible = isGroupVisible
     }
+
+    fun setCryptoItemAmountVisibility(isGroupVisible: Boolean) {
+        binding.amountCrypto.isVisible = isGroupVisible
+        binding.amountFiat.isVisible = isGroupVisible
+        if (!isGroupVisible) {
+            binding.dashIconBack.isVisible = false
+            binding.dashIconBack.isVisible = false
+        } else {
+            if (GenericUtils.isCurrencySymbolFirst()) {
+                binding.dashIconBack.isVisible = false
+                binding.dashIconFront.isVisible = true
+            } else {
+                binding.dashIconBack.isVisible = true
+                binding.dashIconFront.isVisible = false
+            }
+        }
+    }
+
     fun setCryptoItemGroupVisibility(isGroupVisible: Boolean) {
         binding.fromDataGroup.isVisible = isGroupVisible
         // binding.selectTheCoinTitle.isVisible = !isGroupVisible
     }
 
     fun setSyncingVisibility(isGroupVisible: Boolean) {
-        binding.syncingProgressContainer.isVisible = isGroupVisible
+        // binding.syncingProgressContainer.isVisible = isGroupVisible
     }
 
     fun setConvertItemTitle(title: String) {
@@ -108,6 +131,7 @@ class CryptoCurrencyItem @JvmOverloads constructor(
         binding.amountCrypto.isVisible = true
         binding.amountFiat.text = amountFiat
         binding.amountCrypto.text = amountCrypto
+        setCryptoItemAmountVisibility(true)
     }
 
     fun setConvertItemIcon(url: String?) {

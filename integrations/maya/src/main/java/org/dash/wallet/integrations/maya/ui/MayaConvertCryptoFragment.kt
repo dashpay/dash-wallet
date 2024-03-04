@@ -295,11 +295,11 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             }
         }
 
-        viewModel.dashWalletBalance.observe(
-            viewLifecycleOwner
-        ) {
-            binding.convertView.dashInput = it
-        }
+//        viewModel.dashWalletBalance.observe(
+//            viewLifecycleOwner
+//        ) {
+//            binding.convertView.dashInput = it
+//        }
 
         convertViewModel.validSwapValue.observe(viewLifecycleOwner) {
             binding.limitDesc.isGone = true
