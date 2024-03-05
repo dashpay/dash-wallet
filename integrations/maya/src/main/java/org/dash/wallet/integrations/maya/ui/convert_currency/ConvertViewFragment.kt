@@ -36,6 +36,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.isCurrencyFirst
+import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentConvertCurrencyViewBinding
 import org.dash.wallet.integrations.maya.ui.mayaViewModels
@@ -84,6 +85,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                 resetViewSelection(it)
             }
         }
+
+        binding.inputAmount.showResultContainer = false
+        binding.inputAmount.showCurrencySelector = false
 
         binding.bottomCard.isVisible = false
 
@@ -210,6 +214,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
 
                     else -> {
                         if (pickedCurrencyOption == userAccountData.coinbaseAccount.currency) {
+                            // Crypto -> DASH
                             (valueToBind.toBigDecimal().setScale(8, RoundingMode.HALF_UP) / userAccountData.getCryptoToDashExchangeRate())
                                 .setScale(8, RoundingMode.HALF_UP).toString()
                         } else {
@@ -247,10 +252,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                 if (viewModel.selectedLocalCurrencyCode == binding.currencyOptions.pickedOption) {
                     val localCurrencySymbol =
                         GenericUtils.getLocalCurrencySymbol(viewModel.selectedLocalCurrencyCode)
-                    binding.inputAmount.text.split(" ")
+                    binding.inputAmount.input.split(" ")
                         .first { it != localCurrencySymbol }
                 } else {
-                    binding.inputAmount.text.split(" ")
+                    binding.inputAmount.input.split(" ")
                         .first { it != binding.currencyOptions.pickedOption }
                 }
             if (inputValue != "0") {
@@ -332,47 +337,66 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
     fun applyNewValue(value: String, currencyCode: String) {
         // Create a new spannable with the two strings
         val balance = value.ifEmpty { "0" }
-        val isFraction = balance.indexOf(decimalSeparator) > -1
-        val lengthOfDecimalPart = balance.length - balance.indexOf(decimalSeparator)
-        val spannableString = if (viewModel.selectedLocalCurrencyCode == currencyCode) {
-            val cleanedValue = GenericUtils.formatFiatWithoutComma(balance)
-            val fiatAmount = Fiat.parseFiat(viewModel.selectedLocalCurrencyCode, cleanedValue)
-            val localCurrencySymbol =
-                GenericUtils.getLocalCurrencySymbol(viewModel.selectedLocalCurrencyCode)
+//        val isFraction = balance.indexOf(decimalSeparator) > -1
+//        val lengthOfDecimalPart = balance.length - balance.indexOf(decimalSeparator)
+//        val spannableString = if (viewModel.selectedLocalCurrencyCode == currencyCode) {
+//            val cleanedValue = GenericUtils.formatFiatWithoutComma(balance)
+//            val fiatAmount = Fiat.parseFiat(viewModel.selectedLocalCurrencyCode, cleanedValue)
+//            val localCurrencySymbol =
+//                GenericUtils.getLocalCurrencySymbol(viewModel.selectedLocalCurrencyCode)
+//
+//            val faitBalance = if (isFraction && lengthOfDecimalPart > 2) {
+//                format.format(fiatAmount).toString()
+//            } else {
+//                balance
+//            }
+//            val text = if (fiatAmount.isCurrencyFirst()) {
+//                "$localCurrencySymbol $faitBalance"
+//            } else {
+//                "$faitBalance $localCurrencySymbol"
+//            }
+//            SpannableString(text).apply {
+//                if (fiatAmount.isCurrencyFirst() && text.length - faitBalance.length > 0) {
+//                    setAmountFormat(this, 0, text.length - faitBalance.length)
+//                } else {
+//                    setAmountFormat(this, balance.length, text.length)
+//                }
+//            }
+//        } else {
+//            val formattedValue = if (balance.contains("E")) {
+//                DecimalFormat("########.########").format(balance.toDouble())
+//            } else {
+//                balance
+//            }
+//
+//            val text = "$formattedValue $currencyCode"
+//
+//            SpannableString(text).apply {
+//                setAmountFormat(this, formattedValue.length, text.length)
+//            }
+//        }
 
-            val faitBalance = if (isFraction && lengthOfDecimalPart > 2) {
-                format.format(fiatAmount).toString()
-            } else {
-                balance
-            }
-            val text = if (fiatAmount.isCurrencyFirst()) {
-                "$localCurrencySymbol $faitBalance"
-            } else {
-                "$faitBalance $localCurrencySymbol"
-            }
-            SpannableString(text).apply {
-                if (fiatAmount.isCurrencyFirst() && text.length - faitBalance.length > 0) {
-                    setAmountFormat(this, 0, text.length - faitBalance.length)
-                } else {
-                    setAmountFormat(this, balance.length, text.length)
-                }
-            }
-        } else {
-            val formattedValue = if (balance.contains("E")) {
-                DecimalFormat("########.########").format(balance.toDouble())
-            } else {
-                balance
-            }
 
-            val text = "$formattedValue $currencyCode"
-
-            SpannableString(text).apply {
-                setAmountFormat(this, formattedValue.length, text.length)
+        binding.inputAmount.dashToFiat = currencyCode == "DASH"
+        val one = BigDecimal.ONE.setScale(8, RoundingMode.HALF_UP)
+        var currencyCodeForView = viewModel.selectedLocalCurrencyCode
+        val rate = when (currencyCode) {
+            "DASH" -> {
+                one / viewModel.account.currencyToDashExchangeRate
+            }
+            viewModel.selectedLocalCurrencyCode -> {
+                one / viewModel.account.currencyToDashExchangeRate
+            }
+            else -> {
+                currencyCodeForView = currencyCode
+                one / viewModel.account.getCryptoToDashExchangeRate()
             }
         }
 
-        binding.inputAmount.text = spannableString
+        binding.inputAmount.exchangeRate = ExchangeRate(Coin.COIN, rate.toFiat(currencyCodeForView))
+        binding.inputAmount.input = value
         viewModel.enteredConvertAmount = balance
+
 
         val hasBalance = balance.isNotEmpty() &&
             (balance.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
@@ -430,28 +454,28 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         checkTheUserEnteredValue(hasBalance)
     }
 
-    private fun setAmountFormat(
-        spannable: Spannable,
-        from: Int,
-        to: Int
-    ): Spannable {
-        val textSize = 21.0f / binding.inputAmount.paint.textSize
-        return spannable.apply {
-            setSpan(
-                RelativeSizeSpan(textSize),
-                from,
-                to,
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-            setSpan(
-                context?.resources?.getColor(R.color.content_primary, null)
-                    ?.let { ForegroundColorSpan(it) },
-                from,
-                to,
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-        }
-    }
+//    private fun setAmountFormat(
+//        spannable: Spannable,
+//        from: Int,
+//        to: Int
+//    ): Spannable {
+//        val textSize = 21.0f / binding.inputAmount.paint.textSize
+//        return spannable.apply {
+//            setSpan(
+//                RelativeSizeSpan(textSize),
+//                from,
+//                to,
+//                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+//            )
+//            setSpan(
+//                context?.resources?.getColor(R.color.content_primary, null)
+//                    ?.let { ForegroundColorSpan(it) },
+//                from,
+//                to,
+//                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+//            )
+//        }
+//    }
 
     private fun checkTheUserEnteredValue(hasBalance: Boolean) {
         binding.continueBtn.isEnabled = hasBalance

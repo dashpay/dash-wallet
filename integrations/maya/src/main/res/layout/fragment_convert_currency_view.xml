@@ -35,7 +35,7 @@
 
      <LinearLayout
         android:id="@+id/input_wrapper"
-        android:layout_width="200dp"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:visibility="gone"
@@ -54,7 +54,17 @@
              android:visibility="gone"
              tools:text="BTC"/>
 
-         <ImageView
+         <org.dash.wallet.common.ui.enter_amount.AmountView
+             android:id="@+id/input_amount"
+             android:layout_width="match_parent"
+             android:layout_height="wrap_content"
+             android:layout_marginHorizontal="2dp"
+             app:layout_constraintStart_toStartOf="parent"
+             app:layout_constraintEnd_toEndOf="parent"
+             app:layout_constraintHorizontal_bias="0.0"
+             app:layout_constraintTop_toTopOf="parent" />
+
+         <!--ImageView
              android:id="@+id/front_symbol"
              android:layout_width="wrap_content"
              android:layout_height="wrap_content"
@@ -73,7 +83,7 @@
             autofit:autoSizeMaxTextSize="48sp"
             android:gravity="center"
             android:layout_gravity="center|bottom"
-            autofit:sizeToFit="true" />
+            autofit:sizeToFit="true" /-->
 
          <!--ImageView
              android:id="@+id/end_symbol"
