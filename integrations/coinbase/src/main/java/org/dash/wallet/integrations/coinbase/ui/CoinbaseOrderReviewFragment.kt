@@ -18,6 +18,7 @@ package org.dash.wallet.integrations.coinbase.ui
 
 import android.os.Bundle
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -51,11 +52,12 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
     private val dashFormat = MonetaryFormat().withLocale(
         GenericUtils.getDeviceLocale()
     ).noCode().minDecimals(6).optionalDecimals()
+    private var onBackPressedCallback: OnBackPressedCallback? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+        onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
             viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_ANDROID_BACK)
             findNavController().popBackStack()
         }
@@ -185,5 +187,10 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
         }
 
         return Pair("", "")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        onBackPressedCallback?.remove()
     }
 }
