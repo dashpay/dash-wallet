@@ -22,6 +22,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -186,7 +189,9 @@ class MayaConvertCryptoViewModel @Inject constructor(
         )
 
     private fun setDashWalletBalance() {
-        _dashWalletBalance.value = walletDataProvider.getWalletBalance()
+        walletDataProvider.observeBalance().onEach {
+            _dashWalletBalance.value = it
+        }.launchIn(viewModelScope)
     }
 
     suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {

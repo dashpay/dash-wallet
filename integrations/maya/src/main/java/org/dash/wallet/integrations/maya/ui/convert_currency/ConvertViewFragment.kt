@@ -25,7 +25,6 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
-import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
@@ -33,6 +32,7 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentConvertCurrencyViewBinding
+import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.ui.mayaViewModels
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -112,13 +112,15 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         }
 
         binding.currencyOptions.setOnOptionPickedListener { value, _ ->
-            setAmountValue(value, viewModel.enteredConvertAmount)
+            // setAmountValue(value, viewModel.enteredConvertAmount)
+            setAmountValue(value)
             viewModel.selectedPickerCurrencyCode = value
+            // viewModel.setAmount()
         }
     }
 
     private fun getMaxAmount(): String? {
-        if (viewModel.dashToCrypto.value == true) { // from wallet -> coinbase
+        if (viewModel.dashToCrypto.value == true) { // from wallet -> maya
             viewModel.selectedCryptoCurrencyAccount.value?.let { account ->
                 val cleanedValue =
                     viewModel.maxForDashWalletAmount.toBigDecimal() /
@@ -154,76 +156,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         }
     }
 
-    private fun setAmountValue(pickedCurrencyOption: String, valueToBind: String) {
-        viewModel.selectedCryptoCurrencyAccount.value?.let { userAccountData ->
-            val enteredConvertAmount = (viewModel.enteredConvertAmount.toBigDecimalOrNull() ?: BigDecimal.ZERO)
-            val cleanedValue = if (viewModel.selectedPickerCurrencyCode !== pickedCurrencyOption &&
-                enteredConvertAmount > BigDecimal.ZERO
-            ) {
-                val currency = userAccountData.coinbaseAccount.currency
-                val convertedValue = when {
-                    (currency == viewModel.selectedPickerCurrencyCode) -> {
-                        if (pickedCurrencyOption == viewModel.selectedLocalCurrencyCode) {
-                            (
-                                valueToBind.toBigDecimal() /
-                                    userAccountData.currencyToCryptoCurrencyExchangeRate
-                                )
-                                .setScale(8, RoundingMode.HALF_UP).toString()
-                        } else {
-                            // Crypto -> DASH
-                            val bd = viewModel.toDashValue(valueToBind, userAccountData, true)
-                            val coin = try {
-                                Coin.parseCoin(bd.toString())
-                            } catch (x: Exception) {
-                                Coin.ZERO
-                            }
-                            if (coin.isZero) {
-                                0.toBigDecimal()
-                            } else {
-                                bd
-                            }
-                        }
-                    }
-                    (viewModel.selectedLocalCurrencyCode == viewModel.selectedPickerCurrencyCode) -> {
-                        if (pickedCurrencyOption == userAccountData.coinbaseAccount.currency) {
-                            // Fiat -> Crypto
-                            (valueToBind.toBigDecimal() * userAccountData.currencyToCryptoCurrencyExchangeRate)
-                                .setScale(8, RoundingMode.HALF_UP).toString()
-                        } else {
-                            // Fiat -> DASH
-                            val bd = viewModel.toDashValue(valueToBind, userAccountData)
-                            val coin = try {
-                                Coin.parseCoin(bd.toString())
-                            } catch (x: Exception) {
-                                Coin.ZERO
-                            }
-                            if (coin.isZero) {
-                                0.toBigDecimal()
-                            } else {
-                                bd
-                            }
-                        }
-                    }
-
-                    else -> {
-                        if (pickedCurrencyOption == userAccountData.coinbaseAccount.currency) {
-                            // Crypto -> DASH
-                            (valueToBind.toBigDecimal().setScale(8, RoundingMode.HALF_UP) / userAccountData.getCryptoToDashExchangeRate())
-                                .setScale(8, RoundingMode.HALF_UP).toString()
-                        } else {
-                            // DASH -> Fiat
-                            (valueToBind.toBigDecimal().setScale(8, RoundingMode.HALF_UP) / userAccountData.currencyToDashExchangeRate)
-                                .setScale(8, RoundingMode.HALF_UP).toString()
-                        }
-                    }
-                }
-                convertedValue.toString()
-            } else {
-                valueToBind
-            }
-
-            applyNewValue(cleanedValue, pickedCurrencyOption)
-        }
+    private fun setAmountValue(pickedCurrencyOption: String) {
+        val value = viewModel.getAmountValue(pickedCurrencyOption)
+        setAmountViewInfo(pickedCurrencyOption, value)
     }
 
     fun setViewDetails(continueText: String, keyboardHeader: View?) {
@@ -329,152 +264,46 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
 
     fun applyNewValue(value: String, currencyCode: String) {
         // Create a new spannable with the two strings
-        val balance = value.ifEmpty { "0" }
-//        val isFraction = balance.indexOf(decimalSeparator) > -1
-//        val lengthOfDecimalPart = balance.length - balance.indexOf(decimalSeparator)
-//        val spannableString = if (viewModel.selectedLocalCurrencyCode == currencyCode) {
-//            val cleanedValue = GenericUtils.formatFiatWithoutComma(balance)
-//            val fiatAmount = Fiat.parseFiat(viewModel.selectedLocalCurrencyCode, cleanedValue)
-//            val localCurrencySymbol =
-//                GenericUtils.getLocalCurrencySymbol(viewModel.selectedLocalCurrencyCode)
-//
-//            val faitBalance = if (isFraction && lengthOfDecimalPart > 2) {
-//                format.format(fiatAmount).toString()
-//            } else {
-//                balance
-//            }
-//            val text = if (fiatAmount.isCurrencyFirst()) {
-//                "$localCurrencySymbol $faitBalance"
-//            } else {
-//                "$faitBalance $localCurrencySymbol"
-//            }
-//            SpannableString(text).apply {
-//                if (fiatAmount.isCurrencyFirst() && text.length - faitBalance.length > 0) {
-//                    setAmountFormat(this, 0, text.length - faitBalance.length)
-//                } else {
-//                    setAmountFormat(this, balance.length, text.length)
-//                }
-//            }
-//        } else {
-//            val formattedValue = if (balance.contains("E")) {
-//                DecimalFormat("########.########").format(balance.toDouble())
-//            } else {
-//                balance
-//            }
-//
-//            val text = "$formattedValue $currencyCode"
-//
-//            SpannableString(text).apply {
-//                setAmountFormat(this, formattedValue.length, text.length)
-//            }
-//        }
+        val newValue = value.ifEmpty { "0" }
+        viewModel.setEnteredAmount(newValue)
 
+        setAmountViewInfo(currencyCode, newValue)
 
+        val isNonZero = newValue.isNotEmpty() &&
+            (newValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
+        viewModel.updateAmounts()
+        checkTheUserEnteredValue(isNonZero)
+    }
+
+    private fun setAmountViewInfo(currencyCode: String, value: String) {
         binding.inputAmount.dashToFiat = currencyCode == "DASH"
         val one = BigDecimal.ONE.setScale(8, RoundingMode.HALF_UP)
         var currencyCodeForView = viewModel.selectedLocalCurrencyCode
-        var amount = balance
+        var amount = value
         val rate = when (currencyCode) {
-            "DASH" -> {
-                one / viewModel.account.currencyToDashExchangeRate
-            }
+            "DASH" -> viewModel.amount.dashFiatExchangeRate
             // Fiat
             viewModel.selectedLocalCurrencyCode -> {
                 amount = amount.toBigDecimal().setScale(2, RoundingMode.HALF_UP).toString()
+                // if (balance[balance.length-1] != '.')
+                //    amount = amount.stripTrailingZeros()
                 one / viewModel.account.currencyToDashExchangeRate
+                viewModel.amount.dashFiatExchangeRate
             }
             // Crypto
             else -> {
                 currencyCodeForView = currencyCode
-                //if (balance[balance.length-1] != '.')
+                amount = amount.toBigDecimal().setScale(8, RoundingMode.HALF_UP).toString()
+                // if (balance[balance.length-1] != '.')
                 //    amount = amount.stripTrailingZeros()
-                one / viewModel.account.getCryptoToDashExchangeRate()
+                viewModel.amount.cryptoDashExchangeRate
             }
         }
 
         binding.inputAmount.exchangeRate = ExchangeRate(Coin.COIN, rate.toFiat(currencyCodeForView))
         binding.inputAmount.input = amount
         viewModel.enteredConvertAmount = amount
-
-
-        val hasBalance = balance.isNotEmpty() &&
-            (balance.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
-
-        if (hasBalance) {
-            viewModel.selectedCryptoCurrencyAccount.value?.let {
-                viewModel.selectedLocalExchangeRate.value?.let {
-                    ExchangeRate(Coin.COIN, it.fiat)
-                }?.let { _ ->
-                    val dashAmount = when {
-                        (
-                            it.coinbaseAccount.currency == currencyCode &&
-                                it.coinbaseAccount.currency != Constants.DASH_CURRENCY
-                            ) -> {
-                            val bd =
-                                viewModel.toDashValue(balance, it, true)
-                            try {
-                                Coin.parseCoin(bd.toString())
-                            } catch (x: Exception) {
-                                Coin.ZERO
-                            }
-                        }
-                        (
-                            viewModel.selectedLocalCurrencyCode == currencyCode &&
-                                it.coinbaseAccount.currency != Constants.DASH_CURRENCY
-                            ) -> {
-                            // USD
-                            val bd =
-                                viewModel.toDashValue(balance, it)
-                            try {
-                                Coin.parseCoin(bd.toString())
-                            } catch (x: Exception) {
-                                Coin.ZERO
-                            }
-                        }
-
-                        else -> {
-                            // DASH
-                            val formattedValue = GenericUtils.formatFiatWithoutComma(balance)
-                            try {
-                                Coin.parseCoin(formattedValue)
-                            } catch (x: Exception) {
-                                Coin.ZERO
-                            }
-                        }
-                    }
-
-                    viewModel.setEnteredConvertDashAmount(dashAmount)
-                }
-            }
-        } else {
-            viewModel.setEnteredConvertDashAmount(Coin.ZERO)
-        }
-
-        checkTheUserEnteredValue(hasBalance)
     }
-
-//    private fun setAmountFormat(
-//        spannable: Spannable,
-//        from: Int,
-//        to: Int
-//    ): Spannable {
-//        val textSize = 21.0f / binding.inputAmount.paint.textSize
-//        return spannable.apply {
-//            setSpan(
-//                RelativeSizeSpan(textSize),
-//                from,
-//                to,
-//                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//            )
-//            setSpan(
-//                context?.resources?.getColor(R.color.content_primary, null)
-//                    ?.let { ForegroundColorSpan(it) },
-//                from,
-//                to,
-//                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//            )
-//        }
-//    }
 
     private fun checkTheUserEnteredValue(hasBalance: Boolean) {
         binding.continueBtn.isEnabled = hasBalance

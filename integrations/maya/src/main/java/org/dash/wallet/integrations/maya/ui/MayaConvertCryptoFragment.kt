@@ -267,19 +267,22 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             setConvertViewInput()
         }
 
+        convertViewModel.enteredAmount.observe(viewLifecycleOwner) { amount ->
+            // convertViewModel.setAmount(amount, convertViewModel.selectedPickerCurrencyCode)
+        }
+
         convertViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner) { amount ->
             val hasAmount = !amount.isZero
             binding.youWillReceiveLabel.isVisible = hasAmount
             binding.youWillReceiveValue.isVisible = hasAmount
             binding.convertView.dashInput = amount
-            // binding.convertView.amountFiat = "?"
+        }
 
-            if (hasAmount && !binding.convertView.dashToCrypto) {
-                binding.youWillReceiveValue.text = context?.getString(
-                    R.string.you_will_receive_dash,
-                    dashFormat.format(amount).toString()
-                )
-            }
+        convertViewModel.enteredConvertFiatAmount.observe(viewLifecycleOwner) { amount ->
+            val hasAmount = !amount.isZero
+            binding.youWillReceiveLabel.isVisible = hasAmount
+            binding.youWillReceiveValue.isVisible = hasAmount
+            binding.convertView.fiatInput = amount
         }
 
         convertViewModel.enteredConvertCryptoAmount.observe(viewLifecycleOwner) { amount ->
@@ -295,11 +298,11 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             }
         }
 
-//        viewModel.dashWalletBalance.observe(
-//            viewLifecycleOwner
-//        ) {
+        viewModel.dashWalletBalance.observe(
+            viewLifecycleOwner
+        ) {
 //            binding.convertView.dashInput = it
-//        }
+        }
 
         convertViewModel.validSwapValue.observe(viewLifecycleOwner) {
             binding.limitDesc.isGone = true

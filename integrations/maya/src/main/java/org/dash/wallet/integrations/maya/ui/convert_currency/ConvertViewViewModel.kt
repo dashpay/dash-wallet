@@ -29,7 +29,6 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -40,10 +39,15 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
 import org.dash.wallet.integrations.maya.utils.MayaConstants
+import org.slf4j.LoggerFactory
+import java.lang.IllegalArgumentException
 import java.math.BigDecimal
+import java.math.BigInteger
 import java.math.RoundingMode
 import javax.inject.Inject
 
@@ -53,6 +57,8 @@ enum class CurrencyInputType {
     Fiat
 }
 
+fun toScaledBigDecimal(value: String): BigDecimal = value.toBigDecimal().setScale(8, RoundingMode.HALF_UP)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ConvertViewViewModel @Inject constructor(
@@ -61,8 +67,12 @@ class ConvertViewViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
+    companion object {
+        private val log = LoggerFactory.getLogger(ConvertViewFragment::class.java)
+    }
     var destinationCurrency: String? = null
     lateinit var account: AccountDataUIModel
+    val amount = Amount()
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
 
@@ -87,9 +97,17 @@ class ConvertViewViewModel @Inject constructor(
 
     var selectedPickerCurrencyCode: String = Constants.USD_CURRENCY
 
+    private val _enteredAmount = MutableLiveData<String>("0")
+    val enteredAmount: LiveData<String>
+        get() = _enteredAmount
+
     private val _enteredConvertDashAmount = MutableLiveData<Coin>()
     val enteredConvertDashAmount: LiveData<Coin>
         get() = _enteredConvertDashAmount
+
+    private val _enteredConvertFiatAmount = MutableLiveData<Fiat>()
+    val enteredConvertFiatAmount: LiveData<Fiat>
+        get() = _enteredConvertFiatAmount
 
     private val _enteredConvertCryptoAmount = MutableLiveData<Pair<String, String>>()
     val enteredConvertCryptoAmount: LiveData<Pair<String, String>>
@@ -161,20 +179,26 @@ class ConvertViewViewModel @Inject constructor(
         }
 
         maxForDashCoinBaseAccount = maxCoinValue
+
+        setExchangeRates(BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) / account.currencyToDashExchangeRate, BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) / account.currencyToCryptoCurrencyExchangeRate)
     }
 
-    fun setEnteredConvertDashAmount(value: Coin) {
-        _enteredConvertDashAmount.value = value
-        if (!value.isZero) {
+    fun updateAmounts() {
+        val dashValue = try {
+            Coin.parseCoin(amount.dash.toString())
+        } catch (e: Exception) {
+            Coin.ZERO
+        }
+        _enteredConvertDashAmount.value = dashValue
+        if (!dashValue.isZero) {
             _selectedCryptoCurrencyAccount.value?.let {
-                val cryptoCurrency = (value.toBigDecimal() / it.getCryptoToDashExchangeRate())
-                    .setScale(8, RoundingMode.HALF_UP).toString()
-
+                val cryptoCurrency = amount.crypto.setScale(8, RoundingMode.HALF_UP).toString()
                 _enteredConvertCryptoAmount.value = Pair(cryptoCurrency, it.coinbaseAccount.currency)
             }
-        }
+            val fiatValue = Fiat.parseFiat(selectedLocalCurrencyCode, amount.fiat.setScale(2, RoundingMode.HALF_UP).toString())
+            _enteredConvertFiatAmount.value = fiatValue
 
-        if (value.isZero) {
+        } else {
             resetSwapValueError()
         }
     }
@@ -343,5 +367,33 @@ class ConvertViewViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         _selectedCryptoCurrencyAccount.value = null
+    }
+
+    fun setExchangeRates(dashRate: BigDecimal, cryptoRate: BigDecimal) {
+        amount.dashFiatExchangeRate = dashRate
+        amount.cryptoFiatExchangeRate = cryptoRate
+    }
+    fun setAmount(valueToBind: String, currencyCode: String) {
+        val value = toScaledBigDecimal(valueToBind)
+        when (currencyCode) {
+            "DASH" -> amount.dash = value
+            selectedLocalCurrencyCode -> amount.fiat
+            selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency -> amount.crypto
+        }
+    }
+
+    fun setEnteredAmount(amount: String) {
+        _enteredAmount.value = amount
+        setAmount(amount, selectedPickerCurrencyCode)
+        log.info("setting amount: {} {}: {}", amount, selectedPickerCurrencyCode, this.amount)
+    }
+
+    fun getAmountValue(currencyCode: String): String {
+        return when (currencyCode) {
+            "DASH" -> amount.dash
+            selectedLocalCurrencyCode -> amount.fiat
+            selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency -> amount.crypto
+            else -> throw IllegalArgumentException("Currency code $currencyCode is not found (DASH, $selectedLocalCurrencyCode, $selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency)")
+        }.toString()
     }
 }
