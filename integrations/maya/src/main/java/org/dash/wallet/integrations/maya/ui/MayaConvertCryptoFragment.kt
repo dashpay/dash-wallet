@@ -219,9 +219,9 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                     "Wallet",
                     true
                 ),
-                BigDecimal.ONE.setScale(8, RoundingMode.UP) / (poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
-                BigDecimal.ONE.setScale(8, RoundingMode.UP) / (dashPoolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
-                BigDecimal.ONE
+                BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) / (poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
+                BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) / (dashPoolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
+                BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP)
             )
         )
 

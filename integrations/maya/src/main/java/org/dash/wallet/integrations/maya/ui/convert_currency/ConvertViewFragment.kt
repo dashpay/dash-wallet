@@ -18,10 +18,6 @@
 package org.dash.wallet.integrations.maya.ui.convert_currency
 
 import android.os.Bundle
-import android.text.Spannable
-import android.text.SpannableString
-import android.text.style.ForegroundColorSpan
-import android.text.style.RelativeSizeSpan
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -29,20 +25,17 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentConvertCurrencyViewBinding
 import org.dash.wallet.integrations.maya.ui.mayaViewModels
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 
 @AndroidEntryPoint
@@ -380,22 +373,28 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         binding.inputAmount.dashToFiat = currencyCode == "DASH"
         val one = BigDecimal.ONE.setScale(8, RoundingMode.HALF_UP)
         var currencyCodeForView = viewModel.selectedLocalCurrencyCode
+        var amount = balance
         val rate = when (currencyCode) {
             "DASH" -> {
                 one / viewModel.account.currencyToDashExchangeRate
             }
+            // Fiat
             viewModel.selectedLocalCurrencyCode -> {
+                amount = amount.toBigDecimal().setScale(2, RoundingMode.HALF_UP).toString()
                 one / viewModel.account.currencyToDashExchangeRate
             }
+            // Crypto
             else -> {
                 currencyCodeForView = currencyCode
+                //if (balance[balance.length-1] != '.')
+                //    amount = amount.stripTrailingZeros()
                 one / viewModel.account.getCryptoToDashExchangeRate()
             }
         }
 
         binding.inputAmount.exchangeRate = ExchangeRate(Coin.COIN, rate.toFiat(currencyCodeForView))
-        binding.inputAmount.input = value
-        viewModel.enteredConvertAmount = balance
+        binding.inputAmount.input = amount
+        viewModel.enteredConvertAmount = amount
 
 
         val hasBalance = balance.isNotEmpty() &&

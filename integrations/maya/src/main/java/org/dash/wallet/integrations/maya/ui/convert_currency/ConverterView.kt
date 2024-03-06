@@ -146,7 +146,7 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
                     val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
                     val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
                     binding.convertFromBtn.setConvertItemAmounts(
-                        "${dashFormat.minDecimals(0).format(dash)}",
+                        "${dashFormat.minDecimals(2).optionalDecimals(2,4).format(dash)}",
                         "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
                     )
 //                binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
