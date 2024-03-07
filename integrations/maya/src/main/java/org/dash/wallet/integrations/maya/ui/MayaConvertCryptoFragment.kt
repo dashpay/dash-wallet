@@ -93,7 +93,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
         if (savedInstanceState == null) {
             fragment = ConvertViewFragment.newInstance()
-            fragment.setViewDetails(getString(R.string.get_quote), null)
+            fragment.setViewDetails(getString(R.string.button_continue), null)
 
             parentFragmentManager.commit {
                 setReorderingAllowed(true)

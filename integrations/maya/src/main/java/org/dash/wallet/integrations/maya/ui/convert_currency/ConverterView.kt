@@ -169,6 +169,7 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
 
     private fun setConvertToBtnData() {
         binding.convertToBtn.setCryptoItemArrowVisibility(dashToCrypto)
+        binding.convertToBtn.setCryptoItemAmountVisibility(false)
         if (!dashToCrypto) {
             binding.convertToBtn.setCryptoItemGroupVisibility(true)
             binding.convertToBtn.setConvertItemServiceName(R.string.dash_wallet_name)

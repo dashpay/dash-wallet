@@ -38,7 +38,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
@@ -47,7 +46,6 @@ import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.slf4j.LoggerFactory
 import java.lang.IllegalArgumentException
 import java.math.BigDecimal
-import java.math.BigInteger
 import java.math.RoundingMode
 import javax.inject.Inject
 
@@ -180,7 +178,10 @@ class ConvertViewViewModel @Inject constructor(
 
         maxForDashCoinBaseAccount = maxCoinValue
 
-        setExchangeRates(BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) / account.currencyToDashExchangeRate, BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) / account.currencyToCryptoCurrencyExchangeRate)
+        setExchangeRates(
+            BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) / account.currencyToDashExchangeRate,
+            BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) / account.currencyToCryptoCurrencyExchangeRate
+        )
     }
 
     fun updateAmounts() {
@@ -190,15 +191,18 @@ class ConvertViewViewModel @Inject constructor(
             Coin.ZERO
         }
         _enteredConvertDashAmount.value = dashValue
-        if (!dashValue.isZero) {
-            _selectedCryptoCurrencyAccount.value?.let {
-                val cryptoCurrency = amount.crypto.setScale(8, RoundingMode.HALF_UP).toString()
-                _enteredConvertCryptoAmount.value = Pair(cryptoCurrency, it.coinbaseAccount.currency)
-            }
-            val fiatValue = Fiat.parseFiat(selectedLocalCurrencyCode, amount.fiat.setScale(2, RoundingMode.HALF_UP).toString())
-            _enteredConvertFiatAmount.value = fiatValue
 
-        } else {
+        _selectedCryptoCurrencyAccount.value?.let {
+            val cryptoCurrency = amount.crypto.setScale(8, RoundingMode.HALF_UP).toString()
+            _enteredConvertCryptoAmount.value = Pair(cryptoCurrency, it.coinbaseAccount.currency)
+        }
+        val fiatValue = Fiat.parseFiat(
+            selectedLocalCurrencyCode,
+            amount.fiat.setScale(2, RoundingMode.HALF_UP).toString()
+        )
+        _enteredConvertFiatAmount.value = fiatValue
+
+        if (dashValue.isZero) {
             resetSwapValueError()
         }
     }
@@ -393,7 +397,9 @@ class ConvertViewViewModel @Inject constructor(
             "DASH" -> amount.dash
             selectedLocalCurrencyCode -> amount.fiat
             selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency -> amount.crypto
-            else -> throw IllegalArgumentException("Currency code $currencyCode is not found (DASH, $selectedLocalCurrencyCode, $selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency)")
+            else -> throw IllegalArgumentException(
+                "Currency code $currencyCode is not found (DASH, $selectedLocalCurrencyCode, $selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency)"
+            )
         }.toString()
     }
 }
