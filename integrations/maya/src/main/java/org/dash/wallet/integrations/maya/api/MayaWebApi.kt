@@ -81,24 +81,24 @@ open class MayaWebApi @Inject constructor(
     suspend fun getInboundAddresses(): List<InboundAddress> {
         return listOf(
             InboundAddress(
-                    address = "XsPKvvrZqQB931M8EbFpB12W88QxjW9WnX",
-                    chain = "DASH",
-                    chain_lp_actions_paused = false,
-                    chain_trading_paused = false,
-                    dust_threshold = "10000",
-                    gas_rate = "12",
-                    gas_rate_units = "satsperbyte",
-                    global_trading_paused = false,
-                    halted = false,
-                    outbound_fee = "5412",
-                    outbound_tx_size = "451",
-                    pub_key = "mayapub1addwnpepq255x4s5ag6qu0s2hrj9kwnlqpuy5r33d5t50p9r00wgr2842zhvz74muvu"
+                address = "XsPKvvrZqQB931M8EbFpB12W88QxjW9WnX",
+                chain = "DASH",
+                chain_lp_actions_paused = false,
+                chain_trading_paused = false,
+                dust_threshold = "10000",
+                gas_rate = "12",
+                gas_rate_units = "satsperbyte",
+                global_trading_paused = false,
+                halted = false,
+                outbound_fee = "5412",
+                outbound_tx_size = "451",
+                pub_key = "mayapub1addwnpepq255x4s5ag6qu0s2hrj9kwnlqpuy5r33d5t50p9r00wgr2842zhvz74muvu"
             )
         )
 //        return try {
 //            val response = endpoint.getInboundAddresses()
 //            log.info("maya: response: {}", response)
-//        
+//
 //            return if (response.isSuccessful && response.body()?.isNotEmpty() == true) {
 //                response.body()!!.toList()
 //            } else {
@@ -107,11 +107,11 @@ open class MayaWebApi @Inject constructor(
 //            }
 //        } catch (ex: Exception) {
 //            log.error("Error in getInboundAddresses: $ex")
-//        
+//
 //            if (ex !is IOException) {
 //                analyticsService.logError(ex)
 //            }
-//        
+//
 //            listOf()
 //      }
     }

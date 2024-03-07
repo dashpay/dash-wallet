@@ -19,7 +19,7 @@ package org.dash.wallet.integrations.maya.ui.convert_currency.model
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 
 sealed class PaymentMethodsUiState {
-    data class Success(val paymentMethodsList: List<PaymentMethod>): PaymentMethodsUiState()
-    data class Error(val isError:Boolean): PaymentMethodsUiState()
-    data class LoadingState(val isLoading:Boolean): PaymentMethodsUiState()
+    data class Success(val paymentMethodsList: List<PaymentMethod>) : PaymentMethodsUiState()
+    data class Error(val isError: Boolean) : PaymentMethodsUiState()
+    data class LoadingState(val isLoading: Boolean) : PaymentMethodsUiState()
 }

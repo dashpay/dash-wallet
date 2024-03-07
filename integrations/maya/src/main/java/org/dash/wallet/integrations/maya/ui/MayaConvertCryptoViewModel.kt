@@ -22,7 +22,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -41,9 +40,9 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toFormattedStringNoCode
-import org.dash.wallet.integrations.maya.model.CoinbaseErrorResponse
 import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.CoinbaseErrorResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.TradesRequest
@@ -82,7 +81,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
         setDashWalletBalance()
     }
 
-    fun setBaseIdForFaitModelCoinBase(list:List<BaseIdForUSDData>) {
+    fun setBaseIdForFaitModelCoinBase(list: List<BaseIdForUSDData>) {
         _baseIdForFaitModelCoinBase.value = list
     }
 
@@ -196,8 +195,8 @@ class MayaConvertCryptoViewModel @Inject constructor(
 
     suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
         return false
-        //val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash()
-        //return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
+        // val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash()
+        // return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
     }
 
     fun getUpdatedPaymentIntent(amountInDash: Coin, destination: Address): PaymentIntent? {

@@ -9,7 +9,6 @@ import org.dash.wallet.common.util.toFormattedString
 import java.math.BigDecimal
 import java.math.RoundingMode
 
-
 @Parcelize
 data class AccountDataUIModel(
     override val coinbaseAccount: Account,
@@ -31,7 +30,7 @@ fun AccountDataUIModel.getCoinBaseExchangeRateConversion(
 ): Pair<String, Coin> {
     val cleanedValue =
         this.coinbaseAccount.availableBalance.value.toBigDecimal() /
-                this.currencyToCryptoCurrencyExchangeRate
+            this.currencyToCryptoCurrencyExchangeRate
     val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
     val currencyRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
@@ -46,7 +45,7 @@ open class ToDashExchangeRateUIModel(
     open val coinbaseAccount: Account,
     open val currencyToDashExchangeRate: BigDecimal,
     open val currencyToUSDExchangeRate: BigDecimal
-): Parcelable {
+) : Parcelable {
     companion object {
         val EMPTY = ToDashExchangeRateUIModel(
             Account.EMPTY,

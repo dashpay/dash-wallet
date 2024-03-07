@@ -27,9 +27,7 @@ import androidx.core.view.setPadding
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.ConverterViewBinding
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.BaseServiceWallet
@@ -54,7 +52,7 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
 
     var walletToCoinbase: Boolean = false
         set(value) {
-            if (field != value){
+            if (field != value) {
                 field = value
                 updateSymbols(isDeviceConnectedToInternet)
                 updateAmount()
@@ -70,24 +68,43 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
         }
 
     private fun updateSymbols(isOnline: Boolean) {
-        if (walletToCoinbase){
+        if (walletToCoinbase) {
             binding.convertFromBtn.setConvertItemTitle(R.string.dash_wallet_name)
             binding.convertToBtn.setConvertItemTitle(R.string.maya_service_name)
-            ContextCompat.getDrawable(context,
-                if (isOnline)
-                R.drawable.ic_dash_blue_filled else org.dash.wallet.common.R.drawable.ic_dash_saturated)
+            ContextCompat.getDrawable(
+                context,
+                if (isOnline) {
+                    R.drawable.ic_dash_blue_filled
+                } else {
+                    org.dash.wallet.common.R.drawable.ic_dash_saturated
+                }
+            )
                 ?.let { binding.convertFromBtn.setConvertItemIcon(it) }
-            ContextCompat.getDrawable(context, if (isOnline)
-                R.drawable.ic_maya_logo else R.drawable.ic_maya_logo) // saturated?
+            ContextCompat.getDrawable(
+                context,
+                if (isOnline) {
+                    R.drawable.ic_maya_logo
+                } else {
+                    R.drawable.ic_maya_logo
+                }
+            ) // saturated?
                 ?.let { binding.convertToBtn.setConvertItemIcon(it) }
         } else {
             binding.convertFromBtn.setConvertItemTitle(R.string.maya_service_name)
             binding.convertToBtn.setConvertItemTitle(R.string.dash_wallet_name)
-            ContextCompat.getDrawable(context, if (isOnline)
-                R.drawable.ic_maya_logo else R.drawable.ic_maya_logo)  // saturated
+            ContextCompat.getDrawable(
+                context,
+                if (isOnline) {
+                    R.drawable.ic_maya_logo
+                } else {
+                    R.drawable.ic_maya_logo
+                }
+            ) // saturated
                 ?.let { binding.convertFromBtn.setConvertItemIcon(it) }
-            ContextCompat.getDrawable(context,
-                if (isOnline) R.drawable.ic_dash_blue_filled else org.dash.wallet.common.R.drawable.ic_dash_saturated)
+            ContextCompat.getDrawable(
+                context,
+                if (isOnline) R.drawable.ic_dash_blue_filled else org.dash.wallet.common.R.drawable.ic_dash_saturated
+            )
                 ?.let { binding.convertToBtn.setConvertItemIcon(it) }
         }
     }
@@ -101,7 +118,7 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
         }
     }
 
-    fun setOnTransferDirectionBtnClicked(listener: () -> Unit){
+    fun setOnTransferDirectionBtnClicked(listener: () -> Unit) {
         onTransferDirectionBtnClicked = listener
     }
 
@@ -116,7 +133,7 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
         }
     }
 
-    private fun initUI(){
+    private fun initUI() {
         binding.convertFromBtn.setCryptoItemGroupVisibility(true)
         binding.convertToBtn.setCryptoItemGroupVisibility(true)
         binding.convertFromBtn.setSyncingVisibility(false)
@@ -158,8 +175,8 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
             }
         } else {
             balanceOnCoinbase?.let {
-                val balance = it.balance?: ""
-                if (balance.isNotEmpty() && balance != MayaConstants.VALUE_ZERO){
+                val balance = it.balance ?: ""
+                if (balance.isNotEmpty() && balance != MayaConstants.VALUE_ZERO) {
                     val formattedAmount = GenericUtils.formatFiatWithoutComma(balance)
                     val coin = try {
                         Coin.parseCoin(formattedAmount)
@@ -176,7 +193,6 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
 //                    binding.convertFromDashFiatAmount.isVisible = true
 //
 //                    binding.walletIcon.isVisible = balance.isNotEmpty()
-
                 }
             }
         }

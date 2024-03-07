@@ -16,7 +16,7 @@ data class Account(
     val active: Boolean,
     val type: String,
     val ready: Boolean
-): Parcelable {
+) : Parcelable {
     companion object {
         val EMPTY = Account(
             UUID.randomUUID(),
@@ -35,4 +35,4 @@ data class Account(
 data class Balance(
     val value: String,
     val currency: String
-): Parcelable
+) : Parcelable

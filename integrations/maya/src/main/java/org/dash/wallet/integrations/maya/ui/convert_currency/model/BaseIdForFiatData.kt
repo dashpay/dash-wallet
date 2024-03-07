@@ -29,7 +29,7 @@ data class BaseIdForUSDData(
 ) : Parcelable
 
 sealed class BaseIdForFiatData {
-    data class Success(val baseIdForFaitDataList: List<BaseIdForUSDData>): BaseIdForFiatData()
+    data class Success(val baseIdForFaitDataList: List<BaseIdForUSDData>) : BaseIdForFiatData()
     object LoadingState : BaseIdForFiatData()
-    object Error: BaseIdForFiatData()
+    object Error : BaseIdForFiatData()
 }

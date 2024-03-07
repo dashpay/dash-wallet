@@ -219,8 +219,10 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                     "Wallet",
                     true
                 ),
-                BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) / (poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
-                BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) / (dashPoolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
+                BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) /
+                    (poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
+                BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) /
+                    (dashPoolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
                 BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP)
             )
         )
@@ -485,7 +487,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         binding.convertView.layoutParams = params
     }
 
-
     private fun showProgress(messageResId: Int) {
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
@@ -506,7 +507,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             getString(R.string.we_didnt_find_any_assets),
             getString(R.string.you_dont_own_any_crypto),
             getString(R.string.button_close),
-            getString(R.string.buy_crypto_on_coinbase),
+            getString(R.string.buy_crypto_on_coinbase)
         ).show(requireActivity()) { buyOnCoinbase ->
             if (buyOnCoinbase == true) {
                 viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_BUY_ON_COINBASE)

@@ -20,8 +20,8 @@ package org.dash.wallet.integrations.maya.model
 import java.math.BigDecimal
 
 /**
-    holds an amount in terms of dash, a fiat currency and another crypto currency. When exchange rates are changed
-    dash is used as the anchor to recalculate the fiat and crypto values.
+ holds an amount in terms of dash, a fiat currency and another crypto currency. When exchange rates are changed
+ dash is used as the anchor to recalculate the fiat and crypto values.
  */
 data class Amount(
     private var _dash: BigDecimal = BigDecimal.ZERO,

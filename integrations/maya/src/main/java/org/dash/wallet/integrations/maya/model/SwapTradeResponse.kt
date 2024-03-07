@@ -77,5 +77,5 @@ data class SwapTradeUIModel(
     val feeCurrency: String = "",
     var assetsBaseID: Pair<String, String>? = null,
     var inputCurrencyName: String = "",
-    var outputCurrencyName: String = "",
+    var outputCurrencyName: String = ""
 ) : Parcelable

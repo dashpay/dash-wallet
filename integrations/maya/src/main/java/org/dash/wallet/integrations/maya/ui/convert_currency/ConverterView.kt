@@ -23,7 +23,6 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
-import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
@@ -144,7 +143,7 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
 
             if (dashInput != null && fiatInput != null) {
                 binding.convertFromBtn.setConvertItemAmounts(
-                    "${dashFormat.minDecimals(2).optionalDecimals(2,4).format(dashInput?: Coin.ZERO)}",
+                    "${dashFormat.minDecimals(2).optionalDecimals(2,4).format(dashInput ?: Coin.ZERO)}",
                     "${Constants.PREFIX_ALMOST_EQUAL_TO} ${ (fiatInput ?: Fiat.valueOf("USD", 0)).toFormattedString() }"
                 )
             }
@@ -156,10 +155,10 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
 //                        "${dashFormat.minDecimals(2).optionalDecimals(2,4).format(dash)}",
 //                        "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
 //                    )
-////                binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
-////                    .optionalDecimals(0,8).format(dash)} DASH"
-////
-////                binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
+// //                binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
+// //                    .optionalDecimals(0,8).format(dash)} DASH"
+// //
+// //                binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
 //                }
 //            }
         } else {
@@ -222,7 +221,7 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
         }
 
 //        exchangeRate?.let { currentExchangeRate ->
- //           dashInput?.let { dash ->
+        //           dashInput?.let { dash ->
 //                val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
 //                val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
 //                binding.convertFromBtn.setConvertItemAmounts("${dashFormat.minDecimals(0)

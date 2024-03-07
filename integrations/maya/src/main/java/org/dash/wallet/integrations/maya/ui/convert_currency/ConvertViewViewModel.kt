@@ -398,7 +398,8 @@ class ConvertViewViewModel @Inject constructor(
             selectedLocalCurrencyCode -> amount.fiat
             selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency -> amount.crypto
             else -> throw IllegalArgumentException(
-                "Currency code $currencyCode is not found (DASH, $selectedLocalCurrencyCode, $selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency)"
+                "Currency code $currencyCode is not found (DASH, $selectedLocalCurrencyCode," +
+                    "$selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency)"
             )
         }.toString()
     }

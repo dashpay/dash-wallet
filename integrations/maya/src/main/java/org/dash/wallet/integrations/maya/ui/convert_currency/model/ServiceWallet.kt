@@ -16,7 +16,6 @@
  */
 package org.dash.wallet.integrations.maya.ui.convert_currency.model
 
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 
 data class ServiceWallet(
@@ -26,7 +25,7 @@ data class ServiceWallet(
     val currency: String,
     override var faitAmount: String,
     val icon: String?
-): BaseServiceWallet(balance, faitAmount)
+) : BaseServiceWallet(balance, faitAmount)
 
 open class BaseServiceWallet(
     open var balance: String = MayaConstants.VALUE_ZERO,

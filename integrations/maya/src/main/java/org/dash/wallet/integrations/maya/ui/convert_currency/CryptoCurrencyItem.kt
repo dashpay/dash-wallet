@@ -25,7 +25,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.withStyledAttributes
 import androidx.core.view.isVisible
-import androidx.core.view.marginEnd
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import coil.load
@@ -96,11 +95,15 @@ class CryptoCurrencyItem @JvmOverloads constructor(
             if (GenericUtils.isCurrencySymbolFirst()) {
                 binding.dashIconBack.isVisible = false
                 binding.dashIconFront.isVisible = binding.amountFiat.text.isNotEmpty()
-                binding.amountCrypto.updatePadding(right = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding))
+                binding.amountCrypto.updatePadding(
+                    right = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
+                )
             } else {
                 binding.dashIconBack.isVisible = binding.amountFiat.text.isNotEmpty()
                 binding.dashIconFront.isVisible = false
-                binding.amountCrypto.updatePadding(right = resources.getDimensionPixelOffset(R.dimen.default_vertical_padding))
+                binding.amountCrypto.updatePadding(
+                    right = resources.getDimensionPixelOffset(R.dimen.default_vertical_padding)
+                )
             }
         }
     }
