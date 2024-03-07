@@ -25,7 +25,7 @@ import org.dash.wallet.common.payments.parsers.PaymentIntentParser
 abstract class MayaPaymentIntentParser(
     currency: String,
     uriPrefix: String,
-    private val asset: String,
+    val asset: String,
     params: NetworkParameters?
 ) :
     PaymentIntentParser(
