@@ -40,6 +40,7 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Amount
+import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
 import org.dash.wallet.integrations.maya.utils.MayaConstants
@@ -49,11 +50,6 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import javax.inject.Inject
 
-enum class CurrencyInputType {
-    Dash,
-    Crypto,
-    Fiat
-}
 
 fun toScaledBigDecimal(value: String): BigDecimal = value.toBigDecimal().setScale(8, RoundingMode.HALF_UP)
 
