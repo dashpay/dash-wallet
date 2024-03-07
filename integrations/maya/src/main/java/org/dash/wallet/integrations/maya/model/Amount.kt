@@ -19,48 +19,78 @@ package org.dash.wallet.integrations.maya.model
 
 import java.math.BigDecimal
 
+enum class CurrencyInputType {
+    Dash,
+    Crypto,
+    Fiat
+}
+
 /**
- holds an amount in terms of dash, a fiat currency and another crypto currency. When exchange rates are changed
- dash is used as the anchor to recalculate the fiat and crypto values.
+ Holds an amount in terms of dash, a fiat currency and another crypto currency. When exchange rates are changed
+ anchor is used to determine which should be recalculated.  Dash is the default anchor currency.
  */
 data class Amount(
     private var _dash: BigDecimal = BigDecimal.ZERO,
     private var _fiat: BigDecimal = BigDecimal.ZERO,
-    private var _crypto: BigDecimal = BigDecimal.ZERO
+    private var _crypto: BigDecimal = BigDecimal.ZERO,
+    private var anchor: CurrencyInputType = CurrencyInputType.Dash
 ) {
     var dash: BigDecimal
         get() = _dash
         set(value) {
             _dash = value
-            _fiat = value * dashFiatExchangeRate
-            _crypto = value * cryptoDashExchangeRate
+            anchor = CurrencyInputType.Dash
+            update()
         }
     var fiat: BigDecimal
         get() = _fiat
         set(value) {
             _fiat = value
-            _dash = value / dashFiatExchangeRate
-            _crypto = value / cryptoFiatExchangeRate
+            anchor = CurrencyInputType.Fiat
+            update()
         }
     var crypto: BigDecimal
         get() = _crypto
         set(value) {
             _crypto = value
-            _dash = value * cryptoDashExchangeRate
-            _fiat = value * cryptoFiatExchangeRate
+            anchor = CurrencyInputType.Crypto
+            update()
         }
-    var dashFiatExchangeRate: BigDecimal = BigDecimal.ONE // 1 DASH = x Fiat, eg 1 DASH = $35.87
+    /** 1 DASH = x Fiat, eg 1 DASH = $35.87 or $35.87/DASH */
+    var dashFiatExchangeRate: BigDecimal = BigDecimal.ONE
         set(value) {
             field = value
-            _fiat = _dash / value
-            _crypto = _dash / cryptoDashExchangeRate
+            update()
         }
-    var cryptoFiatExchangeRate: BigDecimal = BigDecimal.ONE // 1 Crypto = x Fiat
+
+    /** updates the other currencies based on the current #[anchor] */
+    private fun update() {
+        when (anchor) {
+            CurrencyInputType.Dash -> {
+                _fiat = _dash * dashFiatExchangeRate
+                _crypto = _dash * cryptoDashExchangeRate
+            }
+
+            CurrencyInputType.Fiat -> {
+                _dash = _fiat / dashFiatExchangeRate
+                _crypto = _fiat / cryptoFiatExchangeRate
+            }
+
+            CurrencyInputType.Crypto -> {
+                _dash = _crypto / cryptoDashExchangeRate
+                _fiat = _crypto * cryptoFiatExchangeRate
+            }
+        }
+    }
+
+    /** 1 Crypto = x Fiat, eg 1 BTC = $65,000 or $65,000/BTC */
+    var cryptoFiatExchangeRate: BigDecimal = BigDecimal.ONE
         set(value) {
             field = value
-            _fiat = _dash / value
-            _crypto = _dash / cryptoDashExchangeRate
+            update()
         }
+
+    /** exchange rate between Dash and Crypto, e.g. 0.00055 DASH/BTC */
     val cryptoDashExchangeRate
         get() = dashFiatExchangeRate / cryptoFiatExchangeRate
 }
