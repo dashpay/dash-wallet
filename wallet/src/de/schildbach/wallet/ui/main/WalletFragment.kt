@@ -198,6 +198,14 @@ class WalletFragment : Fragment(R.layout.home_content) {
             val activeSessionsText = ".".repeat(it)
             mixingBinding.mixingSessions.text = activeSessionsText
         }
+
+        viewModel.balance.observe(viewLifecycleOwner) {
+            mixingBinding.balance.text = getString(
+                R.string.coinjoin_progress_balance,
+                viewModel.mixedBalance,
+                viewModel.walletBalance
+            )
+        }
     }
 
     fun scrollToTop() {
