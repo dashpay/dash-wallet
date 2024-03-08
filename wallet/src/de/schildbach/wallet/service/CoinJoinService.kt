@@ -67,6 +67,7 @@ import org.bitcoinj.wallet.WalletEx
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.NetworkStatus
+import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -156,10 +157,12 @@ class CoinJoinMixingService @Inject constructor(
     private val uiCoroutineScope = CoroutineScope(Dispatchers.Main)
 
     private var blockChain: AbstractBlockChain? = null
+    private var blockchainState: BlockchainState = BlockchainState()
     private val isBlockChainSet: Boolean
         get() = blockChain != null
     private var networkStatus: NetworkStatus = NetworkStatus.UNKNOWN
-    private var isSynced = false
+
+    // private var isSynced = false
     private var hasAnonymizableBalance: Boolean = false
     private var timeSkew: Long = 0L
     private var activeSessions = 0
@@ -203,9 +206,16 @@ class CoinJoinMixingService @Inject constructor(
             .distinctUntilChanged()
             .onEach { blockChainState ->
                 val isSynced = blockChainState.isSynced()
-                if (isSynced != this.isSynced) {
+                if (isSynced != this.blockchainState.isSynced()) {
                     val networkStatus = blockchainStateProvider.getNetworkStatus()
-                    updateState(config.getMode(), timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
+                    updateState(
+                        config.getMode(),
+                        timeSkew,
+                        hasAnonymizableBalance,
+                        networkStatus,
+                        blockChainState,
+                        blockChain
+                    )
                 }
                 // this will trigger mixing as new blocks are mined and received tx's are confirmed
                 if (isSynced) {
@@ -250,16 +260,16 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     suspend fun updateTimeSkewInternal(timeSkew: Long) {
-        updateState(config.getMode(), timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
+        updateState(config.getMode(), timeSkew, hasAnonymizableBalance, networkStatus, blockchainState, blockChain)
     }
 
     private suspend fun updateBalance(balance: Coin) {
         CoinJoinClientOptions.setAmount(balance)
-        log.info("coinjoin: total balance: ${balance.toFriendlyString()}")
+        // log.info("coinjoin: total balance: ${balance.toFriendlyString()}")
         val walletEx = walletDataProvider.wallet as WalletEx
-        log.info("coinjoin: mixed balance: ${walletEx.coinJoinBalance.toFriendlyString()}")
+        // log.info("coinjoin: mixed balance: ${walletEx.coinJoinBalance.toFriendlyString()}")
         val anonBalance = walletEx.getAnonymizableBalance(false, false)
-        log.info("coinjoin: anonymizable balance {}", anonBalance.toFriendlyString())
+        // log.info("coinjoin: anonymizable balance {}", anonBalance.toFriendlyString())
         val hasPartiallyMixedCoins = (walletEx.denominatedBalance - walletEx.coinJoinBalance).isGreaterThan(Coin.ZERO)
         val hasAnonymizableBalance = anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())
 
@@ -268,7 +278,7 @@ class CoinJoinMixingService @Inject constructor(
         } else {
             // if the client manager is not running, just say canDenominate is true
             // The first round of execution will determine if mixing can happen
-            log.info("coinjoin: client manager is not running, canDemoninate=true")
+            // log.info("coinjoin: client manager is not running, canDemoninate=true")
             true
         }
 
@@ -279,7 +289,7 @@ class CoinJoinMixingService @Inject constructor(
         }
 
         log.info(
-            "coinjoin: mixing can occur: $hasBalanceLeftToMix = balance: (${anonBalance.isGreaterThan(
+            "coinjoin: can mix balance: $hasBalanceLeftToMix = balance: (${anonBalance.isGreaterThan(
                 CoinJoin.getSmallestDenomination()
             )} && canDenominate: $canDenominate) || partially-mixed: $hasPartiallyMixedCoins"
         )
@@ -288,7 +298,7 @@ class CoinJoinMixingService @Inject constructor(
             getCurrentTimeSkew(),
             hasBalanceLeftToMix,
             networkStatus,
-            isSynced,
+            blockchainState,
             blockchainStateProvider.getBlockChain()
         )
     }
@@ -298,31 +308,31 @@ class CoinJoinMixingService @Inject constructor(
         timeSkew: Long,
         hasAnonymizableBalance: Boolean,
         networkStatus: NetworkStatus,
-        isSynced: Boolean,
+        blockchainState: BlockchainState,
         blockChain: AbstractBlockChain?
     ) {
         updateMutex.lock()
-        log.info(
-            "coinjoin-old-state: ${this.mode}, ${this.timeSkew}ms, ${this.hasAnonymizableBalance}, ${this.networkStatus}, synced: ${this.isSynced} ${blockChain != null}"
-        )
+//        log.info(
+//            "coinjoin-old-state: ${this.mode}, ${this.timeSkew}ms, ${this.hasAnonymizableBalance}, ${this.networkStatus}, synced: ${this.blockchainState.isSynced()} ${blockChain != null}"
+//        )
         try {
             setBlockchain(blockChain)
             log.info(
-                "coinjoin-new-state: $mode, $timeSkew ms, $hasAnonymizableBalance, $networkStatus, synced: $isSynced, ${blockChain != null}"
+                "coinjoin-state: $mode, $timeSkew ms, $hasAnonymizableBalance, $networkStatus, synced: ${blockchainState.isSynced()}, ${blockChain != null}"
             )
             // log.info("coinjoin-Current timeskew: ${getCurrentTimeSkew()}")
             this.networkStatus = networkStatus
             this.hasAnonymizableBalance = hasAnonymizableBalance
-            this.isSynced = isSynced
+            this.blockchainState = blockchainState
             this.mode = mode
             this.timeSkew = timeSkew
 
-            if (mode == CoinJoinMode.NONE || !isInsideTimeSkewBounds(timeSkew)) {
+            if (mode == CoinJoinMode.NONE || !isInsideTimeSkewBounds(timeSkew) || blockchainState.replaying) {
                 updateMixingState(MixingStatus.NOT_STARTED)
             } else {
                 configureMixing()
                 if (hasAnonymizableBalance) {
-                    if (networkStatus == NetworkStatus.CONNECTED && isBlockChainSet && isSynced) {
+                    if (networkStatus == NetworkStatus.CONNECTED && isBlockChainSet && blockchainState.isSynced()) {
                         updateMixingState(MixingStatus.MIXING)
                     } else {
                         updateMixingState(MixingStatus.PAUSED)
@@ -334,7 +344,6 @@ class CoinJoinMixingService @Inject constructor(
             updateProgress()
         } finally {
             updateMutex.unlock()
-            log.info("updateMutex is unlocked")
         }
     }
 
@@ -345,7 +354,7 @@ class CoinJoinMixingService @Inject constructor(
         try {
             val previousMixingStatus = _mixingState.value
             _mixingState.value = mixingStatus
-            log.info("coinjoin-updateMixingState: $previousMixingStatus -> $mixingStatus")
+            log.info("coinjoin-mixing: $previousMixingStatus -> $mixingStatus")
 
             when {
                 mixingStatus == MixingStatus.MIXING && previousMixingStatus != MixingStatus.MIXING -> {
@@ -365,11 +374,11 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateBlockChain(blockChain: AbstractBlockChain?) {
-        updateState(mode, timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
+        updateState(mode, timeSkew, hasAnonymizableBalance, networkStatus, blockchainState, blockChain)
     }
 
     private suspend fun updateNetworkStatus(networkStatus: NetworkStatus) {
-        updateState(mode, timeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
+        updateState(mode, timeSkew, hasAnonymizableBalance, networkStatus, blockchainState, blockChain)
     }
 
     private suspend fun updateMode(mode: CoinJoinMode) {
@@ -379,7 +388,7 @@ class CoinJoinMixingService @Inject constructor(
         }
         updateBalance(walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.AVAILABLE))
         val currentTimeSkew = getCurrentTimeSkew()
-        updateState(mode, currentTimeSkew, hasAnonymizableBalance, networkStatus, isSynced, blockChain)
+        updateState(mode, currentTimeSkew, hasAnonymizableBalance, networkStatus, blockchainState, blockChain)
     }
 
     private var mixingProgressTracker: MixingProgressTracker = object : MixingProgressTracker() {
@@ -416,6 +425,9 @@ class CoinJoinMixingService @Inject constructor(
         override fun onTransactionProcessed(tx: Transaction?, type: CoinJoinTransactionType?, sessionId: Int) {
             super.onTransactionProcessed(tx, type, sessionId)
             log.info("coinjoin-tx {} in session {}  {}", type, sessionId, tx?.txId)
+            coroutineScope.launch {
+                updateProgress()
+            }
         }
     }
 
@@ -556,6 +568,7 @@ class CoinJoinMixingService @Inject constructor(
             val asyncStart = coroutineScope.async(Dispatchers.IO) {
                 // though coroutineScope is on a Context propogated thread, we still need this
                 org.bitcoinj.core.Context.propagate(walletDataProvider.wallet!!.context)
+                (walletDataProvider.wallet as WalletEx).coinJoin.refreshUnusedKeys()
                 coinJoinManager?.initMasternodeGroup(blockChain)
                 clientManager.doAutomaticDenominating()
             }
@@ -633,7 +646,8 @@ class CoinJoinMixingService @Inject constructor(
         coroutineScope.launch {
             activeSessions = if (this@CoinJoinMixingService::clientManager.isInitialized) {
                 clientManager.sessionsStatus?.count { poolStatus ->
-                    poolStatus == PoolStatus.CONNECTING || poolStatus == PoolStatus.CONNECTED || poolStatus == PoolStatus.MIXING
+                    poolStatus == PoolStatus.CONNECTING || poolStatus == PoolStatus.CONNECTED ||
+                        poolStatus == PoolStatus.MIXING
                 } ?: 0
             } else {
                 0
