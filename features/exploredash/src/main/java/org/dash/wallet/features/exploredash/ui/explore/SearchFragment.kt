@@ -372,7 +372,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             },
             onExtraMessageAction = {
-                requireActivity().openCustomTab(getString(R.string.dashspend_url))
+                requireActivity().openCustomTab(getString(R.string.ctx_spend_url))
             }
         )
     }

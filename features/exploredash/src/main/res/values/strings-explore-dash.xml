@@ -195,7 +195,7 @@
     <string name="gift_card_barcode_failed">Failed to load the barcode</string>
     <string name="gift_card_tx_title">Gift card · %s</string>
 
-    <!-- dash direct login-->
+    <!-- dash spend login-->
     <string name="enter_verification_code">Enter verification code</string>
     <string name="verification_check_email">Check your email and enter the verification code</string>
     <string name="buy_gift_card">Buy a gift card with your DashSpend account</string>
@@ -218,7 +218,7 @@
     <string name="gift_card_redeem_url_not_supported">The payment has was made for merchant that supplies a redeem URL, but that is not currently supported.  Please contact CTX with gift card id %s and payment id %s and transaction id %s.</string>
     <string name="dashspend_terms_conditions">Accept DashSpend terms and conditions</string>
     <string name="accept_terms_conditions">I accept DashSpend terms and conditions</string>
-    <string name="tap_link_to_proceed">To create an account at DashSpend you must tap on the link bellow to proceed</string>
+    <string name="tap_link_to_proceed">To create an account at DashSpend you must tap on the link below to proceed</string>
     <string name="accept_to_proceed">To create an account at DashSpend you have to accept DashSpend terms and conditions</string>
     <string name="view_terms_conditions">View Terms &amp; Conditions</string>
     <string name="terms_conditions">Terms &amp; Conditions</string>
@@ -230,7 +230,5 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Buy a gift card with your DashSpend account</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Create a DashSpend account or log in to the existing one</string>
     <string name="ctx_spend_url" translatable="false">pay.ctx.com</string>
-    
-    <string name="dashspend_url" translatable="false">spend.ctx.com</string>
-    <string name="dashspend_terms" translatable="false">https://ionia.docsend.com/view/ixu6g9x5eiz2jgnu</string>
+    <string name="ctx_terms_url" translatable="false">https://ionia.docsend.com/view/ixu6g9x5eiz2jgnu</string>
 </resources>

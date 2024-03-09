@@ -45,7 +45,7 @@ class CTXSpendTermsDialog : OffsetDialogFragment(R.layout.dialog_dashspend_terms
 
         binding.termsLink.setOnClickListener {
             viewModel.openedCTXSpendTermsAndConditions = true
-            requireActivity().openCustomTab(getString(R.string.dashspend_terms))
+            requireActivity().openCustomTab(getString(R.string.ctx_terms_url))
         }
 
         binding.acceptTermsCheckbox.setOnCheckedChangeListener { _, isChecked ->
