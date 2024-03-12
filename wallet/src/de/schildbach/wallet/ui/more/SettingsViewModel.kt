@@ -52,11 +52,15 @@ class SettingsViewModel @Inject constructor(
     val voteDashPayIsEnabled = walletUIConfig.observe(WalletUIConfig.VOTE_DASH_PAY_ENABLED)
     val coinJoinMixingMode: Flow<CoinJoinMode>
         get() = coinJoinConfig.observeMode()
+    var mixingProgress: Double = 0.0
 
     var coinJoinMixingStatus: MixingStatus = MixingStatus.NOT_STARTED
     init {
         coinJoinService.observeMixingState()
             .onEach { coinJoinMixingStatus = it }
+            .launchIn(viewModelScope)
+        coinJoinService.observeMixingProgress()
+            .onEach { mixingProgress = it }
             .launchIn(viewModelScope)
     }
 

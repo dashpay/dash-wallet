@@ -32,6 +32,7 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.integration.android.BitcoinIntegration
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
@@ -53,6 +54,7 @@ import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -155,6 +157,11 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 binding.paymentHeader.setPaymentAddressViewIcon(profile.avatarUrl, R.drawable.ic_avatar)
             }
             updateView()
+        }
+        viewModel.coinJoinMode.observe(viewLifecycleOwner) { mode ->
+            if (mode != CoinJoinMode.NONE) {
+                binding.paymentHeader.setBalanceTitle(getString(R.string.coinjoin_mixed_balance))
+            }
         }
 
         enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.currentAmount = it }

@@ -95,11 +95,11 @@ object WalletActivityExt {
         }
     }
 
-    fun MainActivity.checkTimeSkew(viewModel: MainViewModel) {
+    fun MainActivity.checkTimeSkew(viewModel: MainViewModel, force: Boolean = false) {
         lifecycleScope.launch {
-            val (isTimeSkewed, timeSkew) = viewModel.getDeviceTimeSkew()
+            val (isTimeSkewed, timeSkew) = viewModel.getDeviceTimeSkew(force)
             val coinJoinOn = viewModel.getCoinJoinMode() != CoinJoinMode.NONE
-            if (isTimeSkewed && (!timeSkewDialogShown || coinJoinOn)) {
+            if (isTimeSkewed && (!timeSkewDialogShown || force)) {
                 timeSkewDialogShown = true
                 // add 1 to round up so 2.2 seconds appears as 3
                 showTimeSkewAlertDialog((if (timeSkew > 0) 1 else -1) + timeSkew / 1000L, coinJoinOn)
