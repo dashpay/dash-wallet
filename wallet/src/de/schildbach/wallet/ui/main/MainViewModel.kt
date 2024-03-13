@@ -680,11 +680,16 @@ class MainViewModel @Inject constructor(
     suspend fun getInviteHistory() = invitationsDao.loadAll()
 
     private fun combineLatestData(): Boolean {
-        val isPlatformAvailable = isPlatformAvailableData.value ?: false
-        val isSynced = _isBlockchainSynced.value ?: false
-        val noIdentityCreatedOrInProgress = (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
-        val canAffordIdentityCreation = walletData.canAffordIdentityCreation()
-        return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress && canAffordIdentityCreation
+        return if (Constants.DASHPAY_DISABLED) {
+            false
+        } else {
+            val isPlatformAvailable = isPlatformAvailableData.value ?: false
+            val isSynced = _isBlockchainSynced.value ?: false
+            val noIdentityCreatedOrInProgress =
+                (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
+            val canAffordIdentityCreation = walletData.canAffordIdentityCreation()
+            return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress && canAffordIdentityCreation
+        }
     }
 
     private fun startContactRequestTimer() {

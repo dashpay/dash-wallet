@@ -233,6 +233,10 @@ public class Configuration {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true);
     }
 
+    public void setLastRestoreTime() {
+        prefs.edit().putLong(PREFS_KEY_LAST_RESTORE, System.currentTimeMillis());
+    }
+
     public long getLastRestoreTime() {
         return prefs.getLong(PREFS_KEY_LAST_RESTORE, 0);
     }

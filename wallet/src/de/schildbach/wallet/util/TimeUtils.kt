@@ -39,7 +39,7 @@ private fun queryNtpTime(server: String): Long? {
         // Convert seconds to milliseconds and adjust from 1900 to epoch (1970)
         return (seconds - 2208988800L) * 1000
     } catch (e: Exception) {
-        e.printStackTrace()
+        // swallow
     }
     return null
 }
@@ -58,11 +58,9 @@ suspend fun getTimeSkew(force: Boolean = false): Long {
 
     val networkTimes = arrayListOf<Long>()
     for (i in 0..3) {
-        try {
-            val time = queryNtpTime("pool.ntp.org")
-            if (time != null && time > 0) { networkTimes.add(time) }
-        } catch (e: SocketTimeoutException) {
-            // swallow
+        val time = queryNtpTime("pool.ntp.org")
+        if (time != null && time > 0) {
+            networkTimes.add(time)
         }
     }
     networkTimes.sort()
@@ -96,6 +94,6 @@ suspend fun getTimeSkew(force: Boolean = false): Long {
     val systemTimeMillis = System.currentTimeMillis()
     lastTimeWhenSkewChecked = systemTimeMillis
     lastTimeSkew = systemTimeMillis - networkTime
-    log.info("timeskew: $systemTimeMillis-$networkTime = ${systemTimeMillis - networkTime}; source: $timeSource")
+    log.debug("timeskew: $systemTimeMillis-$networkTime = ${systemTimeMillis - networkTime}; source: $timeSource")
     return systemTimeMillis - networkTime
 }

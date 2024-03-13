@@ -824,7 +824,7 @@ public class WalletApplication extends MultiDexApplication
 
     public void resetBlockchain() {
         // reset the extensions
-        if (wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID)) {
+        if (wallet != null && wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID)) {
             AuthenticationGroupExtension authenticationGroupExtension = (AuthenticationGroupExtension) wallet.getKeyChainExtensions().get(AuthenticationGroupExtension.EXTENSION_ID);
             authenticationGroupExtension.reset();
         }

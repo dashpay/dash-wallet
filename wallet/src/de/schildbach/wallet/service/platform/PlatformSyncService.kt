@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
 import com.google.zxing.BarcodeFormat
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
@@ -1020,6 +1021,7 @@ class PlatformSynchronizationService @Inject constructor(
             // this will enable notifications, since platform information has been synced
             config.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, System.currentTimeMillis() - TimeUnit.DAYS.toMillis(7))
         }
+        log.info("PreBlockDownload: $preDownloadBlocksFuture")
         preDownloadBlocksFuture?.set(true)
         preDownloadBlocks.set(false)
     }
@@ -1062,6 +1064,10 @@ class PlatformSynchronizationService @Inject constructor(
             lastPreBlockStage = PreBlockStage.None
             preDownloadBlocksFuture = future
             log.info("PreDownloadBlocks: starting")
+            if (Constants.DASHPAY_DISABLED) {
+                finishPreBlockDownload()
+                return@launch
+            }
 
             // first check to see if there is a blockchain identity
             if (blockchainIdentityDataDao.load() == null) {

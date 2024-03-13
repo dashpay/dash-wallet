@@ -31,6 +31,7 @@ import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
@@ -173,6 +174,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         initViewModel()
+
+        if (Constants.DASHPAY_DISABLED) {
+            binding.usernameVoting.isVisible = false
+        }
     }
 
     private fun dismissProfileError() {
