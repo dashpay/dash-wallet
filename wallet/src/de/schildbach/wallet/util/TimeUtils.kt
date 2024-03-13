@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.net.SocketTimeoutException
 import kotlin.jvm.Throws
 
 private val log = LoggerFactory.getLogger("TimeUtils")
@@ -49,6 +50,7 @@ private var lastTimeSkew = 0L
 @Throws(NullPointerException::class)
 suspend fun getTimeSkew(force: Boolean = false): Long {
     if (!force && (lastTimeWhenSkewChecked + 60 * 1000 > System.currentTimeMillis())) {
+        log.info("timeskew: {}; using last value", lastTimeSkew)
         return lastTimeSkew
     }
     var networkTime: Long? = null
@@ -85,6 +87,7 @@ suspend fun getTimeSkew(force: Boolean = false): Long {
                 // swallow
             }
         }
+        log.info("timeskew: network time is $networkTime")
         requireNotNull(networkTime)
     }
 
