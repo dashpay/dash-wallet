@@ -86,6 +86,8 @@ import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants;
 import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
+import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
+import ch.qos.logback.core.util.FileSize;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
@@ -123,7 +125,6 @@ import ch.qos.logback.classic.android.LogcatAppender;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
-import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import dagger.hilt.android.HiltAndroidApp;
 import org.dash.wallet.common.data.entity.BlockchainState;
 import de.schildbach.wallet.database.dao.BlockchainStateDao;
@@ -142,6 +143,7 @@ import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.security.PinRetryController;
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.LogMarkerFilter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
@@ -576,6 +578,8 @@ public class WalletApplication extends MultiDexApplication
 
         final LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
 
+        final LogMarkerFilter markerFilter = new LogMarkerFilter();
+
         final PatternLayoutEncoder filePattern = new PatternLayoutEncoder();
         filePattern.setContext(context);
         filePattern.setPattern("%d{HH:mm:ss,UTC} [%thread] %logger{0} - %msg%n");
@@ -585,16 +589,19 @@ public class WalletApplication extends MultiDexApplication
         fileAppender.setContext(context);
         fileAppender.setFile(logFile.getAbsolutePath());
 
-        final TimeBasedRollingPolicy<ILoggingEvent> rollingPolicy = new TimeBasedRollingPolicy<ILoggingEvent>();
+        final SizeAndTimeBasedRollingPolicy<ILoggingEvent> rollingPolicy = new SizeAndTimeBasedRollingPolicy<ILoggingEvent>();
         rollingPolicy.setContext(context);
         rollingPolicy.setParent(fileAppender);
-        rollingPolicy.setFileNamePattern(logDir.getAbsolutePath() + "/wallet.%d{yyyy-MM-dd,UTC}.log.gz");
-        rollingPolicy.setMaxHistory(7);
+        rollingPolicy.setFileNamePattern(logDir.getAbsolutePath() + "/wallet.%i.%d{yyyy-MM-dd,UTC}.log.gz");
+        rollingPolicy.setMaxHistory(20);
+        rollingPolicy.setMaxFileSize(FileSize.valueOf("10MB"));
+        rollingPolicy.setTotalSizeCap(FileSize.valueOf("200MB"));
         rollingPolicy.start();
 
 
         fileAppender.setEncoder(filePattern);
         fileAppender.setRollingPolicy(rollingPolicy);
+        fileAppender.addFilter(markerFilter);
         fileAppender.start();
 
         final PatternLayoutEncoder logcatTagPattern = new PatternLayoutEncoder();
@@ -611,6 +618,7 @@ public class WalletApplication extends MultiDexApplication
         logcatAppender.setContext(context);
         logcatAppender.setTagEncoder(logcatTagPattern);
         logcatAppender.setEncoder(logcatPattern);
+        logcatAppender.addFilter(markerFilter);
         logcatAppender.start();
 
         final ch.qos.logback.classic.Logger log = context.getLogger(Logger.ROOT_LOGGER_NAME);

@@ -76,6 +76,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
+
 enum class CoinJoinMode {
     NONE,
     INTERMEDIATE,
@@ -120,7 +121,7 @@ class CoinJoinMixingService @Inject constructor(
         val log: Logger = LoggerFactory.getLogger(CoinJoinMixingService::class.java)
         const val DEFAULT_MULTISESSION = false // for stability, need to investigate
         const val DEFAULT_ROUNDS = 4
-        const val DEFAULT_SESSIONS = 4
+        const val DEFAULT_SESSIONS = 6
         const val DEFAULT_DENOMINATIONS_GOAL = 50
         const val DEFAULT_DENOMINATIONS_HARDCAP = 300
 
@@ -188,6 +189,7 @@ class CoinJoinMixingService @Inject constructor(
     override fun observeMixingProgress(): Flow<Double> = _progressFlow
 
     init {
+        //initLogging()
         blockchainStateProvider.observeNetworkStatus()
             .filterNot { it == NetworkStatus.UNKNOWN }
             .onEach { status ->
@@ -250,7 +252,7 @@ class CoinJoinMixingService @Inject constructor(
         }
     }
 
-    suspend fun getCurrentTimeSkew(): Long {
+    private suspend fun getCurrentTimeSkew(): Long {
         return try {
             getTimeSkew()
         } catch (e: Exception) {
@@ -404,7 +406,6 @@ class CoinJoinMixingService @Inject constructor(
             message: PoolMessage?
         ) {
             super.onSessionStarted(wallet, sessionId, denomination, message)
-            log.info("Session started: {}.  {}% mixed. {} active sessions", sessionId, progress, activeSessions + 1)
             updateActiveSessions()
         }
 
@@ -418,13 +419,11 @@ class CoinJoinMixingService @Inject constructor(
             joined: Boolean
         ) {
             super.onSessionComplete(wallet, sessionId, denomination, state, message, address, joined)
-            log.info("Session completed: {}.  {}% mixed. {} active sessions", sessionId, progress, activeSessions - 1)
             updateActiveSessions()
         }
 
         override fun onTransactionProcessed(tx: Transaction?, type: CoinJoinTransactionType?, sessionId: Int) {
             super.onTransactionProcessed(tx, type, sessionId)
-            log.info("coinjoin-tx {} in session {}  {}", type, sessionId, tx?.txId)
             coroutineScope.launch {
                 updateProgress()
             }
@@ -652,7 +651,7 @@ class CoinJoinMixingService @Inject constructor(
             } else {
                 0
             }
-            log.info("coinjoin-activeSessions: {}", activeSessions)
+            // log.info("coinjoin-activeSessions: {}", activeSessions)
             activeSessionsFlow.emit(activeSessions)
         }
     }

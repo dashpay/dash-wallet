@@ -1340,7 +1340,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         final Intent broadcast = new Intent(ACTION_BLOCKCHAIN_STATE);
         broadcast.setPackage(getPackageName());
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
-        log.info("handle blockchain state notification: {}, {}", foregroundService, mixingStatus);
+        // log.info("handle blockchain state notification: {}, {}", foregroundService, mixingStatus);
         this.mixingProgress = mixingProgress;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && blockchainState != null
                 && blockchainState.getBestChainDate() != null) {
