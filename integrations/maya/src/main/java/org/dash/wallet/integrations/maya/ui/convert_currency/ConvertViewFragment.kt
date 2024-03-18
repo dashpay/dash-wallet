@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -117,6 +117,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         }
     }
 
+    // TODO: return Amount object
     private fun getMaxAmount(): String? {
         if (viewModel.dashToCrypto.value == true) { // from wallet -> maya
             viewModel.selectedCryptoCurrencyAccount.value?.let { account ->
@@ -280,30 +281,46 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         var amount = value
         val rate = when (currencyCode) {
             "DASH" -> {
-                if (!isEditing && value[value.length - 1] != '.') {
-                    amount = amount.toBigDecimal().stripTrailingZeros().toString()
+                val amountBG = amount.toBigDecimal()
+                if (!isEditing) {
+                    if (amountBG != BigDecimal.ZERO.setScale(amountBG.scale())) {
+                        amount = amount.toBigDecimal().setScale(8, RoundingMode.HALF_UP).toString()
+                    }
+                    if (value[value.length - 1] != '.') {
+                        amount = amount.toBigDecimal().stripTrailingZeros().toString()
+                    }
                 }
                 viewModel.amount.dashFiatExchangeRate
             }
             // Fiat
             viewModel.selectedLocalCurrencyCode -> {
-                amount = amount.toBigDecimal().setScale(2, RoundingMode.HALF_UP).toString()
-
+                if (!isEditing) {
+                    val digits = GenericUtils.getCurrencyDigits()
+                    amount = amount.toBigDecimal().setScale(digits, RoundingMode.HALF_UP).toString()
+                    if (value[value.length - 1] != '.') {
+                        amount = amount.toBigDecimal().stripTrailingZeros().toString()
+                    }
+                }
                 one / viewModel.account.currencyToDashExchangeRate
                 viewModel.amount.dashFiatExchangeRate
             }
             // Crypto
             else -> {
                 currencyCodeForView = currencyCode
-                amount = amount.toBigDecimal().setScale(8, RoundingMode.HALF_UP).toString()
-                if (isEditing && value[value.length - 1] != '.') {
-                    amount = amount.toBigDecimal().stripTrailingZeros().toPlainString()
+                val amountBG = amount.toBigDecimal()
+                if (!isEditing) {
+                    if(amountBG != BigDecimal.ZERO.setScale(amountBG.scale())) {
+                        amount = amount.toBigDecimal().setScale(8, RoundingMode.HALF_UP).toString()
+                    }
+                    if (value[value.length - 1] != '.') {
+                        amount = amount.toBigDecimal().stripTrailingZeros().toPlainString()
+                    }
                 }
                 viewModel.amount.cryptoDashExchangeRate
             }
         }
 
-        binding.inputAmount.exchangeRate = ExchangeRate(Coin.COIN, rate.toFiat(currencyCodeForView))
+        binding.inputAmount.exchangeRate = ExchangeRate(Coin.COIN, rate.toFiat(currencyCodeForView.substring(0, 3)))
         binding.inputAmount.input = amount
         viewModel.enteredConvertAmount = amount
     }

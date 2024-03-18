@@ -105,4 +105,10 @@ object GenericUtils {
 
         return pattern.startsWith("¤")
     }
+
+    fun getCurrencyDigits(): Int {
+        val locale = getDeviceLocale()
+        val currency: Currency? = Currency.getInstance(locale)
+        return currency?.defaultFractionDigits ?: 0
+    }
 }

@@ -377,8 +377,8 @@ class ConvertViewViewModel @Inject constructor(
         val value = toScaledBigDecimal(valueToBind)
         when (currencyCode) {
             "DASH" -> amount.dash = value
-            selectedLocalCurrencyCode -> amount.fiat
-            selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency -> amount.crypto
+            selectedLocalCurrencyCode -> amount.fiat = value
+            selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency -> amount.crypto = value
         }
     }
 
