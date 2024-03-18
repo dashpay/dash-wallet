@@ -80,50 +80,6 @@
         android:visibility="gone"
         tools:visibility="visible" />
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/address_source_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/round_corners_white_bg"
-        android:layout_marginHorizontal="15dp"
-        android:layout_marginVertical="15dp"
-        >
-        <TextView
-            android:id="@+id/select_title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginVertical="10dp"
-            android:layout_marginHorizontal="15dp"
-            android:text="Select an option"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/content_list"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginVertical="10dp"
-            android:clipToPadding="false"
-            app:layout_constraintTop_toBottomOf="@+id/select_title"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            tools:listitem="@layout/iconifieditem_row"
-            tools:itemCount="2"
-            />
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <Button
-        android:id="@+id/show_clipboard_btn"
-        style="@style/Button.Primary.Small.Blue"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="11dp"
-        android:layout_marginHorizontal="15dp"
-        android:text="@string/show_clipboard" />
-
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -137,7 +93,7 @@
         android:overScrollMode="never">
 
         <LinearLayout
-            android:id="@+id/clipboard_content_container"
+            android:id="@+id/scrollContainer"
             style="@style/ViewRaised"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -147,22 +103,67 @@
             android:paddingHorizontal="15dp"
             android:paddingVertical="10dp"
             android:theme="@style/SecondaryBackground"
-            android:visibility="gone"
-            tools:visibility="visible">
+            android:visibility="visible" >
 
-            <TextView
-                style="@style/Overline.Secondary"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/address_source_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/tap_to_paste" />
+                android:background="@drawable/round_corners_white_bg" >
+                <TextView
+                    android:id="@+id/select_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Select an option"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    />
 
-            <TextView
-                android:id="@+id/clipboard_content"
-                style="@style/Overline"
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/content_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="10dp"
+                    android:clipToPadding="false"
+                    app:layout_constraintTop_toBottomOf="@+id/select_title"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:listitem="@layout/iconifieditem_row"
+                    tools:itemCount="2"
+                    />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <Button
+                android:id="@+id/show_clipboard_btn"
+                style="@style/Button.Primary.Small.Blue"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                tools:text="Hey! Here is my primary Dash address Xsic8B4tmiMHMe98H7XoMnv55bee8Ms9is" />
+                android:layout_marginTop="11dp"
+                android:text="@string/show_clipboard" />
+
+            <LinearLayout
+                android:id="@+id/clipboard_content_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tap_address_label"
+                    style="@style/Overline.Secondary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tap_to_paste" />
+
+                <TextView
+                    android:id="@+id/clipboard_content"
+                    style="@style/Overline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    tools:text="Hey! Here is my primary Dash address Xsic8B4tmiMHMe98H7XoMnv55bee8Ms9is" />
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 
