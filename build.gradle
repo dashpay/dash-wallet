@@ -22,7 +22,7 @@ buildscript {
         preferenceVersion = '1.2.0'
 
         // Utils
-        slf4jVersion = '1.7.32'
+        slf4jVersion = '2.0.7'
         desugaringLibraryVersion = '1.1.5'
 
         // UI
