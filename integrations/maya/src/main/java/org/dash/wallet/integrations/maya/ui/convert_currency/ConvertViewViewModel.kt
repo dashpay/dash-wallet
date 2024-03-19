@@ -48,10 +48,12 @@ import org.slf4j.LoggerFactory
 import java.lang.IllegalArgumentException
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.text.NumberFormat
+import java.util.Locale
 import javax.inject.Inject
 
-
-fun toScaledBigDecimal(value: String): BigDecimal = value.toBigDecimal().setScale(8, RoundingMode.HALF_UP)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -69,6 +71,14 @@ class ConvertViewViewModel @Inject constructor(
     val amount = Amount()
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
+    val cryptoFormat: DecimalFormat = DecimalFormat("0.########", DecimalFormatSymbols(GenericUtils.getDeviceLocale())).apply {
+        isDecimalSeparatorAlwaysShown = false
+        isGroupingUsed = false
+    }
+    val fiatFormat: DecimalFormat = DecimalFormat("0.##", DecimalFormatSymbols(GenericUtils.getDeviceLocale())).apply {
+        isDecimalSeparatorAlwaysShown = false
+        isGroupingUsed = false
+    }
 
     private val _dashToCrypto = MutableLiveData<Boolean>()
     val dashToCrypto: LiveData<Boolean>
@@ -82,7 +92,7 @@ class ConvertViewViewModel @Inject constructor(
     var maxForDashWalletAmount: String = "0"
     val onContinueEvent = SingleLiveEvent<SwapRequest>()
 
-    var minAllowedSwapDashCoin: Coin = Coin.ZERO
+    private var minAllowedSwapDashCoin: Coin = Coin.ZERO
     private var maxForDashCoinBaseAccount: Coin = Coin.ZERO
 
     private val _selectedCryptoCurrencyAccount = MutableLiveData<AccountDataUIModel?>()
@@ -369,12 +379,12 @@ class ConvertViewViewModel @Inject constructor(
         _selectedCryptoCurrencyAccount.value = null
     }
 
-    fun setExchangeRates(dashRate: BigDecimal, cryptoRate: BigDecimal) {
+    private fun setExchangeRates(dashRate: BigDecimal, cryptoRate: BigDecimal) {
         amount.dashFiatExchangeRate = dashRate
         amount.cryptoFiatExchangeRate = cryptoRate
     }
-    fun setAmount(valueToBind: String, currencyCode: String) {
-        val value = toScaledBigDecimal(valueToBind)
+    private fun setAmount(valueToBind: String, currencyCode: String) {
+        val value = GenericUtils.toScaledBigDecimal(valueToBind, localized = true)
         when (currencyCode) {
             "DASH" -> amount.dash = value
             selectedLocalCurrencyCode -> amount.fiat = value

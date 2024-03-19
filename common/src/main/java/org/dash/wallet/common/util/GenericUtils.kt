@@ -19,10 +19,13 @@ package org.dash.wallet.common.util
 
 import android.os.Build
 import android.os.LocaleList
+import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.text.NumberFormat
+import java.text.ParseException
 import java.util.*
+
 
 /**
  * @author Andreas Schildbach
@@ -54,6 +57,10 @@ object GenericUtils {
         val deviceLocaleLanguage = Locale.getDefault().language
 
         return Locale(deviceLocaleLanguage, countryCode)
+    }
+
+    fun getDefaultLocale(): Locale {
+        return Locale.US
     }
 
     /**
@@ -97,7 +104,7 @@ object GenericUtils {
 
     fun isCurrencySymbolFirst(): Boolean {
         val locale = getDeviceLocale()
-        val currency: Currency = Currency.getInstance(locale)
+        // val currency: Currency = Currency.getInstance(locale)
         val currencyFormat = NumberFormat.getCurrencyInstance(locale)
 
         val pattern = (currencyFormat as DecimalFormat).toPattern()
@@ -110,5 +117,23 @@ object GenericUtils {
         val locale = getDeviceLocale()
         val currency: Currency? = Currency.getInstance(locale)
         return currency?.defaultFractionDigits ?: 0
+    }
+
+    fun stringToBigDecimal(value: String): BigDecimal {
+        return try {
+            val format = NumberFormat.getNumberInstance(getDeviceLocale())
+            val number = format.parse(value)
+            if (number != null) BigDecimal(number.toString()) else BigDecimal.ZERO
+        } catch (e: ParseException) {
+            BigDecimal.ZERO
+        }
+    }
+
+    fun toScaledBigDecimal(value: String, localized: Boolean = false, scale: Int = 8): BigDecimal {
+        return if (localized) {
+            stringToBigDecimal(value).setScale(scale, RoundingMode.HALF_UP)
+        } else {
+            value.toBigDecimal().setScale(scale, RoundingMode.HALF_UP)
+        }
     }
 }

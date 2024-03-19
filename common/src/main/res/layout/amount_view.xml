@@ -26,7 +26,7 @@
     <LinearLayout
         android:id="@+id/input_container"
         android:layout_height="wrap_content"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:orientation="horizontal"
         android:clickable="true"
         android:focusable="true"
@@ -35,36 +35,29 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/result_container">
 
-        <ImageView
-            android:id="@+id/input_symbol_dash"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_marginEnd="8dp"
-            android:src="@drawable/ic_dash_d_white"
-            android:layout_gravity="center_vertical"
-            app:tint="@color/content_primary"
-            tools:tint="@color/content_primary" />
-
         <TextView
             android:id="@+id/input_amount"
             style="@style/Headline3.Medium"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:ellipsize="middle"
+            android:textAlignment="center"
+            android:gravity="center"
             android:maxLines="1"
             android:lines="1"
             tools:text="0" />
 
-        <ImageView
-            android:id="@+id/input_symbol_dash_postfix"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_marginStart="8dp"
-            android:src="@drawable/ic_dash_d_white"
-            android:layout_gravity="center_vertical"
-            android:visibility="gone"
-            app:tint="@color/content_primary"
-            tools:tint="@color/content_primary" />
+        <!--me.grantland.widget.AutofitTextView
+            android:id="@+id/input_amount"
+            style="@style/Headline3.Medium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:singleLine="true"
+            tools:text="0"
+            app:autoSizeMaxTextSize="48sp"
+            android:gravity="center"
+            android:layout_gravity="center|bottom"
+            app:sizeToFit="true" /-->
 
         <ImageView
             android:id="@+id/input_currency_toggle"
