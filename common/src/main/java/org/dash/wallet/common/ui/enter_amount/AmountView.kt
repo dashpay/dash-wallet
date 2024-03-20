@@ -31,7 +31,6 @@ import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.PopupMenu
-import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
@@ -46,6 +45,7 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
+import java.lang.ArithmeticException
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
@@ -208,7 +208,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             }
         } else {
             binding.resultAmount.text = resources.getString(R.string.rate_not_available)
-            Log.e(AmountView::class.java.name, "Exchange rate is not initialized")
+            log.warn("Exchange rate is not initialized")
         }
         binding.inputAmount.requestLayout()
         binding.inputAmount.invalidate()
@@ -221,10 +221,18 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
 
         if (dashToFiat) {
             dashAmount = Coin.parseCoin(cleanedValue)
-            fiatAmount = rate?.coinToFiat(dashAmount)
+            try {
+                fiatAmount = rate?.coinToFiat(dashAmount)
+            } catch (e: ArithmeticException) {
+                log.info("ArithmeticException {} with {}", dashAmount, rate)
+            }
         } else if (rate != null) {
             fiatAmount = Fiat.parseFiat(rate.fiat.currencyCode, cleanedValue)
-            dashAmount = rate.fiatToCoin(fiatAmount)
+            try {
+                dashAmount = rate.fiatToCoin(fiatAmount)
+            } catch (e: ArithmeticException) {
+                log.info("ArithmeticException {} with {}", fiatAmount, rate)
+            }
         }
 
         // if (dashAmount.isGreaterThan(Constants.MAX_MONEY)) {
@@ -283,7 +291,6 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     private fun setIconWithText(text: String, iconSize: Int = 22) {
         val context = binding.inputAmount.context
         val scale = resources.displayMetrics.scaledDensity
@@ -309,7 +316,11 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             val drawable = ContextCompat.getDrawable(context, R.drawable.ic_dash_d_black)?.apply {
                 setBounds(0, 0, (iconSize * scale * sizeRelative).toInt(), (iconSize * scale * sizeRelative).toInt())
             }
-            val imageSpan = drawable?.let { ImageSpan(it, ImageSpan.ALIGN_CENTER) }
+            val imageSpan = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                drawable?.let { ImageSpan(it, ImageSpan.ALIGN_CENTER) }
+            } else {
+                drawable?.let { CenteredImageSpan(it, binding.inputAmount.context) }
+            }
             imageSpan?.let {
                 if (GenericUtils.isCurrencySymbolFirst()) {
                     spannableString = SpannableString("  $text")
@@ -323,7 +334,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
                 }
             }
         } else {
-            val roomLeft = maxTextWidth - binding.inputAmount.paint.measureText("$text  ") + (iconSize * scale)
+            val roomLeft = maxTextWidth - binding.inputAmount.paint.measureText("$text")
             val sizeRelative = if (roomLeft < 0) {
                 val ratio = min(1.0f, (maxTextWidth + roomLeft) / maxTextWidth)
                 if (ratio == Float.NEGATIVE_INFINITY) {
@@ -334,6 +345,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             } else {
                 1.0f
             }
+            log.info("resizing number: {} to {}", text, sizeRelative)
             val sizeSpan = RelativeSizeSpan(sizeRelative)
             spannableString.setSpan(sizeSpan, 0, spannableString.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
         }
