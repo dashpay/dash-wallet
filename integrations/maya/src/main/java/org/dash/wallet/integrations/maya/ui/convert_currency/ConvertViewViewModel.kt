@@ -38,6 +38,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
@@ -50,8 +51,6 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
-import java.text.NumberFormat
-import java.util.Locale
 import javax.inject.Inject
 
 
@@ -129,7 +128,7 @@ class ConvertViewViewModel @Inject constructor(
     val validSwapValue = SingleLiveEvent<String>()
 
     init {
-        setDashWalletBalance()
+        updateDashWalletBalance()
         // do we need this?
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
@@ -329,10 +328,17 @@ class ConvertViewViewModel @Inject constructor(
         return convertedValue
     }
 
-    private fun setDashWalletBalance() {
+    private fun updateDashWalletBalance() {
         val balance = walletDataProvider.getWalletBalance()
         maxForDashWalletAmount = dashFormat.minDecimals(0)
             .optionalDecimals(0, 8).format(balance).toString()
+    }
+
+    fun getMaxAmount() : Amount? {
+        return walletDataProvider.wallet?.let {
+            val balance = it.balance
+            amount.copy().apply { dash = balance.toBigDecimal() }
+        }
     }
 
     private fun doesMeetSendingConditions(value: Coin): Boolean {
@@ -383,8 +389,8 @@ class ConvertViewViewModel @Inject constructor(
         amount.dashFiatExchangeRate = dashRate
         amount.cryptoFiatExchangeRate = cryptoRate
     }
-    private fun setAmount(valueToBind: String, currencyCode: String) {
-        val value = GenericUtils.toScaledBigDecimal(valueToBind, localized = true)
+    private fun setAmount(valueToBind: String, currencyCode: String, isLocalized: Boolean) {
+        val value = GenericUtils.toScaledBigDecimal(valueToBind, localized = isLocalized)
         when (currencyCode) {
             "DASH" -> amount.dash = value
             selectedLocalCurrencyCode -> amount.fiat = value
@@ -392,9 +398,9 @@ class ConvertViewViewModel @Inject constructor(
         }
     }
 
-    fun setEnteredAmount(amount: String) {
+    fun setEnteredAmount(amount: String, isLocalized: Boolean) {
         _enteredAmount.value = amount
-        setAmount(amount, selectedPickerCurrencyCode)
+        setAmount(amount, selectedPickerCurrencyCode, isLocalized)
         log.info("setting amount: {} {}: {}", amount, selectedPickerCurrencyCode, this.amount)
     }
 

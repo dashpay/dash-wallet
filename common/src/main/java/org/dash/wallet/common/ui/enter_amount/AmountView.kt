@@ -45,7 +45,6 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
-import java.lang.ArithmeticException
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
@@ -125,10 +124,8 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
                         fiatAmount = exchangeRate!!.coinToFiat(dashAmount)
                         _input = fiatFormat.minDecimals(0)
                             .optionalDecimals(0, 2).format(fiatAmount).toString()
-                        // binding.inputAmount.text = formatInputWithCurrency()
                         setIconWithText(formatInputWithCurrency())
                     } else {
-                        // binding.inputAmount.text = resources.getString(R.string.rate_not_available)
                         setIconWithText(resources.getString(R.string.rate_not_available))
                     }
                 }
@@ -221,23 +218,15 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
 
         if (dashToFiat) {
             dashAmount = Coin.parseCoin(cleanedValue)
-            try {
-                fiatAmount = rate?.coinToFiat(dashAmount)
-            } catch (e: ArithmeticException) {
-                log.info("ArithmeticException {} with {}", dashAmount, rate)
-            }
+            fiatAmount = rate?.coinToFiat(dashAmount)
         } else if (rate != null) {
             fiatAmount = Fiat.parseFiat(rate.fiat.currencyCode, cleanedValue)
-            try {
-                dashAmount = rate.fiatToCoin(fiatAmount)
-            } catch (e: ArithmeticException) {
-                log.info("ArithmeticException {} with {}", fiatAmount, rate)
-            }
+            dashAmount = rate.fiatToCoin(fiatAmount)
         }
 
-        // if (dashAmount.isGreaterThan(Constants.MAX_MONEY)) {
-        //    throw IllegalArgumentException()
-        // }
+        if (dashAmount.isGreaterThan(Constants.MAX_MONEY)) {
+            throw IllegalArgumentException()
+        }
 
         return Pair(dashAmount, fiatAmount)
     }
@@ -349,9 +338,6 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             val sizeSpan = RelativeSizeSpan(sizeRelative)
             spannableString.setSpan(sizeSpan, 0, spannableString.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
         }
-
-        // Apply RelativeSizeSpan for variable text size
-
         binding.inputAmount.text = spannableString
     }
 }

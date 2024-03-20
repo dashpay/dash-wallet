@@ -34,6 +34,7 @@ import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentConvertCurrencyViewBinding
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.ui.mayaViewModels
+import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormatSymbols
@@ -41,6 +42,7 @@ import java.text.DecimalFormatSymbols
 @AndroidEntryPoint
 class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
     companion object {
+        val log = LoggerFactory.getLogger(ConvertViewFragment::class.java)
         @JvmStatic
         fun newInstance(): ConvertViewFragment {
             return ConvertViewFragment()
@@ -85,22 +87,20 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
 
         binding.maxButton.setOnClickListener {
             viewModel.selectedCryptoCurrencyAccount.value?.let { userAccountData ->
-                getMaxAmount()?.let { maxAmount ->
-                    val currency = userAccountData.coinbaseAccount.currency
+                viewModel.getMaxAmount()?.let { maxAmount ->
+                    val cryptoCurrency = userAccountData.coinbaseAccount.currency
 
-                    if (viewModel.selectedPickerCurrencyCode == currency) {
-                        applyNewValue(maxAmount, viewModel.selectedPickerCurrencyCode)
+                    if (viewModel.selectedPickerCurrencyCode == cryptoCurrency) {
+                        applyNewValue(maxAmount.crypto.toString(), viewModel.selectedPickerCurrencyCode, isLocalized = false)
                     } else {
                         val cleanedValue =
                             if (viewModel.selectedPickerCurrencyCode == viewModel.selectedLocalCurrencyCode) {
-                                maxAmount.toBigDecimal() /
-                                    userAccountData.currencyToCryptoCurrencyExchangeRate
+                                maxAmount.fiat
                             } else {
-                                maxAmount.toBigDecimal() *
-                                    userAccountData.getCryptoToDashExchangeRate()
-                            }.setScale(8, RoundingMode.HALF_UP).toString()
+                                maxAmount.dash
+                            }.toString()
 
-                        applyNewValue(cleanedValue, viewModel.selectedPickerCurrencyCode)
+                        applyNewValue(cleanedValue, viewModel.selectedPickerCurrencyCode, isLocalized = false)
                     }
 
                     maxAmountSelected = true
@@ -112,21 +112,6 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
             setAmountValue(value)
             viewModel.selectedPickerCurrencyCode = value
         }
-    }
-
-    // TODO: return Amount object
-    private fun getMaxAmount(): String? {
-        if (viewModel.dashToCrypto.value == true) { // from wallet -> maya
-            viewModel.selectedCryptoCurrencyAccount.value?.let { account ->
-                val cleanedValue =
-                    viewModel.maxForDashWalletAmount.toBigDecimal() /
-                        account.getCryptoToDashExchangeRate()
-                return cleanedValue.setScale(8, RoundingMode.HALF_UP).toString()
-            }
-        } else { // coinbase -> wallet
-            return viewModel.maxCoinBaseAccountAmount
-        }
-        return null
     }
 
     private fun resetViewSelection(it: AccountDataUIModel?) {
@@ -142,7 +127,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
             }
             viewModel.enteredConvertAmount = "0"
             viewModel.selectedPickerCurrencyCode = binding.currencyOptions.pickedOption
-            applyNewValue(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption)
+            applyNewValue(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption, isLocalized = true)
             binding.currencyOptions.isVisible = true
             binding.maxButtonWrapper.isVisible = true
             binding.inputWrapper.isVisible = true
@@ -154,7 +139,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
 
     private fun setAmountValue(pickedCurrencyOption: String) {
         val value = viewModel.getAmountValue(pickedCurrencyOption)
-        setAmountViewInfo(pickedCurrencyOption, value)
+        setAmountViewInfo(pickedCurrencyOption, value, isLocalized = false)
     }
 
     fun setViewDetails(continueText: String, keyboardHeader: View?) {
@@ -215,10 +200,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                 try {
                     appendIfValidAfter(number.toString())
 
-                    applyNewValue(value.toString(), binding.currencyOptions.pickedOption, isEditing = true)
+                    applyNewValue(value.toString(), binding.currencyOptions.pickedOption, isLocalized = true, isEditing = true)
                 } catch (x: Exception) {
                     value.deleteCharAt(value.length - 1)
-                    applyNewValue(value.toString(), binding.currencyOptions.pickedOption, isEditing = true)
+                    applyNewValue(value.toString(), binding.currencyOptions.pickedOption, isLocalized = true, isEditing = true)
                 }
             }
         }
@@ -231,7 +216,12 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                 value.deleteCharAt(value.length - 1)
                 viewModel.resetSwapValueError()
             }
-            applyNewValue(value.toString(), binding.currencyOptions.pickedOption, isEditing = true)
+            applyNewValue(
+                    value.toString(),
+                    binding.currencyOptions.pickedOption,
+                    isLocalized = true,
+                    isEditing = true
+                )
             maxAmountSelected = false
         }
 
@@ -247,7 +237,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                 value.append(decimalSeparator)
             }
 
-            applyNewValue(value.toString(), binding.currencyOptions.pickedOption, isEditing = true)
+            applyNewValue(value.toString(), binding.currencyOptions.pickedOption, isLocalized = true, isEditing = true)
         }
 
         private fun appendIfValidAfter(number: String) {
@@ -262,12 +252,12 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         }
     }
 
-    fun applyNewValue(value: String, currencyCode: String, isEditing: Boolean = false) {
+    fun applyNewValue(value: String, currencyCode: String, isLocalized: Boolean, isEditing: Boolean = false) {
         // Create a new spannable with the two strings
         val newValue = value.ifEmpty { "0" }
-        viewModel.setEnteredAmount(newValue)
+        viewModel.setEnteredAmount(newValue, isLocalized)
 
-        setAmountViewInfo(currencyCode, newValue, isEditing)
+        setAmountViewInfo(currencyCode, newValue, isLocalized, isEditing)
 
         val isNonZero = newValue.isNotEmpty() &&
             (newValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
@@ -275,26 +265,20 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         checkTheUserEnteredValue(isNonZero)
     }
 
-    private fun setAmountViewInfo(currencyCode: String, value: String, isEditing: Boolean = false) {
+    private fun setAmountViewInfo(currencyCode: String, value: String, isLocalized: Boolean, isEditing: Boolean = false) {
         binding.inputAmount.dashToFiat = currencyCode == "DASH"
         val one = BigDecimal.ONE.setScale(8, RoundingMode.HALF_UP)
         var currencyCodeForView = viewModel.selectedLocalCurrencyCode
         var amount = value
+        val amountBG = GenericUtils.toScaledBigDecimal(value, isLocalized)
         val rate = when (currencyCode) {
             "DASH" -> {
                 if (!isEditing) {
-                    val amountBG = amount.toBigDecimal()
                     if (amountBG != BigDecimal.ZERO.setScale(amountBG.scale())) {
                         amount = viewModel.cryptoFormat.format(amountBG)
                     } else {
                         amount = viewModel.cryptoFormat.format(BigDecimal.ZERO)
                     }
-//                    if (amountBG != BigDecimal.ZERO.setScale(amountBG.scale())) {
-//                        amount = amount.toBigDecimal().setScale(8, RoundingMode.HALF_UP).toString()
-//                    }
-//                    if (value[value.length - 1] != '.') {
-//                        amount = amount.trimEnd('0', '.')
-//                    }
                 }
                 viewModel.amount.dashFiatExchangeRate
             }
@@ -302,10 +286,6 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
             viewModel.selectedLocalCurrencyCode -> {
                 if (!isEditing) {
                     val digits = GenericUtils.getCurrencyDigits()
-                    //amount = amount.toBigDecimal().setScale(digits, RoundingMode.HALF_UP).toString()
-                    //if (value[value.length - 1] != '.') {
-                    //    amount = amount.toBigDecimal().stripTrailingZeros().toString()
-                    //}
                     amount = viewModel.fiatFormat.format(amount.toBigDecimal().setScale(digits, RoundingMode.HALF_UP))
                 }
                 one / viewModel.account.currencyToDashExchangeRate
@@ -315,13 +295,6 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
             else -> {
                 currencyCodeForView = currencyCode
                 if (!isEditing) {
-                    val amountBG = amount.toBigDecimal()
-                    //if (amountBG != BigDecimal.ZERO.setScale(amountBG.scale())) {
-                    //    amount = amount.toBigDecimal().setScale(8, RoundingMode.HALF_UP).toString()
-                    //}
-                    //if (value[value.length - 1] != '.') {
-                    //    amount = amount.toBigDecimal().setScale(8, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
-                    //}
                     amount = if (amountBG != BigDecimal.ZERO.setScale(amountBG.scale())) {
                         viewModel.cryptoFormat.format(amountBG)
                     } else {
@@ -332,13 +305,13 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
             }
         }
 
+        binding.inputAmount.input = amount
         binding.inputAmount.currencyDigits = if (currencyCode == viewModel.selectedLocalCurrencyCode) {
             GenericUtils.getCurrencyDigits()
         } else {
             8
         }
         binding.inputAmount.exchangeRate = ExchangeRate(Coin.COIN, rate.toFiat(currencyCodeForView.substring(0, 3)))
-        binding.inputAmount.input = amount
         viewModel.enteredConvertAmount = amount
     }
 

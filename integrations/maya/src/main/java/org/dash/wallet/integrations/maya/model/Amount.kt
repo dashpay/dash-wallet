@@ -33,7 +33,9 @@ data class Amount(
     private var _dash: BigDecimal = BigDecimal.ZERO,
     private var _fiat: BigDecimal = BigDecimal.ZERO,
     private var _crypto: BigDecimal = BigDecimal.ZERO,
-    private var anchor: CurrencyInputType = CurrencyInputType.Dash
+    private var anchor: CurrencyInputType = CurrencyInputType.Dash,
+    private var _dashFiatExchangeRate: BigDecimal = BigDecimal.ONE,
+    private var _cryptoFiatExchangeRate: BigDecimal = BigDecimal.ONE
 ) {
     var dash: BigDecimal
         get() = _dash
@@ -56,10 +58,12 @@ data class Amount(
             anchor = CurrencyInputType.Crypto
             update()
         }
+
     /** 1 DASH = x Fiat, eg 1 DASH = $35.87 or $35.87/DASH */
-    var dashFiatExchangeRate: BigDecimal = BigDecimal.ONE
+    var dashFiatExchangeRate: BigDecimal
+        get() = _dashFiatExchangeRate
         set(value) {
-            field = value
+            _dashFiatExchangeRate = value
             update()
         }
 
@@ -84,9 +88,10 @@ data class Amount(
     }
 
     /** 1 Crypto = x Fiat, eg 1 BTC = $65,000 or $65,000/BTC */
-    var cryptoFiatExchangeRate: BigDecimal = BigDecimal.ONE
+    var cryptoFiatExchangeRate: BigDecimal
+        get() = _cryptoFiatExchangeRate
         set(value) {
-            field = value
+            _cryptoFiatExchangeRate = value
             update()
         }
 
