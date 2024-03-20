@@ -17,7 +17,6 @@
 
 package org.dash.wallet.common.util
 
-import android.os.Build
 import android.os.LocaleList
 import java.math.RoundingMode
 import java.text.NumberFormat
@@ -45,11 +44,7 @@ object GenericUtils {
     }
 
     fun getDeviceLocale(): Locale {
-        val countryCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            LocaleList.getDefault()[0].country
-        } else {
-            Locale.getDefault().country
-        }
+        val countryCode = LocaleList.getDefault()[0].country
         val deviceLocaleLanguage = Locale.getDefault().language
 
         return Locale(deviceLocaleLanguage, countryCode)
