@@ -218,7 +218,7 @@ open class CrowdNodeBlockchainApi @Inject constructor(
 
     open fun getFullSignUpTxSet(): FullCrowdNodeSignUpTxSet? {
         val wrappedTransactions = walletData.wrapAllTransactions(
-            FullCrowdNodeSignUpTxSet(params, walletData.transactionBag)
+            FullCrowdNodeSignUpTxSetFactory(params, walletData.transactionBag)
         )
         return wrappedTransactions.firstOrNull { it is FullCrowdNodeSignUpTxSet } as? FullCrowdNodeSignUpTxSet
     }

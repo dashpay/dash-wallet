@@ -26,6 +26,7 @@ import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.TransactionWrapperFactory
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import kotlin.jvm.Throws
 
@@ -59,7 +60,7 @@ interface WalletDataProvider {
 
     fun getTransactions(vararg filters: TransactionFilter): Collection<Transaction>
 
-    fun wrapAllTransactions(vararg wrappers: TransactionWrapper): Collection<TransactionWrapper>
+    fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
 
     fun attachOnWalletWipedListener(listener: () -> Unit)
 

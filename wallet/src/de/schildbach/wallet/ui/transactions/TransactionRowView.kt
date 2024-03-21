@@ -22,6 +22,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.annotation.StyleRes
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
 import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.*
@@ -61,14 +62,33 @@ data class TransactionRowView(
         ): TransactionRowView {
             val lastTx = txWrapper.transactions.last()
 
-            return if (txWrapper is FullCrowdNodeSignUpTxSet) {
-                TransactionRowView(
-                    ResourceString(R.string.crowdnode_account),
+            return when (txWrapper) {
+                is FullCrowdNodeSignUpTxSet -> TransactionRowView(
+                        ResourceString(R.string.crowdnode_account),
+                        lastTx.txId,
+                        txWrapper.getValue(bag),
+                        lastTx.exchangeRate,
+                        null,
+                        R.drawable.ic_crowdnode_logo,
+                        null,
+                        R.style.TxNoBackground,
+                        -1,
+                        metadata?.memo ?: "",
+                        txWrapper.transactions.size,
+                        lastTx.updateTime.time,
+                        TxResourceMapper().dateTimeFormat,
+                        false,
+                        ServiceName.CrowdNode,
+                        txWrapper
+                    )
+
+                is CoinJoinMixingTxSet -> TransactionRowView(
+                    ResourceString(R.string.coinjoin_mixing_transactions),
                     lastTx.txId,
                     txWrapper.getValue(bag),
                     lastTx.exchangeRate,
                     null,
-                    R.drawable.ic_crowdnode_logo,
+                    R.drawable.ic_coinjoin_mixing_group,
                     null,
                     R.style.TxNoBackground,
                     -1,
@@ -77,11 +97,11 @@ data class TransactionRowView(
                     lastTx.updateTime.time,
                     TxResourceMapper().dateTimeFormat,
                     false,
-                    ServiceName.CrowdNode,
+                    ServiceName.Unknown,
                     txWrapper
                 )
-            } else {
-                fromTransaction(lastTx, bag, context, metadata, contact)
+
+                else -> fromTransaction(lastTx, bag, context, metadata, contact)
             }
         }
 
