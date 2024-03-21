@@ -26,14 +26,18 @@ import org.dash.wallet.common.transactions.filters.TransactionFilter
 
 open class CoinJoinTxFilter(private val wallet: WalletEx, val type: CoinJoinTransactionType) : TransactionFilter {
     override fun matches(tx: Transaction): Boolean {
-        return CoinJoinTransactionType.fromTx(tx, wallet) == type &&
+        return CoinJoinTransactionType.fromTx(tx, wallet) == type/* &&
             tx.outputs.any { output ->
-                ScriptPattern.isP2PKH(output.scriptPubKey) &&
-                    wallet.coinJoin.findKeyFromPubKeyHash(
-                        ScriptPattern.extractHashFromP2PKH(output.scriptPubKey),
-                        Script.ScriptType.P2PKH
-                    ) != null
-            }
+                when {
+                    ScriptPattern.isP2PKH(output.scriptPubKey) ->
+                        wallet.coinJoin.findKeyFromPubKeyHash(
+                            ScriptPattern.extractHashFromP2PKH(output.scriptPubKey),
+                            Script.ScriptType.P2PKH
+                        ) != null
+                    ScriptPattern.isOpReturn(output.scriptPubKey) -> true
+                    else -> false
+                }
+            }*/
     }
 }
 

@@ -83,7 +83,7 @@ data class TransactionRowView(
                     )
 
                 is CoinJoinMixingTxSet -> TransactionRowView(
-                    ResourceString(R.string.coinjoin),
+                    ResourceString(R.string.coinjoin_mixing_transactions),
                     lastTx.txId,
                     txWrapper.getValue(bag),
                     lastTx.exchangeRate,

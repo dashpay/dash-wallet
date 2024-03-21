@@ -52,7 +52,7 @@ import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
-import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
+import de.schildbach.wallet.transactions.coinjoin.CoinJoinTxWrapperFactory
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationCountLiveData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -101,7 +101,7 @@ import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
+import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
 import kotlin.math.abs
 import java.text.DecimalFormat
@@ -475,8 +475,8 @@ class MainViewModel @Inject constructor(
             }
 
             val transactionViews = walletData.wrapAllTransactions(
-                FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet),
-                CoinJoinMixingTxSet(walletData.networkParameters, wallet as WalletEx)
+                FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet),
+                CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
             ).filter { it.passesFilter(filter, metadata) }
                 .sortedWith(TransactionWrapperComparator())
                 .map {

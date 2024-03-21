@@ -20,18 +20,19 @@ package de.schildbach.wallet.transactions
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.TransactionWrapperFactory
 import org.slf4j.LoggerFactory
 
 object TransactionWrapperHelper {
     private val log = LoggerFactory.getLogger(TransactionWrapperHelper::class.java)
     fun wrapTransactions(
         transactions: Set<Transaction?>,
-        vararg wrappers: TransactionWrapper
+        vararg wrapperFactories: TransactionWrapperFactory
     ): Collection<TransactionWrapper> {
         val wrappedTransactions = ArrayList<TransactionWrapper>()
-
+        log.info("processing transaction wrappers")
         for (transaction in transactions) {
-            log.info("wrapper ------------------ \n  {}", transaction?.txId)
+            // log.info("wrapper ------------------ \n  {}", transaction?.txId)
             if (transaction == null) {
                 continue
             }
@@ -42,10 +43,11 @@ object TransactionWrapperHelper {
                 override fun getValue(bag: TransactionBag) = transaction.getValue(bag)
             }
 
-            if (wrappers.isNotEmpty()) {
+            if (wrapperFactories.isNotEmpty()) {
                 var added = false
-                for (wrapper in wrappers) {
-                    if (wrapper.tryInclude(transaction)) {
+                for (wrapperFactory in wrapperFactories) {
+                    val (included, wrapper) = wrapperFactory.tryInclude(transaction)
+                    if (included && wrapper != null) {
                         if (!wrappedTransactions.contains(wrapper)) {
                             //log.info("wrapper: {} -> added {}", wrapper::class.java.simpleName, transaction.txId)
                             wrappedTransactions.add(wrapper)
