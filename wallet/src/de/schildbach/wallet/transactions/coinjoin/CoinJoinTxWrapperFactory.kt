@@ -28,7 +28,9 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 class CoinJoinTxWrapperFactory(val params: NetworkParameters, val wallet: WalletEx) : TransactionWrapperFactory {
-    private val wrappers = hashMapOf<Long, CoinJoinMixingTxSet>()
+    private val wrapperMap = hashMapOf<Long, CoinJoinMixingTxSet>()
+    override val wrappers: List<TransactionWrapper>
+        get() = wrapperMap.values.toList()
 
     override fun tryInclude(tx: Transaction): Pair<Boolean, TransactionWrapper?> {
         return when (CoinJoinTransactionType.fromTx(tx, wallet)) {
@@ -38,13 +40,13 @@ class CoinJoinTxWrapperFactory(val params: NetworkParameters, val wallet: Wallet
                 val localDateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
                 val startOfDay = localDateTime.toLocalDate().atStartOfDay(ZoneId.systemDefault())
                 val startOfDayTimestamp = startOfDay.toInstant().toEpochMilli()
-                val wrapper = wrappers[startOfDayTimestamp]
+                val wrapper = wrapperMap[startOfDayTimestamp]
                 if (wrapper != null) {
                     Pair(wrapper.tryInclude(tx), wrapper)
                 } else {
                     val newWrapper = CoinJoinMixingTxSet(params, wallet)
                     val included = newWrapper.tryInclude(tx)
-                    wrappers[startOfDayTimestamp] = newWrapper
+                    wrapperMap[startOfDayTimestamp] = newWrapper
                     Pair(included, newWrapper)
                 }
             }

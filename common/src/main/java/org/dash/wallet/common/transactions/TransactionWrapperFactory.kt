@@ -21,4 +21,5 @@ import org.bitcoinj.core.Transaction
 
 interface TransactionWrapperFactory {
     fun tryInclude(tx: Transaction): Pair<Boolean, TransactionWrapper?>
+    val wrappers: List<TransactionWrapper>
 }
