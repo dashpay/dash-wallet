@@ -52,6 +52,7 @@ import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
+import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationCountLiveData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -474,7 +475,8 @@ class MainViewModel @Inject constructor(
             }
 
             val transactionViews = walletData.wrapAllTransactions(
-                FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
+                FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet),
+                CoinJoinMixingTxSet(walletData.networkParameters, wallet as WalletEx)
             ).filter { it.passesFilter(filter, metadata) }
                 .sortedWith(TransactionWrapperComparator())
                 .map {

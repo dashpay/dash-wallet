@@ -22,6 +22,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
+import de.schildbach.wallet.transactions.coinjoin.CoinJoinTxResourceMapper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
 import org.bitcoinj.core.Sha256Hash
@@ -87,10 +89,10 @@ class TransactionGroupViewModel @Inject constructor(
         transactionWrapper: TransactionWrapper,
         metadata: Map<Sha256Hash, PresentableTxMetadata>
     ) {
-        val resourceMapper = if (transactionWrapper is FullCrowdNodeSignUpTxSet) {
-            CrowdNodeTxResourceMapper()
-        } else {
-            TxResourceMapper()
+        val resourceMapper = when (transactionWrapper) {
+            is FullCrowdNodeSignUpTxSet -> CrowdNodeTxResourceMapper()
+            is CoinJoinMixingTxSet -> CoinJoinTxResourceMapper()
+            else -> TxResourceMapper()
         }
 
         _transactions.value = transactionWrapper.transactions.map {
