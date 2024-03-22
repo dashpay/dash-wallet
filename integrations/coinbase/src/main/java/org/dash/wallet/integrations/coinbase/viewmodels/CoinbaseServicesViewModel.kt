@@ -90,7 +90,8 @@ class CoinbaseServicesViewModel @Inject constructor(
             }.onEach { state -> _uiState.value = state }
             .launchIn(viewModelScope)
 
-        viewModelScope.launch { coinBaseRepository.refreshWithdrawalLimit() }
+        // TODO: disabled until Coinbase changes are clear
+//        viewModelScope.launch { coinBaseRepository.refreshWithdrawalLimit() }
     }
 
     fun refreshBalance() {

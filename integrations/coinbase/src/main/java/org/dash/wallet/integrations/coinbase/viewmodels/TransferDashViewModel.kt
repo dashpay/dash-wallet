@@ -150,8 +150,7 @@ class TransferDashViewModel @Inject constructor(
     }
 
     private suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
-        val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash()
-        return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
+        return coinBaseRepository.isInputGreaterThanLimit(amountInDash)
     }
 
     suspend fun checkEnteredAmountValue(amountInDash: Coin): SwapValueErrorType {
