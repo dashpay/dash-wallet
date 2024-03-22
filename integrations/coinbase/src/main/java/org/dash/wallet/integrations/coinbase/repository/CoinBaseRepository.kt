@@ -161,7 +161,7 @@ class CoinBaseRepository @Inject constructor(
 
     override suspend fun getActivePaymentMethods(): List<PaymentMethodsData> {
         val apiResult = servicesApi.getActivePaymentMethods()
-        return apiResult?.data ?: emptyList()
+        return apiResult?.paymentMethods ?: emptyList()
     }
 
     override suspend fun depositToFiatAccount(paymentMethodId: String, amountUSD: String) {
