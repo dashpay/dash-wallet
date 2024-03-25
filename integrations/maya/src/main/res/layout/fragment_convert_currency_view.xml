@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-  ~ Copyright 2021 Dash Core Group.
+  ~ Copyright 2024 Dash Core Group.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -63,39 +63,6 @@
              app:layout_constraintEnd_toEndOf="parent"
              app:layout_constraintHorizontal_bias="0.0"
              app:layout_constraintTop_toTopOf="parent" />
-
-         <!--ImageView
-             android:id="@+id/front_symbol"
-             android:layout_width="wrap_content"
-             android:layout_height="wrap_content"
-             android:src="@drawable/ic_dash_d_black"
-             android:visibility="gone"/>
-
-        <me.grantland.widget.AutofitTextView
-            android:id="@+id/input_amount"
-            style="@style/Headline3"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="5dp"
-            android:maxLines="1"
-            android:singleLine="true"
-            tools:text="0.00 DASH"
-            autofit:autoSizeMaxTextSize="48sp"
-            android:gravity="center"
-            android:layout_gravity="center|bottom"
-            autofit:sizeToFit="true" /-->
-
-         <!--ImageView
-             android:id="@+id/end_symbol"
-             android:layout_width="wrap_content"
-             android:layout_height="wrap_content"
-             android:src="@drawable/ic_dash_d_black" />
-         <TextView
-             android:id="@+id/end_currency_code"
-             android:layout_width="wrap_content"
-             android:layout_height="wrap_content"
-             style="@style/Headline3.Medium"
-             tools:text="BTC"/-->
     </LinearLayout>
 
     <FrameLayout

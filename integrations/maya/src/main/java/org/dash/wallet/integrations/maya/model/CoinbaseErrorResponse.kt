@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ import android.os.Parcelable
 import com.google.gson.Gson
 import kotlinx.parcelize.Parcelize
 
-enum class CoinbaseErrorType {
+enum class MayaErrorType {
     NONE,
     BUY_FAILED,
     USER_ACCOUNT_ERROR,
@@ -31,7 +31,7 @@ enum class CoinbaseErrorType {
     DEPOSIT_FAILED
 }
 
-class CoinbaseException(val errorType: CoinbaseErrorType, message: String?) : Exception(message)
+class MayaException(val errorType: MayaErrorType, message: String?) : Exception(message)
 
 @Parcelize
 data class CoinbaseErrorResponse(

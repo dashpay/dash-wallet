@@ -15,21 +15,6 @@
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
-
-        <!--LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="68dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/toolbar_title"
-                style="@style/Subtitle1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="@string/conversion_preview" />
-        </LinearLayout-->
     </androidx.appcompat.widget.Toolbar>
     <TextView
         android:id="@+id/title"
