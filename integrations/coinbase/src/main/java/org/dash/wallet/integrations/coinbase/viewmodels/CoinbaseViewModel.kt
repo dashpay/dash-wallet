@@ -120,9 +120,7 @@ class CoinbaseViewModel @Inject constructor(
     }
 
     suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
-        return amountInDash.toPlainString().toDoubleOrZero.compareTo(
-            coinBaseRepository.getWithdrawalLimitInDash()
-        ) > 0
+        return coinBaseRepository.isInputGreaterThanLimit(amountInDash)
     }
 
     fun logEvent(eventName: String) {

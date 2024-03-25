@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.main
 
-import android.os.Build
 import android.os.LocaleList
 import android.telephony.TelephonyManager
 import androidx.annotation.VisibleForTesting
@@ -437,10 +436,6 @@ class MainViewModel @Inject constructor(
     }
 
     private fun getCurrentCountry(): String {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            LocaleList.getDefault()[0].country
-        } else {
-            Locale.getDefault().country
-        }
+        return LocaleList.getDefault()[0].country
     }
 }

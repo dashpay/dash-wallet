@@ -1,101 +1,43 @@
 {
-  "data": [
+  "payment_methods" : [
     {
-      "id": "453eeb6d-a446-53c7-be6a-c0bb829488f6",
-      "type": "fiat_account",
-      "name": "Cash (USD)",
-      "currency": "USD",
-      "primary_buy": false,
-      "primary_sell": true,
-      "instant_buy": true,
-      "instant_sell": true,
-      "created_at": "2018-04-06T15:01:02Z",
-      "updated_at": "2018-04-06T15:01:02Z",
-      "resource": "payment_method",
-      "resource_path": "/v2/payment-methods/453eeb6d-a446-53c7-be6a-c0bb829488f6",
-      "allow_buy": false,
-      "allow_sell": true,
-      "allow_deposit": false,
-      "allow_withdraw": false,
-      "fiat_account": {
-        "id": "7c0bfa90-14d3-52f5-801e-7624a1234567",
-        "resource": "account",
-        "resource_path": "/v2/accounts/7c0bfa90-14d3-52f5-801e-7624a7670366"
-      },
-      "verified": true,
-      "minimum_purchase_amount": {
-        "amount": "0.00",
-        "currency": "USD"
-      }
+      "updated_at" : "2022-06-30T14:04:13Z",
+      "allow_deposit" : false,
+      "id" : "bfb4c087-b26d-5058-b614-4c6f9e411aaf",
+      "allow_withdraw" : false,
+      "allow_buy" : false,
+      "verified" : true,
+      "created_at" : "2022-06-30T14:04:13Z",
+      "type" : "COINBASE_FIAT_ACCOUNT",
+      "currency" : "USD",
+      "name" : "Cash (USD)",
+      "allow_sell" : false
     },
     {
-      "id": "931aa7a2-6500-505b-bf0b-35f031466711",
-      "type": "ach_bank_account",
-      "name": "Bank of America - Busi... ********1234",
-      "currency": "USD",
-      "primary_buy": true,
-      "primary_sell": false,
-      "instant_buy": true,
-      "instant_sell": false,
-      "created_at": "2018-03-16T18:50:09Z",
-      "updated_at": "2018-03-16T18:50:13Z",
-      "resource": "payment_method",
-      "resource_path": "/v2/payment-methods/931aa7a2-6500-505b-bf0b-35f031466711",
-      "allow_buy": true,
-      "allow_sell": false,
-      "allow_deposit": true,
-      "allow_withdraw": true,
-      "verified": true,
-      "minimum_purchase_amount": {
-        "amount": "1.00",
-        "currency": "USD"
-      }
+      "updated_at" : "2022-12-09T06:15:10Z",
+      "allow_deposit" : false,
+      "id" : "018b3577-47ce-5d15-8b25-2931166088db",
+      "allow_withdraw" : false,
+      "allow_buy" : false,
+      "verified" : true,
+      "created_at" : "2022-12-08T09:36:36Z",
+      "type" : "APPLE_PAY",
+      "currency" : "USD",
+      "name" : "Apple Pay",
+      "allow_sell" : false
     },
     {
-      "id": "ec4b15d0-a430-5a03-9dbf-bddf3c12bc73",
-      "type": "worldpay_card",
-      "name": "0007********2021",
-      "currency": "USD",
-      "primary_buy": false,
-      "primary_sell": false,
-      "instant_buy": true,
-      "instant_sell": false,
-      "created_at": "2021-10-28T17:13:26Z",
-      "updated_at": "2021-10-28T17:15:58Z",
-      "resource": "payment_method",
-      "resource_path": "/v2/payment-methods/ec4b15d0-a430-5a03-9dbf-bddf3c12bc73",
-      "allow_buy": false,
-      "allow_sell": false,
-      "allow_deposit": false,
-      "allow_withdraw": false,
-      "verified": true,
-      "minimum_purchase_amount": {
-        "amount": "1.00",
-        "currency": "USD"
-      }
-    },
-    {
-      "id": "2e55fc67-db8d-5e14-81f6-25432dc27227",
-      "type": "paypal_account",
-      "name": "PayPal - t***t@fakemail.com",
-      "currency": "USD",
-      "primary_buy": false,
-      "primary_sell": false,
-      "instant_buy": true,
-      "instant_sell": true,
-      "created_at": "2021-12-14T18:34:51Z",
-      "updated_at": "2021-12-14T18:34:51Z",
-      "resource": "payment_method",
-      "resource_path": "/v2/payment-methods/2e55fc67-db8d-5e14-81f6-25432dc27227",
-      "allow_buy": true,
-      "allow_sell": false,
-      "allow_deposit": true,
-      "allow_withdraw": true,
-      "verified": true,
-      "minimum_purchase_amount": {
-        "amount": "1.00",
-        "currency": "USD"
-      }
+      "updated_at" : null,
+      "allow_deposit" : false,
+      "id" : "662eec93-2862-438a-b7e1-6b52c01b81b6",
+      "allow_withdraw" : false,
+      "allow_buy" : false,
+      "verified" : true,
+      "created_at" : "2022-12-09T06:15:02Z",
+      "type" : "GOOGLE_PAY",
+      "currency" : "USD",
+      "name" : "Google Pay",
+      "allow_sell" : false
     }
   ]
 }
