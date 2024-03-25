@@ -75,7 +75,6 @@ dependencies {
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
     implementation "io.coil-kt:coil:$coilVersion"
     implementation "androidx.browser:browser:$browserVersion"
-    implementation 'me.grantland:autofittextview:0.2.1'
 
     // Tests
     testImplementation "junit:junit:$junitVersion"

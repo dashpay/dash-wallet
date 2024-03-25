@@ -46,19 +46,6 @@
             android:lines="1"
             tools:text="0" />
 
-        <!--me.grantland.widget.AutofitTextView
-            android:id="@+id/input_amount"
-            style="@style/Headline3.Medium"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:maxLines="1"
-            android:singleLine="true"
-            tools:text="0"
-            app:autoSizeMaxTextSize="48sp"
-            android:gravity="center"
-            android:layout_gravity="center|bottom"
-            app:sizeToFit="true" /-->
-
         <ImageView
             android:id="@+id/input_currency_toggle"
             android:layout_width="10dp"
