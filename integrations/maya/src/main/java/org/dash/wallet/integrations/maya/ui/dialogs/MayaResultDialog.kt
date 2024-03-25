@@ -35,7 +35,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.DialogCoinbaseResultBinding
 
-class CoinBaseResultDialog : DialogFragment() {
+class MayaResultDialog : DialogFragment() {
     private val binding by viewBinding(DialogCoinbaseResultBinding::bind)
     var onCoinBaseResultDialogButtonsClickListener: CoinBaseResultDialogButtonsClickListener? = null
 
@@ -231,14 +231,14 @@ class CoinBaseResultDialog : DialogFragment() {
             responseMessage: String?,
             coinbaseWalletName: String? = null,
             dashToCoinbase: Boolean = false
-        ): CoinBaseResultDialog {
+        ): MayaResultDialog {
             val args = Bundle().apply {
                 putInt("Type", type.ordinal)
                 putString(ARG_MESSAGE, responseMessage)
                 putString(ARG_COINBASE_WALLET_NAME, coinbaseWalletName)
                 putBoolean(ARG_DASH_TO_COINBASE, dashToCoinbase)
             }
-            return CoinBaseResultDialog().apply {
+            return MayaResultDialog().apply {
                 arguments = args
             }
         }

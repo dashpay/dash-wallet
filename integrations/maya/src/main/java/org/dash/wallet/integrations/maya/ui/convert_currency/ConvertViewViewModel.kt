@@ -53,7 +53,6 @@ import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import javax.inject.Inject
 
-
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ConvertViewViewModel @Inject constructor(
@@ -70,11 +69,17 @@ class ConvertViewViewModel @Inject constructor(
     val amount = Amount()
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
-    val cryptoFormat: DecimalFormat = DecimalFormat("0.########", DecimalFormatSymbols(GenericUtils.getDeviceLocale())).apply {
+    val cryptoFormat: DecimalFormat = DecimalFormat(
+        "0.########",
+        DecimalFormatSymbols(GenericUtils.getDeviceLocale())
+    ).apply {
         isDecimalSeparatorAlwaysShown = false
         isGroupingUsed = false
     }
-    val fiatFormat: DecimalFormat = DecimalFormat("0.##", DecimalFormatSymbols(GenericUtils.getDeviceLocale())).apply {
+    val fiatFormat: DecimalFormat = DecimalFormat(
+        "0.##",
+        DecimalFormatSymbols(GenericUtils.getDeviceLocale())
+    ).apply {
         isDecimalSeparatorAlwaysShown = false
         isGroupingUsed = false
     }

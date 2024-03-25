@@ -5,7 +5,6 @@
         <attr name="crypto_convert_item_service_title" format="reference|string" />
         <attr name="crypto_convert_item_icon" format="integer|reference" />
         <attr name="is_crypto_convert_item_group_visible" format="boolean" />
-        <attr name="is_crypto_convert_item_arrow_visible" format="boolean" />
         <attr name="is_crypto_convert_item_amount_visible" format="boolean" />
     </declare-styleable>
 </resources>

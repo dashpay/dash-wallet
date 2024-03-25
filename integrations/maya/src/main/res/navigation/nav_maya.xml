@@ -73,7 +73,7 @@
 
     <dialog
         android:id="@+id/coinbaseFeeInfoDialog"
-        android:name="org.dash.wallet.integrations.maya.ui.dialogs.CoinbaseFeeInfoDialog"
+        android:name="org.dash.wallet.integrations.maya.ui.dialogs.MayaFeeInfoDialog"
         android:label="coinbase_info_fee"
         tools:layout="@layout/dialog_coinbase_fee_info"
         />

@@ -58,7 +58,6 @@ import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewMode
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.ServiceWallet
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
-import org.dash.wallet.integrations.maya.ui.dialogs.crypto_wallets.CryptoWalletsDialog
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.UUID
@@ -68,12 +67,10 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
     private val binding by viewBinding(FragmentMayaConvertCryptoBinding::bind)
     private val viewModel by viewModels<MayaConvertCryptoViewModel>()
     private val convertViewModel by mayaViewModels<ConvertViewViewModel>()
-    private val sharedViewModel by mayaViewModels<CoinbaseViewModel>()
     private val mayaViewModel by viewModels<MayaViewModel>()
     private val args by navArgs<MayaConvertCryptoFragmentArgs>()
 
     private var loadingDialog: AdaptiveDialog? = null
-    private var cryptoWalletsDialog: CryptoWalletsDialog? = null
     private var selectedCoinBaseAccount: AccountDataUIModel? = null
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(8).optionalDecimals()
@@ -113,16 +110,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 //                showProgress(R.string.loading)
 //            } else {
 //                dismissProgress()
-//            }
-//        }
-
-//        convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) { rate ->
-//            rate?.let {
-//                binding.toolbarSubtitle.text = getString(
-//                    R.string.exchange_rate_template,
-//                    Coin.COIN.toPlainString(),
-//                    rate.fiat.toFormattedString()
-//                )
 //            }
 //        }
 
@@ -189,24 +176,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             ).show(requireActivity())
         }
 
-//        convertViewModel.setSelectedCryptoCurrency(
-//            AccountDataUIModel(
-//                Account(
-//                    UUID.nameUUIDFromBytes(args.currency.toByteArray()),
-//                    args.currency,
-//                    args.currency,
-//                    Balance("0", args.currency),
-//                    true,
-//                    true,
-//                    "Wallet",
-//                    true
-//                ),
-//                BigDecimal.ONE,
-//                (poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE) / (dashPoolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
-//                poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE
-//            )
-//        )
-
         convertViewModel.setSelectedCryptoCurrency(
             AccountDataUIModel(
                 Account(
@@ -229,40 +198,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
         convertViewModel.destinationCurrency = args.currency
         viewModel.paymentIntent = args.paymentIntent
-
-//        binding.convertView.setOnCurrencyChooserClicked {
-//            lifecycleScope.launch {
-//                var list = listOf<AccountDataUIModel>()
-//                val selectedCurrencyCode = convertViewModel.selectedCryptoCurrencyAccount.value
-//                    ?.coinbaseAccount?.currency ?: convertViewModel.selectedLocalCurrencyCode
-//
-//                cryptoWalletsDialog = CryptoWalletsDialog(selectedCurrencyCode) { index, dialog ->
-//                    list.getOrNull(index)?.let {
-//                        convertViewModel.setSelectedCryptoCurrency(it)
-//                        setConvertViewInput()
-//                    }
-//                    dialog.dismiss()
-//                }
-//
-//                if (cryptoWalletsDialog?.isVisible == false) {
-//                    cryptoWalletsDialog?.show(parentFragmentManager, "payment_method")
-//                    list = viewModel.getUserWalletAccounts(binding.convertView.dashToCrypto)
-//
-//                    if (list.isEmpty()) {
-//                        if (viewModel.isDeviceConnectedToInternet.value == true) {
-//                            cryptoWalletsDialog?.dismissAllowingStateLoss()
-//                            showNoAssetsError()
-//                        }
-//                    } else {
-//                        cryptoWalletsDialog?.submitList(list)
-//                    }
-//                }
-//            }
-//        }
-
-//        binding.convertView.setOnSwapClicked {
-//            convertViewModel.setOnSwapDashFromToCryptoClicked(it)
-//        }
 
         convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
             binding.convertView.exchangeRate = it?.let { ExchangeRate(Coin.COIN, it.fiat) }
@@ -312,29 +247,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             setGuidelinePercent(true)
         }
 
-        sharedViewModel.uiState.observe(viewLifecycleOwner) { uiState ->
-//            if (uiState.isSessionExpired) {
-//                findNavController().popBackStack()
-//            } else {
-//                // New value received
-//                when (uiState.baseIdForFiatModel) {
-//                    is BaseIdForFiatData.Success -> {
-//                        dismissProgress()
-//                        uiState.baseIdForFiatModel.baseIdForFaitDataList.let { list ->
-//                            viewModel.setBaseIdForFaitModelCoinBase(list)
-//                        }
-//                    }
-//                    is BaseIdForFiatData.LoadingState -> {
-//                        showProgress(R.string.loading)
-//                    }
-//                    is BaseIdForFiatData.Error -> {
-//                        dismissProgress()
-//                        // Retry in case of error
-//                        // sharedViewModel.getBaseIdForFiatModel()
-//                    }
-//                }
-//            }
-        }
         mayaViewModel.updateInboundAddresses()
     }
 

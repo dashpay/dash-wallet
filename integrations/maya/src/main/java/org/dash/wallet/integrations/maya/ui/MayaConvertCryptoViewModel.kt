@@ -46,7 +46,6 @@ import org.dash.wallet.integrations.maya.model.CoinbaseErrorResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.TradesRequest
-import org.dash.wallet.integrations.maya.ui.convert_currency.model.BaseIdForUSDData
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import javax.inject.Inject
 
@@ -65,8 +64,6 @@ class MayaConvertCryptoViewModel @Inject constructor(
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
-    private val _baseIdForFaitModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
-
     val swapTradeOrder = SingleLiveEvent<SwapTradeUIModel>()
 
     val swapTradeFailedCallback = SingleLiveEvent<String?>()
@@ -81,10 +78,6 @@ class MayaConvertCryptoViewModel @Inject constructor(
         setDashWalletBalance()
     }
 
-    fun setBaseIdForFaitModelCoinBase(list: List<BaseIdForUSDData>) {
-        _baseIdForFaitModelCoinBase.value = list
-    }
-
     fun swapTrade(
         valueToConvert: Fiat,
         selectedCoinBaseAccount: AccountDataUIModel,
@@ -92,21 +85,8 @@ class MayaConvertCryptoViewModel @Inject constructor(
     ) = viewModelScope.launch {
         _showLoading.value = true
 
-        val sourceAsset =
-            if (dashToCrypt) {
-                _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == Constants.DASH_CURRENCY }?.base_id ?: ""
-            } else {
-                _baseIdForFaitModelCoinBase.value?.firstOrNull {
-                    it.base == selectedCoinBaseAccount.coinbaseAccount.currency
-                }?.base_id ?: ""
-            }
-        val targetAsset = if (dashToCrypt) {
-            _baseIdForFaitModelCoinBase.value?.firstOrNull {
-                it.base == selectedCoinBaseAccount.coinbaseAccount.currency
-            }?.base_id ?: ""
-        } else {
-            _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == Constants.DASH_CURRENCY }?.base_id ?: ""
-        }
+        val sourceAsset = "DASH"
+        val targetAsset = selectedCoinBaseAccount.coinbaseAccount.currency
 
         val tradesRequest = TradesRequest(
             valueToConvert.toFormattedStringNoCode(),
@@ -178,7 +158,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
     }
 
     suspend fun getLastBalance(): Coin {
-        return Coin.ZERO // valueOf(config.get(CoinbaseConfig.LAST_BALANCE) ?: 0)
+        return Coin.ZERO
     }
 
     private fun isValidCoinBaseAccount(it: AccountDataUIModel) = (
@@ -195,8 +175,6 @@ class MayaConvertCryptoViewModel @Inject constructor(
 
     suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
         return false
-        // val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash()
-        // return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
     }
 
     fun getUpdatedPaymentIntent(amountInDash: Coin, destination: Address): PaymentIntent? {

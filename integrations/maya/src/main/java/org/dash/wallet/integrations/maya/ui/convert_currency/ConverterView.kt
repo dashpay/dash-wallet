@@ -42,7 +42,6 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
         .noCode().minDecimals(6).optionalDecimals()
 
     private var onCurrencyChooserClicked: (() -> Unit)? = null
-//    private var onSwapClicked: ((Boolean) -> Unit)? = null
 
     private var _isSellSwapEnabled: Boolean = false
     var isSellSwapEnabled: Boolean
@@ -96,18 +95,8 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
     }
 
     init {
-
-        // binding.convertFromDashBalance.isVisible = input != null
         updateUiWithSwap()
         updateSellSwapBtn()
-//        binding.swapBtn.setOnClickListener {
-//            onSwapClicked?.invoke(!dashToCrypto)
-//            if (dashInput?.isZero == true && !dashToCrypto) {
-//                return@setOnClickListener
-//            }
-//            updateUiWithSwap()
-//            dashToCrypto = !dashToCrypto
-//        }
 
         binding.convertFromBtn.setConvertItemClickListener {
             if (!dashToCrypto) {
@@ -124,7 +113,6 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
     private fun updateSellSwapBtn() {
         binding.swapBtn.isEnabled = _isSellSwapEnabled
         binding.swapBtn.isVisible = _isSellSwapEnabled
-        // binding.buySwapBtn.isGone = _isSellSwapEnabled
     }
 
     private fun updateUiWithSwap() {
@@ -133,7 +121,6 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
     }
 
     private fun setConvertFromBtnData() {
-        binding.convertFromBtn.setCryptoItemArrowVisibility(!dashToCrypto)
         if (dashToCrypto) {
             binding.convertFromBtn.setCryptoItemGroupVisibility(true)
             binding.convertFromBtn.setConvertItemServiceName(R.string.dash_wallet_name)
@@ -147,27 +134,12 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
                     "${Constants.PREFIX_ALMOST_EQUAL_TO} ${ (fiatInput ?: Fiat.valueOf("USD", 0)).toFormattedString() }"
                 )
             }
-//            exchangeRate?.let { currentExchangeRate ->
-//                dashInput?.let { dash ->
-//                    val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
-//                    val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
-//                    binding.convertFromBtn.setConvertItemAmounts(
-//                        "${dashFormat.minDecimals(2).optionalDecimals(2,4).format(dash)}",
-//                        "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
-//                    )
-// //                binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
-// //                    .optionalDecimals(0,8).format(dash)} DASH"
-// //
-// //                binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
-//                }
-//            }
         } else {
             setFromBtnData()
         }
     }
 
     private fun setConvertToBtnData() {
-        binding.convertToBtn.setCryptoItemArrowVisibility(dashToCrypto)
         binding.convertToBtn.setCryptoItemAmountVisibility(false)
         if (!dashToCrypto) {
             binding.convertToBtn.setCryptoItemGroupVisibility(true)
@@ -183,9 +155,6 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
     @SuppressLint("SetTextI18n")
     private fun setFromBtnData() {
         binding.convertFromBtn.setCryptoItemGroupVisibility(input != null)
-//        binding.walletIcon.isVisible = (input != null)
-//        binding.convertFromDashBalance.isVisible = (input != null)
-//        binding.convertFromDashFiatAmount.isVisible = (input != null)
         input?.let {
             binding.convertFromBtn.setConvertItemServiceName(it.cryptoWalletService)
             binding.convertFromBtn.setConvertItemTitle(it.cryptoWalletName)
@@ -199,11 +168,6 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
                 } catch (x: Exception) {
                     Coin.ZERO
                 }
-
-//                binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
-//                    .optionalDecimals(0,8).format(coin)} ${input?.currency}"
-//
-//                binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} ${input?.faitAmount}"
             }
         }
     }
@@ -211,36 +175,16 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
     @SuppressLint("SetTextI18n")
     private fun setToBtnData() {
         binding.convertToBtn.setCryptoItemGroupVisibility(input != null)
-//        binding.convertFromDashBalance.isVisible = (dashInput != null)
-//        binding.convertFromDashFiatAmount.isVisible = (dashInput != null)
-//        binding.walletIcon.isVisible = (dashInput != null)
         input?.let {
             binding.convertToBtn.setConvertItemServiceName(it.cryptoWalletService)
             binding.convertToBtn.setConvertItemTitle(it.cryptoWalletName)
             binding.convertToBtn.setConvertItemIcon(it.icon)
         }
-
-//        exchangeRate?.let { currentExchangeRate ->
-        //           dashInput?.let { dash ->
-//                val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
-//                val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
-//                binding.convertFromBtn.setConvertItemAmounts("${dashFormat.minDecimals(0)
-//                    .optionalDecimals(0,8).format(dash)}", "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount")
-//                binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
-//                    .optionalDecimals(0,8).format(dash)} DASH"
-//
-//                binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
-//            }
-//        }
     }
 
     fun setOnCurrencyChooserClicked(listener: () -> Unit) {
         onCurrencyChooserClicked = listener
     }
-
-//    fun setOnSwapClicked(listener: (Boolean) -> Unit) {
-//        onSwapClicked = listener
-//    }
 
     private fun updateAmount() {
         if (dashToCrypto) {

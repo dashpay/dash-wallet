@@ -51,7 +51,6 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
 
     private val binding by viewBinding(FragmentConvertCurrencyViewBinding::bind)
     private val viewModel by mayaViewModels<ConvertViewViewModel>()
-    private val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode()
     private val decimalSeparator =
         DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
     private var maxAmountSelected: Boolean = false
@@ -91,7 +90,11 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                     val cryptoCurrency = userAccountData.coinbaseAccount.currency
 
                     if (viewModel.selectedPickerCurrencyCode == cryptoCurrency) {
-                        applyNewValue(maxAmount.crypto.toString(), viewModel.selectedPickerCurrencyCode, isLocalized = false)
+                        applyNewValue(
+                            maxAmount.crypto.toString(),
+                            viewModel.selectedPickerCurrencyCode,
+                            isLocalized = false
+                        )
                     } else {
                         val cleanedValue =
                             if (viewModel.selectedPickerCurrencyCode == viewModel.selectedLocalCurrencyCode) {
@@ -200,10 +203,20 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                 try {
                     appendIfValidAfter(number.toString())
 
-                    applyNewValue(value.toString(), binding.currencyOptions.pickedOption, isLocalized = true, isEditing = true)
+                    applyNewValue(
+                        value.toString(),
+                        binding.currencyOptions.pickedOption,
+                        isLocalized = true,
+                        isEditing = true
+                    )
                 } catch (x: Exception) {
                     value.deleteCharAt(value.length - 1)
-                    applyNewValue(value.toString(), binding.currencyOptions.pickedOption, isLocalized = true, isEditing = true)
+                    applyNewValue(
+                        value.toString(),
+                        binding.currencyOptions.pickedOption,
+                        isLocalized = true,
+                        isEditing = true
+                    )
                 }
             }
         }
@@ -217,11 +230,11 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                 viewModel.resetSwapValueError()
             }
             applyNewValue(
-                    value.toString(),
-                    binding.currencyOptions.pickedOption,
-                    isLocalized = true,
-                    isEditing = true
-                )
+                value.toString(),
+                binding.currencyOptions.pickedOption,
+                isLocalized = true,
+                isEditing = true
+            )
             maxAmountSelected = false
         }
 

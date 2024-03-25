@@ -37,7 +37,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.DialogCoinbaseFeeInfoBinding
 
-class CoinbaseFeeInfoDialog : DialogFragment() {
+class MayaFeeInfoDialog : DialogFragment() {
     private val binding by viewBinding(DialogCoinbaseFeeInfoBinding::bind)
 
     override fun onCreateView(
