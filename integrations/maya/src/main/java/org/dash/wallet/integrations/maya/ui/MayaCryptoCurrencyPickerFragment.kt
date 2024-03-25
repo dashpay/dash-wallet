@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.maya.ui
 import android.os.Bundle
 import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -110,6 +111,20 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                 requireContext().getString(R.string.cryptocurrency_rune_network)
             )
         )
+
+        binding.searchQuery.doAfterTextChanged { text ->
+            lifecycleScope.launch {
+                if (!text.isNullOrEmpty()) {
+                    val fromQuery = itemList.filter {
+                        it.title.contains(text.toString().uppercase()) || it.subtitle.uppercase()
+                            .contains(text.toString().uppercase())
+                    }
+                    adapter.submitList(fromQuery)
+                } else {
+                    adapter.submitList(itemList)
+                }
+            }
+        }
 
         viewModel.poolList.observe(viewLifecycleOwner) {
             lifecycleScope.launch {

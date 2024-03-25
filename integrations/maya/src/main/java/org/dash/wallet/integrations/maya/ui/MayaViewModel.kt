@@ -21,6 +21,7 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
@@ -33,6 +34,7 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.MayaApi
+import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.payments.parsers.MayaPaymentParsers
 import org.dash.wallet.integrations.maya.utils.MayaConfig
@@ -75,6 +77,7 @@ class MayaViewModel @Inject constructor(
         get() = globalConfig.format.noCode()
 
     val poolList = MutableStateFlow<List<PoolInfo>>(listOf())
+    val inboundAddresses = arrayListOf<InboundAddress>()
     val paymentParsers = MayaPaymentParsers()
 
     init {
@@ -126,5 +129,19 @@ class MayaViewModel @Inject constructor(
 
     fun logEvent(eventName: String) {
         analytics.logEvent(eventName, mapOf())
+    }
+
+    fun getPoolInfo(currency: String): PoolInfo? {
+        if (poolList.value.isNotEmpty()) {
+            return poolList.value.find { it.currencyCode == currency }
+        }
+        return null
+    }
+
+    fun updateInboundAddresses() {
+        viewModelScope.launch {
+            inboundAddresses.clear()
+            inboundAddresses.addAll(mayaApi.getInboundAddresses())
+        }
     }
 }

@@ -58,5 +58,6 @@ class CoinbaseConfig @Inject constructor(
         val AUTH_INFO_SHOWN = booleanPreferencesKey("coinbase_auth_info_shown")
         val USER_WITHDRAWAL_LIMIT = stringPreferencesKey("withdrawal_limit")
         val SEND_LIMIT_CURRENCY = stringPreferencesKey("send_limit_currency")
+
     }
 }

@@ -73,7 +73,7 @@ object Constants {
     @JvmField
     val NETWORK_PARAMETERS: NetworkParameters = MainNetParams.get()
     @JvmField
-    var ANYPAY_SCHEME = "pay"
+    val ANYPAY_SCHEME = "pay"
     @JvmField
-    var DASH_SCHEME = "dash"
+    val DASH_SCHEME = "dash"
 }

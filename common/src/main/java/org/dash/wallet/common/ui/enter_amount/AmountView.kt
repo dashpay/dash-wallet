@@ -20,6 +20,11 @@ package org.dash.wallet.common.ui.enter_amount
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Context.CLIPBOARD_SERVICE
+import android.os.Build
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ImageSpan
+import android.text.style.RelativeSizeSpan
 import android.util.AttributeSet
 import android.util.Log
 import android.view.ContextThemeWrapper
@@ -27,6 +32,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.PopupMenu
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import org.bitcoinj.core.Coin
@@ -38,11 +44,15 @@ import org.dash.wallet.common.databinding.AmountViewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFormattedString
+import org.slf4j.LoggerFactory
 import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
 import java.util.*
+import kotlin.math.min
 
 class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs) {
+    private val log = LoggerFactory.getLogger(AmountView::class.java)
     private val binding = AmountViewBinding.inflate(LayoutInflater.from(context), this)
     val dashFormat: MonetaryFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
@@ -55,6 +65,19 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
 
     private var currencySymbol = "$"
     private var isCurrencySymbolFirst = true
+    var currencyDigits = GenericUtils.getCurrencyDigits()
+        set(value) {
+            field = value
+            updateAmount()
+        }
+
+    private val cryptoFormat: DecimalFormat = DecimalFormat(
+        "0.########",
+        DecimalFormatSymbols(GenericUtils.getDeviceLocale())
+    ).apply {
+        isDecimalSeparatorAlwaysShown = false
+        isGroupingUsed = false
+    }
 
     private var _input = "0"
     var input: String
@@ -63,6 +86,9 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             _input = value.ifEmpty { "0" }
             updateAmount()
         }
+    private fun getLocalizedInput(scale: Int): String = cryptoFormat.format(
+        GenericUtils.toScaledBigDecimal(_input, localized = false, scale)
+    )
 
     var fiatAmount: Fiat = Fiat.valueOf(Constants.DEFAULT_EXCHANGE_CURRENCY, 0)
         private set
@@ -98,9 +124,9 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
                         fiatAmount = exchangeRate!!.coinToFiat(dashAmount)
                         _input = fiatFormat.minDecimals(0)
                             .optionalDecimals(0, 2).format(fiatAmount).toString()
-                        binding.inputAmount.text = formatInputWithCurrency()
+                        setIconWithText(formatInputWithCurrency())
                     } else {
-                        binding.inputAmount.text = resources.getString(R.string.rate_not_available)
+                        setIconWithText(resources.getString(R.string.rate_not_available))
                     }
                 }
             }
@@ -163,7 +189,8 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     }
 
     private fun updateAmount() {
-        binding.inputAmount.text = formatInputWithCurrency()
+        // binding.inputAmount.text = formatInputWithCurrency()
+        setIconWithText(formatInputWithCurrency())
         val rate = exchangeRate
         val pair = parseAmounts(input, rate)
         dashAmount = pair.first
@@ -178,8 +205,10 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             }
         } else {
             binding.resultAmount.text = resources.getString(R.string.rate_not_available)
-            Log.e(AmountView::class.java.name, "Exchange rate is not initialized")
+            log.warn("Exchange rate is not initialized")
         }
+        binding.inputAmount.requestLayout()
+        binding.inputAmount.invalidate()
     }
 
     private fun parseAmounts(input: String, rate: ExchangeRate?): Pair<Coin, Fiat?> {
@@ -207,17 +236,11 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         binding.resultCurrencyToggle.isVisible = showCurrencySelector && dashToFiat
 
         if (dashToFiat) {
-            binding.inputSymbolDash.isVisible = isCurrencySymbolFirst
-            binding.inputSymbolDashPostfix.isVisible = !isCurrencySymbolFirst
-
             binding.resultSymbolDash.isVisible = false
             binding.resultSymbolDashPostfix.isVisible = false
         } else {
             binding.resultSymbolDash.isVisible = isCurrencySymbolFirst
             binding.resultSymbolDashPostfix.isVisible = !isCurrencySymbolFirst
-
-            binding.inputSymbolDash.isVisible = false
-            binding.inputSymbolDashPostfix.isVisible = false
         }
     }
 
@@ -255,5 +278,66 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         } catch (ex: Exception) {
             false
         }
+    }
+
+    private fun setIconWithText(text: String, iconSize: Int = 22) {
+        val context = binding.inputAmount.context
+        val scale = resources.displayMetrics.scaledDensity
+        val maxTextWidth = binding.inputAmount.width
+        var spannableString = SpannableString(text) // Space for the icon
+
+        // show Dash Icon if DASH is the primary currency
+        if (dashToFiat) {
+            // TODO: adjust for dark mode
+
+            val roomLeft = maxTextWidth - binding.inputAmount.paint.measureText("$text  ") - (iconSize * scale)
+            val sizeRelative = if (roomLeft < 0) {
+                val ratio = min(1.0f, (maxTextWidth + roomLeft) / maxTextWidth)
+                if (ratio == Float.NEGATIVE_INFINITY) {
+                    1.0f
+                } else {
+                    ratio
+                }
+            } else {
+                1.0f
+            }
+            val sizeSpan = RelativeSizeSpan(sizeRelative)
+            val drawable = ContextCompat.getDrawable(context, R.drawable.ic_dash_d_black)?.apply {
+                setBounds(0, 0, (iconSize * scale * sizeRelative).toInt(), (iconSize * scale * sizeRelative).toInt())
+            }
+            val imageSpan = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                drawable?.let { ImageSpan(it, ImageSpan.ALIGN_CENTER) }
+            } else {
+                drawable?.let { CenteredImageSpan(it, binding.inputAmount.context) }
+            }
+            imageSpan?.let {
+                if (GenericUtils.isCurrencySymbolFirst()) {
+                    spannableString = SpannableString("  $text")
+                    spannableString.setSpan(it, 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    spannableString.setSpan(sizeSpan, 1, spannableString.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+                } else {
+                    spannableString = SpannableString("$text  ")
+                    val len = spannableString.length
+                    spannableString.setSpan(it, len - 1, len, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    spannableString.setSpan(sizeSpan, 0, len - 1, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+                }
+            }
+        } else {
+            val roomLeft = maxTextWidth - binding.inputAmount.paint.measureText("$text")
+            val sizeRelative = if (roomLeft < 0) {
+                val ratio = min(1.0f, (maxTextWidth + roomLeft) / maxTextWidth)
+                if (ratio == Float.NEGATIVE_INFINITY) {
+                    1.0f
+                } else {
+                    ratio
+                }
+            } else {
+                1.0f
+            }
+            log.info("resizing number: {} to {}", text, sizeRelative)
+            val sizeSpan = RelativeSizeSpan(sizeRelative)
+            spannableString.setSpan(sizeSpan, 0, spannableString.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+        }
+        binding.inputAmount.text = spannableString
     }
 }

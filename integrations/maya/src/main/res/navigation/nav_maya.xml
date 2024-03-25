@@ -49,15 +49,15 @@
             />
 
         <action android:id="@+id/mayaAddressInput_to_EnterAmount"
-            app:destination="@id/mayaEnterAmountFragment"
+            app:destination="@id/mayaConvertCryptoFragment"
             app:enterAnim="@anim/slide_in_right"
             app:popEnterAnim="@anim/activity_stay"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
-    <fragment android:id="@+id/mayaEnterAmountFragment"
-        android:name="org.dash.wallet.integrations.maya.ui.MayaEnterAmountFragment"
+    <fragment android:id="@+id/mayaConvertCryptoFragment"
+        android:name="org.dash.wallet.integrations.maya.ui.MayaConvertCryptoFragment"
         android:label="Enter Amount"
         tools:layout="@layout/fragment_maya_enter_amount">
 
@@ -66,6 +66,32 @@
         <argument android:name="paymentIntent"
             app:argType="org.dash.wallet.common.data.PaymentIntent" />
 
+        <action
+            android:id="@+id/mayaConvertCryptoFragmentToMayaConversionPreviewFragment"
+            app:destination="@id/mayaConversionPreviewFragment" />
     </fragment>
 
+    <dialog
+        android:id="@+id/coinbaseFeeInfoDialog"
+        android:name="org.dash.wallet.integrations.maya.ui.dialogs.MayaFeeInfoDialog"
+        android:label="coinbase_info_fee"
+        tools:layout="@layout/dialog_coinbase_fee_info"
+        />
+    <fragment
+        android:id="@+id/mayaConversionPreviewFragment"
+        android:name="org.dash.wallet.integrations.maya.ui.MayaConversionPreviewFragment"
+        android:label="MayaConversionPreviewFragment"
+        tools:layout="@layout/fragment_maya_conversion_preview">
+
+        <action
+            android:id="@+id/orderReviewToFeeInfo"
+            app:destination="@id/coinbaseFeeInfoDialog" />
+        <argument
+            android:name="swapModel"
+            app:argType="org.dash.wallet.integrations.maya.model.SwapTradeUIModel" />
+        <argument android:name="currency"
+            app:argType="string" />
+        <argument android:name="paymentIntent"
+            app:argType="org.dash.wallet.common.data.PaymentIntent" />
+    </fragment>
 </navigation>

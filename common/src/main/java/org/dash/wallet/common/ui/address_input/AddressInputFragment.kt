@@ -148,6 +148,7 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
 
             binding.showClipboardBtn.isVisible = it.hasClipboardText && it.clipboardText.isEmpty()
             binding.clipboardContentContainer.isVisible = it.clipboardText.isNotEmpty()
+            binding.scrollContainer.isVisible = it.hasClipboardText || binding.addressSourceContainer.isVisible
 
             if (it.clipboardText.isNotEmpty()) {
                 val spannable = SpannableString(it.clipboardText)

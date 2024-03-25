@@ -15,24 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.maya.utils
+package org.dash.wallet.integrations.maya.ui
 
-import org.bitcoinj.core.NetworkParameters
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModel
+import androidx.navigation.navGraphViewModels
+import org.dash.wallet.integrations.maya.R
 
-object MayaConstants {
-    const val DEFAULT_EXCHANGE_CURRENCY = "USD"
-
-    private const val MAINNET_BASE_URL = "https://midgard.mayachain.info/v2/"
-    // private const val MAINNET_BASE_URL = "https://mayanode.mayachain.info/mayachain/"
-
-    /**
-     * https://exchangerate.host/#/docs
-     */
-    const val EXCHANGERATE_BASE_URL = "https://api.exchangerate.host/"
-
-    fun getBaseUrl(params: NetworkParameters): String {
-        return MAINNET_BASE_URL
-    }
-    const val VALUE_ZERO = "0"
-    const val MIN_USD_AMOUNT = "2"
+inline fun <reified VM : ViewModel> Fragment.mayaViewModels(): Lazy<VM> {
+    return navGraphViewModels(R.id.nav_maya) { defaultViewModelProviderFactory }
 }

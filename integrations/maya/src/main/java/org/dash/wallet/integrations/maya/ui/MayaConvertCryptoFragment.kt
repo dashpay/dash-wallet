@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.integrations.coinbase.ui
+package org.dash.wallet.integrations.maya.ui
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -30,8 +30,10 @@ import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
@@ -43,29 +45,33 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFormattedString
-import org.dash.wallet.integrations.coinbase.R
-import org.dash.wallet.integrations.coinbase.databinding.FragmentCoinbaseConvertCryptoBinding
-import org.dash.wallet.integrations.coinbase.model.CoinBaseUserAccountDataUIModel
-import org.dash.wallet.integrations.coinbase.model.getCoinBaseExchangeRateConversion
-import org.dash.wallet.integrations.coinbase.ui.convert_currency.ConvertViewFragment
-import org.dash.wallet.integrations.coinbase.ui.convert_currency.model.*
-import org.dash.wallet.integrations.coinbase.ui.dialogs.crypto_wallets.CryptoWalletsDialog
-import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseConvertCryptoViewModel
-import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseViewModel
-import org.dash.wallet.integrations.coinbase.viewmodels.ConvertViewViewModel
-import org.dash.wallet.integrations.coinbase.viewmodels.coinbaseViewModels
+import org.dash.wallet.integrations.maya.R
+import org.dash.wallet.integrations.maya.databinding.FragmentMayaConvertCryptoBinding
+import org.dash.wallet.integrations.maya.model.Account
+import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.Balance
+import org.dash.wallet.integrations.maya.model.getCoinBaseExchangeRateConversion
+import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewFragment
+import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewModel
+import org.dash.wallet.integrations.maya.ui.convert_currency.model.ServiceWallet
+import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
+import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
+import java.math.BigDecimal
+import java.math.RoundingMode
+import java.util.UUID
 
 @AndroidEntryPoint
-class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_convert_crypto) {
-    private val binding by viewBinding(FragmentCoinbaseConvertCryptoBinding::bind)
-    private val viewModel by viewModels<CoinbaseConvertCryptoViewModel>()
-    private val convertViewModel by coinbaseViewModels<ConvertViewViewModel>()
-    private val sharedViewModel by coinbaseViewModels<CoinbaseViewModel>()
+class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto) {
+    private val binding by viewBinding(FragmentMayaConvertCryptoBinding::bind)
+    private val viewModel by viewModels<MayaConvertCryptoViewModel>()
+    private val convertViewModel by mayaViewModels<ConvertViewViewModel>()
+    private val mayaViewModel by viewModels<MayaViewModel>()
+    private val args by navArgs<MayaConvertCryptoFragmentArgs>()
 
     private var loadingDialog: AdaptiveDialog? = null
-    private var cryptoWalletsDialog: CryptoWalletsDialog? = null
-    private var selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel? = null
+    private var selectedCoinBaseAccount: AccountDataUIModel? = null
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(8).optionalDecimals()
 
@@ -73,15 +79,18 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val poolInfo = mayaViewModel.getPoolInfo(args.currency)
+        val dashPoolInfo = mayaViewModel.getPoolInfo("DASH")
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
         binding.convertView.isSellSwapEnabled = true
+        convertViewModel.setOnSwapDashFromToCryptoClicked(true)
 
         if (savedInstanceState == null) {
             fragment = ConvertViewFragment.newInstance()
-            fragment.setViewDetails(getString(R.string.get_quote), null)
+            fragment.setViewDetails(getString(R.string.button_continue), null)
 
             parentFragmentManager.commit {
                 setReorderingAllowed(true)
@@ -94,25 +103,15 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             binding.convertView.isEnabled = hasInternet
         }
 
-        viewModel.showLoading.observe(
-            viewLifecycleOwner
-        ) {
-            if (it) {
-                showProgress(R.string.loading)
-            } else {
-                dismissProgress()
-            }
-        }
-
-        convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) { rate ->
-            rate?.let {
-                binding.toolbarSubtitle.text = getString(
-                    R.string.exchange_rate_template,
-                    Coin.COIN.toPlainString(),
-                    rate.fiat.toFormattedString()
-                )
-            }
-        }
+//        viewModel.showLoading.observe(
+//            viewLifecycleOwner
+//        ) {
+//            if (it) {
+//                showProgress(R.string.loading)
+//            } else {
+//                dismissProgress()
+//            }
+//        }
 
         convertViewModel.dashToCrypto.value?.let {
             if (it) {
@@ -136,11 +135,22 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
             safeNavigate(
-                CoinbaseConvertCryptoFragmentDirections
-                    .coinbaseConvertCryptoFragmentTocoinbaseConversionPreviewFragment(it)
+                MayaConvertCryptoFragmentDirections
+                    .mayaConvertCryptoFragmentToMayaConversionPreviewFragment(
+                        it,
+                        convertViewModel.destinationCurrency!!,
+                        viewModel.getUpdatedPaymentIntent(
+                            convertViewModel.enteredConvertDashAmount.value!!,
+                            Address.fromBase58(
+                                null,
+                                mayaViewModel.inboundAddresses.find { inboundAddress ->
+                                    inboundAddress.chain == "DASH"
+                                }!!.address
+                            )
+                        )!!
+                    )
             )
         }
-
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
             val message = if (it.isNullOrBlank()) {
@@ -153,7 +163,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 R.drawable.ic_error,
                 getString(R.string.error),
                 message,
-                getString(R.string.close)
+                getString(R.string.button_close)
             ).show(requireActivity())
         }
 
@@ -162,60 +172,54 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 R.drawable.ic_error,
                 getString(R.string.dont_have_any_dash),
                 "",
-                getString(R.string.close)
+                getString(R.string.button_close)
             ).show(requireActivity())
         }
 
-        binding.convertView.setOnCurrencyChooserClicked {
-            lifecycleScope.launch {
-                var list = listOf<CoinBaseUserAccountDataUIModel>()
-                val selectedCurrencyCode = convertViewModel.selectedCryptoCurrencyAccount.value
-                    ?.coinbaseAccount?.currency ?: convertViewModel.selectedLocalCurrencyCode
+        convertViewModel.setSelectedCryptoCurrency(
+            AccountDataUIModel(
+                Account(
+                    UUID.nameUUIDFromBytes(args.currency.toByteArray()),
+                    args.currency,
+                    args.currency,
+                    Balance("0", args.currency),
+                    true,
+                    true,
+                    "Wallet",
+                    true
+                ),
+                BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) /
+                    (poolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
+                BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP) /
+                    (dashPoolInfo?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ONE),
+                BigDecimal.ONE.setScale(16, RoundingMode.HALF_UP)
+            )
+        )
 
-                cryptoWalletsDialog = CryptoWalletsDialog(selectedCurrencyCode) { index, dialog ->
-                    list.getOrNull(index)?.let {
-                        convertViewModel.setSelectedCryptoCurrency(it)
-                        setConvertViewInput()
-                    }
-                    dialog.dismiss()
-                }
-
-                if (cryptoWalletsDialog?.isVisible == false) {
-                    cryptoWalletsDialog?.show(parentFragmentManager, "payment_method")
-                    list = viewModel.getUserWalletAccounts(binding.convertView.dashToCrypto)
-
-                    if (list.isEmpty()) {
-                        if (viewModel.isDeviceConnectedToInternet.value == true) {
-                            cryptoWalletsDialog?.dismissAllowingStateLoss()
-                            showNoAssetsError()
-                        }
-                    } else {
-                        cryptoWalletsDialog?.submitList(list)
-                    }
-                }
-            }
-        }
-
-        binding.convertView.setOnSwapClicked {
-            convertViewModel.setOnSwapDashFromToCryptoClicked(it)
-        }
+        convertViewModel.destinationCurrency = args.currency
+        viewModel.paymentIntent = args.paymentIntent
 
         convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
             binding.convertView.exchangeRate = it?.let { ExchangeRate(Coin.COIN, it.fiat) }
             setConvertViewInput()
         }
 
+        convertViewModel.enteredAmount.observe(viewLifecycleOwner) { amount ->
+            // convertViewModel.setAmount(amount, convertViewModel.selectedPickerCurrencyCode)
+        }
+
         convertViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner) { amount ->
             val hasAmount = !amount.isZero
             binding.youWillReceiveLabel.isVisible = hasAmount
             binding.youWillReceiveValue.isVisible = hasAmount
+            binding.convertView.dashInput = amount
+        }
 
-            if (hasAmount && !binding.convertView.dashToCrypto) {
-                binding.youWillReceiveValue.text = context?.getString(
-                    R.string.you_will_receive_dash,
-                    dashFormat.format(amount).toString()
-                )
-            }
+        convertViewModel.enteredConvertFiatAmount.observe(viewLifecycleOwner) { amount ->
+            val hasAmount = !amount.isZero
+            binding.youWillReceiveLabel.isVisible = hasAmount
+            binding.youWillReceiveValue.isVisible = hasAmount
+            binding.convertView.fiatInput = amount
         }
 
         convertViewModel.enteredConvertCryptoAmount.observe(viewLifecycleOwner) { amount ->
@@ -234,7 +238,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         viewModel.dashWalletBalance.observe(
             viewLifecycleOwner
         ) {
-            binding.convertView.dashInput = it
+//            binding.convertView.dashInput = it
         }
 
         convertViewModel.validSwapValue.observe(viewLifecycleOwner) {
@@ -243,29 +247,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             setGuidelinePercent(true)
         }
 
-        sharedViewModel.uiState.observe(viewLifecycleOwner) { uiState ->
-            if (uiState.isSessionExpired) {
-                findNavController().popBackStack()
-            } else {
-                // New value received
-                when (uiState.baseIdForFiatModel) {
-                    is BaseIdForFiatData.Success -> {
-                        dismissProgress()
-                        uiState.baseIdForFiatModel.baseIdForFaitDataList.let { list ->
-                            viewModel.setBaseIdForFaitModelCoinBase(list)
-                        }
-                    }
-                    is BaseIdForFiatData.LoadingState -> {
-                        showProgress(R.string.loading)
-                    }
-                    is BaseIdForFiatData.Error -> {
-                        dismissProgress()
-                        // Retry in case of error
-                        sharedViewModel.getBaseIdForFiatModel()
-                    }
-                }
-            }
-        }
+        mayaViewModel.updateInboundAddresses()
     }
 
     private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {
@@ -303,9 +285,9 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         val guideLine = binding.amountViewGuide
         val params = guideLine.layoutParams as ConstraintLayout.LayoutParams
         if (isErrorHidden) {
-            params.guidePercent = 0.08f // 45% // range: 0 <-> 1
+            params.guidePercent = 0.15f // 45% // range: 0 <-> 1
         } else {
-            params.guidePercent = 0.15f
+            params.guidePercent = 0.22f
         }
         guideLine.layoutParams = params
     }
@@ -376,7 +358,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     }
 
     private fun setConvertViewInput() {
-        convertViewModel.selectedCryptoCurrencyAccount.value?.let {
+        convertViewModel.selectedCryptoCurrencyAccount.value?.let { it ->
             val accountData = it.coinbaseAccount
             val currency = accountData.currency.lowercase()
             val iconUrl = if (accountData.currency.isNotEmpty()) {
@@ -385,9 +367,16 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 null
             }
 
+            val address = args.paymentIntent.outputs?.first().let { output ->
+                val memoChunk = output?.script?.chunks?.get(1)!!
+                var memo = String(memoChunk.data!!)
+                val index = memo.indexOfLast { ch -> ch == ':' }
+                memo = memo.substring(index + 1)
+                memo
+            }
             binding.convertView.input = ServiceWallet(
                 it.coinbaseAccount.name,
-                getString(R.string.coinbase),
+                address,
                 it.coinbaseAccount.availableBalance.value,
                 it.coinbaseAccount.currency,
                 convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
@@ -410,7 +399,6 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         binding.convertView.layoutParams = params
     }
 
-
     private fun showProgress(messageResId: Int) {
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
@@ -430,8 +418,8 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             R.drawable.ic_error,
             getString(R.string.we_didnt_find_any_assets),
             getString(R.string.you_dont_own_any_crypto),
-            getString(R.string.close),
-            getString(R.string.buy_crypto_on_coinbase),
+            getString(R.string.button_close),
+            getString(R.string.buy_crypto_on_coinbase)
         ).show(requireActivity()) { buyOnCoinbase ->
             if (buyOnCoinbase == true) {
                 viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_BUY_ON_COINBASE)

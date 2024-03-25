@@ -73,6 +73,8 @@ dependencies {
     implementation "com.google.android.material:material:$materialVersion"
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
+    implementation "io.coil-kt:coil:$coilVersion"
+    implementation "androidx.browser:browser:$browserVersion"
 
     // Tests
     testImplementation "junit:junit:$junitVersion"
