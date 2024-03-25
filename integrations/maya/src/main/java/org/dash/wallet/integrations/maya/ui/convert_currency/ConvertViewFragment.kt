@@ -278,7 +278,12 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         checkTheUserEnteredValue(isNonZero)
     }
 
-    private fun setAmountViewInfo(currencyCode: String, value: String, isLocalized: Boolean, isEditing: Boolean = false) {
+    private fun setAmountViewInfo(
+        currencyCode: String,
+        value: String,
+        isLocalized: Boolean,
+        isEditing: Boolean = false
+    ) {
         binding.inputAmount.dashToFiat = currencyCode == "DASH"
         val one = BigDecimal.ONE.setScale(8, RoundingMode.HALF_UP)
         var currencyCodeForView = viewModel.selectedLocalCurrencyCode
