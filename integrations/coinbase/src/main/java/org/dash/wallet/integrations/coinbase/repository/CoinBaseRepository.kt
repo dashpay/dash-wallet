@@ -29,6 +29,7 @@ import org.dash.wallet.common.data.safeApiCall
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toCoin
 import org.dash.wallet.integrations.coinbase.*
 import org.dash.wallet.integrations.coinbase.model.*
 import org.dash.wallet.integrations.coinbase.service.CoinBaseAuthApi
@@ -37,6 +38,8 @@ import org.dash.wallet.integrations.coinbase.service.CoinBaseServicesApi
 import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
 import org.dash.wallet.integrations.coinbase.viewmodels.toDoubleOrZero
 import java.math.BigDecimal
+import java.math.MathContext
+import java.math.RoundingMode
 import java.util.UUID
 import javax.inject.Inject
 
@@ -63,10 +66,10 @@ interface CoinBaseRepositoryInt {
     ): ResponseResource<SendTransactionToWalletResponse?>
     suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel>
     suspend fun commitSwapTrade(buyOrderId: String): ResponseResource<SwapTradeUIModel>
-    suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean>
+    suspend fun completeCoinbaseAuthentication(authorizationCode: String): Boolean
     suspend fun refreshWithdrawalLimit()
     suspend fun getExchangeRateFromCoinbase(): ResponseResource<CoinbaseToDashExchangeRateUIModel>
-    suspend fun getWithdrawalLimitInDash(): Double
+    suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean
 }
 
 class CoinBaseRepository @Inject constructor(
@@ -113,10 +116,10 @@ class CoinBaseRepository @Inject constructor(
 
         saveUserAccountInfo()
 
-        return userAccountData.also {
-            config.set(CoinbaseConfig.USER_ACCOUNT_ID, it.uuid.toString())
-            config.set(CoinbaseConfig.LAST_BALANCE, Coin.parseCoin(it.availableBalance.value).value)
-        }
+        config.set(CoinbaseConfig.USER_ACCOUNT_ID, userAccountData.uuid.toString())
+        config.set(CoinbaseConfig.LAST_BALANCE, userAccountData.coinBalance().value)
+
+        return userAccountData
     }
 
     override suspend fun getUserAccount(cryptoCurrency: String): CoinbaseAccount {
@@ -190,7 +193,7 @@ class CoinBaseRepository @Inject constructor(
 
     override suspend fun getActivePaymentMethods(): List<PaymentMethodsData> {
         val apiResult = servicesApi.getActivePaymentMethods()
-        return apiResult?.data ?: emptyList()
+        return apiResult?.paymentMethods ?: emptyList()
     }
 
     override suspend fun depositToFiatAccount(paymentMethodId: String, amountUSD: String) {
@@ -249,15 +252,14 @@ class CoinBaseRepository @Inject constructor(
         )
     }
 
-    override suspend fun completeCoinbaseAuthentication(authorizationCode: String) = safeApiCall {
-        authApi.getToken(code = authorizationCode).also {
-            it?.let { tokenResponse ->
-                config.set(CoinbaseConfig.LAST_ACCESS_TOKEN, tokenResponse.accessToken)
-                config.set(CoinbaseConfig.LAST_REFRESH_TOKEN, tokenResponse.refreshToken)
-                getUserAccount()
-            }
+    override suspend fun completeCoinbaseAuthentication(authorizationCode: String): Boolean {
+        authApi.getToken(code = authorizationCode)?.let { tokenResponse ->
+            config.set(CoinbaseConfig.LAST_ACCESS_TOKEN, tokenResponse.accessToken)
+            config.set(CoinbaseConfig.LAST_REFRESH_TOKEN, tokenResponse.refreshToken)
+            getUserAccount()
         }
-        !config.get(CoinbaseConfig.LAST_ACCESS_TOKEN).isNullOrEmpty()
+
+        return !config.get(CoinbaseConfig.LAST_ACCESS_TOKEN).isNullOrEmpty()
     }
 
     override suspend fun refreshWithdrawalLimit() {
@@ -307,7 +309,14 @@ class CoinBaseRepository @Inject constructor(
         lastAddress ?: ""
     }
 
-    override suspend fun getWithdrawalLimitInDash(): Double {
+    override suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
+        // TODO: disabled until Coinbase changes are clear
+        return false
+//        val withdrawalLimitInDash = getWithdrawalLimitInDash()
+//        return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
+    }
+
+    private suspend fun getWithdrawalLimitInDash(): Double {
         val withdrawalLimit = config.get(CoinbaseConfig.USER_WITHDRAWAL_LIMIT)
         val withdrawalLimitCurrency = config.get(CoinbaseConfig.SEND_LIMIT_CURRENCY)
             ?: CoinbaseConstants.DEFAULT_CURRENCY_USD

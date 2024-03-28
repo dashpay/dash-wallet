@@ -22,7 +22,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_primary"
-    tools:context="de.schildbach.wallet.ui.buy_sell.IntegrationOverviewFragment">
+    tools:context="de.schildbach.wallet.ui.more.masternode_keys.MasternodeKeysFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"

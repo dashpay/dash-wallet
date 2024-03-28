@@ -17,24 +17,29 @@
 
 package de.schildbach.wallet.ui.buy_sell
 
-import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withResumed
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import org.dash.wallet.integrations.coinbase.ui.CoinBaseWebClientActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentIntegrationOverviewBinding
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 
 @AndroidEntryPoint
 class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overview) {
@@ -44,22 +49,26 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
     }
     private val binding by viewBinding(FragmentIntegrationOverviewBinding::bind)
     private val viewModel by viewModels<IntegrationOverviewViewModel>()
-    private var action: String? = null
-    private val coinbaseAuthLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val data = result.data
 
-        if (result.resultCode == Activity.RESULT_OK) {
-            data?.extras?.getString(CoinBaseWebClientActivity.RESULT_TEXT)?.let { code ->
-                handleCoinbaseAuthResult(code)
+    private val coinbaseAuthResultReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val uri = intent.extras?.get("uri") as Uri?
+            val code = uri?.getQueryParameter("code")
+
+            if (code != null) {
+                lifecycleScope.launch {
+                    withResumed {
+                        handleCoinbaseAuthResult(code)
+                    }
+                }
             }
+
+            startActivity(intent)
         }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        action = requireArguments().getString(INTENT_ACTION)
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
@@ -68,15 +77,16 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
         binding.continueBtn.setOnClickListener {
             continueCoinbase()
         }
-        action?.let {
-            if (it == LOGIN_AND_CLOSE) {
-                continueCoinbase()
-            }
-        }
+
         // the convert or buy swap feature should be hidden
         // as there are not enough supported currencies with the v3 API
         binding.buyConvertText.isVisible = false
         binding.buyConvertIc.isVisible = false
+
+        LocalBroadcastManager.getInstance(requireContext()).registerReceiver(
+            coinbaseAuthResultReceiver,
+            IntentFilter(CoinbaseConstants.AUTH_RESULT_ACTION)
+        )
     }
 
     private fun continueCoinbase() {
@@ -91,29 +101,23 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
 
             if (goodToGo) {
                 viewModel.setCoinbaseInfoPopupShown()
-                coinbaseAuthLauncher.launch(
-                    Intent(
-                        requireContext(),
-                        CoinBaseWebClientActivity::class.java
-                    )
-                )
+                linkCoinbaseAccount()
             }
         }
     }
 
+    private fun linkCoinbaseAccount() {
+        requireActivity().openCustomTab(CoinbaseConstants.LINK_URL)
+    }
+
     private fun handleCoinbaseAuthResult(code: String) {
-        lifecycleScope.launchWhenResumed {
+        lifecycleScope.launch {
             val success = AdaptiveDialog.withProgress(getString(R.string.loading), requireActivity()) {
                 viewModel.loginToCoinbase(code)
             }
 
             if (success) {
-                if (action == LOGIN_AND_CLOSE) {
-                    action = null
-                    findNavController().popBackStack()
-                } else {
-                    safeNavigate(IntegrationOverviewFragmentDirections.overviewToCoinbase())
-                }
+                safeNavigate(IntegrationOverviewFragmentDirections.overviewToCoinbase())
             } else {
                 AdaptiveDialog.create(
                     R.drawable.ic_error,
@@ -128,5 +132,13 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
                 }
             }
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+
+        LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(
+            coinbaseAuthResultReceiver
+        )
     }
 }

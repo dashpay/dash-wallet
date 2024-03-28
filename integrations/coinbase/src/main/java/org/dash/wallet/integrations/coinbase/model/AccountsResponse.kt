@@ -19,7 +19,15 @@ package org.dash.wallet.integrations.coinbase.model
 
 import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
+import org.bitcoinj.core.Coin
+import org.dash.wallet.common.util.toCoin
+import java.lang.Exception
+import java.lang.IllegalArgumentException
+import java.math.BigDecimal
+import java.math.MathContext
+import java.math.RoundingMode
 import java.util.UUID
 
 @Parcelize
@@ -50,6 +58,17 @@ data class CoinbaseAccount(
             type = "",
             ready = false
         )
+    }
+
+    fun coinBalance(): Coin = try {
+        Coin.parseCoin(availableBalance.value)
+    } catch (ex: IllegalArgumentException) {
+        try {
+            val rounded = BigDecimal(availableBalance.value).round(MathContext(8, RoundingMode.HALF_UP))
+            rounded.toCoin()
+        } catch (ex: Exception) {
+            Coin.ZERO
+        }
     }
 }
 

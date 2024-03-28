@@ -38,6 +38,7 @@ import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integrations.coinbase.ui.convert_currency.model.BaseIdForFiatData
 import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
 import org.slf4j.LoggerFactory
+import java.lang.Exception
 import javax.inject.Inject
 
 data class CoinbaseUIState(
@@ -79,19 +80,12 @@ class CoinbaseViewModel @Inject constructor(
     }
 
     suspend fun loginToCoinbase(code: String): Boolean {
-        when (val response = coinBaseRepository.completeCoinbaseAuthentication(code)) {
-            is ResponseResource.Success -> {
-                if (response.value) {
-                    return true
-                }
-            }
-
-            is ResponseResource.Failure -> {
-                log.error("Coinbase login error ${response.errorCode}: ${response.errorBody ?: "empty"}")
-            }
+        return try {
+            coinBaseRepository.completeCoinbaseAuthentication(code)
+        } catch (ex: Exception) {
+            log.error("Coinbase login error $ex")
+            false
         }
-
-        return false
     }
     fun getBaseIdForFiatModel() = viewModelScope.launch {
         _uiState.update { it.copy(baseIdForFiatModel = BaseIdForFiatData.LoadingState) }
@@ -126,9 +120,7 @@ class CoinbaseViewModel @Inject constructor(
     }
 
     suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
-        return amountInDash.toPlainString().toDoubleOrZero.compareTo(
-            coinBaseRepository.getWithdrawalLimitInDash()
-        ) > 0
+        return coinBaseRepository.isInputGreaterThanLimit(amountInDash)
     }
 
     fun logEvent(eventName: String) {

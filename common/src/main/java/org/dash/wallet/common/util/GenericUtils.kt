@@ -23,8 +23,9 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.text.NumberFormat
+import java.util.Currency
+import java.util.Locale
 import java.text.ParseException
-import java.util.*
 
 
 /**
@@ -35,6 +36,14 @@ object GenericUtils {
         maximumFractionDigits = 2
         roundingMode = RoundingMode.HALF_UP
     }
+
+    private val isRunningUnitTest: Boolean
+        get() = try {
+            Class.forName("org.junit.Test")
+            true
+        } catch (e: ClassNotFoundException) {
+            false
+        }
 
     fun startsWithIgnoreCase(string: String, prefix: String): Boolean =
         string.regionMatches(0, prefix, 0, prefix.length, ignoreCase = true)
@@ -49,7 +58,7 @@ object GenericUtils {
     }
 
     fun getDeviceLocale(): Locale {
-        val countryCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        val countryCode = if (!isRunningUnitTest) {
             LocaleList.getDefault()[0].country
         } else {
             Locale.getDefault().country

@@ -113,8 +113,7 @@
                 android:indeterminate="true"
                 android:indeterminateTint="@color/dash_white"
                 android:paddingStart="32dp"
-                android:paddingEnd="32dp"
-                tools:targetApi="lollipop" />
+                android:paddingEnd="32dp" />
 
             <TextView
                 android:id="@+id/action_subtitle"

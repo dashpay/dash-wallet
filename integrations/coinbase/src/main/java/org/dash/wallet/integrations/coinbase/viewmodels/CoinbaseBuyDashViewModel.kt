@@ -87,14 +87,14 @@ class CoinbaseBuyDashViewModel @Inject constructor(
             )
         } else if (retryWithDeposit) {
             val bankAccount = coinBaseRepository.getActivePaymentMethods().firstOrNull {
-                paymentMethodTypeFromCoinbaseType(it.type ?: "") == PaymentMethodType.BankAccount
+                paymentMethodTypeFromCoinbaseType(it.type) == PaymentMethodType.BankAccount
             } ?: return CoinbaseErrorType.NO_BANK_ACCOUNT
 
             paymentMethod = PaymentMethod(
-                bankAccount.id ?: "",
-                bankAccount.name ?: "",
+                bankAccount.id,
+                bankAccount.name,
                 account = "",
-                accountType = bankAccount.type ?: "",
+                accountType = bankAccount.type,
                 paymentMethodType = PaymentMethodType.BankAccount,
                 isValid = true
             )
@@ -177,13 +177,14 @@ class CoinbaseBuyDashViewModel @Inject constructor(
 
     private fun paymentMethodTypeFromCoinbaseType(type: String?): PaymentMethodType {
         return when (type) {
-            "fiat_account" -> PaymentMethodType.Fiat
-            "secure3d_card", "worldpay_card", "credit_card", "debit_card" -> PaymentMethodType.Card
-            "ach_bank_account", "sepa_bank_account",
-            "ideal_bank_account", "eft_bank_account", "interac" -> PaymentMethodType.BankAccount
-            "bank_wire" -> PaymentMethodType.WireTransfer
-            "paypal_account" -> PaymentMethodType.PayPal
-            "apple_pay" -> PaymentMethodType.ApplePay
+            "COINBASE_FIAT_ACCOUNT" -> PaymentMethodType.Fiat
+            "SECURE3D_CARD", "WORLDPAY_CARD", "CREDIT_CARD", "DEBIT_CARD" -> PaymentMethodType.Card
+            "ACH", "SEPA",
+            "IDEAL", "EFT", "INTERAC" -> PaymentMethodType.BankAccount
+            "BANK_WIRE" -> PaymentMethodType.WireTransfer
+            "PAYPAL", "PAYPAL_ACCOUNT" -> PaymentMethodType.PayPal
+            "APPLE_PAY" -> PaymentMethodType.ApplePay
+            "GOOGLE_PAY" -> PaymentMethodType.GooglePay
             else -> PaymentMethodType.Unknown
         }
     }

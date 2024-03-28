@@ -649,7 +649,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup = new PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain);
                 if (resetMNListsOnPeerGroupStart) {
                     resetMNListsOnPeerGroupStart = false;
-                    application.getWallet().getContext().masternodeListManager.setBootstrap(mnlistinfoBootStrapStream, qrinfoBootStrapStream, SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION);
+                    application.getWallet().getContext().masternodeListManager.setBootstrap(mnlistinfoBootStrapStream, qrinfoBootStrapStream, SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION);
                     resetMNLists(true);
                 }
 

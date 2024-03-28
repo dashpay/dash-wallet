@@ -188,10 +188,10 @@ android {
 
     defaultConfig {
         compileSdk 33
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion 33
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 100021
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "10.0.2"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 100030
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "10.0.3"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -216,15 +216,6 @@ android {
             buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
         } else if(System.getenv("SUPPORT_EMAIL") != null) {
             buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv("SUPPORT_EMAIL")}\"")
-        }
-    }
-
-    signingConfigs {
-        debug {
-            storeFile file('keystore/debug.keystore')
-            storePassword "android"
-            keyAlias "androiddebugkey"
-            keyPassword "android"
         }
     }
 

@@ -26,6 +26,7 @@ import android.os.Looper
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.addCallback
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
@@ -81,6 +82,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var isKeyboardShowing: Boolean = false
     private var hasLocationBeenRequested: Boolean = false
     private var previousScreenState: ScreenState = ScreenState.SearchResults
+    private var onBackPressedCallback: OnBackPressedCallback? = null
 
     private val isPhysicalSearch: Boolean
         get() = viewModel.exploreTopic == ExploreTopic.ATMs || viewModel.filterMode.value == FilterMode.Nearby
@@ -267,6 +269,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     override fun onDestroy() {
         super.onDestroy()
         viewModel.onExitSearch()
+        // clear this listener
+        requireActivity().window?.decorView?.let { decor ->
+            ViewCompat.setOnApplyWindowInsetsListener(decor) { _, _ ->
+                WindowInsetsCompat.CONSUMED
+            }
+        }
+        onBackPressedCallback?.remove()
     }
 
     private fun refreshManageGpsView() {
@@ -554,19 +563,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
-        requireActivity()
-            .onBackPressedDispatcher
-            .addCallback(
-                viewLifecycleOwner,
-                object : OnBackPressedCallback(true) {
-                    override fun handleOnBackPressed() {
-                        hardBackAction.invoke()
-                        if (isMerchantTopic) {
-                            viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BACK_BOTTOM)
-                        }
-                    }
-                }
-            )
+        onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+            hardBackAction.invoke()
+            if (isMerchantTopic) {
+                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BACK_BOTTOM)
+            }
+        }
     }
 
     private fun transitToDetails() {
