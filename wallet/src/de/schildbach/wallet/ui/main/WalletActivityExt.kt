@@ -28,8 +28,6 @@ import android.os.PowerManager
 import android.os.storage.StorageManager
 import android.provider.Settings
 import android.view.MenuItem
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.view.isVisible

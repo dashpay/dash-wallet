@@ -35,6 +35,8 @@ import de.schildbach.wallet.service.*
 import de.schildbach.wallet.service.AndroidActionsService
 import de.schildbach.wallet.service.AppRestartService
 import de.schildbach.wallet.service.RestartService
+import de.schildbach.wallet.ui.more.tools.ZenLedgerApi
+import de.schildbach.wallet.ui.more.tools.ZenLedgerClient
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.*
@@ -44,6 +46,8 @@ import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApiAggregator
 import org.dash.wallet.integrations.uphold.api.UpholdClient
 import javax.inject.Singleton
 
@@ -122,4 +126,8 @@ abstract class AppModule {
 
     @Binds
     abstract fun bindWalletFactory(walletFactory: DashWalletFactory) : WalletFactory
+
+    @Binds
+    @Singleton
+    abstract fun bindZenLedgerClient(zenLedgerClient: ZenLedgerClient): ZenLedgerApi
 }

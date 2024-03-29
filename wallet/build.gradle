@@ -284,6 +284,11 @@ android {
             buildConfigField("String", "TOPPER_KEY_ID", topperKeyId)
             buildConfigField("String", "TOPPER_WIDGET_ID", topperWidgetId)
             buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
+
+            def zenLedgerClientId = props.getProperty("ZENLEDGER_CLIENT_ID", "\"\"")
+            def zenLedgerClientSecret = props.getProperty("ZENLEDGER_CLIENT_SECRET", "\"\"")
+            buildConfigField("String", "ZENLEDGER_CLIENT_ID", zenLedgerClientId)
+            buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", zenLedgerClientSecret)
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
@@ -299,11 +304,15 @@ android {
             buildConfigField("String", "TOPPER_KEY_ID", topperKeyId)
             buildConfigField("String", "TOPPER_WIDGET_ID", topperWidgetId)
             buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
+            buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
+            buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
         }
         devnet {
             applicationId = "org.dash.wallet.devnet"
             buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
+            buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
+            buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
         }
     }
 
