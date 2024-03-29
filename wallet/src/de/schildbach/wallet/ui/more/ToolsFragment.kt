@@ -35,7 +35,7 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.AddressBookActivity
 import de.schildbach.wallet.ui.ExportTransactionHistoryDialogBuilder
 import de.schildbach.wallet.ui.NetworkMonitorActivity
-import de.schildbach.wallet.ui.more.tools.ZenLedgerDialog
+import de.schildbach.wallet.ui.more.tools.ZenLedgerDialogFragment
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
@@ -135,7 +135,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         }
 
         binding.zenledgerExport.setOnClickListener {
-            ZenLedgerDialog().show(requireActivity())
+            ZenLedgerDialogFragment().show(requireActivity())
         }
     }
 

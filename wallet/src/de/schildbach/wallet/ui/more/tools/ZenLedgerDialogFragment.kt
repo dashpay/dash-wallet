@@ -31,7 +31,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.openCustomTab
 
 @AndroidEntryPoint
-class ZenLedgerDialog : OffsetDialogFragment(R.layout.dialog_zenledger) {
+class ZenLedgerDialogFragment : OffsetDialogFragment(R.layout.dialog_zenledger) {
     private val binding by viewBinding(DialogZenledgerBinding::bind)
     val viewModel by viewModels<ZenLedgerViewModel>()
 
@@ -60,14 +60,14 @@ class ZenLedgerDialog : OffsetDialogFragment(R.layout.dialog_zenledger) {
                                 getString(R.string.button_close)
                             ).showAsync(requireActivity())
                         }
-                    } else {
-                        AdaptiveDialog.create(
-                            null,
-                            getString(R.string.chain_syncing),
-                            getString(R.string.chain_syncing_default_message),
-                            getString(R.string.button_close)
-                        ).showAsync(requireActivity())
                     }
+                } else {
+                    AdaptiveDialog.create(
+                        null,
+                        getString(R.string.chain_syncing),
+                        getString(R.string.chain_syncing_default_message),
+                        getString(R.string.button_close)
+                    ).showAsync(requireActivity())
                 }
             }
         }
