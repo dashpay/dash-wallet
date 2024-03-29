@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.script.ScriptPattern
+import org.bitcoinj.wallet.KeyChain
 import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -67,34 +68,43 @@ class ZenLedgerViewModel @Inject constructor(
     suspend fun sendTransactionInformation(): Boolean {
         val wallet = walletDataProvider.wallet!!
         val transactions = wallet.getTransactions(false)
-        if (transactions.isEmpty()) {
-            return false
-        }
-        val addresses = arrayListOf<ZenLedgerAddress>()
-        transactions.forEach { tx ->
-            tx.outputs.forEach { output ->
-                if (output.isMine(wallet)) {
-                    log.info(
-                        "zen output: {} {}",
-                        output.value.toFriendlyString(),
-                        Address.fromPubKeyHash(
-                            Constants.NETWORK_PARAMETERS,
-                            ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
-                        ).toString()
-                    )
-                    addresses.add(
-                        ZenLedgerAddress(
-                            "DASH",
-                            "DASH",
+        val addresses = if (transactions.isEmpty()) {
+            listOf(
+                ZenLedgerAddress(
+                    "DASH",
+                    "DASH",
+                    wallet.currentAddress(KeyChain.KeyPurpose.RECEIVE_FUNDS).toBase58(),
+                    "Dash Wallet"
+                )
+            )
+        } else {
+            val addresses = arrayListOf<ZenLedgerAddress>()
+            transactions.forEach { tx ->
+                tx.outputs.forEach { output ->
+                    if (output.isMine(wallet)) {
+                        log.info(
+                            "zen output: {} {}",
+                            output.value.toFriendlyString(),
                             Address.fromPubKeyHash(
                                 Constants.NETWORK_PARAMETERS,
                                 ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
-                            ).toString(),
-                            "Dash Wallet"
+                            ).toBase58()
                         )
-                    )
+                        addresses.add(
+                            ZenLedgerAddress(
+                                "DASH",
+                                "DASH",
+                                Address.fromPubKeyHash(
+                                    Constants.NETWORK_PARAMETERS,
+                                    ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
+                                ).toBase58(),
+                                "Dash Wallet"
+                            )
+                        )
+                    }
                 }
             }
+            addresses
         }
 //        return false
 
