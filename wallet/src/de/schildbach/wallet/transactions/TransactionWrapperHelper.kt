@@ -30,9 +30,7 @@ object TransactionWrapperHelper {
         vararg wrapperFactories: TransactionWrapperFactory
     ): Collection<TransactionWrapper> {
         val wrappedTransactions = ArrayList<TransactionWrapper>()
-        log.info("processing transaction wrappers")
         for (transaction in transactions) {
-            // log.info("wrapper ------------------ \n  {}", transaction?.txId)
             if (transaction == null) {
                 continue
             }
@@ -49,7 +47,6 @@ object TransactionWrapperHelper {
                     val (included, wrapper) = wrapperFactory.tryInclude(transaction)
                     if (included && wrapper != null) {
                         if (!wrappedTransactions.contains(wrapper)) {
-                            //log.info("wrapper: {} -> added {}", wrapper::class.java.simpleName, transaction.txId)
                             wrappedTransactions.add(wrapper)
                         }
                         added = true
@@ -57,11 +54,9 @@ object TransactionWrapperHelper {
                 }
                 if (!added) {
                     wrappedTransactions.add(anonWrapper)
-                    //log.info("wrapper a: {} -> added {}", "anonWrapper", transaction.txId)
                 }
             } else {
                 wrappedTransactions.add(anonWrapper)
-                //log.info("wrapper b: {} -> added {}", "anonWrapper", transaction.txId)
             }
         }
 
