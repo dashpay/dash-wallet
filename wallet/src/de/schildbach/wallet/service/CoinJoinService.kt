@@ -322,7 +322,6 @@ class CoinJoinMixingService @Inject constructor(
             log.info(
                 "coinjoin-state: $mode, $timeSkew ms, $hasAnonymizableBalance, $networkStatus, synced: ${blockchainState.isSynced()}, ${blockChain != null}"
             )
-            // log.info("coinjoin-Current timeskew: ${getCurrentTimeSkew()}")
             this.networkStatus = networkStatus
             this.hasAnonymizableBalance = hasAnonymizableBalance
             this.blockchainState = blockchainState

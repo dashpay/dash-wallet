@@ -20,14 +20,16 @@ package de.schildbach.wallet.transactions
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.TransactionWrapperFactory
+import org.slf4j.LoggerFactory
 
 object TransactionWrapperHelper {
+    private val log = LoggerFactory.getLogger(TransactionWrapperHelper::class.java)
     fun wrapTransactions(
         transactions: Set<Transaction?>,
-        vararg wrappers: TransactionWrapper
+        vararg wrapperFactories: TransactionWrapperFactory
     ): Collection<TransactionWrapper> {
         val wrappedTransactions = ArrayList<TransactionWrapper>()
-
         for (transaction in transactions) {
             if (transaction == null) {
                 continue
@@ -39,14 +41,18 @@ object TransactionWrapperHelper {
                 override fun getValue(bag: TransactionBag) = transaction.getValue(bag)
             }
 
-            if (wrappers.isNotEmpty()) {
-                for (wrapper in wrappers) {
-                    if (wrapper.tryInclude(transaction)) {
+            if (wrapperFactories.isNotEmpty()) {
+                var added = false
+                for (wrapperFactory in wrapperFactories) {
+                    val (included, wrapper) = wrapperFactory.tryInclude(transaction)
+                    if (included && wrapper != null) {
                         if (!wrappedTransactions.contains(wrapper)) {
                             wrappedTransactions.add(wrapper)
                         }
-                        break
+                        added = true
                     }
+                }
+                if (!added) {
                     wrappedTransactions.add(anonWrapper)
                 }
             } else {

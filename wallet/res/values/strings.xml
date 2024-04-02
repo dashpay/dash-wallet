@@ -508,6 +508,8 @@
     <string name="coinjoin_description_3">Turning this feature on will result a higher battery usage</string>
     <string name="coinjoin_mixing_level_title">Select mixing level</string>
     <string name="coinjoin_mixing_level_subtitle">You can change or stop the mixing level at any time</string>
+    <string name="coinjoin_mixing_transactions">Mixing Transactions</string>
+    <string name="coinjoin_transaction_group">These are mixing related transactions.</string>
     <string name="intermediate">Intermediate</string>
     <string name="advanced">Advanced</string>
     <string name="intermediate_level_card_decs">Advanced users who have a very high level of technical expertise can determine your transaction history</string>
