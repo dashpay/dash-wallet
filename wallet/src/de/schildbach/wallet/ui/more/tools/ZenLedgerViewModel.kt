@@ -18,20 +18,14 @@
 package de.schildbach.wallet.ui.more.tools
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Address
-import org.bitcoinj.core.Transaction
 import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.wallet.KeyChain
-import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.BlockchainStateProvider
+import org.dash.wallet.common.util.Constants.DASH_CURRENCY
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -49,30 +43,16 @@ class ZenLedgerViewModel @Inject constructor(
         return blockchainStateProvider.getState()?.isSynced() ?: false
     }
 
-//    private var transactions: Iterable<WalletTransaction> = setOf()
-//    private val _hasTransactions = MutableStateFlow(false)
-//    val hasTransactions: Flow<Boolean>
-//        get() = _hasTransactions
-//
-//    init {
-//        walletDataProvider.observeWalletChanged()
-//            .onEach {
-//                transactions = walletDataProvider.wallet!!.walletTransactions
-//            }
-//            .launchIn(viewModelScope)
-//    }
-
     var signUpUrl: String? = null
 
-    // This is a dummy function for now
     suspend fun sendTransactionInformation(): Boolean {
         val wallet = walletDataProvider.wallet!!
         val transactions = wallet.getTransactions(false)
         val addresses = if (transactions.isEmpty()) {
             listOf(
                 ZenLedgerAddress(
-                    "DASH",
-                    "DASH",
+                    DASH_CURRENCY,
+                    DASH_CURRENCY,
                     wallet.currentAddress(KeyChain.KeyPurpose.RECEIVE_FUNDS).toBase58(),
                     "Dash Wallet"
                 )
@@ -83,7 +63,6 @@ class ZenLedgerViewModel @Inject constructor(
                 tx.outputs.forEach { output ->
                     if (output.isMine(wallet)) {
                         log.info(
-                            "zen output: {} {}",
                             output.value.toFriendlyString(),
                             Address.fromPubKeyHash(
                                 Constants.NETWORK_PARAMETERS,
@@ -92,8 +71,8 @@ class ZenLedgerViewModel @Inject constructor(
                         )
                         addresses.add(
                             ZenLedgerAddress(
-                                "DASH",
-                                "DASH",
+                                DASH_CURRENCY,
+                                DASH_CURRENCY,
                                 Address.fromPubKeyHash(
                                     Constants.NETWORK_PARAMETERS,
                                     ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
@@ -106,21 +85,20 @@ class ZenLedgerViewModel @Inject constructor(
             }
             addresses
         }
-//        return false
 
         return try {
             if (zenLedgerClient.hasValidCredentials) {
                 zenLedgerClient.getToken()
-
+                log.info("zenledger: obtained token successfully")
                 val request = ZenLedgerCreatePortfolioRequest(addresses)
                 signUpUrl = zenLedgerClient.getSignupUrl(request)
-                // run custom tab
+                log.info("zenledger: obtained signup url successfully")
                 true
             } else {
                 false
             }
         } catch (e: Exception) {
-            log.error("send tx error:", e)
+            log.error("zenledger: send addresses error:", e)
             false
         }
     }

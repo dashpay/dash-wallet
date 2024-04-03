@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.more.tools
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.viewModels
@@ -49,7 +50,7 @@ class ZenLedgerDialogFragment : OffsetDialogFragment(R.layout.dialog_zenledger) 
                             getString(R.string.permission_allow)
                         ).showAsync(requireActivity()) == true
                     ) {
-                        if (viewModel.sendTransactionInformation()) {
+                        if (viewModel.sendTransactionInformation() && viewModel.signUpUrl != null) {
                             requireActivity().openCustomTab(viewModel.signUpUrl!!)
                             dismiss()
                         } else {
@@ -70,6 +71,10 @@ class ZenLedgerDialogFragment : OffsetDialogFragment(R.layout.dialog_zenledger) 
                     ).showAsync(requireActivity())
                 }
             }
+        }
+
+        binding.zenledgerLink.setOnClickListener {
+            startActivity(Intent.parseUri(getString(R.string.zenledger_export_url), 0))
         }
     }
 }
