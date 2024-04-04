@@ -75,28 +75,20 @@
             android:text="@string/zenledger_export_description"
             android:textAlignment="center"
             />
-        <LinearLayout
+        <TextView
             android:id="@+id/zenledger_link"
+            style="@style/Caption.Blue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="40dp"
-            android:layout_gravity="center">
-            <TextView
-                style="@style/Button.Primary.Small.Blue"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="@string/zenledger_export_link"
-                android:layout_gravity="center"
-                android:textAlignment="center" />
-            <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:src="@drawable/ic_open_link"
-                android:layout_gravity="center" />
-        </LinearLayout>
+            android:text="@string/zenledger_export_link"
+            android:layout_gravity="center"
+            android:textAlignment="center"
+            android:drawablePadding="8dp"
+            app:drawableEndCompat="@drawable/ic_open_link"/>
+
+
     </LinearLayout>
 
     <Button

@@ -73,6 +73,8 @@ class ZenLedgerClient @Inject constructor(): ZenLedgerApi {
     }
 
     override suspend fun getSignupUrl(portfolioRequest: ZenLedgerCreatePortfolioRequest): String? {
-        return zenLedgerService.createPortfolio("Bearer ${token!!}", portfolioRequest)?.data?.signupUrl
+        val response = zenLedgerService.createPortfolio("Bearer ${token!!}", portfolioRequest)
+        log.info("create portfolio response: {}", response)
+        return response?.data?.signupUrl
     }
 }

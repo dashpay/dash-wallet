@@ -92,7 +92,7 @@ class ZenLedgerViewModel @Inject constructor(
                 log.info("zenledger: obtained token successfully")
                 val request = ZenLedgerCreatePortfolioRequest(addresses)
                 signUpUrl = zenLedgerClient.getSignupUrl(request)
-                log.info("zenledger: obtained signup url successfully")
+                log.info("zenledger: obtained signup url successfully: {}", signUpUrl)
                 true
             } else {
                 false
