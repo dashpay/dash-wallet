@@ -94,7 +94,7 @@ open class MayaLegacyWebApi @Inject constructor(
     suspend fun getUserAccounts(currency: String): List<AccountDataUIModel> {
         return listOf(
             AccountDataUIModel(
-                Account(UUID.randomUUID(), currency, currency, Balance("0", currency), true, true, "", true),
+                Account(UUID.randomUUID(), currency, currency, currency, Balance("0", currency), true, true, "", true),
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
                 BigDecimal.ZERO
