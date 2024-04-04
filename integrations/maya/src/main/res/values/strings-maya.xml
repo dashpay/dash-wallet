@@ -21,6 +21,8 @@
     <string name="maya_portal_convert_subtitle">From Dash Wallet to any crypto</string>
     <string name="maya_address_input_hint">%s Address</string>
     <string name="maya_address_input_title">Convert DASH to %s</string>
+    <string name="maya_crypto_convert_title">Convert Dash</string>
+    <string name="maya_crypto_convert_order_preview_title">Order Preview</string>
 
     <string name="cryptocurrency_bitcoin_code" translatable="false">BTC</string>
     <string name="cryptocurrency_bitcoin_network">Bitcoin</string>
@@ -87,9 +89,10 @@
     <string name="you_send">you send</string>
     <string name="from_your_coinbase_account">From your Coinbase account</string>
     <string name="you_receive">you receive</string>
-    <string name="to_dash_wallet_on_this_device">To Dash wallet on this device</string>
-    <string name="to_your_coinbase_account">to your Coinbase account</string>
+    <string name="to_dash_wallet_on_this_device">from Dash Wallet on this device</string>
     <string name="purchase">Purchase</string>
-    <string name="coinbase_fee">Coinbase Fee</string>
+    <string name="maya_fee">Maya Fee</string>
     <string name="total">Total</string>
+    <string name="to_external_address">to %s</string>
+
 </resources>

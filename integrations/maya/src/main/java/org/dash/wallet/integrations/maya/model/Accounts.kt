@@ -10,6 +10,7 @@ data class Account(
     val uuid: UUID,
     val name: String,
     val currency: String,
+    val asset: String,
     @SerializedName("available_balance")
     val availableBalance: Balance,
     val default: Boolean,
@@ -20,6 +21,7 @@ data class Account(
     companion object {
         val EMPTY = Account(
             UUID.randomUUID(),
+            "",
             "",
             "",
             Balance("", ""),

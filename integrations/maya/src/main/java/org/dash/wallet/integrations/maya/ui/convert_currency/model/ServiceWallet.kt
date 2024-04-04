@@ -16,6 +16,8 @@
  */
 package org.dash.wallet.integrations.maya.ui.convert_currency.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 
 data class ServiceWallet(
@@ -31,3 +33,13 @@ open class BaseServiceWallet(
     open var balance: String = MayaConstants.VALUE_ZERO,
     open var faitAmount: String = MayaConstants.VALUE_ZERO
 )
+
+@Parcelize
+data class SendTransactionToWalletParams(
+    val amount: String?,
+    val currency: String?,
+    val idem: String?,
+    val to: String?,
+    val type: String?,
+    val description: String? = "Dash Wallet App"
+): Parcelable

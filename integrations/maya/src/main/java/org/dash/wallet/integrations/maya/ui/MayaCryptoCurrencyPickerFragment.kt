@@ -181,6 +181,7 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
         safeNavigate(
             MayaCryptoCurrencyPickerFragmentDirections.mayaCurrencyPickerToAddressInput(
                 pool.currencyCode,
+                pool.asset,
                 getString(R.string.maya_address_input_title, pool.currencyCode),
                 getString(R.string.maya_address_input_hint, pool.currencyCode)
             )

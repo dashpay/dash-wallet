@@ -182,6 +182,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                     UUID.nameUUIDFromBytes(args.currency.toByteArray()),
                     args.currency,
                     args.currency,
+                    args.asset,
                     Balance("0", args.currency),
                     true,
                     true,
@@ -251,7 +252,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
     }
 
     private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {
-        if (request.fiatAmount == null && request.amount != null) {
+        if (request.cryptoAmount == null && request.amount != null) {
             showSwapValueErrorView(SwapValueErrorType.ExchangeRateMissing)
             return
         }
@@ -261,17 +262,15 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         lifecycleScope.launch {
             if (swapValueErrorType == SwapValueErrorType.NOError) {
                 if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
-                    if (viewModel.getLastBalance() < (request.amount ?: Coin.ZERO)) {
+                    if (viewModel.getLastBalance() < (request.dashAmount ?: Coin.ZERO)) {
                         showNoAssetsError()
                     }
                 } else {
-                    if (request.amount != null && viewModel.isInputGreaterThanLimit(request.amount)) {
+                    if (request.amount != null && viewModel.isInputGreaterThanLimit(request.dashAmount)) {
                         showSwapValueErrorView(SwapValueErrorType.UnAuthorizedValue)
                     } else {
                         selectedCoinBaseAccount?.let {
-                            request.fiatAmount?.let { fait ->
-                                viewModel.swapTrade(fait, it, request.dashToCrypto)
-                            }
+                            viewModel.swapTrade(request, it, request.dashToCrypto)
                         }
                     }
                 }

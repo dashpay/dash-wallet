@@ -26,7 +26,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentMayaEnterAmountBinding
 
-class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_enter_amount) {
+class MayaConversionPreviewFragment2 : Fragment(R.layout.fragment_maya_enter_amount) {
     private val binding by viewBinding(FragmentMayaEnterAmountBinding::bind)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

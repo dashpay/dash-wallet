@@ -46,6 +46,7 @@ import org.dash.wallet.integrations.maya.model.CoinbaseErrorResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.TradesRequest
+import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import javax.inject.Inject
 
@@ -79,7 +80,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
     }
 
     fun swapTrade(
-        valueToConvert: Fiat,
+        swapTradeInfo: SwapRequest,
         selectedCoinBaseAccount: AccountDataUIModel,
         dashToCrypt: Boolean
     ) = viewModelScope.launch {
@@ -89,10 +90,13 @@ class MayaConvertCryptoViewModel @Inject constructor(
         val targetAsset = selectedCoinBaseAccount.coinbaseAccount.currency
 
         val tradesRequest = TradesRequest(
-            valueToConvert.toFormattedStringNoCode(),
+            swapTradeInfo.amount,
             walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY) ?: Constants.DEFAULT_EXCHANGE_CURRENCY,
             source_asset = sourceAsset,
-            target_asset = targetAsset
+            target_asset = targetAsset,
+            source_maya_asset = "$sourceAsset.$sourceAsset",
+            target_maya_asset = swapTradeInfo.cryptoCurrencyAsset,
+            fiatCurrency = swapTradeInfo.fiatCurrencyCode
         )
 
         when (val result = coinBaseRepository.swapTrade(tradesRequest)) {

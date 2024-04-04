@@ -40,6 +40,9 @@
             android:name="currency"
             app:argType="string" />
         <argument
+            android:name="asset"
+            app:argType="string" />
+        <argument
             android:name="title"
             app:argType="string" />
 
@@ -63,6 +66,7 @@
 
         <argument android:name="currency"
             app:argType="string" />
+        <argument android:name="asset" app:argType="string" />
         <argument android:name="paymentIntent"
             app:argType="org.dash.wallet.common.data.PaymentIntent" />
 

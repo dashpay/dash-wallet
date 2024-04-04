@@ -26,7 +26,7 @@ data class SwapTradeResponse(
     val `data`: SwapTradeResponseData? = null
 ) : Parcelable {
     companion object {
-        val EMPTY_SWAP_TRADE = SwapTradeUIModel("", "", "", "", "")
+        val EMPTY_SWAP_TRADE = SwapTradeUIModel(Amount(), "", "", "", "", "", "")
     }
 }
 
@@ -66,6 +66,7 @@ data class SwapApiAmount(
 
 @Parcelize
 data class SwapTradeUIModel(
+    val amount: Amount,
     val swapTradeId: String = "",
     val inputAmount: String = "",
     val inputCurrency: String = "",
