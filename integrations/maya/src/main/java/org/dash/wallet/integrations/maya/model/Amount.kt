@@ -17,6 +17,8 @@
 
 package org.dash.wallet.integrations.maya.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import java.math.BigDecimal
 
 enum class CurrencyInputType {
@@ -29,6 +31,7 @@ enum class CurrencyInputType {
  Holds an amount in terms of dash, a fiat currency and another crypto currency. When exchange rates are changed
  anchor is used to determine which should be recalculated.  Dash is the default anchor currency.
  */
+@Parcelize
 data class Amount(
     private var _dash: BigDecimal = BigDecimal.ZERO,
     private var _fiat: BigDecimal = BigDecimal.ZERO,
@@ -36,7 +39,7 @@ data class Amount(
     private var anchor: CurrencyInputType = CurrencyInputType.Dash,
     private var _dashFiatExchangeRate: BigDecimal = BigDecimal.ONE,
     private var _cryptoFiatExchangeRate: BigDecimal = BigDecimal.ONE
-) {
+) : Parcelable {
     var dash: BigDecimal
         get() = _dash
         set(value) {
