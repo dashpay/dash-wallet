@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui.more.tools
 import com.google.gson.GsonBuilder
 import de.schildbach.wallet_test.BuildConfig
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import org.dash.wallet.common.util.Constants
 import org.slf4j.LoggerFactory
 import retrofit2.Retrofit
@@ -59,9 +58,7 @@ class ZenLedgerClient @Inject constructor(): ZenLedgerApi {
     private val zenLedgerService: ZenLedgerService = RemoteDataSource().buildApi(
         ZenLedgerService::class.java,
         BASE_URL,
-        Constants.HTTP_CLIENT.newBuilder()
-            .addInterceptor(HttpLoggingInterceptor { log.info(it) }.setLevel(HttpLoggingInterceptor.Level.BODY))
-            .build()
+        Constants.HTTP_CLIENT
     )
     private var token: String? = null
 
