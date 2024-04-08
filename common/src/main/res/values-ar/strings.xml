@@ -98,4 +98,7 @@
     <string name="enter_amount_available">متاح</string>
     <string name="transaction_row_rate_not_available">غير متاح</string>
     <string name="log_in">تسجيل الدخول </string>
+
+    <string name="chain_syncing">السلسلة قيد المزامنة ...</string>
+
 </resources>

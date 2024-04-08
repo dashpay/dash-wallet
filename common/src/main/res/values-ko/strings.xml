@@ -98,4 +98,7 @@
     <string name="enter_amount_available">가능</string>
     <string name="transaction_row_rate_not_available">이용할 수 없음</string>
     <string name="log_in">로그인</string>
+
+    <string name="chain_syncing">체인 동기화 중...</string>
+
 </resources>

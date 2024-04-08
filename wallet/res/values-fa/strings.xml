@@ -298,6 +298,16 @@
     <string name="report_transaction_history_mail_intent_chooser">ارسال سابقه تراکنش‌ها با استفاده از ...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">ارسال سابقه تراکنش‌ها موفقیت‌آمیز نبود. </string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ذن‌لجر</string>
+    <string name="zenledger_export_subtitle">فرآیند مالیاتی رمزارزی خود را ساده‌ کنید</string>
+    <string name="zenledger_export_all_tx">خروجی گرفتن از همه تراکنش‌ها</string>
+    <string name="zenledger_export_description">کیف‌های پول‌تان را به پلتفرم ذن‌لجر متصل کنید. اطلاعات بیشتر و آغاز به کار با تراکنش‌هایتان در دش والت</string>
+    <string name="chain_syncing_default_message">منتظر بمانید تا بلاکچین کاملا به‌روزرسانی شود تا بتوانید سابقه تراکنش‌هایتان را ببینید. </string>
+    <string name="zenledger_export_permission">اجازه ارسال همه تراکنش‌‌ها از دش والت به ذن‌لجر را می‌دهید؟ </string>
+    <string name="zenledger_export_error">در خروجی گرفتن از سابقه تراکنش‌هایتان به ذن‌لجر خطایی روی داد. </string>
+
+
     <string name="about_title">اطلاعات بیشتر</string>
     <string name="about_version_title">نسخه</string>
     <string name="about_copyright_title">کپی‌رایت</string>

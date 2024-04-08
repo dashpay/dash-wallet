@@ -98,4 +98,7 @@
     <string name="enter_amount_available">mevcut</string>
     <string name="transaction_row_rate_not_available">Mevcut değil</string>
     <string name="log_in">Giriş Yap</string>
+
+    <string name="chain_syncing">Zincir senkronize ediliyor…</string>
+
 </resources>

@@ -297,6 +297,16 @@
     <string name="report_transaction_history_mail_intent_chooser">发送交易记录使用...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">发送交易记录失败.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">简化您的加密数字货币报税</string>
+    <string name="zenledger_export_all_tx">导出所有交易</string>
+    <string name="zenledger_export_description">将您的加密数字货币钱包连接至 ZenLedger 平台. 了解更多信息并开始使用您的 Dash 钱包进行交易.</string>
+    <string name="chain_syncing_default_message">等待区块链完全同步, 我们便可以回顾您的交易历史.</string>
+    <string name="zenledger_export_permission">允许将所有交易从 Dash 钱包发送到 Zenledger?</string>
+    <string name="zenledger_export_error">当向 ZenLedger 导出您的交易历史时产生了一个错误.</string>
+
+
     <string name="about_title">关于</string>
     <string name="about_version_title">版本</string>
     <string name="about_copyright_title">Copyright</string>

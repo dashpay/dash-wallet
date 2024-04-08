@@ -256,7 +256,7 @@
     <string name="security_medium">Средно</string>
     <string name="security_high">Високо</string>
     <string name="security_very_high">Много високо</string>
-    <string name="max">Максимум</string>
+    <string name="max">Макс</string>
 
     <string name="skip">пропусни</string>
     <string name="get_started">Първи стъпки</string>

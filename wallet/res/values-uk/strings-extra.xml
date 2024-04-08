@@ -325,7 +325,7 @@
     <string name="security_medium">Середній</string>
     <string name="security_high">Високий</string>
     <string name="security_very_high">Дуже високий</string>
-    <string name="max">Максимум</string>
+    <string name="max">Макс</string>
 
     <string name="skip">пропустити</string>
     <string name="get_started">Почати</string>

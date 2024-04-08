@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">크라우드노드의 서비스 이용 약관에 따라, 사용자들은 다음의 금액 이상을 출금할 수 없습니다:</string>
     <string name="crowdnode_withdraw_without_limits_online">제한 없이 출금하려면 크라우드노드 웹사이트의 온라인 계정을 활용하십시오.</string>
     <string name="crowdnode_withdrawal_limits_error">크라우드노드 출금 한도를 초과하여 에러가 발생한 것으로 보입니다. 잠시 후 다시 시도하십시오.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">다음 출금을 요청하기 전 기다려 주십시오</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">다음 출금을 요청하시기 전 5분을 대기하여야 합니다</string>
     <string name="per_transaction">거래당</string>
     <string name="per_hour">시간당</string>
     <string name="per_day">24시간당</string>

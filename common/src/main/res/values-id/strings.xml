@@ -98,4 +98,7 @@
     <string name="enter_amount_available">tersedia</string>
     <string name="transaction_row_rate_not_available">Tak tersedia</string>
     <string name="log_in">masuk</string>
+
+    <string name="chain_syncing">Rantai sedang menyinkronkan…</string>
+
 </resources>
