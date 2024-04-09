@@ -98,4 +98,7 @@
     <string name="enter_amount_available">可用的</string>
     <string name="transaction_row_rate_not_available">無法使用</string>
     <string name="log_in">登入</string>
+
+    <string name="chain_syncing">區塊鏈正在同步…</string>
+
 </resources>
