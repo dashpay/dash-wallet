@@ -38,7 +38,10 @@ data class Amount(
     private var _crypto: BigDecimal = BigDecimal.ZERO,
     private var anchor: CurrencyInputType = CurrencyInputType.Dash,
     private var _dashFiatExchangeRate: BigDecimal = BigDecimal.ONE,
-    private var _cryptoFiatExchangeRate: BigDecimal = BigDecimal.ONE
+    private var _cryptoFiatExchangeRate: BigDecimal = BigDecimal.ONE,
+    var dashCode: String = "DASH",
+    var fiatCode: String = "USD",
+    var cryptoCode: String = "BTC"
 ) : Parcelable {
     var dash: BigDecimal
         get() = _dash
@@ -61,6 +64,28 @@ data class Amount(
             anchor = CurrencyInputType.Crypto
             update()
         }
+
+    val anchoredValue: BigDecimal
+        get() {
+            return when (anchor) {
+                CurrencyInputType.Dash -> _dash
+                CurrencyInputType.Fiat -> _fiat
+                CurrencyInputType.Crypto -> _crypto
+            }
+        }
+
+    val anchoredCurrencyCode: String
+        get() {
+            return when (anchor) {
+                CurrencyInputType.Dash -> dashCode
+                CurrencyInputType.Fiat -> fiatCode
+                CurrencyInputType.Crypto -> cryptoCode
+            }
+        }
+
+
+    val anchoredType: CurrencyInputType
+        get() = anchor
 
     /** 1 DASH = x Fiat, eg 1 DASH = $35.87 or $35.87/DASH */
     var dashFiatExchangeRate: BigDecimal
@@ -88,6 +113,12 @@ data class Amount(
                 _fiat = _crypto * cryptoFiatExchangeRate
             }
         }
+    }
+
+    fun getValue(anchor: CurrencyInputType) = when (anchor) {
+        CurrencyInputType.Dash -> _dash
+        CurrencyInputType.Fiat -> _fiat
+        CurrencyInputType.Crypto -> _crypto
     }
 
     /** 1 Crypto = x Fiat, eg 1 BTC = $65,000 or $65,000/BTC */
