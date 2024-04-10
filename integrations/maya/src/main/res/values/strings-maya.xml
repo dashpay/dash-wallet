@@ -46,7 +46,7 @@
     <string name="maya_error">Maya Error</string>
     <string name="maya_error_not_available">The Maya service is not available.  Please try again later.</string>
     <string name="maya_error_report_issue">Please report this issue to the Dash Wallet support team using "Report Issue" from the main menu.</string>
-    <string name="maya_error_address_not_valid"></string>
+    <string name="maya_error_address_not_valid">Address is not valid</string>
 
     <!-- taken from Coinbase -->
     <string name="entered_amount_is_too_low">The minimum transaction amount is</string>
@@ -77,8 +77,8 @@
     <string name="auth_limit_description">You exceeded the authorization limit on Coinbase.</string>
     <string name="you_will_receive">Receive amount</string>
     <string name="contact_coinbase_support">Contact Coinbase Support</string>
-    <string name="fees_in_crypto_purchase">Fees in crypto purchases</string>
-    <string name="coinbase_fee_info_msg_content">In addition to the displayed Coinbase fee, we include a spread in the price. Cryptocurrency markets are volatile, and this allows us to temporary lock in a price for trade execution.</string>
+    <string name="fees_in_crypto_purchase">Maya Fees in crypto conversions</string>
+    <string name="coinbase_fee_info_msg_content">There are various inbound, outbound and liquidity fees associated to Maya transactions.  The amount that you entered is the amount that will be received.</string>
     <string name="learn_more">Learn More</string>
     <string name="debit_money">Debit money from your account</string>
     <string name="change_limit">Change this limit</string>
