@@ -16,7 +16,7 @@
         android:gravity="center_vertical"
         android:layout_marginTop="10dp"
         android:layout_marginBottom="5dp"
-        android:text="@string/you_send"
+        android:text="@string/from_title"
         android:theme="@style/ListViewButtonBackground"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -61,7 +61,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="@+id/input_account_subtitle"
         app:layout_constraintTop_toTopOf="@id/input_account_title"
-        tools:text="1234" />
+        tools:text="1.234" />
 
     <TextView
         android:id="@+id/input_account_hint_label"
@@ -91,7 +91,7 @@
         android:gravity="center_vertical"
         android:layout_marginTop="10dp"
         android:layout_marginBottom="5dp"
-        android:text="@string/you_receive"
+        android:text="@string/to_title"
         android:theme="@style/ListViewButtonBackground"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/input_account_separator" />
@@ -136,7 +136,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="@+id/convert_output_subtitle"
         app:layout_constraintTop_toTopOf="@id/convert_output_title"
-        tools:text="1234" />
+        tools:text="0.1234" />
 
     <TextView
         android:id="@+id/output_account_hint_label"
@@ -178,7 +178,7 @@
         app:layout_constraintBottom_toBottomOf="@id/purchase_label"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/purchase_label"
-        tools:text="109.00 US$" />
+        tools:text="$ 109.00" />
 
     <View
         android:id="@+id/purchase_separator"
@@ -226,7 +226,7 @@
             app:layout_constraintBottom_toBottomOf="@id/coinbase_fee_label"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/coinbase_fee_label"
-            tools:text="10.00 US$" />
+            tools:text="$ 1.00" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -257,6 +257,6 @@
         app:layout_constraintBottom_toBottomOf="@id/total_label"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/total_label"
-        tools:text="200.00 US$" />
+        tools:text="$ 200.00" />
 </androidx.constraintlayout.widget.ConstraintLayout>
 
