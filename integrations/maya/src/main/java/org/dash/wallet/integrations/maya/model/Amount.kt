@@ -83,9 +83,11 @@ data class Amount(
             }
         }
 
-
-    val anchoredType: CurrencyInputType
+    var anchoredType: CurrencyInputType
         get() = anchor
+        set(value) {
+            anchor = value
+        }
 
     /** 1 DASH = x Fiat, eg 1 DASH = $35.87 or $35.87/DASH */
     var dashFiatExchangeRate: BigDecimal
@@ -119,6 +121,14 @@ data class Amount(
         CurrencyInputType.Dash -> _dash
         CurrencyInputType.Fiat -> _fiat
         CurrencyInputType.Crypto -> _crypto
+    }
+
+    fun setAnchoredType(currencyCode: String) {
+        when (currencyCode) {
+            dashCode -> anchor = CurrencyInputType.Dash
+            fiatCode -> anchor = CurrencyInputType.Fiat
+            cryptoCode -> anchor = CurrencyInputType.Crypto
+        }
     }
 
     /** 1 Crypto = x Fiat, eg 1 BTC = $65,000 or $65,000/BTC */
