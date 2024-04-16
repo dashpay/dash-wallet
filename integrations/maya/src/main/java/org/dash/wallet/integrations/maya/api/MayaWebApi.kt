@@ -23,9 +23,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
-import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.Balance
-import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.NetworkResponse
 import org.dash.wallet.integrations.maya.model.PoolInfo
@@ -126,7 +124,7 @@ open class MayaWebApi @Inject constructor(
             }
 
             listOf()
-      }
+        }
     }
 
     suspend fun getNetwork(): NetworkResponse? {
@@ -182,13 +180,17 @@ open class MayaWebApi @Inject constructor(
 
         // Liquidity Fee
         val swapAmount = tradesRequest.amount.crypto
-        val poolDepth = destinationPoolInfo!!.assetDepth.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(BigDecimal(1_0000_000))
+        val poolDepth = destinationPoolInfo!!.assetDepth.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(
+            BigDecimal(1_0000_000)
+        )
         val slip = swapAmount / (swapAmount + poolDepth)
         val fee = slip * swapAmount
         val feeAmount = tradesRequest.amount.copy().apply { crypto = fee }
 
         // Outgoing Fee
-        val outgoingFee = destination!!.outboundFee.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(BigDecimal(1_0000_0000))// * txSize * outboundFeeMultiplier
+        val outgoingFee = destination!!.outboundFee.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(
+            BigDecimal(1_0000_0000)
+        ) // * txSize * outboundFeeMultiplier
 
         feeAmount.crypto += outgoingFee
         feeAmount.dash += incomingFee

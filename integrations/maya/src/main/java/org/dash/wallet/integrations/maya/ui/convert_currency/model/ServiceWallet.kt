@@ -42,4 +42,4 @@ data class SendTransactionToWalletParams(
     val to: String?,
     val type: String?,
     val description: String? = "Dash Wallet App"
-): Parcelable
+) : Parcelable

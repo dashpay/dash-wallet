@@ -128,7 +128,12 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                         AdaptiveDialog.create(
                             null,
                             "New Maya Order",
-                            "This order will send (${it.amount.dash} + ${it.feeAmount.dash.setScale(8, RoundingMode.HALF_UP)}) of ${it.inputCurrency} to ${it.amount.crypto.setScale(8, RoundingMode.HALF_UP)} of ${it.amount.cryptoCode} at ${it.destinationAddress}",
+                            "This order will send (${it.amount.dash} + ${it.feeAmount.dash.setScale(
+                                8,
+                                RoundingMode.HALF_UP
+                            )}) of ${it.inputCurrency} to ${
+                            it.amount.crypto.setScale(8, RoundingMode.HALF_UP)
+                            } of ${it.amount.cryptoCode} at ${it.destinationAddress}",
                             getString(R.string.button_okay)
                         ).show(requireActivity())
                         viewModel.commitSwapTrade(orderId)
@@ -251,7 +256,8 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             inputAmount,
             inputCurrencySymbol,
             isCurrencyCodeFirst,
-            true, false
+            true,
+            false
         )
 
         val outputAmount = this.amount.crypto.setScale(8, RoundingMode.HALF_UP)
@@ -262,7 +268,8 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             outputAmount,
             outputCurrency,
             isCurrencyCodeFirst,
-            false, false
+            false,
+            false
         )
 
         val currencySymbol = GenericUtils.currencySymbol(this.amount.anchoredCurrencyCode)
@@ -341,9 +348,10 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         // show Dash Icon if DASH is the primary currency
         if (isDash) {
             // TODO: adjust for dark mode
-            val drawable = ContextCompat.getDrawable(context, org.dash.wallet.common.R.drawable.ic_dash_d_black)?.apply {
-                setBounds(0, 0, (iconSize * scale).toInt(), (iconSize * scale).toInt())
-            }
+            val drawable =
+                ContextCompat.getDrawable(context, org.dash.wallet.common.R.drawable.ic_dash_d_black)?.apply {
+                    setBounds(0, 0, (iconSize * scale).toInt(), (iconSize * scale).toInt())
+                }
             val imageSpan = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 drawable?.let { ImageSpan(it, ImageSpan.ALIGN_CENTER) }
             } else {
@@ -411,35 +419,36 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             responseMessage,
             dashToCoinbase = viewModel.swapTradeUIModel.inputCurrency == Constants.DASH_CURRENCY
         ).apply {
-            this.onCoinBaseResultDialogButtonsClickListener = object : MayaResultDialog.CoinBaseResultDialogButtonsClickListener {
-                override fun onPositiveButtonClick(type: MayaResultDialog.Type) {
-                    when (type) {
-                        MayaResultDialog.Type.CONVERSION_ERROR -> {
-                            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY)
-                            dismiss()
-                            findNavController().popBackStack()
+            this.onCoinBaseResultDialogButtonsClickListener =
+                object : MayaResultDialog.CoinBaseResultDialogButtonsClickListener {
+                    override fun onPositiveButtonClick(type: MayaResultDialog.Type) {
+                        when (type) {
+                            MayaResultDialog.Type.CONVERSION_ERROR -> {
+                                viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY)
+                                dismiss()
+                                findNavController().popBackStack()
+                            }
+                            MayaResultDialog.Type.SWAP_ERROR -> {
+                                viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY)
+                                dismiss()
+                                findNavController().popBackStack()
+                                findNavController().popBackStack()
+                            }
+                            MayaResultDialog.Type.CONVERSION_SUCCESS -> {
+                                viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE)
+                                dismiss()
+                                val navController = findNavController()
+                                val home = navController.graph.startDestinationId
+                                navController.popBackStack(home, false)
+                            }
+                            else -> {}
                         }
-                        MayaResultDialog.Type.SWAP_ERROR -> {
-                            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY)
-                            dismiss()
-                            findNavController().popBackStack()
-                            findNavController().popBackStack()
-                        }
-                        MayaResultDialog.Type.CONVERSION_SUCCESS -> {
-                            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE)
-                            dismiss()
-                            val navController = findNavController()
-                            val home = navController.graph.startDestinationId
-                            navController.popBackStack(home, false)
-                        }
-                        else -> {}
+                    }
+
+                    override fun onNegativeButtonClick(type: MayaResultDialog.Type) {
+                        viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_CLOSE)
                     }
                 }
-
-                override fun onNegativeButtonClick(type: MayaResultDialog.Type) {
-                    viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_CLOSE)
-                }
-            }
         }
         transactionStateDialog?.showNow(parentFragmentManager, "CoinBaseBuyDashDialog")
     }

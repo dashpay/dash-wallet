@@ -1,7 +1,6 @@
 package org.dash.wallet.integrations.maya.ui
 
 import android.content.Context
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integrations.maya.R
 import java.util.Currency
 

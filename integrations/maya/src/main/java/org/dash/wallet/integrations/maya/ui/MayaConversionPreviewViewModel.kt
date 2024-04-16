@@ -19,12 +19,8 @@ package org.dash.wallet.integrations.maya.ui
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.InsufficientMoneyException
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.SendPaymentService
@@ -32,7 +28,6 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.maya.api.MayaWebApi
-import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.CoinbaseErrorResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
@@ -79,8 +74,8 @@ class MayaConversionPreviewViewModel @Inject constructor(
         val inputCurrency = swapTradeUIModel.amount.dashCode
         val inputAmount = swapTradeUIModel.amount.dash
 
-        //TODO: this is the action to do the swap
-        //_showLoading.value = true
+        // TODO: this is the action to do the swap
+        // _showLoading.value = true
 //        when (val result = coinBaseRepository.commitSwapTrade(tradeId)) {
 //            is ResponseResource.Success -> {
 //                _showLoading.value = false

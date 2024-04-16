@@ -17,14 +17,11 @@
 
 package org.dash.wallet.integrations.maya.api
 
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.PoolInfo
-import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
-import org.dash.wallet.integrations.maya.model.TradesRequest
 import org.slf4j.LoggerFactory
 import retrofit2.Response
 import retrofit2.http.GET

@@ -274,14 +274,18 @@ class ConvertViewViewModel @Inject constructor(
         viewModelScope.launch {
             analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_CONTINUE, mapOf())
             val currencyInputType = getCurrencyInputType(pickedCurrencyOption)
-            //val amount = getFiatAmount(currencyInputType)
+            // val amount = getFiatAmount(currencyInputType)
             logEnteredAmountCurrency(currencyInputType)
             onContinueEvent.value = selectedCryptoCurrencyAccount.value?.coinbaseAccount?.let {
-                    destinationAddress?.let { address ->
-                        SwapRequest(
-                            amount, address, it.currency, it.asset, selectedLocalCurrencyCode
-                        )
-                    }
+                destinationAddress?.let { address ->
+                    SwapRequest(
+                        amount,
+                        address,
+                        it.currency,
+                        it.asset,
+                        selectedLocalCurrencyCode
+                    )
+                }
             }
         }
     }
