@@ -50,6 +50,7 @@ import org.dash.wallet.integrations.maya.databinding.FragmentMayaConversionPrevi
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
+import java.math.BigDecimal
 import java.math.RoundingMode
 
 @AndroidEntryPoint
@@ -238,7 +239,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
 
         val isCurrencyCodeFirst = GenericUtils.isCurrencySymbolFirst()
         val inputCurrencySymbol = GenericUtils.currencySymbol(this.inputCurrency)
-        val inputAmount = this.amount.dash.setScale(8, RoundingMode.HALF_UP).toString()
+        val inputAmount = this.amount.dash.setScale(8, RoundingMode.HALF_UP)
 
 //        binding.contentOrderReview.inputAccount.text = getString(
 //            R.string.fiat_balance_with_currency,
@@ -250,10 +251,10 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             inputAmount,
             inputCurrencySymbol,
             isCurrencyCodeFirst,
-            true
+            true, false
         )
 
-        val outputAmount = this.amount.crypto.setScale(8, RoundingMode.HALF_UP).toString()
+        val outputAmount = this.amount.crypto.setScale(8, RoundingMode.HALF_UP)
         val outputCurrency = this.amount.cryptoCode
 
         setValueWithCurrencyCodeOrSymbol(
@@ -261,7 +262,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             outputAmount,
             outputCurrency,
             isCurrencyCodeFirst,
-            false
+            false, false
         )
 
         val currencySymbol = GenericUtils.currencySymbol(this.amount.anchoredCurrencyCode)
@@ -270,38 +271,41 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         } else {
             8
         }
-        val purchaseAmount = this.amount.anchoredValue.setScale(digits, RoundingMode.HALF_UP).toString()
+        val purchaseAmount = this.amount.anchoredValue.setScale(digits, RoundingMode.HALF_UP)
 
         setValueWithCurrencyCodeOrSymbol(
             binding.contentOrderReview.purchaseAmount,
             purchaseAmount,
             currencySymbol,
             isCurrencyCodeFirst,
-            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY
+            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY,
+            amount.anchoredType == CurrencyInputType.Fiat
         )
 
         val feeCurrencySymbol = GenericUtils.currencySymbol(this.feeAmount.anchoredCurrencyCode)
-        val feeAmount = this.feeAmount.anchoredValue.setScale(digits, RoundingMode.HALF_UP).toString()
+        val feeAmount = this.feeAmount.anchoredValue.setScale(digits, RoundingMode.HALF_UP)
 
         setValueWithCurrencyCodeOrSymbol(
             binding.contentOrderReview.mayaFeeAmount,
             feeAmount,
             feeCurrencySymbol,
             isCurrencyCodeFirst,
-            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY
+            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY,
+            amount.anchoredType == CurrencyInputType.Fiat
         )
 
         val totalAmount = (this.amount.anchoredValue + this.feeAmount.anchoredValue).setScale(
             digits,
             RoundingMode.HALF_UP
-        ).toString()
+        )
 
         setValueWithCurrencyCodeOrSymbol(
             binding.contentOrderReview.totalAmount,
             totalAmount,
             feeCurrencySymbol,
             isCurrencyCodeFirst,
-            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY
+            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY,
+            amount.anchoredType == CurrencyInputType.Fiat
         )
         binding.contentOrderReview.inputAccountIcon
             .load(GenericUtils.getCoinIcon(this.inputCurrency.lowercase())) {
@@ -322,33 +326,21 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
 
     private fun setValueWithCurrencyCodeOrSymbol(
         textView: TextView,
-        value: String,
+        value: BigDecimal,
         currencyCode: String,
         isCurrencySymbolFirst: Boolean,
         isDash: Boolean,
+        isFiat: Boolean,
         iconSize: Int = 12
     ) {
         val context = textView.context
         val scale = resources.displayMetrics.scaledDensity
-        val maxTextWidth = binding.contentOrderReview.inputAccount.width
-        var spannableString = SpannableString(value) // Space for the icon
+        val valueString = GenericUtils.toLocalizedString(value, isDash || !isFiat, currencyCode)
+        var spannableString = SpannableString(valueString) // Space for the icon
 
         // show Dash Icon if DASH is the primary currency
         if (isDash) {
             // TODO: adjust for dark mode
-
-//            val roomLeft = maxTextWidth - textView.paint.measureText("$value  ") - (iconSize * scale)
-//            val sizeRelative = if (roomLeft < 0) {
-//                val ratio = min(1.0f, (maxTextWidth + roomLeft) / maxTextWidth)
-//                if (ratio == Float.NEGATIVE_INFINITY) {
-//                    1.0f
-//                } else {
-//                    ratio
-//                }
-//            } else {
-//                1.0f
-//            }
-//            val sizeSpan = RelativeSizeSpan(sizeRelative)
             val drawable = ContextCompat.getDrawable(context, org.dash.wallet.common.R.drawable.ic_dash_d_black)?.apply {
                 setBounds(0, 0, (iconSize * scale).toInt(), (iconSize * scale).toInt())
             }
@@ -359,11 +351,11 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             }
             imageSpan?.let {
                 if (GenericUtils.isCurrencySymbolFirst()) {
-                    spannableString = SpannableString("  $value")
+                    spannableString = SpannableString("  $valueString")
                     spannableString.setSpan(it, 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     // spannableString.setSpan(sizeSpan, 1, spannableString.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
                 } else {
-                    spannableString = SpannableString("$value  ")
+                    spannableString = SpannableString("$valueString  ")
                     val len = spannableString.length
                     spannableString.setSpan(it, len - 1, len, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     // spannableString.setSpan(sizeSpan, 0, len - 1, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
@@ -373,8 +365,8 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             spannableString = SpannableString(
                 getString(
                     R.string.fiat_balance_with_currency,
-                    if (isCurrencySymbolFirst) currencyCode else value,
-                    if (isCurrencySymbolFirst) value else currencyCode
+                    if (isCurrencySymbolFirst) currencyCode else valueString,
+                    if (isCurrencySymbolFirst) valueString else currencyCode
                 )
             )
 //            val roomLeft = maxTextWidth - textView.paint.measureText("$value")

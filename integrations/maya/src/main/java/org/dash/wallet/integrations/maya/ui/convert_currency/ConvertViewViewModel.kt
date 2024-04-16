@@ -227,7 +227,7 @@ class ConvertViewViewModel @Inject constructor(
     fun checkEnteredAmountValue(checkSendingConditions: Boolean): SwapValueErrorType {
         val coin = try {
             if (dashToCrypto.value == true) {
-                Coin.parseCoin(maxForDashWalletAmount)
+                Coin.parseCoin(maxForDashWalletAmount.replace(',', '.'))
             } else {
                 maxForDashCoinBaseAccount
             }
