@@ -32,6 +32,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.maya.api.MayaWebApi
+import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.CoinbaseErrorResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
@@ -48,6 +49,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
     networkState: NetworkStateInt,
     private val transactionMetadataProvider: TransactionMetadataProvider
 ) : ViewModel() {
+    lateinit var swapTradeUIModel: SwapTradeUIModel
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -72,8 +74,10 @@ class MayaConversionPreviewViewModel @Inject constructor(
 
     var isFirstTime = true
 
-    fun commitSwapTrade(tradeId: String, inputCurrency: String, inputAmount: String) = viewModelScope.launch {
+    fun commitSwapTrade(tradeId: String) = viewModelScope.launch {
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
+        val inputCurrency = swapTradeUIModel.amount.dashCode
+        val inputAmount = swapTradeUIModel.amount.dash
 
         //TODO: this is the action to do the swap
         //_showLoading.value = true
@@ -121,14 +125,10 @@ class MayaConversionPreviewViewModel @Inject constructor(
 //        }
     }
 
-    private fun swapTrade(swapTradeUIModel: SwapTradeUIModel) = viewModelScope.launch {
+    fun swapTrade(swapTradeUIModel: SwapTradeUIModel) = viewModelScope.launch {
         _showLoading.value = true
         val tradesRequest = TradesRequest(
             swapTradeUIModel.amount,
-            swapTradeUIModel.displayInputAmount,
-            swapTradeUIModel.displayInputCurrency,
-            source_asset = swapTradeUIModel.inputCurrency,
-            target_asset = swapTradeUIModel.outputCurrency,
             source_maya_asset = "DASH.DASH",
             target_maya_asset = swapTradeUIModel.outputAsset,
             fiatCurrency = swapTradeUIModel.amount.fiatCode,
@@ -141,7 +141,6 @@ class MayaConversionPreviewViewModel @Inject constructor(
                     swapTradeFailureState.call()
                 } else {
                     result.value.apply {
-                        this.assetsBaseID = swapTradeUIModel.assetsBaseID
                         this.inputCurrencyName =
                             swapTradeUIModel.inputCurrencyName
                         this.outputCurrencyName = swapTradeUIModel.outputCurrencyName
@@ -167,32 +166,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
         }
     }
 
-    fun onRefreshOrderClicked(swapTradeUIModel: SwapTradeUIModel) {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_RETRY, mapOf())
-        swapTrade(swapTradeUIModel)
-    }
-
     fun logEvent(eventName: String) {
         analyticsService.logEvent(eventName, mapOf())
-    }
-
-    private suspend fun sendDashToCoinbase(coin: Coin, addressInfo: String): Boolean {
-        val address = Address.fromString(walletDataProvider.networkParameters, addressInfo.trim { it <= ' ' })
-        return try {
-            val transaction = sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false)
-            transactionMetadataProvider.markAddressAsTransferOutAsync(
-                address.toBase58(),
-                ServiceName.Coinbase
-            )
-            transaction.isPending
-        } catch (x: InsufficientMoneyException) {
-            onInsufficientMoneyCallback.call()
-            x.printStackTrace()
-            false
-        } catch (ex: Exception) {
-            onFailure.value = ex.message
-            ex.printStackTrace()
-            false
-        }
     }
 }

@@ -194,25 +194,10 @@ open class MayaWebApi @Inject constructor(
         feeAmount.dash += incomingFee
         feeAmount.anchoredType = tradesRequest.amount.anchoredType
 
-        val displayCurrency = when (tradesRequest.amount.anchoredType) {
-            CurrencyInputType.Dash -> tradesRequest.source_asset
-            CurrencyInputType.Fiat -> tradesRequest.fiatCurrency
-            CurrencyInputType.Crypto -> tradesRequest.target_asset
-        }
-
         return ResponseResource.Success(
             SwapTradeUIModel(
                 amount = tradesRequest.amount,
-                inputAmount = tradesRequest.amount.dash.toPlainString(),
-                displayInputCurrency = displayCurrency,
-                displayInputAmount = tradesRequest.amount.anchoredValue.setScale(
-                    8,
-                    RoundingMode.HALF_UP
-                ).toPlainString(),
-                inputCurrency = tradesRequest.source_asset,
-                outputCurrency = tradesRequest.target_asset,
                 outputAsset = tradesRequest.target_maya_asset,
-                outputAmount = tradesRequest.amount.crypto.setScale(8, RoundingMode.HALF_UP).toPlainString(),
                 feeAmount = feeAmount,
                 destinationAddress = tradesRequest.targetAddress
             )

@@ -92,8 +92,6 @@ class MayaConvertCryptoViewModel @Inject constructor(
         val tradesRequest = TradesRequest(
             swapTradeInfo.amount,
             walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY) ?: Constants.DEFAULT_EXCHANGE_CURRENCY,
-            source_asset = sourceAsset,
-            target_asset = targetAsset,
             source_maya_asset = "$sourceAsset.$sourceAsset",
             target_maya_asset = swapTradeInfo.cryptoCurrencyAsset,
             fiatCurrency = swapTradeInfo.fiatCurrencyCode,
@@ -109,7 +107,6 @@ class MayaConvertCryptoViewModel @Inject constructor(
                     _showLoading.value = false
 
                     result.value.apply {
-                        this.assetsBaseID = Pair(sourceAsset, targetAsset)
                         this.inputCurrencyName = if (dashToCrypt) {
                             "Dash"
                         } else {

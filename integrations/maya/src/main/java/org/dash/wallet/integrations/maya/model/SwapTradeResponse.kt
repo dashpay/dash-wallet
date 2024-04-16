@@ -18,6 +18,7 @@ package org.dash.wallet.integrations.maya.model
 
 import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
@@ -26,7 +27,7 @@ data class SwapTradeResponse(
     val `data`: SwapTradeResponseData? = null
 ) : Parcelable {
     companion object {
-        val EMPTY_SWAP_TRADE = SwapTradeUIModel(Amount(), "", "", "", "", "", "")
+        val EMPTY_SWAP_TRADE = SwapTradeUIModel(Amount(), "", "", "", Amount(), "")
     }
 }
 
@@ -69,16 +70,12 @@ data class SwapTradeUIModel(
     val amount: Amount,
     val destinationAddress: String,
     val swapTradeId: String = "",
-    val inputAmount: String = "",
-    val inputCurrency: String = "",
-    val outputAmount: String = "",
-    val outputCurrency: String = "",
     val outputAsset: String = "",
-    val displayInputAmount: String = "",
-    val displayInputCurrency: String = "",
     val feeAmount: Amount = Amount(),
-    // val feeCurrency: String = "",
-    var assetsBaseID: Pair<String, String>? = null,
     var inputCurrencyName: String = "",
     var outputCurrencyName: String = ""
-) : Parcelable
+) : Parcelable {
+    @IgnoredOnParcel
+    val inputCurrency = amount.dashCode
+    val outputCurrency = amount.cryptoCode
+}

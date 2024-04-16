@@ -58,7 +58,6 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
     private val viewModel by viewModels<MayaConversionPreviewViewModel>()
     private val mayaViewModel by mayaViewModels<MayaViewModel>()
     private lateinit var mayaCurrencyMapper: MayaCurrencyMapper
-    private lateinit var swapTradeUIModel: SwapTradeUIModel
     private var loadingDialog: AdaptiveDialog? = null
     private var isRetrying = false
     private var transactionStateDialog: MayaResultDialog? = null
@@ -113,7 +112,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         arguments?.let {
             MayaConversionPreviewFragmentArgs.fromBundle(it).swapModel.apply {
                 updateConversionPreviewUI()
-                swapTradeUIModel = this
+                viewModel.swapTradeUIModel = this
             }
         }
 
@@ -124,14 +123,14 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                 isRetrying = false
             } else {
                 newSwapOrderId?.let { orderId ->
-                    swapTradeUIModel.let {
+                    viewModel.swapTradeUIModel.let {
                         AdaptiveDialog.create(
                             null,
                             "New Maya Order",
                             "This order will send (${it.amount.dash} + ${it.feeAmount.dash.setScale(8, RoundingMode.HALF_UP)}) of ${it.inputCurrency} to ${it.amount.crypto.setScale(8, RoundingMode.HALF_UP)} of ${it.amount.cryptoCode} at ${it.destinationAddress}",
                             getString(R.string.button_okay)
                         ).show(requireActivity())
-                        viewModel.commitSwapTrade(orderId, it.inputCurrency, it.inputAmount)
+                        viewModel.commitSwapTrade(orderId)
                     }
                 }
             }
@@ -155,7 +154,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_FEE_INFO)
-            safeNavigate(MayaConversionPreviewFragmentDirections.orderReviewToFeeInfo())
+            safeNavigate(MayaConversionPreviewFragmentDirections.mayaOrderReviewToFeeInfo())
         }
 
         viewModel.swapTradeFailureState.observe(viewLifecycleOwner) {
@@ -168,10 +167,10 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         }
 
         viewModel.commitSwapTradeSuccessState.observe(viewLifecycleOwner) { params ->
-            val walletName = if (swapTradeUIModel.inputCurrency == Constants.DASH_CURRENCY) {
-                swapTradeUIModel.inputCurrencyName
+            val walletName = if (viewModel.swapTradeUIModel.inputCurrency == Constants.DASH_CURRENCY) {
+                mayaCurrencyMapper.getCurrencyName(viewModel.swapTradeUIModel.inputCurrency)
             } else {
-                swapTradeUIModel.outputCurrencyName
+                viewModel.swapTradeUIModel.outputCurrencyName
             }
 
 //            safeNavigate(
@@ -255,24 +254,26 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         )
 
         val outputAmount = this.amount.crypto.setScale(8, RoundingMode.HALF_UP)
+        val outputCurrency = this.amount.cryptoCode
         binding.contentOrderReview.outputAccount.text = getString(
             R.string.fiat_balance_with_currency,
-            if (isCurrencyCodeFirst) GenericUtils.currencySymbol(this.outputCurrency) else outputAmount,
-            if (isCurrencyCodeFirst) outputAmount else GenericUtils.currencySymbol(this.outputCurrency)
+            if (isCurrencyCodeFirst) GenericUtils.currencySymbol(outputCurrency) else outputAmount,
+            if (isCurrencyCodeFirst) outputAmount else GenericUtils.currencySymbol(outputCurrency)
         )
 
-        val currencySymbol = GenericUtils.currencySymbol(this.displayInputCurrency)
+        val currencySymbol = GenericUtils.currencySymbol(this.amount.anchoredCurrencyCode)
         val digits = if (this.feeAmount.anchoredType == CurrencyInputType.Fiat) {
             GenericUtils.getCurrencyDigits()
         } else {
             8
         }
+        val purchaseAmount = this.amount.anchoredValue.setScale(8, RoundingMode.HALF_UP)
 
         binding.contentOrderReview.purchaseAmount.text =
             getString(
                 R.string.fiat_balance_with_currency,
-                if (isCurrencyCodeFirst) currencySymbol else this.displayInputAmount,
-                if (isCurrencyCodeFirst) this.displayInputAmount else currencySymbol
+                if (isCurrencyCodeFirst) currencySymbol else purchaseAmount,
+                if (isCurrencyCodeFirst) purchaseAmount else currencySymbol
             )
 
         val feeCurrencySymbol = GenericUtils.currencySymbol(this.feeAmount.anchoredCurrencyCode)
@@ -411,7 +412,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         transactionStateDialog = MayaResultDialog.newInstance(
             type,
             responseMessage,
-            dashToCoinbase = swapTradeUIModel.inputCurrency == Constants.DASH_CURRENCY
+            dashToCoinbase = viewModel.swapTradeUIModel.inputCurrency == Constants.DASH_CURRENCY
         ).apply {
             this.onCoinBaseResultDialogButtonsClickListener = object : MayaResultDialog.CoinBaseResultDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: MayaResultDialog.Type) {
@@ -471,7 +472,8 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
     }
 
     private fun getNewCommitOrder() {
-        viewModel.onRefreshOrderClicked(swapTradeUIModel)
+        viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_RETRY)
+        viewModel.swapTrade(viewModel.swapTradeUIModel)
     }
 
     private fun setRetryStatus() {

@@ -136,7 +136,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="@+id/convert_output_subtitle"
         app:layout_constraintTop_toTopOf="@id/convert_output_title"
-        tools:text="0.1234" />
+        tools:text="BTC 0.1234" />
 
     <TextView
         android:id="@+id/output_account_hint_label"
@@ -209,7 +209,7 @@
            />
 
         <ImageView
-            android:id="@+id/coinbase_fee_info"
+            android:id="@+id/maya_fee_info"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:padding="7dp"
