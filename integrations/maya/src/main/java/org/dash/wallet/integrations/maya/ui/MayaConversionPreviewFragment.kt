@@ -253,12 +253,15 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             true
         )
 
-        val outputAmount = this.amount.crypto.setScale(8, RoundingMode.HALF_UP)
+        val outputAmount = this.amount.crypto.setScale(8, RoundingMode.HALF_UP).toString()
         val outputCurrency = this.amount.cryptoCode
-        binding.contentOrderReview.outputAccount.text = getString(
-            R.string.fiat_balance_with_currency,
-            if (isCurrencyCodeFirst) GenericUtils.currencySymbol(outputCurrency) else outputAmount,
-            if (isCurrencyCodeFirst) outputAmount else GenericUtils.currencySymbol(outputCurrency)
+
+        setValueWithCurrencyCodeOrSymbol(
+            binding.contentOrderReview.outputAccount,
+            outputAmount,
+            outputCurrency,
+            isCurrencyCodeFirst,
+            false
         )
 
         val currencySymbol = GenericUtils.currencySymbol(this.amount.anchoredCurrencyCode)
@@ -267,37 +270,39 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         } else {
             8
         }
-        val purchaseAmount = this.amount.anchoredValue.setScale(8, RoundingMode.HALF_UP)
+        val purchaseAmount = this.amount.anchoredValue.setScale(digits, RoundingMode.HALF_UP).toString()
 
-        binding.contentOrderReview.purchaseAmount.text =
-            getString(
-                R.string.fiat_balance_with_currency,
-                if (isCurrencyCodeFirst) currencySymbol else purchaseAmount,
-                if (isCurrencyCodeFirst) purchaseAmount else currencySymbol
-            )
+        setValueWithCurrencyCodeOrSymbol(
+            binding.contentOrderReview.purchaseAmount,
+            purchaseAmount,
+            currencySymbol,
+            isCurrencyCodeFirst,
+            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY
+        )
 
         val feeCurrencySymbol = GenericUtils.currencySymbol(this.feeAmount.anchoredCurrencyCode)
-        val feeAmount = this.feeAmount.anchoredValue.setScale(digits, RoundingMode.HALF_UP)
+        val feeAmount = this.feeAmount.anchoredValue.setScale(digits, RoundingMode.HALF_UP).toString()
 
-        binding.contentOrderReview.mayaFeeAmount.text =
-            getString(
-                R.string.fiat_balance_with_currency,
-                if (isCurrencyCodeFirst) feeCurrencySymbol else feeAmount,
-                if (isCurrencyCodeFirst) feeAmount else feeCurrencySymbol
-            )
+        setValueWithCurrencyCodeOrSymbol(
+            binding.contentOrderReview.mayaFeeAmount,
+            feeAmount,
+            feeCurrencySymbol,
+            isCurrencyCodeFirst,
+            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY
+        )
 
         val totalAmount = (this.amount.anchoredValue + this.feeAmount.anchoredValue).setScale(
             digits,
             RoundingMode.HALF_UP
+        ).toString()
+
+        setValueWithCurrencyCodeOrSymbol(
+            binding.contentOrderReview.totalAmount,
+            totalAmount,
+            feeCurrencySymbol,
+            isCurrencyCodeFirst,
+            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY
         )
-
-        binding.contentOrderReview.totalAmount.text =
-            getString(
-                R.string.fiat_balance_with_currency,
-                if (isCurrencyCodeFirst) currencySymbol else totalAmount,
-                if (isCurrencyCodeFirst) totalAmount else currencySymbol
-            )
-
         binding.contentOrderReview.inputAccountIcon
             .load(GenericUtils.getCoinIcon(this.inputCurrency.lowercase())) {
                 crossfade(true)
