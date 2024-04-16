@@ -16,13 +16,19 @@
  */
 package org.dash.wallet.integrations.maya.ui
 
+import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ImageSpan
 import android.view.View
+import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
 import androidx.annotation.ColorRes
 import androidx.annotation.StyleRes
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -33,6 +39,7 @@ import coil.transform.CircleCropTransformation
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.enter_amount.CenteredImageSpan
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
@@ -40,13 +47,17 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentMayaConversionPreviewBinding
+import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
+import java.math.RoundingMode
 
 @AndroidEntryPoint
 class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion_preview) {
     private val binding by viewBinding(FragmentMayaConversionPreviewBinding::bind)
     private val viewModel by viewModels<MayaConversionPreviewViewModel>()
+    private val mayaViewModel by mayaViewModels<MayaViewModel>()
+    private lateinit var mayaCurrencyMapper: MayaCurrencyMapper
     private lateinit var swapTradeUIModel: SwapTradeUIModel
     private var loadingDialog: AdaptiveDialog? = null
     private var isRetrying = false
@@ -75,6 +86,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupBackNavigation()
+        mayaCurrencyMapper = MayaCurrencyMapper(requireContext())
 
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
             setNetworkState(hasInternet)
@@ -113,6 +125,12 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             } else {
                 newSwapOrderId?.let { orderId ->
                     swapTradeUIModel.let {
+                        AdaptiveDialog.create(
+                            null,
+                            "New Maya Order",
+                            "This order will send (${it.amount.dash} + ${it.feeAmount.dash.setScale(8, RoundingMode.HALF_UP)}) of ${it.inputCurrency} to ${it.amount.crypto.setScale(8, RoundingMode.HALF_UP)} of ${it.amount.cryptoCode} at ${it.destinationAddress}",
+                            getString(R.string.button_okay)
+                        ).show(requireActivity())
                         viewModel.commitSwapTrade(orderId, it.inputCurrency, it.inputAmount)
                     }
                 }
@@ -200,50 +218,83 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
     private fun SwapTradeUIModel.updateConversionPreviewUI() {
         newSwapOrderId = this.swapTradeId
 
+        binding.contentOrderReview.inputAccountTitle.text = this.amount.dashCode
+        binding.contentOrderReview.convertOutputTitle.text = this.amount.cryptoCode
+
+        binding.contentOrderReview.inputAccountSubtitle.text = mayaCurrencyMapper.getCurrencyName(this.amount.dashCode)
+        binding.contentOrderReview.convertOutputSubtitle.text = mayaCurrencyMapper.getCurrencyName(
+            this.amount.cryptoCode
+        )
+
+//        if (this.inputCurrency == Constants.DASH_CURRENCY) {
+        binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_dash_wallet_on_this_device)
+        binding.contentOrderReview.outputAccountHintLabel.text = getString(
+            R.string.to_external_address,
+            this.destinationAddress
+        )
+//        } else {
+//            binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_your_coinbase_account)
+//            binding.contentOrderReview.outputAccountHintLabel.setText(R.string.to_dash_wallet_on_this_device)
+//        }
+
+        val isCurrencyCodeFirst = GenericUtils.isCurrencySymbolFirst()
+        val inputCurrencySymbol = GenericUtils.currencySymbol(this.inputCurrency)
+        val inputAmount = this.amount.dash.setScale(8, RoundingMode.HALF_UP).toString()
+
+//        binding.contentOrderReview.inputAccount.text = getString(
+//            R.string.fiat_balance_with_currency,
+//            if (isCurrencyCodeFirst) inputCurrencySymbol else inputAmount,
+//            if (isCurrencyCodeFirst) inputAmount else inputCurrencySymbol
+//        )
+        setValueWithCurrencyCodeOrSymbol(
+            binding.contentOrderReview.inputAccount,
+            inputAmount,
+            inputCurrencySymbol,
+            isCurrencyCodeFirst,
+            true
+        )
+
+        val outputAmount = this.amount.crypto.setScale(8, RoundingMode.HALF_UP)
         binding.contentOrderReview.outputAccount.text = getString(
             R.string.fiat_balance_with_currency,
-            this.outputAmount,
-            GenericUtils.currencySymbol(this.outputCurrency)
+            if (isCurrencyCodeFirst) GenericUtils.currencySymbol(this.outputCurrency) else outputAmount,
+            if (isCurrencyCodeFirst) outputAmount else GenericUtils.currencySymbol(this.outputCurrency)
         )
-        binding.contentOrderReview.inputAccountTitle.text = this.inputCurrencyName
-        binding.contentOrderReview.convertOutputTitle.text = this.outputCurrencyName
 
-        binding.contentOrderReview.inputAccountSubtitle.text = this.inputCurrency
-        binding.contentOrderReview.convertOutputSubtitle.text = this.outputCurrency
-
-        if (this.inputCurrency == Constants.DASH_CURRENCY) {
-            binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_dash_wallet_on_this_device)
-            binding.contentOrderReview.outputAccountHintLabel.text = getString(R.string.to_external_address, "dummy-address-goes-here")
+        val currencySymbol = GenericUtils.currencySymbol(this.displayInputCurrency)
+        val digits = if (this.feeAmount.anchoredType == CurrencyInputType.Fiat) {
+            GenericUtils.getCurrencyDigits()
         } else {
-            binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_your_coinbase_account)
-            binding.contentOrderReview.outputAccountHintLabel.setText(R.string.to_dash_wallet_on_this_device)
+            8
         }
-
-        binding.contentOrderReview.inputAccount.text = getString(
-            R.string.fiat_balance_with_currency,
-            this.inputAmount,
-            GenericUtils.currencySymbol(this.inputCurrency)
-        )
 
         binding.contentOrderReview.purchaseAmount.text =
             getString(
                 R.string.fiat_balance_with_currency,
-                this.displayInputAmount,
-                GenericUtils.currencySymbol(this.displayInputCurrency)
+                if (isCurrencyCodeFirst) currencySymbol else this.displayInputAmount,
+                if (isCurrencyCodeFirst) this.displayInputAmount else currencySymbol
             )
+
+        val feeCurrencySymbol = GenericUtils.currencySymbol(this.feeAmount.anchoredCurrencyCode)
+        val feeAmount = this.feeAmount.anchoredValue.setScale(digits, RoundingMode.HALF_UP)
 
         binding.contentOrderReview.coinbaseFeeAmount.text =
             getString(
                 R.string.fiat_balance_with_currency,
-                this.feeAmount,
-                GenericUtils.currencySymbol(this.feeCurrency)
+                if (isCurrencyCodeFirst) feeCurrencySymbol else feeAmount,
+                if (isCurrencyCodeFirst) feeAmount else feeCurrencySymbol
             )
+
+        val totalAmount = (this.amount.anchoredValue + this.feeAmount.anchoredValue).setScale(
+            digits,
+            RoundingMode.HALF_UP
+        )
 
         binding.contentOrderReview.totalAmount.text =
             getString(
                 R.string.fiat_balance_with_currency,
-                (this.displayInputAmount.toBigDecimal() + this.feeAmount.toBigDecimal()).toPlainString(),
-                GenericUtils.currencySymbol(this.displayInputCurrency)
+                if (isCurrencyCodeFirst) currencySymbol else totalAmount,
+                if (isCurrencyCodeFirst) totalAmount else currencySymbol
             )
 
         binding.contentOrderReview.inputAccountIcon
@@ -261,6 +312,81 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                 placeholder(org.dash.wallet.common.R.drawable.ic_default_flag)
                 transformations(CircleCropTransformation())
             }
+    }
+
+    private fun setValueWithCurrencyCodeOrSymbol(
+        textView: TextView,
+        value: String,
+        currencyCode: String,
+        isCurrencySymbolFirst: Boolean,
+        isDash: Boolean,
+        iconSize: Int = 12
+    ) {
+        val context = textView.context
+        val scale = resources.displayMetrics.scaledDensity
+        val maxTextWidth = binding.contentOrderReview.inputAccount.width
+        var spannableString = SpannableString(value) // Space for the icon
+
+        // show Dash Icon if DASH is the primary currency
+        if (isDash) {
+            // TODO: adjust for dark mode
+
+//            val roomLeft = maxTextWidth - textView.paint.measureText("$value  ") - (iconSize * scale)
+//            val sizeRelative = if (roomLeft < 0) {
+//                val ratio = min(1.0f, (maxTextWidth + roomLeft) / maxTextWidth)
+//                if (ratio == Float.NEGATIVE_INFINITY) {
+//                    1.0f
+//                } else {
+//                    ratio
+//                }
+//            } else {
+//                1.0f
+//            }
+//            val sizeSpan = RelativeSizeSpan(sizeRelative)
+            val drawable = ContextCompat.getDrawable(context, org.dash.wallet.common.R.drawable.ic_dash_d_black)?.apply {
+                setBounds(0, 0, (iconSize * scale).toInt(), (iconSize * scale).toInt())
+            }
+            val imageSpan = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                drawable?.let { ImageSpan(it, ImageSpan.ALIGN_CENTER) }
+            } else {
+                drawable?.let { CenteredImageSpan(it, textView.context) }
+            }
+            imageSpan?.let {
+                if (GenericUtils.isCurrencySymbolFirst()) {
+                    spannableString = SpannableString("  $value")
+                    spannableString.setSpan(it, 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    // spannableString.setSpan(sizeSpan, 1, spannableString.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+                } else {
+                    spannableString = SpannableString("$value  ")
+                    val len = spannableString.length
+                    spannableString.setSpan(it, len - 1, len, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    // spannableString.setSpan(sizeSpan, 0, len - 1, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+                }
+            }
+        } else {
+            spannableString = SpannableString(
+                getString(
+                    R.string.fiat_balance_with_currency,
+                    if (isCurrencySymbolFirst) currencyCode else value,
+                    if (isCurrencySymbolFirst) value else currencyCode
+                )
+            )
+//            val roomLeft = maxTextWidth - textView.paint.measureText("$value")
+//            val sizeRelative = if (roomLeft < 0) {
+//                val ratio = min(1.0f, (maxTextWidth + roomLeft) / maxTextWidth)
+//                if (ratio == Float.NEGATIVE_INFINITY) {
+//                    1.0f
+//                } else {
+//                    ratio
+//                }
+//            } else {
+//                1.0f
+//            }
+            // log.info("resizing number: {} to {}", text, sizeRelative)
+            // val sizeSpan = RelativeSizeSpan(sizeRelative)
+            // spannableString.setSpan(sizeSpan, 0, spannableString.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+        }
+        textView.text = spannableString
     }
 
     private fun showProgress(messageResId: Int) {

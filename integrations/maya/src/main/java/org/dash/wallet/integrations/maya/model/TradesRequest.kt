@@ -28,5 +28,6 @@ data class TradesRequest(
     val target_asset: String,
     val source_maya_asset: String,
     val target_maya_asset: String,
-    val fiatCurrency: String
+    val fiatCurrency: String,
+    val targetAddress: String
 ) : Parcelable

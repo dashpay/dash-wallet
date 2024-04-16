@@ -142,6 +142,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
 
     private fun setAmountValue(pickedCurrencyOption: String) {
         val value = viewModel.getAmountValue(pickedCurrencyOption)
+        viewModel.amount.setAnchoredType(pickedCurrencyOption)
         setAmountViewInfo(pickedCurrencyOption, value, isLocalized = false)
     }
 

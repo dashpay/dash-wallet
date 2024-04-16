@@ -102,6 +102,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             fragment.handleNetworkState(hasInternet)
             binding.convertView.isEnabled = hasInternet
         }
+        convertViewModel.destinationAddress = getArgAddress()
 
 //        viewModel.showLoading.observe(
 //            viewLifecycleOwner
@@ -366,13 +367,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                 null
             }
 
-            val address = args.paymentIntent.outputs?.first().let { output ->
-                val memoChunk = output?.script?.chunks?.get(1)!!
-                var memo = String(memoChunk.data!!)
-                val index = memo.indexOfLast { ch -> ch == ':' }
-                memo = memo.substring(index + 1)
-                memo
-            }
+            val address = getArgAddress()
             binding.convertView.input = ServiceWallet(
                 it.coinbaseAccount.name,
                 address,
@@ -384,6 +379,16 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                 iconUrl
             )
             setConvertViewTopMargin(convertViewModel.selectedCryptoCurrencyAccount.value == null)
+        }
+    }
+
+    private fun getArgAddress(): String {
+        return args.paymentIntent.outputs?.first().let { output ->
+            val memoChunk = output?.script?.chunks?.get(1)!!
+            var memo = String(memoChunk.data!!)
+            val index = memo.indexOfLast { ch -> ch == ':' }
+            memo = memo.substring(index + 1)
+            memo
         }
     }
 

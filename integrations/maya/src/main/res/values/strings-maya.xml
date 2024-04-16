@@ -24,6 +24,7 @@
     <string name="maya_crypto_convert_title">Convert Dash</string>
     <string name="maya_crypto_convert_order_preview_title">Order Preview</string>
 
+    <string name="cryptocurrency_any_network">% Network</string>
     <string name="cryptocurrency_bitcoin_code" translatable="false">BTC</string>
     <string name="cryptocurrency_bitcoin_network">Bitcoin</string>
     <string name="cryptocurrency_dash_code" translatable="false">DASH</string>

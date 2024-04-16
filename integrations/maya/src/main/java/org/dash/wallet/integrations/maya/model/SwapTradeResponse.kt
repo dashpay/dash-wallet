@@ -67,15 +67,17 @@ data class SwapApiAmount(
 @Parcelize
 data class SwapTradeUIModel(
     val amount: Amount,
+    val destinationAddress: String,
     val swapTradeId: String = "",
     val inputAmount: String = "",
     val inputCurrency: String = "",
     val outputAmount: String = "",
     val outputCurrency: String = "",
+    val outputAsset: String = "",
     val displayInputAmount: String = "",
     val displayInputCurrency: String = "",
-    val feeAmount: String = "",
-    val feeCurrency: String = "",
+    val feeAmount: Amount = Amount(),
+    // val feeCurrency: String = "",
     var assetsBaseID: Pair<String, String>? = null,
     var inputCurrencyName: String = "",
     var outputCurrencyName: String = ""

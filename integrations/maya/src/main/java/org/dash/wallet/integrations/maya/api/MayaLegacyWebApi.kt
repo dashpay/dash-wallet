@@ -75,22 +75,6 @@ open class MayaLegacyWebApi @Inject constructor(
         }
     }
 
-    suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel> {
-        return ResponseResource.Success(
-            SwapTradeUIModel(
-                amount = tradesRequest.amount,
-                inputAmount = tradesRequest.amount.dash.toPlainString(),
-                displayInputCurrency = "DASH",
-                displayInputAmount = tradesRequest.amount.dash.toPlainString(),
-                inputCurrency = tradesRequest.amount_asset,
-                outputCurrency = tradesRequest.target_asset,
-                outputAmount = tradesRequest.amount.crypto.toPlainString(),
-                feeAmount = "0.01",
-                feeCurrency = tradesRequest.source_asset
-            )
-        )
-    }
-
     suspend fun getUserAccounts(currency: String): List<AccountDataUIModel> {
         return listOf(
             AccountDataUIModel(

@@ -17,11 +17,15 @@
 
 package org.dash.wallet.integrations.maya.api
 
+import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.Balance
+import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.NetworkResponse
 import org.dash.wallet.integrations.maya.model.PoolInfo
@@ -59,6 +63,10 @@ open class MayaWebApi @Inject constructor(
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(MayaWebApi::class.java)
+        private const val DEFAULT_UTXO_CHAIN_TX_SIZE = 250L
+        private const val DEFAULT_ETH_TX_SIZE = 21000L
+        private const val DEFAULT_ERC20_TX_SIZE = 70000L
+        private const val GWEI_CONVERSION: Int = 1_000_000_000
     }
 
     suspend fun getPoolInfo(): List<PoolInfo> {
@@ -143,6 +151,21 @@ open class MayaWebApi @Inject constructor(
         }
     }
 
+//    {
+//        "address": "bc1qfufu935synv680ws076m60g60n6gxvqaqglawt",
+//        "chain": "BTC",
+//        "chain_lp_actions_paused": false,
+//        "chain_trading_paused": false,
+//        "dust_threshold": "10000",
+//        "gas_rate": "36",
+//        "gas_rate_units": "satsperbyte",
+//        "global_trading_paused": false,
+//        "halted": false,
+//        "outbound_fee": "36000",
+//        "outbound_tx_size": "1000",
+//        "pub_key": "mayapub1addwnpepqdupyxvsy864n5wua9532ey72feplzmtsacfjc8wvy0e5sdd96w0zf0anph"
+//    },
+
     suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel> {
         // we need to calculate the fees based on getInboundAddresses
 
@@ -154,23 +177,44 @@ open class MayaWebApi @Inject constructor(
         val destination = inboundAddresses.find { it.chain == tradesRequest.target_asset }
         val networkResponse = getNetwork()
 
+        // incomingFee (estimated)
+        val incomingFee = Transaction.DEFAULT_TX_FEE.multiply(227).div(1000).toBigDecimal()
+
         // Liquidity Fee
         val swapAmount = tradesRequest.amount.crypto
-        val poolDepth = destinationPoolInfo!!.assetDepth.toBigDecimal().setScale(8, RoundingMode.HALF_UP)
+        val poolDepth = destinationPoolInfo!!.assetDepth.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(BigDecimal(1_0000_000))
         val slip = swapAmount / (swapAmount + poolDepth)
         val fee = slip * swapAmount
+        val feeAmount = tradesRequest.amount.copy().apply { crypto = fee }
+
+        // Outgoing Fee
+        val outgoingFee = destination!!.outboundFee.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(BigDecimal(1_0000_0000))// * txSize * outboundFeeMultiplier
+
+        feeAmount.crypto += outgoingFee
+        feeAmount.dash += incomingFee
+        feeAmount.anchoredType = tradesRequest.amount.anchoredType
+
+        val displayCurrency = when (tradesRequest.amount.anchoredType) {
+            CurrencyInputType.Dash -> tradesRequest.source_asset
+            CurrencyInputType.Fiat -> tradesRequest.fiatCurrency
+            CurrencyInputType.Crypto -> tradesRequest.target_asset
+        }
 
         return ResponseResource.Success(
             SwapTradeUIModel(
                 amount = tradesRequest.amount,
                 inputAmount = tradesRequest.amount.dash.toPlainString(),
-                displayInputCurrency = "DASH",
-                displayInputAmount = tradesRequest.amount.dash.toPlainString(),
-                inputCurrency = tradesRequest.amount_asset,
+                displayInputCurrency = displayCurrency,
+                displayInputAmount = tradesRequest.amount.anchoredValue.setScale(
+                    8,
+                    RoundingMode.HALF_UP
+                ).toPlainString(),
+                inputCurrency = tradesRequest.source_asset,
                 outputCurrency = tradesRequest.target_asset,
+                outputAsset = tradesRequest.target_maya_asset,
                 outputAmount = tradesRequest.amount.crypto.setScale(8, RoundingMode.HALF_UP).toPlainString(),
-                feeAmount = fee.setScale(8, RoundingMode.HALF_UP).toPlainString(),
-                feeCurrency = tradesRequest.source_asset
+                feeAmount = feeAmount,
+                destinationAddress = tradesRequest.targetAddress
             )
         )
     }

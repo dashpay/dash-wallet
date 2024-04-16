@@ -76,10 +76,10 @@
     </fragment>
 
     <dialog
-        android:id="@+id/coinbaseFeeInfoDialog"
+        android:id="@+id/mayaFeeInfoDialog"
         android:name="org.dash.wallet.integrations.maya.ui.dialogs.MayaFeeInfoDialog"
         android:label="coinbase_info_fee"
-        tools:layout="@layout/dialog_coinbase_fee_info"
+        tools:layout="@layout/dialog_maya_fee_info"
         />
     <fragment
         android:id="@+id/mayaConversionPreviewFragment"
@@ -89,7 +89,7 @@
 
         <action
             android:id="@+id/orderReviewToFeeInfo"
-            app:destination="@id/coinbaseFeeInfoDialog" />
+            app:destination="@id/mayaFeeInfoDialog" />
         <argument
             android:name="swapModel"
             app:argType="org.dash.wallet.integrations.maya.model.SwapTradeUIModel" />

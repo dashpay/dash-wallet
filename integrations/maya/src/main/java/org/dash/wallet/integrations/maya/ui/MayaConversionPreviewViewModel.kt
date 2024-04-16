@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,21 +23,25 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.services.NetworkStateInt
-import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.api.MayaWebApi
+import org.dash.wallet.integrations.maya.model.CoinbaseErrorResponse
+import org.dash.wallet.integrations.maya.model.SwapTradeResponse
+import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dash.wallet.integrations.maya.model.TradesRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
 import javax.inject.Inject
 
 @HiltViewModel
 class MayaConversionPreviewViewModel @Inject constructor(
-    private val coinBaseRepository: MayaWebApi,
+    private val mayaWebApi: MayaWebApi,
     private val walletDataProvider: WalletDataProvider,
     private val sendPaymentService: SendPaymentService,
     private val analyticsService: AnalyticsService,
@@ -71,7 +75,8 @@ class MayaConversionPreviewViewModel @Inject constructor(
     fun commitSwapTrade(tradeId: String, inputCurrency: String, inputAmount: String) = viewModelScope.launch {
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
 
-        _showLoading.value = true
+        //TODO: this is the action to do the swap
+        //_showLoading.value = true
 //        when (val result = coinBaseRepository.commitSwapTrade(tradeId)) {
 //            is ResponseResource.Success -> {
 //                _showLoading.value = false
@@ -117,48 +122,49 @@ class MayaConversionPreviewViewModel @Inject constructor(
     }
 
     private fun swapTrade(swapTradeUIModel: SwapTradeUIModel) = viewModelScope.launch {
-//        _showLoading.value = true
-//        swapTradeUIModel.assetsBaseID?.let {
-//            val tradesRequest = TradesRequest(
-//                swapTradeUIModel.amount,
-//                swapTradeUIModel.displayInputAmount,
-//                swapTradeUIModel.displayInputCurrency,
-//                source_asset = it.first,
-//                target_asset = it.second,
-//                fiatCurrency = swapTradeUIModel.feeCurrency
-//            )
-//            when (val result = coinBaseRepository.swapTrade(tradesRequest)) {
-//                is ResponseResource.Success -> {
-//                    _showLoading.value = false
-//                    if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
-//                        swapTradeFailureState.call()
-//                    } else {
-//                        result.value.apply {
-//                            this.assetsBaseID = swapTradeUIModel.assetsBaseID
-//                            this.inputCurrencyName =
-//                                swapTradeUIModel.inputCurrencyName
-//                            this.outputCurrencyName = swapTradeUIModel.outputCurrencyName
-//                        }
-//                        _swapTradeOrder.value = result.value
-//                    }
-//                }
-//                is ResponseResource.Failure -> {
-//                    _showLoading.value = false
-//
-//                    val error = result.errorBody
-//                    if (error.isNullOrEmpty()) {
-//                        swapTradeFailureState.call()
-//                    } else {
-//                        val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
-//                        if (message.isNullOrEmpty()) {
-//                            swapTradeFailureState.call()
-//                        } else {
-//                            swapTradeFailureState.value = message
-//                        }
-//                    }
-//                }
-//            }
-//        }
+        _showLoading.value = true
+        val tradesRequest = TradesRequest(
+            swapTradeUIModel.amount,
+            swapTradeUIModel.displayInputAmount,
+            swapTradeUIModel.displayInputCurrency,
+            source_asset = swapTradeUIModel.inputCurrency,
+            target_asset = swapTradeUIModel.outputCurrency,
+            source_maya_asset = "DASH.DASH",
+            target_maya_asset = swapTradeUIModel.outputAsset,
+            fiatCurrency = swapTradeUIModel.amount.fiatCode,
+            targetAddress = swapTradeUIModel.destinationAddress
+        )
+        when (val result = mayaWebApi.swapTrade(tradesRequest)) {
+            is ResponseResource.Success -> {
+                _showLoading.value = false
+                if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
+                    swapTradeFailureState.call()
+                } else {
+                    result.value.apply {
+                        this.assetsBaseID = swapTradeUIModel.assetsBaseID
+                        this.inputCurrencyName =
+                            swapTradeUIModel.inputCurrencyName
+                        this.outputCurrencyName = swapTradeUIModel.outputCurrencyName
+                    }
+                    _swapTradeOrder.value = result.value
+                }
+            }
+            is ResponseResource.Failure -> {
+                _showLoading.value = false
+
+                val error = result.errorBody
+                if (error.isNullOrEmpty()) {
+                    swapTradeFailureState.call()
+                } else {
+                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
+                    if (message.isNullOrEmpty()) {
+                        swapTradeFailureState.call()
+                    } else {
+                        swapTradeFailureState.value = message
+                    }
+                }
+            }
+        }
     }
 
     fun onRefreshOrderClicked(swapTradeUIModel: SwapTradeUIModel) {
@@ -169,27 +175,6 @@ class MayaConversionPreviewViewModel @Inject constructor(
     fun logEvent(eventName: String) {
         analyticsService.logEvent(eventName, mapOf())
     }
-
-//    private suspend fun sellDashToCoinBase(coin: Coin) {
-//        _showLoading.value = true
-//
-//        when (val result = coinBaseRepository.createAddress()) {
-//            is ResponseResource.Success -> {
-//                if (result.value.isEmpty()) {
-//                    _showLoading.value = false
-//                    getUserAccountAddressFailedCallback.call()
-//                } else {
-//                    sendDashToCoinbase(coin, result.value)
-//                    sellSwapSuccessState.call()
-//                    _showLoading.value = false
-//                }
-//            }
-//            is ResponseResource.Failure -> {
-//                _showLoading.value = false
-//                getUserAccountAddressFailedCallback.call()
-//            }
-//        }
-//    }
 
     private suspend fun sendDashToCoinbase(coin: Coin, addressInfo: String): Boolean {
         val address = Address.fromString(walletDataProvider.networkParameters, addressInfo.trim { it <= ' ' })

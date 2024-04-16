@@ -65,6 +65,7 @@ class ConvertViewViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(ConvertViewFragment::class.java)
     }
     var destinationCurrency: String? = null
+    var destinationAddress: String? = null
     lateinit var account: AccountDataUIModel
     val amount = Amount()
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
@@ -150,6 +151,8 @@ class ConvertViewViewModel @Inject constructor(
     }
 
     fun setSelectedCryptoCurrency(account: AccountDataUIModel) {
+        amount.cryptoCode = account.coinbaseAccount.currency
+        amount.fiatCode = selectedLocalCurrencyCode
         this.account = account
         maxCoinBaseAccountAmount = account.coinbaseAccount.availableBalance.value
 
@@ -274,9 +277,11 @@ class ConvertViewViewModel @Inject constructor(
             //val amount = getFiatAmount(currencyInputType)
             logEnteredAmountCurrency(currencyInputType)
             onContinueEvent.value = selectedCryptoCurrencyAccount.value?.coinbaseAccount?.let {
-                SwapRequest(
-                    amount, it.currency, it.asset, selectedLocalCurrencyCode
-                )
+                    destinationAddress?.let { address ->
+                        SwapRequest(
+                            amount, address, it.currency, it.asset, selectedLocalCurrencyCode
+                        )
+                    }
             }
         }
     }

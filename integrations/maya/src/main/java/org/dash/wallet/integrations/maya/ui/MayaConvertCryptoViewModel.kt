@@ -96,7 +96,8 @@ class MayaConvertCryptoViewModel @Inject constructor(
             target_asset = targetAsset,
             source_maya_asset = "$sourceAsset.$sourceAsset",
             target_maya_asset = swapTradeInfo.cryptoCurrencyAsset,
-            fiatCurrency = swapTradeInfo.fiatCurrencyCode
+            fiatCurrency = swapTradeInfo.fiatCurrencyCode,
+            targetAddress = swapTradeInfo.destinationAddress
         )
 
         when (val result = coinBaseRepository.swapTrade(tradesRequest)) {
