@@ -26,7 +26,7 @@ import java.util.*
 class BlockchainStateRoomConverters {
 
     @TypeConverter
-    fun fromImpedimentsEnumSet(value: String?): Set<BlockchainState.Impediment> {
+    fun fromImpedimentsEnumSet(value: String?): MutableSet<BlockchainState.Impediment> {
         val impedimentSet = EnumSet.noneOf(BlockchainState.Impediment::class.java)
         if (value == null || value.isEmpty()) {
             return impedimentSet
@@ -39,7 +39,7 @@ class BlockchainStateRoomConverters {
     }
 
     @TypeConverter
-    fun toImpedimentsString(impediments: Set<BlockchainState.Impediment>): String {
+    fun toImpedimentsString(impediments: MutableSet<BlockchainState.Impediment>): String {
         val sb = StringBuilder()
         impediments.forEach {
             if (sb.isNotEmpty()) {
