@@ -43,7 +43,7 @@
             />
 
         <TextView
-            android:id="@+id/coinbase_fee_info_msg"
+            android:id="@+id/maya_fee_info_msg"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             app:layout_constraintTop_toBottomOf="@id/maya_fee_info_title"
@@ -60,23 +60,11 @@
             android:lineSpacingExtra="4sp"
             />
 
-        <TextView
-            android:id="@+id/maya_fee_info_learn_more"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:layout_constraintTop_toBottomOf="@id/coinbase_fee_info_msg"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            style="@style/Caption.SemiBold.Blue"
-            android:text="@string/learn_more"
-            android:textSize="12sp"
-            />
-
         <Button
-            android:id="@+id/coinbase_fee_info_close_btn"
+            android:id="@+id/maya_fee_info_close_btn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:layout_constraintTop_toBottomOf="@id/maya_fee_info_learn_more"
+            app:layout_constraintTop_toBottomOf="@id/maya_fee_info_msg"
             android:layout_marginLeft="20dp"
             android:layout_marginRight="20dp"
             android:layout_marginTop="36dp"

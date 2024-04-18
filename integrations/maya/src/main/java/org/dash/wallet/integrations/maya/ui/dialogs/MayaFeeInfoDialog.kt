@@ -54,11 +54,7 @@ class MayaFeeInfoDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.coinbaseFeeInfoCloseBtn.setOnClickListener { findNavController().navigateUp() }
-        binding.mayaFeeInfoLearnMore.setOnClickListener {
-            findNavController().navigateUp()
-            openWebPage()
-        }
+        binding.mayaFeeInfoCloseBtn.setOnClickListener { findNavController().navigateUp() }
     }
 
     private fun openWebPage() {
