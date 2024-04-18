@@ -83,6 +83,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         val dashPoolInfo = mayaViewModel.getPoolInfo("DASH")
 
         binding.toolbar.setNavigationOnClickListener {
+            convertViewModel.reset()
             findNavController().popBackStack()
         }
         binding.convertView.isSellSwapEnabled = true

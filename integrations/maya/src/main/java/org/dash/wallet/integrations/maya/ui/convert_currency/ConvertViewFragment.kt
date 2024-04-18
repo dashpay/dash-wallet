@@ -117,7 +117,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
             viewModel.selectedPickerCurrencyCode = value
         }
 
-        initAmount()
+        // initAmount()
     }
 
     private fun resetViewSelection(it: AccountDataUIModel?) {
@@ -136,7 +136,12 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                 viewModel.amount.anchoredType != CurrencyInputType.Fiat,
                 viewModel.amount.anchoredCurrencyCode
             )
-            viewModel.selectedPickerCurrencyCode = binding.currencyOptions.pickedOption
+            viewModel.selectedPickerCurrencyCode = viewModel.amount.anchoredCurrencyCode
+            binding.currencyOptions.pickedOptionIndex = when (viewModel.amount.anchoredType) {
+                CurrencyInputType.Dash -> 0
+                CurrencyInputType.Fiat -> 1
+                CurrencyInputType.Crypto -> 2
+            }
             applyNewValue(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption, isLocalized = true)
             binding.currencyOptions.isVisible = true
             binding.maxButtonWrapper.isVisible = true

@@ -429,4 +429,8 @@ class ConvertViewViewModel @Inject constructor(
             )
         }.toString()
     }
+
+    fun reset() {
+        amount.dash = BigDecimal.ZERO
+    }
 }
