@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Qr
@@ -137,6 +138,20 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
                         ).buildAlertDialog()
                     alertDialog.show()
                 }
+            }
+        }
+
+        // val composeView = findViewById<ComposeView>(R.id.zen_ledger_view)
+        binding.zenLedgerView.setContent {
+            MenuItem(
+                getString(R.string.zenledger_export_title),
+                getString(R.string.zenledger_export_subtitle),
+                "details",
+                R.drawable.ic_zenledger_icon,
+                showInfo = true,
+                showChevron = true
+            ) {
+                ZenLedgerDialogFragment().show(requireActivity())
             }
         }
 
