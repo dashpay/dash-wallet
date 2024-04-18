@@ -135,14 +135,12 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
             }
         }
 
-        // val composeView = findViewById<ComposeView>(R.id.zen_ledger_view)
         binding.zenLedgerView.setContent {
             MenuItem(
-                getString(R.string.zenledger_export_title),
-                getString(R.string.zenledger_export_subtitle),
-                "details",
-                R.drawable.ic_zenledger_icon,
-                showInfo = true,
+                title = getString(R.string.zenledger_export_title),
+                subtitle = getString(R.string.zenledger_export_subtitle),
+                icon = R.drawable.ic_zenledger_icon,
+                showInfo = false,
                 showChevron = true
             ) {
                 ZenLedgerDialogFragment().show(requireActivity())

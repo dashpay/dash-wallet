@@ -27,7 +27,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,52 +37,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.dash.wallet.common.R
-
-//@Composable
-//fun MenuItemIcon(icon: Int?) {
-//    icon?.let {
-//        Image(
-//            painter = painterResource(id = it),
-//            contentDescription = null,
-//            modifier = Modifier.size(36.dp)
-//        )
-//    }
-//}
-//
-//@Composable
-//fun MenuItemTexts(title: String, subtitle: String?, details: String?) {
-//    Column(
-//        modifier = Modifier
-//            .weight(1f)
-//            .padding(start = 8.dp)
-//    ) {
-//        Text(
-//            text = title,
-//            fontWeight = FontWeight.Medium,
-//            fontSize = 14.sp,
-//            color = Color.Black,
-//            modifier = Modifier.weight(1f)
-//        )
-//
-//        subtitle?.let {
-//            Text(
-//                text = it,
-//                fontSize = 12.sp,
-//                color = Color.DarkGray,
-//                modifier = Modifier.padding(top = 2.dp)
-//            )
-//        }
-//
-//        details?.let {
-//            Text(
-//                text = it,
-//                fontSize = 12.sp,
-//                color = Color.DarkGray,
-//                modifier = Modifier.padding(top = 2.dp)
-//            )
-//        }
-//    }
-//}
 
 @Composable
 fun MenuItem(
@@ -103,7 +56,7 @@ fun MenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(10.dp)
-            .background(Color.LightGray, RoundedCornerShape(8.dp))
+            .background(Color.Gray, RoundedCornerShape(8.dp))
             .clickable { action?.invoke() }
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -112,7 +65,7 @@ fun MenuItem(
             Image(
                 painter = painterResource(id = it),
                 contentDescription = null,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(34.dp)
             )
         }
 
@@ -172,7 +125,7 @@ fun MenuItem(
 
         if (showChevron) {
             Icon(
-                painter = painterResource(id = android.R.drawable.arrow_down_float),
+                painter = painterResource(id = R.drawable.ic_menu_row_arrow),
                 contentDescription = "Chevron",
                 tint = Color.Gray,
                 modifier = Modifier.padding(end = 10.dp)
@@ -187,7 +140,7 @@ fun PreviewMenuItem() {
     MenuItem(
         title = "Title",
         subtitle = "Easily stake Dash and earn passive income with a few simple steps",
-        icon = R.drawable.ic_dash_blue_filled, // Replace 'ic_faceid' with actual resource ID
+        icon = R.drawable.ic_dash_blue_filled,
         showInfo = true,
         isToggled = { true },
         onToggleChanged = { }
