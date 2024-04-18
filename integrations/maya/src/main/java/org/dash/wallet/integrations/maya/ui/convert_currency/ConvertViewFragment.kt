@@ -33,6 +33,7 @@ import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentConvertCurrencyViewBinding
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.ui.mayaViewModels
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -115,6 +116,8 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
             setAmountValue(value)
             viewModel.selectedPickerCurrencyCode = value
         }
+
+        initAmount()
     }
 
     private fun resetViewSelection(it: AccountDataUIModel?) {
@@ -128,7 +131,11 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                 pickedOptionIndex = 0
                 provideOptions(currencyConversionOptionList)
             }
-            viewModel.enteredConvertAmount = "0"
+            viewModel.enteredConvertAmount = GenericUtils.toLocalizedString(
+                viewModel.amount.anchoredValue,
+                viewModel.amount.anchoredType != CurrencyInputType.Fiat,
+                viewModel.amount.anchoredCurrencyCode
+            )
             viewModel.selectedPickerCurrencyCode = binding.currencyOptions.pickedOption
             applyNewValue(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption, isLocalized = true)
             binding.currencyOptions.isVisible = true
@@ -138,6 +145,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                 binding.bottomCard.isVisible = true
             }
         }
+    }
+
+    private fun initAmount() {
+        setAmountValue(viewModel.selectedPickerCurrencyCode)
     }
 
     private fun setAmountValue(pickedCurrencyOption: String) {
