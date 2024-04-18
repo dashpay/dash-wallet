@@ -1,6 +1,6 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-kapt'
+apply plugin: 'com.google.devtools.ksp'
 apply plugin: 'kotlin-parcelize'
 apply plugin: 'dagger.hilt.android.plugin'
 
@@ -78,7 +78,7 @@ dependencies {
 
     // UI
     implementation "com.github.bumptech.glide:glide:$glideVersion"
-    kapt "com.github.bumptech.glide:compiler:$glideVersion"
+    ksp "com.github.bumptech.glide:compiler:$glideVersion"
     implementation "io.coil-kt:coil:$coilVersion"
     implementation "com.google.android.material:material:$materialVersion"
     implementation "androidx.browser:browser:$browserVersion"
@@ -89,7 +89,7 @@ dependencies {
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
-    kapt "com.google.dagger:hilt-compiler:$hiltVersion"
+    ksp "com.google.dagger:hilt-compiler:$hiltVersion"
 
     testImplementation "junit:junit:$junitVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"

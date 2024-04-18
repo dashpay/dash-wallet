@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-    id 'kotlin-kapt'
+    id 'com.google.devtools.ksp'
     id 'androidx.navigation.safeargs.kotlin'
     id 'dagger.hilt.android.plugin'
     id 'kotlin-parcelize'
@@ -37,10 +37,6 @@ android {
     namespace 'org.dash.wallet.integrations.crowdnode'
 }
 
-kapt {
-    correctErrorTypes true
-}
-
 hilt {
     enableAggregatingTask = true
 }
@@ -65,8 +61,8 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     implementation "androidx.hilt:hilt-work:$hiltWorkVersion"
     implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
-    kapt "com.google.dagger:hilt-android-compiler:$hiltVersion"
-    kapt "androidx.hilt:hilt-compiler:1.0.0"
+    ksp "com.google.dagger:hilt-android-compiler:$hiltVersion"
+    ksp "androidx.hilt:hilt-compiler:$hiltCompilerVersion"
 
     // UI
     implementation "com.google.android.material:material:$materialVersion"

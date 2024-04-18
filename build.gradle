@@ -1,14 +1,15 @@
 buildscript {
     ext {
-        kotlin_version = '1.8.22'
+        kotlin_version = '1.9.23'
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.9.1'
-        dashjVersion = '20.0.4'
-        hiltVersion = '2.45'
+        dashjVersion = '20.0.34'
+        hiltVersion = '2.51'
+        hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.0.0'
         workRuntimeVersion='2.7.1'
         firebaseVersion = '32.1.1'
-        roomVersion = '2.4.3'
+        roomVersion = '2.5.2'
         jetpackVersion = '1.8.0'
         appCompatVersion = '1.4.2'
 
@@ -16,7 +17,6 @@ buildscript {
         lifecycleVersion = '2.5.1'
         navigationVersion = '2.6.0'
         datastoreVersion = "1.0.0"
-        hiltVersion = '2.45'
         hiltWorkVersion = '1.0.0'
         serializationVersion = '1.0.1'
         preferenceVersion = '1.2.0'
@@ -60,6 +60,10 @@ buildscript {
         classpath "com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin:2.0.1"
         classpath "org.jlleitschuh.gradle:ktlint-gradle:11.3.1"
     }
+}
+
+plugins {
+    id 'com.google.devtools.ksp' version '1.9.23-1.0.19' apply false
 }
 
 allprojects {
