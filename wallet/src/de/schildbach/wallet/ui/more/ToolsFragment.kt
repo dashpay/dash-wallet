@@ -22,10 +22,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -109,8 +105,6 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         binding.showXpub.setOnClickListener {
             handleExtendedPublicKey()
         }
-
-        binding.zenLedgerView.setContent { Greeting("Hello") }
 
         var isSyncing = false
         viewModel.blockchainState.observe(viewLifecycleOwner) {
@@ -211,12 +205,4 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         Toast(requireContext()).toast(R.string.copied)
         log.info("xpub copied to clipboard: {}", xpub)
     }
-}
-
-@Composable
-fun Greeting(text: String) {
-    Text(
-        text = "$text!", color = Color(0xFF0F9D58),
-        fontSize = 30.sp
-    )
 }

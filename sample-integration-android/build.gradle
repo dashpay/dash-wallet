@@ -37,9 +37,9 @@ android {
     }
 
     defaultConfig {
-        compileSdk 34
+        compileSdk 33
         minSdkVersion 24
-        targetSdkVersion 34
+        targetSdkVersion 33
         multiDexEnabled true
     }
     compileOptions {

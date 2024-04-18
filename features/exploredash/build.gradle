@@ -10,9 +10,9 @@ plugins {
 
 android {
     defaultConfig {
-        compileSdk 34
+        compileSdk 33
         minSdkVersion 24
-        targetSdkVersion 34
+        targetSdkVersion 33
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
         javaCompileOptions {
@@ -73,6 +73,8 @@ dependencies {
     // Database
     implementation "androidx.room:room-ktx:$roomVersion"
     implementation "androidx.room:room-paging:$roomVersion"
+    implementation "androidx.room:room-runtime:$roomVersion"
+    ksp "androidx.room:room-compiler:$roomVersion"
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
@@ -115,7 +117,6 @@ dependencies {
     testImplementation "androidx.arch.core:core-testing:$coreTestingVersion"
     testImplementation "org.robolectric:robolectric:4.9.2"
     testImplementation "androidx.room:room-testing:$roomVersion"
-    ksp "androidx.room:room-compiler:$roomVersion"
 
     androidTestImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
     androidTestImplementation "org.mockito:mockito-android:4.6.1"

@@ -21,7 +21,6 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import de.schildbach.wallet.database.dao.*
-import org.dash.wallet.common.data.RoomConverters
 import org.dash.wallet.common.data.entity.AddressMetadata
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -29,6 +28,7 @@ import org.dash.wallet.common.data.entity.IconBitmap
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.features.exploredash.utils.RoomConverters
 
 @Database(
     entities =
