@@ -56,7 +56,7 @@ fun MenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(10.dp)
-            .background(Color.Gray, RoundedCornerShape(8.dp))
+            .background(Color.White, RoundedCornerShape(8.dp))
             .clickable { action?.invoke() }
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
