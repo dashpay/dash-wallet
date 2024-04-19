@@ -48,6 +48,7 @@ import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.quorums.InstantSendLock
+import org.bitcoinj.quorums.LLMQParameters
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
@@ -69,10 +70,13 @@ import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAsse
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.toHex
+import org.dashj.platform.sdk.callbacks.ContextProvider
+import org.dashj.platform.sdk.dashsdk
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.sdk.platform.multicall.MulticallQuery
 import org.slf4j.LoggerFactory
+import java.math.BigInteger
 import java.util.*
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
@@ -136,6 +140,8 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun init() {
+        // load the dash-sdk library
+        System.loadLibrary("sdklib")
         authenticationGroupExtension = walletApplication.wallet?.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
         blockchainIdentityDataDao.load()?.let {
             blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet!!)
@@ -979,11 +985,78 @@ class PlatformRepo @Inject constructor(
 
     }
 
+    val contextProvider = object : ContextProvider() {
+        override fun getQuorumPublicKey(
+            quorumType: Int,
+            quorumHashBytes: ByteArray?,
+            coreChainLockedHeight: Int
+        ): ByteArray? {
+            val quorumHash = Sha256Hash.wrap(quorumHashBytes)
+            var quorumPublicKey: ByteArray? = null
+            log.info("searching for quorum: $quorumType, $quorumHash, $coreChainLockedHeight")
+            Context.propagate(walletApplication.wallet!!.context)
+            Context.get().masternodeListManager.getQuorumListAtTip(
+                LLMQParameters.LLMQType.fromValue(
+                    quorumType
+                )
+            ).forEachQuorum(true) {
+                if (it.llmqType.value == quorumType && it.quorumHash == quorumHash) {
+                    quorumPublicKey = it.quorumPublicKey.serialize(false)
+                }
+            }
+            log.info("searching for quorum: result: ${quorumPublicKey?.toHex()}")
+            return quorumPublicKey
+        }
+
+        override fun getDataContract(identifier: org.dashj.platform.sdk.Identifier?): ByteArray {
+            TODO("Not yet implemented")
+        }
+    }
+
     fun getIdentityFromPublicKeyId(): Identity? {
         val encryptionKey = getWalletEncryptionKey()
         val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey) ?: return null
 
         return try {
+            // this first query is for testing on Android
+            val identifier = org.dashj.platform.sdk.Identifier(Base58.decode("4EfA9Jrvv3nnCFdSf7fad59851iiTRZ6Wcu6YVJ4iSeF"))
+            val testValue = dashsdk.fetchIdentity(identifier,
+                BigInteger.valueOf(contextProvider.quorumPublicKeyCallback),
+                BigInteger.ZERO
+            )
+            try {
+                val identity = testValue.unwrap()
+                log.info("data contract owner found for ${Base58.encode(identity.v0._0.id._0._0)} with ${identity.v0._0.publicKeys.size} keys")
+            } catch (e: Exception) {
+                log.info("fetch identity error: ${testValue.unwrapError()}")
+            } finally {
+                identifier.delete() // manually free this memory
+            }
+            // this second query is for testing on Android
+            val publicKeyHash = ECKey.fromPublicOnly(Constants.HEX.decode("02c8b4747b528cac5fddf7a6cc63702ee04ed7d1332904e08510343ea00dce546a")).pubKeyHash
+            val testValue2 = dashsdk.getIdentityByPublicKeyHash(publicKeyHash,
+                BigInteger.valueOf(contextProvider.quorumPublicKeyCallback),
+                BigInteger.ZERO
+            )
+            try {
+                val identity = testValue2.unwrap()
+                log.info("data contract owner found for ${Constants.HEX.encode(publicKeyHash)} with ${identity.v0._0.publicKeys.size} keys")
+            } catch (e: Exception) {
+                log.info("fetch identity error: ${testValue2.unwrapError()}")
+            }
+            // this is the actual query that we need, but the result is not sued
+            val value = dashsdk.getIdentityByPublicKeyHash(
+                firstIdentityKey.pubKeyHash,
+                BigInteger.valueOf(contextProvider.quorumPublicKeyCallback),
+                BigInteger.ZERO
+            )
+            try {
+                val identity = value.unwrap()
+                log.info("identify found for ${identity.v0._0.id} with ${identity.v0._0.publicKeys.size}")
+            } catch (e: Exception) {
+                log.info("fetch identity error: ${value.unwrapError()}")
+            }
+            // this is the original query that will fail because it uses DPP 0.23
             platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
         } catch (e: MaxRetriesReachedException) {
             null
