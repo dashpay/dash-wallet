@@ -58,7 +58,6 @@ class WalletUriHandlerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         wallet = (application as WalletApplication).wallet
-        handleIntent(intent)
         walletUriResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             var resultIntent: Intent? = null
             if (result.resultCode == Activity.RESULT_OK) {
@@ -70,6 +69,7 @@ class WalletUriHandlerActivity : AppCompatActivity() {
             setResult(result.resultCode, resultIntent)
             finish()
         }
+        handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
