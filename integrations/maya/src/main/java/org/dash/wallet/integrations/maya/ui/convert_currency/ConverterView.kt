@@ -129,7 +129,7 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
 
             if (dashInput != null && fiatInput != null) {
                 binding.convertFromBtn.setConvertItemAmounts(
-                    "${dashFormat.minDecimals(2).optionalDecimals(2,4).format(dashInput ?: Coin.ZERO)}",
+                    "${dashFormat.format(dashInput ?: Coin.ZERO)}",
                     "${Constants.PREFIX_ALMOST_EQUAL_TO} ${ (fiatInput ?: Fiat.valueOf("USD", 0)).toFormattedString() }"
                 )
             }

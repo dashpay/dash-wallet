@@ -148,7 +148,7 @@ object GenericUtils {
     }
 
     val dashFormat: MonetaryFormat
-        get() = MonetaryFormat().withLocale(getDeviceLocale()).noCode().optionalDecimals(1, 1, 1, 1, 1, 1)
+        get() = MonetaryFormat().withLocale(getDeviceLocale()).noCode().minDecimals(0).repeatOptionalDecimals(1, 8)
     val fiatFormat: MonetaryFormat
         get() = MonetaryFormat().withLocale(getDeviceLocale()).noCode().minDecimals(getCurrencyDigits())
 
