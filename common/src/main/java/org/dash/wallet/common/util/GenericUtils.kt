@@ -147,10 +147,10 @@ object GenericUtils {
         }
     }
 
-    private val dashFormat: MonetaryFormat = MonetaryFormat().withLocale(getDeviceLocale())
-        .noCode().minDecimals(2).optionalDecimals(2, 2, 2)
-    private val fiatFormat: MonetaryFormat = MonetaryFormat().withLocale(getDeviceLocale())
-        .noCode().minDecimals(getCurrencyDigits()).optionalDecimals()
+    val dashFormat: MonetaryFormat
+        get() = MonetaryFormat().withLocale(getDeviceLocale()).noCode().optionalDecimals(1, 1, 1, 1, 1, 1)
+    val fiatFormat: MonetaryFormat
+        get() = MonetaryFormat().withLocale(getDeviceLocale()).noCode().minDecimals(getCurrencyDigits())
 
     fun toLocalizedString(value: BigDecimal, isCrypto: Boolean, currencyCode: String): String {
         return if (isCrypto) {

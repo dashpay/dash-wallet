@@ -38,8 +38,7 @@ import java.math.RoundingMode
 
 class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs) {
     private val binding = ConverterViewBinding.inflate(LayoutInflater.from(context), this)
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-        .noCode().minDecimals(6).optionalDecimals()
+    private val dashFormat = GenericUtils.dashFormat
 
     private var onCurrencyChooserClicked: (() -> Unit)? = null
 
