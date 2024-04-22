@@ -157,24 +157,6 @@ class WalletUriHandlerActivity : AppCompatActivity() {
         confirmationAlertDialogBuilder.buildAlertDialog().show()
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == REQUEST_CODE_SEND_FROM_WALLET_URI) {
-            var result: Intent? = null
-
-            if (resultCode == RESULT_OK) {
-                val requestData = intent.data
-                val transactionHash = BitcoinIntegration.transactionHashFromResult(data)
-                result = WalletUri.createPaymentResult(requestData, transactionHash)
-            }
-
-            setResult(resultCode, result)
-            finish()
-        }
-    }
-
     private val negativeButtonClickListener = {
         this@WalletUriHandlerActivity.setResult(RESULT_CANCELED)
         finish()
