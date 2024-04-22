@@ -135,18 +135,6 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
             }
         }
 
-        binding.zenLedgerView.setContent {
-            MenuItem(
-                title = getString(R.string.zenledger_export_title),
-                subtitle = getString(R.string.zenledger_export_subtitle),
-                icon = R.drawable.ic_zenledger_icon,
-                showInfo = false,
-                showChevron = true
-            ) {
-                ZenLedgerDialogFragment().show(requireActivity())
-            }
-        }
-
         binding.zenledgerExport.setOnClickListener {
             ZenLedgerDialogFragment().show(requireActivity())
         }
