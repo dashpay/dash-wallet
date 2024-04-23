@@ -77,6 +77,8 @@
     <string name="dash_wallet_name">Dash Wallet</string>
     <string name="from">from</string>
     <string name="to">to</string>
+    <string name="from_title">From</string>
+    <string name="to_title">To</string>
     <string name="select_currency">Select Currency</string>
     <string name="exchange_rate_template" translatable="false">%1$s DASH = %2$s</string>
     <string name="send_coins_error_dusty_send">The amount is too small to send</string>
@@ -127,4 +129,14 @@
     <string name="input_parser_invalid_transaction">Invalid transaction:\n%s</string>
     <string name="address_input_paste_from">Paste from %s</string>
     <string name="input_connect">Connect</string>
+
+    <!-- others -->
+    <string name="confirm_sec">Confirm (%ss)</string>
+    <string name="cancel_transaction">Cancel transaction?</string>
+    <string name="yes_cancel">Yes, cancel</string>
+    <string name="no_keep_it">No, keep it</string>
+    <string name="insufficient_money_title">Not enough coins</string>
+    <string name="insufficient_money_msg">The amount of coins in the wallet is too small for this transaction.</string>
+    <string name="send_coins_error_msg">Problem sending coins!</string>
+    <string name="from_dash_wallet_on_this_device">From Dash wallet on this device</string>
 </resources>

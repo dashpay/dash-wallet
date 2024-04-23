@@ -1,16 +1,18 @@
 package org.dash.wallet.integrations.maya.model
 
+import com.google.gson.annotations.SerializedName
+
 data class InboundAddress(
-    val address: String,
-    val chain: String,
-    val chain_lp_actions_paused: Boolean,
-    val chain_trading_paused: Boolean,
-    val dust_threshold: String,
-    val gas_rate: String,
-    val gas_rate_units: String,
-    val global_trading_paused: Boolean,
-    val halted: Boolean,
-    val outbound_fee: String,
-    val outbound_tx_size: String,
-    val pub_key: String
+    @SerializedName("address") val address: String,
+    @SerializedName("chain") val chain: String,
+    @SerializedName("chain_lp_actions_paused") val chainLpActionsPaused: Boolean,
+    @SerializedName("chain_trading_paused") val chainTradingPaused: Boolean,
+    @SerializedName("dust_threshold") val dustThreshold: String,
+    @SerializedName("gas_rate") val gasRate: String,
+    @SerializedName("gas_rate_units") val gasRateUnits: String,
+    @SerializedName("global_trading_paused") val globalTradingPaused: Boolean,
+    @SerializedName("halted") val halted: Boolean,
+    @SerializedName("outbound_fee") val outboundFee: String,
+    @SerializedName("outbound_tx_size") val outboundTxSize: String,
+    @SerializedName("pub_key") val pubKey: String
 )

@@ -40,6 +40,9 @@
             android:name="currency"
             app:argType="string" />
         <argument
+            android:name="asset"
+            app:argType="string" />
+        <argument
             android:name="title"
             app:argType="string" />
 
@@ -63,6 +66,7 @@
 
         <argument android:name="currency"
             app:argType="string" />
+        <argument android:name="asset" app:argType="string" />
         <argument android:name="paymentIntent"
             app:argType="org.dash.wallet.common.data.PaymentIntent" />
 
@@ -72,10 +76,10 @@
     </fragment>
 
     <dialog
-        android:id="@+id/coinbaseFeeInfoDialog"
+        android:id="@+id/mayaFeeInfoDialog"
         android:name="org.dash.wallet.integrations.maya.ui.dialogs.MayaFeeInfoDialog"
-        android:label="coinbase_info_fee"
-        tools:layout="@layout/dialog_coinbase_fee_info"
+        android:label="maya_info_fee"
+        tools:layout="@layout/dialog_maya_fee_info"
         />
     <fragment
         android:id="@+id/mayaConversionPreviewFragment"
@@ -84,8 +88,8 @@
         tools:layout="@layout/fragment_maya_conversion_preview">
 
         <action
-            android:id="@+id/orderReviewToFeeInfo"
-            app:destination="@id/coinbaseFeeInfoDialog" />
+            android:id="@+id/mayaOrderReviewToFeeInfo"
+            app:destination="@id/mayaFeeInfoDialog" />
         <argument
             android:name="swapModel"
             app:argType="org.dash.wallet.integrations.maya.model.SwapTradeUIModel" />

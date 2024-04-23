@@ -19,6 +19,7 @@ package org.dash.wallet.common.util
 
 import android.os.Build
 import android.os.LocaleList
+import org.bitcoinj.utils.MonetaryFormat
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
@@ -128,7 +129,7 @@ object GenericUtils {
         return currency?.defaultFractionDigits ?: 0
     }
 
-    fun stringToBigDecimal(value: String): BigDecimal {
+    private fun stringToBigDecimal(value: String): BigDecimal {
         return try {
             val format = NumberFormat.getNumberInstance(getDeviceLocale())
             val number = format.parse(value)
@@ -144,5 +145,18 @@ object GenericUtils {
         } else {
             value.toBigDecimal().setScale(scale, RoundingMode.HALF_UP)
         }
+    }
+
+    val dashFormat: MonetaryFormat
+        get() = MonetaryFormat().withLocale(getDeviceLocale()).noCode().minDecimals(0).repeatOptionalDecimals(1, 8)
+    val fiatFormat: MonetaryFormat
+        get() = MonetaryFormat().withLocale(getDeviceLocale()).noCode().minDecimals(getCurrencyDigits())
+
+    fun toLocalizedString(value: BigDecimal, isCrypto: Boolean, currencyCode: String): String {
+        return if (isCrypto) {
+            dashFormat.format(value.toCoin())
+        } else {
+            fiatFormat.format(value.toFiat(currencyCode))
+        }.toString()
     }
 }

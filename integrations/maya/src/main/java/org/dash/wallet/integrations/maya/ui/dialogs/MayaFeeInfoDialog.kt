@@ -35,10 +35,10 @@ import org.dash.wallet.common.UserInteractionAwareCallback
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.maya.R
-import org.dash.wallet.integrations.maya.databinding.DialogCoinbaseFeeInfoBinding
+import org.dash.wallet.integrations.maya.databinding.DialogMayaFeeInfoBinding
 
 class MayaFeeInfoDialog : DialogFragment() {
-    private val binding by viewBinding(DialogCoinbaseFeeInfoBinding::bind)
+    private val binding by viewBinding(DialogMayaFeeInfoBinding::bind)
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -49,16 +49,12 @@ class MayaFeeInfoDialog : DialogFragment() {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             requestFeature(Window.FEATURE_NO_TITLE)
         }
-        return inflater.inflate(R.layout.dialog_coinbase_fee_info, container, false)
+        return inflater.inflate(R.layout.dialog_maya_fee_info, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.coinbaseFeeInfoCloseBtn.setOnClickListener { findNavController().navigateUp() }
-        binding.coinbaseFeeInfoLearnMore.setOnClickListener {
-            findNavController().navigateUp()
-            openWebPage()
-        }
+        binding.mayaFeeInfoCloseBtn.setOnClickListener { findNavController().navigateUp() }
     }
 
     private fun openWebPage() {

@@ -37,7 +37,10 @@ class AddressParserTest {
         assertEquals(
             2,
             parser.findAll(
-                "Here is the first address XssjzLKgsfATYGqTQmiJURQzeKdpL5K1k3 and the second: XssjzLKgsfATYGqTQmiJURQzeKdpL5K1k3" // ktlint-disable max-line-length
+                """
+                Here is the first address XssjzLKgsfATYGqTQmiJURQzeKdpL5K1k3 and the second: 
+                XssjzLKgsfATYGqTQmiJURQzeKdpL5K1k3" // ktlint-disable max-line-length
+                """
             ).size
         )
     }
@@ -56,10 +59,12 @@ class AddressParserTest {
         assertEquals(
             4,
             parser.findAll(
-                "Here is the first address 183axN6F7ZjwayiJPjjwJgWGas6J9mtfi" +
-                    " and the second: 34Me5SAG8W8Bf2LxGfPiqVZRKKV1VL1hmW" +
-                    "\n\n bc1qxhgnnp745zryn2ud8hm6k3mygkkpkm35020js0 " +
-                    "\n bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297"
+                """
+                Here is the first address 183axN6F7ZjwayiJPjjwJgWGas6J9mtfi
+                and the second: 34Me5SAG8W8Bf2LxGfPiqVZRKKV1VL1hmW
+                \n\n bc1qxhgnnp745zryn2ud8hm6k3mygkkpkm35020js0
+                \n bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297
+                """
             ).size
         )
     }
@@ -74,7 +79,10 @@ class AddressParserTest {
         assertEquals(
             2,
             parser.findAll(
-                "Here is the first address 0x51a1449b3B6D635EddeC781cD47a99221712De97 and the second: 0xa895f5E48e91BD314ab146bD235b4345f657f497" // ktlint-disable max-line-length
+                """
+                Here is the first address 0x51a1449b3B6D635EddeC781cD47a99221712De97 and the second: 
+                0xa895f5E48e91BD314ab146bD235b4345f657f497"
+                """
             ).size
         )
     }
@@ -89,7 +97,10 @@ class AddressParserTest {
         assertEquals(
             2,
             parser.findAll(
-                "Here is the first address kujira1r8egcurpwxftegr07gjv9gwffw4fk00960dj4f and the second: kujira1377jxt6t0jrkk47thc86udxfxnvqkhj7evmd99" // ktlint-disable max-line-length
+                """
+                Here is the first address kujira1r8egcurpwxftegr07gjv9gwffw4fk00960dj4f and the second: 
+                kujira1377jxt6t0jrkk47thc86udxfxnvqkhj7evmd99
+                """
             ).size
         )
 
@@ -101,7 +112,10 @@ class AddressParserTest {
         assertEquals(
             2,
             runeParser.findAll(
-                "Here is the first address thor166n4w5039meulfa3p6ydg60ve6ueac7tlt0jws and the second: thor1ap5vn4svwkpch2c9jm7hlpr2pj47e62xwpcvtw" // ktlint-disable max-line-length
+                """
+                Here is the first address thor166n4w5039meulfa3p6ydg60ve6ueac7tlt0jws and the second: 
+                thor1ap5vn4svwkpch2c9jm7hlpr2pj47e62xwpcvtw
+                """
             ).size
         )
     }

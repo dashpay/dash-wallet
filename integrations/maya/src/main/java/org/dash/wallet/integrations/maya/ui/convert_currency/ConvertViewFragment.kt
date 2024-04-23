@@ -33,6 +33,7 @@ import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentConvertCurrencyViewBinding
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.ui.mayaViewModels
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -115,6 +116,8 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
             setAmountValue(value)
             viewModel.selectedPickerCurrencyCode = value
         }
+
+        // initAmount()
     }
 
     private fun resetViewSelection(it: AccountDataUIModel?) {
@@ -128,8 +131,17 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                 pickedOptionIndex = 0
                 provideOptions(currencyConversionOptionList)
             }
-            viewModel.enteredConvertAmount = "0"
-            viewModel.selectedPickerCurrencyCode = binding.currencyOptions.pickedOption
+            viewModel.enteredConvertAmount = GenericUtils.toLocalizedString(
+                viewModel.amount.anchoredValue,
+                viewModel.amount.anchoredType != CurrencyInputType.Fiat,
+                viewModel.amount.anchoredCurrencyCode
+            )
+            viewModel.selectedPickerCurrencyCode = viewModel.amount.anchoredCurrencyCode
+            binding.currencyOptions.pickedOptionIndex = when (viewModel.amount.anchoredType) {
+                CurrencyInputType.Dash -> 0
+                CurrencyInputType.Fiat -> 1
+                CurrencyInputType.Crypto -> 2
+            }
             applyNewValue(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption, isLocalized = true)
             binding.currencyOptions.isVisible = true
             binding.maxButtonWrapper.isVisible = true
@@ -140,8 +152,13 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         }
     }
 
+    private fun initAmount() {
+        setAmountValue(viewModel.selectedPickerCurrencyCode)
+    }
+
     private fun setAmountValue(pickedCurrencyOption: String) {
         val value = viewModel.getAmountValue(pickedCurrencyOption)
+        viewModel.amount.setAnchoredType(pickedCurrencyOption)
         setAmountViewInfo(pickedCurrencyOption, value, isLocalized = false)
     }
 

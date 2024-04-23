@@ -21,9 +21,13 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class TradesRequest(
-    val amount: String,
-    val amount_asset: String,
+    val amount: Amount,
     val amount_from: String = "input",
-    val source_asset: String,
-    val target_asset: String
-) : Parcelable
+    val source_maya_asset: String,
+    val target_maya_asset: String,
+    val fiatCurrency: String,
+    val targetAddress: String
+) : Parcelable {
+    val source_asset = amount.dashCode
+    val target_asset = amount.cryptoCode
+}

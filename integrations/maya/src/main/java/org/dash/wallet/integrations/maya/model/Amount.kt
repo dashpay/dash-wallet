@@ -17,6 +17,8 @@
 
 package org.dash.wallet.integrations.maya.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import java.math.BigDecimal
 
 enum class CurrencyInputType {
@@ -29,14 +31,18 @@ enum class CurrencyInputType {
  Holds an amount in terms of dash, a fiat currency and another crypto currency. When exchange rates are changed
  anchor is used to determine which should be recalculated.  Dash is the default anchor currency.
  */
+@Parcelize
 data class Amount(
     private var _dash: BigDecimal = BigDecimal.ZERO,
     private var _fiat: BigDecimal = BigDecimal.ZERO,
     private var _crypto: BigDecimal = BigDecimal.ZERO,
     private var anchor: CurrencyInputType = CurrencyInputType.Dash,
     private var _dashFiatExchangeRate: BigDecimal = BigDecimal.ONE,
-    private var _cryptoFiatExchangeRate: BigDecimal = BigDecimal.ONE
-) {
+    private var _cryptoFiatExchangeRate: BigDecimal = BigDecimal.ONE,
+    var dashCode: String = "DASH",
+    var fiatCode: String = "USD",
+    var cryptoCode: String = "BTC"
+) : Parcelable {
     var dash: BigDecimal
         get() = _dash
         set(value) {
@@ -57,6 +63,30 @@ data class Amount(
             _crypto = value
             anchor = CurrencyInputType.Crypto
             update()
+        }
+
+    val anchoredValue: BigDecimal
+        get() {
+            return when (anchor) {
+                CurrencyInputType.Dash -> _dash
+                CurrencyInputType.Fiat -> _fiat
+                CurrencyInputType.Crypto -> _crypto
+            }
+        }
+
+    val anchoredCurrencyCode: String
+        get() {
+            return when (anchor) {
+                CurrencyInputType.Dash -> dashCode
+                CurrencyInputType.Fiat -> fiatCode
+                CurrencyInputType.Crypto -> cryptoCode
+            }
+        }
+
+    var anchoredType: CurrencyInputType
+        get() = anchor
+        set(value) {
+            anchor = value
         }
 
     /** 1 DASH = x Fiat, eg 1 DASH = $35.87 or $35.87/DASH */
@@ -84,6 +114,20 @@ data class Amount(
                 _dash = _crypto / cryptoDashExchangeRate
                 _fiat = _crypto * cryptoFiatExchangeRate
             }
+        }
+    }
+
+    fun getValue(anchor: CurrencyInputType) = when (anchor) {
+        CurrencyInputType.Dash -> _dash
+        CurrencyInputType.Fiat -> _fiat
+        CurrencyInputType.Crypto -> _crypto
+    }
+
+    fun setAnchoredType(currencyCode: String) {
+        when (currencyCode) {
+            dashCode -> anchor = CurrencyInputType.Dash
+            fiatCode -> anchor = CurrencyInputType.Fiat
+            cryptoCode -> anchor = CurrencyInputType.Crypto
         }
     }
 

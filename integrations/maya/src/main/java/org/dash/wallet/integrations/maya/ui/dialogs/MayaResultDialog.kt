@@ -33,10 +33,10 @@ import androidx.fragment.app.DialogFragment
 import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.maya.R
-import org.dash.wallet.integrations.maya.databinding.DialogCoinbaseResultBinding
+import org.dash.wallet.integrations.maya.databinding.DialogMayaResultBinding
 
 class MayaResultDialog : DialogFragment() {
-    private val binding by viewBinding(DialogCoinbaseResultBinding::bind)
+    private val binding by viewBinding(DialogMayaResultBinding::bind)
     var onCoinBaseResultDialogButtonsClickListener: CoinBaseResultDialogButtonsClickListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,7 +54,7 @@ class MayaResultDialog : DialogFragment() {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             requestFeature(Window.FEATURE_NO_TITLE)
         }
-        return inflater.inflate(R.layout.dialog_coinbase_result, container, false)
+        return inflater.inflate(R.layout.dialog_maya_result, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

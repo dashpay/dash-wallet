@@ -16,8 +16,7 @@
         android:gravity="center_vertical"
         android:layout_marginTop="10dp"
         android:layout_marginBottom="5dp"
-        android:text="@string/you_send"
-        android:textAllCaps="true"
+        android:text="@string/from_title"
         android:theme="@style/ListViewButtonBackground"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -62,7 +61,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="@+id/input_account_subtitle"
         app:layout_constraintTop_toTopOf="@id/input_account_title"
-        tools:text="1234" />
+        tools:text="1.234" />
 
     <TextView
         android:id="@+id/input_account_hint_label"
@@ -70,7 +69,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        tools:text="@string/from_your_coinbase_account"
+        tools:text="@string/to_dash_wallet_on_this_device"
         android:layout_marginTop="5dp"
         android:theme="@style/ListViewButtonBackground"
         app:layout_constraintStart_toStartOf="parent"
@@ -92,8 +91,7 @@
         android:gravity="center_vertical"
         android:layout_marginTop="10dp"
         android:layout_marginBottom="5dp"
-        android:text="@string/you_receive"
-        android:textAllCaps="true"
+        android:text="@string/to_title"
         android:theme="@style/ListViewButtonBackground"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/input_account_separator" />
@@ -138,7 +136,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="@+id/convert_output_subtitle"
         app:layout_constraintTop_toTopOf="@id/convert_output_title"
-        tools:text="1234" />
+        tools:text="BTC 0.1234" />
 
     <TextView
         android:id="@+id/output_account_hint_label"
@@ -146,7 +144,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        tools:text="@string/to_dash_wallet_on_this_device"
+        tools:text="@string/to_external_address"
         android:layout_marginTop="5dp"
         android:theme="@style/ListViewButtonBackground"
         app:layout_constraintStart_toStartOf="parent"
@@ -167,7 +165,6 @@
         android:layout_height="46dp"
         android:gravity="center_vertical"
         android:text="@string/purchase"
-        android:textAllCaps="true"
         android:theme="@style/ListViewButtonBackground"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/output_account_separator" />
@@ -181,7 +178,7 @@
         app:layout_constraintBottom_toBottomOf="@id/purchase_label"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/purchase_label"
-        tools:text="109.00 US$" />
+        tools:text="$ 109.00" />
 
     <View
         android:id="@+id/purchase_separator"
@@ -191,7 +188,7 @@
         app:layout_constraintBottom_toBottomOf="@+id/purchase_label" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/coinbase_fee_info_container"
+        android:id="@+id/maya_fee_info_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -200,46 +197,45 @@
         app:layout_constraintEnd_toEndOf="parent">
 
         <TextView
-            android:id="@+id/coinbase_fee_label"
+            android:id="@+id/maya_fee_label"
             style="@style/Caption.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="46dp"
-            android:textAllCaps="true"
             android:gravity="center_vertical"
-            android:text="@string/coinbase_fee"
+            android:text="@string/maya_fee"
             android:theme="@style/ListViewButtonBackground"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
            />
 
         <ImageView
-            android:id="@+id/coinbase_fee_info"
+            android:id="@+id/maya_fee_info"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:padding="7dp"
             android:src="@drawable/ic_dash_info_blue_meduim"
-            app:layout_constraintBottom_toBottomOf="@+id/coinbase_fee_label"
-            app:layout_constraintStart_toEndOf="@id/coinbase_fee_label"
-            app:layout_constraintTop_toTopOf="@id/coinbase_fee_label" />
+            app:layout_constraintBottom_toBottomOf="@+id/maya_fee_label"
+            app:layout_constraintStart_toEndOf="@id/maya_fee_label"
+            app:layout_constraintTop_toTopOf="@id/maya_fee_label" />
 
         <TextView
-            android:id="@+id/coinbase_fee_amount"
+            android:id="@+id/maya_fee_amount"
             style="@style/Caption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:layout_constraintBottom_toBottomOf="@id/coinbase_fee_label"
+            app:layout_constraintBottom_toBottomOf="@id/maya_fee_label"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/coinbase_fee_label"
-            tools:text="10.00 US$" />
+            app:layout_constraintTop_toTopOf="@id/maya_fee_label"
+            tools:text="$ 1.00" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <View
-        android:id="@+id/coinbase_fee_separator"
+        android:id="@+id/maya_fee_separator"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/divider_color"
-        app:layout_constraintBottom_toBottomOf="@+id/coinbase_fee_info_container" />
+        app:layout_constraintBottom_toBottomOf="@+id/maya_fee_info_container" />
 
     <TextView
         android:id="@+id/total_label"
@@ -248,10 +244,9 @@
         android:layout_height="46dp"
         android:gravity="center_vertical"
         android:text="@string/total"
-        android:textAllCaps="true"
         android:theme="@style/ListViewButtonBackground"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/coinbase_fee_info_container" />
+        app:layout_constraintTop_toBottomOf="@id/maya_fee_info_container" />
 
     <TextView
         android:id="@+id/total_amount"
@@ -262,6 +257,6 @@
         app:layout_constraintBottom_toBottomOf="@id/total_label"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/total_label"
-        tools:text="200.00 US$" />
+        tools:text="$ 200.00" />
 </androidx.constraintlayout.widget.ConstraintLayout>
 

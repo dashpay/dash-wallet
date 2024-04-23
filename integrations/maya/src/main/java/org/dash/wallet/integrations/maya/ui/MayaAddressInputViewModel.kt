@@ -17,6 +17,7 @@ import javax.inject.Inject
 class MayaAddressInputViewModel @Inject constructor(
     private val exchangeIntegrationProvider: ExchangeIntegrationProvider
 ) : ViewModel() {
+    lateinit var asset: String
     private val inputCurrency = MutableStateFlow<String?>(null)
     private val _addressSources = MutableStateFlow(listOf<AddressSource>())
     val addressSources: Flow<List<AddressSource>>

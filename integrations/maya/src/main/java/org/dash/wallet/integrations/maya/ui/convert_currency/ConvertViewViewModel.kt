@@ -65,6 +65,7 @@ class ConvertViewViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(ConvertViewFragment::class.java)
     }
     var destinationCurrency: String? = null
+    var destinationAddress: String? = null
     lateinit var account: AccountDataUIModel
     val amount = Amount()
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
@@ -150,6 +151,8 @@ class ConvertViewViewModel @Inject constructor(
     }
 
     fun setSelectedCryptoCurrency(account: AccountDataUIModel) {
+        amount.cryptoCode = account.coinbaseAccount.currency
+        amount.fiatCode = selectedLocalCurrencyCode
         this.account = account
         maxCoinBaseAccountAmount = account.coinbaseAccount.availableBalance.value
 
@@ -224,7 +227,7 @@ class ConvertViewViewModel @Inject constructor(
     fun checkEnteredAmountValue(checkSendingConditions: Boolean): SwapValueErrorType {
         val coin = try {
             if (dashToCrypto.value == true) {
-                Coin.parseCoin(maxForDashWalletAmount)
+                Coin.parseCoin(maxForDashWalletAmount.replace(',', '.'))
             } else {
                 maxForDashCoinBaseAccount
             }
@@ -271,13 +274,19 @@ class ConvertViewViewModel @Inject constructor(
         viewModelScope.launch {
             analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_CONTINUE, mapOf())
             val currencyInputType = getCurrencyInputType(pickedCurrencyOption)
-            val amount = getFiatAmount(currencyInputType)
+            // val amount = getFiatAmount(currencyInputType)
             logEnteredAmountCurrency(currencyInputType)
-            onContinueEvent.value = SwapRequest(
-                dashToCrypto.value ?: false, // dash -> coinbase,
-                amount.second,
-                amount.first
-            )
+            onContinueEvent.value = selectedCryptoCurrencyAccount.value?.coinbaseAccount?.let {
+                destinationAddress?.let { address ->
+                    SwapRequest(
+                        amount,
+                        address,
+                        it.currency,
+                        it.asset,
+                        selectedLocalCurrencyCode
+                    )
+                }
+            }
         }
     }
 
@@ -419,5 +428,9 @@ class ConvertViewViewModel @Inject constructor(
                     "$selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency)"
             )
         }.toString()
+    }
+
+    fun reset() {
+        amount.dash = BigDecimal.ZERO
     }
 }

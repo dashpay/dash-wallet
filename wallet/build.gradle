@@ -190,8 +190,8 @@ android {
         compileSdk 33
         minSdkVersion 24
         targetSdkVersion 33
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 100030
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "10.0.3"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 101000
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "10.1.0"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true

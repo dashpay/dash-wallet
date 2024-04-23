@@ -27,7 +27,6 @@ import androidx.core.view.isVisible
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFormattedString
@@ -38,8 +37,7 @@ import java.math.RoundingMode
 
 class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs) {
     private val binding = ConverterViewBinding.inflate(LayoutInflater.from(context), this)
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-        .noCode().minDecimals(6).optionalDecimals()
+    private val dashFormat = GenericUtils.dashFormat
 
     private var onCurrencyChooserClicked: (() -> Unit)? = null
 
@@ -130,7 +128,7 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
 
             if (dashInput != null && fiatInput != null) {
                 binding.convertFromBtn.setConvertItemAmounts(
-                    "${dashFormat.minDecimals(2).optionalDecimals(2,4).format(dashInput ?: Coin.ZERO)}",
+                    "${dashFormat.format(dashInput ?: Coin.ZERO)}",
                     "${Constants.PREFIX_ALMOST_EQUAL_TO} ${ (fiatInput ?: Fiat.valueOf("USD", 0)).toFormattedString() }"
                 )
             }

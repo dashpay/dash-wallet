@@ -22,8 +22,6 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integrations.maya.api.ExchangeRateApi
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateAggregatedProvider
@@ -31,14 +29,13 @@ import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.MayaApi
 import org.dash.wallet.integrations.maya.api.MayaApiAggregator
 import org.dash.wallet.integrations.maya.api.MayaEndpoint
+import org.dash.wallet.integrations.maya.api.MayaLegacyEndpoint
 import org.dash.wallet.integrations.maya.api.RemoteDataSource
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import javax.inject.Singleton
-import kotlin.time.ExperimentalTime
 
 @Module
 @InstallIn(SingletonComponent::class)
-@OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class, FlowPreview::class)
 abstract class MayaModule {
     companion object {
         @Provides
@@ -49,6 +46,16 @@ abstract class MayaModule {
             val baseUrl = MayaConstants.getBaseUrl(walletDataProvider.networkParameters)
             return remoteDataSource.buildApi(MayaEndpoint::class.java, baseUrl)
         }
+
+        @Provides
+        fun provideMayaLegacyEndpoint(
+            remoteDataSource: RemoteDataSource,
+            walletDataProvider: WalletDataProvider
+        ): MayaLegacyEndpoint {
+            val baseUrl = MayaConstants.getLegacyBaseUrl(walletDataProvider.networkParameters)
+            return remoteDataSource.buildApi(MayaLegacyEndpoint::class.java, baseUrl)
+        }
+
         @Provides
         fun provideExchangeRateEndpoint(
             remoteDataSource: RemoteDataSource,

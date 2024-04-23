@@ -43,6 +43,10 @@ class MayaAddressInputFragment : AddressInputFragment() {
             clickListener(item)
         }
 
+        requireArguments().getString("asset")?.let {
+            mayaAddressInputViewModel.asset = it
+        }
+
         val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
         val decorator = ListDividerDecorator(
             divider,
@@ -71,6 +75,7 @@ class MayaAddressInputFragment : AddressInputFragment() {
         safeNavigate(
             MayaAddressInputFragmentDirections.mayaAddressInputToEnterAmount(
                 viewModel.currency,
+                mayaAddressInputViewModel.asset,
                 viewModel.addressResult.paymentIntent!!
             )
         )

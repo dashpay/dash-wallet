@@ -22,8 +22,8 @@ import org.bitcoinj.core.NetworkParameters
 object MayaConstants {
     const val DEFAULT_EXCHANGE_CURRENCY = "USD"
 
-    private const val MAINNET_BASE_URL = "https://midgard.mayachain.info/v2/"
-    // private const val MAINNET_BASE_URL = "https://mayanode.mayachain.info/mayachain/"
+    private const val MAINNET_LEGACY_BASE_URL = "https://midgard.mayachain.info/v2/"
+    private const val MAINNET_BASE_URL = "https://mayanode.mayachain.info/mayachain/"
 
     /**
      * https://exchangerate.host/#/docs
@@ -32,6 +32,9 @@ object MayaConstants {
 
     fun getBaseUrl(params: NetworkParameters): String {
         return MAINNET_BASE_URL
+    }
+    fun getLegacyBaseUrl(params: NetworkParameters): String {
+        return MAINNET_LEGACY_BASE_URL
     }
     const val VALUE_ZERO = "0"
     const val MIN_USD_AMOUNT = "2"
