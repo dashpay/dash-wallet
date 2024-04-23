@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-    id 'kotlin-kapt'
+    id 'com.google.devtools.ksp'
     id 'androidx.navigation.safeargs.kotlin'
     id 'dagger.hilt.android.plugin'
     id 'kotlin-parcelize'
@@ -49,10 +49,6 @@ android {
     namespace 'org.dash.wallet.features.exploredash'
 }
 
-kapt {
-    correctErrorTypes true
-}
-
 hilt {
     enableAggregatingTask = true
 }
@@ -77,11 +73,13 @@ dependencies {
     // Database
     implementation "androidx.room:room-ktx:$roomVersion"
     implementation "androidx.room:room-paging:$roomVersion"
+    implementation "androidx.room:room-runtime:$roomVersion"
+    ksp "androidx.room:room-compiler:$roomVersion"
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
-    kapt "com.google.dagger:hilt-compiler:$hiltVersion"
-    kapt 'androidx.hilt:hilt-compiler:1.0.0'
+    ksp "com.google.dagger:hilt-compiler:$hiltVersion"
+    ksp "androidx.hilt:hilt-compiler:$hiltCompilerVersion"
     implementation "androidx.hilt:hilt-work:$hiltWorkVersion"
 
     // UI
@@ -119,7 +117,6 @@ dependencies {
     testImplementation "androidx.arch.core:core-testing:$coreTestingVersion"
     testImplementation "org.robolectric:robolectric:4.9.2"
     testImplementation "androidx.room:room-testing:$roomVersion"
-    kapt "androidx.room:room-compiler:$roomVersion"
 
     androidTestImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
     androidTestImplementation "org.mockito:mockito-android:4.6.1"

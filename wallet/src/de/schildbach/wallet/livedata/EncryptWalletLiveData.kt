@@ -74,10 +74,12 @@ class EncryptWalletLiveData(
     @SuppressLint("StaticFieldLeak")
     internal inner class EncryptWalletTask : AsyncTask<Any, Void, Resource<Wallet>>() {
 
+        @Deprecated("Deprecated in Java")
         override fun onPreExecute() {
             value = Resource.loading(null)
         }
 
+        @Deprecated("Deprecated in Java")
         override fun doInBackground(vararg args: Any): Resource<Wallet> {
             val initialize = args[0] as Boolean
             val wallet = walletApplication.wallet!!
@@ -111,6 +113,7 @@ class EncryptWalletLiveData(
             }
         }
 
+        @Deprecated("Deprecated in Java")
         override fun onPostExecute(result: Resource<Wallet>) {
             value = result
             encryptWalletTask = null
@@ -120,10 +123,12 @@ class EncryptWalletLiveData(
     @SuppressLint("StaticFieldLeak")
     internal inner class DecryptWalletTask : AsyncTask<String, Void, Resource<Wallet>>() {
 
+        @Deprecated("Deprecated in Java")
         override fun onPreExecute() {
             value = Resource.loading(null)
         }
 
+        @Deprecated("Deprecated in Java")
         override fun doInBackground(vararg args: String): Resource<Wallet> {
             val password = args[0]
             val wallet = walletApplication.wallet!!
@@ -137,6 +142,7 @@ class EncryptWalletLiveData(
             }
         }
 
+        @Deprecated("Deprecated in Java")
         override fun onPostExecute(result: Resource<Wallet>) {
             value = result
             decryptWalletTask = null

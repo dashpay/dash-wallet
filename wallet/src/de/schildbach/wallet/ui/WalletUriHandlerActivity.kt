@@ -17,8 +17,11 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import de.schildbach.wallet.Constants
@@ -27,6 +30,7 @@ import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.integration.android.BitcoinIntegration
 import de.schildbach.wallet.ui.buy_sell.IntegrationOverviewFragment
 import de.schildbach.wallet.ui.main.WalletActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity.Companion.sendFromWalletUri
 import de.schildbach.wallet.ui.util.InputParser.WalletUriParser
 import de.schildbach.wallet.ui.util.WalletUri
@@ -49,10 +53,22 @@ class WalletUriHandlerActivity : AppCompatActivity() {
     }
 
     private var wallet: Wallet? = null
+    private lateinit var walletUriResultLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         wallet = (application as WalletApplication).wallet
+        walletUriResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            var resultIntent: Intent? = null
+            if (result.resultCode == Activity.RESULT_OK) {
+                val data = result.data
+                val requestData = intent.data
+                val transactionHash = BitcoinIntegration.transactionHashFromResult(data)
+                resultIntent = WalletUri.createPaymentResult(requestData, transactionHash)
+            }
+            setResult(result.resultCode, resultIntent)
+            finish()
+        }
         handleIntent(intent)
     }
 
@@ -90,9 +106,10 @@ class WalletUriHandlerActivity : AppCompatActivity() {
                 } else {
                     object : WalletUriParser(intentUri) {
                         override fun handlePaymentIntent(paymentIntent: PaymentIntent, forceInstantSend: Boolean) {
-                            sendFromWalletUri(
-                                this@WalletUriHandlerActivity, REQUEST_CODE_SEND_FROM_WALLET_URI, paymentIntent
-                            )
+                            val intent = Intent(this@WalletUriHandlerActivity, SendCoinsActivity::class.java)
+                            intent.action = SendCoinsActivity.ACTION_SEND_FROM_WALLET_URI
+                            intent.putExtra(SendCoinsActivity.INTENT_EXTRA_PAYMENT_INTENT, paymentIntent)
+                            walletUriResultLauncher.launch(intent)
                         }
 
                         override fun handleMasterPublicKeyRequest(sender: String) {
@@ -138,23 +155,6 @@ class WalletUriHandlerActivity : AppCompatActivity() {
         confirmationAlertDialogBuilder.negativeText = getString(R.string.button_cancel)
         confirmationAlertDialogBuilder.negativeAction = negativeButtonClickListener
         confirmationAlertDialogBuilder.buildAlertDialog().show()
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == REQUEST_CODE_SEND_FROM_WALLET_URI) {
-            var result: Intent? = null
-
-            if (resultCode == RESULT_OK) {
-                val requestData = intent.data
-                val transactionHash = BitcoinIntegration.transactionHashFromResult(data)
-                result = WalletUri.createPaymentResult(requestData, transactionHash)
-            }
-
-            setResult(resultCode, result)
-            finish()
-        }
     }
 
     private val negativeButtonClickListener = {
