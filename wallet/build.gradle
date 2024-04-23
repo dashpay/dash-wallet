@@ -56,6 +56,8 @@ dependencies {
     implementation 'org.dashj.platform:dapi-client:0.24-SNAPSHOT'
     implementation 'org.dashj:dashj-merk:0.22-SNAPSHOT'
     implementation 'org.dashj.android:dashj-merk:0.22-SNAPSHOT'
+    implementation 'org.dashj.platform:dash-sdk-java:1.0-SNAPSHOT'
+    implementation 'org.dashj.platform:dash-sdk-android:1.0-SNAPSHOT'
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation "org.dashj.android:dashj-bls-android:1.0.0"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
@@ -211,7 +213,7 @@ android {
 
     defaultConfig {
         compileSdk 33
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion 33
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 90002
         versionName project.hasProperty('versionName') ? project.property('versionName') : "5.4-dashpay"
