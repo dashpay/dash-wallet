@@ -37,7 +37,7 @@ import org.dash.wallet.integrations.maya.databinding.DialogMayaResultBinding
 
 class MayaResultDialog : DialogFragment() {
     private val binding by viewBinding(DialogMayaResultBinding::bind)
-    var onCoinBaseResultDialogButtonsClickListener: CoinBaseResultDialogButtonsClickListener? = null
+    var onMayaResultDialogButtonsClickListener: MayaBaseResultDialogButtonsClickListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,7 +79,7 @@ class MayaResultDialog : DialogFragment() {
             }
 
             binding.coinbaseBuyDialogPositiveButton.setOnClickListener {
-                onCoinBaseResultDialogButtonsClickListener?.onPositiveButtonClick(
+                onMayaResultDialogButtonsClickListener?.onPositiveButtonClick(
                     Type.values().first { it.ordinal == type }
                 )
             }
@@ -87,7 +87,7 @@ class MayaResultDialog : DialogFragment() {
 
         binding.coinbaseBuyDialogNegativeButton.setOnClickListener {
             type?.let {
-                onCoinBaseResultDialogButtonsClickListener?.onNegativeButtonClick(
+                onMayaResultDialogButtonsClickListener?.onNegativeButtonClick(
                     Type.values().first { it.ordinal == type }
                 )
             }
@@ -255,7 +255,7 @@ class MayaResultDialog : DialogFragment() {
         TRANSFER_DASH_ERROR
     }
 
-    interface CoinBaseResultDialogButtonsClickListener {
+    interface MayaBaseResultDialogButtonsClickListener {
         fun onPositiveButtonClick(type: Type)
         fun onNegativeButtonClick(type: Type) {}
     }

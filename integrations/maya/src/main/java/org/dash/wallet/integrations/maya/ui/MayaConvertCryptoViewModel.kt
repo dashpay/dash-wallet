@@ -40,7 +40,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
-import org.dash.wallet.integrations.maya.model.CoinbaseErrorResponse
+import org.dash.wallet.integrations.maya.model.MayaErrorResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.TradesRequest
@@ -126,7 +126,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
                 if (error.isNullOrEmpty()) {
                     swapTradeFailedCallback.call()
                 } else {
-                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
+                    val message = MayaErrorResponse.getErrorMessage(error)?.message
                     if (message.isNullOrEmpty()) {
                         swapTradeFailedCallback.call()
                     } else {

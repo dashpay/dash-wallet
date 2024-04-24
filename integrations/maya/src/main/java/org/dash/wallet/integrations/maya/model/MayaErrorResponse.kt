@@ -34,16 +34,16 @@ enum class MayaErrorType {
 class MayaException(val errorType: MayaErrorType, message: String?) : Exception(message)
 
 @Parcelize
-data class CoinbaseErrorResponse(
+data class MayaErrorResponse(
     val errors: List<Error>? = null
 ) : Parcelable {
     companion object {
         fun getErrorMessage(json: String): Error? {
             return try {
                 val gson = Gson()
-                val errorResponse: CoinbaseErrorResponse = gson.fromJson(
+                val errorResponse: MayaErrorResponse = gson.fromJson(
                     json,
-                    CoinbaseErrorResponse::class.java
+                    MayaErrorResponse::class.java
                 )
                 errorResponse.errors?.firstOrNull()
             } catch (e: Exception) {
