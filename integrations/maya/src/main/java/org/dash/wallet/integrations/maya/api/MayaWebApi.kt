@@ -29,6 +29,7 @@ import org.dash.wallet.integrations.maya.model.NetworkResponse
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.TradesRequest
+import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
 import org.slf4j.LoggerFactory
 import retrofit2.Response
 import retrofit2.http.GET
@@ -164,7 +165,7 @@ open class MayaWebApi @Inject constructor(
 //        "pub_key": "mayapub1addwnpepqdupyxvsy864n5wua9532ey72feplzmtsacfjc8wvy0e5sdd96w0zf0anph"
 //    },
 
-    suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel> {
+    suspend fun swapTradeInfo(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel> {
         // we need to calculate the fees based on getInboundAddresses
 
         val poolInfoList = getPoolInfo()
@@ -188,22 +189,32 @@ open class MayaWebApi @Inject constructor(
         val feeAmount = tradesRequest.amount.copy().apply { crypto = fee }
 
         // Outgoing Fee
-        val outgoingFee = destination!!.outboundFee.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(
-            BigDecimal(1_0000_0000)
-        ) // * txSize * outboundFeeMultiplier
+        val outgoingFee = if (tradesRequest.target_maya_asset.contains("ETH.")) {
+                destination!!.outboundFee.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(
+                    BigDecimal(1_000_000_000)
+                )
+            } else {
+                // DASH/BITCOIN
+                destination!!.outboundFee.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(
+                    BigDecimal(1_0000_0000)
+                )
+        }
+
 
         feeAmount.crypto += outgoingFee
         feeAmount.dash += incomingFee
         feeAmount.anchoredType = tradesRequest.amount.anchoredType
 
-        return ResponseResource.Success(
-            SwapTradeUIModel(
-                amount = tradesRequest.amount,
-                outputAsset = tradesRequest.target_maya_asset,
-                feeAmount = feeAmount,
-                destinationAddress = tradesRequest.targetAddress
-            )
+        val result = SwapTradeUIModel(
+            amount = tradesRequest.amount,
+            outputAsset = tradesRequest.target_maya_asset,
+            feeAmount = feeAmount,
+            vaultAddress = source!!.address,
+            destinationAddress = tradesRequest.targetAddress
         )
+
+        log.info("swapTradeInfo result {}", result)
+        return ResponseResource.Success(result)
     }
 
     suspend fun getUserAccounts(currency: String): List<AccountDataUIModel> {
@@ -215,5 +226,15 @@ open class MayaWebApi @Inject constructor(
                 BigDecimal.ZERO
             )
         )
+    }
+
+    fun sendFundsToWallet(params: SendTransactionToWalletParams, nothing: String?): ResponseResource<Boolean> {
+        log.info("sendFundsToWallet($params, $nothing")
+        return ResponseResource.Success(true)
+    }
+
+    fun commitSwapTransaction(tradeId: String, swapTradeUIModel: SwapTradeUIModel): ResponseResource<SwapTradeUIModel> {
+        log.info("commitSwapTransaction($tradeId, $swapTradeUIModel")
+        return ResponseResource.Success(swapTradeUIModel)
     }
 }

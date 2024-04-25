@@ -128,6 +128,31 @@ class SendCoinsTaskRunner @Inject constructor(
         }
     }
 
+    override suspend fun completeTransaction(sendRequest: SendRequest) {
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        val securityGuard = SecurityGuard()
+        val password = securityGuard.retrievePassword()
+        val encryptionKey = securityFunctions.deriveKey(wallet, password)
+        sendRequest.aesKey = encryptionKey
+        sendRequest.coinSelector = ZeroConfCoinSelector.get() // default coin selector
+        wallet.completeTx(sendRequest)
+        sendRequest.aesKey = null
+    }
+
+    override suspend fun signTransaction(sendRequest: SendRequest) {
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        val securityGuard = SecurityGuard()
+        val password = securityGuard.retrievePassword()
+        val encryptionKey = securityFunctions.deriveKey(wallet, password)
+        sendRequest.aesKey = encryptionKey
+        wallet.signTransaction(sendRequest)
+        sendRequest.aesKey = null
+    }
+
+    override suspend fun sendTransaction(sendRequest: SendRequest): Transaction {
+        return sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = false)
+    }
+
     private suspend fun createPaymentRequest(basePaymentIntent: PaymentIntent): Transaction {
         val requestUrl = basePaymentIntent.paymentRequestUrl
             ?: throw InvalidPaymentRequestURL("Payment request URL is null")

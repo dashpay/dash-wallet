@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.maya.model
 import android.os.Parcelable
 import com.google.gson.Gson
 import kotlinx.parcelize.Parcelize
+import org.bitcoinj.core.Transaction
 
 enum class MayaErrorType {
     NONE,
@@ -32,6 +33,8 @@ enum class MayaErrorType {
 }
 
 class MayaException(val errorType: MayaErrorType, message: String?) : Exception(message)
+class IncorrectSwapOutputCount(val tx: Transaction):
+    Exception("Maya transaction has ${tx.outputs.size} outputs.  Only 3 are allowed")
 
 @Parcelize
 data class MayaErrorResponse(

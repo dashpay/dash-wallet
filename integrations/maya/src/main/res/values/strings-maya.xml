@@ -66,7 +66,7 @@
     <string name="send_to_wallet_error">Cannot send this amount without going over application limit</string>
     <string name="purchase_successful">Purchase successful</string>
     <string name="it_could_take_up_to_2_3_minutes">It could take up to 2–3 minutes for the Dash to be transferred to your Dash Wallet on this device.</string>
-    <string name="it_could_take_up_to_5_minutes">It could take up to 5 minutes to convert %s from Coinbase account to Dash in your Dash Wallet on this device..</string>
+    <string name="it_could_take_up_to_5_minutes">It could take up to 2 minutes to convert %s from Dash Wallet to %s and send it to the provided address.</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">It could take up to 5 minutes to convert Dash from Dash Wallet on this device to %s in your Coinbase account.</string>
     <string name="conversion_failed">Conversion Failed</string>
     <string name="transfer_dash_successful">Transfer successful</string>

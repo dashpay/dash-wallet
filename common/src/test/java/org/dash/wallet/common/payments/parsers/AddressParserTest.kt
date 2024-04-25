@@ -39,7 +39,7 @@ class AddressParserTest {
             parser.findAll(
                 """
                 Here is the first address XssjzLKgsfATYGqTQmiJURQzeKdpL5K1k3 and the second: 
-                XssjzLKgsfATYGqTQmiJURQzeKdpL5K1k3" // ktlint-disable max-line-length
+                XssjzLKgsfATYGqTQmiJURQzeKdpL5K1k3
                 """
             ).size
         )

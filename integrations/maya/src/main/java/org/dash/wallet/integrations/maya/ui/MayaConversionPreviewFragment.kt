@@ -49,6 +49,8 @@ import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentMayaConversionPreviewBinding
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dash.wallet.integrations.maya.model.TransactionType
+import org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams
 import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -125,17 +127,6 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             } else {
                 newSwapOrderId?.let { orderId ->
                     viewModel.swapTradeUIModel.let {
-                        AdaptiveDialog.create(
-                            null,
-                            "New Maya Order",
-                            "This order will send (${it.amount.dash} + ${it.feeAmount.dash.setScale(
-                                8,
-                                RoundingMode.HALF_UP
-                            )}) of ${it.inputCurrency} to ${
-                            it.amount.crypto.setScale(8, RoundingMode.HALF_UP)
-                            } of ${it.amount.cryptoCode} at ${it.destinationAddress}",
-                            getString(R.string.button_okay)
-                        ).show(requireActivity())
                         viewModel.commitSwapTrade(orderId)
                     }
                 }
@@ -178,12 +169,12 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             } else {
                 viewModel.swapTradeUIModel.outputCurrencyName
             }
-
-//            safeNavigate(
-//                MayaConversionPreviewFragmentDirections.conversionPreviewToTwoFaCode(
-//                    CoinbaseTransactionParams(params, TransactionType.BuySwap, walletName)
-//                )
-//            )
+            dismissProgress()
+            safeNavigate(
+                MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(
+                    MayaTransactionParams(params, TransactionType.SellSwap, walletName)
+                )
+            )
         }
         observeNavigationCallBack()
 
@@ -246,11 +237,6 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         val inputCurrencySymbol = GenericUtils.currencySymbol(this.inputCurrency)
         val inputAmount = this.amount.dash.setScale(8, RoundingMode.HALF_UP)
 
-//        binding.contentOrderReview.inputAccount.text = getString(
-//            R.string.fiat_balance_with_currency,
-//            if (isCurrencyCodeFirst) inputCurrencySymbol else inputAmount,
-//            if (isCurrencyCodeFirst) inputAmount else inputCurrencySymbol
-//        )
         setValueWithCurrencyCodeOrSymbol(
             binding.contentOrderReview.inputAccount,
             inputAmount,
@@ -361,12 +347,10 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                 if (GenericUtils.isCurrencySymbolFirst()) {
                     spannableString = SpannableString("  $valueString")
                     spannableString.setSpan(it, 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    // spannableString.setSpan(sizeSpan, 1, spannableString.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
                 } else {
                     spannableString = SpannableString("$valueString  ")
                     val len = spannableString.length
                     spannableString.setSpan(it, len - 1, len, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    // spannableString.setSpan(sizeSpan, 0, len - 1, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
                 }
             }
         } else {
@@ -377,20 +361,6 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                     if (isCurrencySymbolFirst) valueString else currencyCode
                 )
             )
-//            val roomLeft = maxTextWidth - textView.paint.measureText("$value")
-//            val sizeRelative = if (roomLeft < 0) {
-//                val ratio = min(1.0f, (maxTextWidth + roomLeft) / maxTextWidth)
-//                if (ratio == Float.NEGATIVE_INFINITY) {
-//                    1.0f
-//                } else {
-//                    ratio
-//                }
-//            } else {
-//                1.0f
-//            }
-            // log.info("resizing number: {} to {}", text, sizeRelative)
-            // val sizeSpan = RelativeSizeSpan(sizeRelative)
-            // spannableString.setSpan(sizeSpan, 0, spannableString.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
         }
         textView.text = spannableString
     }
@@ -417,10 +387,11 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         transactionStateDialog = MayaResultDialog.newInstance(
             type,
             responseMessage,
-            dashToCoinbase = viewModel.swapTradeUIModel.inputCurrency == Constants.DASH_CURRENCY
+            viewModel.swapTradeUIModel.inputCurrency,
+            destinationCurrency = viewModel.swapTradeUIModel.outputCurrency
         ).apply {
-            this.onCoinBaseResultDialogButtonsClickListener =
-                object : MayaResultDialog.CoinBaseResultDialogButtonsClickListener {
+            this.onMayaResultDialogButtonsClickListener =
+                object : MayaResultDialog.MayaBaseResultDialogButtonsClickListener {
                     override fun onPositiveButtonClick(type: MayaResultDialog.Type) {
                         when (type) {
                             MayaResultDialog.Type.CONVERSION_ERROR -> {

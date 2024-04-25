@@ -96,7 +96,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
             targetAddress = swapTradeInfo.destinationAddress
         )
 
-        when (val result = coinBaseRepository.swapTrade(tradesRequest)) {
+        when (val result = coinBaseRepository.swapTradeInfo(tradesRequest)) {
             is ResponseResource.Success -> {
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     _showLoading.value = false

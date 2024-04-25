@@ -22,6 +22,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.CoinSelector
+import org.bitcoinj.wallet.SendRequest
 
 class LeftoverBalanceException(missing: Coin, message: String) : InsufficientMoneyException(missing, message)
 class DirectPayException(message: String) : Exception(message)
@@ -49,4 +50,9 @@ interface SendPaymentService {
     )
 
     suspend fun payWithDashUrl(dashUri: String): Transaction
+
+    /** support manual tx creation */
+    suspend fun completeTransaction(sendRequest: SendRequest)
+    suspend fun signTransaction(sendRequest: SendRequest)
+    suspend fun sendTransaction(sendRequest: SendRequest): Transaction
 }

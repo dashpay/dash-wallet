@@ -32,6 +32,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.DialogMayaResultBinding
 
@@ -61,20 +62,20 @@ class MayaResultDialog : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val type = arguments?.getInt("Type")
-        val coinbaseWallet = arguments?.getString(ARG_COINBASE_WALLET_NAME)
-        val dashToCoinbase = arguments?.getBoolean(ARG_DASH_TO_COINBASE) ?: false
+        val sourceCurrency = arguments?.getString(ARG_SOURCE) ?: Constants.DASH_CURRENCY
+        val destinationCurrency = arguments?.getString(ARG_DESTINATION) ?: getString(R.string.error)
         type?.let {
             when (type) {
                 Type.PURCHASE_ERROR.ordinal -> setPurchaseError()
                 Type.DEPOSIT_ERROR.ordinal -> setDepositError()
                 Type.DEPOSIT_SUCCESS.ordinal -> setDepositSuccess()
                 Type.CONVERSION_SUCCESS.ordinal -> setConversionSuccess(
-                    coinbaseWallet,
-                    dashToCoinbase
+                    sourceCurrency,
+                    destinationCurrency
                 )
                 Type.CONVERSION_ERROR.ordinal -> setConversionError()
                 Type.SWAP_ERROR.ordinal -> setSwapError()
-                Type.TRANSFER_DASH_SUCCESS.ordinal -> setTransferDashSuccess(dashToCoinbase)
+                Type.TRANSFER_DASH_SUCCESS.ordinal -> setTransferDashSuccess(false)
                 Type.TRANSFER_DASH_ERROR.ordinal -> setTransferDashFailure()
             }
 
@@ -169,20 +170,11 @@ class MayaResultDialog : DialogFragment() {
         binding.coinbaseBuyDialogPositiveButton.isVisible = false
     }
 
-    private fun setConversionSuccess(coinbaseWallet: String?, dashToCoinbase: Boolean = false) {
+    private fun setConversionSuccess(source: String, destination: String) {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
-        binding.coinbaseBuyDialogMessage.setText(
-            if (dashToCoinbase) {
-                getString(
-                    R.string.it_could_take_up_to_5_minutes_to_coinbase,
-                    coinbaseWallet ?: ""
-                )
-            } else {
-                getString(R.string.it_could_take_up_to_5_minutes, coinbaseWallet ?: "")
-            }
-        )
+        binding.coinbaseBuyDialogMessage.text = getString(R.string.it_could_take_up_to_5_minutes, source, destination)
         binding.buyDialogContactCoinbaseSupport.isGone = true
         binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
@@ -224,19 +216,19 @@ class MayaResultDialog : DialogFragment() {
 
     companion object {
         const val ARG_MESSAGE: String = "ARG_RESPONSE_MESSAGE"
-        const val ARG_COINBASE_WALLET_NAME: String = "ARG_COINBASE_WALLET_NAME"
-        const val ARG_DASH_TO_COINBASE: String = "ARG_DASH_TO_COINBASE"
+        const val ARG_SOURCE: String = "ARG_SOURCE"
+        const val ARG_DESTINATION: String = "ARG_DESTINATION"
         fun newInstance(
             type: Type,
             responseMessage: String?,
-            coinbaseWalletName: String? = null,
-            dashToCoinbase: Boolean = false
+            sourceCurrency: String?,
+            destinationCurrency: String?
         ): MayaResultDialog {
             val args = Bundle().apply {
                 putInt("Type", type.ordinal)
                 putString(ARG_MESSAGE, responseMessage)
-                putString(ARG_COINBASE_WALLET_NAME, coinbaseWalletName)
-                putBoolean(ARG_DASH_TO_COINBASE, dashToCoinbase)
+                putString(ARG_SOURCE, sourceCurrency)
+                putString(ARG_DESTINATION, destinationCurrency)
             }
             return MayaResultDialog().apply {
                 arguments = args

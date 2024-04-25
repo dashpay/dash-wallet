@@ -56,7 +56,7 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
 
         val adapter = IconifiedListAdapter() { item, index ->
             viewModel.poolList.value.firstOrNull {
-                it.currencyCode == item.title
+                it.asset == item.id
             }?.let {
                 clickListener(it)
             }
@@ -129,6 +129,7 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
         viewModel.poolList.observe(viewLifecycleOwner) {
             lifecycleScope.launch {
                 itemList = it.filter { pool -> pool.asset != "DASH.DASH" }
+                    .filter { pool -> defaultItemMap.containsKey(pool.asset) }
                     .map { pool ->
                         if (defaultItemMap.containsKey(pool.asset)) {
                             defaultItemMap[pool.asset]!!.copy(
@@ -136,7 +137,8 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                                 iconSelectMode = IconSelectMode.None,
                                 additionalInfo = GenericUtils.formatFiatWithoutComma(
                                     viewModel.formatFiat(pool.assetPriceFiat)
-                                )
+                                ),
+                                id = pool.asset
                             )
                         } else {
                             IconifiedViewItem(
@@ -146,7 +148,8 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                                 iconSelectMode = IconSelectMode.None,
                                 additionalInfo = GenericUtils.formatFiatWithoutComma(
                                     viewModel.formatFiat(pool.assetPriceFiat)
-                                )
+                                ),
+                                id = pool.asset
                             )
                         }
                     }.sortedBy { it.title }

@@ -28,8 +28,11 @@ import org.dash.wallet.integrations.maya.api.FiatExchangeRateAggregatedProvider
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.MayaApi
 import org.dash.wallet.integrations.maya.api.MayaApiAggregator
+import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
+import org.dash.wallet.integrations.maya.api.MayaBlockchainApiImpl
 import org.dash.wallet.integrations.maya.api.MayaEndpoint
 import org.dash.wallet.integrations.maya.api.MayaLegacyEndpoint
+import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.api.RemoteDataSource
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import javax.inject.Singleton
@@ -69,6 +72,10 @@ abstract class MayaModule {
     @Binds
     @Singleton
     abstract fun bindMayaApi(mayaApi: MayaApiAggregator): MayaApi
+
+    @Binds
+    @Singleton
+    abstract fun bindMayaBlockchainApi(mayaApi: MayaBlockchainApiImpl): MayaBlockchainApi
 
     @Binds
     @Singleton
