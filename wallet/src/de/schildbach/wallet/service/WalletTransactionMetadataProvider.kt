@@ -366,9 +366,9 @@ class WalletTransactionMetadataProvider @Inject constructor(
         // This may not matter as the default tax category is probably the same for each.
         if (addressMetadataDao.exists(address, isInput)) {
             log.info("address $address/$isInput was already added")
+        } else {
+            addressMetadataDao.markAddress(address, isInput, taxCategory, service)
         }
-
-        addressMetadataDao.markAddress(address, isInput, taxCategory, service)
     }
 
     override suspend fun maybeMarkAddressWithTaxCategory(

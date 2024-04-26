@@ -39,7 +39,7 @@ abstract class MayaPaymentIntentParser(
         } else {
             inputStr
         }
-        val metadata = "SWAP:$asset:$destinationAddress"
+        val metadata = "=:$asset:$destinationAddress"
         return PaymentIntent(
             null, "maya DASH pool", null,
             arrayOf(PaymentIntent.Output(Coin.ZERO, ScriptBuilder.createOpReturnScript(metadata.toByteArray()))),

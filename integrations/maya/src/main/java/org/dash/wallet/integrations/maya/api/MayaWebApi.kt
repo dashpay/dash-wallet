@@ -27,12 +27,16 @@ import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.NetworkResponse
 import org.dash.wallet.integrations.maya.model.PoolInfo
+import org.dash.wallet.integrations.maya.model.SwapQuote
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dash.wallet.integrations.maya.model.SwapTransactionInfo
 import org.dash.wallet.integrations.maya.model.TradesRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
 import org.slf4j.LoggerFactory
 import retrofit2.Response
 import retrofit2.http.GET
+import retrofit2.http.Path
+import retrofit2.http.Query
 import java.io.IOException
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -53,6 +57,18 @@ interface MayaEndpoint {
     suspend fun getInboundAddresses(): Response<List<InboundAddress>>
     @GET("network")
     suspend fun getNetwork(): Response<NetworkResponse>
+    @GET("quote/swap")
+    suspend fun getSwapQuote(
+        @Query("from_asset") fromAsset: String,
+        @Query("to_asset") toAsset: String,
+        @Query("amount") amount: Long,
+        @Query("destination") destination: String
+    ): Response<SwapQuote>
+
+    @GET("tx/{txid}")
+    suspend fun getSwapTransactionInfo(
+        @Path("txid") txid: String
+    ): Response<SwapTransactionInfo>
 }
 
 open class MayaWebApi @Inject constructor(

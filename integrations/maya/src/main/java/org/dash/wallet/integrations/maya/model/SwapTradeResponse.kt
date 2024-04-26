@@ -76,6 +76,7 @@ data class SwapTradeUIModel(
     val feeAmount: Amount = Amount(),
     var inputCurrencyName: String = "",
     var outputCurrencyName: String = "",
+    var memo: String? = null,
     var txid: Sha256Hash = Sha256Hash.ZERO_HASH
 ) : Parcelable {
     @IgnoredOnParcel

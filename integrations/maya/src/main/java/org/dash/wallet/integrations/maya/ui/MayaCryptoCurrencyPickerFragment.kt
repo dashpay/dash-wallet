@@ -129,7 +129,7 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
         viewModel.poolList.observe(viewLifecycleOwner) {
             lifecycleScope.launch {
                 itemList = it.filter { pool -> pool.asset != "DASH.DASH" }
-                    .filter { pool -> defaultItemMap.containsKey(pool.asset) }
+                    .filter { pool -> defaultItemMap.containsKey(pool.asset) && pool.status == "available" }
                     .map { pool ->
                         if (defaultItemMap.containsKey(pool.asset)) {
                             defaultItemMap[pool.asset]!!.copy(
