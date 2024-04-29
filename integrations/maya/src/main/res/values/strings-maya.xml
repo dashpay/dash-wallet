@@ -96,4 +96,10 @@
     <string name="total">Total</string>
     <string name="to_external_address">to %s</string>
 
+    <string name="maya_error_information">%s\nCryptocurrency: %s</string>
+    <string name="maya_error_invalid_destination_address">Invalid destination address</string>
+    <string name="maya_error_below_recommended_minimum">Entered amount is lower than the recommended minimum</string>
+    <string name="maya_error_trading_halted">Trading has been halted on %s.</string>
+
+
 </resources>

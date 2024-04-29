@@ -29,8 +29,8 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.util.toCoin
 import org.dash.wallet.integrations.maya.model.IncorrectSwapOutputCount
+import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
-import org.dash.wallet.integrations.maya.model.TradesRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.RoundingMode
@@ -56,35 +56,40 @@ class MayaBlockchainApiImpl @Inject constructor(
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel> {
         log.info("commitSwapTransaction($tradeId, $swapTradeUIModel")
+        val params = walletProviderData.networkParameters
         val resultSwapTrade = mayaWebApi.swapTradeInfo(
-            TradesRequest(
+            SwapQuoteRequest(
                 amount = swapTradeUIModel.amount,
-                source_maya_asset = swapTradeUIModel.inputCurrency,
+                source_maya_asset = "DASH.DASH",
                 target_maya_asset = swapTradeUIModel.outputAsset,
                 fiatCurrency = swapTradeUIModel.amount.fiatCode,
-                targetAddress = swapTradeUIModel.destinationAddress
+                targetAddress = swapTradeUIModel.destinationAddress,
+                maximum = swapTradeUIModel.maximum
             )
         )
         if (resultSwapTrade is ResponseResource.Success) {
             try {
-                val tx = Transaction(walletProviderData.networkParameters)
+                val tx = Transaction(params)
                 // set outputs according to:
                 //   https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/sending-transactions#utxo-chains
                 // Send the transaction with Asgard vault as VOUT0
-                val dashAmountWithFees = (resultSwapTrade.value.amount.dash + resultSwapTrade.value.feeAmount.dash)
-                    .setScale(8, RoundingMode.HALF_UP)
-                    .toCoin()
+                val dashAmountWithFees = if (swapTradeUIModel.maximum) {
+                    (resultSwapTrade.value.amount.dash + resultSwapTrade.value.feeAmount.dash)
+                } else {
+                    resultSwapTrade.value.amount.dash
+                }.setScale(8, RoundingMode.HALF_UP).toCoin()
                 tx.addOutput(
                     dashAmountWithFees,
-                    Address.fromBase58(walletProviderData.networkParameters, resultSwapTrade.value.vaultAddress)
+                    Address.fromBase58(params, resultSwapTrade.value.vaultAddress)
                 )
                 // Include the memo as an OP_RETURN in VOUT1
                 // memo documentation: https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/transaction-memos#swap
                 // SWAP:ASSET:DESTADDR[:AFFILIATE:FEE]
-                val memo = "SWAP:${resultSwapTrade.value.outputAsset}:${resultSwapTrade.value.destinationAddress}"
+                val memo = swapTradeUIModel.memo ?: "=:${resultSwapTrade.value.outputAsset}:${resultSwapTrade.value.destinationAddress}"
+                log.info("memo: {}", memo)
                 tx.addOutput(
                     TransactionOutput(
-                        walletProviderData.networkParameters,
+                        params,
                         tx,
                         Coin.ZERO,
                         ScriptBuilder.createOpReturnScript(memo.toByteArray()).program
@@ -92,15 +97,18 @@ class MayaBlockchainApiImpl @Inject constructor(
                 )
                 val sendRequest = SendRequest.forTx(tx)
                 // Override randomised VOUT ordering; MAYAChain requires specific output ordering.
-                sendRequest.sortByBIP69 = false // we don't want the order changed
-                sendRequest.shuffleOutputs = false // we don't want the order changed
+                sendRequest.sortByBIP69 = false // we don't want the output order changed
+                sendRequest.shuffleOutputs = false // we don't want the output order changed
                 // this will complete the transaction by adding inputs and an output for change
                 sendPaymentService.completeTransaction(sendRequest)
 
                 // verify that there are only 3 outputs in the transaction
                 if (sendRequest.tx.outputs.size != 3) {
                     return ResponseResource.Failure(
-                        IncorrectSwapOutputCount(sendRequest.tx), false, 0, null
+                        IncorrectSwapOutputCount(sendRequest.tx),
+                        false,
+                        0,
+                        null
                     )
                 }
 
@@ -132,8 +140,8 @@ class MayaBlockchainApiImpl @Inject constructor(
                 log.info("maya swap transaction resigned: {}", sendRequest.tx)
 
                 //
-                //val sentTransaction = sendPaymentService.sendTransaction(sendRequest)
-                //swapTradeUIModel.txid = sentTransaction.txId
+                // val sentTransaction = sendPaymentService.sendTransaction(sendRequest)
+                // swapTradeUIModel.txid = sentTransaction.txId
                 return ResponseResource.Success(swapTradeUIModel)
             } catch (e: InsufficientMoneyException) {
                 return ResponseResource.Failure(e, false, 0, e.message)

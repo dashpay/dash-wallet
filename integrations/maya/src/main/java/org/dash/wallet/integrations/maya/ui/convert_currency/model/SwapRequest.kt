@@ -25,6 +25,7 @@ import org.dash.wallet.integrations.maya.model.Amount
 
 data class SwapRequest(
     val amount: Amount,
+    val maximum: Boolean,
     val destinationAddress: String,
     val cryptoCurrencyCode: String,
     val cryptoCurrencyAsset: String,

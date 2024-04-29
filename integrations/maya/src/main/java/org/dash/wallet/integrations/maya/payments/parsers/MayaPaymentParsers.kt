@@ -50,8 +50,8 @@ class MayaPaymentParsers : PaymentParsers() {
         add(
             "usk",
             "usk",
-            Bech32PaymentIntentParser("usk", "usk", "kajira", 38, "KUJI.USK"),
-            Bech32AddressParser("usk", 38, null)
+            Bech32PaymentIntentParser("usk", "kujira", "kajira", 38, "KUJI.USK"),
+            Bech32AddressParser("kujira", 38, null)
         )
     }
 }

@@ -34,6 +34,7 @@ abstract class MayaPaymentIntentParser(
         params
     ) {
     fun createPaymentIntent(inputStr: String): PaymentIntent {
+        // val destinationAddress = if (inputStr.lowercase().startsWith(uriPrefix.lowercase() + ":")) {
         val destinationAddress = if (inputStr.lowercase().startsWith(uriPrefix.lowercase())) {
             inputStr.substring(uriPrefix.length + 1)
         } else {

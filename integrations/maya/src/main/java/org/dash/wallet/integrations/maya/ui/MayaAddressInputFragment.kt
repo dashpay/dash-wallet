@@ -20,16 +20,23 @@ package org.dash.wallet.integrations.maya.ui
 import android.os.Bundle
 import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import org.dash.wallet.common.R
+import kotlinx.coroutines.launch
+import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.common.ui.address_input.AddressInputFragment
 import org.dash.wallet.common.ui.address_input.AddressSource
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.recyclerview.IconifiedListAdapter
 import org.dash.wallet.common.util.DeepLinkDestination
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integrations.maya.model.MayaErrorType
+import org.dash.wallet.integrations.maya.model.getMayaErrorString
+import org.dash.wallet.integrations.maya.model.getMayaErrorType
 
 class MayaAddressInputFragment : AddressInputFragment() {
     private val mayaViewModel by viewModels<MayaViewModel>()
@@ -72,15 +79,41 @@ class MayaAddressInputFragment : AddressInputFragment() {
     }
 
     override fun continueAction() {
-        safeNavigate(
-            MayaAddressInputFragmentDirections.mayaAddressInputToEnterAmount(
-                viewModel.currency,
-                mayaAddressInputViewModel.asset,
-                viewModel.addressResult.paymentIntent!!
-            )
-        )
-        // TODO: add event monitoring here
-        // viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE)
+        lifecycleScope.launch {
+            val quote = mayaAddressInputViewModel.getDefaultQuote()
+            if (quote != null && quote.error == null) {
+                safeNavigate(
+                    MayaAddressInputFragmentDirections.mayaAddressInputToEnterAmount(
+                        viewModel.currency,
+                        mayaAddressInputViewModel.asset,
+                        viewModel.addressResult.paymentIntent!!
+                    )
+                )
+                // TODO: add event monitoring here
+                // viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE)
+            } else {
+                if (getMayaErrorType(quote?.error ?: "") == MayaErrorType.INVALID_DESTINATION_ADDRESS) {
+                    // show error
+                    binding.inputWrapper.isErrorEnabled = true
+                    binding.errorText.isVisible = true
+                } else {
+                    val message: String = if (quote?.error.isNullOrBlank()) {
+                        requireContext().getString(R.string.something_wrong_title)
+                    } else {
+                        // get localized error
+                        getMayaErrorString(quote?.error ?: "")?.let { id -> getString(id, viewModel.currency) }
+                            ?: requireContext().getString(R.string.something_wrong_title)
+                    }
+
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(org.dash.wallet.integrations.maya.R.string.error),
+                        message,
+                        getString(org.dash.wallet.integrations.maya.R.string.button_close)
+                    ).show(requireActivity())
+                }
+            }
+        }
     }
 
     override fun onResume() {

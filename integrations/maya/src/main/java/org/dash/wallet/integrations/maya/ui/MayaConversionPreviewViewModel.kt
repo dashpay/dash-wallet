@@ -19,25 +19,21 @@ package org.dash.wallet.integrations.maya.ui
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.services.NetworkStateInt
-import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.toCoin
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.MayaErrorResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
-import org.dash.wallet.integrations.maya.model.TradesRequest
+import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import javax.inject.Inject
@@ -123,12 +119,13 @@ class MayaConversionPreviewViewModel @Inject constructor(
 
     fun swapTrade(swapTradeUIModel: SwapTradeUIModel) = viewModelScope.launch {
         _showLoading.value = true
-        val tradesRequest = TradesRequest(
+        val tradesRequest = SwapQuoteRequest(
             swapTradeUIModel.amount,
             source_maya_asset = "DASH.DASH",
             target_maya_asset = swapTradeUIModel.outputAsset,
             fiatCurrency = swapTradeUIModel.amount.fiatCode,
-            targetAddress = swapTradeUIModel.destinationAddress
+            targetAddress = swapTradeUIModel.destinationAddress,
+            maximum = swapTradeUIModel.maximum
         )
         when (val result = mayaWebApi.swapTradeInfo(tradesRequest)) {
             is ResponseResource.Success -> {
