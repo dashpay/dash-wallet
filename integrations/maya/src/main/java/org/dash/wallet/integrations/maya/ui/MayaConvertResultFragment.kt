@@ -161,7 +161,9 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
                                 dismiss()
                                 findNavController().popBackStack()
                             }
-                            MayaResultDialog.Type.CONVERSION_SUCCESS, MayaResultDialog.Type.DEPOSIT_SUCCESS, MayaResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
+                            MayaResultDialog.Type.CONVERSION_SUCCESS,
+                            MayaResultDialog.Type.DEPOSIT_SUCCESS,
+                            MayaResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
                                 viewModel.logClose(type)
                                 dismiss()
                                 val navController = findNavController()

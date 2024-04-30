@@ -32,7 +32,6 @@ import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApiImpl
 import org.dash.wallet.integrations.maya.api.MayaEndpoint
 import org.dash.wallet.integrations.maya.api.MayaLegacyEndpoint
-import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.api.RemoteDataSource
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import javax.inject.Singleton

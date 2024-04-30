@@ -3,13 +3,13 @@ package org.dash.wallet.integrations.maya.model
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
-sealed class TransactionType: Parcelable {
+sealed class TransactionType : Parcelable {
     @Parcelize
-    object BuyDash: TransactionType()
+    object BuyDash : TransactionType()
     @Parcelize
-    object SellSwap: TransactionType()
+    object SellSwap : TransactionType()
     @Parcelize
-    object BuySwap: TransactionType()
+    object BuySwap : TransactionType()
     @Parcelize
-    object TransferDash: TransactionType()
+    object TransferDash : TransactionType()
 }

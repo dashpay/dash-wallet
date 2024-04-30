@@ -49,5 +49,5 @@ data class SendTransactionToWalletParams(
 data class MayaTransactionParams(
     val params: SendTransactionToWalletParams,
     val type: TransactionType,
-    val coinbaseWalletName:String? = null
-): Parcelable
+    val coinbaseWalletName: String? = null
+) : Parcelable

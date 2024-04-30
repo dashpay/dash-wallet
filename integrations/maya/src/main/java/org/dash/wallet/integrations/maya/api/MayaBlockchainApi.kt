@@ -47,7 +47,7 @@ class MayaBlockchainApiImpl @Inject constructor(
     private val sendPaymentService: SendPaymentService,
     private val mayaWebApi: MayaWebApi,
     private val walletProviderData: WalletDataProvider
-): MayaBlockchainApi {
+) : MayaBlockchainApi {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(MayaBlockchainApiImpl::class.java)
     }
@@ -71,7 +71,8 @@ class MayaBlockchainApiImpl @Inject constructor(
         if (resultSwapTrade is ResponseResource.Success) {
             try {
                 val sendRequest: SendRequest
-                val memo = swapTradeUIModel.memo ?: "=:${resultSwapTrade.value.outputAsset}:${resultSwapTrade.value.destinationAddress}"
+                val memo = swapTradeUIModel.memo
+                    ?: "=:${resultSwapTrade.value.outputAsset}:${resultSwapTrade.value.destinationAddress}"
                 val tx = Transaction(params)
 
                 // set outputs according to:
@@ -136,8 +137,7 @@ class MayaBlockchainApiImpl @Inject constructor(
                     // account for the size and possibly larger signatures when re-signed
                     val size = sendRequest.tx.bitcoinSerialize().size + sendRequest.tx.inputs.size
                     sendRequest.tx.outputs[0].value = swapTradeUIModel.amount.dash.toCoin() -
-                            Coin.valueOf(size * Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.value / 1000)
-
+                        Coin.valueOf(size * Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.value / 1000)
                 } else {
                     // Pass all change back to the VIN0 address in VOUT2
                     val connectedOutput = sendRequest.tx.getInput(0).connectedOutput

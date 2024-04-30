@@ -25,7 +25,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import kotlinx.coroutines.launch
-import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.common.ui.address_input.AddressInputFragment
 import org.dash.wallet.common.ui.address_input.AddressSource
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
@@ -34,6 +33,7 @@ import org.dash.wallet.common.ui.recyclerview.IconifiedListAdapter
 import org.dash.wallet.common.util.DeepLinkDestination
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.model.MayaErrorType
 import org.dash.wallet.integrations.maya.model.getMayaErrorString
 import org.dash.wallet.integrations.maya.model.getMayaErrorType

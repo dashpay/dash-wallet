@@ -38,7 +38,7 @@ enum class MayaErrorType {
 }
 
 class MayaException(val errorType: MayaErrorType, message: String?) : Exception(message)
-class IncorrectSwapOutputCount(val tx: Transaction):
+class IncorrectSwapOutputCount(val tx: Transaction) :
     Exception("Maya transaction has ${tx.outputs.size} outputs.  Only 3 are allowed")
 
 fun getMayaErrorType(error: String): MayaErrorType {

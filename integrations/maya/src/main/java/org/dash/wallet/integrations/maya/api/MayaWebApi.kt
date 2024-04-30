@@ -194,11 +194,6 @@ open class MayaWebApi @Inject constructor(
 //    },
 
     suspend fun getSwapInfo(tradesRequest: SwapQuoteRequest): ResponseResource<SwapTradeUIModel> {
-        // MAX is not supported
-        // if (tradesRequest.maximum) {
-        //    return ResponseResource.Failure(MayaException("MAX not supported"), false, 0, null)
-        // }
-
         // we need to calculate the fees based on getSwapQuote
         val inboundAddresses = getInboundAddresses()
         if (inboundAddresses.isNotEmpty()) {
@@ -208,7 +203,9 @@ open class MayaWebApi @Inject constructor(
             if (source == null || destination == null) {
                 return ResponseResource.Failure(
                     MayaException(
-                        "inbound_addresses did not return ${tradesRequest.source_asset} or ${tradesRequest.target_asset}"
+                        "inbound_addresses did not return ${
+                            tradesRequest.source_asset
+                        } or ${tradesRequest.target_asset}"
                     ),
                     false,
                     0,

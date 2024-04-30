@@ -119,13 +119,13 @@ class MayaConvertResultViewModel @Inject constructor(
     fun logRetry(type: MayaResultDialog.Type) {
         when (type) {
             MayaResultDialog.Type.DEPOSIT_ERROR -> {
-               // analyticsService.logEvent(AnalyticsConstants.Maya.BUY_ERROR_RETRY, mapOf())
+                // analyticsService.logEvent(AnalyticsConstants.Maya.BUY_ERROR_RETRY, mapOf())
             }
             MayaResultDialog.Type.CONVERSION_ERROR -> {
-               // analyticsService.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_RETRY, mapOf())
+                // analyticsService.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_RETRY, mapOf())
             }
             MayaResultDialog.Type.TRANSFER_DASH_ERROR -> {
-               // analyticsService.logEvent(AnalyticsConstants.Maya.TRANSFER_ERROR_RETRY, mapOf())
+                // analyticsService.logEvent(AnalyticsConstants.Maya.TRANSFER_ERROR_RETRY, mapOf())
             }
             else -> {}
         }
@@ -134,22 +134,22 @@ class MayaConvertResultViewModel @Inject constructor(
     fun logClose(type: MayaResultDialog.Type) {
         when (type) {
             MayaResultDialog.Type.DEPOSIT_SUCCESS -> {
-                //analyticsService.logEvent(AnalyticsConstants.Maya.BUY_SUCCESS_CLOSE, mapOf())
+                // analyticsService.logEvent(AnalyticsConstants.Maya.BUY_SUCCESS_CLOSE, mapOf())
             }
             MayaResultDialog.Type.DEPOSIT_ERROR -> {
-                //analyticsService.logEvent(AnalyticsConstants.Maya.BUY_ERROR_CLOSE, mapOf())
+                // analyticsService.logEvent(AnalyticsConstants.Maya.BUY_ERROR_CLOSE, mapOf())
             }
             MayaResultDialog.Type.CONVERSION_SUCCESS -> {
-                //analyticsService.logEvent(AnalyticsConstants.Maya.CONVERT_SUCCESS_CLOSE, mapOf())
+                // analyticsService.logEvent(AnalyticsConstants.Maya.CONVERT_SUCCESS_CLOSE, mapOf())
             }
             MayaResultDialog.Type.CONVERSION_ERROR -> {
-                //analyticsService.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_CLOSE, mapOf())
+                // analyticsService.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_CLOSE, mapOf())
             }
             MayaResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
-                //analyticsService.logEvent(AnalyticsConstants.Maya.TRANSFER_SUCCESS_CLOSE, mapOf())
+                // analyticsService.logEvent(AnalyticsConstants.Maya.TRANSFER_SUCCESS_CLOSE, mapOf())
             }
             MayaResultDialog.Type.TRANSFER_DASH_ERROR -> {
-                //analyticsService.logEvent(AnalyticsConstants.Maya.TRANSFER_ERROR_CLOSE, mapOf())
+                // analyticsService.logEvent(AnalyticsConstants.Maya.TRANSFER_ERROR_CLOSE, mapOf())
             }
             else -> {}
         }

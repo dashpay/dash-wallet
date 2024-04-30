@@ -32,8 +32,18 @@ class MayaPaymentParsers : PaymentParsers() {
             EthereumPaymentIntentParser("ethereum", "ETH.ETH"),
             AddressParser.getEthereumAddressParser()
         )
-        add("usdc", "usdc", EthereumPaymentIntentParser("usdc", "ETH.USDC-6EB48"), AddressParser.getEthereumAddressParser())
-        add("tether", "usdt", EthereumPaymentIntentParser("usdt", "ETH.USDT-31EC7"), AddressParser.getEthereumAddressParser())
+        add(
+            "usdc",
+            "usdc",
+            EthereumPaymentIntentParser("usdc", "ETH.USDC-6EB48"),
+            AddressParser.getEthereumAddressParser()
+        )
+        add(
+            "tether",
+            "usdt",
+            EthereumPaymentIntentParser("usdt", "ETH.USDT-31EC7"),
+            AddressParser.getEthereumAddressParser()
+        )
         add(
             "Wrapped stETH",
             "wsteth",

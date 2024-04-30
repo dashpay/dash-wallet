@@ -291,7 +291,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             amount.anchoredType == CurrencyInputType.Fiat
         )
 
-        val totalAmount = if(this.maximum) {
+        val totalAmount = if (this.maximum) {
             this.amount.anchoredValue
         } else {
             (this.amount.anchoredValue + this.feeAmount.anchoredValue).setScale(
