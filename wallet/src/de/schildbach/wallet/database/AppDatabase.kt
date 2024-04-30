@@ -58,7 +58,6 @@ import org.dash.wallet.common.data.entity.GiftCard
         AddressMetadata::class,
         IconBitmap::class,
         GiftCard::class,
-        BlockchainIdentityData::class,
         DashPayProfile::class,
         DashPayContactRequest::class,
         UserAlert::class,
@@ -67,7 +66,7 @@ import org.dash.wallet.common.data.entity.GiftCard
         TransactionMetadataDocument::class,
         UsernameRequest::class
     ],
-    version = 18 // if increasing version, we need migrations to preserve tx/addr metadata
+    version = 19 // if increasing version, we need migrations to preserve tx/addr metadata
 )
 @TypeConverters(RoomConverters::class, BlockchainStateRoomConverters::class)
 abstract class AppDatabase : RoomDatabase() {
