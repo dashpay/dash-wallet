@@ -108,7 +108,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
                 } else {
                     val message = MayaErrorResponse.getErrorMessage(error)?.message
                     if (message.isNullOrEmpty()) {
-                        commitSwapTradeFailureState.call()
+                        commitSwapTradeFailureState.value = result.throwable.localizedMessage
                     } else {
                         commitSwapTradeFailureState.value = message ?: ""
                     }
@@ -127,7 +127,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
             targetAddress = swapTradeUIModel.destinationAddress,
             maximum = swapTradeUIModel.maximum
         )
-        when (val result = mayaWebApi.swapTradeInfo(tradesRequest)) {
+        when (val result = mayaWebApi.getSwapInfo(tradesRequest)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {

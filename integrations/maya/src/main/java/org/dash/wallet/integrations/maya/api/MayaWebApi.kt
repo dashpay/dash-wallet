@@ -26,9 +26,9 @@ import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.NetworkResponse
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapQuote
+import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.SwapTransactionInfo
-import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
 import org.slf4j.LoggerFactory
@@ -193,11 +193,11 @@ open class MayaWebApi @Inject constructor(
 //        "pub_key": "mayapub1addwnpepqdupyxvsy864n5wua9532ey72feplzmtsacfjc8wvy0e5sdd96w0zf0anph"
 //    },
 
-    suspend fun swapTradeInfo(tradesRequest: SwapQuoteRequest): ResponseResource<SwapTradeUIModel> {
+    suspend fun getSwapInfo(tradesRequest: SwapQuoteRequest): ResponseResource<SwapTradeUIModel> {
         // MAX is not supported
-        if (tradesRequest.maximum) {
-            return ResponseResource.Failure(MayaException("MAX not supported"), false, 0, null)
-        }
+        // if (tradesRequest.maximum) {
+        //    return ResponseResource.Failure(MayaException("MAX not supported"), false, 0, null)
+        // }
 
         // we need to calculate the fees based on getSwapQuote
         val inboundAddresses = getInboundAddresses()
@@ -261,7 +261,7 @@ open class MayaWebApi @Inject constructor(
 //                    BigDecimal(1_0000_0000)
 //                )
 //            }
-            val quote = getSwapQuote(
+            var quote = getSwapQuote(
                 tradesRequest.source_maya_asset,
                 tradesRequest.target_maya_asset,
                 tradesRequest.amount.dash.multiply(BigDecimal.valueOf(1_0000_0000)).toLong(),
@@ -275,24 +275,26 @@ open class MayaWebApi @Inject constructor(
                 )
 
             if (quote.error == null) {
-                val outgoingFee2 = if (tradesRequest.target_maya_asset.contains("ETH.")) {
-                    quote.fees.outbound.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(
-                        BigDecimal(1_00_000_000)
-                    )
-                } else {
-                    // DASH/BITCOIN
-                    quote.fees.outbound.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(
-                        BigDecimal(1_0000_0000)
-                    )
-                }
-                log.info("quote: {}", quote)
-                log.info("quote.amount {} vs {}", quote.expectedAmountOut, tradesRequest.amount.crypto)
-
                 val newAmount = tradesRequest.amount.copy()
-                newAmount.crypto += outgoingFee2
+                val feeAmount = tradesRequest.amount.copy()
 
-                val quote2 = if (!tradesRequest.maximum) {
-                    getSwapQuote(
+                if (!tradesRequest.maximum) {
+                    val outgoingFee2 = if (tradesRequest.target_maya_asset.contains("ETH.")) {
+                        quote.fees.outbound.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(
+                            BigDecimal(1_00_000_000)
+                        )
+                    } else {
+                        // DASH/BITCOIN
+                        quote.fees.outbound.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(
+                            BigDecimal(1_0000_0000)
+                        )
+                    }
+                    log.info("quote: {}", quote)
+                    log.info("quote.amount {} vs {}", quote.expectedAmountOut, tradesRequest.amount.crypto)
+
+                    newAmount.crypto += outgoingFee2
+
+                    quote = getSwapQuote(
                         tradesRequest.source_maya_asset,
                         tradesRequest.target_maya_asset,
                         newAmount.dash.multiply(BigDecimal.valueOf(1_0000_0000)).toLong(),
@@ -304,14 +306,16 @@ open class MayaWebApi @Inject constructor(
                             0,
                             null
                         )
-                } else {
-                    quote
-                }
-                log.info("quote: {}", quote2)
-                log.info("quote.amount {} vs {}", quote2.expectedAmountOut, tradesRequest.amount.crypto)
 
-                val feeAmount = tradesRequest.amount.copy()
-                feeAmount.dash = newAmount.dash - tradesRequest.amount.dash
+                    log.info("quote: {}", quote)
+                    log.info("quote.amount {} vs {}", quote.expectedAmountOut, tradesRequest.amount.crypto)
+                    feeAmount.dash = newAmount.dash - tradesRequest.amount.dash
+                } else {
+                    newAmount.crypto = quote.expectedAmountOut.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(
+                        BigDecimal(1_0000_0000)
+                    )
+                    feeAmount.dash = tradesRequest.amount.dash - newAmount.dash
+                }
                 feeAmount.anchoredType = tradesRequest.amount.anchoredType
 
                 val result = SwapTradeUIModel(
@@ -320,12 +324,12 @@ open class MayaWebApi @Inject constructor(
                     feeAmount = feeAmount,
                     vaultAddress = source.address,
                     destinationAddress = tradesRequest.targetAddress,
-                    memo = quote2.memo,
+                    memo = quote.memo,
                     maximum = tradesRequest.maximum
                 )
                 return ResponseResource.Success(result)
             }
-            return ResponseResource.Failure(MayaException(quote.error), false, 0, null)
+            return ResponseResource.Failure(MayaException(quote.error ?: "Unknown error"), false, 0, null)
         } else {
             return ResponseResource.Failure(MayaException("inbound address api failure"), false, 0, null)
         }

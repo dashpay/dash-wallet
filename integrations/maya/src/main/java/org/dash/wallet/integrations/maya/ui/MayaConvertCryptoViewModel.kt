@@ -97,7 +97,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
             maximum = swapTradeInfo.maximum
         )
 
-        when (val result = coinBaseRepository.swapTradeInfo(tradesRequest)) {
+        when (val result = coinBaseRepository.getSwapInfo(tradesRequest)) {
             is ResponseResource.Success -> {
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     _showLoading.value = false

@@ -369,7 +369,7 @@ class ConvertViewViewModel @Inject constructor(
 
     fun getMaxAmount(): Amount? {
         return walletDataProvider.wallet?.let {
-            val balance = it.balance
+            val balance = it.getBalance(Wallet.BalanceType.ESTIMATED)
             amount.copy().apply { dash = balance.toBigDecimal() }
         }
     }

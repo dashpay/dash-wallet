@@ -264,7 +264,11 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         } else {
             8
         }
-        val purchaseAmount = this.amount.anchoredValue.setScale(digits, RoundingMode.HALF_UP)
+        val purchaseAmount = if (this.maximum) {
+            (this.amount.anchoredValue - this.feeAmount.anchoredValue)
+        } else {
+            this.amount.anchoredValue
+        }.setScale(digits, RoundingMode.HALF_UP)
 
         setValueWithCurrencyCodeOrSymbol(
             binding.contentOrderReview.purchaseAmount,
@@ -287,10 +291,14 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             amount.anchoredType == CurrencyInputType.Fiat
         )
 
-        val totalAmount = (this.amount.anchoredValue + this.feeAmount.anchoredValue).setScale(
-            digits,
-            RoundingMode.HALF_UP
-        )
+        val totalAmount = if(this.maximum) {
+            this.amount.anchoredValue
+        } else {
+            (this.amount.anchoredValue + this.feeAmount.anchoredValue).setScale(
+                digits,
+                RoundingMode.HALF_UP
+            )
+        }
 
         setValueWithCurrencyCodeOrSymbol(
             binding.contentOrderReview.totalAmount,
