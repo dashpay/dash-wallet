@@ -249,7 +249,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             setGuidelinePercent(true)
         }
 
-        mayaViewModel.updateInboundAddresses()
         convertViewModel.setSelectedAsset(args.asset)
     }
 

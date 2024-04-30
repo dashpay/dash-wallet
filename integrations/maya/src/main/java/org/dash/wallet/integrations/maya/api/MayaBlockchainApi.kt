@@ -23,6 +23,7 @@ import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.script.ScriptBuilder
+import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
@@ -113,9 +114,14 @@ class MayaBlockchainApiImpl @Inject constructor(
                 }
 
                 // Pass all change back to the VIN0 address in VOUT2
-                val inputIndex = sendRequest.tx.getInput(0).index
-                val inputTx = sendRequest.tx.getInput(0).connectedTransaction
-                val scriptPubKey = inputTx!!.getOutput(inputIndex.toLong()).scriptPubKey
+                val connectedOutput = sendRequest.tx.getInput(0).connectedOutput
+                    ?: return ResponseResource.Failure(
+                        MayaException("transaction input not connected"),
+                        false,
+                        0,
+                        null
+                    )
+                val scriptPubKey = connectedOutput.scriptPubKey
 
                 // to replace output[2], we must clear all outputs and them back
                 // this is because Transaction.getOutputs returns an immutable list
@@ -139,9 +145,16 @@ class MayaBlockchainApiImpl @Inject constructor(
                 sendPaymentService.signTransaction(sendRequest)
                 log.info("maya swap transaction resigned: {}", sendRequest.tx)
 
-                //
-                // val sentTransaction = sendPaymentService.sendTransaction(sendRequest)
-                // swapTradeUIModel.txid = sentTransaction.txId
+                // check that vout3 is using vin0
+                if (ScriptPattern.isP2PKH(sendRequest.tx.outputs[2].scriptPubKey)) {
+                    val input0 = sendRequest.tx.inputs[0]
+                    if (sendRequest.tx.outputs[2].scriptPubKey != input0.connectedOutput?.scriptPubKey) {
+                        return ResponseResource.Failure(MayaException("vout3 script != vin0"), false, 0, null)
+                    }
+                }
+                // send the transaction
+                //val sentTransaction = sendPaymentService.sendTransaction(sendRequest)
+                //swapTradeUIModel.txid = sentTransaction.txId
                 return ResponseResource.Success(swapTradeUIModel)
             } catch (e: InsufficientMoneyException) {
                 return ResponseResource.Failure(e, false, 0, e.message)

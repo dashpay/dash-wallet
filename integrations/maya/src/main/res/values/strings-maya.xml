@@ -77,7 +77,7 @@
     <string name="transfer_dash_failed_msg">There was a problem transferring it to Dash Wallet on this device.</string>
     <string name="auth_limit_description">You exceeded the authorization limit on Coinbase.</string>
     <string name="you_will_receive">Receive amount</string>
-    <string name="contact_coinbase_support">Contact Coinbase Support</string>
+    <string name="contact_maya_support">Contact Maya Support</string>
     <string name="maya_fees_in_crypto_purchase">Maya Fees in crypto conversions</string>
     <string name="maya_fee_info_msg_content">There are various inbound, outbound and liquidity fees associated to Maya transactions.  The amount that you entered is the amount that will be received.</string>
     <string name="learn_more">Learn More</string>

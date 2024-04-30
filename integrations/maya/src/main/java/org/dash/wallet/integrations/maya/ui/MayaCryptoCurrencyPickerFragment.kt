@@ -58,7 +58,17 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
             viewModel.poolList.value.firstOrNull {
                 it.asset == item.id
             }?.let {
-                clickListener(it)
+                val inboundAddress = viewModel.getInboundAddress(it.asset)
+                if (inboundAddress != null && !inboundAddress.halted) {
+                    clickListener(it)
+                } else {
+                    AdaptiveDialog.create(
+                        null,
+                        getString(R.string.error),
+                        getString(R.string.maya_error_trading_halted, it.asset),
+                        getString(R.string.button_close)
+                    ).show(requireActivity())
+                }
             }
         }
 

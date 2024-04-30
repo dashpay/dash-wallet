@@ -86,16 +86,16 @@ class MayaResultDialog : DialogFragment() {
             }
         }
 
-        binding.coinbaseBuyDialogNegativeButton.setOnClickListener {
-            type?.let {
-                onMayaResultDialogButtonsClickListener?.onNegativeButtonClick(
-                    Type.values().first { it.ordinal == type }
-                )
-            }
-            dismiss()
-            findNavController().popBackStack()
-            findNavController().popBackStack()
-        }
+//        binding.coinbaseBuyDialogNegativeButton.setOnClickListener {
+//            type?.let {
+//                onMayaResultDialogButtonsClickListener?.onNegativeButtonClick(
+//                    Type.values().first { it.ordinal == type }
+//                )
+//            }
+//            dismiss()
+//            findNavController().popBackStack()
+//            findNavController().popBackStack()
+//        }
 
         binding.buyDialogContactCoinbaseSupport.setOnClickListener {
             openCoinbaseHelp()
@@ -113,7 +113,6 @@ class MayaResultDialog : DialogFragment() {
             binding.coinbaseBuyDialogMessage.text = errorMessage
         }
         binding.buyDialogContactCoinbaseSupport.isGone = true
-        binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -133,18 +132,15 @@ class MayaResultDialog : DialogFragment() {
 
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.setText(R.string.button_close)
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
     }
 
     private fun setDepositSuccess() {
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
         binding.coinbaseBuyDialogMessage.setText(R.string.it_could_take_up_to_2_3_minutes)
         binding.buyDialogContactCoinbaseSupport.isGone = true
-        binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -154,8 +150,6 @@ class MayaResultDialog : DialogFragment() {
         binding.coinbaseBuyDialogMessage.setText(R.string.something_wrong_title)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.setText(R.string.button_close)
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
     }
 
@@ -165,23 +159,20 @@ class MayaResultDialog : DialogFragment() {
         binding.coinbaseBuyDialogMessage.setText(R.string.something_wrong_title)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.setText(R.string.button_close)
         binding.coinbaseBuyDialogPositiveButton.isVisible = false
     }
 
     private fun setConversionSuccess(source: String, destination: String) {
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
         binding.coinbaseBuyDialogMessage.text = getString(R.string.it_could_take_up_to_5_minutes, source, destination)
         binding.buyDialogContactCoinbaseSupport.isGone = true
-        binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
     private fun setTransferDashSuccess(dashToCoinbase: Boolean) {
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
         binding.coinbaseBuyDialogTitle.setText(R.string.transfer_dash_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
         binding.coinbaseBuyDialogMessage.setText(
@@ -192,7 +183,6 @@ class MayaResultDialog : DialogFragment() {
             }
         )
         binding.buyDialogContactCoinbaseSupport.isGone = true
-        binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -209,8 +199,6 @@ class MayaResultDialog : DialogFragment() {
 
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.setText(R.string.button_close)
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
     }
 
