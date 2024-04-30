@@ -168,6 +168,8 @@ class DashWalletFactory @Inject constructor(
 
             // does this work on encrypted backups?
             wallet.addKeyChain(Constants.BIP44_PATH)
+            wallet as WalletEx
+            wallet.initializeCoinJoin(0)
             return wallet
         } finally {
             try {
