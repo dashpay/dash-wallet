@@ -27,15 +27,21 @@ import android.os.Handler;
 import android.os.PowerManager;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.google.android.material.snackbar.Snackbar;
 import com.google.common.collect.ImmutableList;
 
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.services.RateRetrievalState;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.ui.components.ComposeHostFrameLayout;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
+import org.dash.wallet.common.util.FlowExtKt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +61,10 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
+import kotlin.coroutines.Continuation;
 import kotlin.jvm.functions.Function0;
+import kotlinx.coroutines.flow.Flow;
+import kotlinx.coroutines.flow.FlowCollector;
 
 /**
  * @author Andreas Schildbach
@@ -76,7 +85,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private boolean isRestoringBackup;
 
     private BaseAlertDialogBuilder baseAlertDialogBuilder;
-    private MainViewModel viewModel;
+    public MainViewModel viewModel;
+    public RateRetrievalState rateRetrievalState = new RateRetrievalState(false, false, false);
+    public ComposeHostFrameLayout composeHostFrameLayout = null;
 
     ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), result -> WalletActivityExt.INSTANCE.requestDisableBatteryOptimisation(WalletActivity.this));
 
@@ -112,6 +123,27 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 currencies.component2()
             )
         );
+
+        FlowExtKt.observe(viewModel.getRateStale(), this, new FlowCollector<RateRetrievalState>() {
+            @Nullable
+            @Override
+            public Object emit(RateRetrievalState state, @NonNull Continuation<? super Unit> continuation) {
+                rateRetrievalState = state;
+                //                if (!getLockScreenDisplayed() && !state.getStaleRate()) {
+//                    // Show a notification or update the UI to indicate the stale rate
+//                    //Toast.makeText(WalletActivity.this, "Exchange rate is stale.", Toast.LENGTH_LONG).show();
+//                    View rootView = findViewById(android.R.id.content);
+//                    Snackbar snackbar = Snackbar.make(WalletActivity.this, rootView, "The exchange rates are out of date, please do something about it right away. Go to settings", Snackbar.LENGTH_INDEFINITE);
+//                    snackbar.setAction("OK", v -> snackbar.dismiss());
+//                    snackbar.setTextMaxLines(2);
+//                    snackbar.show();
+//                }
+                WalletActivityExt.INSTANCE.showStaleRatesToast(WalletActivity.this);
+                return Unit.INSTANCE;
+            }
+        });
+        //WalletActivityExt.INSTANCE.initViewModel(this);
+        //viewModel.showSnackbar();
     }
 
     @Override
@@ -364,5 +396,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (configuration.getShowNotificationsExplainer()) {
             WalletActivityExt.INSTANCE.explainPushNotifications(this);
         }
+        WalletActivityExt.INSTANCE.showStaleRatesToast(this);
+    }
+
+    @Override
+    public void onLockScreenActivated() {
+        WalletActivityExt.INSTANCE.showStaleRatesToast(this);
     }
 }

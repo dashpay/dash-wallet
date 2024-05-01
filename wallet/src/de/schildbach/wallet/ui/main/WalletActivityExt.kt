@@ -28,6 +28,20 @@ import android.os.PowerManager
 import android.os.storage.StorageManager
 import android.provider.Settings
 import android.view.MenuItem
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.view.isVisible
@@ -40,6 +54,8 @@ import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.ComposeHostFrameLayout
+import org.dash.wallet.common.ui.components.Toast3
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog.Companion.create
 import org.dash.wallet.common.util.openCustomTab
@@ -179,13 +195,14 @@ object WalletActivityExt {
     }
 
     private fun WalletActivity.showLowStorageAlertDialog() {
-        val storageManagerIntent = Intent(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                StorageManager.ACTION_MANAGE_STORAGE
-            } else {
-                Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS
-            }
-        )
+        val storageManagerIntent =
+            Intent(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    StorageManager.ACTION_MANAGE_STORAGE
+                } else {
+                    Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS
+                }
+            )
         val hasStorageManager = packageManager.resolveActivity(storageManagerIntent, 0) != null
 
         AdaptiveDialog.create(
@@ -256,5 +273,54 @@ object WalletActivityExt {
                 }
             }
         }
+    }
+
+    private fun WalletActivity.showToast3(visible: Boolean) {
+        if (composeHostFrameLayout == null) {
+            composeHostFrameLayout = ComposeHostFrameLayout(this)
+            composeHostFrameLayout.layoutParams =
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT // Convert dp to pixels for height
+                ).apply {
+                    gravity = android.view.Gravity.BOTTOM // Align to bottom of FrameLayout
+                }
+            val rootView = findViewById<ViewGroup>(android.R.id.content)
+            rootView.addView(composeHostFrameLayout)
+        }
+        composeHostFrameLayout.setContent {
+            if (visible) {
+                var showToast by remember { mutableStateOf(true) } // State to control visibility
+                if (showToast) {
+                    MaterialTheme {
+                        val density = LocalDensity.current
+                        val bottom = WindowInsets.systemBars.getBottom(density)
+                        val top = WindowInsets.systemBars.getTop(density)
+                        Box(
+                            modifier =
+                                Modifier
+                                    .padding(
+                                        top = top.dp,
+                                        bottom = bottom.dp
+                                    )
+                        ) {
+                            // Content that should not overlap the navigation bar
+                            Toast3(
+                                // text = "My text which could be long enough to appear on the second line",
+                                text = "The exchange rates are out of date, please do something about it right away. Go to settings.",
+                                actionText = "OK",
+                                imageResource = R.drawable.ic_bolt_border
+                            ) {
+                                showToast = false
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun WalletActivity.showStaleRatesToast() {
+        showToast3(!lockScreenDisplayed && !rateRetrievalState.isStale)
     }
 }
