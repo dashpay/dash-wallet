@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,12 +53,16 @@ import androidx.navigation.ui.NavigationUI.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.ComposeHostFrameLayout
 import org.dash.wallet.common.ui.components.Toast3
+import org.dash.wallet.common.ui.components.ToastDuration
+import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog.Companion.create
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.openCustomTab
 
 object WalletActivityExt {
@@ -275,7 +280,14 @@ object WalletActivityExt {
         }
     }
 
-    private fun WalletActivity.showToast3(visible: Boolean) {
+    private fun WalletActivity.showToast(
+        visible: Boolean,
+        imageResource: ToastImageResource?,
+        messageText: String?,
+        duration: ToastDuration = ToastDuration.INDEFINITE,
+        actionText: String? = null,
+        onActionClick: (() -> Unit)? = null,
+    ) {
         if (composeHostFrameLayout == null) {
             composeHostFrameLayout = ComposeHostFrameLayout(this)
             composeHostFrameLayout.layoutParams =
@@ -289,9 +301,16 @@ object WalletActivityExt {
             rootView.addView(composeHostFrameLayout)
         }
         composeHostFrameLayout.setContent {
-            if (visible) {
+            if (visible && messageText != null) {
                 var showToast by remember { mutableStateOf(true) } // State to control visibility
                 if (showToast) {
+                    if (duration != ToastDuration.INDEFINITE) {
+                        LaunchedEffect(key1 = true) {
+                            delay(if (duration == ToastDuration.SHORT) 3000L else 10000L)
+                            showToast = false
+                            //onDismiss() // Trigger the dismiss callback
+                        }
+                    }
                     MaterialTheme {
                         val density = LocalDensity.current
                         val bottom = WindowInsets.systemBars.getBottom(density)
@@ -306,12 +325,12 @@ object WalletActivityExt {
                         ) {
                             // Content that should not overlap the navigation bar
                             Toast3(
-                                // text = "My text which could be long enough to appear on the second line",
-                                text = "The exchange rates are out of date, please do something about it right away. Go to settings.",
-                                actionText = "OK",
-                                imageResource = R.drawable.ic_bolt_border
+                                text = messageText,
+                                actionText = actionText ?: getString(R.string.button_ok),
+                                imageResource = imageResource?.resourceId
                             ) {
                                 showToast = false
+                                onActionClick?.invoke()
                             }
                         }
                     }
@@ -321,6 +340,22 @@ object WalletActivityExt {
     }
 
     fun WalletActivity.showStaleRatesToast() {
-        showToast3(!lockScreenDisplayed && !rateRetrievalState.isStale)
+        val currentCurrencyCode = viewModel.exchangeRate.value?.currencyCode ?: Constants.DEFAULT_EXCHANGE_CURRENCY
+        // val rateRetrievalState = RateRetrievalState(false, true, false)
+        val rateRetrievalState = viewModel.currentStaleRateState
+        val message = when {
+            rateRetrievalState.lastAttemptFailed -> getString(R.string.stale_exchange_rates_error, currentCurrencyCode)
+            rateRetrievalState.staleRate -> getString(R.string.stale_exchange_rates_stale, currentCurrencyCode)
+            rateRetrievalState.volatile -> getString(R.string.stale_exchange_rates_volatile, currentCurrencyCode)
+            else -> null
+        }
+        showToast(
+            !lockScreenDisplayed && rateRetrievalState.isStale,
+            imageResource = ToastImageResource.Warning,
+            messageText = message,
+            actionText = getString(R.string.button_ok)
+        ) {
+            viewModel.rateStaleDismissed = true
+        }
     }
 }

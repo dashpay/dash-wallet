@@ -86,7 +86,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private BaseAlertDialogBuilder baseAlertDialogBuilder;
     public MainViewModel viewModel;
-    public RateRetrievalState rateRetrievalState = new RateRetrievalState(false, false, false);
     public ComposeHostFrameLayout composeHostFrameLayout = null;
 
     ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), result -> WalletActivityExt.INSTANCE.requestDisableBatteryOptimisation(WalletActivity.this));
@@ -128,22 +127,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Nullable
             @Override
             public Object emit(RateRetrievalState state, @NonNull Continuation<? super Unit> continuation) {
-                rateRetrievalState = state;
-                //                if (!getLockScreenDisplayed() && !state.getStaleRate()) {
-//                    // Show a notification or update the UI to indicate the stale rate
-//                    //Toast.makeText(WalletActivity.this, "Exchange rate is stale.", Toast.LENGTH_LONG).show();
-//                    View rootView = findViewById(android.R.id.content);
-//                    Snackbar snackbar = Snackbar.make(WalletActivity.this, rootView, "The exchange rates are out of date, please do something about it right away. Go to settings", Snackbar.LENGTH_INDEFINITE);
-//                    snackbar.setAction("OK", v -> snackbar.dismiss());
-//                    snackbar.setTextMaxLines(2);
-//                    snackbar.show();
-//                }
                 WalletActivityExt.INSTANCE.showStaleRatesToast(WalletActivity.this);
                 return Unit.INSTANCE;
             }
         });
-        //WalletActivityExt.INSTANCE.initViewModel(this);
-        //viewModel.showSnackbar();
     }
 
     @Override

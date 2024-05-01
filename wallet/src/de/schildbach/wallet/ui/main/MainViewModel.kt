@@ -123,6 +123,9 @@ class MainViewModel @Inject constructor(
     )
     val rateStale: Flow<RateRetrievalState>
         get() = _rateStale
+    val currentStaleRateState
+        get() = _rateStale.value
+    var rateStaleDismissed = false
 
     private val _balance = MutableLiveData<Coin>()
     val balance: LiveData<Coin>
@@ -198,7 +201,6 @@ class MainViewModel @Inject constructor(
             .filterNotNull()
             .flatMapLatest { code ->
                 exchangeRatesProvider.observeStaleRates(code)
-                    .filterNotNull()
             }
             .onEach(_rateStale::emit)
             .launchIn(viewModelScope)
