@@ -127,6 +127,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Nullable
             @Override
             public Object emit(RateRetrievalState state, @NonNull Continuation<? super Unit> continuation) {
+                log.info("updateTrigger => rateStale: {}", state);
                 WalletActivityExt.INSTANCE.showStaleRatesToast(WalletActivity.this);
                 return Unit.INSTANCE;
             }

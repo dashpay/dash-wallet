@@ -280,10 +280,13 @@ object WalletActivityExt {
         }
     }
 
+    /**
+     * show a single toast that is created with Compose
+     */
     private fun WalletActivity.showToast(
         visible: Boolean,
-        imageResource: ToastImageResource?,
-        messageText: String?,
+        imageResource: ToastImageResource? = null,
+        messageText: String? = null,
         duration: ToastDuration = ToastDuration.INDEFINITE,
         actionText: String? = null,
         onActionClick: (() -> Unit)? = null,
@@ -340,17 +343,17 @@ object WalletActivityExt {
     }
 
     fun WalletActivity.showStaleRatesToast() {
-        val currentCurrencyCode = viewModel.exchangeRate.value?.currencyCode ?: Constants.DEFAULT_EXCHANGE_CURRENCY
+        // val currentCurrencyCode = viewModel.exchangeRate.value?.currencyCode ?: Constants.DEFAULT_EXCHANGE_CURRENCY
         // val rateRetrievalState = RateRetrievalState(false, true, false)
         val rateRetrievalState = viewModel.currentStaleRateState
         val message = when {
-            rateRetrievalState.lastAttemptFailed -> getString(R.string.stale_exchange_rates_error, currentCurrencyCode)
-            rateRetrievalState.staleRate -> getString(R.string.stale_exchange_rates_stale, currentCurrencyCode)
-            rateRetrievalState.volatile -> getString(R.string.stale_exchange_rates_volatile, currentCurrencyCode)
+            rateRetrievalState.volatile -> getString(R.string.stale_exchange_rates_volatile)
+            rateRetrievalState.staleRate -> getString(R.string.stale_exchange_rates_stale)
+            rateRetrievalState.lastAttemptFailed -> getString(R.string.stale_exchange_rates_error)
             else -> null
         }
         showToast(
-            !lockScreenDisplayed && rateRetrievalState.isStale,
+            !lockScreenDisplayed && rateRetrievalState.isStale && !viewModel.rateStaleDismissed,
             imageResource = ToastImageResource.Warning,
             messageText = message,
             actionText = getString(R.string.button_ok)

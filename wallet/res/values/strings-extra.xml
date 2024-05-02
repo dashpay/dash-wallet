@@ -420,5 +420,5 @@
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Prices weren\'t retrieved. Fiat values may be incorrect.</string>
     <string name="stale_exchange_rates_stale">Prices are at least 30 minutes old. Fiat values may be incorrect.</string>
-    <string name="stale_exchange_rates_volatile">Prices have fluctuated more than 50%% since the last update.</string>
+    <string name="stale_exchange_rates_volatile">Prices have fluctuated more than 50% since the last update.</string>
 </resources>

@@ -278,7 +278,7 @@ enum class ToastDuration {
 
 enum class ToastImageResource(@DrawableRes val resourceId: Int) {
     Information(R.drawable.ic_toast_info),
-    Warning(R.drawable.ic_toast_info),
+    Warning(R.drawable.ic_toast_info_warning),
     Copy(R.drawable.ic_toast_copy),
     Error(R.drawable.ic_toast_error),
     NoInternet(R.drawable.ic_toast_no_wifi)
@@ -304,20 +304,15 @@ fun Toast3(
         Row(
             modifier =
                 Modifier
-                    // .padding(horizontal = 0.dp, vertical = 0.dp)
                     .fillMaxWidth()
                     .wrapContentSize(Alignment.BottomCenter)
-                    .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 8.dp)
-            //        .background(Color(0xffFF00FF))
-            ,
-            // horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
                 modifier =
                     Modifier
                         .weight(1f),
-                        //.background(Color(0xFF0000FF)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (imageResource != null) {
@@ -327,8 +322,6 @@ fun Toast3(
                         modifier =
                             Modifier
                                 .size(15.dp)
-                                //.padding(end = 0.dp)
-                                //.align(Alignment.CenterVertically) // should this be centered
                     )
                 }
                 Text(
@@ -344,10 +337,8 @@ fun Toast3(
                 onClick = onActionClick,
                 modifier =
                     Modifier
-                        //.background(Color.Red) // Temporarily see the space it occupies
                         .padding(start = 0.dp)
-                        //.height(16.dp)
-                        .wrapContentSize(Alignment.BottomCenter)
+                        .wrapContentSize()
                         .padding(horizontal = 0.dp, vertical = 0.dp),
                 contentPadding = PaddingValues(0.dp)
             ) {
@@ -362,12 +353,11 @@ fun Toast3(
     }
 }
 
-@Preview // (widthDp = 350, heightDp = 50)
+@Preview
 @Composable
 private fun ToastPreview() {
     Box(Modifier.width(400.dp).height(100.dp).background(Color.White)) {
         Toast3(
-            //text = "The exchange rates .",
             text = "The exchange rates are out of date, please do something about it right away",
             actionText = "OK",
             Modifier,

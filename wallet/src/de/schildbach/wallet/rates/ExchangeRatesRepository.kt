@@ -124,6 +124,7 @@ class ExchangeRatesRepository @Inject constructor(
             } finally {
                 isLoading.postValue(false)
                 updateTrigger.emit(System.currentTimeMillis())
+                log.info("updateTrigger")
             }
         }
     }
@@ -166,8 +167,9 @@ class ExchangeRatesRepository @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeStaleRates(currencyCode: String): Flow<RateRetrievalState> = updateTrigger
         .mapLatest {
+            log.info("updateTrigger.mapLatest")
             val currentTime = System.currentTimeMillis()
-            val lastRetrievalTime = config.get(EXCHANGE_RATES_RETRIEVAL_TIME) ?: 0L
+            val lastRetrievalTime = config.get(EXCHANGE_RATES_RETRIEVAL_TIME) ?: System.currentTimeMillis()
 
             val staleRate = if ((currentTime - lastRetrievalTime) > STALE_DURATION_MS) {
                 true
