@@ -194,10 +194,11 @@ class ExchangeRatesRepository @Inject constructor(
             } else {
                 false
             }
+            val retrievalError = config.get(EXCHANGE_RATES_RETRIEVAL_FAILURE) ?: false
             RateRetrievalState(
-                config.get(EXCHANGE_RATES_RETRIEVAL_FAILURE) ?: false,
+                retrievalError,
                 staleRate,
-                volatile
+                if (retrievalError || staleRate) false else volatile
             )
         }
         .catch {
