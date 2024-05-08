@@ -44,6 +44,7 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.RateRetrievalState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -113,6 +114,19 @@ class MainViewModel @Inject constructor(
     val exchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
 
+    private val _rateStale = MutableStateFlow(
+        RateRetrievalState(
+            lastAttemptFailed = false,
+            staleRates = false,
+            volatile = false
+        )
+    )
+    val rateStale: Flow<RateRetrievalState>
+        get() = _rateStale
+    val currentStaleRateState
+        get() = _rateStale.value
+    var rateStaleDismissed = false
+
     private val _balance = MutableLiveData<Coin>()
     val balance: LiveData<Coin>
         get() = _balance
@@ -180,6 +194,15 @@ class MainViewModel @Inject constructor(
                     .filterNotNull()
             }
             .onEach(_exchangeRate::postValue)
+            .launchIn(viewModelScope)
+
+        walletUIConfig
+            .observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .flatMapLatest { code ->
+                exchangeRatesProvider.observeStaleRates(code)
+            }
+            .onEach(_rateStale::emit)
             .launchIn(viewModelScope)
     }
 
