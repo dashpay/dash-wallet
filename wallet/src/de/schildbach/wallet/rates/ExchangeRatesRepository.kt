@@ -16,14 +16,11 @@ import org.dash.wallet.common.data.ExchangeRatesConfig
 import org.dash.wallet.common.data.ExchangeRatesConfig.Companion.EXCHANGE_RATES_PREVIOUS_RETRIEVAL_TIME
 import org.dash.wallet.common.data.ExchangeRatesConfig.Companion.EXCHANGE_RATES_RETRIEVAL_FAILURE
 import org.dash.wallet.common.data.ExchangeRatesConfig.Companion.EXCHANGE_RATES_RETRIEVAL_TIME
-import org.dash.wallet.common.data.ExchangeRatesConfig.Companion.EXCHANGE_RATES_VOLATILE
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.RateRetrievalState
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
-import java.math.MathContext
-import java.math.RoundingMode
 import java.util.*
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -51,6 +48,7 @@ class ExchangeRatesRepository @Inject constructor(
     private var isRefreshing = false
     private val refreshScope = CoroutineScope(Dispatchers.IO)
     private val updateTrigger = MutableSharedFlow<Long>()
+    // used to detect 50% change in rates since the last rates (volatile)
     private val previousRates = arrayListOf<ExchangeRate>()
 
     init {
@@ -90,15 +88,7 @@ class ExchangeRatesRepository @Inject constructor(
 
                 if (rates.isNotEmpty()) {
                     previousRates.clear()
-                    // previousRates.addAll(exchangeRatesDao.getAll())
-                    previousRates.addAll(exchangeRatesDao.getAll().map {
-                        log.info("rate: {}", it)
-                        val newRate = ExchangeRate(
-                            it.currencyCode,
-                            ((it.rate?.toBigDecimal(MathContext(2, RoundingMode.HALF_UP)) ?: BigDecimal.ONE) / BigDecimal.TEN).toPlainString(), it.retrievalTime)
-                        log.info("rate: new {}", newRate)
-                        newRate
-                    })
+                    previousRates.addAll(exchangeRatesDao.getAll())
                     exchangeRatesDao.insertAll(rates)
                     lastUpdated = System.currentTimeMillis()
                     populateExchangeRatesStack()
@@ -167,10 +157,10 @@ class ExchangeRatesRepository @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeStaleRates(currencyCode: String): Flow<RateRetrievalState> = updateTrigger
         .mapLatest {
-            log.info("updateTrigger.mapLatest")
             val currentTime = System.currentTimeMillis()
             val lastRetrievalTime = config.get(EXCHANGE_RATES_RETRIEVAL_TIME) ?: System.currentTimeMillis()
 
+            // are rates older than 30 minutes?
             val staleRate = if ((currentTime - lastRetrievalTime) > STALE_DURATION_MS) {
                 true
             } else {
@@ -179,6 +169,7 @@ class ExchangeRatesRepository @Inject constructor(
                         (currentTime - lastRate.retrievalTime) > STALE_DURATION_MS
             }
             val previousRetrievalTime = config.get(EXCHANGE_RATES_PREVIOUS_RETRIEVAL_TIME) ?: 0
+            // have rates changed by 50% since the last values?
             val volatile = if (lastRetrievalTime - previousRetrievalTime < TimeUnit.DAYS.toMillis(7)) {
                 val previousRate = previousRates.find { it.currencyCode == currencyCode }
                 previousRate?.let { prev ->
@@ -209,5 +200,5 @@ class ExchangeRatesRepository @Inject constructor(
                 false
             )
         }
-        .distinctUntilChanged()  // Only emit when the value changes
+        .distinctUntilChanged()
 }

@@ -117,7 +117,7 @@ class MainViewModel @Inject constructor(
     private val _rateStale = MutableStateFlow(
         RateRetrievalState(
             lastAttemptFailed = false,
-            staleRate = false,
+            staleRates = false,
             volatile = false
         )
     )

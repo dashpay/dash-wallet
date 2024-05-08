@@ -19,9 +19,7 @@ class ExchangeRatesConfig
         companion object {
             private const val PREFERENCES_NAME = "exchange_rates_config"
             val EXCHANGE_RATES_RETRIEVAL_TIME = longPreferencesKey("exchange_rates_retrieval_time")
-            val EXCHANGE_RATES_WARNING_DISMISSED = longPreferencesKey("exchange_rates_warning_dismissed")
             val EXCHANGE_RATES_RETRIEVAL_FAILURE = booleanPreferencesKey("exchange_rates_retrieval_error")
-            val EXCHANGE_RATES_VOLATILE = booleanPreferencesKey("exchange_rates_retrieval_error")
             val EXCHANGE_RATES_PREVIOUS_RETRIEVAL_TIME = longPreferencesKey("exchange_rates_previous_retrieval_time")
         }
     }

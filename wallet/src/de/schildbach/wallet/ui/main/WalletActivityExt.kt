@@ -57,12 +57,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.ComposeHostFrameLayout
-import org.dash.wallet.common.ui.components.Toast3
+import org.dash.wallet.common.ui.components.Toast
 import org.dash.wallet.common.ui.components.ToastDuration
 import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog.Companion.create
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.openCustomTab
 
 object WalletActivityExt {
@@ -305,13 +304,12 @@ object WalletActivityExt {
         }
         composeHostFrameLayout.setContent {
             if (visible && messageText != null) {
-                var showToast by remember { mutableStateOf(true) } // State to control visibility
+                var showToast by remember { mutableStateOf(true) }
                 if (showToast) {
                     if (duration != ToastDuration.INDEFINITE) {
                         LaunchedEffect(key1 = true) {
                             delay(if (duration == ToastDuration.SHORT) 3000L else 10000L)
                             showToast = false
-                            //onDismiss() // Trigger the dismiss callback
                         }
                     }
                     MaterialTheme {
@@ -326,8 +324,8 @@ object WalletActivityExt {
                                         bottom = bottom.dp
                                     )
                         ) {
-                            // Content that should not overlap the navigation bar
-                            Toast3(
+                            // rh
+                            Toast(
                                 text = messageText,
                                 actionText = actionText ?: getString(R.string.button_ok),
                                 imageResource = imageResource?.resourceId
@@ -343,21 +341,20 @@ object WalletActivityExt {
     }
 
     fun WalletActivity.showStaleRatesToast() {
-        // val currentCurrencyCode = viewModel.exchangeRate.value?.currencyCode ?: Constants.DEFAULT_EXCHANGE_CURRENCY
-        // val rateRetrievalState = RateRetrievalState(false, true, false)
-        val rateRetrievalState = viewModel.currentStaleRateState
+        val staleRateState = viewModel.currentStaleRateState
         val message = when {
-            rateRetrievalState.volatile -> getString(R.string.stale_exchange_rates_volatile)
-            rateRetrievalState.staleRate -> getString(R.string.stale_exchange_rates_stale)
-            rateRetrievalState.lastAttemptFailed -> getString(R.string.stale_exchange_rates_error)
+            staleRateState.volatile -> getString(R.string.stale_exchange_rates_volatile)
+            staleRateState.staleRates -> getString(R.string.stale_exchange_rates_stale)
+            staleRateState.lastAttemptFailed -> getString(R.string.stale_exchange_rates_error)
             else -> null
         }
         showToast(
-            !lockScreenDisplayed && rateRetrievalState.isStale && !viewModel.rateStaleDismissed,
+            !lockScreenDisplayed && staleRateState.isStale && !viewModel.rateStaleDismissed,
             imageResource = ToastImageResource.Warning,
             messageText = message,
             actionText = getString(R.string.button_ok)
         ) {
+            // never show a stale rate message until app is restarted
             viewModel.rateStaleDismissed = true
         }
     }

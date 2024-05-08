@@ -19,8 +19,8 @@ package org.dash.wallet.common.services
 
 data class RateRetrievalState(
     val lastAttemptFailed: Boolean = false,
-    val staleRate: Boolean,
+    val staleRates: Boolean,
     val volatile: Boolean
 ) {
-    val isStale = lastAttemptFailed || staleRate || volatile
+    val isStale = lastAttemptFailed || staleRates || volatile
 }
