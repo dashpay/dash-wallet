@@ -701,4 +701,9 @@ class MainViewModel @Inject constructor(
             AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_RECEIVE
         )
     }
+
+    fun addCoinJoinToWallet() {
+        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
+        (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
+    }
 }

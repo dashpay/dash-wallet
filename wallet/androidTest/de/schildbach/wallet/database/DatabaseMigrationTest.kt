@@ -61,7 +61,8 @@ open class DatabaseMigrationTest {
     private val migrations = arrayOf(
         AppDatabaseMigrations.migration11To12,
         AppDatabaseMigrations.migration12To17,
-        AppDatabaseMigrations.migration17To18
+        AppDatabaseMigrations.migration17To18,
+        AppDatabaseMigrations.migration18To19
     )
 
     @Rule

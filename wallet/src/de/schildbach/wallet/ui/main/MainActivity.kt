@@ -65,7 +65,9 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.ChildNumber
+import org.bitcoinj.wallet.DerivationPathFactory
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.FancyAlertDialog
@@ -147,6 +149,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         if (savedInstanceState == null) {
             // Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false)
+            upgradeWalletCoinJoin(false)
         }
 
         viewModel.currencyChangeDetected.observe(
@@ -351,6 +354,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
         config.disarmBackupReminder()
         upgradeWalletKeyChains(Constants.BIP44_PATH, true)
+        upgradeWalletCoinJoin(true)
     }
 
     private fun handleInvite(invite: InvitationLinkData) {
@@ -535,6 +539,21 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 // and they will have to enter a PIN.
                 //
                 UpgradeWalletDisclaimerDialog.show(getSupportFragmentManager(), false)
+            }
+        } else {
+            if (restoreBackup) {
+                checkRestoredWalletEncryptionDialog()
+            } else checkWalletEncryptionDialog()
+        }
+    }
+
+    open fun upgradeWalletCoinJoin(restoreBackup: Boolean) {
+        val wallet = walletData.wallet!!
+        isRestoringBackup = restoreBackup
+        val coinJoinPath = DerivationPathFactory(Constants.NETWORK_PARAMETERS).coinJoinDerivationPath(0)
+        if ((wallet as WalletEx).coinJoin != null && !wallet.coinJoin.hasKeyChain(coinJoinPath)) {
+            if (wallet.isEncrypted()) {
+                viewModel.addCoinJoinToWallet()
             }
         } else {
             if (restoreBackup) {
