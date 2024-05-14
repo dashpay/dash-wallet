@@ -16,8 +16,11 @@
 
 package org.dash.wallet.integrations.maya.model
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
 
+@Parcelize
 data class SwapQuote(
     @SerializedName("dust_threshold") val dustThreshold: String,
     @SerializedName("expected_amount_out") val expectedAmountOut: String,
@@ -34,14 +37,15 @@ data class SwapQuote(
     @SerializedName("slippage_bps") val slippageBps: Int,
     val warning: String,
     val error: String?
-)
+) : Parcelable
 
+@Parcelize
 data class SwapFees(
     val affiliate: String,
     val asset: String,
     val liquidity: String,
     val outbound: String,
-    val slippageBps: Int,
+    @SerializedName("slippage_bps") val slippageBps: Int,
     val total: String,
     @SerializedName("total_bps") val totalBps: Int
-)
+) : Parcelable
