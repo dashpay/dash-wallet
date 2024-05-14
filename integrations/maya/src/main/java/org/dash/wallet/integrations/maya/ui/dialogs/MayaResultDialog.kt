@@ -138,7 +138,7 @@ class MayaResultDialog : DialogFragment() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
-        binding.coinbaseBuyDialogMessage.setText(R.string.it_could_take_up_to_2_3_minutes)
+        binding.coinbaseBuyDialogMessage.setText(R.string.maya_it_could_take_up_to_2_3_minutes)
         binding.buyDialogContactCoinbaseSupport.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
@@ -165,7 +165,11 @@ class MayaResultDialog : DialogFragment() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
-        binding.coinbaseBuyDialogMessage.text = getString(R.string.it_could_take_up_to_5_minutes, source, destination)
+        binding.coinbaseBuyDialogMessage.text = getString(
+            R.string.maya_it_could_take_up_to_5_minutes,
+            source,
+            destination
+        )
         binding.buyDialogContactCoinbaseSupport.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
@@ -176,9 +180,9 @@ class MayaResultDialog : DialogFragment() {
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
         binding.coinbaseBuyDialogMessage.setText(
             if (dashToCoinbase) {
-                R.string.it_could_take_up_to_10_minutes_to_coinbase
+                R.string.maya_it_could_take_up_to_10_minutes_to_coinbase
             } else {
-                R.string.it_could_take_up_to_10_minutes
+                R.string.maya_it_could_take_up_to_10_minutes
             }
         )
         binding.buyDialogContactCoinbaseSupport.isGone = true

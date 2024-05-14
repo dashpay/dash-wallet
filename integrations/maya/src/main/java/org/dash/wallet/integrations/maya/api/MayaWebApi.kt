@@ -193,19 +193,19 @@ open class MayaWebApi @Inject constructor(
 //        "pub_key": "mayapub1addwnpepqdupyxvsy864n5wua9532ey72feplzmtsacfjc8wvy0e5sdd96w0zf0anph"
 //    },
 
-    suspend fun getSwapInfo(tradesRequest: SwapQuoteRequest): ResponseResource<SwapTradeUIModel> {
+    suspend fun getSwapInfo(swapRequest: SwapQuoteRequest): ResponseResource<SwapTradeUIModel> {
         // we need to calculate the fees based on getSwapQuote
         val inboundAddresses = getInboundAddresses()
         if (inboundAddresses.isNotEmpty()) {
-            val source = inboundAddresses.find { it.chain == tradesRequest.source_asset }
-            val destinationChain = tradesRequest.target_maya_asset.let { it.substring(0, it.indexOf('.')) }
+            val source = inboundAddresses.find { it.chain == swapRequest.source_asset }
+            val destinationChain = swapRequest.target_maya_asset.let { it.substring(0, it.indexOf('.')) }
             val destination = inboundAddresses.find { it.chain == destinationChain }
             if (source == null || destination == null) {
                 return ResponseResource.Failure(
                     MayaException(
                         "inbound_addresses did not return ${
-                            tradesRequest.source_asset
-                        } or ${tradesRequest.target_asset}"
+                        swapRequest.source_asset
+                        } or ${swapRequest.target_asset}"
                     ),
                     false,
                     0,
@@ -215,7 +215,7 @@ open class MayaWebApi @Inject constructor(
             if (source.halted) {
                 return ResponseResource.Failure(
                     MayaException(
-                        "source vault has been halted ${tradesRequest.source_asset}"
+                        "source vault has been halted ${swapRequest.source_asset}"
                     ),
                     false,
                     0,
@@ -225,7 +225,7 @@ open class MayaWebApi @Inject constructor(
             if (destination.halted) {
                 return ResponseResource.Failure(
                     MayaException(
-                        "destination vault has been halted ${tradesRequest.target_asset}"
+                        "destination vault has been halted ${swapRequest.target_asset}"
                     ),
                     false,
                     0,
@@ -259,10 +259,10 @@ open class MayaWebApi @Inject constructor(
 //                )
 //            }
             var quote = getSwapQuote(
-                tradesRequest.source_maya_asset,
-                tradesRequest.target_maya_asset,
-                tradesRequest.amount.dash.multiply(BigDecimal.valueOf(1_0000_0000)).toLong(),
-                tradesRequest.targetAddress
+                swapRequest.source_maya_asset,
+                swapRequest.target_maya_asset,
+                swapRequest.amount.dash.multiply(BigDecimal.valueOf(1_0000_0000)).toLong(),
+                swapRequest.targetAddress
             )
                 ?: return ResponseResource.Failure(
                     MayaException("swap-quote failure"),
@@ -271,12 +271,13 @@ open class MayaWebApi @Inject constructor(
                     null
                 )
 
+            log.info("quote = {}", quote)
             if (quote.error == null) {
-                val newAmount = tradesRequest.amount.copy()
-                val feeAmount = tradesRequest.amount.copy()
+                val newAmount = swapRequest.amount.copy()
+                val feeAmount = swapRequest.amount.copy()
 
-                if (!tradesRequest.maximum) {
-                    val outgoingFee2 = if (tradesRequest.target_maya_asset.contains("ETH.")) {
+                if (!swapRequest.maximum) {
+                    val outgoingFee2 = if (swapRequest.target_maya_asset.contains("ETH.")) {
                         quote.fees.outbound.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(
                             BigDecimal(1_00_000_000)
                         )
@@ -287,15 +288,15 @@ open class MayaWebApi @Inject constructor(
                         )
                     }
                     log.info("quote: {}", quote)
-                    log.info("quote.amount {} vs {}", quote.expectedAmountOut, tradesRequest.amount.crypto)
+                    log.info("quote.amount {} vs {}", quote.expectedAmountOut, swapRequest.amount.crypto)
 
                     newAmount.crypto += outgoingFee2
 
                     quote = getSwapQuote(
-                        tradesRequest.source_maya_asset,
-                        tradesRequest.target_maya_asset,
+                        swapRequest.source_maya_asset,
+                        swapRequest.target_maya_asset,
                         newAmount.dash.multiply(BigDecimal.valueOf(1_0000_0000)).toLong(),
-                        tradesRequest.targetAddress
+                        swapRequest.targetAddress
                     )
                         ?: return ResponseResource.Failure(
                             MayaException("swap-quote failure"),
@@ -305,24 +306,24 @@ open class MayaWebApi @Inject constructor(
                         )
 
                     log.info("quote: {}", quote)
-                    log.info("quote.amount {} vs {}", quote.expectedAmountOut, tradesRequest.amount.crypto)
-                    feeAmount.dash = newAmount.dash - tradesRequest.amount.dash
+                    log.info("quote.amount {} vs {}", quote.expectedAmountOut, swapRequest.amount.crypto)
+                    feeAmount.dash = newAmount.dash - swapRequest.amount.dash
                 } else {
                     newAmount.crypto = quote.expectedAmountOut.toBigDecimal().setScale(8, RoundingMode.HALF_UP).div(
                         BigDecimal(1_0000_0000)
                     )
-                    feeAmount.dash = tradesRequest.amount.dash - newAmount.dash
+                    feeAmount.dash = swapRequest.amount.dash - newAmount.dash
                 }
-                feeAmount.anchoredType = tradesRequest.amount.anchoredType
+                feeAmount.anchoredType = swapRequest.amount.anchoredType
 
                 val result = SwapTradeUIModel(
-                    amount = tradesRequest.amount,
-                    outputAsset = tradesRequest.target_maya_asset,
+                    amount = swapRequest.amount,
+                    outputAsset = swapRequest.target_maya_asset,
                     feeAmount = feeAmount,
                     vaultAddress = source.address,
-                    destinationAddress = tradesRequest.targetAddress,
+                    destinationAddress = swapRequest.targetAddress,
                     memo = quote.memo,
-                    maximum = tradesRequest.maximum
+                    maximum = swapRequest.maximum
                 )
                 return ResponseResource.Success(result)
             }

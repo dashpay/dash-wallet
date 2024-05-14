@@ -87,7 +87,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
         val sourceAsset = "DASH"
         val targetAsset = selectedCoinBaseAccount.coinbaseAccount.currency
 
-        val tradesRequest = SwapQuoteRequest(
+        val swapRequest = SwapQuoteRequest(
             swapTradeInfo.amount,
             walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY) ?: Constants.DEFAULT_EXCHANGE_CURRENCY,
             source_maya_asset = "$sourceAsset.$sourceAsset",
@@ -97,7 +97,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
             maximum = swapTradeInfo.maximum
         )
 
-        when (val result = coinBaseRepository.getSwapInfo(tradesRequest)) {
+        when (val result = coinBaseRepository.getSwapInfo(swapRequest)) {
             is ResponseResource.Success -> {
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     _showLoading.value = false

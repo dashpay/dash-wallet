@@ -51,7 +51,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/coinbase_buy_dialog_title"
-        tools:text="@string/it_could_take_up_to_2_3_minutes" />
+        tools:text="@string/maya_it_could_take_up_to_2_3_minutes" />
 
     <Button
         android:id="@+id/buy_dialog_contact_coinbase_support"
