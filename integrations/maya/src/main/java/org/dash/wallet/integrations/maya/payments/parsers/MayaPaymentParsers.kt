@@ -29,15 +29,25 @@ class MayaPaymentParsers : PaymentParsers() {
         add(
             "ethereum",
             "eth",
-            EthereumPaymentIntentParser("etherium", "ETH.ETH"),
+            EthereumPaymentIntentParser("ethereum", "ETH.ETH"),
             AddressParser.getEthereumAddressParser()
         )
-        add("usdc", "usdc", EthereumPaymentIntentParser("usdc", "ETH.USDC"), AddressParser.getEthereumAddressParser())
-        add("tether", "usdt", EthereumPaymentIntentParser("usdt", "ETH.USDC"), AddressParser.getEthereumAddressParser())
+        add(
+            "usdc",
+            "usdc",
+            EthereumPaymentIntentParser("usdc", "ETH.USDC-6EB48"),
+            AddressParser.getEthereumAddressParser()
+        )
+        add(
+            "tether",
+            "usdt",
+            EthereumPaymentIntentParser("usdt", "ETH.USDT-31EC7"),
+            AddressParser.getEthereumAddressParser()
+        )
         add(
             "Wrapped stETH",
             "wsteth",
-            EthereumPaymentIntentParser("wsteth", "ETH.WSTETH"),
+            EthereumPaymentIntentParser("wsteth", "ETH.WSTETH-E2CA0"),
             AddressParser.getEthereumAddressParser()
         )
         add("rune", "rune", RunePaymentIntentProcessor(), RuneAddressParser())
@@ -50,8 +60,8 @@ class MayaPaymentParsers : PaymentParsers() {
         add(
             "usk",
             "usk",
-            Bech32PaymentIntentParser("usk", "usk", "kajira", 38, "KUJI.USK"),
-            Bech32AddressParser("usk", 38, null)
+            Bech32PaymentIntentParser("usk", "kujira", "kajira", 38, "KUJI.USK"),
+            Bech32AddressParser("kujira", 38, null)
         )
     }
 }

@@ -20,6 +20,7 @@ import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
+import org.bitcoinj.core.Sha256Hash
 
 @Parcelize
 data class SwapTradeResponse(
@@ -27,7 +28,7 @@ data class SwapTradeResponse(
     val `data`: SwapTradeResponseData? = null
 ) : Parcelable {
     companion object {
-        val EMPTY_SWAP_TRADE = SwapTradeUIModel(Amount(), "", "", "", Amount(), "")
+        val EMPTY_SWAP_TRADE = SwapTradeUIModel(Amount(), false, "", "", "", "", Amount(), "")
     }
 }
 
@@ -68,12 +69,16 @@ data class SwapApiAmount(
 @Parcelize
 data class SwapTradeUIModel(
     val amount: Amount,
+    val maximum: Boolean,
+    val vaultAddress: String,
     val destinationAddress: String,
     val swapTradeId: String = "",
     val outputAsset: String = "",
     val feeAmount: Amount = Amount(),
     var inputCurrencyName: String = "",
-    var outputCurrencyName: String = ""
+    var outputCurrencyName: String = "",
+    var memo: String? = null,
+    var txid: Sha256Hash = Sha256Hash.ZERO_HASH
 ) : Parcelable {
     @IgnoredOnParcel
     val inputCurrency = amount.dashCode

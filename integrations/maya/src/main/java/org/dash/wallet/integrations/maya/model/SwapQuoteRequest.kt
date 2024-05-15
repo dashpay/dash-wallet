@@ -17,17 +17,21 @@
 package org.dash.wallet.integrations.maya.model
 
 import android.os.Parcelable
+import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
-data class TradesRequest(
+data class SwapQuoteRequest(
     val amount: Amount,
     val amount_from: String = "input",
     val source_maya_asset: String,
     val target_maya_asset: String,
     val fiatCurrency: String,
-    val targetAddress: String
+    val targetAddress: String,
+    val maximum: Boolean
 ) : Parcelable {
+    @IgnoredOnParcel
     val source_asset = amount.dashCode
+    @IgnoredOnParcel
     val target_asset = amount.cryptoCode
 }

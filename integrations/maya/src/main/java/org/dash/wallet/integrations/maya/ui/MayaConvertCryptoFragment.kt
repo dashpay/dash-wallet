@@ -37,7 +37,6 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
@@ -52,6 +51,7 @@ import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.getCoinBaseExchangeRateConversion
+import org.dash.wallet.integrations.maya.model.getMayaErrorString
 import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewFragment
 import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewModel
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.ServiceWallet
@@ -71,8 +71,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
     private var loadingDialog: AdaptiveDialog? = null
     private var selectedCoinBaseAccount: AccountDataUIModel? = null
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-        .noCode().minDecimals(8).optionalDecimals()
 
     private lateinit var fragment: ConvertViewFragment
 
@@ -154,10 +152,11 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         }
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
-            val message = if (it.isNullOrBlank()) {
+            val message: String = if (it.isNullOrBlank()) {
                 requireContext().getString(R.string.something_wrong_title)
             } else {
-                it
+                // get localized error
+                getMayaErrorString(it)?.let { id -> getString(id, args.currency) } ?: it
             }
 
             AdaptiveDialog.create(
@@ -249,7 +248,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             setGuidelinePercent(true)
         }
 
-        mayaViewModel.updateInboundAddresses()
+        convertViewModel.setSelectedAsset(args.asset)
     }
 
     private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {

@@ -20,6 +20,8 @@ package org.dash.wallet.integrations.maya.model
 import android.os.Parcelable
 import com.google.gson.Gson
 import kotlinx.parcelize.Parcelize
+import org.bitcoinj.core.Transaction
+import org.dash.wallet.integrations.maya.R
 
 enum class MayaErrorType {
     NONE,
@@ -28,22 +30,55 @@ enum class MayaErrorType {
     INSUFFICIENT_BALANCE,
     NO_BANK_ACCOUNT,
     NO_EXCHANGE_RATE,
-    DEPOSIT_FAILED
+    DEPOSIT_FAILED,
+    INVALID_DESTINATION_ADDRESS,
+    TRADING_IS_HALTED,
+    QUOTE_ERROR,
+    UNKNOWN_ERROR
 }
 
 class MayaException(val errorType: MayaErrorType, message: String?) : Exception(message)
+class IncorrectSwapOutputCount(val tx: Transaction) :
+    Exception("Maya transaction has ${tx.outputs.size} outputs.  Only 3 are allowed")
+
+fun getMayaErrorType(error: String): MayaErrorType {
+    val endOfErrorType = error.indexOf(':')
+    val errorType = if (endOfErrorType != -1) {
+        error.substring(0, endOfErrorType)
+    } else {
+        error
+    }
+    return when (errorType) {
+        "bad destination address" -> MayaErrorType.INVALID_DESTINATION_ADDRESS
+        "failed to simulate swap" -> {
+            when {
+                error.contains("trading is halted") -> MayaErrorType.TRADING_IS_HALTED
+                else -> MayaErrorType.QUOTE_ERROR
+            }
+        }
+        else -> MayaErrorType.UNKNOWN_ERROR
+    }
+}
+
+private val errorMap = mapOf(
+    MayaErrorType.INVALID_DESTINATION_ADDRESS to R.string.maya_error_invalid_destination_address,
+    MayaErrorType.TRADING_IS_HALTED to R.string.maya_error_trading_halted
+)
+fun getMayaErrorString(error: String): Int? {
+    return errorMap[getMayaErrorType(error)]
+}
 
 @Parcelize
-data class CoinbaseErrorResponse(
+data class MayaErrorResponse(
     val errors: List<Error>? = null
 ) : Parcelable {
     companion object {
         fun getErrorMessage(json: String): Error? {
             return try {
                 val gson = Gson()
-                val errorResponse: CoinbaseErrorResponse = gson.fromJson(
+                val errorResponse: MayaErrorResponse = gson.fromJson(
                     json,
-                    CoinbaseErrorResponse::class.java
+                    MayaErrorResponse::class.java
                 )
                 errorResponse.errors?.firstOrNull()
             } catch (e: Exception) {

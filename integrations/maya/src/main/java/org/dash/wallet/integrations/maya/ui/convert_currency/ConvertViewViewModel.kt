@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
@@ -39,6 +40,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.common.util.toCoin
+import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
@@ -59,7 +62,8 @@ class ConvertViewViewModel @Inject constructor(
     var exchangeRates: ExchangeRatesProvider,
     private val walletUIConfig: WalletUIConfig,
     private val walletDataProvider: WalletDataProvider,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    private val mayaWebApi: MayaWebApi
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(ConvertViewFragment::class.java)
@@ -150,6 +154,20 @@ class ConvertViewViewModel @Inject constructor(
         }
     }
 
+    fun setSelectedAsset(asset: String) {
+        viewModelScope.launch {
+            val quote = mayaWebApi.getDefaultSwapQuote(asset)
+            val minAmount = amount.copy()
+            if (quote != null && quote.error == null) {
+                minAmount.dash = quote.recommendedMinAmountIn.toBigDecimal()
+                    .setScale(8, RoundingMode.HALF_UP)
+                    .div(BigDecimal(1_0000_0000))
+                minAllowedSwapAmount =
+                    minAmount.fiat.setScale(GenericUtils.getCurrencyDigits(), RoundingMode.HALF_UP).toString()
+                minAllowedSwapDashCoin = minAmount.dash.toCoin()
+            }
+        }
+    }
     fun setSelectedCryptoCurrency(account: AccountDataUIModel) {
         amount.cryptoCode = account.coinbaseAccount.currency
         amount.fiatCode = selectedLocalCurrencyCode
@@ -280,6 +298,7 @@ class ConvertViewViewModel @Inject constructor(
                 destinationAddress?.let { address ->
                     SwapRequest(
                         amount,
+                        amount.dash.toCoin() == walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED),
                         address,
                         it.currency,
                         it.asset,
@@ -350,7 +369,7 @@ class ConvertViewViewModel @Inject constructor(
 
     fun getMaxAmount(): Amount? {
         return walletDataProvider.wallet?.let {
-            val balance = it.balance
+            val balance = it.getBalance(Wallet.BalanceType.ESTIMATED)
             amount.copy().apply { dash = balance.toBigDecimal() }
         }
     }

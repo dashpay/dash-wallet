@@ -5,5 +5,6 @@ object ServiceName {
     const val Uphold = "uphold"
     const val Coinbase = "coinbase"
     const val DashDirect = "dashdirect"
+    const val Maya = "maya"
     const val Unknown = "unknown"
 }

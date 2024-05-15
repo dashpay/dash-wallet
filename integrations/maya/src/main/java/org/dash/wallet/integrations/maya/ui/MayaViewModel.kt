@@ -110,6 +110,8 @@ class MayaViewModel @Inject constructor(
                 poolList.value = it
             }
             .launchIn(viewModelScope)
+
+        updateInboundAddresses()
     }
 
     fun formatFiat(fiatAmount: Fiat): String {
@@ -138,10 +140,17 @@ class MayaViewModel @Inject constructor(
         return null
     }
 
-    fun updateInboundAddresses() {
+    private fun updateInboundAddresses() {
         viewModelScope.launch {
             inboundAddresses.clear()
             inboundAddresses.addAll(mayaApi.getInboundAddresses())
         }
+    }
+
+    fun getInboundAddress(asset: String): InboundAddress? {
+        return if (inboundAddresses.isNotEmpty()) {
+            val chain = asset.let { it.substring(0, it.indexOf('.')) }
+            inboundAddresses.find { it.chain == chain }
+        } else { null }
     }
 }

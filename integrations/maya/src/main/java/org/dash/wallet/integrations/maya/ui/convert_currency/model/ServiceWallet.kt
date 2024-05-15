@@ -18,6 +18,8 @@ package org.dash.wallet.integrations.maya.ui.convert_currency.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+import org.dash.wallet.integrations.maya.model.Amount
+import org.dash.wallet.integrations.maya.model.TransactionType
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 
 data class ServiceWallet(
@@ -36,10 +38,16 @@ open class BaseServiceWallet(
 
 @Parcelize
 data class SendTransactionToWalletParams(
-    val amount: String?,
-    val currency: String?,
-    val idem: String?,
-    val to: String?,
+    val amount: Amount,
+    val fees: Amount,
+    val toAddress: String?,
     val type: String?,
     val description: String? = "Dash Wallet App"
+) : Parcelable
+
+@Parcelize
+data class MayaTransactionParams(
+    val params: SendTransactionToWalletParams,
+    val type: TransactionType,
+    val coinbaseWalletName: String? = null
 ) : Parcelable

@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_bright"
+    tools:context=".ui.MayaConvertResultFragment">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        android:background="@android:color/white"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <TextView
+        android:id="@+id/enter_code_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintStart_toStartOf="@id/left_guide_line"
+        style="@style/Headline6"
+        android:text="Order is Executing..."
+        />
+
+    <!--TextView
+        android:id="@+id/extra_steps_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="@id/left_guide_line"
+        app:layout_constraintEnd_toEndOf="@id/right_guide_line"
+        app:layout_constraintTop_toBottomOf="@id/enter_code_title"
+        style="@style/Body2"
+        android:layout_marginTop="10dp"
+        android:text="@string/extra_steps_label"
+        /-->
+
+    <TextView
+        android:id="@+id/need_help"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/enter_code_title"
+        app:layout_constraintStart_toStartOf="@id/left_guide_line"
+        style="@style/Body2"
+        android:layout_marginTop="10dp"
+        android:text="Need Help"
+        />
+
+    <TextView
+        android:id="@+id/contact_coinbase_support"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/enter_code_title"
+        app:layout_constraintStart_toEndOf="@id/need_help"
+        style="@style/Body2.Blue"
+        android:layout_marginTop="10dp"
+        android:text="Contact Maya Support"
+        android:layout_marginHorizontal="4dp"
+        />
+
+    <!--androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/enter_code_field"
+        android:layout_width="0dp"
+        android:layout_height="46dp"
+        app:layout_constraintTop_toBottomOf="@id/need_help"
+        android:layout_marginTop="25dp"
+        android:textIsSelectable="true"
+        app:layout_constraintStart_toStartOf="@id/left_guide_line"
+        app:layout_constraintEnd_toEndOf="@id/right_guide_line"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/BlueStrokeColorWhiteBackground"
+        style="@style/Body1"
+        android:textCursorDrawable="@color/dash_blue"
+        android:hint="@string/coinbase_fa_code_hint"
+        android:paddingLeft="15dp"
+        android:focusable="false"
+        android:gravity="center_vertical"
+        android:textColorHint="@color/content_disabled"
+        /-->
+
+    <!--TextView
+        android:id="@+id/enter_code_details"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="@id/left_guide_line"
+        app:layout_constraintEnd_toEndOf="@id/right_guide_line"
+        app:layout_constraintTop_toBottomOf="@id/enter_code_field"
+        android:layout_marginTop="10dp"
+        android:text="@string/enter_code_details"
+        style="@style/Caption.Secondary"
+        /-->
+
+    <!--ImageView
+        android:id="@+id/incorrect_code_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="@id/left_guide_line"
+        app:layout_constraintTop_toBottomOf="@id/enter_code_field"
+        android:layout_marginTop="10dp"
+        android:src="@drawable/ic_red_exclamation_mark_circle"
+        /-->
+
+    <!--TextView
+        android:id="@+id/incorrect_code_description"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toEndOf="@id/incorrect_code_icon"
+        app:layout_constraintTop_toTopOf="@id/incorrect_code_icon"
+        app:layout_constraintBottom_toBottomOf="@id/incorrect_code_icon"
+        android:layout_marginLeft="6dp"
+        android:text="@string/two_fa_code_incorrect"
+        style="@style/Caption.Red"
+        /-->
+
+    <!--androidx.constraintlayout.widget.Group
+        android:id="@+id/incorrect_code_group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:constraint_referenced_ids="incorrect_code_icon, incorrect_code_description"
+        android:visibility="gone"
+        /-->
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/left_guide_line"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_begin="20dp"
+        />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/right_guide_line"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_end="20dp"
+        />
+
+    <!--androidx.cardview.widget.CardView
+        android:id="@+id/bottom_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="-10dp"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <LinearLayout
+            android:id="@+id/keyboard_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="@dimen/enter_amount_keyboard_spacing"
+            android:orientation="vertical">
+
+            <View
+                android:id="@+id/keyboard_header_divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="@dimen/enter_amount_keyboard_spacing"
+                android:visibility="gone"
+                android:background="@color/divider_color"
+                android:layout_marginHorizontal="@dimen/divider_margin_horizontal" />
+
+            <org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
+                android:id="@+id/keyboard_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginBottom="@dimen/enter_amount_keyboard_spacing"
+                app:nk_decSeparatorEnabled="false"
+                app:nk_functionEnabled="false"
+                />
+
+            <Button
+                android:id="@+id/verify_btn"
+                style="@style/Button.Primary.Large.Blue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="25dp"
+                android:layout_marginHorizontal="15dp"
+                android:enabled="false"
+                android:text="@string/verify_code" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView-->
+
+</androidx.constraintlayout.widget.ConstraintLayout>

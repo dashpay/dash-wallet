@@ -40,10 +40,10 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
-import org.dash.wallet.integrations.maya.model.CoinbaseErrorResponse
+import org.dash.wallet.integrations.maya.model.MayaErrorResponse
+import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
-import org.dash.wallet.integrations.maya.model.TradesRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import javax.inject.Inject
@@ -87,16 +87,17 @@ class MayaConvertCryptoViewModel @Inject constructor(
         val sourceAsset = "DASH"
         val targetAsset = selectedCoinBaseAccount.coinbaseAccount.currency
 
-        val tradesRequest = TradesRequest(
+        val swapRequest = SwapQuoteRequest(
             swapTradeInfo.amount,
             walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY) ?: Constants.DEFAULT_EXCHANGE_CURRENCY,
             source_maya_asset = "$sourceAsset.$sourceAsset",
             target_maya_asset = swapTradeInfo.cryptoCurrencyAsset,
             fiatCurrency = swapTradeInfo.fiatCurrencyCode,
-            targetAddress = swapTradeInfo.destinationAddress
+            targetAddress = swapTradeInfo.destinationAddress,
+            maximum = swapTradeInfo.maximum
         )
 
-        when (val result = coinBaseRepository.swapTrade(tradesRequest)) {
+        when (val result = coinBaseRepository.getSwapInfo(swapRequest)) {
             is ResponseResource.Success -> {
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     _showLoading.value = false
@@ -124,9 +125,9 @@ class MayaConvertCryptoViewModel @Inject constructor(
 
                 val error = result.errorBody
                 if (error.isNullOrEmpty()) {
-                    swapTradeFailedCallback.call()
+                    swapTradeFailedCallback.value = result.throwable.localizedMessage
                 } else {
-                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
+                    val message = MayaErrorResponse.getErrorMessage(error)?.message
                     if (message.isNullOrEmpty()) {
                         swapTradeFailedCallback.call()
                     } else {

@@ -38,4 +38,9 @@ object MayaConstants {
     }
     const val VALUE_ZERO = "0"
     const val MIN_USD_AMOUNT = "2"
+
+    const val ERROR_ID_INVALID_REQUEST = "invalid_request"
+    const val ERROR_ID_2FA_REQUIRED = "two_factor_required"
+    const val ERROR_MSG_INVALID_REQUEST = "That code was invalid"
+    const val TRANSACTION_TYPE_SEND = "send"
 }

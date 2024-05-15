@@ -34,12 +34,13 @@ abstract class MayaPaymentIntentParser(
         params
     ) {
     fun createPaymentIntent(inputStr: String): PaymentIntent {
-        val destinationAddress = if (inputStr.lowercase().startsWith(uriPrefix.lowercase())) {
+        val destinationAddress = if (inputStr.lowercase().startsWith(uriPrefix.lowercase() + ":")) {
+            // val destinationAddress = if (inputStr.lowercase().startsWith(uriPrefix.lowercase())) {
             inputStr.substring(uriPrefix.length + 1)
         } else {
             inputStr
         }
-        val metadata = "SWAP:$asset:$destinationAddress"
+        val metadata = "=:$asset:$destinationAddress"
         return PaymentIntent(
             null, "maya DASH pool", null,
             arrayOf(PaymentIntent.Output(Coin.ZERO, ScriptBuilder.createOpReturnScript(metadata.toByteArray()))),

@@ -30,14 +30,14 @@ import android.widget.Toast
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
-import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.DialogMayaResultBinding
 
 class MayaResultDialog : DialogFragment() {
     private val binding by viewBinding(DialogMayaResultBinding::bind)
-    var onCoinBaseResultDialogButtonsClickListener: CoinBaseResultDialogButtonsClickListener? = null
+    var onMayaResultDialogButtonsClickListener: MayaBaseResultDialogButtonsClickListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,40 +61,40 @@ class MayaResultDialog : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val type = arguments?.getInt("Type")
-        val coinbaseWallet = arguments?.getString(ARG_COINBASE_WALLET_NAME)
-        val dashToCoinbase = arguments?.getBoolean(ARG_DASH_TO_COINBASE) ?: false
+        val sourceCurrency = arguments?.getString(ARG_SOURCE) ?: Constants.DASH_CURRENCY
+        val destinationCurrency = arguments?.getString(ARG_DESTINATION) ?: getString(R.string.error)
         type?.let {
             when (type) {
                 Type.PURCHASE_ERROR.ordinal -> setPurchaseError()
                 Type.DEPOSIT_ERROR.ordinal -> setDepositError()
                 Type.DEPOSIT_SUCCESS.ordinal -> setDepositSuccess()
                 Type.CONVERSION_SUCCESS.ordinal -> setConversionSuccess(
-                    coinbaseWallet,
-                    dashToCoinbase
+                    sourceCurrency,
+                    destinationCurrency
                 )
                 Type.CONVERSION_ERROR.ordinal -> setConversionError()
                 Type.SWAP_ERROR.ordinal -> setSwapError()
-                Type.TRANSFER_DASH_SUCCESS.ordinal -> setTransferDashSuccess(dashToCoinbase)
+                Type.TRANSFER_DASH_SUCCESS.ordinal -> setTransferDashSuccess(false)
                 Type.TRANSFER_DASH_ERROR.ordinal -> setTransferDashFailure()
             }
 
             binding.coinbaseBuyDialogPositiveButton.setOnClickListener {
-                onCoinBaseResultDialogButtonsClickListener?.onPositiveButtonClick(
+                onMayaResultDialogButtonsClickListener?.onPositiveButtonClick(
                     Type.values().first { it.ordinal == type }
                 )
             }
         }
 
-        binding.coinbaseBuyDialogNegativeButton.setOnClickListener {
-            type?.let {
-                onCoinBaseResultDialogButtonsClickListener?.onNegativeButtonClick(
-                    Type.values().first { it.ordinal == type }
-                )
-            }
-            dismiss()
-            findNavController().popBackStack()
-            findNavController().popBackStack()
-        }
+//        binding.coinbaseBuyDialogNegativeButton.setOnClickListener {
+//            type?.let {
+//                onMayaResultDialogButtonsClickListener?.onNegativeButtonClick(
+//                    Type.values().first { it.ordinal == type }
+//                )
+//            }
+//            dismiss()
+//            findNavController().popBackStack()
+//            findNavController().popBackStack()
+//        }
 
         binding.buyDialogContactCoinbaseSupport.setOnClickListener {
             openCoinbaseHelp()
@@ -112,7 +112,6 @@ class MayaResultDialog : DialogFragment() {
             binding.coinbaseBuyDialogMessage.text = errorMessage
         }
         binding.buyDialogContactCoinbaseSupport.isGone = true
-        binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -132,18 +131,15 @@ class MayaResultDialog : DialogFragment() {
 
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.setText(R.string.button_close)
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
     }
 
     private fun setDepositSuccess() {
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
-        binding.coinbaseBuyDialogMessage.setText(R.string.it_could_take_up_to_2_3_minutes)
+        binding.coinbaseBuyDialogMessage.setText(R.string.maya_it_could_take_up_to_2_3_minutes)
         binding.buyDialogContactCoinbaseSupport.isGone = true
-        binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -153,8 +149,6 @@ class MayaResultDialog : DialogFragment() {
         binding.coinbaseBuyDialogMessage.setText(R.string.something_wrong_title)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.setText(R.string.button_close)
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
     }
 
@@ -164,43 +158,34 @@ class MayaResultDialog : DialogFragment() {
         binding.coinbaseBuyDialogMessage.setText(R.string.something_wrong_title)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.setText(R.string.button_close)
         binding.coinbaseBuyDialogPositiveButton.isVisible = false
     }
 
-    private fun setConversionSuccess(coinbaseWallet: String?, dashToCoinbase: Boolean = false) {
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
+    private fun setConversionSuccess(source: String, destination: String) {
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
-        binding.coinbaseBuyDialogMessage.setText(
-            if (dashToCoinbase) {
-                getString(
-                    R.string.it_could_take_up_to_5_minutes_to_coinbase,
-                    coinbaseWallet ?: ""
-                )
-            } else {
-                getString(R.string.it_could_take_up_to_5_minutes, coinbaseWallet ?: "")
-            }
+        binding.coinbaseBuyDialogMessage.text = getString(
+            R.string.maya_it_could_take_up_to_5_minutes,
+            source,
+            destination
         )
         binding.buyDialogContactCoinbaseSupport.isGone = true
-        binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
     private fun setTransferDashSuccess(dashToCoinbase: Boolean) {
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
         binding.coinbaseBuyDialogTitle.setText(R.string.transfer_dash_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
         binding.coinbaseBuyDialogMessage.setText(
             if (dashToCoinbase) {
-                R.string.it_could_take_up_to_10_minutes_to_coinbase
+                R.string.maya_it_could_take_up_to_10_minutes_to_coinbase
             } else {
-                R.string.it_could_take_up_to_10_minutes
+                R.string.maya_it_could_take_up_to_10_minutes
             }
         )
         binding.buyDialogContactCoinbaseSupport.isGone = true
-        binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -217,26 +202,24 @@ class MayaResultDialog : DialogFragment() {
 
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.isVisible = true
-        binding.coinbaseBuyDialogNegativeButton.setText(R.string.button_close)
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
     }
 
     companion object {
         const val ARG_MESSAGE: String = "ARG_RESPONSE_MESSAGE"
-        const val ARG_COINBASE_WALLET_NAME: String = "ARG_COINBASE_WALLET_NAME"
-        const val ARG_DASH_TO_COINBASE: String = "ARG_DASH_TO_COINBASE"
+        const val ARG_SOURCE: String = "ARG_SOURCE"
+        const val ARG_DESTINATION: String = "ARG_DESTINATION"
         fun newInstance(
             type: Type,
             responseMessage: String?,
-            coinbaseWalletName: String? = null,
-            dashToCoinbase: Boolean = false
+            sourceCurrency: String?,
+            destinationCurrency: String?
         ): MayaResultDialog {
             val args = Bundle().apply {
                 putInt("Type", type.ordinal)
                 putString(ARG_MESSAGE, responseMessage)
-                putString(ARG_COINBASE_WALLET_NAME, coinbaseWalletName)
-                putBoolean(ARG_DASH_TO_COINBASE, dashToCoinbase)
+                putString(ARG_SOURCE, sourceCurrency)
+                putString(ARG_DESTINATION, destinationCurrency)
             }
             return MayaResultDialog().apply {
                 arguments = args
@@ -255,7 +238,7 @@ class MayaResultDialog : DialogFragment() {
         TRANSFER_DASH_ERROR
     }
 
-    interface CoinBaseResultDialogButtonsClickListener {
+    interface MayaBaseResultDialogButtonsClickListener {
         fun onPositiveButtonClick(type: Type)
         fun onNegativeButtonClick(type: Type) {}
     }

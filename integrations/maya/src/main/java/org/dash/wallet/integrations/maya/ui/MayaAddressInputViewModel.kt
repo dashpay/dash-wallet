@@ -10,12 +10,15 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.integrations.ExchangeIntegration
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider
 import org.dash.wallet.common.ui.address_input.AddressSource
+import org.dash.wallet.integrations.maya.api.MayaWebApi
+import org.dash.wallet.integrations.maya.model.SwapQuote
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class MayaAddressInputViewModel @Inject constructor(
-    private val exchangeIntegrationProvider: ExchangeIntegrationProvider
+    private val exchangeIntegrationProvider: ExchangeIntegrationProvider,
+    private val mayaWebApi: MayaWebApi
 ) : ViewModel() {
     lateinit var asset: String
     private val inputCurrency = MutableStateFlow<String?>(null)
@@ -57,5 +60,9 @@ class MayaAddressInputViewModel @Inject constructor(
                 refreshAddressSources(exchangeIntegrationProvider.getDepositAddresses(it))
             }
         }
+    }
+
+    suspend fun getDefaultQuote(): SwapQuote? {
+        return mayaWebApi.getDefaultSwapQuote(asset)
     }
 }

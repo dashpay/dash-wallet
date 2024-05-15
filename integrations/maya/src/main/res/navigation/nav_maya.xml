@@ -90,6 +90,8 @@
         <action
             android:id="@+id/mayaOrderReviewToFeeInfo"
             app:destination="@id/mayaFeeInfoDialog" />
+        <action android:id="@+id/mayaOrderPreviewToOrderExecution"
+            app:destination="@+id/mayaConvertResultFragment" />
         <argument
             android:name="swapModel"
             app:argType="org.dash.wallet.integrations.maya.model.SwapTradeUIModel" />
@@ -97,5 +99,17 @@
             app:argType="string" />
         <argument android:name="paymentIntent"
             app:argType="org.dash.wallet.common.data.PaymentIntent" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/mayaConvertResultFragment"
+        android:name="org.dash.wallet.integrations.maya.ui.MayaConvertResultFragment"
+        android:label="MayaConvertResultFragment"
+        tools:layout="@layout/maya_convert_result_fragment">
+        <argument
+            android:name="transactionParams"
+            app:argType="org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams"
+            />
+
     </fragment>
 </navigation>
