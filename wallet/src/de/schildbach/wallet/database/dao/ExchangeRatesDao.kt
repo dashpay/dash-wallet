@@ -46,4 +46,7 @@ interface ExchangeRatesDao {
 
     @Query("DELETE FROM exchange_rates WHERE currencyCode IN (:currencyCodes)")
     suspend fun delete(currencyCodes: Collection<String>)
+
+    @Query("SELECT * FROM exchange_rates ORDER BY currencyCode")
+    suspend fun getAll(): List<ExchangeRate>
 }
