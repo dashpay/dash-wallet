@@ -46,8 +46,8 @@ dependencies {
     implementation 'androidx.legacy:legacy-support-core-utils:1.0.0'
     implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
     implementation "androidx.biometric:biometric:1.1.0"
-    implementation("androidx.activity:activity-compose:1.7.2")
 
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.74'
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation "org.dashj.android:dashj-bls-android:1.0.0"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
@@ -90,6 +90,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     debugImplementation 'androidx.compose.ui:ui-tooling:1.0.0'
+    implementation("androidx.activity:activity-compose:1.7.2")
 
     // Navigation
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"

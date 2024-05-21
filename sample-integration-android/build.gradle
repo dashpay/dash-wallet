@@ -10,6 +10,7 @@ dependencies {
     }
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'com.google.protobuf:protobuf-javalite:3.17.3'
 }
 
 android {
