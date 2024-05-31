@@ -98,4 +98,7 @@
     <string name="enter_amount_available">ที่สามารถใช้ได้</string>
     <string name="transaction_row_rate_not_available">ไม่สามารถใช้ได้</string>
     <string name="log_in">เข้าสู่ระบบ</string>
+
+    <string name="chain_syncing">โซ่กำลังซิงค์...</string>
+
 </resources>

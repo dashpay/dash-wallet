@@ -297,6 +297,16 @@
     <string name="report_transaction_history_mail_intent_chooser">Invia la cronologia delle transazioni utilizzando...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Invio della cronologia delle transazioni non riuscito.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Semplifica le tue tasse sulle criptovalute</string>
+    <string name="zenledger_export_all_tx">Esporta tutte le transazioni</string>
+    <string name="zenledger_export_description">Collega i tuoi portafogli crittografici alla piattaforma ZenLedger. Scopri di più e inizia con le transazioni del tuo Dash Wallet.</string>
+    <string name="chain_syncing_default_message">Attendi fino a quando la catena non sarà completamente sincronizzata, in modo da poter rivedere la cronologia delle transazioni.</string>
+    <string name="zenledger_export_permission">Consentire l\'invio di tutte le transazioni da Dash Wallet a Zenledger?</string>
+    <string name="zenledger_export_error">Si è verificato un errore durante l\'esportazione della cronologia delle transazioni su ZenLedger.</string>
+
+
     <string name="about_title">Informazioni</string>
     <string name="about_version_title">Versione</string>
     <string name="about_copyright_title">Copyright</string>

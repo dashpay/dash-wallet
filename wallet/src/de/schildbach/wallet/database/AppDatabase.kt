@@ -20,18 +20,7 @@ package de.schildbach.wallet.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import de.schildbach.wallet.database.dao.AddressMetadataDao
-import de.schildbach.wallet.database.dao.BlockchainStateDao
-import de.schildbach.wallet.database.dao.DashPayContactRequestDao
-import de.schildbach.wallet.database.dao.DashPayProfileDao
-import de.schildbach.wallet.database.dao.ExchangeRatesDao
-import de.schildbach.wallet.database.dao.IconBitmapDao
-import de.schildbach.wallet.database.dao.InvitationsDao
-import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
-import de.schildbach.wallet.database.dao.TransactionMetadataDao
-import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
-import de.schildbach.wallet.database.dao.UserAlertDao
-import de.schildbach.wallet.database.dao.UsernameRequestDao
+import de.schildbach.wallet.database.dao.*
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -40,7 +29,6 @@ import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
 import de.schildbach.wallet.database.entity.TransactionMetadataDocument
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.dashpay.UserAlert
-import org.dash.wallet.common.data.RoomConverters
 import org.dash.wallet.common.data.entity.AddressMetadata
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -48,6 +36,7 @@ import org.dash.wallet.common.data.entity.IconBitmap
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.features.exploredash.utils.RoomConverters
 
 @Database(
     entities =

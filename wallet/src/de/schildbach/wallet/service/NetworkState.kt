@@ -19,7 +19,6 @@ package de.schildbach.wallet.service
 
 import android.net.*
 import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
-import android.os.Build
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.services.NetworkStateInt
@@ -30,10 +29,6 @@ import javax.inject.Singleton
 class NetworkState @Inject constructor(val connectivityManager: ConnectivityManager): NetworkStateInt {
     override var isConnected: MutableStateFlow<Boolean> = MutableStateFlow(false)
         private set
-
-    private var networkRequestBuilder: NetworkRequest.Builder = NetworkRequest.Builder()
-        .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
 
     init {
         val connectivityManagerCallback = object : ConnectivityManager.NetworkCallback() {
@@ -55,17 +50,9 @@ class NetworkState @Inject constructor(val connectivityManager: ConnectivityMana
 
         val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
         isConnected.value = capabilities?.hasCapability(NET_CAPABILITY_INTERNET) == true
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            connectivityManager.registerDefaultNetworkCallback(
-                connectivityManagerCallback
-            )
-        } else {
-            connectivityManager.registerNetworkCallback(
-                networkRequestBuilder.build(),
-                connectivityManagerCallback
-            )
-        }
+        connectivityManager.registerDefaultNetworkCallback(
+            connectivityManagerCallback
+        )
     }
 
     override fun isWifiConnected(): Boolean {

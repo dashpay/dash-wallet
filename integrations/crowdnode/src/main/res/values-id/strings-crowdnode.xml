@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">Karena persyaratan layanan CrowdNode, pengguna dapat menarik tidak lebih dari:</string>
     <string name="crowdnode_withdraw_without_limits_online">Penarikan tanpa batas dengan akun online di situs web CrowdNode.</string>
     <string name="crowdnode_withdrawal_limits_error">Kesalahan ini kemungkinan besar karena melebihi batas penarikan CrowdNode. Coba lagi nanti.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Harap tunggu sebelum memulai penarikan berikutnya</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Anda harus menunggu 5 menit sebelum memulai penarikan lainnya</string>
     <string name="per_transaction">per transaksi</string>
     <string name="per_hour">per jam</string>
     <string name="per_day">per 24 jam</string>

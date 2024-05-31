@@ -34,6 +34,8 @@ open class ExchangeRate : Parcelable {
     @PrimaryKey
     var currencyCode: String
     var rate: String? = null
+    @Ignore
+    var retrievalTime: Long = -1L
 
     @Ignore
     private var currencyName: String? = null
@@ -41,9 +43,16 @@ open class ExchangeRate : Parcelable {
     @Ignore
     private var currency: Currency? = null
 
+    constructor(currencyCode: String, rate: String?, retrievalTime: Long) {
+        this.currencyCode = currencyCode
+        this.rate = rate
+        this.retrievalTime = retrievalTime
+    }
+
     constructor(currencyCode: String, rate: String?) {
         this.currencyCode = currencyCode
         this.rate = rate
+        this.retrievalTime = -1
     }
 
     protected constructor(input: Parcel) {
@@ -79,13 +88,16 @@ open class ExchangeRate : Parcelable {
             // If the currency is not a valid ISO 4217 code, then set the
             // currency name to be equal to the currency code
             // exchanges often have "invalid" currency codes like USDT and CNH
-            currencyName = if (currencyCode.length == 3) {
-                try {
-                    getCurrency().displayName
-                } catch (x: IllegalArgumentException) {
+            currencyName =
+                if (currencyCode.length == 3) {
+                    try {
+                        getCurrency().displayName
+                    } catch (x: IllegalArgumentException) {
+                        currencyCode
+                    }
+                } else {
                     currencyCode
                 }
-            } else currencyCode
             if (currencyCode.equals(currencyName!!, ignoreCase = true)) {
                 currencyName = CurrencyInfo.getOtherCurrencyName(currencyCode, context)
             }
@@ -97,7 +109,10 @@ open class ExchangeRate : Parcelable {
         return 0
     }
 
-    override fun writeToParcel(dest: Parcel, flags: Int) {
+    override fun writeToParcel(
+        dest: Parcel,
+        flags: Int
+    ) {
         dest.writeString(currencyCode)
         dest.writeString(rate)
         dest.writeString(currencyName)

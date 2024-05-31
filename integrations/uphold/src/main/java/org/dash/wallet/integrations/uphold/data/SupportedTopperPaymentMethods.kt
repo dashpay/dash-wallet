@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,19 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.data
+package org.dash.wallet.integrations.uphold.data
 
-import androidx.room.TypeConverter
-import java.util.*
+data class SupportedTopperPaymentMethods(
+    val paymentMethods: List<TopperPaymentMethod>
+)
 
-class RoomConverters {
-    @TypeConverter
-    fun fromTimestamp(value: Long?): Date? {
-        return value?.let { Date(it) }
-    }
+data class TopperPaymentMethod(
+    val billingAsset: String,
+    val countries: List<String>,
+    val limits: List<PaymentMethodLimit>,
+    val network: String,
+    val type: String
 
-    @TypeConverter
-    fun dateToTimestamp(date: Date?): Long? {
-        return date?.time
-    }
-}
+)
+
+data class PaymentMethodLimit(
+    val asset: String,
+    val maximum: String,
+    val minimum: String
+)

@@ -53,6 +53,7 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.CheckpointManager;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.FilteredBlock;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
@@ -687,7 +688,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup = new PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain);
                 if (resetMNListsOnPeerGroupStart) {
                     resetMNListsOnPeerGroupStart = false;
-                    application.getWallet().getContext().masternodeListManager.setBootstrap(mnlistinfoBootStrapStream, qrinfoBootStrapStream, SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION);
+                    application.getWallet().getContext().masternodeListManager.setBootstrap(mnlistinfoBootStrapStream, qrinfoBootStrapStream, SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION);
                     resetMNLists(true);
                 }
 
@@ -751,6 +752,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                     log.info("DMN peer discovery returned less than 16 nodes.  Adding default DMN peers to the list to increase connections");
                                     MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(defaultMNList, Constants.NETWORK_PARAMETERS.getPort());
                                     peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
+
+                                    // use EvoNodes if the network is small
+                                    if (peers.size() < MINIMUM_PEER_COUNT) {
+                                        String [] defaultEvoNodeList = Constants.NETWORK_PARAMETERS.getDefaultHPMasternodeList();
+                                        MasternodePeerDiscovery discoveryEvo = new MasternodePeerDiscovery(defaultEvoNodeList, Constants.NETWORK_PARAMETERS.getPort());
+                                        peers.addAll(Arrays.asList(discoveryEvo.getPeers(services, timeoutValue, timeoutUnit)));
+                                    }
                                 } else {
                                     log.info("DNS peer discovery returned less than 16 nodes.  Unable to add seed peers (it is not specified for this network).");
                                 }

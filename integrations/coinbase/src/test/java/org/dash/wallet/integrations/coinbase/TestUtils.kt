@@ -53,7 +53,7 @@ object TestUtils {
         return gson.fromJson(dataSetAsString, resourceGenerator.type)
     }
 
-    val paymentMethodsData = getPaymentMethodsApiResponse().data
+    val paymentMethodsData = getPaymentMethodsApiResponse().paymentMethods
 
     fun getPaymentMethodsApiResponse(): PaymentMethodsResponse {
         val apiResponse = readFileWithoutNewLineFromResources("payment_methods.json")

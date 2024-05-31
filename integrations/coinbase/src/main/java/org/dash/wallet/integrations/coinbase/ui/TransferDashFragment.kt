@@ -21,6 +21,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
@@ -72,6 +73,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private var dashValue: Coin = Coin.ZERO
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals()
+    private var onBackPressedCallback: OnBackPressedCallback? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -350,7 +352,9 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
     private fun handleBackButtonPress(){
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){ findNavController().popBackStack() }
+        onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+            findNavController().popBackStack()
+        }
     }
 
     private fun setInternetAccessState(hasInternet: Boolean) {
@@ -451,5 +455,10 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         binding.topGuideLine.updateLayoutParams<ConstraintLayout.LayoutParams> {
             guidePercent = 0.09f
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        onBackPressedCallback?.remove()
     }
 }

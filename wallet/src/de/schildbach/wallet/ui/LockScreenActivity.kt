@@ -28,6 +28,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -486,6 +487,7 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (!lockScreenDisplayed) {
             super.onBackPressed()

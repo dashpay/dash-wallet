@@ -21,9 +21,13 @@ import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants
 import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
+import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseViewModel
 import org.slf4j.LoggerFactory
+import java.lang.Exception
 import javax.inject.Inject
 
 @HiltViewModel
@@ -37,19 +41,12 @@ class IntegrationOverviewViewModel @Inject constructor(
     }
 
     suspend fun loginToCoinbase(code: String): Boolean {
-        when (val response = coinBaseRepository.completeCoinbaseAuthentication(code)) {
-            is ResponseResource.Success -> {
-                if (response.value) {
-                    return true
-                }
-            }
-
-            is ResponseResource.Failure -> {
-                log.error("Coinbase login error ${response.errorCode}: ${response.errorBody ?: "empty"}")
-            }
+        return try {
+            coinBaseRepository.completeCoinbaseAuthentication(code)
+        } catch (ex: Exception) {
+            log.error("Coinbase login error $ex")
+            false
         }
-
-        return false
     }
 
     suspend fun shouldShowCoinbaseInfoPopup(): Boolean {

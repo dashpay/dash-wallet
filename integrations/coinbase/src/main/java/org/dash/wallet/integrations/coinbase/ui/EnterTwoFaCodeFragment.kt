@@ -24,6 +24,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -50,6 +51,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
     private val binding by viewBinding(EnterTwoFaCodeFragmentBinding::bind)
     private val viewModel by viewModels<EnterTwoFaCodeViewModel>()
     private lateinit var loadingDialog: AdaptiveDialog
+    private var onBackPressedCallback: OnBackPressedCallback? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -160,7 +162,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
             findNavController().popBackStack()
         }
 
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){
+        onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
             findNavController().previousBackStackEntry?.savedStateHandle?.set("resume_review", true)
             findNavController().popBackStack()
         }
@@ -219,5 +221,10 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
 
     override fun onLockScreenActivated() {
         findNavController().popBackStack(R.id.coinbaseServicesFragment, false)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        onBackPressedCallback?.remove()
     }
 }

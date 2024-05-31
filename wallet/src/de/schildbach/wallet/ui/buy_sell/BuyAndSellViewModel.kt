@@ -110,6 +110,7 @@ class BuyAndSellViewModel @Inject constructor(
 
         viewModelScope.launch {
             topperClient.refreshSupportedAssets()
+            topperClient.refreshPaymentMethods()
         }
     }
 
@@ -203,9 +204,8 @@ class BuyAndSellViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val account = coinBaseRepository.getUserAccount()
-                val balance = account.availableBalance.value
-                coinbaseConfig.set(CoinbaseConfig.LAST_BALANCE, Coin.parseCoin(balance).value)
-                showRowBalance(ServiceType.COINBASE, balance)
+                coinbaseConfig.set(CoinbaseConfig.LAST_BALANCE, account.coinBalance().value)
+                showRowBalance(ServiceType.COINBASE, account.availableBalance.value)
             } catch (ex: Exception) {
                 showRowBalance(ServiceType.COINBASE, coinbaseBalanceString())
             }
