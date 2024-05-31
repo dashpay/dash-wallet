@@ -25,4 +25,5 @@ interface ExchangeRatesProvider {
     fun observeExchangeRate(currencyCode: String): Flow<ExchangeRate?>
     suspend fun getExchangeRate(currencyCode: String): ExchangeRate?
     suspend fun cleanupObsoleteCurrencies()
+    fun observeStaleRates(currencyCode: String): Flow<RateRetrievalState>
 }

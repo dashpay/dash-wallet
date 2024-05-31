@@ -88,9 +88,16 @@ class AppDatabaseMigrations {
                 )
 
                 database.execSQL(
-                    "CREATE TABLE IF NOT EXISTS username_requests (`requestId` TEXT PRIMARY KEY," +
+                    "CREATE TABLE IF NOT EXISTS username_requests (`requestId` TEXT NOT NULL PRIMARY KEY," +
                         "`username` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `identity` TEXT NOT NULL," +
                         "`link` TEXT, `votes` INTEGER NOT NULL, `isApproved` INTEGER NOT NULL);"
+                )
+            }
+        }
+        val migration18To19 = object : Migration(18, 19) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "DROP TABLE IF EXISTS `blockchain_identity`"
                 )
             }
         }

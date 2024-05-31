@@ -67,7 +67,7 @@
     <string name="pay_with">Pagar con</string>
     <string name="choose_payment_method">Elige el método de pago</string>
     <string name="debit_credit_card">Tarjeta de crédito/débito</string>
-    <string name="max">Máximo</string>
+    <string name="max">Máx</string>
     <string name="select_the_coin">Selecciona la moneda</string>
     <string name="dash">Dash</string>
     <string name="dash_wallet_name">Billetera de Dash</string>
@@ -98,4 +98,7 @@
     <string name="enter_amount_available">disponible</string>
     <string name="transaction_row_rate_not_available">No disponible</string>
     <string name="log_in">Iniciar sesión</string>
+
+    <string name="chain_syncing">La cadena esta sincronizando...</string>
+
 </resources>

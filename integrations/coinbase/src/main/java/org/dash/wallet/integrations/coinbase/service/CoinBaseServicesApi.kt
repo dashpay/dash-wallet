@@ -42,7 +42,7 @@ interface CoinBaseServicesApi {
         @Query("currency") currency: String = Constants.DASH_CURRENCY
     ): CoinBaseExchangeRates?
 
-    @GET("v2/payment-methods")
+    @GET("api/v3/brokerage/payment_methods")
     suspend fun getActivePaymentMethods(
         @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE
     ): PaymentMethodsResponse?

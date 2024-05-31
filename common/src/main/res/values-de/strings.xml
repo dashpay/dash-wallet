@@ -98,4 +98,7 @@
     <string name="enter_amount_available">verfügbar</string>
     <string name="transaction_row_rate_not_available">Nicht verfügbar</string>
     <string name="log_in">Einloggen</string>
+
+    <string name="chain_syncing">Die Chain synchronisiert...</string>
+
 </resources>

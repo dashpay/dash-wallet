@@ -98,4 +98,7 @@
     <string name="enter_amount_available">διαθέσιμο</string>
     <string name="transaction_row_rate_not_available">Μη διαθέσιμο</string>
     <string name="log_in">Είσοδος</string>
+
+    <string name="chain_syncing">Το blockchain συγχρονίζεται...</string>
+
 </resources>

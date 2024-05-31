@@ -67,7 +67,7 @@
     <string name="pay_with">Платіть з</string>
     <string name="choose_payment_method">Виберіть спосіб оплати</string>
     <string name="debit_credit_card">Дебетова/кредитна картка</string>
-    <string name="max">Максимум</string>
+    <string name="max">Макс</string>
     <string name="select_the_coin">Виберіть монету</string>
     <string name="dash">Dash</string>
     <string name="dash_wallet_name">Dash Wallet</string>
@@ -98,4 +98,7 @@
     <string name="enter_amount_available">доступно</string>
     <string name="transaction_row_rate_not_available">Недоступний</string>
     <string name="log_in">Увійти</string>
+
+    <string name="chain_syncing">Блокчейн синхронізується...</string>
+
 </resources>

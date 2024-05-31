@@ -98,4 +98,7 @@
     <string name="enter_amount_available">dostupné</string>
     <string name="transaction_row_rate_not_available">Nie je k dispozícií</string>
     <string name="log_in">Prihlásiť sa</string>
+
+    <string name="chain_syncing">Reťazec sa synchronizuje...</string>
+
 </resources>

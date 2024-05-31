@@ -175,4 +175,13 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
             positiveButtonText = getString(R.string.button_ok)
         ).show(this)
     }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == SET_PIN_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            setResult(Activity.RESULT_OK)
+            finish()
+        }
+    }
 }

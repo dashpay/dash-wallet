@@ -78,6 +78,7 @@ class OnboardingViewModel @Inject constructor(
             if (!walletApplication.isWalletUpgradedToBIP44) {
                 walletApplication.wallet!!.addKeyChain(Constants.BIP44_PATH)
             }
+            (walletApplication.wallet as WalletEx).initializeCoinJoin(0)
             configuration.armBackupSeedReminder()
 
             finishUnecryptedWalletUpgradeAction.call(Unit)

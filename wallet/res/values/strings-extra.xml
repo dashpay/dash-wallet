@@ -699,4 +699,9 @@
     <string name="masternode_key_private_public_base64">Private / Public Keys (base64)</string>
     <string name="timeskew_ahead">ahead</string>
     <string name="timeskew_behind">behind</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">Prices weren\'t retrieved. Fiat values may be incorrect.</string>
+    <string name="stale_exchange_rates_stale">Prices are at least 30 minutes old. Fiat values may be incorrect.</string>
+    <string name="stale_exchange_rates_volatile">Prices have fluctuated more than 50% since the last update.</string>
 </resources>

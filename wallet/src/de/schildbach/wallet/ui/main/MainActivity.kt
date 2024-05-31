@@ -57,6 +57,7 @@ import de.schildbach.wallet.ui.main.WalletActivityExt.handleFirebaseAction
 import de.schildbach.wallet.ui.main.WalletActivityExt.requestDisableBatteryOptimisation
 import de.schildbach.wallet.ui.main.WalletActivityExt.setupBottomNavigation
 import de.schildbach.wallet.ui.main.WalletActivityExt.showFiatCurrencyChangeDetectedDialog
+import de.schildbach.wallet.ui.main.WalletActivityExt.showStaleRatesToast
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
@@ -65,11 +66,15 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.ChildNumber
+import org.bitcoinj.wallet.DerivationPathFactory
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.components.ComposeHostFrameLayout
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.*
@@ -100,7 +105,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private val baseAlertDialogBuilder = BaseAlertDialogBuilder(this)
-    private val viewModel: MainViewModel by viewModels()
+    val viewModel: MainViewModel by viewModels()
     @Inject
     lateinit var config: Configuration
     private lateinit var binding: ActivityMainBinding
@@ -108,6 +113,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private var showBackupWalletDialog = false
     private var retryCreationIfInProgress = true
     private var pendingInvite: InvitationLinkData? = null
+    var composeHostFrameLayout: ComposeHostFrameLayout? = null
 
     val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
         requestDisableBatteryOptimisation()
@@ -147,6 +153,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         if (savedInstanceState == null) {
             // Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false)
+            upgradeWalletCoinJoin(false)
         }
 
         viewModel.currencyChangeDetected.observe(
@@ -161,6 +168,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             addAction(Intent.ACTION_TIME_CHANGED)
         }
         registerReceiver(timeChangeReceiver, timeChangedFilter)
+
+        viewModel.rateStale.observe(this) { state ->
+            log.info("updateTrigger => rateStale: {}", state)
+            showStaleRatesToast()
+        }
     }
 
     override fun onStart() {
@@ -351,6 +363,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
         config.disarmBackupReminder()
         upgradeWalletKeyChains(Constants.BIP44_PATH, true)
+        upgradeWalletCoinJoin(true)
     }
 
     private fun handleInvite(invite: InvitationLinkData) {
@@ -543,6 +556,21 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
+    open fun upgradeWalletCoinJoin(restoreBackup: Boolean) {
+        val wallet = walletData.wallet!!
+        isRestoringBackup = restoreBackup
+        val coinJoinPath = DerivationPathFactory(Constants.NETWORK_PARAMETERS).coinJoinDerivationPath(0)
+        if ((wallet as WalletEx).coinJoin != null && !wallet.coinJoin.hasKeyChain(coinJoinPath)) {
+            if (wallet.isEncrypted()) {
+                viewModel.addCoinJoinToWallet()
+            }
+        } else {
+            if (restoreBackup) {
+                checkRestoredWalletEncryptionDialog()
+            } else checkWalletEncryptionDialog()
+        }
+    }
+
     private fun showBackupWalletDialogIfNeeded() {
         if (showBackupWalletDialog) {
             BackupWalletDialogFragment.show(this)
@@ -584,6 +612,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         } else if (config.showNotificationsExplainer) {
             explainPushNotifications()
         }
+        showStaleRatesToast()
+    }
+
+    override fun onLockScreenActivated() {
+        showStaleRatesToast()
     }
 
     /**

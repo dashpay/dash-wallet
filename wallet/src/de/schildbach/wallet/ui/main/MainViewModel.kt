@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.main
 
-import android.os.Build
 import android.os.LocaleList
 import android.telephony.TelephonyManager
 import androidx.annotation.VisibleForTesting
@@ -93,6 +92,7 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.RateRetrievalState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -177,6 +177,19 @@ class MainViewModel @Inject constructor(
     private val _exchangeRate = MutableLiveData<ExchangeRate>()
     val exchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
+
+    private val _rateStale = MutableStateFlow(
+        RateRetrievalState(
+            lastAttemptFailed = false,
+            staleRates = false,
+            volatile = false
+        )
+    )
+    val rateStale: Flow<RateRetrievalState>
+        get() = _rateStale
+    val currentStaleRateState
+        get() = _rateStale.value
+    var rateStaleDismissed = false
 
     private val _balance = MutableLiveData<Coin>()
     val balance: LiveData<Coin>
@@ -313,6 +326,15 @@ class MainViewModel @Inject constructor(
                     .filterNotNull()
             }
             .onEach(_exchangeRate::postValue)
+            .launchIn(viewModelScope)
+
+        walletUIConfig
+            .observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .flatMapLatest { code ->
+                exchangeRatesProvider.observeStaleRates(code)
+            }
+            .onEach(_rateStale::emit)
             .launchIn(viewModelScope)
 
         // DashPay
@@ -627,11 +649,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun getCurrentCountry(): String {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            LocaleList.getDefault()[0].country
-        } else {
-            Locale.getDefault().country
-        }
+        return LocaleList.getDefault()[0].country
     }
 
     // DashPay
@@ -700,5 +718,10 @@ class MainViewModel @Inject constructor(
             log,
             AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_RECEIVE
         )
+    }
+
+    fun addCoinJoinToWallet() {
+        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
+        (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
     }
 }

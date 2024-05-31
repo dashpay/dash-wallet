@@ -1,4 +1,20 @@
 Dash Wallet
+v10.1.0
+* Add ZenLedger support
+* Coinbase: upgrade payment methods to v3
+* Update to dashj 20.0.4 (track deadlocks)
+
+v10.0.3
+* Deprecate Android 6 support, Android 7 now required
+* Coinbase: use custom tab for linking accounts
+* Topper: set $100 as default amount
+* Uphold: update API endpoint for withdraw capabilities
+* Fix some memory leaks in Coinbase and Explore modules
+* Add bootstrap files for less bandwidth initial sync
+* Fix rare blockchain rescan crashes
+* Fix rare internal wallet restoration crash
+* update to dashj 20.0.3
+
 v10.0.2
 * Fix Syncing... issue
 * Fix CrowdNode and Masternode APY calculation

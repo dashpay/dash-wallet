@@ -322,7 +322,7 @@
     <string name="security_medium">Moyen</string>
     <string name="security_high">Élevé</string>
     <string name="security_very_high">Très élevé</string>
-    <string name="max">Maximum</string>
+    <string name="max">Max</string>
 
     <string name="skip">ignorer</string>
     <string name="get_started">Commencer</string>

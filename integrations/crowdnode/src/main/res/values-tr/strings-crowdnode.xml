@@ -143,6 +143,8 @@
     <string name="crowdnode_withdrawal_limits_message">CrowdNode\'un hizmet koşulları nedeniyle, kullanıcılar aşağıdakilerden daha fazlasını çekemez:</string>
     <string name="crowdnode_withdraw_without_limits_online">CrowdNode web sitesinde çevrimiçi bir hesapla sınırsız para çekin.</string>
     <string name="crowdnode_withdrawal_limits_error">Bu hatanın nedeni büyük olasılıkla CrowdNode para çekme limitlerinin aşılmasıdır. Daha sonra tekrar deneyin.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">Bir sonraki para çekme işlemini başlatmadan önce lütfen bekleyin</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">Başka bir para çekme işlemine başlamadan önce 5 dakika beklemeniz gerekir</string>
     <string name="per_transaction">işlem başına</string>
     <string name="per_hour">saat başına</string>
     <string name="per_day">24 saatte</string>

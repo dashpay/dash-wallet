@@ -186,7 +186,6 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     }
 
     suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
-        val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash()
-        return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
+        return coinBaseRepository.isInputGreaterThanLimit(amountInDash)
     }
 }

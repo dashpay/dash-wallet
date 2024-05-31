@@ -297,6 +297,11 @@
     <string name="report_transaction_history_mail_intent_chooser">取引履歴の送信中…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">取引履歴の送信に失敗しました。</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">暗号資産の税金を簡素化する</string>
+    <string name="zenledger_export_all_tx">全ての取引をエクスポートする</string>
+    <string name="zenledger_export_permission">DashウォレットからZenledgerに全ての取引の送信を許可しますか。</string>
     <string name="about_title">アプリについて</string>
     <string name="about_version_title">バージョン</string>
     <string name="about_copyright_title">コピーライト</string>

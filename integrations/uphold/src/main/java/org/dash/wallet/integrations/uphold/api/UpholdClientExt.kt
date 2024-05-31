@@ -150,7 +150,7 @@ suspend fun UpholdClient.revokeAccessToken() {
 }
 
 suspend fun UpholdClient.checkCapabilities() {
-    val operation = "withdrawals"
+    val operation = "crypto_withdrawals"
     val response = service.getCapabilities(operation)
     response.ensureSuccessful()
     val capability = response.body()
@@ -207,7 +207,7 @@ fun UpholdClient.createDashAddress(cardId: String) {
 }
 
 fun UpholdClient.getWithdrawalRequirements(): List<String> {
-    val result = requirements["withdrawals"]
+    val result = requirements["crypto_withdrawals"]
     return result ?: emptyList()
 }
 

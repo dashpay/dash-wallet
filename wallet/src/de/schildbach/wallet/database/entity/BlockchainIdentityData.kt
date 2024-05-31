@@ -23,9 +23,6 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.room.Entity
-import androidx.room.Ignore
-import androidx.room.PrimaryKey
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformService
@@ -47,7 +44,6 @@ import org.dashj.platform.dpp.util.Converters
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@Entity(tableName = "blockchain_identity")
 data class BlockchainIdentityData(var creationState: CreationState = CreationState.NONE,
                                   var creationStateErrorMessage: String?,
                                   var username: String?,
@@ -68,13 +64,11 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
                                   var currentMainKeyIndex: Int? = null,
                                   var currentMainKeyType: IdentityPublicKey.Type? = null) {
 
-    @PrimaryKey
     var id = 1
         set(@Suppress("UNUSED_PARAMETER") value) {
             field = 1
         }
 
-    @Ignore
     private var creditFundingTransactionCache: AssetLockTransaction? = null
 
     fun findAssetLockTransaction(wallet: Wallet?): AssetLockTransaction? {

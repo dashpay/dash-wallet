@@ -535,6 +535,7 @@ class SetPinActivity : InteractionAwareActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         when {
             pin.size > 0 -> setState(state)
