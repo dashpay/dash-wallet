@@ -99,7 +99,7 @@ constructor(private val context: Context, private val client: FusedLocationProvi
                 override fun onLocationResult(locationResult: LocationResult) {
                     super.onLocationResult(locationResult)
                     val location = locationResult.lastLocation
-                    val newLocation = Pair(location.latitude, location.longitude)
+                    val newLocation = Pair(location!!.latitude, location.longitude)
                     val distance =
                         distanceBetween(
                             previousLocation.first,
