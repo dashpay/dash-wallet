@@ -30,19 +30,41 @@
     <string name="cryptocurrency_dash_code" translatable="false">DASH</string>
     <string name="cryptocurrency_dash_network">Dash</string>
     <string name="cryptocurrency_rune_code" translatable="false">RUNE</string>
-    <string name="cryptocurrency_rune_network">Rune</string>
+    <string name="cryptocurrency_rune_network">Thorchain</string>
     <string name="cryptocurrency_ethereum_code" translatable="false">ETH</string>
     <string name="cryptocurrency_usdcoin_code" translatable="false">USDC</string>
     <string name="cryptocurrency_tether_code" translatable="false">USDT</string>
-    <string name="cryptocurrency_ethereum_network">Ethereum</string>
-    <string name="cryptocurrency_usdcoin_network">USD Coin</string>
-    <string name="cryptocurrency_tether_network">Tether</string>
+    <string name="cryptocurrency_ethereum_network">Ethereum  (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
+    <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
     <string name="cryptocurrency_kuji_code" translatable="false">KUJI</string>
     <string name="cryptocurrency_kuji_network">Kujira</string>
     <string name="cryptocurrency_usk_code" translatable="false">USK</string>
     <string name="cryptocurrency_usk_network">USK</string>
     <string name="cryptocurrency_wsteth_code" translatable="false">WSTETH</string>
-    <string name="cryptocurrency_wsteth_network">Wrapped stETH</string>
+    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
+    <string name="cryptocurrency_arbitrum_code" translatable="false">ARB</string>
+    <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
+    <string name="cryptocurrency_dai_code" translatable="false">DAI</string>
+    <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
+    <string name="cryptocurrency_ethereum_arbitrum_network">Ethereum (Arbitrum)</string>
+    <string name="cryptocurrency_goldario_code" translatable="false">GLD</string>
+    <string name="cryptocurrency_goldario_arbitrum_network">Goldario (Arbitrum)</string>
+    <string name="cryptocurrency_leo_code" translatable="false">LEO</string>
+    <string name="cryptocurrency_leo_arbitrum_network">UNUS SED LEO (Arbitrum)</string>
+
+    <string name="cryptocurrency_pepe_code" translatable="false">PEPE</string>
+    <string name="cryptocurrency_pepe_arbitrum_network">PEPE (Arbitrum)</string>
+    <string name="cryptocurrency_pepe_ethereum_network">PEPE (Ethereum)</string>
+    <string name="cryptocurrency_link_code" translatable="false">LINK</string>
+    <string name="cryptocurrency_link_arbitrum_network">Chainlink (Arbitrum)</string>
+    <string name="cryptocurrency_tgt_code" translatable="false">TGT</string>
+    <string name="cryptocurrency_tgt_arbitrum_network">THORWallet (Arbitrum)</string>
+    <string name="cryptocurrency_wbtc_code" translatable="false">WBTC</string>
+    <string name="cryptocurrency_wbtc_arbitrum_network">Wrapped Bitcoin (Arbitrum)</string>
+    <string name="cryptocurrency_wsteth_arbitrum_network">Wrapped stETH (Arbitrum)</string>
+
 
     <string name="maya_error">Maya Error</string>
     <string name="maya_error_not_available">The Maya service is not available.  Please try again later.</string>
