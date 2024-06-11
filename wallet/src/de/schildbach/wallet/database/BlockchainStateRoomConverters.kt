@@ -21,13 +21,12 @@ import android.net.Uri
 import androidx.room.TypeConverter
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.data.InvitationLinkData
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dpp.identity.Identity
-import org.dashj.platform.dpp.identity.IdentityPublicKey
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
+import org.dashj.platform.sdk.KeyType
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -99,12 +98,12 @@ class BlockchainStateRoomConverters {
     }
 
     @TypeConverter
-    fun toCurrentMainKeyType(value: Int): IdentityPublicKey.Type? {
-        return if (value > -1) IdentityPublicKey.Type.values()[value] else null
+    fun toCurrentMainKeyType(value: Int): KeyType? {
+        return if (value > -1) KeyType.entries[value] else null
     }
 
     @TypeConverter
-    fun fromCurrentMainKeyType(currentMainKeyType: IdentityPublicKey.Type?): Int {
+    fun fromCurrentMainKeyType(currentMainKeyType: KeyType?): Int {
         return currentMainKeyType?.ordinal ?: -1
     }
 

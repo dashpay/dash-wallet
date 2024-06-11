@@ -38,9 +38,9 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dpp.identity.Identity
-import org.dashj.platform.dpp.identity.IdentityPublicKey
 import org.dashj.platform.dpp.toHex
 import org.dashj.platform.dpp.util.Converters
+import org.dashj.platform.sdk.KeyType
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -62,7 +62,7 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
                                   var totalKeyCount: Int? = null,
                                   var keysCreated: Long? = null,
                                   var currentMainKeyIndex: Int? = null,
-                                  var currentMainKeyType: IdentityPublicKey.Type? = null) {
+                                  var currentMainKeyType: KeyType? = null) {
 
     var id = 1
         set(@Suppress("UNUSED_PARAMETER") value) {
@@ -73,7 +73,11 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
 
     fun findAssetLockTransaction(wallet: Wallet?): AssetLockTransaction? {
         if (creditFundingTxId == null) {
-            return null
+            val authExtension =
+                wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
+            val list = authExtension.assetLockTransactions
+            list.sortBy { it.updateTime }
+            return if (list.isEmpty()) null else list.first()
         }
         if (wallet != null) {
             creditFundingTransactionCache = wallet.getTransaction(creditFundingTxId)?.run {
