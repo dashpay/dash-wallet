@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -33,40 +34,60 @@ import javax.inject.Inject
 class FiatExchangeRateApiAggregator @Inject constructor(
     private val exchangeRateApi: ExchangeRateApi,
     private val currencyBeaconApi: CurrencyBeaconApi,
-    private val freeCurrencyApi: FreeCurrencyApi
+    private val freeCurrencyApi: FreeCurrencyApi,
+    private val mayaConfig: MayaConfig
 ) {
     companion object {
         val log: Logger = LoggerFactory.getLogger(FiatExchangeRateApiAggregator::class.java)
     }
     suspend fun getRate(currencyCode: String): ExchangeRate? {
-        val currencyBeaconResponse = currencyBeaconApi.getRates(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, currencyCode)
-        if (currencyBeaconResponse.isSuccessful) {
-            val response = currencyBeaconResponse.body()
+        val lastUpdate = mayaConfig.get(MayaConfig.EXCHANGE_RATE_LAST_UPDATE)
+        val lastCurrencyCode = mayaConfig.get(MayaConfig.EXCHANGE_RATE_CURRENCY_CODE)
+        if (lastCurrencyCode != currencyCode || lastUpdate == null || lastUpdate == 0L ||
+            (System.currentTimeMillis() - lastUpdate) > MayaConfig.expirationDuration) {
+            val currencyBeaconResponse =
+                currencyBeaconApi.getRates(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, currencyCode)
+            if (currencyBeaconResponse.isSuccessful) {
+                val response = currencyBeaconResponse.body()
+                val exchangeRate = response?.rates?.get(currencyCode) ?: 0.0
+                log.info("exchange rate: {} {}", exchangeRate, currencyCode)
+                if (exchangeRate != 0.0) {
+                    return saveNewExchangeRate(exchangeRate, currencyCode)
+                }
+            }
+
+            val freeCurrencyResponse = freeCurrencyApi.getRates(resultCurrencyCode = currencyCode)
+            if (freeCurrencyResponse.isSuccessful) {
+                val response = freeCurrencyResponse.body()
+                val exchangeRate = response?.data?.get(currencyCode) ?: 0.0
+                log.info("exchange rate: {} {}", exchangeRate, currencyCode)
+                if (exchangeRate != 0.0) {
+                    return saveNewExchangeRate(exchangeRate, currencyCode)
+                }
+            }
+
+            val response = exchangeRateApi.getRates().body()
             val exchangeRate = response?.rates?.get(currencyCode) ?: 0.0
             log.info("exchange rate: {} {}", exchangeRate, currencyCode)
-            if (exchangeRate != 0.0) {
-                return ExchangeRate(currencyCode, exchangeRate.toString())
+            return if (exchangeRate != 0.0) {
+                saveNewExchangeRate(exchangeRate, currencyCode)
+            } else {
+                null
             }
-        }
-
-        val freeCurrencyResponse = freeCurrencyApi.getRates(resultCurrencyCode = currencyCode)
-        if (freeCurrencyResponse.isSuccessful) {
-            val response = freeCurrencyResponse.body()
-            val exchangeRate = response?.data?.get(currencyCode) ?: 0.0
-            log.info("exchange rate: {} {}", exchangeRate, currencyCode)
-            if (exchangeRate != 0.0) {
-                return ExchangeRate(currencyCode, exchangeRate.toString())
-            }
-        }
-
-        val response = exchangeRateApi.getRates().body()
-        val exchangeRate = response?.rates?.get(currencyCode) ?: 0.0
-        log.info("exchange rate: {} {}", exchangeRate, currencyCode)
-        return if (exchangeRate != 0.0) {
-            ExchangeRate(currencyCode, exchangeRate.toString())
         } else {
-            null
+            val lastValue = mayaConfig.get(MayaConfig.EXCHANGE_RATE_VALUE) ?: 0
+            return ExchangeRate(lastCurrencyCode, lastValue.toString())
         }
+    }
+
+    private suspend fun saveNewExchangeRate(
+        exchangeRate: Double,
+        currencyCode: String
+    ): ExchangeRate {
+        mayaConfig.set(MayaConfig.EXCHANGE_RATE_VALUE, exchangeRate)
+        mayaConfig.set(MayaConfig.EXCHANGE_RATE_CURRENCY_CODE, currencyCode)
+        mayaConfig.set(MayaConfig.EXCHANGE_RATE_LAST_UPDATE, System.currentTimeMillis())
+        return ExchangeRate(currencyCode, exchangeRate.toString())
     }
 }
 
