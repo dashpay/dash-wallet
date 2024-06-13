@@ -412,4 +412,5 @@
     <string name="masternode_key_not_used">استفاده‌نشده</string>
     <string name="masternode_key_revoked">لغوشده</string>
     <string name="masternode_key_private_public_base64">کلیدهای خصوصی/عمومی (بیش۶۴)</string>
-</resources>
+
+    </resources>

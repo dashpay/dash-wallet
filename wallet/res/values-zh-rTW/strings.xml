@@ -297,6 +297,16 @@
     <string name="report_transaction_history_mail_intent_chooser">使用…發送交易歷史</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">發送交易記錄失敗。</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">簡化您的加密貨幣報稅事宜</string>
+    <string name="zenledger_export_all_tx">匯出所有交易</string>
+    <string name="zenledger_export_description">將您的加密錢包連接到 ZenLedger 平台。了解更多並開始使用您的達世幣錢包交易。</string>
+    <string name="chain_syncing_default_message">等到區塊鏈完全同步，以便我們可以查看您的交易歷史記錄。</string>
+    <string name="zenledger_export_permission">允許將所有交易從達世幣錢包發送到 Zenledger 嗎？</string>
+    <string name="zenledger_export_error">將交易歷史記錄匯出到 ZenLedger 時發生錯誤。</string>
+
+
     <string name="about_title">關於</string>
     <string name="about_version_title">版本</string>
     <string name="about_copyright_title">著作權</string>

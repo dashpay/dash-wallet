@@ -410,4 +410,9 @@
     <string name="masternode_key_not_used">Niet gebruikt</string>
     <string name="masternode_key_revoked">Ingetrokken</string>
     <string name="masternode_key_private_public_base64">persoonlijke / publieke sleutels (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">Prijzen zijn niet opgehaald. Fiat waarden kunnen onjuist zijn.</string>
+    <string name="stale_exchange_rates_stale">Prijzen zijn minstens 30 minuten oud. Fiat waarden kunnen onjuist zijn.</string>
+    <string name="stale_exchange_rates_volatile">Sinds de laatste update zijn de prijzen meer dan 50% veranderd.</string>
 </resources>

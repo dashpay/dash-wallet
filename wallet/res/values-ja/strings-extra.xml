@@ -411,4 +411,9 @@
     <string name="masternode_key_not_used">未使用です</string>
     <string name="masternode_key_revoked">無効になっています</string>
     <string name="masternode_key_private_public_base64">プライベート/パブリックキー(ベース64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">価格を取得できませんでした。フィアットの値が正しくない可能性があります。</string>
+    <string name="stale_exchange_rates_stale">価格は30分以上前のものです。フィアットの値が正しくない可能性があります。</string>
+    <string name="stale_exchange_rates_volatile">価格は前回のアップデートから50％以上変動しています。</string>
 </resources>
