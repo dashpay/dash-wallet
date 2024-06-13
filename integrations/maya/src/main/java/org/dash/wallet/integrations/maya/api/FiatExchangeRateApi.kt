@@ -31,13 +31,35 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 class FiatExchangeRateApiAggregator @Inject constructor(
-    private val exchangeRateApi: ExchangeRateApi
+    private val exchangeRateApi: ExchangeRateApi,
+    private val currencyBeaconApi: CurrencyBeaconApi,
+    private val freeCurrencyApi: FreeCurrencyApi
 ) {
     companion object {
         val log: Logger = LoggerFactory.getLogger(FiatExchangeRateApiAggregator::class.java)
     }
     suspend fun getRate(currencyCode: String): ExchangeRate? {
-        val response = exchangeRateApi.getRates(MayaConstants.DEFAULT_EXCHANGE_CURRENCY).body()
+        val currencyBeaconResponse = currencyBeaconApi.getRates(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, currencyCode)
+        if (currencyBeaconResponse.isSuccessful) {
+            val response = currencyBeaconResponse.body()
+            val exchangeRate = response?.rates?.get(currencyCode) ?: 0.0
+            log.info("exchange rate: {} {}", exchangeRate, currencyCode)
+            if (exchangeRate != 0.0) {
+                return ExchangeRate(currencyCode, exchangeRate.toString())
+            }
+        }
+
+        val freeCurrencyResponse = freeCurrencyApi.getRates(resultCurrencyCode = currencyCode)
+        if (freeCurrencyResponse.isSuccessful) {
+            val response = freeCurrencyResponse.body()
+            val exchangeRate = response?.data?.get(currencyCode) ?: 0.0
+            log.info("exchange rate: {} {}", exchangeRate, currencyCode)
+            if (exchangeRate != 0.0) {
+                return ExchangeRate(currencyCode, exchangeRate.toString())
+            }
+        }
+
+        val response = exchangeRateApi.getRates().body()
         val exchangeRate = response?.rates?.get(currencyCode) ?: 0.0
         log.info("exchange rate: {} {}", exchangeRate, currencyCode)
         return if (exchangeRate != 0.0) {

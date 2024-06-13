@@ -23,9 +23,11 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.integrations.maya.api.CurrencyBeaconApi
 import org.dash.wallet.integrations.maya.api.ExchangeRateApi
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateAggregatedProvider
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
+import org.dash.wallet.integrations.maya.api.FreeCurrencyApi
 import org.dash.wallet.integrations.maya.api.MayaApi
 import org.dash.wallet.integrations.maya.api.MayaApiAggregator
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
@@ -61,10 +63,25 @@ abstract class MayaModule {
         @Provides
         fun provideExchangeRateEndpoint(
             remoteDataSource: RemoteDataSource,
-            walletDataProvider: WalletDataProvider
         ): ExchangeRateApi {
             val baseUrl = MayaConstants.EXCHANGERATE_BASE_URL
             return remoteDataSource.buildApi(ExchangeRateApi::class.java, baseUrl)
+        }
+
+        @Provides
+        fun provideCurrencyBeaconEndpoint(
+            remoteDataSource: RemoteDataSource
+        ): CurrencyBeaconApi {
+            val baseUrl = MayaConstants.CURRENCYBEACON_BASE_URL
+            return remoteDataSource.buildApi(CurrencyBeaconApi::class.java, baseUrl)
+        }
+
+        @Provides
+        fun provideFreeCurrencyApiEndpoint(
+            remoteDataSource: RemoteDataSource,
+        ): FreeCurrencyApi {
+            val baseUrl = MayaConstants.FREE_CURRENCY_API_BASE_URL
+            return remoteDataSource.buildApi(FreeCurrencyApi::class.java, baseUrl)
         }
     }
 
