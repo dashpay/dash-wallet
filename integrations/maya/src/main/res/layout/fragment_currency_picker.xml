@@ -104,19 +104,19 @@
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/content_list"
-        android:background="@drawable/white_background_rounded"
-        app:layout_constraintTop_toBottomOf="@+id/search_box"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:clipToPadding="false"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="30dp"
         android:layout_marginHorizontal="15dp"
-        tools:visibility="gone"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/white_background_rounded"
+        android:clipToPadding="false"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        tools:itemCount="5"
-        tools:listitem="@layout/radiobutton_row" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.551"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/search_box"
+        tools:itemCount="10"
+        tools:listitem="@layout/radiobutton_row"
+        tools:visibility="visible" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

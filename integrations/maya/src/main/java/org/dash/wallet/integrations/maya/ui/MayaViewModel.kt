@@ -36,7 +36,7 @@ import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.MayaApi
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
-import org.dash.wallet.integrations.maya.payments.parsers.MayaPaymentParsers
+import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.slf4j.LoggerFactory
 import java.util.Locale
@@ -78,7 +78,7 @@ class MayaViewModel @Inject constructor(
 
     val poolList = MutableStateFlow<List<PoolInfo>>(listOf())
     val inboundAddresses = arrayListOf<InboundAddress>()
-    val paymentParsers = MayaPaymentParsers()
+    val paymentParsers = MayaCurrencyList.getPaymentProcessors()
 
     init {
         // TODO: is this really needed? we don't support DASH swaps
