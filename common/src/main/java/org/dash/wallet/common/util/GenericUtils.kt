@@ -129,6 +129,11 @@ object GenericUtils {
         return currency?.defaultFractionDigits ?: 0
     }
 
+    fun getCurrencyDigits(code: String): Int {
+        val currency: Currency? = Currency.getInstance(code)
+        return currency?.defaultFractionDigits ?: 2
+    }
+
     private fun stringToBigDecimal(value: String): BigDecimal {
         return try {
             val format = NumberFormat.getNumberInstance(getDeviceLocale())
