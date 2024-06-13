@@ -1,4 +1,10 @@
 Dash Wallet
+v10.1.1
+* Attempt to fix stuck at Syncing 30 or 31%
+* Support devices without a camera flash
+* Warn user of stale (old) exchange rates
+* Add Jetpack Compose component
+
 v10.1.0
 * Add ZenLedger support
 * Coinbase: upgrade payment methods to v3
