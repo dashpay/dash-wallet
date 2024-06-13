@@ -116,7 +116,9 @@ open class MayaKujiraCryptoCurrency : MayaBitcoinCryptoCurrency() {
 class MayaKujiraTokenCryptoCurrency(
     override val code: String,
     override val name: String,
-    override val asset: String
+    override val asset: String,
+    override val codeId: Int,
+    override val nameId: Int
 ) : MayaKujiraCryptoCurrency()
 
 class MayaEthereumTokenCryptoCurrency(
@@ -267,7 +269,14 @@ object MayaCurrencyList {
             ),
 
             MayaKujiraCryptoCurrency(),
-            MayaKujiraTokenCryptoCurrency("USK", "USK", "KUJI.USK"),
+            MayaKujiraTokenCryptoCurrency(
+                "USK",
+                "USK",
+                "KUJI.USK",
+                R.string.cryptocurrency_usk_code,
+                R.string.cryptocurrency_usk_network
+            ),
+
             MayaRuneCryptoCurrency()
         )
         currencyMap = currencyList.associateBy({ it.asset }, { it })
