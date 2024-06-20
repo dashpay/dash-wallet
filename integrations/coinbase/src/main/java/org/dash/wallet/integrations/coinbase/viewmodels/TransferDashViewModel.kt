@@ -146,17 +146,11 @@ class TransferDashViewModel @Inject constructor(
     }
 
     private fun calculateCoinbaseMaxAllowedValue(account:CoinbaseToDashExchangeRateUIModel) {
-        val maxCoinValue = try {
-            Coin.parseCoin(account.coinbaseAccount.availableBalance.value)
-        } catch (x: Exception) {
-            Coin.ZERO
-        }
-        maxForDashCoinBaseAccount = maxCoinValue
+        maxForDashCoinBaseAccount = account.coinbaseAccount.coinBalance()
     }
 
     private suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
-        val withdrawalLimitInDash = coinBaseRepository.getWithdrawalLimitInDash()
-        return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
+        return coinBaseRepository.isInputGreaterThanLimit(amountInDash)
     }
 
     suspend fun checkEnteredAmountValue(amountInDash: Coin): SwapValueErrorType {

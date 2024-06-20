@@ -322,7 +322,7 @@
     <string name="security_medium">Moyen</string>
     <string name="security_high">Élevé</string>
     <string name="security_very_high">Très élevé</string>
-    <string name="max">Maximum</string>
+    <string name="max">Max</string>
 
     <string name="skip">ignorer</string>
     <string name="get_started">Commencer</string>
@@ -413,4 +413,9 @@
     <string name="masternode_key_not_used">Non utilisé</string>
     <string name="masternode_key_revoked">Révoqué</string>
     <string name="masternode_key_private_public_base64">Clés privée / publique (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">Les cours n\'ont pas pu être récupérés. Les valeurs fiduciaires peuvent être incorrectes.</string>
+    <string name="stale_exchange_rates_stale">Les cours ont au minimum 30 minutes d\'âge. Les valeurs fiduciaires peuvent être incorrectes.</string>
+    <string name="stale_exchange_rates_volatile">Les cours ont fluctué de plus de 50% depuis la mise à jour précédente.</string>
 </resources>

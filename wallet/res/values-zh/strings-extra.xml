@@ -407,4 +407,9 @@
     <string name="masternode_key_not_used">未使用</string>
     <string name="masternode_key_revoked">已撤销</string>
     <string name="masternode_key_private_public_base64">私钥 / 公钥 (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">价格未被检索到. 法币价值或许错误.</string>
+    <string name="stale_exchange_rates_stale">价格至少有30分钟的延迟. 法币显示价值或许错误.</string>
+    <string name="stale_exchange_rates_volatile">价格据上次更新已经有超过50%的波动.</string>
 </resources>

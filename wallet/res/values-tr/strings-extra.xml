@@ -410,4 +410,5 @@
     <string name="masternode_key_not_used">Kullanılmamış</string>
     <string name="masternode_key_revoked">İptal edildi</string>
     <string name="masternode_key_private_public_base64">Özel / Genel Anahtarlar (base64)</string>
-</resources>
+
+    </resources>

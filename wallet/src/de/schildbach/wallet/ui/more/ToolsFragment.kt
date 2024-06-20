@@ -35,6 +35,7 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.AddressBookActivity
 import de.schildbach.wallet.ui.ExportTransactionHistoryDialogBuilder
 import de.schildbach.wallet.ui.NetworkMonitorActivity
+import de.schildbach.wallet.ui.more.tools.ZenLedgerDialogFragment
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
@@ -43,6 +44,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Qr
@@ -131,6 +133,10 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
                     alertDialog.show()
                 }
             }
+        }
+
+        binding.zenledgerExport.setOnClickListener {
+            ZenLedgerDialogFragment().show(requireActivity())
         }
     }
 

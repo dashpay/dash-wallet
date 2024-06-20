@@ -407,4 +407,9 @@
     <string name="masternode_key_not_used">Tidak digunakan</string>
     <string name="masternode_key_revoked">Dicabut</string>
     <string name="masternode_key_private_public_base64">Kunci private / publik (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">Harga tidak diambil. Nilai Fiat mungkin salah.</string>
+    <string name="stale_exchange_rates_stale">Harga setidaknya berumur 30 menit. Nilai Fiat mungkin salah.</string>
+    <string name="stale_exchange_rates_volatile">Harga telah berfluktuasi lebih dari 50% sejak pembaruan terakhir.</string>
 </resources>

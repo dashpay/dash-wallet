@@ -98,4 +98,7 @@
     <string name="enter_amount_available">доступно</string>
     <string name="transaction_row_rate_not_available">Недоступно</string>
     <string name="log_in">Войти</string>
+
+    <string name="chain_syncing">Блокчейн синхронизируется...</string>
+
 </resources>

@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integrations.coinbase.service
 
+import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.model.TokenResponse
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
@@ -26,12 +27,13 @@ interface CoinBaseAuthApi {
     @POST("oauth/token")
     suspend fun getToken(
         @Field("client_id") clientId: String = CoinBaseClientConstants.CLIENT_ID,
-        @Field("redirect_uri") redirectUri: String = "authhub://oauth-callback",
-        @Field("grant_type") grant_type: String = "authorization_code",
-        @Field("client_secret") client_secret: String = CoinBaseClientConstants.CLIENT_SECRET,
+        @Field("redirect_uri") redirectUri: String = CoinbaseConstants.REDIRECT_URL,
+        @Field("grant_type") grantType: String = "authorization_code",
+        @Field("client_secret") clientSecret: String = CoinBaseClientConstants.CLIENT_SECRET,
         @Field("code") code: String
     ): TokenResponse?
 
+    @FormUrlEncoded
     @POST("oauth/revoke")
     suspend fun revokeToken(@Field("token") token: String)
 }

@@ -297,6 +297,16 @@
     <string name="report_transaction_history_mail_intent_chooser">Odoslať históriu transakcií pomocou…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Odoslanie histórie transakcií zlyhalo.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Zjednodušte si dane z kryptomien</string>
+    <string name="zenledger_export_all_tx">Exportovať všetky transakcie</string>
+    <string name="zenledger_export_description">Pripojte svoje kryptopeňaženky k platforme ZenLedger. Získajte viac informácií a začnite s Dash Wallet transakciami.</string>
+    <string name="chain_syncing_default_message">Počkajte, kým sa reťazec úplne zosynchronizuje, aby sme mohli skontrolovať vašu históriu transakcií.</string>
+    <string name="zenledger_export_permission">Povoliť odosielanie všetkých transakcií z Dash Wallet do Zenledgeru?</string>
+    <string name="zenledger_export_error">Pri exporte vašej histórie transakcií do ZenLedger sa vyskytla chyba.</string>
+
+
     <string name="about_title">O aplikácií</string>
     <string name="about_version_title">Verzia</string>
     <string name="about_copyright_title">Autorské práva</string>

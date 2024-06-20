@@ -258,6 +258,9 @@ public class WalletApplication extends MultiDexApplication
         }
 
         CrashReporter.init(getCacheDir());
+        // enable deadlock warnings to try to catch the cause of the stuck at "Syncing 31%"
+        Threading.setUseDefaultAndroidPolicy(false);
+        Threading.warnOnLockCycles();
 
         Threading.uncaughtExceptionHandler = (thread, throwable) -> {
             log.info("dashj uncaught exception", throwable);
@@ -747,7 +750,7 @@ public class WalletApplication extends MultiDexApplication
 
     public void resetBlockchain() {
         // reset the extensions
-        if (wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID)) {
+        if (wallet != null && wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID)) {
             AuthenticationGroupExtension authenticationGroupExtension = (AuthenticationGroupExtension) wallet.getKeyChainExtensions().get(AuthenticationGroupExtension.EXTENSION_ID);
             authenticationGroupExtension.reset();
         }

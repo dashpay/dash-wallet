@@ -407,4 +407,9 @@
     <string name="masternode_key_not_used">사용되지 않음</string>
     <string name="masternode_key_revoked">취소됨</string>
     <string name="masternode_key_private_public_base64">개인 / 공공 키 (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">가격을 불러오지 않았습니다. 금액이 정확하지 않을 수 있습니다.</string>
+    <string name="stale_exchange_rates_stale">마지막 가격 업데이트가 최소 30분을 경과했습니다. 금액이 정확하지 않을 수 있습니다.</string>
+    <string name="stale_exchange_rates_volatile">가격이 지난 업데이트와 비교하여 50% 이상 변동하였습니다.</string>
 </resources>

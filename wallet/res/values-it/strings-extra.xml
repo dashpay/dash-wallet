@@ -322,7 +322,7 @@
     <string name="security_medium">Medio</string>
     <string name="security_high">Alto</string>
     <string name="security_very_high">Molto Alto</string>
-    <string name="max">Massimo</string>
+    <string name="max">Max</string>
 
     <string name="skip">salta</string>
     <string name="get_started">Iniziare</string>
@@ -413,4 +413,9 @@
     <string name="masternode_key_not_used">Non usato</string>
     <string name="masternode_key_revoked">Revocato</string>
     <string name="masternode_key_private_public_base64">Chiavi private/pubbliche (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">I prezzi non sono stati recuperati. I valori Fiat potrebbero essere errati.</string>
+    <string name="stale_exchange_rates_stale">I prezzi risalgono ad almeno 30 minuti. I valori Fiat potrebbero essere errati.</string>
+    <string name="stale_exchange_rates_volatile">I prezzi hanno oscillato di oltre il 50% dall\'ultimo aggiornamento.</string>
 </resources>

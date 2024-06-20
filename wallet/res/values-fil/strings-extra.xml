@@ -410,4 +410,9 @@
     <string name="masternode_key_not_used">hindi ginagamit</string>
     <string name="masternode_key_revoked">Binawi</string>
     <string name="masternode_key_private_public_base64">Pribado / Pampublikong Susi (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">Hindi nakuha ang mga presyo. Maaaring mali ang mga halaga ng Fiat.</string>
+    <string name="stale_exchange_rates_stale">Ang mga presyo ay hindi bababa sa 30 minutong gulang. Maaaring mali ang mga halaga ng Fiat.</string>
+    <string name="stale_exchange_rates_volatile">Nag-iba-iba ang mga presyo nang higit sa 50% mula noong huling pag-update.</string>
 </resources>

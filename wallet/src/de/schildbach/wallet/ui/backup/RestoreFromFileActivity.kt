@@ -110,6 +110,7 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
         viewModel.restoreWallet(walletBuffer, password)
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == SET_PIN_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
