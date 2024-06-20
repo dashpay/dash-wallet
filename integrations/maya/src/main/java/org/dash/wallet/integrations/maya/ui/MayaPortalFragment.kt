@@ -34,7 +34,7 @@ import org.dash.wallet.integrations.maya.R
 class MayaPortalFragment : Fragment(R.layout.fragment_integration_portal) {
 
     private val binding by viewBinding(FragmentIntegrationPortalBinding::bind)
-    private val viewModel by viewModels<MayaViewModel>()
+    private val viewModel by mayaViewModels<MayaViewModel>()
     private var balanceAnimator: ObjectAnimator? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

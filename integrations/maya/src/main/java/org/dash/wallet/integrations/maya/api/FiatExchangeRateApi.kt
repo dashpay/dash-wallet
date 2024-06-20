@@ -45,6 +45,10 @@ class FiatExchangeRateApiAggregator @Inject constructor(
         val lastCurrencyCode = mayaConfig.get(MayaConfig.EXCHANGE_RATE_CURRENCY_CODE)
         if (lastCurrencyCode != currencyCode || lastUpdate == null || lastUpdate == 0L ||
             (System.currentTimeMillis() - lastUpdate) > MayaConfig.expirationDuration) {
+
+            if (currencyCode == MayaConstants.DEFAULT_EXCHANGE_CURRENCY) {
+                return ExchangeRate(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, "1.0")
+            }
             val currencyBeaconResponse =
                 currencyBeaconApi.getRates(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, currencyCode)
             if (currencyBeaconResponse.isSuccessful) {
@@ -72,7 +76,7 @@ class FiatExchangeRateApiAggregator @Inject constructor(
             return if (exchangeRate != 0.0) {
                 saveNewExchangeRate(exchangeRate, currencyCode)
             } else {
-                null
+                ExchangeRate(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, "1.0")
             }
         } else {
             val lastValue = mayaConfig.get(MayaConfig.EXCHANGE_RATE_VALUE) ?: 0
@@ -101,7 +105,6 @@ class FiatExchangeRateAggregatedProvider @Inject constructor(
 ) : FiatExchangeRateProvider {
     companion object {
         private val log = LoggerFactory.getLogger(FiatExchangeRateApiAggregator::class.java)
-        private val UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30)
     }
 
     private val responseScope = CoroutineScope(
@@ -111,31 +114,23 @@ class FiatExchangeRateAggregatedProvider @Inject constructor(
     override val fiatExchangeRate = MutableStateFlow(ExchangeRate(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, "1.0"))
 
     override fun observeFiatRate(currencyCode: String): Flow<ExchangeRate?> {
-        if (shouldRefresh()) {
-            refreshRates(currencyCode)
-        }
+        refreshRates(currencyCode)
         return fiatExchangeRate
     }
 
     private fun refreshRates(currencyCode: String) {
-        if (!shouldRefresh()) {
-            return
-        }
-
         responseScope.launch {
             updateExchangeRates(currencyCode)
             poolListLastUpdated = System.currentTimeMillis()
         }
     }
 
-    private fun shouldRefresh(): Boolean {
-        val now = System.currentTimeMillis()
-        return poolListLastUpdated == 0L || now - poolListLastUpdated > UPDATE_FREQ_MS
-    }
-
     private suspend fun updateExchangeRates(currencyCode: String) {
-        fiatExchangeRateApi.getRate(currencyCode)?.let { rate ->
-            fiatExchangeRate.value = rate
+        val newRate = fiatExchangeRateApi.getRate(currencyCode)
+        if (newRate != null) {
+            fiatExchangeRate.value = newRate
+        } else {
+            fiatExchangeRate.value = ExchangeRate(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, "1.0")
         }
     }
 }

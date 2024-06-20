@@ -20,6 +20,7 @@ package org.dash.wallet.common.ui.recyclerview
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.view.isVisible
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.RadiobuttonRowBinding
@@ -29,8 +30,9 @@ import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
 import org.dash.wallet.common.ui.setRoundedRippleBackground
 
 class IconifiedListAdapter(
+    diffCallback: DiffUtil.ItemCallback<IconifiedViewItem> = RadioGroupAdapter.DiffCallback(),
     private val clickListener: (IconifiedViewItem, Int) -> Unit
-): ListAdapter<IconifiedViewItem, IconifiedViewHolder>(RadioGroupAdapter.DiffCallback()) {
+): ListAdapter<IconifiedViewItem, IconifiedViewHolder>(diffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): IconifiedViewHolder {
         val inflater = LayoutInflater.from(parent.context)

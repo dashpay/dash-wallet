@@ -66,7 +66,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
     private val binding by viewBinding(FragmentMayaConvertCryptoBinding::bind)
     private val viewModel by viewModels<MayaConvertCryptoViewModel>()
     private val convertViewModel by mayaViewModels<ConvertViewViewModel>()
-    private val mayaViewModel by viewModels<MayaViewModel>()
+    private val mayaViewModel by mayaViewModels<MayaViewModel>()
     private val args by navArgs<MayaConvertCryptoFragmentArgs>()
 
     private var loadingDialog: AdaptiveDialog? = null

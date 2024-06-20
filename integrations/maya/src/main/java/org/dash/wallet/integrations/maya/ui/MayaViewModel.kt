@@ -96,24 +96,23 @@ class MayaViewModel @Inject constructor(
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
-            .onEach { log.info("selected currency: {}", it) }
+            .onEach { log.info("exchange rate selected currency: {}", it) }
             .flatMapLatest(fiatExchangeRateProvider::observeFiatRate)
             .onEach {
                 it?.let { fiatRate ->
-                    fiatFormat = fiatFormat.minDecimals(GenericUtils.getCurrencyDigits(it.currencyCode))
+                    fiatFormat = fiatFormat.minDecimals(GenericUtils.getCurrencyDigits(fiatRate.currencyCode))
                     fiatExchangeRate = fiatRate.fiat
                 }
                 log.info("exchange rate: $it")
             }
             .flatMapLatest { mayaApi.observePoolList(it!!.fiat) }
-            .onEach {
+            .onEach { newPoolList ->
                 log.info("exchange rate in view model: {}", fiatExchangeRate?.toFriendlyString())
-                log.info("Pool List: {}", it)
-                log.info("Pool List: {}", it.map { pool -> pool.assetPriceFiat })
-                it.forEach { pool ->
+                newPoolList.forEach { pool ->
                     pool.setAssetPrice(fiatExchangeRate!!)
                 }
-                poolList.value = it
+                log.info("exchange rate Pool List: {}", newPoolList.map { pool -> pool.assetPriceFiat.toFriendlyString() })
+                poolList.value = newPoolList
             }
             .launchIn(viewModelScope)
 

@@ -25,6 +25,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.DiffUtil
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
@@ -40,13 +41,29 @@ import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentCurrencyPickerBinding
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
+import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_picker) {
+    companion object {
+        private val log = LoggerFactory.getLogger(MayaCryptoCurrencyPickerFragment::class.java)
+    }
     private val binding by viewBinding(FragmentCurrencyPickerBinding::bind)
-    private val viewModel by viewModels<MayaViewModel>()
+    private val viewModel by mayaViewModels<MayaViewModel>()
     private var itemList = listOf<IconifiedViewItem>()
     private lateinit var defaultItemMap: Map<String, IconifiedViewItem>
+
+    class FullDiffCallback : DiffUtil.ItemCallback<IconifiedViewItem>() {
+        override fun areItemsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
+            return oldItem.title == newItem.title &&
+                    oldItem.iconRes == newItem.iconRes &&
+                    oldItem.additionalInfo == newItem.additionalInfo
+        }
+
+        override fun areContentsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
+            return oldItem == newItem
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -55,7 +72,7 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
             findNavController().popBackStack()
         }
 
-        val adapter = IconifiedListAdapter() { item, index ->
+        val adapter = IconifiedListAdapter(diffCallback = FullDiffCallback()) { item, _ ->
             viewModel.poolList.value.firstOrNull {
                 it.asset == item.id
             }?.let {
@@ -132,6 +149,7 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                             )
                         }
                     }.sortedBy { it.title }
+                log.info("exchange rate: updating itemList with {}", itemList[0].additionalInfo)
                 adapter.submitList(itemList)
             }
         }
