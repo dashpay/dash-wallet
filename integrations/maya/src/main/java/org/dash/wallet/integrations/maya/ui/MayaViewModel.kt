@@ -111,7 +111,10 @@ class MayaViewModel @Inject constructor(
                 newPoolList.forEach { pool ->
                     pool.setAssetPrice(fiatExchangeRate!!)
                 }
-                log.info("exchange rate Pool List: {}", newPoolList.map { pool -> pool.assetPriceFiat.toFriendlyString() })
+                log.info(
+                    "exchange rate Pool List: {}",
+                    newPoolList.map { pool -> pool.assetPriceFiat.toFriendlyString() }
+                )
                 poolList.value = newPoolList
             }
             .launchIn(viewModelScope)

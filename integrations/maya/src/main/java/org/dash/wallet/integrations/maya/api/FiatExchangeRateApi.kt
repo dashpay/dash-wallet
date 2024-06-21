@@ -28,7 +28,6 @@ import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 class FiatExchangeRateApiAggregator @Inject constructor(
@@ -44,8 +43,8 @@ class FiatExchangeRateApiAggregator @Inject constructor(
         val lastUpdate = mayaConfig.get(MayaConfig.EXCHANGE_RATE_LAST_UPDATE)
         val lastCurrencyCode = mayaConfig.get(MayaConfig.EXCHANGE_RATE_CURRENCY_CODE)
         if (lastCurrencyCode != currencyCode || lastUpdate == null || lastUpdate == 0L ||
-            (System.currentTimeMillis() - lastUpdate) > MayaConfig.expirationDuration) {
-
+            (System.currentTimeMillis() - lastUpdate) > MayaConfig.expirationDuration
+        ) {
             if (currencyCode == MayaConstants.DEFAULT_EXCHANGE_CURRENCY) {
                 return ExchangeRate(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, "1.0")
             }

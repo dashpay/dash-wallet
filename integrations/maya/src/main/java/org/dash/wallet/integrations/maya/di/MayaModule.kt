@@ -62,7 +62,7 @@ abstract class MayaModule {
 
         @Provides
         fun provideExchangeRateEndpoint(
-            remoteDataSource: RemoteDataSource,
+            remoteDataSource: RemoteDataSource
         ): ExchangeRateApi {
             val baseUrl = MayaConstants.EXCHANGERATE_BASE_URL
             return remoteDataSource.buildApi(ExchangeRateApi::class.java, baseUrl)
@@ -78,7 +78,7 @@ abstract class MayaModule {
 
         @Provides
         fun provideFreeCurrencyApiEndpoint(
-            remoteDataSource: RemoteDataSource,
+            remoteDataSource: RemoteDataSource
         ): FreeCurrencyApi {
             val baseUrl = MayaConstants.FREE_CURRENCY_API_BASE_URL
             return remoteDataSource.buildApi(FreeCurrencyApi::class.java, baseUrl)

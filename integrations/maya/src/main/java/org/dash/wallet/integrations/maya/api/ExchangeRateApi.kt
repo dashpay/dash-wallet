@@ -22,7 +22,6 @@ import org.dash.wallet.integrations.maya.model.ExchangeRateResponse
 import org.dash.wallet.integrations.maya.model.FreeCurrencyResponse
 import retrofit2.Response
 import retrofit2.http.GET
-import retrofit2.http.Header
 import retrofit2.http.Query
 
 /**

@@ -22,7 +22,6 @@ import android.view.View
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DiffUtil
@@ -56,8 +55,8 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
     class FullDiffCallback : DiffUtil.ItemCallback<IconifiedViewItem>() {
         override fun areItemsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
             return oldItem.title == newItem.title &&
-                    oldItem.iconRes == newItem.iconRes &&
-                    oldItem.additionalInfo == newItem.additionalInfo
+                oldItem.iconRes == newItem.iconRes &&
+                oldItem.additionalInfo == newItem.additionalInfo
         }
 
         override fun areContentsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
