@@ -18,9 +18,12 @@
 package org.dash.wallet.integrations.maya.utils
 
 import android.content.Context
+import androidx.datastore.preferences.core.doublePreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,5 +36,9 @@ open class MayaConfig @Inject constructor(
         const val PREFERENCES_NAME = "maya"
 
         val BACKGROUND_ERROR = stringPreferencesKey("error")
+        val expirationDuration = TimeUnit.DAYS.toMillis(1)
+        val EXCHANGE_RATE_LAST_UPDATE = longPreferencesKey("exchange_rate_last_update")
+        val EXCHANGE_RATE_VALUE = doublePreferencesKey("exchange_rate_value")
+        val EXCHANGE_RATE_CURRENCY_CODE = stringPreferencesKey("exchange_rate_currency_code")
     }
 }

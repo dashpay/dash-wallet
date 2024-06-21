@@ -26,9 +26,19 @@ object MayaConstants {
     private const val MAINNET_BASE_URL = "https://mayanode.mayachain.info/mayachain/"
 
     /**
-     * https://exchangerate.host/#/docs
+     * https://www.exchangerate-api.com/docs/overview
      */
-    const val EXCHANGERATE_BASE_URL = "https://api.exchangerate.host/"
+    const val EXCHANGERATE_BASE_URL = "https://v6.exchangerate-api.com/v6/cb83a189f4780ccfde2883d6/"
+
+    /**
+     * https://currencybeacon.com/api-documentation
+     */
+    const val CURRENCYBEACON_BASE_URL = "https://api.currencybeacon.com/v1/"
+
+    /**
+     * https://freecurrencyapi.com/docs/
+     */
+    const val FREE_CURRENCY_API_BASE_URL = "https://api.freecurrencyapi.com/v1/"
 
     fun getBaseUrl(params: NetworkParameters): String {
         return MAINNET_BASE_URL

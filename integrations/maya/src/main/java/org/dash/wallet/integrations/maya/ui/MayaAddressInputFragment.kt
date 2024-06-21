@@ -39,7 +39,7 @@ import org.dash.wallet.integrations.maya.model.getMayaErrorString
 import org.dash.wallet.integrations.maya.model.getMayaErrorType
 
 class MayaAddressInputFragment : AddressInputFragment() {
-    private val mayaViewModel by viewModels<MayaViewModel>()
+    private val mayaViewModel by mayaViewModels<MayaViewModel>()
     private val mayaAddressInputViewModel by viewModels<MayaAddressInputViewModel>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

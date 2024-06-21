@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,14 +17,9 @@
 
 package org.dash.wallet.integrations.maya.model
 
-import com.google.gson.annotations.SerializedName
-
 /**
- * Response from https://v6.exchangerate-api.com/v6
+ * Response from https://api.freecurrencyapi.com/v1/latest
  */
-data class ExchangeRateResponse(
-    val result: String,
-    @SerializedName("base_code") val baseCode: String,
-    @SerializedName("time_last_update_unix") val lastUpdate: Long,
-    @SerializedName("conversion_rates") val rates: Map<String, Double>
+class FreeCurrencyResponse(
+    val data: Map<String, Double>
 )

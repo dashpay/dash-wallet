@@ -61,14 +61,15 @@ class MayaViewModel @Inject constructor(
         val log = LoggerFactory.getLogger(MayaViewModel::class.java)
     }
 
-    val fiatFormat = MonetaryFormat().minDecimals(2).withLocale(Locale.getDefault()).noCode()
+    var fiatFormat: MonetaryFormat = MonetaryFormat()
+        .minDecimals(GenericUtils.getCurrencyDigits())
+        .withLocale(Locale.getDefault())
+        .noCode()
 
     val networkError = SingleLiveEvent<Unit>()
 
     private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
     private var fiatExchangeRate: Fiat? = null
-
-    // val currencyList = MutableStateFlow<List<CryptoCurrencyItem>>(listOf<CryptoCurrencyItem>())
 
     private val _uiState = MutableStateFlow(MayaPortalUIState())
     val uiState: StateFlow<MayaPortalUIState> = _uiState.asStateFlow()
@@ -86,28 +87,35 @@ class MayaViewModel @Inject constructor(
             .filterNotNull()
             .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
             .onEach { rate ->
-                dashExchangeRate = rate?.let { org.bitcoinj.utils.ExchangeRate(Coin.COIN, rate.fiat) }
+                dashExchangeRate = rate?.let {
+                    org.bitcoinj.utils.ExchangeRate(Coin.COIN, rate.fiat)
+                }
                 _uiState.update { it.copy() }
             }
             .launchIn(viewModelScope)
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
-            .onEach { log.info("selected currency: {}", it) }
+            .onEach { log.info("exchange rate selected currency: {}", it) }
             .flatMapLatest(fiatExchangeRateProvider::observeFiatRate)
             .onEach {
-                it?.let { fiatRate -> fiatExchangeRate = fiatRate.fiat }
+                it?.let { fiatRate ->
+                    fiatFormat = fiatFormat.minDecimals(GenericUtils.getCurrencyDigits(fiatRate.currencyCode))
+                    fiatExchangeRate = fiatRate.fiat
+                }
                 log.info("exchange rate: $it")
             }
             .flatMapLatest { mayaApi.observePoolList(it!!.fiat) }
-            .onEach {
+            .onEach { newPoolList ->
                 log.info("exchange rate in view model: {}", fiatExchangeRate?.toFriendlyString())
-                log.info("Pool List: {}", it)
-                log.info("Pool List: {}", it.map { pool -> pool.assetPriceFiat })
-                it.forEach { pool ->
+                newPoolList.forEach { pool ->
                     pool.setAssetPrice(fiatExchangeRate!!)
                 }
-                poolList.value = it
+                log.info(
+                    "exchange rate Pool List: {}",
+                    newPoolList.map { pool -> pool.assetPriceFiat.toFriendlyString() }
+                )
+                poolList.value = newPoolList
             }
             .launchIn(viewModelScope)
 
