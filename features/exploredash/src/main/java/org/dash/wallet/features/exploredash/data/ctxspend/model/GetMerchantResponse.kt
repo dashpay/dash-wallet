@@ -18,10 +18,40 @@ package org.dash.wallet.features.exploredash.data.ctxspend.model
 
 import com.google.gson.annotations.SerializedName
 
+/**
+ * denominationType: "min-max", "min-max-major" or "fixed"
+ */
 data class GetMerchantResponse(
-    @SerializedName("id") val id: String,
-    @SerializedName("minimumCardPurchase") val minimumCardPurchase: Double? = 0.0,
-    @SerializedName("maximumCardPurchase") val maximumCardPurchase: Double? = 0.0,
-    @SerializedName("savingsPercentage") val savingsPercentage: Double? = 0.0,
-    @SerializedName("hasBarcode") val hasBarcode: Boolean? = false
-)
+    val id: String,
+    val denominations: List<String>,
+    val denominationType: String,
+    val savingsPercentage: Int = 0,
+    val redeemType: String = ""
+) {
+    val savings: Double
+        get() = savingsPercentage.toDouble() / 100
+
+    val minimumCardPurchase: Double
+        get() {
+            require(denominations.isNotEmpty())
+            return denominations[0].toDouble()
+        }
+    val maximumCardPurchase: Double
+        get() {
+            return when (denominationType) {
+                "min-max" -> {
+                    require(denominations.size == 2)
+                    denominations[1].toDouble()
+                }
+                "min-max-major" -> {
+                    require(denominations.size == 3)
+                    denominations[1].toDouble()
+                }
+                "fixed" -> {
+                    require(denominations.isNotEmpty())
+                    denominations.last().toDouble()
+                }
+                else -> error("unknown denomination type")
+            }
+        }
+}

@@ -150,10 +150,14 @@ class CTXSpendViewModel @Inject constructor(
         val response = getMerchant(merchant.merchantId!!)
 
         if (response is ResponseResource.Success) {
-            response.value?.let {
-                merchant.savingsPercentage = it.savingsPercentage
-                merchant.minCardPurchase = it.minimumCardPurchase
-                merchant.maxCardPurchase = it.maximumCardPurchase
+            try {
+                response.value?.let {
+                    merchant.savingsPercentage = it.savings
+                    merchant.minCardPurchase = it.minimumCardPurchase
+                    merchant.maxCardPurchase = it.maximumCardPurchase
+                }
+            } catch (e: Exception) {
+                log.warn("updated merchant details contains unexpected data:", e)
             }
         }
     }
