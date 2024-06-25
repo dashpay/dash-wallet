@@ -60,7 +60,6 @@ class SendInviteWorker @AssistedInject constructor(
         const val KEY_PASSWORD = "SendInviteWorker.PASSWORD"
         const val KEY_TX_ID = "SendInviteWorker.KEY_TX_ID"
         const val KEY_USER_ID = "SendInviteWorker.KEY_USER_ID"
-        const val KEY_INVITE_ID = "SendInviteWorker.KEY_INVITE_ID"
         const val KEY_DYNAMIC_LINK = "SendInviteWorker.KEY_DYNAMIC_LINK"
         const val KEY_SHORT_DYNAMIC_LINK = "SendInviteWorker.KEY_SHORT_DYNAMIC_LINK"
     }
@@ -70,8 +69,6 @@ class SendInviteWorker @AssistedInject constructor(
             get() = data.getByteArray(KEY_TX_ID)!!
         val userId
             get() = data.getString(KEY_USER_ID)!!
-        val inviteId
-            get() = data.getString(KEY_INVITE_ID)!!
         val dynamicLink
             get() = data.getString(KEY_DYNAMIC_LINK)!!
         val shortDynamicLink
@@ -107,7 +104,6 @@ class SendInviteWorker @AssistedInject constructor(
             Result.success(workDataOf(
                     KEY_TX_ID to cftx.txId.bytes,
                     KEY_USER_ID to cftx.identityId.toStringBase58(),
-                    KEY_INVITE_ID to Address.fromPubKeyHash(wallet.params, cftx.identityId.bytes).toBase58(),
                     KEY_DYNAMIC_LINK to dynamicLink.uri.toString(),
                     KEY_SHORT_DYNAMIC_LINK to shortDynamicLink.shortLink.toString()
             ))
