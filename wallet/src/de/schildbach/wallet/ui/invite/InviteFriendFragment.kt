@@ -79,17 +79,9 @@ class InviteFriendFragment() :
         walletApplication = requireActivity().application as WalletApplication
         binding.createInvitationButton.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Invites.INVITE_FRIEND)
-            safeNavigate(InviteFriendFragmentDirections.inviteFriendFragmentToUsernamePrivacy())
+            showConfirmationDialog()
         }
-
-        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<CoinJoinMode?>("mode")?.observe(
-            viewLifecycleOwner,
-        ) { result ->
-            // Do something with the result.
-            result?.let {
-                showConfirmationDialog()
-            }
-        }
+        
         initViewModel()
     }
 
