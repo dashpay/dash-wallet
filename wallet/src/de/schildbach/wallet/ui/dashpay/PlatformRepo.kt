@@ -250,7 +250,7 @@ class PlatformRepo @Inject constructor(
         val nameDocuments = if (!onlyExactUsername) {
             platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
         } else {
-            val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN, MulticallQuery.Companion.CallType.UNTIL_FOUND)
+            val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN)
             if (nameDocument != null) {
                 listOf(nameDocument)
             } else {
@@ -270,7 +270,7 @@ class PlatformRepo @Inject constructor(
             result
         } else {
             nameDocuments.map { getIdentityForName(it) }
-        }
+        }.toSet().toList()
 
         val profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
             val profileDocuments = platform.profiles.getList(userIds)
