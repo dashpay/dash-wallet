@@ -722,7 +722,7 @@ class PlatformRepo @Inject constructor(
         // Syncing complete
         return blockchainIdentity.apply {
             currentUsername = blockchainIdentityData.username
-            registrationStatus = blockchainIdentityData.registrationStatus!!
+            registrationStatus = blockchainIdentityData.registrationStatus ?: BlockchainIdentity.RegistrationStatus.NOT_REGISTERED
             val usernameStatus = HashMap<String, Any>()
             // usernameStatus, usernameSalts are not set if preorder hasn't started
             if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.PREORDER_REGISTERING) {
