@@ -144,9 +144,11 @@ class SendInviteOperation(val application: Application) {
 
         val password = SecurityGuard().retrievePassword()
         val sendInviteWorker = OneTimeWorkRequestBuilder<SendInviteWorker>()
-                .setInputData(workDataOf(
-                        SendInviteWorker.KEY_PASSWORD to password,
-                        SendInviteWorker.KEY_INVITE_ID to id))
+                .setInputData(
+                    workDataOf(
+                        SendInviteWorker.KEY_PASSWORD to password
+                    )
+                )
                 .addTag("invite:$id")
                 .build()
 
