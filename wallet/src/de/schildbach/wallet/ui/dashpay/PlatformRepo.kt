@@ -573,7 +573,7 @@ class PlatformRepo @Inject constructor(
             //TODO: remove when iOS uses big endian
             if (cftxData == null)
                 cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
-            val assetLockTx = AssetLockTransaction(platform.params, cftxData!!.transaction)
+            val assetLockTx = AssetLockTransaction(platform.params, cftxData!!)
             val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
             assetLockTx.addAssetLockPublicKey(privateKey)
 
@@ -594,7 +594,7 @@ class PlatformRepo @Inject constructor(
     //
     suspend fun registerIdentityAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
-            Context.getOrCreate(walletApplication.wallet!!.params)
+            Context.propagate(walletApplication.wallet!!.context)
             for (i in 0 until 3) {
                 try {
                     val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
@@ -611,17 +611,6 @@ class PlatformRepo @Inject constructor(
     }
 
     //
-    // Step 3: Verify that the identity is registered
-    //
-    @Deprecated("watch* functions should no longer be used")
-    suspend fun verifyIdentityRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
-        withContext(Dispatchers.IO) {
-            blockchainIdentity.watchIdentity(100, 1000, RetryDelayType.SLOW20)
-                    ?: throw TimeoutException("the identity was not found to be registered in the allotted amount of time")
-        }
-    }
-
-    //
     // Step 3: Find the identity in the case of recovery
     //
     suspend fun recoverIdentityAsync(blockchainIdentity: BlockchainIdentity, creditFundingTransaction: AssetLockTransaction) {
@@ -632,6 +621,7 @@ class PlatformRepo @Inject constructor(
 
     suspend fun recoverIdentityAsync(blockchainIdentity: BlockchainIdentity, publicKeyHash: ByteArray) {
         withContext(Dispatchers.IO) {
+            blockchainIdentity.registrationStatus = BlockchainIdentity.RegistrationStatus.UNKNOWN
             blockchainIdentity.recoverIdentity(publicKeyHash)
         }
     }
@@ -670,7 +660,7 @@ class PlatformRepo @Inject constructor(
         withContext(Dispatchers.IO) {
             val names = blockchainIdentity.preorderedUsernames()
             val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_DOMAIN_CREATE)
-            blockchainIdentity.registerUsernameDomainsForUsernames(names, keyParameter)
+            blockchainIdentity.registerUsernameDomainsForUsernames(names, keyParameter, false)
             timer.logTiming()
         }
     }
@@ -728,6 +718,8 @@ class PlatformRepo @Inject constructor(
             }
             blockchainIdentity
         }
+        // TODO: needs to check against Platform to see if values exist.  Check after
+        // Syncing complete
         return blockchainIdentity.apply {
             currentUsername = blockchainIdentityData.username
             registrationStatus = blockchainIdentityData.registrationStatus!!
@@ -742,16 +734,12 @@ class PlatformRepo @Inject constructor(
                     usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
                 }
                 usernameStatus[BLOCKCHAIN_USERNAME_UNIQUE] = true
-                usernameStatuses[currentUsername!!] = usernameStatus
+                currentUsername ?.let {
+                    usernameStatuses[it] = usernameStatus
+                }
             }
 
             creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
-            //activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0
-            //totalKeyCount = blockchainIdentityData.totalKeyCount ?: 0
-            //keysCreated = blockchainIdentityData.keysCreated ?: 0
-            //currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
-            //currentMainKeyType = blockchainIdentityData.currentMainKeyType
-            //        ?: IdentityPublicKey.Type.ECDSA_SECP256K1
         }
     }
 
@@ -1152,7 +1140,7 @@ class PlatformRepo @Inject constructor(
                 platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
         }
         if (tx != null) {
-            val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx.transaction)
+            val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx)
             val identity = platform.identities.get(cfTx.identityId.toStringBase58())
             if (identity == null) {
                 // determine if the invite has enough credits
