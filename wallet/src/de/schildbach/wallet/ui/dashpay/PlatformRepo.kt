@@ -345,14 +345,14 @@ class PlatformRepo @Inject constructor(
 
             val toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
             val toContactMap = HashMap<String, DashPayContactRequest>()
-            toContactDocuments!!.forEach {
+            toContactDocuments.forEach {
                 userIdList.add(it.toUserId)
                 toContactMap[it.toUserId] = it
             }
             // Get all contact requests where toUserId == userId, the users who have added me
             val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userId)
             val fromContactMap = HashMap<String, DashPayContactRequest>()
-            fromContactDocuments!!.forEach {
+            fromContactDocuments.forEach {
                 userIdList.add(it.userId)
 
                 // It is possible for a contact to send multiple requests that differ by account
@@ -376,7 +376,7 @@ class PlatformRepo @Inject constructor(
             }
 
             val usernameSearchResults = ArrayList<UsernameSearchResult>()
-            val searchText = text.toLowerCase()
+            val searchText = text.lowercase()
 
             for (profile in profiles) {
                 if (profile.value == null) {
@@ -415,7 +415,7 @@ class PlatformRepo @Inject constructor(
                     else it.dashPayProfile.username.lowercase()
                 }
                 UsernameSortOrderBy.USERNAME -> usernameSearchResults.sortBy {
-                    it.dashPayProfile.username.toLowerCase()
+                    it.dashPayProfile.username.lowercase()
                 }
                 UsernameSortOrderBy.DATE_ADDED -> usernameSearchResults.sortByDescending {
                     it.date
