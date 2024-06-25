@@ -53,7 +53,6 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.CheckpointManager;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.FilteredBlock;
-import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
@@ -192,7 +191,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private BlockchainState blockchainState = new BlockchainState(null, 0, false, impediments, 0, 0, 0);
     private int notificationCount = 0;
     private Coin notificationAccumulatedAmount = Coin.ZERO;
-    private final List<Address> notificationAddresses = new LinkedList<Address>();
+    private final List<Address> notificationAddresses = new LinkedList<>();
     private AtomicInteger transactionsReceived = new AtomicInteger();
     private AtomicInteger mnListDiffsReceived = new AtomicInteger();
     private long serviceCreatedAt;

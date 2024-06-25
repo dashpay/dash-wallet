@@ -411,8 +411,8 @@ class PlatformRepo @Inject constructor(
             when (orderBy) {
                 UsernameSortOrderBy.DISPLAY_NAME -> usernameSearchResults.sortBy {
                     if (it.dashPayProfile.displayName.isNotEmpty())
-                        it.dashPayProfile.displayName.toLowerCase()
-                    else it.dashPayProfile.username.toLowerCase()
+                        it.dashPayProfile.displayName.lowercase()
+                    else it.dashPayProfile.username.lowercase()
                 }
                 UsernameSortOrderBy.USERNAME -> usernameSearchResults.sortBy {
                     it.dashPayProfile.username.toLowerCase()

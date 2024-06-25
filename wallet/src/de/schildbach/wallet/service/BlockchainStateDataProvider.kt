@@ -43,7 +43,6 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
 import org.dash.wallet.common.services.BlockchainStateProvider
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
@@ -125,7 +124,7 @@ class BlockchainStateDataProvider @Inject constructor(
             blockchainState.mnlistHeight = mnListHeight
             blockchainState.percentageSync = percentageSync
             blockchainStateDao.saveState(blockchainState)
-            syncStageFlow.value = syncStage;
+            syncStageFlow.value = syncStage
         }
     }
 
@@ -185,7 +184,7 @@ class BlockchainStateDataProvider @Inject constructor(
     }
 
     override fun observeBlockChain(): Flow<AbstractBlockChain?> {
-        return blockchainFlow;
+        return blockchainFlow
     }
 
     override fun observeSyncStage(): Flow<PeerGroup.SyncStage?> {

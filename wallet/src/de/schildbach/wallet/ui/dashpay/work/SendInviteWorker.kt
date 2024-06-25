@@ -31,7 +31,6 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
-import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bouncycastle.crypto.params.KeyParameter

@@ -28,10 +28,8 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
-import org.dashj.platform.dashpay.RetryDelayType
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 interface PlatformBroadcastService {
