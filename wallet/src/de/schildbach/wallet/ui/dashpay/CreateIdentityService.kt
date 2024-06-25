@@ -31,6 +31,7 @@ import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
@@ -130,6 +131,7 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private val walletApplication by lazy { application as WalletApplication }
+    @Inject lateinit var configuration: Configuration
     @Inject lateinit var platformRepo: PlatformRepo
     @Inject lateinit var platformSyncService: PlatformSyncService
     @Inject lateinit var userAlertDao: UserAlertDao
@@ -377,7 +379,7 @@ class CreateIdentityService : LifecycleService() {
             //
             val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
             if (existingIdentity != null) {
-                val encryptionKey = platformRepo.getWalletEncryptionKey()
+                //val encryptionKey = platformRepo.getWalletEncryptionKey()
                 val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
                 platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKeyHash)
             } else {
@@ -522,7 +524,7 @@ class CreateIdentityService : LifecycleService() {
                             throw IllegalStateException("Invite has already been used", exception)
                         }
 
-                    log.error(e.toString());
+                    log.error(e.toString())
                     throw e
                 }
                 throw e
@@ -539,7 +541,7 @@ class CreateIdentityService : LifecycleService() {
                 SendContactRequestOperation(walletApplication)
                         .create(inviterUserId)
                         .enqueue()
-                walletApplication.configuration.apply {
+                configuration.apply {
                     inviter = inviterUserId
                     inviterContactRequestSentInfoShown = false
                 }
