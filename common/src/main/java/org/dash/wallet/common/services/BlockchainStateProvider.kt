@@ -19,6 +19,7 @@ package org.dash.wallet.common.services
 
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.AbstractBlockChain
+import org.bitcoinj.core.PeerGroup
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.NetworkStatus
 
@@ -43,4 +44,6 @@ interface BlockchainStateProvider {
 
     fun getBlockChain(): AbstractBlockChain?
     fun observeBlockChain(): Flow<AbstractBlockChain?>
+
+    fun observeSyncStage(): Flow<PeerGroup.SyncStage?>
 }

@@ -1302,7 +1302,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private void updateBlockchainState() {
-        blockchainStateDataProvider.updateBlockchainState(blockChain, impediments, percentageSync());
+        blockchainStateDataProvider.updateBlockchainState(
+                blockChain, impediments, percentageSync(),
+                peerGroup != null ? peerGroup.getSyncStage() : null
+        );
     }
 
     @Override

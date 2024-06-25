@@ -76,6 +76,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
@@ -144,6 +145,7 @@ class MainViewModel @Inject constructor(
     }
 
     private val workerJob = SupervisorJob()
+
     @VisibleForTesting
     val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
@@ -239,22 +241,11 @@ class MainViewModel @Inject constructor(
         get() = decimalFormat.format((walletData.wallet as WalletEx).coinJoinBalance.toBigDecimal())
 
     // DashPay
+    private val isPlatformAvailable = MutableStateFlow(false)
 
-    private val isPlatformAvailableData = liveData(Dispatchers.IO) {
-        val status = if (Constants.SUPPORTS_PLATFORM) {
-            platformService.isPlatformAvailable()
-        } else {
-            Resource.success(false)
-        }
-        if (status.status == Status.SUCCESS && status.data != null) {
-            emit(status.data)
-        } else {
-            emit(false)
-        }
-    }
 
     val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
-        addSource(isPlatformAvailableData) {
+        addSource(isPlatformAvailable.asLiveData()) {
             value = combineLatestData()
         }
         addSource(_isBlockchainSynced) {
@@ -352,6 +343,19 @@ class MainViewModel @Inject constructor(
                         .filterNotNull()
                         .distinctUntilChanged()
                         .onEach { forceUpdateNotificationCount() }
+                }
+            }
+            .launchIn(viewModelScope)
+
+        blockchainStateProvider.observeSyncStage()
+            .distinctUntilChanged()
+            .onEach { syncStage ->
+                if (syncStage == PeerGroup.SyncStage.PREBLOCKS || syncStage == PeerGroup.SyncStage.BLOCKS && !isPlatformAvailable.value) {
+                    isPlatformAvailable.value = if (Constants.SUPPORTS_PLATFORM) {
+                        platformService.isPlatformAvailable()
+                    } else {
+                        false
+                    }
                 }
             }
             .launchIn(viewModelScope)
@@ -703,7 +707,7 @@ class MainViewModel @Inject constructor(
         return if (Constants.DASHPAY_DISABLED) {
             false
         } else {
-            val isPlatformAvailable = isPlatformAvailableData.value ?: false
+            val isPlatformAvailable = isPlatformAvailable.value
             val isSynced = _isBlockchainSynced.value ?: false
             val noIdentityCreatedOrInProgress =
                 (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE

@@ -56,7 +56,7 @@ interface PlatformService {
     val client: DapiClient
     val params: NetworkParameters
 
-    suspend fun isPlatformAvailable(): Resource<Boolean>
+    suspend fun isPlatformAvailable(): Boolean
     fun hasApp(app: String): Boolean
     fun setMasternodeListManager(masternodeListManager: SimplifiedMasternodeListManager)
 }
@@ -117,23 +117,26 @@ class PlatformServiceImplementation @Inject constructor(
      *
      * @return true if platform is available
      */
-    override suspend fun isPlatformAvailable(): Resource<Boolean> {
+    override suspend fun isPlatformAvailable(): Boolean {
         return withContext(Dispatchers.IO) {
             var success = 0
             val checks = arrayListOf<Deferred<Boolean>>()
             for (i in 0 until 3) {
-                checks.add(async { platform.check() })
+                checks.add(async {
+                    try {
+                        platform.check()
+                    } catch (e: Exception) {
+                        return@async false
+                    }
+                })
             }
 
             for (check in checks) {
                 success += if (check.await()) 1 else 0
             }
 
-            return@withContext if (success >= 2) {
-                Resource.success(true)
-            } else {
-                Resource.error("Platform is not available")
-            }
+            return@withContext success >= 2
+            //return@withContext Resource.success(true)
         }
     }
 
