@@ -106,6 +106,10 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
         walletApplication = requireActivity().application as WalletApplication
 
         createUsernameArgs = arguments?.getParcelable(CREATE_USER_NAME_ARGS)
+        // why are the args not passed via the nav graph?
+        // TODO: fix the passing of arguments or just use the dashPayViewModel
+        if (createUsernameArgs == null)
+            createUsernameArgs = dashPayViewModel.createUsernameArgs
         when (createUsernameArgs?.actions) {
             CreateUsernameActions.DISPLAY_COMPLETE -> {
                 this.completeUsername = createUsernameArgs?.userName!!
