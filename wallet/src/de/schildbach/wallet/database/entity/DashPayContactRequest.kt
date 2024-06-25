@@ -43,14 +43,14 @@ data class DashPayContactRequest(val userId: String,
     companion object {
         fun fromDocument(document: Document): DashPayContactRequest {
             val timestamp: Long = if (document.createdAt != null) document.createdAt!! else 0L
-            val toUserId = Base58.encode(document.data["toUserId"] as ByteArray)
+            val toUserId = Base58.encode((document.data["toUserId"] as Identifier).toBuffer())
 
             val encryptedAccountLabel: ByteArray? = if (document.data.containsKey("encryptedAccountLabel"))
                 document.data["encryptedAccountLabel"] as ByteArray
             else null
 
             val accountReference: Int = if (document.data.containsKey("accountReference"))
-                document.data["accountReference"] as Int
+                (document.data["accountReference"] as Long).toInt()
             else 0
 
             val autoAcceptProof: ByteArray? = if (document.data.containsKey("autoAcceptProof"))
@@ -60,8 +60,8 @@ data class DashPayContactRequest(val userId: String,
             return DashPayContactRequest(document.ownerId.toString(), toUserId,
                     accountReference,
                     document.data["encryptedPublicKey"] as ByteArray,
-                    document.data["senderKeyIndex"] as Int,
-                    document.data["recipientKeyIndex"] as Int,
+                    (document.data["senderKeyIndex"] as Long).toInt(),
+                    (document.data["recipientKeyIndex"] as Long).toInt(),
                     timestamp,
                     encryptedAccountLabel,
                     autoAcceptProof)
