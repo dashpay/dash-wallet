@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.data.explore.model
 import androidx.room.ColumnInfo
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.features.exploredash.ui.extensions.Const
 
 open class SearchResult(
@@ -58,6 +59,15 @@ open class SearchResult(
 
         if (!address4.isNullOrBlank()) {
             addressBuilder.append("${separator}$address4")
+        }
+
+        // CTX records do not use address2, address3, address4
+        if (source?.lowercase() == ServiceName.CTXSpend.lowercase()) {
+            addressBuilder.append("${separator}$city")
+            territory?.let {
+                addressBuilder.append(", ")
+                addressBuilder.append(territory)
+            }
         }
 
         return addressBuilder.toString()

@@ -24,7 +24,7 @@ import com.google.gson.annotations.SerializedName
 data class GetMerchantResponse(
     val id: String,
     val denominations: List<String>,
-    val denominationType: String,
+    val denominationsType: String,
     val savingsPercentage: Int = 0,
     val redeemType: String = ""
 ) {
@@ -38,7 +38,7 @@ data class GetMerchantResponse(
         }
     val maximumCardPurchase: Double
         get() {
-            return when (denominationType) {
+            return when (denominationsType) {
                 "min-max" -> {
                     require(denominations.size == 2)
                     denominations[1].toDouble()
