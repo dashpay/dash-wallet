@@ -16,8 +16,6 @@
  */
 package org.dash.wallet.features.exploredash.data.ctxspend.model
 
-import com.google.gson.annotations.SerializedName
-
 /**
  * denominationType: "min-max", "min-max-major" or "fixed"
  */
