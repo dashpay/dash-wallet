@@ -69,6 +69,7 @@ import org.dash.wallet.common.util.TickerFlow
 import org.dashj.platform.contracts.wallet.TxMetadataItem
 import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.sdk.platform.DomainDocument
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.HashMap
@@ -526,15 +527,14 @@ class PlatformSynchronizationService @Inject constructor(
                 )
                 val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
-                val nameDocuments = platform.names.getList(identifierList)
+                val nameDocuments = platform.names.getList(identifierList).map { DomainDocument(it) }
                 val nameById =
                     nameDocuments.associateBy({ platformRepo.getIdentityForName(it) }, { it })
 
                 for (id in profileById.keys) {
                     if (nameById.containsKey(id)) {
-                        val nameDocument =
-                            nameById[id] // what happens if there is no username for the identity? crash
-                        val username = nameDocument!!.data["normalizedLabel"] as String
+                        val nameDocument = nameById[id]!! // what happens if there is no username for the identity? crash
+                        val username = nameDocument.normalizedLabel
                         val identityId = platformRepo.getIdentityForName(nameDocument)
 
                         val profileDocument = profileById[id]
@@ -565,7 +565,7 @@ class PlatformSynchronizationService @Inject constructor(
                         val nameDocument = nameById[Identifier.from(identityId)]
                         // what happens if there is no username for the identity? crash
                         if (nameDocument != null) {
-                            val username = nameDocument.data["normalizedLabel"] as String
+                            val username = nameDocument.normalizedLabel
                             val identityIdForName = platformRepo.getIdentityForName(nameDocument)
                             dashPayProfileDao.insert(
                                 DashPayProfile(
