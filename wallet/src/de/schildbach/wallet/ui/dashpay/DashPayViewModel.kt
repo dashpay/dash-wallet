@@ -37,7 +37,6 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
-import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -287,7 +286,7 @@ open class DashPayViewModel @Inject constructor(
         analytics.logEvent(event, mapOf())
     }
 
-    protected fun formatExceptionMessage(description: String, e: Exception): String {
+    private fun formatExceptionMessage(description: String, e: Exception): String {
         var msg = if (e.localizedMessage != null) {
             e.localizedMessage
         } else {
@@ -297,9 +296,6 @@ open class DashPayViewModel @Inject constructor(
             msg = "Unknown error - ${e.javaClass.simpleName}"
         }
         log.error("$description: $msg", e)
-        if (e is StatusRuntimeException) {
-            log.error("---> ${e.trailers}")
-        }
         e.printStackTrace()
         return msg
     }

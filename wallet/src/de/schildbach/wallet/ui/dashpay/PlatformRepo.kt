@@ -441,9 +441,6 @@ class PlatformRepo @Inject constructor(
             msg = "Unknown error - ${e.javaClass.simpleName}"
         }
         log.error("$description: $msg", e)
-        if (e is StatusRuntimeException) {
-            log.error("---> ${e.trailers}")
-        }
         return msg
     }
 
@@ -827,7 +824,7 @@ class PlatformRepo @Inject constructor(
                 return true
             }
             return false
-        } catch (e: StatusRuntimeException) {
+        } catch (e: Exception) {
             formatExceptionMessage("update profile failure", e)
             return false
         }
