@@ -145,7 +145,7 @@ open class BlockchainIdentityConfig @Inject constructor(
         val BALANCE = longPreferencesKey("identity_balance")
     }
 
-    val identityData: Flow<BlockchainIdentityData> = data
+    private val identityData: Flow<BlockchainIdentityData> = data
         .map { prefs ->
             BlockchainIdentityData(
                 creationState = BlockchainIdentityData.CreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
@@ -165,7 +165,7 @@ open class BlockchainIdentityConfig @Inject constructor(
             )
         }
 
-    val identityBaseData: Flow<BlockchainIdentityBaseData> = data
+    private val identityBaseData: Flow<BlockchainIdentityBaseData> = data
         .map { prefs ->
             BlockchainIdentityBaseData(
                 1,
