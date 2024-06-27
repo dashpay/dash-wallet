@@ -68,7 +68,7 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
     private val binding by viewBinding(FragmentCreateUsernameBinding::bind)
 
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
-    val confirmTransactionSharedViewModel: PlatformPaymentConfirmDialog.SharedViewModel by activityViewModels()
+    private val confirmTransactionSharedViewModel: PlatformPaymentConfirmDialog.SharedViewModel by activityViewModels()
     private lateinit var walletApplication: WalletApplication
 
     private var reuseTransaction: Boolean = false

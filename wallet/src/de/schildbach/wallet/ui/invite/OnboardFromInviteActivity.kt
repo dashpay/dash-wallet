@@ -109,7 +109,7 @@ class OnboardFromInviteActivity : AppCompatActivity() {
                 finish()
             }
         }
-        mode = Mode.values()[intent.getIntExtra(EXTRA_MODE, 0)]
+        mode = Mode.entries.toTypedArray()[intent.getIntExtra(EXTRA_MODE, 0)]
         OnboardingState.add()
     }
 
@@ -135,6 +135,7 @@ class OnboardFromInviteActivity : AppCompatActivity() {
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (mode == Mode.STEP_3) {
             startActivity(goNextIntent)

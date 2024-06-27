@@ -33,6 +33,7 @@ import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import de.schildbach.wallet.ui.username.CreateUsernameFragment
 import de.schildbach.wallet.ui.username.voting.RequestUserNameViewModel
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 
@@ -88,6 +89,7 @@ class CreateUsernameActivity : InteractionAwareActivity() {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
