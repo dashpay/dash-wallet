@@ -29,7 +29,6 @@ import androidx.work.WorkInfo
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.ui.ContactSuggestionViewHolder
 import de.schildbach.wallet.ui.ContactViewHolder
 import de.schildbach.wallet.ui.OnContactRequestButtonClickListener
 import de.schildbach.wallet.ui.OnItemClickListener
@@ -92,7 +91,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
                 ContactViewHolder(binding, useFriendsIcon = false)
             }
             CONTACT_NO_RESULTS -> {
-                val binding = NoContactsResultsBinding.inflate(inflater)
+                val binding = NoContactsResultsBinding.inflate(inflater, parent, false)
                 ContactsNoResultsViewHolder(binding)
             }
             CONTACTS_SUGGESTIONS_HEADER -> {
@@ -100,8 +99,8 @@ class ContactSearchResultsAdapter(private val listener: Listener,
                 ContactsSuggestionsHeaderViewHolder(binding)
             }
             CONTACT_SUGGESTION_ROW -> {
-                val binding = DashpayContactSuggestionRowBinding.inflate(inflater)
-                ContactSuggestionViewHolder(binding, isSuggestion = true)
+                val binding = DashpayContactRowBinding.inflate(inflater, parent, false)
+                ContactViewHolder(binding, isSuggestion = true)
             }
             else -> throw IllegalArgumentException("Invalid viewType $viewType")
         }
@@ -148,7 +147,10 @@ class ContactSearchResultsAdapter(private val listener: Listener,
             CONTACT_HEADER -> (holder as ContactHeaderViewHolder).bind()
             CONTACT_NO_RESULTS -> (holder as ContactsNoResultsViewHolder).bind()
             CONTACTS_SUGGESTIONS_HEADER -> (holder as ContactsSuggestionsHeaderViewHolder).bind(query)
-            CONTACT_SUGGESTION_ROW -> (holder as ContactSuggestionViewHolder).bind(item.usernameSearchResult!!, null, itemClickListener, listener)
+            CONTACT_SUGGESTION_ROW -> {
+                val sendContactRequestWorkState = sendContactRequestWorkStateMap[item.usernameSearchResult!!.dashPayProfile.userId]
+                (holder as ContactViewHolder).bind(item.usernameSearchResult!!, sendContactRequestWorkState, itemClickListener, listener)
+            }
             else -> throw IllegalArgumentException("Invalid viewType ${item.viewType}")
         }
     }
