@@ -23,13 +23,11 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.ContactRowBinding
 import de.schildbach.wallet_test.databinding.DashpayContactRowBinding
 
-class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListener: ContactViewHolder.OnContactRequestButtonClickListener) : RecyclerView.Adapter<ContactViewHolder>() {
+class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListener: OnContactRequestButtonClickListener) : RecyclerView.Adapter<ContactViewHolder>() {
 
-    var itemClickListener: ContactViewHolder.OnItemClickListener? = null
+    var itemClickListener: OnItemClickListener? = null
     var results: List<UsernameSearchResult> = arrayListOf()
         set(value) {
             field = value

@@ -28,23 +28,22 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.ContactRowBinding
 import de.schildbach.wallet_test.databinding.DashpayContactRowBinding
 import de.schildbach.wallet_test.databinding.DashpayContactRowContentBinding
 import de.schildbach.wallet_test.databinding.DashpayContactSuggestionRowBinding
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
+interface OnItemClickListener {
+    fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
+}
+
+interface OnContactRequestButtonClickListener {
+    fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
+    fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
+}
+
 class ContactViewHolder(val binding: DashpayContactRowBinding, val isSuggestion: Boolean = false, val useFriendsIcon: Boolean = true)
     : RecyclerView.ViewHolder(binding.root) {
-
-    interface OnItemClickListener {
-        fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
-    }
-
-    interface OnContactRequestButtonClickListener {
-        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
-        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
-    }
 
     val contactRowBinding = DashpayContactRowContentBinding.bind(binding.contactRow)
 
@@ -123,15 +122,6 @@ class ContactViewHolder(val binding: DashpayContactRowBinding, val isSuggestion:
 
 class ContactSuggestionViewHolder(val binding: DashpayContactSuggestionRowBinding, val isSuggestion: Boolean = false, val useFriendsIcon: Boolean = true)
     : RecyclerView.ViewHolder(binding.root) {
-
-    interface OnItemClickListener {
-        fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
-    }
-
-    interface OnContactRequestButtonClickListener {
-        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
-        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
-    }
 
     val contactRowBinding = DashpayContactRowContentBinding.bind(binding.contactRow)
 

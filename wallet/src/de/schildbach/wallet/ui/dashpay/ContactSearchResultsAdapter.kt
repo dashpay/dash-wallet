@@ -31,12 +31,12 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.ContactSuggestionViewHolder
 import de.schildbach.wallet.ui.ContactViewHolder
+import de.schildbach.wallet.ui.OnContactRequestButtonClickListener
+import de.schildbach.wallet.ui.OnItemClickListener
 import de.schildbach.wallet.util.PlatformUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ContactHeaderRowBinding
 import de.schildbach.wallet_test.databinding.ContactRequestHeaderRowBinding
-import de.schildbach.wallet_test.databinding.ContactRequestRowBinding
-import de.schildbach.wallet_test.databinding.ContactRowBinding
 import de.schildbach.wallet_test.databinding.ContactsSuggestionsHeaderBinding
 import de.schildbach.wallet_test.databinding.DashpayContactRowBinding
 import de.schildbach.wallet_test.databinding.DashpayContactSuggestionRowBinding
@@ -64,7 +64,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         setHasStableIds(true)
     }
 
-    var itemClickListener: ContactViewHolder.OnItemClickListener? = null
+    var itemClickListener: OnItemClickListener? = null
     var results: ArrayList<ViewItem> = arrayListOf()
         set(value) {
             field = value
@@ -148,7 +148,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
             CONTACT_HEADER -> (holder as ContactHeaderViewHolder).bind()
             CONTACT_NO_RESULTS -> (holder as ContactsNoResultsViewHolder).bind()
             CONTACTS_SUGGESTIONS_HEADER -> (holder as ContactsSuggestionsHeaderViewHolder).bind(query)
-            CONTACT_SUGGESTION_ROW -> (holder as ContactViewHolder).bind(item.usernameSearchResult!!, null, itemClickListener, listener)
+            CONTACT_SUGGESTION_ROW -> (holder as ContactSuggestionViewHolder).bind(item.usernameSearchResult!!, null, itemClickListener, listener)
             else -> throw IllegalArgumentException("Invalid viewType ${item.viewType}")
         }
     }
@@ -236,7 +236,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         }
     }
 
-    interface Listener : ContactViewHolder.OnContactRequestButtonClickListener {
+    interface Listener : OnContactRequestButtonClickListener {
         fun onSortOrderChanged(direction: UsernameSortOrderBy)
         fun onSearchUser()
     }
