@@ -289,7 +289,11 @@ class PlatformRepo @Inject constructor(
 
         for (domainDoc in nameDocuments) {
             val nameDoc = DomainDocument(domainDoc)
-            //Remove own user document from result
+            if (nameDoc.dashAliasIdentityId != null) {
+                continue // skip aliases
+            }
+
+                //Remove own user document from result
             val nameDocIdentityId = getIdentityForName(nameDoc)
             if (nameDocIdentityId == userId) {
                 continue
