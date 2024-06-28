@@ -534,7 +534,7 @@ class PlatformSynchronizationService @Inject constructor(
                 for (id in profileById.keys) {
                     if (nameById.containsKey(id)) {
                         val nameDocument = nameById[id]!! // what happens if there is no username for the identity? crash
-                        val username = nameDocument.normalizedLabel
+                        val username = nameDocument.label
                         val identityId = platformRepo.getIdentityForName(nameDocument)
 
                         val profileDocument = profileById[id]
@@ -565,7 +565,7 @@ class PlatformSynchronizationService @Inject constructor(
                         val nameDocument = nameById[Identifier.from(identityId)]
                         // what happens if there is no username for the identity? crash
                         if (nameDocument != null) {
-                            val username = nameDocument.normalizedLabel
+                            val username = nameDocument.label
                             val identityIdForName = platformRepo.getIdentityForName(nameDocument)
                             dashPayProfileDao.insert(
                                 DashPayProfile(

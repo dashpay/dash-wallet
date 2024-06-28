@@ -311,20 +311,20 @@ class PlatformRepo @Inject constructor(
                 }
             }
 
-            val username = nameDoc.normalizedLabel
+            val username = nameDoc.label
             val profileDoc = profileById[nameDocIdentityId]
 
             val dashPayProfile = if (profileDoc != null)
                 DashPayProfile.fromDocument(profileDoc, username)!!
             else DashPayProfile(nameDocIdentityId.toString(), username)
 
-            usernameSearchResults.add(UsernameSearchResult(nameDoc.normalizedLabel,
+            usernameSearchResults.add(UsernameSearchResult(username,
                     dashPayProfile, toContact, fromContact))
         }
 
         // TODO: this is only needed when Proofs don't sort results
         // This was added in v0.20
-        usernameSearchResults.sortBy { it.username }
+        usernameSearchResults.sortBy { Names.normalizeString(it.username) }
 
         return usernameSearchResults
     }
@@ -628,6 +628,7 @@ class PlatformRepo @Inject constructor(
     }
 
     //Step 6: Create DashPay Profile
+    @Deprecated("Don't need this function when creating an identity")
     suspend fun createDashPayProfile(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter) {
         withContext(Dispatchers.IO) {
             val username = blockchainIdentity.currentUsername!!
@@ -769,7 +770,7 @@ class PlatformRepo @Inject constructor(
             val nameDocuments = platform.names.getByOwnerId(userId)
 
             if (nameDocuments.isNotEmpty()) {
-                val username = nameDocuments[0].data["normalizedLabel"] as String
+                val username = DomainDocument(nameDocuments[0]).label
 
                 val profile = DashPayProfile.fromDocument(profileDocument, username)
                 dashPayProfileDao.insert(profile!!)
