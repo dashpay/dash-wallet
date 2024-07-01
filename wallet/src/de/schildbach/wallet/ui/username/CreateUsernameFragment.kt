@@ -68,7 +68,7 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
     private val binding by viewBinding(FragmentCreateUsernameBinding::bind)
 
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
-    val confirmTransactionSharedViewModel: PlatformPaymentConfirmDialog.SharedViewModel by activityViewModels()
+    private val confirmTransactionSharedViewModel: PlatformPaymentConfirmDialog.SharedViewModel by activityViewModels()
     private lateinit var walletApplication: WalletApplication
 
     private var reuseTransaction: Boolean = false
@@ -106,6 +106,10 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
         walletApplication = requireActivity().application as WalletApplication
 
         createUsernameArgs = arguments?.getParcelable(CREATE_USER_NAME_ARGS)
+        // why are the args not passed via the nav graph?
+        // TODO: fix the passing of arguments or just use the dashPayViewModel
+        if (createUsernameArgs == null)
+            createUsernameArgs = dashPayViewModel.createUsernameArgs
         when (createUsernameArgs?.actions) {
             CreateUsernameActions.DISPLAY_COMPLETE -> {
                 this.completeUsername = createUsernameArgs?.userName!!

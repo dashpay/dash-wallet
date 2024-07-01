@@ -53,8 +53,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.util.observe
 
 @AndroidEntryPoint
-class SearchUserActivity : LockScreenActivity(), ContactViewHolder.OnItemClickListener,
-        ContactViewHolder.OnContactRequestButtonClickListener {
+class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactRequestButtonClickListener {
 
     companion object {
 

@@ -31,6 +31,7 @@ import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
@@ -130,6 +131,7 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private val walletApplication by lazy { application as WalletApplication }
+    @Inject lateinit var configuration: Configuration
     @Inject lateinit var platformRepo: PlatformRepo
     @Inject lateinit var platformSyncService: PlatformSyncService
     @Inject lateinit var userAlertDao: UserAlertDao
@@ -266,7 +268,7 @@ class CreateIdentityService : LifecycleService() {
             (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring) -> {
                 // TODO: handle case when blockchain reset has happened and the cftx was not found yet
                 val cftx = blockchainIdentityDataTmp.findAssetLockTransaction(walletApplication.wallet)
-                        ?: throw IllegalStateException()
+                        ?: throw IllegalStateException("can't find asset lock transaction")
 
                 restoreIdentity(cftx.identityId.bytes)
                 return
@@ -306,6 +308,8 @@ class CreateIdentityService : LifecycleService() {
                     isInvalidLockProof) {
                 blockchainIdentityData.creationState = CreationState.NONE
                 blockchainIdentityData.creditFundingTxId = null
+                isRetry = true
+            } else if (blockchainIdentityData.creationState >= CreationState.IDENTITY_REGISTERED) {
                 isRetry = true
             }
         }
@@ -348,6 +352,7 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_SENDING)
             val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_ISLOCK)
             // check to see if the funding transaction has been sent previously
+            org.bitcoinj.core.Context.propagate(wallet.context)
             val sent = blockchainIdentity.assetLockTransaction!!.confidence?.let {
                 it.isSent || it.isIX || it.numBroadcastPeers() > 0 || it.confidenceType == TransactionConfidence.ConfidenceType.BUILDING
             } ?: false
@@ -372,13 +377,11 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 3: Register the identity
             //
-            if(isRetry) {
-                val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
-                if (existingIdentity != null) {
-                    val encryptionKey = platformRepo.getWalletEncryptionKey()
-                    val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
-                    platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKey)
-                }
+            val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
+            if (existingIdentity != null) {
+                //val encryptionKey = platformRepo.getWalletEncryptionKey()
+                val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
+                platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKeyHash)
             } else {
                 platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
             }
@@ -498,13 +501,11 @@ class CreateIdentityService : LifecycleService() {
             // Step 3: Register the identity
             //
             try {
-                if(isRetry) {
-                    val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
-                    if (existingIdentity != null) {
-                        val encryptionKey = platformRepo.getWalletEncryptionKey()
-                        val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
-                        platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKey)
-                    }
+                val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
+                if (existingIdentity != null) {
+                    val encryptionKey = platformRepo.getWalletEncryptionKey()
+                    val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
+                    platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKeyHash)
                 } else {
                     platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
                 }
@@ -523,7 +524,7 @@ class CreateIdentityService : LifecycleService() {
                             throw IllegalStateException("Invite has already been used", exception)
                         }
 
-                    log.error(e.toString());
+                    log.error(e.toString())
                     throw e
                 }
                 throw e
@@ -540,7 +541,7 @@ class CreateIdentityService : LifecycleService() {
                 SendContactRequestOperation(walletApplication)
                         .create(inviterUserId)
                         .enqueue()
-                walletApplication.configuration.apply {
+                configuration.apply {
                     inviter = inviterUserId
                     inviterContactRequestSentInfoShown = false
                 }
@@ -551,6 +552,8 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private suspend fun finishRegistration(blockchainIdentity: BlockchainIdentity, encryptionKey: KeyParameter) {
+        // TODO: let's delay to make sure that the identity is propagated
+        delay(20000)
 
         // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
         if (blockchainIdentityData.creationState <= CreationState.IDENTITY_REGISTERED) {
@@ -581,7 +584,7 @@ class CreateIdentityService : LifecycleService() {
             //
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
-
+        delay(30000) // 20 sec delay for platform sync
         if (blockchainIdentityData.creationState <= CreationState.USERNAME_REGISTERING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERING)
             //
@@ -610,6 +613,7 @@ class CreateIdentityService : LifecycleService() {
         addInviteUserAlert(walletApplication.wallet!!)
 
         platformRepo.init()
+        platformSyncService.initSync()
 
         timerStep3.logTiming()
         // aaaand we're done :)
@@ -734,6 +738,7 @@ class CreateIdentityService : LifecycleService() {
 
         platformSyncService.updateSyncStatus(PreBlockStage.RecoveryComplete)
         platformRepo.init()
+        platformSyncService.initSync()
     }
 
     /**

@@ -34,6 +34,7 @@ import org.bitcoinj.core.BlockChain
 import org.bitcoinj.core.CheckpointManager
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.StoredBlock
 import org.bitcoinj.store.BlockStoreException
 import org.dash.wallet.common.Configuration
@@ -42,7 +43,6 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
 import org.dash.wallet.common.services.BlockchainStateProvider
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
@@ -86,6 +86,7 @@ class BlockchainStateDataProvider @Inject constructor(
 
     private val networkStatusFlow = MutableStateFlow(NetworkStatus.UNKNOWN)
     private val blockchainFlow = MutableStateFlow<AbstractBlockChain?>(null)
+    private val syncStageFlow = MutableStateFlow<PeerGroup.SyncStage?>(null)
 
     override suspend fun getState(): BlockchainState? {
         return blockchainStateDao.getState()
@@ -106,7 +107,7 @@ class BlockchainStateDataProvider @Inject constructor(
         }
     }
 
-    fun updateBlockchainState(blockChain: BlockChain, impediments: Set<Impediment>, percentageSync: Int) {
+    fun updateBlockchainState(blockChain: BlockChain, impediments: Set<Impediment>, percentageSync: Int, syncStage: PeerGroup.SyncStage?) {
         coroutineScope.launch {
             var blockchainState = blockchainStateDao.getState()
             if (blockchainState == null) {
@@ -123,6 +124,7 @@ class BlockchainStateDataProvider @Inject constructor(
             blockchainState.mnlistHeight = mnListHeight
             blockchainState.percentageSync = percentageSync
             blockchainStateDao.saveState(blockchainState)
+            syncStageFlow.value = syncStage
         }
     }
 
@@ -182,7 +184,11 @@ class BlockchainStateDataProvider @Inject constructor(
     }
 
     override fun observeBlockChain(): Flow<AbstractBlockChain?> {
-        return blockchainFlow;
+        return blockchainFlow
+    }
+
+    override fun observeSyncStage(): Flow<PeerGroup.SyncStage?> {
+        return syncStageFlow
     }
 
     override fun getMasternodeAPY(): Double {

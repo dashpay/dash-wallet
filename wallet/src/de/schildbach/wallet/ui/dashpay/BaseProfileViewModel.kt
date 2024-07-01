@@ -47,8 +47,8 @@ open class BaseProfileViewModel(
         blockchainIdentityDataDao.observeBase()
             .distinctUntilChanged()
             .onEach(_blockchainIdentity::postValue)
-            .filter { it?.userId != null }
-            .flatMapLatest { dashPayProfileDao.observeByUserId(it?.userId!!) }
+            .filter { it.userId != null }
+            .flatMapLatest { dashPayProfileDao.observeByUserId(it.userId!!) }
             .distinctUntilChanged()
             .onEach(_dashPayProfile::postValue)
             .launchIn(viewModelScope)

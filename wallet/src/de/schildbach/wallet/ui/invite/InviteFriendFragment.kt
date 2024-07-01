@@ -22,14 +22,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentInviteFriendBinding
@@ -79,17 +76,9 @@ class InviteFriendFragment() :
         walletApplication = requireActivity().application as WalletApplication
         binding.createInvitationButton.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Invites.INVITE_FRIEND)
-            safeNavigate(InviteFriendFragmentDirections.inviteFriendFragmentToUsernamePrivacy())
+            showConfirmationDialog()
         }
-
-        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<CoinJoinMode?>("mode")?.observe(
-            viewLifecycleOwner,
-        ) { result ->
-            // Do something with the result.
-            result?.let {
-                showConfirmationDialog()
-            }
-        }
+        
         initViewModel()
     }
 
@@ -106,39 +95,36 @@ class InviteFriendFragment() :
     private fun confirmButtonClick(startedByHistory: Boolean) {
         showProgress()
         viewModel.sendInviteTransaction()
-        viewModel.sendInviteStatusLiveData.observe(
-            viewLifecycleOwner,
-            Observer {
-                if (it.status != Status.LOADING) {
-                    dismissProgress()
-                }
-                when (it.status) {
-                    Status.SUCCESS -> {
-                        if (it.data != null) {
-                            safeNavigate(
-                                InviteFriendFragmentDirections
-                                    .inviteFriendFragmentToInviteCreatedFragment(identityId = it.data.userId, startedFromHistory = startedByHistory),
-                            )
-                        }
-                    }
-                    Status.LOADING -> {
-                        // sending has begun
-                    }
-                    else -> {
-                        // there was an error sending
-                        val errorDialog = FancyAlertDialog.newInstance(
-                            R.string.invitation_creating_error_title,
-                            R.string.invitation_creating_error_message,
-                            R.drawable.ic_error_creating_invitation,
-                            R.string.okay,
-                            0,
+        viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner) {
+            if (it.status != Status.LOADING) {
+                dismissProgress()
+            }
+            when (it.status) {
+                Status.SUCCESS -> {
+                    if (it.data != null) {
+                        safeNavigate(
+                            InviteFriendFragmentDirections
+                                .inviteFriendFragmentToInviteCreatedFragment(identityId = it.data.userId, startedFromHistory = startedByHistory),
                         )
-                        errorDialog.show(childFragmentManager, null)
-                        viewModel.logEvent(AnalyticsConstants.Invites.ERROR_CREATE)
                     }
                 }
-            },
-        )
+                Status.LOADING -> {
+                    // sending has begun
+                }
+                else -> {
+                    // there was an error sending
+                    val errorDialog = FancyAlertDialog.newInstance(
+                        R.string.invitation_creating_error_title,
+                        R.string.invitation_creating_error_message,
+                        R.drawable.ic_error_creating_invitation,
+                        R.string.okay,
+                        0,
+                    )
+                    errorDialog.show(childFragmentManager, null)
+                    viewModel.logEvent(AnalyticsConstants.Invites.ERROR_CREATE)
+                }
+            }
+        }
     }
 
     private fun showConfirmationDialog() {

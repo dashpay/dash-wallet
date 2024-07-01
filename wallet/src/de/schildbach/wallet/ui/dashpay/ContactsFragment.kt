@@ -70,7 +70,7 @@ enum class ContactsScreenMode {
 @AndroidEntryPoint
 class ContactsFragment : Fragment(),
         ContactSearchResultsAdapter.Listener,
-        ContactViewHolder.OnItemClickListener {
+        OnItemClickListener {
 
     private val binding by viewBinding(FragmentContactsRootBinding::bind)
     private val dashPayViewModel by viewModels<DashPayViewModel>()

@@ -5,7 +5,6 @@ import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.delay
 import org.slf4j.LoggerFactory
 
@@ -57,9 +56,6 @@ abstract class BaseWorker(context: Context, parameters: WorkerParameters)
             msg = "Unknown error - ${e.javaClass.simpleName}"
         }
         log.error("$description: $msg", e)
-        if (e is StatusRuntimeException) {
-            log.error("---> ${e.trailers}")
-        }
         return msg
     }
 }

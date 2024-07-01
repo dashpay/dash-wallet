@@ -128,7 +128,7 @@ public final class Constants {
 
     /** Bitcoinj global context. */
     public static final Context CONTEXT = new Context(NETWORK_PARAMETERS);
-    public static final boolean DASHPAY_DISABLED = true;
+    public static final boolean DASHPAY_DISABLED = false;
 
     public final static class Files {
 

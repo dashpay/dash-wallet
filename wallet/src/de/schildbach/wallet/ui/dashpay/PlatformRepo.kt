@@ -48,6 +48,7 @@ import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.quorums.InstantSendLock
+import org.bitcoinj.quorums.LLMQParameters
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
@@ -69,9 +70,9 @@ import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAsse
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.toHex
+import org.dashj.platform.sdk.callbacks.ContextProvider
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
-import org.dashj.platform.sdk.platform.multicall.MulticallQuery
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeoutException
@@ -136,6 +137,8 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun init() {
+        // load the dash-sdk library
+        System.loadLibrary("sdklib")
         authenticationGroupExtension = walletApplication.wallet?.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
         blockchainIdentityDataDao.load()?.let {
             blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet!!)
@@ -247,7 +250,7 @@ class PlatformRepo @Inject constructor(
         val nameDocuments = if (!onlyExactUsername) {
             platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
         } else {
-            val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN, MulticallQuery.Companion.CallType.UNTIL_FOUND)
+            val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN)
             if (nameDocument != null) {
                 listOf(nameDocument)
             } else {
@@ -257,7 +260,7 @@ class PlatformRepo @Inject constructor(
         val userIds = if (onlyExactUsername) {
             val result = mutableListOf<Identifier>()
             val exactNameDoc = try {
-                nameDocuments.first { text == it.data["normalizedLabel"] }
+                DomainDocument(nameDocuments.first { text == it.data["normalizedLabel"] })
             } catch (e: NoSuchElementException) {
                 null
             }
@@ -266,8 +269,8 @@ class PlatformRepo @Inject constructor(
             }
             result
         } else {
-            nameDocuments.map { getIdentityForName(it) }
-        }
+            nameDocuments.map { getIdentityForName(DomainDocument(it)) }
+        }.toSet().toList()
 
         val profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
             val profileDocuments = platform.profiles.getList(userIds)
@@ -278,16 +281,19 @@ class PlatformRepo @Inject constructor(
         }
 
         val toContactDocuments = dashPayContactRequestDao.loadToOthers(userIdString)
-                ?: arrayListOf()
 
         // Get all contact requests where toUserId == userId
         val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userIdString)
-                ?: arrayListOf()
 
         val usernameSearchResults = ArrayList<UsernameSearchResult>()
 
-        for (nameDoc in nameDocuments) {
-            //Remove own user document from result
+        for (domainDoc in nameDocuments) {
+            val nameDoc = DomainDocument(domainDoc)
+            if (nameDoc.dashAliasIdentityId != null) {
+                continue // skip aliases
+            }
+
+                //Remove own user document from result
             val nameDocIdentityId = getIdentityForName(nameDoc)
             if (nameDocIdentityId == userId) {
                 continue
@@ -309,20 +315,20 @@ class PlatformRepo @Inject constructor(
                 }
             }
 
-            val username = nameDoc.data["normalizedLabel"] as String
+            val username = nameDoc.label
             val profileDoc = profileById[nameDocIdentityId]
 
             val dashPayProfile = if (profileDoc != null)
                 DashPayProfile.fromDocument(profileDoc, username)!!
             else DashPayProfile(nameDocIdentityId.toString(), username)
 
-            usernameSearchResults.add(UsernameSearchResult(nameDoc.data["normalizedLabel"] as String,
+            usernameSearchResults.add(UsernameSearchResult(username,
                     dashPayProfile, toContact, fromContact))
         }
 
         // TODO: this is only needed when Proofs don't sort results
         // This was added in v0.20
-        usernameSearchResults.sortBy { it.username }
+        usernameSearchResults.sortBy { Names.normalizeString(it.username) }
 
         return usernameSearchResults
     }
@@ -342,14 +348,14 @@ class PlatformRepo @Inject constructor(
 
             val toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
             val toContactMap = HashMap<String, DashPayContactRequest>()
-            toContactDocuments!!.forEach {
+            toContactDocuments.forEach {
                 userIdList.add(it.toUserId)
                 toContactMap[it.toUserId] = it
             }
             // Get all contact requests where toUserId == userId, the users who have added me
             val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userId)
             val fromContactMap = HashMap<String, DashPayContactRequest>()
-            fromContactDocuments!!.forEach {
+            fromContactDocuments.forEach {
                 userIdList.add(it.userId)
 
                 // It is possible for a contact to send multiple requests that differ by account
@@ -373,7 +379,7 @@ class PlatformRepo @Inject constructor(
             }
 
             val usernameSearchResults = ArrayList<UsernameSearchResult>()
-            val searchText = text.toLowerCase()
+            val searchText = text.lowercase()
 
             for (profile in profiles) {
                 if (profile.value == null) {
@@ -408,11 +414,11 @@ class PlatformRepo @Inject constructor(
             when (orderBy) {
                 UsernameSortOrderBy.DISPLAY_NAME -> usernameSearchResults.sortBy {
                     if (it.dashPayProfile.displayName.isNotEmpty())
-                        it.dashPayProfile.displayName.toLowerCase()
-                    else it.dashPayProfile.username.toLowerCase()
+                        it.dashPayProfile.displayName.lowercase()
+                    else it.dashPayProfile.username.lowercase()
                 }
                 UsernameSortOrderBy.USERNAME -> usernameSearchResults.sortBy {
-                    it.dashPayProfile.username.toLowerCase()
+                    it.dashPayProfile.username.lowercase()
                 }
                 UsernameSortOrderBy.DATE_ADDED -> usernameSearchResults.sortByDescending {
                     it.date
@@ -438,9 +444,6 @@ class PlatformRepo @Inject constructor(
             msg = "Unknown error - ${e.javaClass.simpleName}"
         }
         log.error("$description: $msg", e)
-        if (e is StatusRuntimeException) {
-            log.error("---> ${e.trailers}")
-        }
         return msg
     }
 
@@ -486,53 +489,6 @@ class PlatformRepo @Inject constructor(
         return this::blockchainIdentity.isInitialized
     }
 
-/*
-    @Throws(Exception::class)
-    suspend fun sendContactRequest(toUserId: String): DashPayContactRequest {
-        if (walletApplication.wallet!!.isEncrypted) {
-            // always create a SecurityGuard when it is required
-            val securityGuard = SecurityGuard()
-            val password = securityGuard.retrievePassword()
-            // Don't bother with DeriveKeyTask here, just call deriveKey
-            val encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
-            return sendContactRequest(toUserId, encryptionKey)
-        }
-        throw IllegalStateException("sendContactRequest doesn't support non-encrypted wallets")
-    }
-
-    @Throws(Exception::class)
-    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): DashPayContactRequest {
-        val potentialContactIdentity = platform.identities.get(toUserId)
-        log.info("potential contact identity: $potentialContactIdentity")
-
-        //Create Contact Request
-        val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
-        val cr = contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
-        timer.logTiming()
-        log.info("contact request sent")
-
-        // add our receiving from this contact keychain if it doesn't exist
-        val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
-
-        if (!walletApplication.wallet!!.hasReceivingKeyChain(contact)) {
-            Context.propagate(walletApplication.wallet!!.context)
-            blockchainIdentity.addPaymentKeyChainFromContact(potentialContactIdentity, cr, encryptionKey)
-
-            // update bloom filters now on main thread
-            mainHandler.post {
-                updateBloomFilters()
-            }
-        }
-
-        log.info("contact request: $cr")
-        val dashPayContactRequest = DashPayContactRequest.fromDocument(cr!!)
-        updateDashPayContactRequest(dashPayContactRequest) //update the database since the cr was accepted
-        updateDashPayProfile(toUserId) // update the profile
-        fireContactsUpdatedListeners() // trigger listeners
-        return dashPayContactRequest
-    }
-*/
-
     //
     // Step 1 is to upgrade the wallet to support authentication keys
     //
@@ -570,7 +526,7 @@ class PlatformRepo @Inject constructor(
             //TODO: remove when iOS uses big endian
             if (cftxData == null)
                 cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
-            val assetLockTx = AssetLockTransaction(platform.params, cftxData!!.transaction)
+            val assetLockTx = AssetLockTransaction(platform.params, cftxData!!)
             val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
             assetLockTx.addAssetLockPublicKey(privateKey)
 
@@ -591,7 +547,7 @@ class PlatformRepo @Inject constructor(
     //
     suspend fun registerIdentityAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
-            Context.getOrCreate(walletApplication.wallet!!.params)
+            Context.propagate(walletApplication.wallet!!.context)
             for (i in 0 until 3) {
                 try {
                     val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
@@ -608,17 +564,6 @@ class PlatformRepo @Inject constructor(
     }
 
     //
-    // Step 3: Verify that the identity is registered
-    //
-    @Deprecated("watch* functions should no longer be used")
-    suspend fun verifyIdentityRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
-        withContext(Dispatchers.IO) {
-            blockchainIdentity.watchIdentity(100, 1000, RetryDelayType.SLOW20)
-                    ?: throw TimeoutException("the identity was not found to be registered in the allotted amount of time")
-        }
-    }
-
-    //
     // Step 3: Find the identity in the case of recovery
     //
     suspend fun recoverIdentityAsync(blockchainIdentity: BlockchainIdentity, creditFundingTransaction: AssetLockTransaction) {
@@ -629,6 +574,7 @@ class PlatformRepo @Inject constructor(
 
     suspend fun recoverIdentityAsync(blockchainIdentity: BlockchainIdentity, publicKeyHash: ByteArray) {
         withContext(Dispatchers.IO) {
+            blockchainIdentity.registrationStatus = BlockchainIdentity.RegistrationStatus.UNKNOWN
             blockchainIdentity.recoverIdentity(publicKeyHash)
         }
     }
@@ -667,7 +613,7 @@ class PlatformRepo @Inject constructor(
         withContext(Dispatchers.IO) {
             val names = blockchainIdentity.preorderedUsernames()
             val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_DOMAIN_CREATE)
-            blockchainIdentity.registerUsernameDomainsForUsernames(names, keyParameter)
+            blockchainIdentity.registerUsernameDomainsForUsernames(names, keyParameter, false)
             timer.logTiming()
         }
     }
@@ -686,6 +632,7 @@ class PlatformRepo @Inject constructor(
     }
 
     //Step 6: Create DashPay Profile
+    @Deprecated("Don't need this function when creating an identity")
     suspend fun createDashPayProfile(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter) {
         withContext(Dispatchers.IO) {
             val username = blockchainIdentity.currentUsername!!
@@ -725,9 +672,11 @@ class PlatformRepo @Inject constructor(
             }
             blockchainIdentity
         }
+        // TODO: needs to check against Platform to see if values exist.  Check after
+        // Syncing complete
         return blockchainIdentity.apply {
             currentUsername = blockchainIdentityData.username
-            registrationStatus = blockchainIdentityData.registrationStatus!!
+            registrationStatus = blockchainIdentityData.registrationStatus ?: BlockchainIdentity.RegistrationStatus.NOT_REGISTERED
             val usernameStatus = HashMap<String, Any>()
             // usernameStatus, usernameSalts are not set if preorder hasn't started
             if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.PREORDER_REGISTERING) {
@@ -739,16 +688,12 @@ class PlatformRepo @Inject constructor(
                     usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
                 }
                 usernameStatus[BLOCKCHAIN_USERNAME_UNIQUE] = true
-                usernameStatuses[currentUsername!!] = usernameStatus
+                currentUsername ?.let {
+                    usernameStatuses[it] = usernameStatus
+                }
             }
 
             creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
-            //activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0
-            //totalKeyCount = blockchainIdentityData.totalKeyCount ?: 0
-            //keysCreated = blockchainIdentityData.keysCreated ?: 0
-            //currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
-            //currentMainKeyType = blockchainIdentityData.currentMainKeyType
-            //        ?: IdentityPublicKey.Type.ECDSA_SECP256K1
         }
     }
 
@@ -829,14 +774,14 @@ class PlatformRepo @Inject constructor(
             val nameDocuments = platform.names.getByOwnerId(userId)
 
             if (nameDocuments.isNotEmpty()) {
-                val username = nameDocuments[0].data["normalizedLabel"] as String
+                val username = DomainDocument(nameDocuments[0]).label
 
                 val profile = DashPayProfile.fromDocument(profileDocument, username)
                 dashPayProfileDao.insert(profile!!)
                 return true
             }
             return false
-        } catch (e: StatusRuntimeException) {
+        } catch (e: Exception) {
             formatExceptionMessage("update profile failure", e)
             return false
         }
@@ -911,11 +856,9 @@ class PlatformRepo @Inject constructor(
      * obtains the identity associated with the username (domain document)
      * @throws NullPointerException if neither the unique id or alias exists
      */
-    fun getIdentityForName(nameDocument: Document): Identifier {
-        val domainDocument = DomainDocument(nameDocument)
-
+    fun getIdentityForName(nameDocument: DomainDocument): Identifier {
         // look at the unique identity first, followed by the alias
-        return domainDocument.dashUniqueIdentityId ?: domainDocument.dashAliasIdentityId!!
+        return nameDocument.dashUniqueIdentityId ?: nameDocument.dashAliasIdentityId!!
     }
 
     suspend fun getLocalUserProfile(): DashPayProfile? {
@@ -977,6 +920,34 @@ class PlatformRepo @Inject constructor(
         Preconditions.checkState(key.path.last().isHardened)
         return key
 
+    }
+
+    val contextProvider = object : ContextProvider() {
+        override fun getQuorumPublicKey(
+            quorumType: Int,
+            quorumHashBytes: ByteArray?,
+            coreChainLockedHeight: Int
+        ): ByteArray? {
+            val quorumHash = Sha256Hash.wrap(quorumHashBytes)
+            var quorumPublicKey: ByteArray? = null
+            log.info("searching for quorum: $quorumType, $quorumHash, $coreChainLockedHeight")
+            Context.propagate(walletApplication.wallet!!.context)
+            Context.get().masternodeListManager.getQuorumListAtTip(
+                LLMQParameters.LLMQType.fromValue(
+                    quorumType
+                )
+            ).forEachQuorum(true) {
+                if (it.llmqType.value == quorumType && it.quorumHash == quorumHash) {
+                    quorumPublicKey = it.quorumPublicKey.serialize(false)
+                }
+            }
+            log.info("searching for quorum: result: ${quorumPublicKey?.toHex()}")
+            return quorumPublicKey
+        }
+
+        override fun getDataContract(identifier: org.dashj.platform.sdk.Identifier?): ByteArray {
+            TODO("Not yet implemented")
+        }
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
@@ -1121,7 +1092,7 @@ class PlatformRepo @Inject constructor(
                 platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
         }
         if (tx != null) {
-            val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx.transaction)
+            val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx)
             val identity = platform.identities.get(cfTx.identityId.toStringBase58())
             if (identity == null) {
                 // determine if the invite has enough credits

@@ -28,10 +28,8 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
-import org.dashj.platform.dashpay.RetryDelayType
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 interface PlatformBroadcastService {
@@ -127,20 +125,11 @@ class PlatformDocumentBroadcastService @Inject constructor(
         timer.logTiming()
         log.info("profile broadcast")
 
-        //Verify that the Contact Request was seen on the network
-        val updatedProfile = blockchainIdentity.watchProfile(100, 5000, RetryDelayType.LINEAR)
+        // TODO: Verify that the Contact Request was seen on the network?
 
-        if (createdProfile != updatedProfile) {
-            log.warn("Created profile doesn't match profile from network $createdProfile != $updatedProfile")
-        }
-
-        log.info("updated profile: $updatedProfile")
-        if (updatedProfile != null) {
-            val updatedDashPayProfile = DashPayProfile.fromDocument(updatedProfile, dashPayProfile.username)
-            platformRepo.updateDashPayProfile(updatedDashPayProfile!!) //update the database since the cr was accepted
-            return updatedDashPayProfile
-        } else {
-            throw TimeoutException("timeout when updating profile")
-        }
+        log.info("updated profile: $createdProfile")
+        val updatedDashPayProfile = DashPayProfile.fromDocument(createdProfile, dashPayProfile.username)
+        platformRepo.updateDashPayProfile(updatedDashPayProfile!!) //update the database since the cr was accepted
+        return updatedDashPayProfile
     }
 }

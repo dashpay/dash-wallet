@@ -69,6 +69,7 @@ import org.dash.wallet.common.util.TickerFlow
 import org.dashj.platform.contracts.wallet.TxMetadataItem
 import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.sdk.platform.DomainDocument
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.HashMap
@@ -84,6 +85,7 @@ import kotlin.time.Duration.Companion.seconds
 
 interface PlatformSyncService {
     fun init()
+    fun initSync()
     fun resume()
     fun shutdown()
 
@@ -104,14 +106,14 @@ interface PlatformSyncService {
 }
 
 class PlatformSynchronizationService @Inject constructor(
-    val platform: PlatformService,
-    val platformRepo: PlatformRepo,
+    private val platform: PlatformService,
+    private val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
-    val config: DashPayConfig,
-    val walletApplication: WalletApplication,
-    val transactionMetadataProvider: TransactionMetadataProvider,
-    val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
-    val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
+    private val config: DashPayConfig,
+    private val walletApplication: WalletApplication,
+    private val transactionMetadataProvider: TransactionMetadataProvider,
+    private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
+    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
     private val blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val dashPayProfileDao: DashPayProfileDao,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
@@ -128,7 +130,7 @@ class PlatformSynchronizationService @Inject constructor(
         val CUTOFF_MAX = if (BuildConfig.DEBUG) 6.minutes else 6.hours
     }
 
-    private lateinit var platformSyncJob: Job
+    private var platformSyncJob: Job? = null
     private val updatingContacts = AtomicBoolean(false)
     private val preDownloadBlocks = AtomicBoolean(false)
     private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
@@ -144,17 +146,13 @@ class PlatformSynchronizationService @Inject constructor(
     override fun init() {
         syncScope.launch { platformRepo.init() }
         log.info("Starting the platform sync job")
-        initSync()
     }
 
     override fun resume() {
-        if (!platformSyncJob.isActive && platformRepo.hasIdentity) {
-            log.info("Resuming the platform sync job")
-            initSync()
-        }
+        // This method may not be required.  initSync must be called by PreBlockDownload handler
     }
 
-    private fun initSync() {
+    override fun initSync() {
         platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY)
             .onEach { updateContactRequests() }
             .launchIn(syncScope)
@@ -176,10 +174,12 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override fun shutdown() {
-        if (platformRepo.hasIdentity) {
-            Preconditions.checkState(platformSyncJob.isActive)
+        if (platformSyncJob != null && platformRepo.hasIdentity) {
+            Preconditions.checkState(platformSyncJob!!.isActive)
             log.info("Shutting down the platform sync job")
             syncScope.coroutineContext.cancelChildren(CancellationException("shutdown the platform sync"))
+            platformSyncJob!!.cancel(null)
+            platformSyncJob = null
         }
     }
 
@@ -344,15 +344,17 @@ class PlatformSynchronizationService @Inject constructor(
             log.error(platformRepo.formatExceptionMessage("error updating contacts", e))
         } finally {
             updatingContacts.set(false)
-            if (preDownloadBlocks.get()) {
-                finishPreBlockDownload()
-            }
+
 
             counterForReport++
             if (counterForReport % 8 == 0) {
                 // record the report to the logs every 2 minutes
                 log.info(platform.client.reportNetworkStatus())
             }
+        }
+        // This needs to be here to ensure that the pre-block download stage always completes
+        if (preDownloadBlocks.get()) {
+            finishPreBlockDownload()
         }
     }
 
@@ -525,15 +527,14 @@ class PlatformSynchronizationService @Inject constructor(
                 )
                 val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
-                val nameDocuments = platform.names.getList(identifierList)
+                val nameDocuments = platform.names.getList(identifierList).map { DomainDocument(it) }
                 val nameById =
                     nameDocuments.associateBy({ platformRepo.getIdentityForName(it) }, { it })
 
                 for (id in profileById.keys) {
                     if (nameById.containsKey(id)) {
-                        val nameDocument =
-                            nameById[id] // what happens if there is no username for the identity? crash
-                        val username = nameDocument!!.data["normalizedLabel"] as String
+                        val nameDocument = nameById[id]!! // what happens if there is no username for the identity? crash
+                        val username = nameDocument.label
                         val identityId = platformRepo.getIdentityForName(nameDocument)
 
                         val profileDocument = profileById[id]
@@ -564,7 +565,7 @@ class PlatformSynchronizationService @Inject constructor(
                         val nameDocument = nameById[Identifier.from(identityId)]
                         // what happens if there is no username for the identity? crash
                         if (nameDocument != null) {
-                            val username = nameDocument.data["normalizedLabel"] as String
+                            val username = nameDocument.label
                             val identityIdForName = platformRepo.getIdentityForName(nameDocument)
                             dashPayProfileDao.insert(
                                 DashPayProfile(
@@ -1039,7 +1040,7 @@ class PlatformSynchronizationService @Inject constructor(
 
         // Nevertheless, platformSyncJob should be inactive when the BlockchainService is destroyed
         // Perhaps the updateContactRequests method is being run while the job is canceled
-        if (platformSyncJob.isActive) {
+        if (platformSyncJob?.isActive == true) {
             if (isRunningInForeground()) {
                 log.info("attempting to update bloom filters when the app is in the foreground")
                 val intent = Intent(
@@ -1056,7 +1057,10 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     /**
-     * Called before DashJ starts synchronizing the blockchain
+     * Called before DashJ starts synchronizing the blockchain,
+     * Platform DAPI calls should be delayed until this function
+     * is called because an updated Masternode and Quorun List is
+     * required for proof verification
      */
     override fun preBlockDownload(future: SettableFuture<Boolean>) {
         syncScope.launch(Dispatchers.IO) {
@@ -1097,6 +1101,7 @@ class PlatformSynchronizationService @Inject constructor(
             else if (!updatingContacts.get()) {
                 updateContactRequests()
             }
+            initSync()
         }
     }
 
