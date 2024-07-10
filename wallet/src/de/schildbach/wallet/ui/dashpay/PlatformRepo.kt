@@ -922,34 +922,6 @@ class PlatformRepo @Inject constructor(
 
     }
 
-    val contextProvider = object : ContextProvider() {
-        override fun getQuorumPublicKey(
-            quorumType: Int,
-            quorumHashBytes: ByteArray?,
-            coreChainLockedHeight: Int
-        ): ByteArray? {
-            val quorumHash = Sha256Hash.wrap(quorumHashBytes)
-            var quorumPublicKey: ByteArray? = null
-            log.info("searching for quorum: $quorumType, $quorumHash, $coreChainLockedHeight")
-            Context.propagate(walletApplication.wallet!!.context)
-            Context.get().masternodeListManager.getQuorumListAtTip(
-                LLMQParameters.LLMQType.fromValue(
-                    quorumType
-                )
-            ).forEachQuorum(true) {
-                if (it.llmqType.value == quorumType && it.quorumHash == quorumHash) {
-                    quorumPublicKey = it.quorumPublicKey.serialize(false)
-                }
-            }
-            log.info("searching for quorum: result: ${quorumPublicKey?.toHex()}")
-            return quorumPublicKey
-        }
-
-        override fun getDataContract(identifier: org.dashj.platform.sdk.Identifier?): ByteArray {
-            TODO("Not yet implemented")
-        }
-    }
-
     fun getIdentityFromPublicKeyId(): Identity? {
         val encryptionKey = getWalletEncryptionKey()
         val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey) ?: return null
