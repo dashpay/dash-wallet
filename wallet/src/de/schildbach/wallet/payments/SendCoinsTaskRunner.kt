@@ -268,6 +268,7 @@ class SendCoinsTaskRunner @Inject constructor(
         return sendRequest
     }
 
+
     @VisibleForTesting
     fun createSendRequest(
         address: Address,

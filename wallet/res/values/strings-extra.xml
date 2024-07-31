@@ -704,4 +704,14 @@
     <string name="stale_exchange_rates_error">Prices weren\'t retrieved. Fiat values may be incorrect.</string>
     <string name="stale_exchange_rates_stale">Prices are at least 30 minutes old. Fiat values may be incorrect.</string>
     <string name="stale_exchange_rates_volatile">Prices have fluctuated more than 50% since the last update.</string>
+
+    <!-- credit balance messages / buttons -->
+    <string name="credit_balance_empty_warning_title">Your credit balance is low</string>
+    <string name="credit_balance_low_warning_title">Your credit balance is fully depleted</string>
+    <string name="credit_balance_empty_warning_message">"You can continue to use DashPay for payments but you cannot update your profile or add more contacts until you top up your credit balance</string>
+    <string name="credit_balance_low_warning_message">Top-up your credits to continue making changes to your profile and adding contacts</string>
+    <string name="credit_balance_button_maybe_later">Maybe later</string>
+    <string name="credit_balance_button_buy">Buy Credits</string>
+    <string name="credit_balance_insufficient_error_message">You don’t have enough funds to buy credits</string>
+    <string name="buy_credits_estimated_items">%s - %d contacts / %d profile updates</string>
 </resources>

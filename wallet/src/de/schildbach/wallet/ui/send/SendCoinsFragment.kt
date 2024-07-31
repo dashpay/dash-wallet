@@ -60,21 +60,21 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
+open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsFragment::class.java)
         private const val SEND_COINS_SOUND = "send_coins_broadcast_1"
     }
 
-    private val binding by viewBinding(SendCoinsFragmentBinding::bind)
-    private val viewModel by activityViewModels<SendCoinsViewModel>()
-    private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
+    protected val binding by viewBinding(SendCoinsFragmentBinding::bind)
+    protected val viewModel by activityViewModels<SendCoinsViewModel>()
+    protected val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
     private val dashPayViewModel by activityViewModels<DashPayViewModel>()
     private val args by navArgs<SendCoinsFragmentArgs>()
 
     @Inject lateinit var authManager: AuthenticationManager
-    private var enterAmountFragment: EnterAmountFragment? = null
-    private var userAuthorizedDuring: Boolean = false
+    protected var enterAmountFragment: EnterAmountFragment? = null
+    protected var userAuthorizedDuring: Boolean = false
         get() = field || enterAmountFragment?.didAuthorize == true
         set(value) {
             field = value
@@ -171,7 +171,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
     }
 
-    private fun updateView() {
+    protected open fun updateView() {
         val isReplaying = viewModel.isBlockchainReplaying.value
         val dryRunException = viewModel.dryRunException
         val state = viewModel.state.value ?: SendCoinsViewModel.State.INPUT
@@ -206,13 +206,13 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         )
     }
 
-    private fun getErrorMessage(@StringRes errorMessage: Int) = if (!requirePinForBalance || userAuthorizedDuring) {
+    protected fun getErrorMessage(@StringRes errorMessage: Int) = if (!requirePinForBalance || userAuthorizedDuring) {
         getString(errorMessage)
     } else {
         ""
     }
 
-    private suspend fun authenticateOrConfirm() {
+    open suspend fun authenticateOrConfirm() {
         if (!viewModel.everythingPlausible()) {
             return
         }
@@ -250,6 +250,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 }
 
                 val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate, checkBalance)
+
                 onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
             } catch (ex: LeftoverBalanceException) {
                 val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
@@ -271,7 +272,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
     }
 
-    private suspend fun showPaymentConfirmation() {
+    protected open suspend fun showPaymentConfirmation() {
         val dryRunRequest = viewModel.dryrunSendRequest ?: return
         val address = viewModel.basePaymentIntent.address?.toBase58() ?: return
 
@@ -344,7 +345,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         requireActivity().finish()
     }
 
-    private fun showTransactionResult(transaction: Transaction, autoAcceptContactRequest: Boolean) {
+    protected fun showTransactionResult(transaction: Transaction, autoAcceptContactRequest: Boolean) {
         if (!isAdded) {
             return
         }
@@ -365,7 +366,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         startActivity(transactionResultIntent)
     }
 
-    private fun playSentSound() {
+    protected fun playSentSound() {
         if (!viewModel.shouldPlaySounds) {
             return
         }
@@ -393,7 +394,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         binding.paymentHeader.setBalanceValue(balanceText)
     }
 
-    private suspend fun showInsufficientMoneyDialog(missing: Coin) {
+    protected suspend fun showInsufficientMoneyDialog(missing: Coin) {
         val msg = StringBuilder(
             getString(
                 R.string.send_coins_fragment_insufficient_money_msg1,
@@ -438,7 +439,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
     }
 
-    private suspend fun showEmptyWalletFailedDialog() {
+    protected suspend fun showEmptyWalletFailedDialog() {
         AdaptiveDialog.create(
             R.drawable.ic_error,
             getString(R.string.send_coins_fragment_empty_wallet_failed_title),
@@ -448,7 +449,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         ).showAsync(requireActivity())
     }
 
-    private suspend fun showFailureDialog(exception: Exception) {
+    protected suspend fun showFailureDialog(exception: Exception) {
         AdaptiveDialog.create(
             R.drawable.ic_error,
             getString(R.string.send_coins_error_msg),

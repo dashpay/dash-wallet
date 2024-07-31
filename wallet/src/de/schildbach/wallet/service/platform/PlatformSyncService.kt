@@ -380,6 +380,7 @@ class PlatformSynchronizationService @Inject constructor(
         val contact = EvolutionContact(userId, contactRequest.toUserId.toString())
         try {
             if (!platformRepo.walletApplication.wallet!!.hasReceivingKeyChain(contact)) {
+                Context.propagate(walletApplication.wallet!!.context)
                 log.info("adding accepted/send request to wallet: ${contactRequest.toUserId}")
                 val contactIdentity = platform.identities.get(contactRequest.toUserId)
                 var myEncryptionKey = encryptionKey

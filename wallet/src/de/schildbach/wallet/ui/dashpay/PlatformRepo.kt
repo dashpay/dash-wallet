@@ -48,7 +48,6 @@ import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.quorums.InstantSendLock
-import org.bitcoinj.quorums.LLMQParameters
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
@@ -70,7 +69,6 @@ import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAsse
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.toHex
-import org.dashj.platform.sdk.callbacks.ContextProvider
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
@@ -512,6 +510,14 @@ class PlatformRepo @Inject constructor(
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
             val cftx = blockchainIdentity.createAssetLockTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin, true)
+            blockchainIdentity.initializeAssetLockTransaction(cftx)
+        }
+    }
+
+    suspend fun createTopupTransactionAsync(blockchainIdentity: BlockchainIdentity, topupAmount: Coin, keyParameter: KeyParameter?, useCoinJoin: Boolean) {
+        withContext(Dispatchers.IO) {
+            Context.propagate(walletApplication.wallet!!.context)
+            val cftx = blockchainIdentity.createTopupFundingTransaction(topupAmount, keyParameter, useCoinJoin, true)
             blockchainIdentity.initializeAssetLockTransaction(cftx)
         }
     }
@@ -1191,5 +1197,9 @@ class PlatformRepo @Inject constructor(
             report.append("\n")
         }
         return report.toString()
+    }
+
+    suspend fun getIdentityBalance(): CreditBalanceInfo {
+        return CreditBalanceInfo(platform.client.getIdentityBalance(blockchainIdentity.uniqueIdentifier))
     }
 }
