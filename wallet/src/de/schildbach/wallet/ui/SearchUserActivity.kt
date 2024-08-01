@@ -47,9 +47,13 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySearchDashpayProfileRootBinding
 import kotlinx.coroutines.launch
+import org.bitcoinj.wallet.AuthenticationKeyChain
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.observe
 
 @AndroidEntryPoint
@@ -301,7 +305,39 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        // need to check balance
         dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+
+            lifecycleScope.launch {
+                val enough = dashPayViewModel.hasEnoughCredits()
+                // TODO: before merging remove this
+                val shouldWarn = true // enough.isBalanceWarning()
+                val isEmpty = enough.isBalanceWarning()
+
+                if (shouldWarn || isEmpty) {
+                    val answer = AdaptiveDialog.create(
+                        R.drawable.ic_warning_yellow_circle,
+                        if (isEmpty) getString(R.string.credit_balance_empty_warning_title) else getString(R.string.credit_balance_low_warning_title),
+                        if (isEmpty) getString(R.string.credit_balance_empty_warning_message) else getString(R.string.credit_balance_low_warning_message),
+                        getString(R.string.credit_balance_button_maybe_later),
+                        getString(R.string.credit_balance_button_buy)
+                    ).showAsync(this@SearchUserActivity)
+
+                    if (answer == true) {
+                        val authenticationGroupExtension =
+                            walletData.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
+                        val pubKeyHash =
+                            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP).pubKeyHash
+                        SendCoinsActivity.startBuyCredits(this@SearchUserActivity, pubKeyHash)
+                    } else {
+                        if (shouldWarn)
+                            dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+                    }
+                } else {
+                    dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+                }
+            }
+
     }
 
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
