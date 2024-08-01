@@ -35,12 +35,16 @@ import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.notification.NotificationsViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentNotificationsBinding
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.bitcoinj.wallet.AuthenticationKeyChain
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
@@ -254,11 +258,39 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
 
     fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.NOTIFICATIONS_ACCEPT_REQUEST)
-        dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+        sendContactRequest(usernameSearchResult)
     }
 
     fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         // this Ignmore Request function is not currently implemented
+    }
+
+    fun sendContactRequest(usernameSearchResult: UsernameSearchResult) {
+        lifecycleScope.launch {
+            val enough = dashPayViewModel.hasEnoughCredits()
+            // TODO: before merging remove this
+            val shouldWarn = true // enough.isBalanceWarning()
+            val isEmpty = enough.isBalanceWarning()
+
+            if (shouldWarn || isEmpty) {
+                val answer = AdaptiveDialog.create(
+                    R.drawable.ic_warning_yellow_circle,
+                    if (isEmpty) getString(R.string.credit_balance_empty_warning_title) else getString(R.string.credit_balance_low_warning_title),
+                    if (isEmpty) getString(R.string.credit_balance_empty_warning_message) else getString(R.string.credit_balance_low_warning_message),
+                    getString(R.string.credit_balance_button_maybe_later),
+                    getString(R.string.credit_balance_button_buy)
+                ).showAsync(requireActivity())
+
+                if (answer == true) {
+                   SendCoinsActivity.startBuyCredits(requireActivity())
+                } else {
+                    if (shouldWarn)
+                        dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+                }
+            } else {
+                dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+            }
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

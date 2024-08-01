@@ -208,11 +208,7 @@ class DashPayUserActivity : LockScreenActivity() {
                 ).showAsync(this@DashPayUserActivity)
 
                 if (answer == true) {
-                    val authenticationGroupExtension =
-                        walletData.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
-                    val pubKeyHash =
-                        authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP).pubKeyHash
-                    SendCoinsActivity.startBuyCredits(this@DashPayUserActivity, pubKeyHash)
+                    SendCoinsActivity.startBuyCredits(this@DashPayUserActivity)
                 } else {
                     if (shouldWarn)
                         viewModel.sendContactRequest()

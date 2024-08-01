@@ -73,7 +73,7 @@ open class SendCoinsActivity : LockScreenActivity() {
             context.startActivity(intent)
         }
 
-        fun startBuyCredits(context: Context, pubKeyHash: ByteArray) {
+        fun startBuyCredits(context: Context) {
             val intent = Intent(context, SendCoinsActivity::class.java)
 
             val paymentIntent = PaymentIntent(

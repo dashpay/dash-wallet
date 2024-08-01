@@ -439,9 +439,7 @@ class EditProfileActivity : LockScreenActivity() {
                 ).showAsync(this@EditProfileActivity)
 
                 if (answer == true) {
-                    val authenticationGroupExtension = walletData.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
-                    val pubKeyHash = authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP).pubKeyHash
-                    SendCoinsActivity.startBuyCredits(this@EditProfileActivity, pubKeyHash)
+                    SendCoinsActivity.startBuyCredits(this@EditProfileActivity)
                 } else {
                     if (shouldWarn)
                         save()
