@@ -308,32 +308,31 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
         // need to check balance
         dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
 
-            lifecycleScope.launch {
-                val enough = dashPayViewModel.hasEnoughCredits()
-                // TODO: before merging remove this
-                val shouldWarn = true // enough.isBalanceWarning()
-                val isEmpty = enough.isBalanceWarning()
+        lifecycleScope.launch {
+            val enough = dashPayViewModel.hasEnoughCredits()
+            // TODO: before merging remove this
+            val shouldWarn = true // enough.isBalanceWarning()
+            val isEmpty = enough.isBalanceWarning()
 
-                if (shouldWarn || isEmpty) {
-                    val answer = AdaptiveDialog.create(
-                        R.drawable.ic_warning_yellow_circle,
-                        if (isEmpty) getString(R.string.credit_balance_empty_warning_title) else getString(R.string.credit_balance_low_warning_title),
-                        if (isEmpty) getString(R.string.credit_balance_empty_warning_message) else getString(R.string.credit_balance_low_warning_message),
-                        getString(R.string.credit_balance_button_maybe_later),
-                        getString(R.string.credit_balance_button_buy)
-                    ).showAsync(this@SearchUserActivity)
+            if (shouldWarn || isEmpty) {
+                val answer = AdaptiveDialog.create(
+                    R.drawable.ic_warning_yellow_circle,
+                    if (isEmpty) getString(R.string.credit_balance_empty_warning_title) else getString(R.string.credit_balance_low_warning_title),
+                    if (isEmpty) getString(R.string.credit_balance_empty_warning_message) else getString(R.string.credit_balance_low_warning_message),
+                    getString(R.string.credit_balance_button_maybe_later),
+                    getString(R.string.credit_balance_button_buy)
+                ).showAsync(this@SearchUserActivity)
 
-                    if (answer == true) {
-                        SendCoinsActivity.startBuyCredits(this@SearchUserActivity)
-                    } else {
-                        if (shouldWarn)
-                            dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
-                    }
+                if (answer == true) {
+                    SendCoinsActivity.startBuyCredits(this@SearchUserActivity)
                 } else {
-                    dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+                    if (shouldWarn)
+                        dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
                 }
+            } else {
+                dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
             }
-
+        }
     }
 
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
