@@ -189,9 +189,9 @@ android {
     android.ndkVersion '21.3.6528147'
 
     defaultConfig {
-        compileSdk 33
+        compileSdk 34
         minSdkVersion 24
-        targetSdkVersion 33
+        targetSdkVersion 34
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 101010
         versionName project.hasProperty('versionName') ? project.property('versionName') : "10.1.1"
         multiDexEnabled true
