@@ -173,6 +173,9 @@ class ExploreDatabaseMigrations {
                     database.execSQL(
                         "ALTER TABLE merchant ADD COLUMN redeemType TEXT DEFAULT 'barcode'"
                     )
+                    database.execSQL(
+                        "ALTER TABLE merchant ADD COLUMN savingsPercentage INTEGER DEFAULT 0"
+                    )
                 }
             }
     }

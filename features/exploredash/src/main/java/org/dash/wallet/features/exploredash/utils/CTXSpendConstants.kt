@@ -20,5 +20,6 @@ object CTXSpendConstants {
     const val BASE_URL = "https://spend.ctx.com/"
     const val CLIENT_ID_PARAM_NAME = "clientId"
     @JvmField var CLIENT_ID = ""
-    const val DEFAULT_DISCOUNT = 0.0
+    const val DEFAULT_DISCOUNT: Int = 0 // 0%
+    const val DEFAULT_DISCOUNT_AS_DOUBLE: Double = 0.0 // 0%
 }

@@ -116,10 +116,6 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
         binding.subtitle.text = getDistanceText(resources, merchant)
         binding.subtitle.isVisible = merchant?.type != MerchantType.ONLINE && binding.subtitle.text.isNotEmpty()
 
-        if (merchant?.source?.lowercase() == ServiceName.CTXSpend) {
-            merchant.logoLocation = CTXSpendConstants.BASE_URL + "merchants/" + merchant.merchantId + "/logo"
-        }
-
         binding.logoImg.load(merchant?.logoLocation) {
             crossfade(200)
             scale(Scale.FILL)

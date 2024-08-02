@@ -40,7 +40,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseCtxspendGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.PurchaseGiftCardConfirmDialog
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
-import org.dash.wallet.features.exploredash.utils.CTXSpendConstants.DEFAULT_DISCOUNT
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants.DEFAULT_DISCOUNT_AS_DOUBLE
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 fun min(a: Coin, b: Coin?): Coin {
@@ -159,9 +159,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     private fun setDiscountHint() {
         val merchant = viewModel.giftCardMerchant
-        val savingsPercentage = merchant.savingsPercentage ?: DEFAULT_DISCOUNT
+        val savingsPercentage = merchant.savingsPercentageAsDouble
 
-        if (savingsPercentage != DEFAULT_DISCOUNT) {
+        if (savingsPercentage != DEFAULT_DISCOUNT_AS_DOUBLE) {
             val purchaseAmount = enterAmountViewModel.amount.value
             if (purchaseAmount != null && purchaseAmount != Coin.ZERO) {
                 val rate = enterAmountViewModel.selectedExchangeRate.value

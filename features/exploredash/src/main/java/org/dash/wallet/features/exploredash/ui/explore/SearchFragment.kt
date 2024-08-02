@@ -675,9 +675,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheet.state = setBottomSheetState(expand)
 
         viewModel.selectedItem.value?.let { item ->
-            if (item.source?.lowercase() == ServiceName.CTXSpend) {
-                item.logoLocation = CTXSpendConstants.BASE_URL + "location/" + item.sourceId + "/logo"
-            }
             val header =
                 MerchantLocationsHeaderAdapter(
                     item.name ?: "",

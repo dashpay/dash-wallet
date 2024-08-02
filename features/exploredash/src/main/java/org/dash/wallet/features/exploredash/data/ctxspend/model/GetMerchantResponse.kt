@@ -26,9 +26,6 @@ data class GetMerchantResponse(
     val savingsPercentage: Int = 0,
     val redeemType: String = ""
 ) {
-    val savings: Double
-        get() = savingsPercentage.toDouble() / 100
-
     val minimumCardPurchase: Double
         get() {
             require(denominations.isNotEmpty())

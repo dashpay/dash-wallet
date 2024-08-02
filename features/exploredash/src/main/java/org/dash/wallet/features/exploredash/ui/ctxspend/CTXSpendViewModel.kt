@@ -75,7 +75,7 @@ class CTXSpendViewModel @Inject constructor(
 
     val balanceWithDiscount: Coin?
         get() = _balance.value?.let {
-            val d = (giftCardMerchant.savingsPercentage ?: 0.00) / 100
+            val d = giftCardMerchant.savingsPercentageAsDouble
             return Coin.valueOf((it.value / (1.0 - d)).toLong()).minus(Transaction.DEFAULT_TX_FEE.multiply(20))
         }
 
@@ -152,7 +152,7 @@ class CTXSpendViewModel @Inject constructor(
         if (response is ResponseResource.Success) {
             try {
                 response.value?.let {
-                    merchant.savingsPercentage = it.savings
+                    merchant.savingsPercentage = it.savingsPercentage
                     merchant.minCardPurchase = it.minimumCardPurchase
                     merchant.maxCardPurchase = it.maximumCardPurchase
                 }

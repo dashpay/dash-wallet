@@ -197,9 +197,6 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             locationHint.isVisible = false
             backButton.isVisible = !isOnline && !isGrouped
 
-            if (merchant.source?.lowercase() == ServiceName.CTXSpend) {
-                merchant.logoLocation = CTXSpendConstants.BASE_URL + "merchants/" + merchant.merchantId + "/logo"
-            }
             loadImage(merchant.logoLocation, itemImage)
             itemType.text = getMerchantType(merchant.type)
             itemAddress.isVisible = !isOnline
