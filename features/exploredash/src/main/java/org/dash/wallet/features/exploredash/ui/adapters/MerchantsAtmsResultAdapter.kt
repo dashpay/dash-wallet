@@ -28,13 +28,11 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
-import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.AtmRowBinding
 import org.dash.wallet.features.exploredash.databinding.MerchantRowBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
-import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import java.util.*
 
 open class ExploreViewHolder(root: View) : RecyclerView.ViewHolder(root) {

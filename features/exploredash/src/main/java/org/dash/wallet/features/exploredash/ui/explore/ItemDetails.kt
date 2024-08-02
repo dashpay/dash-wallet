@@ -43,7 +43,6 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
-import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
