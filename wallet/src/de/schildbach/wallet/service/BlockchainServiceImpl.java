@@ -28,6 +28,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.content.pm.ServiceInfo;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -1074,7 +1075,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         //Shows ongoing notification promoting service to foreground service and
         //preventing it from being killed in Android 26 or later
         Notification notification = createNetworkSyncNotification(null);
-        startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        else
+            startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
     }
 
     @Override
