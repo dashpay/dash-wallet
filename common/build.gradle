@@ -7,9 +7,9 @@ apply plugin: 'dagger.hilt.android.plugin'
 android {
 
     defaultConfig {
-        compileSdk 33
+        compileSdk 34
         minSdkVersion 24
-        targetSdkVersion 33
+        targetSdkVersion 34
         vectorDrawables.useSupportLibrary = true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

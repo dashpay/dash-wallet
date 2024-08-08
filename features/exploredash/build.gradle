@@ -10,9 +10,9 @@ plugins {
 
 android {
     defaultConfig {
-        compileSdk 33
+        compileSdk 34
         minSdkVersion 24
-        targetSdkVersion 33
+        targetSdkVersion 34
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
         javaCompileOptions {
@@ -115,7 +115,7 @@ dependencies {
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
     testImplementation "androidx.arch.core:core-testing:$coreTestingVersion"
-    testImplementation "org.robolectric:robolectric:4.9.2"
+    testImplementation "org.robolectric:robolectric:4.13"
     testImplementation "androidx.room:room-testing:$roomVersion"
 
     androidTestImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
