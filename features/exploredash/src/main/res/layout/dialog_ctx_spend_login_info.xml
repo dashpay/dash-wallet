@@ -31,7 +31,7 @@
         android:layout_height="60dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginHorizontal="20dp"
-        android:src="@drawable/ic_dashspend_logo" />
+        android:src="@drawable/ic_ctx_logo_blue" />
 
     <TextView
         android:id="@+id/dialog_title"

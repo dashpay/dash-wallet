@@ -50,6 +50,11 @@ data class Merchant(
     var redeemType: String? = "",
     @Ignore var minCardPurchase: Double? = null,
     @Ignore var maxCardPurchase: Double? = null,
-    @Ignore var savingsPercentage: Double? = null,
+    var savingsPercentage: Int? = 0,
     @Ignore var physicalAmount: Int = 0
-) : SearchResult()
+) : SearchResult() {
+
+    // 1% discount is 0.01
+    val savingsPercentageAsDouble: Double
+        get() = (savingsPercentage?.toDouble() ?: 0.0) / 10000
+}

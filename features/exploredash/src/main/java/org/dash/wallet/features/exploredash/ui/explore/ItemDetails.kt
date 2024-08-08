@@ -43,7 +43,6 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
-import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -197,9 +196,6 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             locationHint.isVisible = false
             backButton.isVisible = !isOnline && !isGrouped
 
-            if (merchant.source?.lowercase() == ServiceName.CTXSpend) {
-                merchant.logoLocation = CTXSpendConstants.BASE_URL + "merchants/" + merchant.merchantId + "/logo"
-            }
             loadImage(merchant.logoLocation, itemImage)
             itemType.text = getMerchantType(merchant.type)
             itemAddress.isVisible = !isOnline

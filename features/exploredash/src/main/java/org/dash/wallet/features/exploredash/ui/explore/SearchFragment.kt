@@ -44,7 +44,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
@@ -66,7 +65,6 @@ import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
 import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendLoginInfoDialog
 import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendTermsDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
-import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 @AndroidEntryPoint
@@ -675,9 +673,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheet.state = setBottomSheetState(expand)
 
         viewModel.selectedItem.value?.let { item ->
-            if (item.source?.lowercase() == ServiceName.CTXSpend) {
-                item.logoLocation = CTXSpendConstants.BASE_URL + "location/" + item.sourceId + "/logo"
-            }
             val header =
                 MerchantLocationsHeaderAdapter(
                     item.name ?: "",

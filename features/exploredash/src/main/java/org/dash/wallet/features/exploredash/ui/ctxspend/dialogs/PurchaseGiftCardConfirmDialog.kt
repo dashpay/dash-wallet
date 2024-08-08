@@ -44,7 +44,6 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
-import org.dash.wallet.features.exploredash.utils.CTXSpendConstants.DEFAULT_DISCOUNT
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -68,7 +67,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
         val merchant = viewModel.giftCardMerchant
         val paymentValue = viewModel.giftCardPaymentValue
-        val savingsPercentage = merchant.savingsPercentage ?: DEFAULT_DISCOUNT
+        val savingsPercentage = merchant.savingsPercentageAsDouble
         binding.merchantName.text = merchant.name
         merchant.logoLocation?.let { logoLocation ->
             binding.merchantLogo.load(logoLocation) {
