@@ -1075,7 +1075,9 @@ class PlatformSynchronizationService @Inject constructor(
             }
 
             // first check to see if there is a blockchain identity
-            if (blockchainIdentityDataDao.load() == null) {
+            // or if the previous restore is incomplete
+            val identityData = blockchainIdentityDataDao.load()
+            if (identityData == null || identityData.restoring) {
                 log.info("PreDownloadBlocks: checking for existing associated identity")
 
                 val identity = platformRepo.getIdentityFromPublicKeyId()

@@ -310,8 +310,7 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
 
         lifecycleScope.launch {
             val enough = dashPayViewModel.hasEnoughCredits()
-            // TODO: before merging remove this
-            val shouldWarn = true // enough.isBalanceWarning()
+            val shouldWarn = enough.isBalanceWarning()
             val isEmpty = enough.isBalanceWarning()
 
             if (shouldWarn || isEmpty) {
