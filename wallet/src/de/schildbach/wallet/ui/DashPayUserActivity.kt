@@ -194,8 +194,7 @@ class DashPayUserActivity : LockScreenActivity() {
     fun sendContactRequest() {
         lifecycleScope.launch {
             val enough = viewModel.hasEnoughCredits()
-            // TODO: before merging remove this
-            val shouldWarn = true // enough.isBalanceWarning()
+            val shouldWarn = enough.isBalanceWarning()
             val isEmpty = enough.isBalanceWarning()
 
             if (shouldWarn || isEmpty) {

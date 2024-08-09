@@ -425,8 +425,7 @@ class EditProfileActivity : LockScreenActivity() {
     private fun saveButton() {
         lifecycleScope.launch {
             val enough = editProfileViewModel.hasEnoughCredits()
-            // TODO: before merging remove this
-            val shouldWarn = true // enough.isBalanceWarning()
+            val shouldWarn = enough.isBalanceWarning()
             val isEmpty = enough.isBalanceWarning()
 
             if (shouldWarn || isEmpty) {
