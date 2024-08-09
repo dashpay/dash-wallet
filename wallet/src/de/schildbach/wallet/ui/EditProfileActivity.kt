@@ -681,7 +681,7 @@ class EditProfileActivity : LockScreenActivity() {
                 if (it == true) {
                     save()
                 } else {
-                    finish()
+                    super.finish()
                 }
             }
             return
