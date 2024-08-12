@@ -78,6 +78,23 @@
         tools:visibility="visible"
         tools:text="Insufficient funds" />
 
+    <TextView
+        android:id="@+id/message_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:layout_marginHorizontal="20dp"
+        android:paddingHorizontal="8dp"
+        android:gravity="center_horizontal"
+        android:background="@drawable/gray_button_background"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottom_card"
+        android:maxLines="2"
+        android:textAlignment="center"
+        tools:text="0.001 DASH - 10 contacts / profile updates" />
+
+
     <androidx.cardview.widget.CardView
         android:id="@+id/bottom_card"
         style="@style/CardViewRaised.Radius15"

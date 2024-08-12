@@ -32,6 +32,17 @@
     </fragment>
 
     <fragment
+        android:id="@+id/buyCreditsFragment"
+        android:name="de.schildbach.wallet.ui.send.BuyCreditsFragment"
+        android:label="BuyCreditsFragment"
+        tools:layout="@layout/send_coins_fragment">
+
+        <argument
+            android:name="paymentIntent"
+            app:argType="de.schildbach.wallet.data.PaymentIntent" />
+    </fragment>
+
+    <fragment
         android:id="@+id/paymentProtocolFragment"
         android:name="de.schildbach.wallet.ui.send.PaymentProtocolFragment"
         android:label="PaymentProtocolFragment"

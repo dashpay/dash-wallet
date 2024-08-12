@@ -31,6 +31,7 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.data.ImgurUploadResponse
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
@@ -70,7 +71,8 @@ class EditProfileViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val analytics: AnalyticsService,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
-    dashPayProfileDao: DashPayProfileDao
+    dashPayProfileDao: DashPayProfileDao,
+    val platformRepo: PlatformRepo
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
     enum class ProfilePictureStorageService {
@@ -122,7 +124,7 @@ class EditProfileViewModel @Inject constructor(
 
     val updateProfileRequestState = UpdateProfileStatusLiveData(walletApplication)
 
-    var lastAttemptedProfile: DashPayProfile? = null
+    private var lastAttemptedProfile: DashPayProfile? = null
 
     fun broadcastUpdateProfile(displayName: String, publicMessage: String, avatarUrl: String,
                                uploadService: String = "", localAvatarUrl: String = "") {
@@ -404,5 +406,9 @@ class EditProfileViewModel @Inject constructor(
                 else -> { }
             }
         }
+    }
+
+    suspend fun hasEnoughCredits(): CreditBalanceInfo {
+        return platformRepo.getIdentityBalance()
     }
 }

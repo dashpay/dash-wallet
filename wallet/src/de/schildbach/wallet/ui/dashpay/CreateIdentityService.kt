@@ -19,8 +19,9 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
+import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_TEXT
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
-import de.schildbach.wallet_test.R
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
@@ -265,7 +266,7 @@ class CreateIdentityService : LifecycleService() {
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
 
         when {
-            (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring) -> {
+            (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring && blockchainIdentityDataTmp.creationStateErrorMessage == null) -> {
                 // TODO: handle case when blockchain reset has happened and the cftx was not found yet
                 val cftx = blockchainIdentityDataTmp.findAssetLockTransaction(walletApplication.wallet)
                         ?: throw IllegalStateException("can't find asset lock transaction")
@@ -626,10 +627,8 @@ class CreateIdentityService : LifecycleService() {
 
             // this alert will be shown or not based on the current balance and will be
             // managed by NotificationsLiveData
-            val userAlert = UserAlert(R.string.invitation_notification_text,
-                    R.drawable.ic_invitation)
+            val userAlert = UserAlert(INVITATION_NOTIFICATION_TEXT, INVITATION_NOTIFICATION_ICON)
             userAlertDao.insert(userAlert)
-
         }
     }
 
@@ -656,7 +655,7 @@ class CreateIdentityService : LifecycleService() {
         val creditFundingTransaction: AssetLockTransaction? = cftxs.find { it.identityId.bytes!!.contentEquals(identity) }
 
         val existingBlockchainIdentityData = blockchainIdentityDataDao.load()
-        if (existingBlockchainIdentityData != null) {
+        if (existingBlockchainIdentityData != null && !(existingBlockchainIdentityData.restoring /*&& existingBlockchainIdentityData.creationStateErrorMessage != null*/)) {
             log.info("Attempting restore of existing identity and username; save credit funding txid")
             val blockchainIdentity = platformRepo.blockchainIdentity
             blockchainIdentity.assetLockTransaction = creditFundingTransaction
@@ -732,7 +731,8 @@ class CreateIdentityService : LifecycleService() {
 
         // We are finished recovering
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)
-
+        blockchainIdentityData.finishRestoration()
+        platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
         // Complete the entire process
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
 

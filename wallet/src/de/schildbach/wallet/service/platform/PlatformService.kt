@@ -17,7 +17,6 @@
 package de.schildbach.wallet.service.platform
 
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -62,7 +61,7 @@ interface PlatformService {
 }
 
 class PlatformServiceImplementation @Inject constructor(
-    walletDataProvider: WalletDataProvider
+    val walletDataProvider: WalletDataProvider
 ) : PlatformService {
     override val platform = Platform(Constants.NETWORK_PARAMETERS)
     override val profiles = Profiles(platform)
@@ -73,7 +72,7 @@ class PlatformServiceImplementation @Inject constructor(
     override val names: Names = platform.names
     override val client: DapiClient = platform.client
     override val params: NetworkParameters = platform.params
-
+    private lateinit var masternodeListManager: SimplifiedMasternodeListManager
     companion object {
         private val log = LoggerFactory.getLogger(PlatformServiceImplementation::class.java)
     }
@@ -88,7 +87,7 @@ class PlatformServiceImplementation @Inject constructor(
                 var quorumPublicKey: ByteArray? = null
                 log.info("searching for quorum: $quorumType, $quorumHash, $coreChainLockedHeight")
                 Context.propagate(walletDataProvider.wallet!!.context)
-                Context.get().masternodeListManager.getQuorumListAtTip(
+                masternodeListManager.getQuorumListAtTip(
                     LLMQParameters.LLMQType.fromValue(
                         quorumType
                     )
@@ -136,11 +135,11 @@ class PlatformServiceImplementation @Inject constructor(
             }
 
             return@withContext success >= 2
-            //return@withContext Resource.success(true)
         }
     }
 
     override fun setMasternodeListManager(masternodeListManager: SimplifiedMasternodeListManager) {
+        this.masternodeListManager = masternodeListManager
         platform.setMasternodeListManager(masternodeListManager)
     }
 }

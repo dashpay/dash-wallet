@@ -113,6 +113,11 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
         DONE,
         DONE_AND_DISMISS // this should always be the last value
     }
+
+    fun finishRestoration() {
+        this.restoring = false
+        this.creationStateErrorMessage = null
+    }
 }
 
 @Singleton

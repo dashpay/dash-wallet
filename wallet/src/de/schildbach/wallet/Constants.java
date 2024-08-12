@@ -287,7 +287,7 @@ public final class Constants {
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
 
     // 1,500,000,000 credits
-    public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.15");
+    public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.45");
     // 150,000,000
     public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);
 

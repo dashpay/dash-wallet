@@ -43,6 +43,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.ObjectKey
@@ -54,15 +55,23 @@ import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIO
 import com.google.api.services.drive.Drive
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityEditProfileBinding
+import kotlinx.coroutines.launch
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.script.ScriptBuilder
+import org.bitcoinj.wallet.AuthenticationKeyChain
+import org.bitcoinj.wallet.AuthenticationKeyChainGroup
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import org.dash.wallet.common.ui.avatar.ProfilePictureTransformation
@@ -172,7 +181,7 @@ class EditProfileActivity : LockScreenActivity() {
 
         })
         binding.save.setOnClickListener {
-            save()
+            saveButton()
         }
 
         binding.profileEditIcon.setOnClickListener {
@@ -413,7 +422,34 @@ class EditProfileActivity : LockScreenActivity() {
         binding.save.isEnabled = !(binding.displayName.text.length > Constants.DISPLAY_NAME_MAX_LENGTH || binding.aboutMe.text.length > Constants.ABOUT_ME_MAX_LENGTH)
     }
 
-    fun save() {
+    private fun saveButton() {
+        lifecycleScope.launch {
+            val enough = editProfileViewModel.hasEnoughCredits()
+            val shouldWarn = enough.isBalanceWarning()
+            val isEmpty = enough.isBalanceWarning()
+
+            if (shouldWarn || isEmpty) {
+                val answer = AdaptiveDialog.create(
+                    R.drawable.ic_warning_yellow_circle,
+                    if (isEmpty) getString(R.string.credit_balance_empty_warning_title) else getString(R.string.credit_balance_low_warning_title),
+                    if (isEmpty) getString(R.string.credit_balance_empty_warning_message) else getString(R.string.credit_balance_low_warning_message),
+                    getString(R.string.credit_balance_button_maybe_later),
+                    getString(R.string.credit_balance_button_buy)
+                ).showAsync(this@EditProfileActivity)
+
+                if (answer == true) {
+                    SendCoinsActivity.startBuyCredits(this@EditProfileActivity)
+                } else {
+                    if (shouldWarn)
+                        save()
+                }
+            } else {
+                save()
+            }
+        }
+    }
+
+    private fun save() {
         showSaveReminderDialog = false
         val displayName = binding.displayName.text.toString().trim()
         val publicMessage = binding.aboutMe.text.toString().trim()
@@ -645,7 +681,7 @@ class EditProfileActivity : LockScreenActivity() {
                 if (it == true) {
                     save()
                 } else {
-                    finish()
+                    super.finish()
                 }
             }
             return

@@ -23,6 +23,7 @@ import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.dao.BlockchainStateDao
@@ -310,4 +311,8 @@ open class DashPayViewModel @Inject constructor(
         val limit: Int = 100,
         val excludeIds: ArrayList<String> = arrayListOf()
     )
+
+    suspend fun hasEnoughCredits(): CreditBalanceInfo {
+        return platformRepo.getIdentityBalance()
+    }
 }

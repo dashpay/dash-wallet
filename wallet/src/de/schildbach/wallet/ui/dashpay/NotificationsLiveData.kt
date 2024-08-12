@@ -45,7 +45,7 @@ open class NotificationsLiveData(
 
             val userAlert = userAlertDao.load(0L)
             if (userAlert != null && platformRepo.shouldShowAlert()) {
-                results.add(NotificationItemUserAlert(userAlert.stringResId, userAlert.iconResId))
+                results.add(NotificationItemUserAlert(userAlert.stringResourceId, userAlert.iconResourceId))
             }
 
             val contactRequests = platformRepo.searchContacts(query, UsernameSortOrderBy.DATE_ADDED)

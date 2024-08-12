@@ -24,6 +24,7 @@ import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
@@ -99,5 +100,9 @@ class DashPayUserActivityViewModel @Inject constructor(
         viewModelScope.launch {
             platformRepo.addOrUpdateDashPayProfile(dashPayProfile)
         }
+    }
+
+    suspend fun hasEnoughCredits(): CreditBalanceInfo {
+        return platformRepo.getIdentityBalance()
     }
 }
