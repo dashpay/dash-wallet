@@ -208,7 +208,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     public static final String START_AS_FOREGROUND_EXTRA = "start_as_foreground";
 
-    private Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
 
     // Risk Analyser for Transactions that is PeerGroup Aware
