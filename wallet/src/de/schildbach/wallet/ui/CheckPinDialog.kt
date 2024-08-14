@@ -207,6 +207,10 @@ open class CheckPinDialog(
     }
 
     protected fun setState(newState: State) {
+        if (view == null) {
+            log.warn("Attempted to set state when the view is not available.")
+            return
+        }
         when (newState) {
             State.ENTER_PIN -> {
                 if (viewModel.pinLength != PinPreviewView.DEFAULT_PIN_LENGTH) {
