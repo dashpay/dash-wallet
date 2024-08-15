@@ -413,6 +413,8 @@
     <string name="battery_optimization_dialog_unrestricted_title">Do you want to receive payments in the background?</string>
     <string name="battery_optimization_dialog_message_not_optimized">This app is configured to continue running after not being visible for some time.\n\nWe suggest allowing this app to always stay up-to-date with the blockchain, even in the background.\n\nDon\'t worry, we will always mind your battery usage.</string>
     <string name="battery_optimization_dialog_button_change">Open Settings</string>
+
+
     <string name="select_privacy_preferences">Select your username privacy preferences</string>
     <string name="please_note_cant_change_this_later">Please note that you will not be able to change this later</string>
     <string name="Intermediate_level_WIFI_Warning">Intermediate privacy level requires a reliable internet connection</string>
@@ -428,12 +430,14 @@
     <string name="upload_your_picture">Upload your picture, personalize your identity.</string>
     <string name="in_case_lose_your_passphrase">In case you lose your passphrase you will lose your right to your requested username.</string>
     <string name="keep_your_passphrase_safe">Keep your passphrase safe</string>
-    <string name="pay_now">Pay now and if not approved, you can create a different name without paying again</string>
+    <string name="pay_now">Pay now and if not approved, you can create a different name without paying again [check if true]</string>
     <string name="case_your_request_is_not_approved">In case your request is not approved</string>
-    <string name="after_voting">After voting is completed on X you can create any username that has not already been created</string>
-    <string name="voting_will_not_required_forever">Voting will not be required forever</string>
+    <string name="voting_requirement_subtitle">Any username that has a number 2–9 or is longer than 20 characters will be automatically approved</string>
+    <string name="voting_requirement_title">Voting is only required in some cases</string>
     <string name="dash_network_must_vote_to_approve">The Dash network must vote to approve your username before it is created.</string>
     <string name="what_is_username_voting">What is username voting?</string>
+    <string name="usernames_blocked_title">Some usernames can be blocked</string>
+    <string name="usernames_blocked_subtitle">If enough of the network determines that a username is inappropriate, they can block it</string>
     <string name="username_voting">Username Voting</string>
     <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before users will be able to create it.</string>
     <string name="voting_duplicates_only_title">Vote only on duplicates</string>
@@ -462,9 +466,14 @@
         <item>I have not approved</item>
     </string-array>
 
-    <string name="request_your_username">Request your username</string>
-    <string name="request_your_hint">Once the voting ends you can create any username you want as long as it hasn’t already been created</string>
+    <string name="request_your_username">Create your username</string>
+    <string name="request_your_hint">Please not that you will not be able to change it in the future</string>
     <string name="request_username">Request Username</string>
+    <string name="request_voting_range">The Dash network will vote on this username. We will notify you of the results on %s.</string>
+    <string name="request_username_available">Username is available</string>
+    <string name="request_username_unavailable">Username is unavailable or blocked</string>
+    <string name="request_username_taken">Username is taken</string>
+
     <string name="voting">Voting:</string>
     <string name="this_username_has_already_been_requested">This username has already been requested, but you can request it too and let the network vote to decide if you can have it</string>
     <string name="request_details">Request details</string>
@@ -508,7 +517,7 @@
     <string name="if_you_tap_cancel_request">If you tap “Cancel Request”, you will still have a chance to request another username without paying again</string>
     <string name="cant_open">Can’t open</string>
     <string name="invalid_link">The link is invalid</string>
-    <string name="welcome_request_username_min_balance_disclaimer">You should have more than %s Dash to create a username</string>
+    <string name="welcome_request_username_min_balance_disclaimer">You have %s Dash.  Some usernames cost up to %s Dash.</string>
     <string name="request_username_min_balance_disclaimer">To request a username on the Dash Network, you need to have more than %s Dash</string>
 
     <!-- CoinJoin -->
