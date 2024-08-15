@@ -50,7 +50,7 @@ data class Merchant(
     var redeemType: String? = "",
     @Ignore var minCardPurchase: Double? = null,
     @Ignore var maxCardPurchase: Double? = null,
-    var savingsPercentage: Int? = 0,  // in basis points 1 = 0.001%
+    var savingsPercentage: Int? = 0, // in basis points 1 = 0.001%
     @Ignore var physicalAmount: Int = 0
 ) : SearchResult() {
 

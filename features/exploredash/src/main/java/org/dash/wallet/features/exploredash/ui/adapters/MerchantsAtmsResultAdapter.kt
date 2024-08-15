@@ -116,7 +116,10 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
         if (merchant != null) {
             if (merchant.savingsAsDouble != 0.00) {
                 binding.discountValue.isVisible = true
-                binding.discountValue.text = binding.root.context.getString(R.string.explore_discount, merchant.savingsPercentageAsDouble)
+                binding.discountValue.text = binding.root.context.getString(
+                    R.string.explore_discount,
+                    merchant.savingsPercentageAsDouble
+                )
             } else {
                 binding.discountValue.isVisible = false
             }
