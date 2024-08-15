@@ -159,7 +159,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     private fun setDiscountHint() {
         val merchant = viewModel.giftCardMerchant
-        val savingsPercentage = merchant.savingsPercentageAsDouble
+        val savingsPercentage = merchant.savingsAsDouble
 
         if (savingsPercentage != DEFAULT_DISCOUNT_AS_DOUBLE) {
             val purchaseAmount = enterAmountViewModel.amount.value
