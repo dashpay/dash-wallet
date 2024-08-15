@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.ui.invite
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
@@ -75,7 +74,7 @@ class OnboardFromInviteActivity : AppCompatActivity() {
                         activate(title1, true)
                         activate(title2, true)
                         activate(title3, false)
-                        step1.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_onboard_from_invite_check, 0)
+                        step1.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_check_circle_green, 0)
                         step2.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
                         step3.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
                         icon2.setImageResource(R.drawable.ic_onboard_from_invite_2)
@@ -87,8 +86,8 @@ class OnboardFromInviteActivity : AppCompatActivity() {
                         activate(title1, true)
                         activate(title2, true)
                         activate(title3, true)
-                        step1.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_onboard_from_invite_check, 0)
-                        step2.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_onboard_from_invite_check, 0)
+                        step1.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_check_circle_green, 0)
+                        step2.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_check_circle_green, 0)
                         step3.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
                         icon2.setImageResource(R.drawable.ic_onboard_from_invite_2)
                         icon3.setImageResource(R.drawable.ic_onboard_from_invite_3)
