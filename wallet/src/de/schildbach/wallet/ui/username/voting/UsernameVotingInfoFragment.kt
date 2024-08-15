@@ -33,14 +33,6 @@ class UsernameVotingInfoFragment : Fragment(R.layout.fragment_username_voting_in
                 UsernameVotingInfoFragmentDirections.usernameVotingInfoFragmentToRequestUsernameFragment()
             )
         }
-
-        binding.balanceRequirementDisclaimer.text = getString(
-            R.string.welcome_request_username_min_balance_disclaimer,
-            Constants.DASH_PAY_FEE.toPlainString()
-        )
-        binding.balanceRequirementDisclaimer.isVisible = !requestUserNameViewModel.canAffordIdentityCreation()
-        binding.usernameVotingInfoContinueBtn.isEnabled = requestUserNameViewModel.canAffordIdentityCreation()
-
         lifecycleScope.launchWhenStarted {
             lifecycleScope.launch {
                 dashPayViewModel.setIsDashPayInfoShown(true)
