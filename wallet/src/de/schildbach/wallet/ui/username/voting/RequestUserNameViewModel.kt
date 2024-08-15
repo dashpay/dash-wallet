@@ -16,15 +16,15 @@
  */
 package de.schildbach.wallet.ui.username.voting
 
-import android.view.View
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,7 +36,9 @@ import javax.inject.Inject
 
 data class RequestUserNameUIState(
     val usernameVerified: Boolean = false,
-    val usernameSubmittedSuccess: Boolean = false,
+    val usernameRequestSubmitting: Boolean = false,
+    val usernameRequestSubmitted: Boolean = false,
+    val usernameCheckSuccess: Boolean = false,
     val usernameSubmittedError: Boolean = false,
     val usernameLengthValid: Boolean = false,
     val usernameCharactersValid: Boolean = false,
@@ -67,7 +69,7 @@ class RequestUserNameViewModel @Inject constructor(
         get() = walletData.getWalletBalance()
     suspend fun isUserNameRequested(): Boolean =
         dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME).isNullOrEmpty().not()
-    suspend fun isUserHaveCancelledRequest(): Boolean =
+    suspend fun hasUserCancelledRequest(): Boolean =
         dashPayConfig.get(DashPayConfig.CANCELED_REQUESTED_USERNAME_LINK) ?: false
 
     fun canAffordIdentityCreation(): Boolean =
@@ -82,9 +84,10 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun submit() {
         // Reset ui state for retry if needed
-        // resetUiForRetrySubmit()
+        resetUiForRetrySubmit()
 
-        // checkUsername()
+        // send the request / create username
+
         // if call success
         updateUiForApiSuccess()
         // else if call failed
@@ -94,14 +97,9 @@ class RequestUserNameViewModel @Inject constructor(
     private fun resetUiForRetrySubmit() {
         _uiState.update {
             it.copy(
-                usernameVerified = false,
-                usernameSubmittedSuccess = false,
                 usernameSubmittedError = false,
-                usernameCharactersValid = false,
-                usernameLengthValid = false,
-                usernameBlocked = false,
-                usernameContested = false,
-                usernameExists = false
+                usernameRequestSubmitted = false,
+                usernameRequestSubmitting = false
             )
         }
     }
@@ -120,7 +118,9 @@ class RequestUserNameViewModel @Inject constructor(
 
         _uiState.update {
             it.copy(
-                usernameSubmittedSuccess = true,
+                usernameCheckSuccess = true,
+                usernameRequestSubmitting = false,
+                usernameRequestSubmitted = true,
                 usernameSubmittedError = false
             )
         }
@@ -128,7 +128,7 @@ class RequestUserNameViewModel @Inject constructor(
     private fun updateUiForApiError() {
         _uiState.update { it ->
             it.copy(
-                usernameSubmittedSuccess = false,
+                usernameCheckSuccess = false,
                 usernameSubmittedError = true
             )
         }
@@ -149,7 +149,7 @@ class RequestUserNameViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         usernameVerified = true,
-                        usernameSubmittedSuccess = true,
+                        usernameCheckSuccess = true,
                         usernameSubmittedError = false,
                         usernameContested = usernameContested,
                         usernameExists = usernameExists,
@@ -213,7 +213,7 @@ class RequestUserNameViewModel @Inject constructor(
                 enoughBalance = enoughBalance,
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
-                usernameSubmittedSuccess = false
+                usernameCheckSuccess = false
             )
         }
         return validCharacters && validLength

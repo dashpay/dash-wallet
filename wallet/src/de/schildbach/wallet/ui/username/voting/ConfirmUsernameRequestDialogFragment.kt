@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogConfirmUsernameRequestBinding
@@ -34,12 +35,18 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
 
     private val viewModel by viewModels<ConfirmUserNameDialogViewModel>()
     private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
+    private val args by navArgs<ConfirmUsernameRequestDialogFragmentArgs>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.confirmBtn.setOnClickListener {
             requestUserNameViewModel.submit()
             dismiss()
+        }
+        binding.confirmBtn.isEnabled = false
+        binding.confirmMessage.text = getString(R.string.new_account_confirm_message, args.username)
+        binding.userAccepts.setOnClickListener {
+            binding.confirmBtn.isEnabled = binding.userAccepts.isChecked
         }
 
         binding.dismissBtn.setOnClickListener { dismiss() }

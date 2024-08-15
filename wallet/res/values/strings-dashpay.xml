@@ -15,7 +15,7 @@
     <string name="invitation_confirm_button_text">Confirm</string>
     <string name="new_account_confirm_accept">I Accept</string>
     <string name="new_account_confirm_upgrade_fee">Upgrade Fee</string>
-    <string name="new_account_confirm_message">You have chose %s as your username. Username cannot be changed once it is registered.</string>
+    <string name="new_account_confirm_message">You have chosen %s as your username. Please note that the username can NOT be changed once it is registered.</string>
     <string name="invitation_confirm_title">Invitation Fee</string>
     <string name="invitation_confirm_message">Each invitation will be funded with this amount so that the receiver can quickly create their username on the Dash Network</string>
     <string name="invitation_init_title">Invite</string>
@@ -383,5 +383,11 @@
     <string name="credit_balance_button_buy">Buy Credits</string>
     <string name="credit_balance_insufficient_error_message">You don’t have enough funds to buy credits</string>
     <string name="buy_credits_estimated_items">%s - %d contacts / %d profile updates</string>
+
+    <string name="request_username_username_voting_message">+ what is username voting?</string>
+    <string name="request_username_character_requirement">Letters, numbers and hyphens only</string>
+    <string name="request_username_balance_requirement">You need to have 0.25 DASH to create this username</string>
+    <string name="request_username_length_requirement">Between 3 and 23 characters</string>
+    <string name="request_username_confirm">I accept</string>
 
 </resources>

@@ -39,7 +39,18 @@
         android:gravity="center_horizontal"
         android:textAlignment="gravity"
         android:layout_marginHorizontal="20dp"
-        android:text="@string/quick_vote" />
+        android:text="@string/confirm" />
+
+    <TextView
+        android:id="@+id/confirm_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="17dp"
+        android:gravity="center_horizontal"
+        android:textAlignment="gravity"
+        android:layout_marginHorizontal="20dp"
+        android:text="@string/new_account_confirm_message" />
+
 
     <LinearLayout
         android:layout_marginTop="17dp"
@@ -89,13 +100,27 @@
 
     </LinearLayout>
 
-
-
-<LinearLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="30dp"
+        android:layout_marginVertical="8dp"
+        android:gravity="center_horizontal">
+        <CheckBox
+            android:id="@+id/user_accepts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/request_username_confirm" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="25dp"
         android:layout_marginBottom="15dp">
 
         <Button

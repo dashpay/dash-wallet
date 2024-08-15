@@ -59,6 +59,7 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left"
             app:popUpTo="@id/requestUsernameFragment" />
+        <argument android:name="closeInstead" app:argType="boolean" android:defaultValue="false" />
     </fragment>
 
     <fragment
@@ -76,6 +77,13 @@
         <action
             android:id="@+id/requests_to_confirmUsernameRequestDialog"
             app:destination="@id/confirmUsernameRequestDialog"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/requests_to_usernameVotingInfoFragment"
+            app:destination="@id/usernameVotingInfoFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
@@ -124,5 +132,7 @@
         android:id="@+id/confirmUsernameRequestDialog"
         android:name="de.schildbach.wallet.ui.username.voting.ConfirmUsernameRequestDialogFragment"
         android:label="ConfirmUsernameRequestDialogFragment"
-        tools:layout="@layout/dialog_confirm_username_request" />
+        tools:layout="@layout/dialog_confirm_username_request">
+        <argument android:name="username" app:argType="string" />
+    </dialog>
 </navigation>

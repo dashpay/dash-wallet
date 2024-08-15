@@ -11,6 +11,8 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
@@ -80,32 +82,43 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         }
 
         binding.requestUsernameButton.setOnClickListener {
-            AdaptiveDialog.create(
-                R.drawable.ic_verify_identity,
-                getString(R.string.verify_your_identity),
-                getString(
-                    R.string.if_somebody
-                ),
-                getString(
-                    R.string.skip
-                ),
-                getString(
-                    R.string.verify
-                )
-            ).show(requireActivity()) {
-                requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
-                if (it == true) {
-                    safeNavigate(
-                        RequestUsernameFragmentDirections.requestUsernameFragmentToVerifyIdentityFragment(
-                            binding.usernameInput.text.toString()
-                        )
+            if (requestUserNameViewModel.uiState.value.usernameContestable) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_verify_identity,
+                    getString(R.string.verify_your_identity),
+                    getString(
+                        R.string.if_somebody
+                    ),
+                    getString(
+                        R.string.skip
+                    ),
+                    getString(
+                        R.string.verify
                     )
-                } else {
-                    lifecycleScope.launch {
-                        checkViewConfirmDialog()
+                ).show(requireActivity()) {
+                    requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
+                    if (it == true) {
+                        safeNavigate(
+                            RequestUsernameFragmentDirections.requestUsernameFragmentToVerifyIdentityFragment(
+                                binding.usernameInput.text.toString()
+                            )
+                        )
+                    } else {
+                        lifecycleScope.launch {
+                            checkViewConfirmDialog()
+                        }
                     }
                 }
+            } else {
+                lifecycleScope.launch {
+                    requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
+                    checkViewConfirmDialog()
+                }
             }
+        }
+
+        binding.usernameVotingInfoBtn.setOnClickListener {
+            safeNavigate(RequestUsernameFragmentDirections.requestsToUsernameVotingInfoFragment(true))
         }
 
         lifecycleScope.launchWhenCreated {
@@ -131,7 +144,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
 
             binding.checkLetters.setImageResource(getCheckMarkImage(it.usernameCharactersValid, it.usernameTooShort))
             binding.checkLength.setImageResource(getCheckMarkImage(it.usernameLengthValid, it.usernameTooShort))
-            if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameSubmittedSuccess) {
+            if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameCheckSuccess) {
                 binding.checkAvailable.setImageResource(getCheckMarkImage(!it.usernameExists))
                 binding.checkBalance.setImageResource(getCheckMarkImage(!it.enoughBalance))
                 if (it.usernameContestable || it.usernameContested) {
@@ -189,11 +202,13 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
     }
 
     private suspend fun checkViewConfirmDialog() {
-        if (requestUserNameViewModel.isUserHaveCancelledRequest()) {
+        if (requestUserNameViewModel.hasUserCancelledRequest()) {
             requestUserNameViewModel.submit()
         } else {
             safeNavigate(
-                RequestUsernameFragmentDirections.requestsToConfirmUsernameRequestDialog()
+                RequestUsernameFragmentDirections.requestsToConfirmUsernameRequestDialog(
+                    requestUserNameViewModel.requestedUserName!!
+                )
             )
         }
     }

@@ -112,7 +112,7 @@
                 style="@style/Overline.Medium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Between 3 and 23 characters"
+                android:text="@string/request_username_length_requirement"
                 />
         </LinearLayout>
 
@@ -132,7 +132,7 @@
                 style="@style/Overline.Medium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Letters, numbers and hyphens only"
+                android:text="@string/request_username_character_requirement"
                 />
         </LinearLayout>
 
@@ -146,14 +146,14 @@
                 android:layout_width="22dp"
                 android:layout_height="22dp"
                 android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_check_circle_green"
+                android:src="@drawable/ic_error_circle"
                 />
 
             <TextView
                 style="@style/Overline.Medium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="You need to have 0.25 DASH to create this username"
+                android:text="@string/request_username_balance_requirement"
                 android:maxLines="2"
                 />
         </LinearLayout>
@@ -209,13 +209,27 @@
                 android:layout_marginEnd="12dp"
                 android:src="@drawable/ic_warning_triangle"
                 />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                >
             <TextView
                 style="@style/Overline.Medium"
                 android:id="@+id/voting_period"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 tools:text="The Dash network will vote on this username. We will notify you of the results on March 14, 2024."
                 />
+            <TextView
+                style="@style/Overline.Medium.Blue"
+                android:id="@+id/username_voting_info_btn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/request_username_username_voting_message"
+                />
+            </LinearLayout>
         </LinearLayout>
 
 <!--        <TextView-->
