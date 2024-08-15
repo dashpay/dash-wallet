@@ -237,6 +237,16 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             }
 
             bindCommonDetails(merchant, isOnline)
+
+            if (merchant.savingsAsDouble != 0.0) {
+                binding.discountValue.isVisible = true
+                binding.discountValue.text = root.context.getString(
+                    R.string.explore_pay_with_dash_save,
+                    merchant.savingsPercentageAsDouble
+                )
+            } else {
+                binding.discountValue.isVisible = false
+            }
         }
     }
 

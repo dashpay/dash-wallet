@@ -46,6 +46,7 @@
     <string name="explore_no_atms">No ATMs</string>
     <string name="distance_miles">%s miles</string>
     <string name="distance_kilometers">%s kilometers</string>
+    <string name="explore_discount" translatable="false">~%.0f%%</string>
 
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d merchant</item>
@@ -62,6 +63,7 @@
     <string name="explore_back_to_nearest">Back to nearest location</string>
     <string name="explore_select_location">Select location</string>
     <string name="explore_pay_with_dash">Pay with Dash</string>
+    <string name="explore_pay_with_dash_save">Save %.2f%%</string>
     <string name="explore_buy_gift_card">Buy a Gift Card</string>
     <string name="explore_buy_dash">Buy Dash</string>
     <string name="explore_sell_dash">Sell Dash</string>
