@@ -25,12 +25,21 @@ class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) 
             safeNavigate(WelcomeToDashPayFragmentDirections.welcomeToDashPayFragmentToUsernameVotingInfoFragment())
         }
 
-        binding.balanceRequirementDisclaimer.text = getString(
-            R.string.welcome_request_username_min_balance_disclaimer,
-            requestUserNameViewModel.walletBalance.toPlainString(),
-            Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
-        )
-        binding.balanceRequirementDisclaimer.isVisible = !requestUserNameViewModel.canAffordIdentityCreation()
-        binding.welcomeDashpayContinueBtn.isEnabled = requestUserNameViewModel.canAffordIdentityCreation()
+        if (!requestUserNameViewModel.canAffordNonContestedUsername()) {
+            binding.balanceRequirementDisclaimer.text = getString(
+                R.string.welcome_request_username_min_balance_disclaimer_noncontested,
+                Constants.DASH_PAY_FEE.toPlainString()
+            )
+        } else if (!requestUserNameViewModel.canAffordNonContestedUsername()){
+            binding.balanceRequirementDisclaimer.text = getString(
+                R.string.welcome_request_username_min_balance_disclaimer_all,
+                requestUserNameViewModel.walletBalance.toPlainString(),
+                Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
+            )
+        } else {
+
+        }
+        binding.balanceRequirementDisclaimer.isVisible = !requestUserNameViewModel.canAffordContestedUsername()
+        binding.welcomeDashpayContinueBtn.isEnabled = requestUserNameViewModel.canAffordNonContestedUsername()
     }
 }
