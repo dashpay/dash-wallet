@@ -38,7 +38,7 @@ import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
-class CreateUsernameActivity : InteractionAwareActivity() {
+class CreateUsernameActivity : LockScreenActivity() {
 
     private val dashPayViewModel: DashPayViewModel by viewModels()
 
