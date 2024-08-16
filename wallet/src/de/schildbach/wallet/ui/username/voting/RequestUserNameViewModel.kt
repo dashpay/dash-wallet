@@ -20,7 +20,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -53,6 +53,7 @@ data class RequestUserNameUIState(
 
 @HiltViewModel
 class RequestUserNameViewModel @Inject constructor(
+    val walletApplication: WalletApplication,
     val dashPayConfig: DashPayConfig,
     val walletData: WalletDataProvider,
     val platformRepo: PlatformRepo
@@ -72,8 +73,9 @@ class RequestUserNameViewModel @Inject constructor(
     suspend fun hasUserCancelledRequest(): Boolean =
         dashPayConfig.get(DashPayConfig.CANCELED_REQUESTED_USERNAME_LINK) ?: false
 
-    fun canAffordIdentityCreation(): Boolean =
-        walletData.canAffordIdentityCreation()
+    fun canAffordNonContestedUsername(): Boolean = walletBalance >= Constants.DASH_PAY_FEE
+    fun canAffordContestedUsername(): Boolean = walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
+
     init {
 
         viewModelScope.launch {
@@ -82,12 +84,21 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
+    private fun triggerIdentityCreation(reuseTransaction: Boolean) {
+        val username = requestedUserName!!
+        if (reuseTransaction) {
+            walletApplication.startService(CreateIdentityService.createIntentForNewUsername(walletApplication, username))
+        } else {
+            walletApplication.startService(CreateIdentityService.createIntent(walletApplication, username))
+        }
+    }
+
     fun submit() {
         // Reset ui state for retry if needed
         resetUiForRetrySubmit()
 
         // send the request / create username
-
+        triggerIdentityCreation(false)
         // if call success
         updateUiForApiSuccess()
         // else if call failed
@@ -213,7 +224,8 @@ class RequestUserNameViewModel @Inject constructor(
                 enoughBalance = enoughBalance,
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
-                usernameCheckSuccess = false
+                usernameCheckSuccess = false,
+                usernameVerified = false
             )
         }
         return validCharacters && validLength

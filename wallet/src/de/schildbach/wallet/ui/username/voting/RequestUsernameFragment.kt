@@ -46,7 +46,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         binding.usernameInput.doOnTextChanged { text, _, _, _ ->
             val username = text.toString()
             binding.requestUsernameButton.isEnabled = username.isNotEmpty() &&
-                requestUserNameViewModel.canAffordIdentityCreation()
+                requestUserNameViewModel.canAffordNonContestedUsername()
 
             binding.inputWrapper.isEndIconVisible = username.isNotEmpty()
             // TODO: Replace with api to verify username
@@ -146,7 +146,9 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             binding.checkLength.setImageResource(getCheckMarkImage(it.usernameLengthValid, it.usernameTooShort))
             if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameCheckSuccess) {
                 binding.checkAvailable.setImageResource(getCheckMarkImage(!it.usernameExists))
-                binding.checkBalance.setImageResource(getCheckMarkImage(!it.enoughBalance))
+                binding.checkBalance.setImageResource(getCheckMarkImage(it.enoughBalance))
+                binding.walletBalanceContainer.isVisible = !it.enoughBalance
+
                 if (it.usernameContestable || it.usernameContested) {
                     val startDate = Date(it.votingPeriodStart)
                     val endDate = Date(startDate.time + TimeUnit.DAYS.toMillis(14))
@@ -179,17 +181,32 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                         binding.checkAvailable.setImageResource(getCheckMarkImage(true))
                     }
                 }
+                binding.requestUsernameButton.isEnabled = it.enoughBalance
+
             } else {
                 binding.votingPeriodContainer.isVisible = false
                 binding.walletBalanceContainer.isVisible = false
                 binding.usernameAvailableContainer.isVisible = false
+                binding.requestUsernameButton.isEnabled = false
             }
 
-//            if (it.usernameVerified) {
-//                binding.usernameInput.isFocusable = (false)
-//                hideKeyboard()
-//                checkViewConfirmDialog()
-//            }
+            if (it.usernameVerified && it.usernameRequestSubmitting) {
+                binding.usernameInput.isFocusable = (false)
+                hideKeyboard()
+                checkViewConfirmDialog()
+            }
+        }
+
+        dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+            if (it?.creationStateErrorMessage != null) {
+                requireActivity().finish()
+            } else if ((it?.creationState?.ordinal ?: 0) > BlockchainIdentityData.CreationState.NONE.ordinal) {
+                // completeUsername = it.username ?: ""
+                // showCompleteState()
+                // for now, just go to the home screen
+                //requireActivity().finish()
+                safeNavigate(RequestUsernameFragmentDirections.requestsToUsernameRegistrationFragment())
+            }
         }
     }
 
