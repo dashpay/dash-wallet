@@ -150,14 +150,6 @@ class SettingsActivity : LockScreenActivity() {
             .onEach { binding.localCurrencySymbol.text = it }
             .launchIn(lifecycleScope)
 
-        viewModel.voteDashPayIsEnabled.observe(this) {
-            binding.votingDashPaySwitch.isChecked = it ?: false
-        }
-
-        binding.votingDashPaySwitch.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.setVoteDashPay(isChecked)
-        }
-
         viewModel.coinJoinMixingMode.observe(this) { mode ->
             if (mode == CoinJoinMode.NONE) {
                 binding.coinjoinSubtitle.text = getText(R.string.turned_off)
@@ -189,10 +181,6 @@ class SettingsActivity : LockScreenActivity() {
                     binding.balance.text = getString(R.string.coinjoin_progress_balance, viewModel.mixedBalance, viewModel.walletBalance)
                 }
             }
-        }
-
-        if (Constants.DASHPAY_DISABLED) {
-            binding.votingDashPay.isVisible = false
         }
     }
 

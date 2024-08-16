@@ -99,8 +99,6 @@ open class DashPayViewModel @Inject constructor(
 
     private var timerUsernameSearch: AnalyticsTimer? = null
 
-    suspend fun isVotingFlowEnabled(): Boolean =
-        walletUIConfig.get(WalletUIConfig.VOTE_DASH_PAY_ENABLED) ?: false
     suspend fun isDashPayInfoShown(): Boolean =
         dashPayConfig.get(DashPayConfig.HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN) ?: false
 
