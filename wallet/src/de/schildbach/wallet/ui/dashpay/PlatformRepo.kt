@@ -212,7 +212,7 @@ class PlatformRepo @Inject constructor(
 
     fun getUsername(username: String): Resource<Document> {
         return try {
-            val nameDocument = platform.names.get(username)
+            val nameDocument = platform.names.get(Names.normalizeString(username))
             Resource.success(nameDocument)
         } catch (e: Exception) {
             Resource.error(e.localizedMessage!!, null)
