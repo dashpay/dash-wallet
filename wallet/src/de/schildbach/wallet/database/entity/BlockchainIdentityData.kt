@@ -44,25 +44,32 @@ import org.dashj.platform.sdk.KeyType
 import javax.inject.Inject
 import javax.inject.Singleton
 
-data class BlockchainIdentityData(var creationState: CreationState = CreationState.NONE,
-                                  var creationStateErrorMessage: String?,
-                                  var username: String?,
-                                  var userId: String?,
-                                  var restoring: Boolean,
-                                  var identity: Identity? = null,
-                                  var creditFundingTxId: Sha256Hash? = null,
-                                  var usingInvite: Boolean = false,
-                                  var invite: InvitationLinkData? = null,
-                                  var preorderSalt: ByteArray? = null,
-                                  var registrationStatus: BlockchainIdentity.RegistrationStatus? = null,
-                                  var usernameStatus: BlockchainIdentity.UsernameStatus? = null,
-                                  var privacyMode: CoinJoinMode? = null,
-                                  var creditBalance: Coin? = null,
-                                  var activeKeyCount: Int? = null,
-                                  var totalKeyCount: Int? = null,
-                                  var keysCreated: Long? = null,
-                                  var currentMainKeyIndex: Int? = null,
-                                  var currentMainKeyType: KeyType? = null) {
+data class BlockchainIdentityData(
+    var creationState: CreationState = CreationState.NONE,
+    var creationStateErrorMessage: String?,
+    var username: String?,
+    var userId: String?,
+    var restoring: Boolean,
+    var identity: Identity? = null,
+    var creditFundingTxId: Sha256Hash? = null,
+    var usingInvite: Boolean = false,
+    var invite: InvitationLinkData? = null,
+    var preorderSalt: ByteArray? = null,
+    var registrationStatus: BlockchainIdentity.RegistrationStatus? = null,
+    var usernameStatus: BlockchainIdentity.UsernameStatus? = null,
+    var privacyMode: CoinJoinMode? = null,
+    var creditBalance: Coin? = null,
+    var activeKeyCount: Int? = null,
+    var totalKeyCount: Int? = null,
+    var keysCreated: Long? = null,
+    var currentMainKeyIndex: Int? = null,
+    var currentMainKeyType: KeyType? = null,
+    var requestedUsername: String? = null,
+    var verificationLink: String? = null,
+    val cancelledVerificationLink: Boolean? = null,
+    val usernameRequested: Boolean? = null,
+    val votingPeriodStart: Long? = null
+    ) {
 
     var id = 1
         set(@Suppress("UNUSED_PARAMETER") value) {
@@ -110,6 +117,11 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
         USERNAME_REGISTERED,
         DASHPAY_PROFILE_CREATING,
         DASHPAY_PROFILE_CREATED,
+        REQUESTED_NAME_CHECKING,
+        REQUESTED_NAME_CHECKED,
+        REQUESTED_NAME_LINK_SAVING,
+        REQUESTED_NAME_LINK_SAVED,
+        VOTING,
         DONE,
         DONE_AND_DISMISS // this should always be the last value
     }
@@ -148,6 +160,13 @@ open class BlockchainIdentityConfig @Inject constructor(
         val IDENTITY = stringPreferencesKey("identity")
         val PRIVACY_MODE = stringPreferencesKey("privacy_mode")
         val BALANCE = longPreferencesKey("identity_balance")
+
+        val REQUESTED_USERNAME = stringPreferencesKey("requested_username")
+        val REQUESTED_USERNAME_LINK = stringPreferencesKey("requested_username_link")
+        val CANCELED_REQUESTED_USERNAME_LINK = booleanPreferencesKey("cancelled_requested_username_link")
+        val USERNAME_REQUESTED = booleanPreferencesKey("username_requested")
+        val VOTING_PERIOD_START = longPreferencesKey("voting_period_start")
+
     }
 
     private val identityData: Flow<BlockchainIdentityData> = data
@@ -166,7 +185,12 @@ open class BlockchainIdentityConfig @Inject constructor(
                 registrationStatus = prefs[IDENTITY_REGISTRATION_STATUS]?.let { BlockchainIdentity.RegistrationStatus.valueOf(it) },
                 usernameStatus = prefs[USERNAME_REGISTRATION_STATUS]?.let { BlockchainIdentity.UsernameStatus.valueOf(it) },
                 privacyMode = prefs[PRIVACY_MODE]?.let { CoinJoinMode.valueOf(it) },
-                creditBalance = prefs[BALANCE]?.let { Coin.valueOf(it)}
+                creditBalance = prefs[BALANCE]?.let { Coin.valueOf(it) },
+                requestedUsername = prefs[REQUESTED_USERNAME],
+                verificationLink = prefs[REQUESTED_USERNAME_LINK],
+                cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
+                usernameRequested = prefs[USERNAME_REQUESTED],
+                votingPeriodStart = prefs[VOTING_PERIOD_START]
             )
         }
 
@@ -181,7 +205,12 @@ open class BlockchainIdentityConfig @Inject constructor(
                 restoring = prefs[RESTORING] ?: false,
                 creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
                 usingInvite = prefs[USING_INVITE] ?: false,
-                invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) }
+                invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) },
+                requestedUsername = prefs[REQUESTED_USERNAME],
+                verificationLink = prefs[REQUESTED_USERNAME_LINK],
+                cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
+                usernameRequested = prefs[USERNAME_REQUESTED],
+                votingPeriodStart = prefs[VOTING_PERIOD_START]
             )
         }
 

@@ -21,10 +21,10 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,7 +54,7 @@ data class RequestUserNameUIState(
 @HiltViewModel
 class RequestUserNameViewModel @Inject constructor(
     val walletApplication: WalletApplication,
-    val dashPayConfig: DashPayConfig,
+    val identityConfig: BlockchainIdentityConfig,
     val walletData: WalletDataProvider,
     val platformRepo: PlatformRepo
 ) : ViewModel() {
@@ -69,9 +69,9 @@ class RequestUserNameViewModel @Inject constructor(
     val walletBalance: Coin
         get() = walletData.getWalletBalance()
     suspend fun isUserNameRequested(): Boolean =
-        dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME).isNullOrEmpty().not()
-    suspend fun hasUserCancelledRequest(): Boolean =
-        dashPayConfig.get(DashPayConfig.CANCELED_REQUESTED_USERNAME_LINK) ?: false
+        identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME).isNullOrEmpty().not()
+    suspend fun hasUserCancelledVerification(): Boolean =
+        identityConfig.get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK) ?: false
 
     fun canAffordNonContestedUsername(): Boolean = walletBalance >= Constants.DASH_PAY_FEE
     fun canAffordContestedUsername(): Boolean = walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
@@ -79,8 +79,7 @@ class RequestUserNameViewModel @Inject constructor(
     init {
 
         viewModelScope.launch {
-            _requestedUserNameLink.value =
-                dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME_LINK)
+            _requestedUserNameLink.value = identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
         }
     }
 
@@ -117,15 +116,15 @@ class RequestUserNameViewModel @Inject constructor(
     fun setRequestedUserNameLink(link: String) {
         _requestedUserNameLink.value = link
     }
-    private fun updateUiForApiSuccess() {
-        viewModelScope.launch {
-            requestedUserName?.let { name ->
-                dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, name)
-            }
-            _requestedUserNameLink.value.let { link ->
-                dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME_LINK, link ?: "")
-            }
+
+    private suspend fun updateConfig() {
+        requestedUserName?.let { name ->
+            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME, name)
         }
+        _requestedUserNameLink.value.let { link ->
+            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, link ?: "")
+        }
+    }
 
         _uiState.update {
             it.copy(
@@ -184,9 +183,9 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun cancelRequest() {
         viewModelScope.launch {
-            dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, "")
-            dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME_LINK, "")
-            dashPayConfig.set(DashPayConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
+            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME, "")
+            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, "")
+            identityConfig.set(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
         }
     }
 

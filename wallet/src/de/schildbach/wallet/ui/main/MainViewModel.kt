@@ -697,7 +697,7 @@ class MainViewModel @Inject constructor(
     }
 
     suspend fun getRequestedUsername(): String =
-        dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME) ?: ""
+        dashPayConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME) ?: ""
     suspend fun getInviteHistory() = invitationsDao.loadAll()
 
     private fun combineLatestData(): Boolean {
