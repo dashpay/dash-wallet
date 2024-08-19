@@ -697,7 +697,7 @@ class MainViewModel @Inject constructor(
     }
 
     suspend fun getRequestedUsername(): String =
-        dashPayConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME) ?: ""
+        blockchainIdentityDataDao.get(BlockchainIdentityConfig.REQUESTED_USERNAME) ?: ""
     suspend fun getInviteHistory() = invitationsDao.loadAll()
 
     private fun combineLatestData(): Boolean {
@@ -709,7 +709,7 @@ class MainViewModel @Inject constructor(
             val noIdentityCreatedOrInProgress =
                 (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
             val canAffordIdentityCreation = walletData.canAffordIdentityCreation()
-            return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress && canAffordIdentityCreation
+            return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress //&& canAffordIdentityCreation
         }
     }
 

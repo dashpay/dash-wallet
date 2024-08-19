@@ -99,6 +99,8 @@ interface PlatformSyncService {
     fun removeContactsUpdatedListener(listener: OnContactsUpdated?)
     fun fireContactsUpdatedListeners()
 
+    suspend fun triggerPreBlockDownloadComplete()
+
     fun addPreBlockProgressListener(listener: OnPreBlockProgressListener)
     fun removePreBlockProgressListener(listener: OnPreBlockProgressListener)
 
@@ -1017,6 +1019,10 @@ class PlatformSynchronizationService @Inject constructor(
         log.info("publishing updates to tx metadata items complete")
     }
 
+    override suspend fun triggerPreBlockDownloadComplete() {
+        finishPreBlockDownload()
+    }
+
     private suspend fun finishPreBlockDownload() {
         log.info("PreDownloadBlocks: complete")
         if (config.areNotificationsDisabled()) {
@@ -1068,7 +1074,7 @@ class PlatformSynchronizationService @Inject constructor(
             preDownloadBlocks.set(true)
             lastPreBlockStage = PreBlockStage.None
             preDownloadBlocksFuture = future
-            log.info("PreDownloadBlocks: starting")
+            log.info("preBlockDownload: starting")
             if (Constants.DASHPAY_DISABLED) {
                 finishPreBlockDownload()
                 return@launch
@@ -1078,13 +1084,13 @@ class PlatformSynchronizationService @Inject constructor(
             // or if the previous restore is incomplete
             val identityData = blockchainIdentityDataDao.load()
             if (identityData == null || identityData.restoring) {
-                log.info("PreDownloadBlocks: checking for existing associated identity")
+                log.info("preBlockDownload: checking for existing associated identity")
 
                 val identity = platformRepo.getIdentityFromPublicKeyId()
                 platformRepo.onIdentityResolved?.invoke(identity)
 
                 if (identity != null) {
-                    log.info("PreDownloadBlocks: initiate recovery of existing identity ${identity.id}")
+                    log.info("preBlockDownload: initiate recovery of existing identity ${identity.id}")
                     ContextCompat.startForegroundService(
                         walletApplication,
                         CreateIdentityService.createIntentForRestore(
@@ -1094,7 +1100,7 @@ class PlatformSynchronizationService @Inject constructor(
                     )
                     return@launch
                 } else {
-                    log.info("PreDownloadBlocks: no existing identity found")
+                    log.info("preBlockDownload: no existing identity found")
                     // resume Sync process, since there is no Platform data to sync
                     finishPreBlockDownload()
                 }

@@ -33,6 +33,7 @@ import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.PackageInfoProvider
@@ -56,6 +57,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -173,6 +175,30 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
         }
 
+        mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
+            if (it.creationState == BlockchainIdentityData.CreationState.VOTING) {
+                binding.joinDashpayContainer.visibility = View.GONE
+                binding.requestedUsernameContainer.visibility = View.VISIBLE
+                binding.requestedUsernameTitle.text = mainActivityViewModel.getRequestedUsername()
+            } else {
+                binding.joinDashpayContainer.visibility = View.VISIBLE
+                binding.requestedUsernameContainer.visibility = View.GONE
+            }
+        }
+
+//        lifecycleScope.launch {
+//            mainActivityViewModel.getRequestedUsername().also { username ->
+//                if (username.isNotEmpty()) {
+//                    binding.joinDashpayContainer.visibility = View.GONE
+//                    binding.requestedUsernameContainer.visibility = View.VISIBLE
+//                    binding.requestedUsernameTitle.text = username
+//                } else {
+//                    binding.joinDashpayContainer.visibility = View.VISIBLE
+//                    binding.requestedUsernameContainer.visibility = View.GONE
+//                }
+//            }
+//        }
+
         initViewModel()
 
         if (Constants.DASHPAY_DISABLED) {
@@ -251,9 +277,6 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             binding.dashpayContainer.isVisible = it
         }
 
-
-
-
         createInviteViewModel.isAbleToPerformInviteAction.observe(viewLifecycleOwner) {
             showInviteSection(it)
         }
@@ -298,16 +321,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         // Developer Mode Feature
         binding.invite.isVisible = showInviteSection
         lifecycleScope.launchWhenResumed {
-            mainActivityViewModel.getRequestedUsername().also { username ->
-                if (username.isNotEmpty()) {
-                    binding.joinDashpayContainer.visibility = View.GONE
-                    binding.requestedUsernameContainer.visibility = View.VISIBLE
-                    binding.requestedUsernameTitle.text = username
-                } else {
-                    binding.joinDashpayContainer.visibility = View.VISIBLE
-                    binding.requestedUsernameContainer.visibility = View.GONE
-                }
-            }
+
         }
     }
 }

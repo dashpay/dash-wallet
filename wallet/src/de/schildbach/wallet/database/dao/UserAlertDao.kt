@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface UserAlertDao {
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(userAlert: UserAlert)
 
     @Query("UPDATE user_alerts SET dismissed = 1 WHERE stringResId = :id")
