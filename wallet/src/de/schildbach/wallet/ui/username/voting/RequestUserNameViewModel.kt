@@ -22,6 +22,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CREATION_STATE
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.REQUESTED_USERNAME
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -32,6 +35,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.WalletDataProvider
+import org.dashj.platform.sdk.platform.Names
 import javax.inject.Inject
 
 data class RequestUserNameUIState(
@@ -68,8 +72,14 @@ class RequestUserNameViewModel @Inject constructor(
 
     val walletBalance: Coin
         get() = walletData.getWalletBalance()
-    suspend fun isUserNameRequested(): Boolean =
-        identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME).isNullOrEmpty().not()
+    suspend fun isUserNameRequested(): Boolean {
+        val hasRequestedName = identityConfig.get(REQUESTED_USERNAME).isNullOrEmpty().not()
+        val creationState = BlockchainIdentityData.CreationState.valueOf(
+            identityConfig.get(CREATION_STATE) ?: BlockchainIdentityData.CreationState.NONE.name
+        )
+        return hasRequestedName && creationState != BlockchainIdentityData.CreationState.NONE &&
+                creationState.ordinal <= BlockchainIdentityData.CreationState.VOTING.ordinal
+    }
     suspend fun hasUserCancelledVerification(): Boolean =
         identityConfig.get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK) ?: false
 
@@ -95,11 +105,13 @@ class RequestUserNameViewModel @Inject constructor(
     fun submit() {
         // Reset ui state for retry if needed
         resetUiForRetrySubmit()
-
-        // send the request / create username
-        triggerIdentityCreation(false)
+        viewModelScope.launch {
+            updateConfig()
+            // send the request / create username, assume not retry
+            triggerIdentityCreation(false)
+        }
         // if call success
-        updateUiForApiSuccess()
+        // updateUiForApiSuccess()
         // else if call failed
         // updateUiForApiError()
     }
@@ -126,6 +138,7 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
+    private fun updateUiForApiSuccess() {
         _uiState.update {
             it.copy(
                 usernameCheckSuccess = true,
@@ -158,7 +171,6 @@ class RequestUserNameViewModel @Inject constructor(
                 val usernameBlocked = false // TODO: make the call
                 _uiState.update {
                     it.copy(
-                        usernameVerified = true,
                         usernameCheckSuccess = true,
                         usernameSubmittedError = false,
                         usernameContested = usernameContested,
@@ -172,12 +184,13 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun verify() {
         viewModelScope.launch {
-            dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
+            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
             _uiState.update {
                 it.copy(
                     usernameVerified = true
                 )
             }
+            //submit()
         }
     }
 
@@ -187,11 +200,6 @@ class RequestUserNameViewModel @Inject constructor(
             identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, "")
             identityConfig.set(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
         }
-    }
-
-    private fun isUsernameContestable(username: String): Boolean {
-        val regex = Regex("^[a-zA-Z01-]{3,19}$")
-        return regex.matches(username)
     }
 
     private fun validateUsernameSize(uname: String): Boolean {
@@ -209,7 +217,7 @@ class RequestUserNameViewModel @Inject constructor(
     fun checkUsernameValid(username: String): Boolean {
         val validLength = validateUsernameSize(username)
         val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
-        val contestable = isUsernameContestable(username)
+        val contestable = Names.isUsernameContestable(username)
         val enoughBalance = if (contestable) {
             walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
         } else {
@@ -224,9 +232,12 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameCheckSuccess = false,
-                usernameVerified = false
             )
         }
         return validCharacters && validLength
+    }
+
+    fun isUsernameContestable(): Boolean {
+        return Names.isUsernameContestable(requestedUserName!!)
     }
 }

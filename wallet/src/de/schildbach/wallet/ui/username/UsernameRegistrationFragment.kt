@@ -165,12 +165,13 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
                     requireActivity().finish()
                 }
 
-                it?.creationState == BlockchainIdentityData.CreationState.DONE -> {
+                it?.creationState == BlockchainIdentityData.CreationState.DONE ||
+                        it?.creationState == BlockchainIdentityData.CreationState.VOTING -> {
                     completeUsername = it.username ?: ""
                     showCompleteState()
                 }
 
-                it?.creationState?.ordinal in BlockchainIdentityData.CreationState.UPGRADING_WALLET.ordinal ..<  BlockchainIdentityData.CreationState.DONE.ordinal -> {
+                it?.creationState?.ordinal in BlockchainIdentityData.CreationState.UPGRADING_WALLET.ordinal until BlockchainIdentityData.CreationState.DONE.ordinal -> {
                     showProcessingState()
                 }
             }
@@ -386,10 +387,14 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
     private fun showProcessingState() {
         if (!isProcessing) {
             val username = requestUsernameViewModel.requestedUserName!!
-            val text = getString(R.string.username_being_created, username)
+                val text = getString(if (requestUsernameViewModel.isUsernameContestable()) {
+                    R.string.username_being_requested
+                } else {
+                    R.string.username_being_created
+                }, username
+            )
 
             binding.processingIdentity.visibility = View.VISIBLE
-            //binding.registrationContent.visibility = View.GONE
             binding.chooseUsernameTitle.startAnimation(fadeOutAnimation)
             binding.processingIdentity.startAnimation(slideInAnimation)
             (binding.processingIdentityLoadingImage.drawable as AnimationDrawable).start()

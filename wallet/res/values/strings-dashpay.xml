@@ -63,15 +63,19 @@
     <string name="invitation_contact_request_sent_message">A contact request has been sent to %s since they invited you.</string>
 
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
+    <string name="username_being_requested">Your username %s is being requested on the Dash Network</string>
+
     <string name="processing_let_me_know">Let me know when it\'s done</string>
     <string name="processing_home_title">Upgrading to Evolution</string>
     <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) Processing Payment</string>
     <string name="processing_home_step_2">(2/3) Creating ID</string>
     <string name="processing_home_step_2_restoring">(2/3) Recovering ID</string>
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Registering Username</string>
+    <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Requesting Username</string>
     <string name="processing_home_step_3_restoring">(3/3) Recovering Username</string>
     <string name="processing_done_title">Hello %s,</string>
     <string name="processing_done_subtitle">Your account is ready</string>
+    <string name="processing_voting_subtitle">Voting for your username has begun</string>
     <string name="processing_error_title">Error Upgrading</string>
     <string name="processing_error_title_from_invite">Error Upgrading from invite</string>
     <string name="processing_error_retry">Retry</string>
@@ -331,7 +335,8 @@
     <string name="vote_for_all">Vote for All</string>
     <string name="voting_period_active">Username Voting Period Active</string>
     <string name="there_was_a_network_error">There was a network error, you can try again at no extra cost</string>
-    <string name="requested_voting_duration">Requested · Voting: 1 Mar – 15 Mar</string>
+    <string name="requested_username_has_been">Username has been requested.</string>
+    <string name="requested_voting_duration">Results on %s.</string>
     <string name="cancel_request">Cancel Request</string>
     <string name="after_the_voting">After the voting ends we will notify you about its results</string>
     <string name="none">None</string>

@@ -264,7 +264,7 @@ class CreateIdentityService : LifecycleService() {
         val timerStep1 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_1)
 
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
-
+        val blockchainIdentityDataBase = platformRepo.loadBlockchainIdentityBaseData() // for other info
         when {
             (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring && blockchainIdentityDataTmp.creationStateErrorMessage == null) -> {
                 // TODO: handle case when blockchain reset has happened and the cftx was not found yet
@@ -282,7 +282,15 @@ class CreateIdentityService : LifecycleService() {
 
             }
             (username != null) -> {
-                blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, username, null, false)
+                blockchainIdentityData = BlockchainIdentityData(
+                    CreationState.NONE,
+                    null,
+                    username,
+                    null,
+                    false,
+                    requestedUsername = blockchainIdentityDataBase?.requestedUsername, // move these back to dashpayconfig?
+                    verificationLink = blockchainIdentityDataBase?.verificationLink
+                )
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
             }
             else -> {

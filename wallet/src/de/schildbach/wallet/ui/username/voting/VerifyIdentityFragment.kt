@@ -1,19 +1,28 @@
 package de.schildbach.wallet.ui.username.voting
 
 import android.os.Bundle
+import android.text.format.DateFormat
 import android.view.View
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentVerfiyIdentityBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
+import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.safeNavigate
+import java.util.Date
+import java.util.concurrent.TimeUnit
 
 
 @AndroidEntryPoint
@@ -56,11 +65,53 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
         binding.verifyBtn.setOnClickListener {
             requestUserNameViewModel.setRequestedUserNameLink(binding.linkInput.text.toString())
             requestUserNameViewModel.verify()
-            findNavController().popBackStack()
+            lifecycleScope.launch {
+                checkViewConfirmDialog()
+            }
+            //findNavController().popBackStack()
+        }
+
+        requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
+//            if (it.usernameSubmittedSuccess) {
+//                requireActivity().finish()
+//            }
+
+//            if (it.usernameSubmittedError) {
+//                showErrorDialog()
+//            }
+//
+//             if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameCheckSuccess) {
+//
+//                if (it.usernameVerified) {
+//                    hideKeyboard()
+//                    checkViewConfirmDialog()
+//                }
+//            }
+        }
+
+        dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+            if (it?.creationStateErrorMessage != null) {
+                requireActivity().finish()
+            } else if ((it?.creationState?.ordinal ?: 0) > BlockchainIdentityData.CreationState.NONE.ordinal) {
+                safeNavigate(VerifyIdentityFragmentDirections.verifyToUsernameRegistrationFragment())
+            }
         }
     }
 
     private fun hideKeyboard() {
         KeyboardUtil.hideKeyboard(requireContext(), view = binding.linkInput)
+    }
+
+    private suspend fun checkViewConfirmDialog() {
+        // TODO: Can we cancel the request?
+        if (requestUserNameViewModel.hasUserCancelledVerification()) {
+            requestUserNameViewModel.submit()
+        } else {
+            safeNavigate(
+                VerifyIdentityFragmentDirections.verifyIdentityFragmentToConfirmUsernameRequestDialog(
+                    requestUserNameViewModel.requestedUserName!!
+                )
+            )
+        }
     }
 }

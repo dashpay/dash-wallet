@@ -12,7 +12,6 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
-import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
@@ -183,17 +182,22 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 }
                 binding.requestUsernameButton.isEnabled = it.enoughBalance
 
+                if (it.usernameRequestSubmitting) {
+                    binding.usernameInput.isFocusable = false
+                    hideKeyboard()
+                }
+
+                if (it.usernameVerified) {
+                    binding.usernameInput.isFocusable = false
+                    hideKeyboard()
+                    checkViewConfirmDialog()
+                }
+
             } else {
                 binding.votingPeriodContainer.isVisible = false
                 binding.walletBalanceContainer.isVisible = false
                 binding.usernameAvailableContainer.isVisible = false
                 binding.requestUsernameButton.isEnabled = false
-            }
-
-            if (it.usernameVerified && it.usernameRequestSubmitting) {
-                binding.usernameInput.isFocusable = (false)
-                hideKeyboard()
-                checkViewConfirmDialog()
             }
         }
 
@@ -219,7 +223,8 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
     }
 
     private suspend fun checkViewConfirmDialog() {
-        if (requestUserNameViewModel.hasUserCancelledRequest()) {
+        // TODO: Can we cancel the request?
+        if (requestUserNameViewModel.hasUserCancelledVerification()) {
             requestUserNameViewModel.submit()
         } else {
             safeNavigate(
