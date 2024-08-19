@@ -39,7 +39,7 @@ data class BlockchainIdentityBaseData(
 
     val creationInProgress: Boolean
         get() = creationState > BlockchainIdentityData.CreationState.NONE &&
-                creationState < BlockchainIdentityData.CreationState.DONE &&
+                creationState < BlockchainIdentityData.CreationState.VOTING &&
                 creationStateErrorMessage == null
 
     val votingInProgress: Boolean

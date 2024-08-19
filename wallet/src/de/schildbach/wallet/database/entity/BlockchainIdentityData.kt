@@ -231,11 +231,9 @@ open class BlockchainIdentityConfig @Inject constructor(
         return identityBaseData
     }
 
-    suspend fun saveIdentityPrefs(blockchainIdentityData: BlockchainIdentityData) {
+    private suspend fun saveIdentityPrefs(blockchainIdentityData: BlockchainIdentityData) {
         updateCreationState(1, blockchainIdentityData.creationState, blockchainIdentityData.creationStateErrorMessage)
         context.dataStore.edit { prefs ->
-            //prefs[CREATION_STATE] = blockchainIdentityData.creationState.name
-            //blockchainIdentityData.creationStateErrorMessage?.let { prefs[CREATION_STATE_ERROR_MESSAGE] = it }
             blockchainIdentityData.username?.let { prefs[USERNAME] = it }
             blockchainIdentityData.userId?.let { prefs[IDENTITY_ID] = it }
             prefs[RESTORING] = blockchainIdentityData.restoring
@@ -250,11 +248,9 @@ open class BlockchainIdentityConfig @Inject constructor(
         }
     }
 
-    suspend fun saveIdentityBasePrefs(blockchainIdentityBaseData: BlockchainIdentityBaseData) {
+    private suspend fun saveIdentityBasePrefs(blockchainIdentityBaseData: BlockchainIdentityBaseData) {
         updateCreationState(1, blockchainIdentityBaseData.creationState, blockchainIdentityBaseData.creationStateErrorMessage)
         context.dataStore.edit { prefs ->
-            //prefs[CREATION_STATE] = blockchainIdentityBaseData.creationState.name
-            //blockchainIdentityBaseData.creationStateErrorMessage?.let { prefs[CREATION_STATE_ERROR_MESSAGE] = it }
             blockchainIdentityBaseData.username?.let { prefs[USERNAME] = it }
             blockchainIdentityBaseData.userId?.let { prefs[IDENTITY_ID] = it }
             prefs[RESTORING] = blockchainIdentityBaseData.restoring
