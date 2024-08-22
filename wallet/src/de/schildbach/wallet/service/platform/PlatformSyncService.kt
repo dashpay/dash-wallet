@@ -1024,7 +1024,7 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private suspend fun finishPreBlockDownload() {
-        log.info("PreDownloadBlocks: complete")
+        log.info("PreBlockDownload: complete")
         if (config.areNotificationsDisabled()) {
             // this will enable notifications, since platform information has been synced
             config.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, System.currentTimeMillis() - TimeUnit.DAYS.toMillis(7))

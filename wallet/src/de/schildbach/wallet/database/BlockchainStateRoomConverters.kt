@@ -26,6 +26,8 @@ import org.dashj.platform.dpp.identity.Identity
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
+import org.dashj.platform.dashpay.IdentityStatus
+import org.dashj.platform.dashpay.UsernameStatus
 import org.dashj.platform.sdk.KeyType
 import java.util.*
 import kotlin.collections.ArrayList
@@ -78,22 +80,22 @@ class BlockchainStateRoomConverters {
     }
 
     @TypeConverter
-    fun toUsernameStatus(value: Int): BlockchainIdentity.UsernameStatus {
-        return BlockchainIdentity.UsernameStatus.values()[value]
+    fun toUsernameStatus(value: Int): UsernameStatus {
+        return UsernameStatus.values()[value]
     }
 
     @TypeConverter
-    fun fromUsernameStatus(usernameStatus: BlockchainIdentity.UsernameStatus?): Int {
-        return usernameStatus?.value ?: BlockchainIdentity.UsernameStatus.NOT_PRESENT.value
+    fun fromUsernameStatus(usernameStatus: UsernameStatus?): Int {
+        return usernameStatus?.value ?: UsernameStatus.NOT_PRESENT.value
     }
 
     @TypeConverter
-    fun toRegistrationStatus(value: Int): BlockchainIdentity.RegistrationStatus? {
-        return if (value > -1) BlockchainIdentity.RegistrationStatus.values()[value] else null
+    fun toRegistrationStatus(value: Int): IdentityStatus? {
+        return if (value > -1) IdentityStatus.values()[value] else null
     }
 
     @TypeConverter
-    fun fromRegistrationStatus(registrationStatus: BlockchainIdentity.RegistrationStatus?): Int {
+    fun fromRegistrationStatus(registrationStatus: IdentityStatus?): Int {
         return registrationStatus?.ordinal ?: -1
     }
 

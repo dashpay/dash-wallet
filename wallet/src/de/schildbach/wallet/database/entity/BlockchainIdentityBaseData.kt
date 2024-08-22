@@ -19,6 +19,7 @@ package de.schildbach.wallet.database.entity
 
 import de.schildbach.wallet.data.InvitationLinkData
 import org.bitcoinj.core.Sha256Hash
+import org.dashj.platform.dashpay.UsernameRequestStatus
 
 data class BlockchainIdentityBaseData(
     val id: Int,
@@ -33,14 +34,14 @@ data class BlockchainIdentityBaseData(
     var requestedUsername: String? = null,
     var verificationLink: String? = null,
     val cancelledVerificationLink: Boolean? = null,
-    val usernameRequested: Boolean? = null,
+    val usernameRequested: UsernameRequestStatus? = null,
     val votingPeriodStart: Long? = null
 ) {
 
     val creationInProgress: Boolean
         get() = creationState > BlockchainIdentityData.CreationState.NONE &&
                 creationState < BlockchainIdentityData.CreationState.VOTING &&
-                creationStateErrorMessage == null
+                creationStateErrorMessage == null && !restoring
 
     val votingInProgress: Boolean
         get() = creationState == BlockchainIdentityData.CreationState.VOTING
