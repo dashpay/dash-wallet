@@ -11,10 +11,12 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
@@ -35,13 +37,20 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
+import org.dashj.platform.dapiclient.SystemIds
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
 import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dashj.platform.dashpay.UsernameInfo
+import org.dashj.platform.dashpay.UsernameRequestStatus
+import org.dashj.platform.dashpay.UsernameStatus
+import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.errors.ConcensusErrorMetadata
 import org.dashj.platform.dpp.errors.concensus.ConcensusException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.IdentityAssetLockTransactionOutPointAlreadyExistsException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofSignatureException
 import org.dashj.platform.dpp.identity.Identity
+import org.dashj.platform.sdk.dashsdk
+import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
@@ -139,6 +148,7 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityConfig
     @Inject lateinit var securityFunctions: SecurityFunctions
     @Inject lateinit var coinJoinConfig: CoinJoinConfig
+    @Inject lateinit var usernameRequestDao: UsernameRequestDao
     private lateinit var securityGuard: SecurityGuard
 
     private val wakeLock by lazy {
@@ -202,7 +212,7 @@ class CreateIdentityService : LifecycleService() {
             val blockchainIdentityData = runBlocking {
                 platformRepo.loadBlockchainIdentityBaseData()
             }
-            if (blockchainIdentityData != null && blockchainIdentityData.creationState != CreationState.DONE) {
+            if (blockchainIdentityData != null && blockchainIdentityData.creationState != CreationState.DONE && !blockchainIdentityData.restoring) {
                 handleCreateIdentityAction(null)
             }
 
@@ -288,7 +298,6 @@ class CreateIdentityService : LifecycleService() {
                     username,
                     null,
                     false,
-                    requestedUsername = blockchainIdentityDataBase?.requestedUsername, // move these back to dashpayconfig?
                     verificationLink = blockchainIdentityDataBase?.verificationLink
                 )
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
@@ -622,7 +631,7 @@ class CreateIdentityService : LifecycleService() {
         addInviteUserAlert()
 
         // check for contested username
-        if (blockchainIdentityData.requestedUsername != null && Names.isUsernameContestable(blockchainIdentityData.requestedUsername!!)) {
+        if (/*blockchainIdentityData.requestedUsername != null && */Names.isUsernameContestable(blockchainIdentityData.username!!)) {
             // get the createdAt date to estimate 2 week voting period
             // check that this username is contested and up for a vote
             // save the verification link in a new document
@@ -630,8 +639,46 @@ class CreateIdentityService : LifecycleService() {
             if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_CHECKING) {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKING)
 
+
+                val contenders = platformRepo.platform.names.getVoteContenders(blockchainIdentityData.username!!)
+
                 blockchainIdentity.currentVotingPeriodStarts = System.currentTimeMillis()
                 blockchainIdentity.currentUsernameRequested = true
+
+                if (contenders.isEmpty()) {
+                    error("${blockchainIdentityData.username} not found because there are no contenders")
+                }
+
+                val documentWithVotes = contenders.map[blockchainIdentity.uniqueIdentifier]
+                    ?: error("${blockchainIdentityData.username} does not have ${blockchainIdentity.uniqueIdentifier} as a contender")
+
+                val document = DomainDocument(
+                    Document(
+                        dashsdk.platformMobileFetchDocumentDeserializeDocumentSdk(
+                            platformRepo.platform.client.rustSdk,
+                            documentWithVotes.seralizedDocument,
+                            SystemIds.dpnsDataContractId.toNative(),
+                            "domain"
+                        ).unwrap(),
+                        SystemIds.dpnsDataContractId
+                    )
+                )
+
+                usernameRequestDao.insert(
+                    UsernameRequest(
+                        blockchainIdentity.uniqueIdString + " " + blockchainIdentityData.username!!,
+                        blockchainIdentityData.username!!,
+                        document.createdAt!!,
+                        blockchainIdentity.uniqueIdString,
+                        blockchainIdentityData.verificationLink,
+                        documentWithVotes.votes,
+                        false
+                    )
+                )
+
+                val usernameInfo = blockchainIdentity.usernameStatuses[blockchainIdentity.currentUsername!!]!!
+                usernameInfo.votingStartedAt = document.createdAt
+                usernameInfo.requestStatus = UsernameRequestStatus.VOTING
 
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             }
@@ -769,6 +816,53 @@ class CreateIdentityService : LifecycleService() {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKING)
 
                 // check if the network has this name in the queue for voting
+                val contestedNames = platformRepo.platform.names.getContestedNames()
+
+                contestedNames.forEach { name ->
+                    val voteContenders = platformRepo.platform.names.getVoteContenders(name)
+                    voteContenders.map.forEach { (identifier, documentWithVotes) ->
+                        if (blockchainIdentity.uniqueIdentifier == identifier) {
+                            blockchainIdentity.currentUsername = name
+                            // load the serialized doc to get voting period and status...
+
+                            blockchainIdentity.usernameStatuses.apply {
+                                clear()
+                                val usernameInfo = UsernameInfo(null, UsernameStatus.CONFIRMED, blockchainIdentity.currentUsername!!,
+                                    UsernameRequestStatus.VOTING, 0)
+                                put(blockchainIdentity.currentUsername!!, usernameInfo)
+                            }
+
+                            val contestedDocument = DomainDocument(
+                                Document(
+                                    dashsdk.platformMobileFetchDocumentDeserializeDocumentSdk(
+                                        platformRepo.platform.client.rustSdk,
+                                        documentWithVotes.seralizedDocument,
+                                        SystemIds.dpnsDataContractId.toNative(),
+                                        "domain"
+                                    ).unwrap(),
+                                    SystemIds.dpnsDataContractId
+                                )
+                            )
+
+                            usernameRequestDao.insert(
+                                UsernameRequest(
+                                    blockchainIdentity.uniqueIdString + " " + blockchainIdentity.currentUsername!!,
+                                    blockchainIdentity.currentUsername!!,
+                                    contestedDocument.createdAt!!,
+                                    blockchainIdentity.uniqueIdString,
+                                    blockchainIdentityData.verificationLink, // get it from the document
+                                    documentWithVotes.votes,
+                                    false
+                                )
+                            )
+                            val usernameInfo = blockchainIdentity.usernameStatuses[blockchainIdentity.currentUsername!!]!!
+                            usernameInfo.votingStartedAt = contestedDocument.createdAt
+                            usernameInfo.requestStatus = UsernameRequestStatus.VOTING
+                        }
+                    }
+                }
+
+
 
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKED)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
@@ -782,25 +876,30 @@ class CreateIdentityService : LifecycleService() {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKED)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.VOTING)
+                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             }
 
             //
             // Step 6: Find the profile
             //
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
+            //platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
             platformRepo.recoverDashPayProfile(blockchainIdentity)
             // blockchainIdentity hasn't changed
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
+            //platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
             platformSyncService.updateSyncStatus(PreBlockStage.GetProfile)
 
             addInviteUserAlert()
 
             // We are finished recovering
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)
             blockchainIdentityData.finishRestoration()
+            if (blockchainIdentityData.creationState != CreationState.VOTING) {
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)
+                platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                // Complete the entire process
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
+            }
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
-            // Complete the entire process
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
 
             platformSyncService.updateSyncStatus(PreBlockStage.RecoveryComplete)
             platformRepo.init()
