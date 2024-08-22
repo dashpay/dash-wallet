@@ -27,7 +27,13 @@ data class UsernameRequest(
     val username: String,
     val createdAt: Long,
     val identity: String,
-    val link: String?,
+    var link: String?,
     val votes: Int,
     val isApproved: Boolean
-)
+) {
+    companion object {
+        fun getRequestId(identity: String, username: String): String {
+            return String.format("%s %s", identity, username)
+        }
+    }
+}

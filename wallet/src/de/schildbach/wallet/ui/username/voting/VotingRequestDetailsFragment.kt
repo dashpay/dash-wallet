@@ -19,12 +19,12 @@ package de.schildbach.wallet.ui.username.voting
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.format.DateFormat
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.findNavController
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentVotingRequestDetailsBinding
@@ -32,6 +32,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import java.util.concurrent.TimeUnit
 
 
 class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_details) {
@@ -41,18 +42,18 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
         super.onResume()
         // Developer Mode Feature
 
-        lifecycleScope.launchWhenResumed {
-            binding.username.text =
-                requestUserNameViewModel.identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME)
-
-            requestUserNameViewModel.requestedUserNameLink.observe(viewLifecycleOwner) {
-                it?.let { link ->
-                    binding.link.text = link
-                    binding.linkLayout.isVisible = link.isEmpty().not()
-                    binding.verfiyNowLayout.isVisible = link.isEmpty()
-                }
-            }
-        }
+//        lifecycleScope.launchWhenResumed {
+//            binding.username.text =
+//                requestUserNameViewModel.identityConfig.get(BlockchainIdentityConfig.USERNAME)
+//
+//            requestUserNameViewModel.requestedUserNameLink.observe(viewLifecycleOwner) {
+//                it?.let { link ->
+//                    binding.link.text = link
+//                    binding.linkLayout.isVisible = link.isEmpty().not()
+//                    binding.verfiyNowLayout.isVisible = link.isEmpty()
+//                }
+//            }
+//        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -62,15 +63,32 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
             requireActivity().finish()
         }
         // TODO Mock identity
-        binding.identity.text = "90f95ff7bc2438a748dc8470255b888b2a9ea6837bf518d018dc3d6cddf698"
-        binding.votingRange.text = "1 Mar – 15 Mar"
-        binding.votesNumber.text = getString(R.string.votes, "10")
 
-        binding.verfiyNow.setOnClickListener {
+
+        binding.verify.setOnClickListener {
             safeNavigate(
                 VotingRequestDetailsFragmentDirections
                     .votingRequestDetailsFragmentToVerifyIdentityFragment(username = binding.username.text.toString())
             )
+        }
+
+        requestUserNameViewModel.myUsernameRequest.observe(viewLifecycleOwner) { myUsernameRequest ->
+            binding.username.text = myUsernameRequest?.username
+            binding.identity.text = myUsernameRequest?.identity
+            val votingPeriod = myUsernameRequest?.createdAt?.let { startTime ->
+                val endTime = startTime + TimeUnit.MILLISECONDS.toDays(14)
+                val dateFormat = DateFormat.getMediumDateFormat(requireContext())
+                dateFormat.format(endTime)
+            } ?: "Voting Period not found"
+            binding.votingRange.text = votingPeriod
+            if (myUsernameRequest?.link != null) {
+                binding.link.text = myUsernameRequest.link
+                binding.linkLayout.isVisible = true
+                binding.verfiyNowLayout.isVisible = false
+            } else {
+                binding.linkLayout.isVisible = false
+                binding.verfiyNowLayout.isVisible = true
+            }
         }
 
 
@@ -102,20 +120,20 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
             )
         }
 
-        binding.cancelRequestButton.setOnClickListener {
-            AdaptiveDialog.create(
-                R.drawable.ic_warning,
-                title = getString(R.string.do_you_really_want_to_cancel),
-                message = getString(R.string.if_you_tap_cancel_request),
-                positiveButtonText = getString(R.string.cancel_request),
-                negativeButtonText = getString(android.R.string.cancel)
-            ).show(requireActivity()) {
-                if (it == true) {
-                    requestUserNameViewModel.cancelRequest()
-                    requireActivity().finish()
-                }
-            }
-            findNavController().popBackStack()
-        }
+//        binding.cancelRequestButton.setOnClickListener {
+//            AdaptiveDialog.create(
+//                R.drawable.ic_warning,
+//                title = getString(R.string.do_you_really_want_to_cancel),
+//                message = getString(R.string.if_you_tap_cancel_request),
+//                positiveButtonText = getString(R.string.cancel_request),
+//                negativeButtonText = getString(android.R.string.cancel)
+//            ).show(requireActivity()) {
+//                if (it == true) {
+//                    requestUserNameViewModel.cancelRequest()
+//                    requireActivity().finish()
+//                }
+//            }
+//            findNavController().popBackStack()
+//        }
     }
 }

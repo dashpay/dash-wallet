@@ -697,7 +697,7 @@ class MainViewModel @Inject constructor(
     }
 
     suspend fun getRequestedUsername(): String =
-        blockchainIdentityDataDao.get(BlockchainIdentityConfig.REQUESTED_USERNAME) ?: ""
+        blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME) ?: ""
     suspend fun getInviteHistory() = invitationsDao.loadAll()
 
     private fun combineLatestData(): Boolean {

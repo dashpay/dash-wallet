@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.more
 import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
+import android.text.format.DateFormat
 import android.view.View
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -60,6 +61,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -180,6 +182,12 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 binding.joinDashpayContainer.visibility = View.GONE
                 binding.requestedUsernameContainer.visibility = View.VISIBLE
                 binding.requestedUsernameTitle.text = mainActivityViewModel.getRequestedUsername()
+                val votingPeriod = it.votingPeriodStart?.let { startTime ->
+                    val endTime = startTime + TimeUnit.MILLISECONDS.toDays(14)
+                    val dateFormat = DateFormat.getMediumDateFormat(requireContext())
+                    String.format("%s - %s", dateFormat.format(startTime), dateFormat.format(endTime))
+                } ?: "Voting Period not found"
+                binding.requestedUsernameSubtitleTwo.text = getString(R.string.requested_voting_duration, votingPeriod)
             } else {
                 binding.joinDashpayContainer.visibility = View.VISIBLE
                 binding.requestedUsernameContainer.visibility = View.GONE

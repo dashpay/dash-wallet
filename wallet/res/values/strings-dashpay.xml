@@ -279,7 +279,7 @@
     <string name="only_links">Only requests with links</string>
     <string name="only_links_short">With links</string>
     <string name="date">Date: %s</string>
-    <string name="votes">Votes: %s</string>
+    <string name="votes">Votes: %d</string>
 
     <string-array name="usernames_sort_by_options">
         <item>New to old</item>
@@ -308,6 +308,7 @@
     <string name="request_details_subtitle">Review the posting bellow to verify the ownership of this username</string>
     <string name="vote_to_approve">Vote to Approve</string>
     <string name="identity">Identity</string>
+    <string name="results">Results</string>
     <string name="link">Link</string>
     <string name="link_not_provided">Not provided</string>
     <string name="cancel_approval">Cancel Approval</string>

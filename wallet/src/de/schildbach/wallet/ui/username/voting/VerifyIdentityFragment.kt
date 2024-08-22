@@ -66,7 +66,22 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
             requestUserNameViewModel.setRequestedUserNameLink(binding.linkInput.text.toString())
             requestUserNameViewModel.verify()
             lifecycleScope.launch {
-                checkViewConfirmDialog()
+                val creationState = dashPayViewModel.blockchainIdentity.value?.creationState ?: BlockchainIdentityData.CreationState.NONE
+                if (creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal) {
+                    checkViewConfirmDialog()
+                    dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+                        if (it?.creationStateErrorMessage != null) {
+                            requireActivity().finish()
+                        } else {
+                            val creationState = it?.creationState ?: BlockchainIdentityData.CreationState.NONE
+                            if (creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal) {
+                                safeNavigate(VerifyIdentityFragmentDirections.verifyToUsernameRegistrationFragment())
+                            }
+                        }
+                    }
+                } else {
+                    findNavController().popBackStack()
+                }
             }
             //findNavController().popBackStack()
         }
@@ -87,14 +102,6 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
 //                    checkViewConfirmDialog()
 //                }
 //            }
-        }
-
-        dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
-            if (it?.creationStateErrorMessage != null) {
-                requireActivity().finish()
-            } else if ((it?.creationState?.ordinal ?: 0) > BlockchainIdentityData.CreationState.NONE.ordinal) {
-                safeNavigate(VerifyIdentityFragmentDirections.verifyToUsernameRegistrationFragment())
-            }
         }
     }
 
