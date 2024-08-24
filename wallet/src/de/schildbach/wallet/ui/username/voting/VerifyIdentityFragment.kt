@@ -1,10 +1,8 @@
 package de.schildbach.wallet.ui.username.voting
 
 import android.os.Bundle
-import android.text.format.DateFormat
 import android.view.View
 import android.widget.Toast
-import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -21,8 +19,6 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
-import java.util.Date
-import java.util.concurrent.TimeUnit
 
 
 @AndroidEntryPoint
@@ -80,6 +76,7 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
                         }
                     }
                 } else {
+                    requestUserNameViewModel.publishIdentityVerifyDocument()
                     findNavController().popBackStack()
                 }
             }

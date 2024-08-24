@@ -22,6 +22,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +42,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Base58
+import org.dashj.platform.sdk.platform.Names
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.min
@@ -71,7 +73,8 @@ data class FiltersUIState(
 @HiltViewModel
 class UsernameRequestsViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
-    private val usernameRequestDao: UsernameRequestDao
+    private val usernameRequestDao: UsernameRequestDao,
+    private val platformSyncService: PlatformSyncService
 ): ViewModel() {
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
@@ -122,6 +125,10 @@ class UsernameRequestsViewModel @Inject constructor(
                 }
         }.onEach { requests -> _uiState.update { it.copy(filteredUsernameRequests = requests) } }
             .launchIn(viewModelWorkerScope)
+
+        viewModelWorkerScope.launch {
+            platformSyncService.updateUsernameRequestsWithVotes()
+        }
     }
 
     suspend fun setFirstTimeInfoShown() {
@@ -246,80 +253,99 @@ class UsernameRequestsViewModel @Inject constructor(
         val from = 1658290321L
 
         viewModelScope.launch {
+            var name = names[Random.nextInt(0, min(names.size, nameCount))]
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, min(names.size, nameCount))],
+                    name,
+                    Names.normalizeString(name),
                     Random.nextLong(from, now),
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     "https://www.figma.com/file/hh5juOSdGnNNPijJG1NGTi/DashPay%E3%83%BBIn-" +
                         "process%E3%83%BBAndroid?type=design&node-id=752-11735&mode=design&t=zasn6AKlSwb5NuYS-0",
                     Random.nextInt(0, 15),
-                    true
-                )
-            )
-            usernameRequestDao.insert(
-                UsernameRequest(
-                    UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
-                    null,
                     Random.nextInt(0, 15),
                     true
                 )
             )
+            name = names[Random.nextInt(0, min(names.size, nameCount))]
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, min(names.size, nameCount))],
+                    name,
+                    Names.normalizeString(name),
                     Random.nextLong(from, now),
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
+                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 15),
+                    true
+                )
+            )
+            name = names[Random.nextInt(0, min(names.size, nameCount))]
+            usernameRequestDao.insert(
+                UsernameRequest(
+                    UUID.randomUUID().toString(),
+                    name,
+                    Names.normalizeString(name),
+                    Random.nextLong(from, now),
+                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    null,
+                    Random.nextInt(0, 15),
                     Random.nextInt(0, 15),
                     false
                 )
             )
+            name = names[Random.nextInt(0, min(names.size, nameCount))]
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(from, now),
+                    name,
+                    Names.normalizeString(name),                    Random.nextLong(from, now),
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     "https://twitter.com/ProductHunt/",
                     Random.nextInt(0, 15),
-                    false
-                )
-            )
-            usernameRequestDao.insert(
-                UsernameRequest(
-                    UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
-                    null,
                     Random.nextInt(0, 15),
                     false
                 )
             )
+            name = names[Random.nextInt(0, min(names.size, nameCount))]
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, min(names.size, nameCount))],
-                    Random.nextLong(from, now),
+                    name,
+                    Names.normalizeString(name),                    Random.nextLong(from, now),
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
+                    Random.nextInt(0, 15),
                     Random.nextInt(0, 15),
                     false
                 )
             )
+            name = names[Random.nextInt(0, min(names.size, nameCount))]
             usernameRequestDao.insert(
                 UsernameRequest(
                     UUID.randomUUID().toString(),
-                    names[Random.nextInt(0, min(names.size, nameCount))],
+                    name,
+                    Names.normalizeString(name),
                     Random.nextLong(from, now),
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
+                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 15),
+                    false
+                )
+            )
+            name = names[Random.nextInt(0, min(names.size, nameCount))]
+            usernameRequestDao.insert(
+                UsernameRequest(
+                    UUID.randomUUID().toString(),
+                    name,
+                    Names.normalizeString(name),
+                    Random.nextLong(from, now),
+                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    null,
+                    Random.nextInt(0, 15),
                     Random.nextInt(0, 15),
                     false
                 )

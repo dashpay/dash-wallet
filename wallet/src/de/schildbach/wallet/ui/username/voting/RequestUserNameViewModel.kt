@@ -31,11 +31,11 @@ import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
@@ -269,5 +269,14 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun isUsernameContestable(): Boolean {
         return Names.isUsernameContestable(requestedUserName!!)
+    }
+
+    fun publishIdentityVerifyDocument() {
+        _requestedUserNameLink.value?.let { url ->
+            BroadcastIdentityVerifyOperation(walletApplication).create(
+                requestedUserName!!,
+                url
+            )
+        }
     }
 }

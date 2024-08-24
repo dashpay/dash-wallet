@@ -25,10 +25,12 @@ data class UsernameRequest(
     @PrimaryKey
     val requestId: String,
     val username: String,
+    val normalizedLabel: String,
     val createdAt: Long,
     val identity: String,
     var link: String?,
     val votes: Int,
+    val lockVotes: Int,
     val isApproved: Boolean
 ) {
     companion object {
