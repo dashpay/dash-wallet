@@ -33,12 +33,14 @@ import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
+import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
 import de.schildbach.wallet.database.entity.TransactionMetadataDocument
+import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.BlockchainService
@@ -70,6 +72,7 @@ import org.dashj.platform.contracts.wallet.TxMetadataItem
 import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.platform.DomainDocument
+import org.dashj.platform.wallet.IdentityVerify
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.HashMap
@@ -94,6 +97,7 @@ interface PlatformSyncService {
 
     suspend fun updateContactRequests()
     fun postUpdateBloomFilters()
+    suspend fun updateUsernameRequestsWithVotes()
 
     fun addContactsUpdatedListener(listener: OnContactsUpdated)
     fun removeContactsUpdatedListener(listener: OnContactsUpdated?)
@@ -119,7 +123,8 @@ class PlatformSynchronizationService @Inject constructor(
     private val blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val dashPayProfileDao: DashPayProfileDao,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
-    private val invitationsDao: InvitationsDao
+    private val invitationsDao: InvitationsDao,
+    private val usernameRequestDao: UsernameRequestDao
 ) : PlatformSyncService {
 
     companion object {
@@ -212,17 +217,17 @@ class PlatformSynchronizationService @Inject constructor(
             return
         }
 
-        val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
-        if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
-            log.info("update contacts not completed username registration/recovery is not complete")
-            return
-        }
-
-        if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
-            return // this is here because the wallet is being reset without removing blockchainIdentityData
-        }
-
         try {
+            val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
+            if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+                log.info("update contacts not completed username registration/recovery is not complete")
+                return
+            }
+
+            if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
+                return // this is here because the wallet is being reset without removing blockchainIdentityData
+            }
+
             val userId = blockchainIdentityData.userId!!
 
             val userIdList = HashSet<String>()
@@ -324,7 +329,7 @@ class PlatformSynchronizationService @Inject constructor(
                     // fetch updated invitations
                     async { updateInvitations() },
                     // fetch updated transaction metadata
-                    async { updateTransactionMetadata() },
+                    async { updateTransactionMetadata() },  // TODO: this is skipped in VOTING state, but shouldn't be
                     // fetch updated profiles from the network
                     async { updateContactProfiles(userId, lastContactRequestTime) }
                 )
@@ -1017,6 +1022,34 @@ class PlatformSynchronizationService @Inject constructor(
         }
 
         log.info("publishing updates to tx metadata items complete")
+    }
+
+    override suspend fun updateUsernameRequestsWithVotes() {
+        val contestedNames = platform.platform.names.getContestedNames()
+        for (name in contestedNames) {
+            val voteContender = platform.platform.names.getVoteContenders(name)
+            voteContender.map.forEach { (identifier, contender) ->
+
+                val contestedDocument = DomainDocument(
+                    platform.platform.names.deserialize(contender.seralizedDocument)
+                )
+
+                val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
+
+                val usernameRequest = UsernameRequest(
+                    UsernameRequest.getRequestId(identifier.toString(), name),
+                    contestedDocument.label,
+                    name,
+                    contestedDocument.createdAt?.div(1000) ?: -1L,
+                    identifier.toString(),
+                    identityVerifyDocument?.url,
+                    contender.votes,
+                    voteContender.lockVoteTally,
+                    false
+                )
+                usernameRequestDao.insert(usernameRequest)
+            }
+        }
     }
 
     override suspend fun triggerPreBlockDownloadComplete() {
