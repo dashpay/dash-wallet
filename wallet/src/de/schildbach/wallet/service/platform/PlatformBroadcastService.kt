@@ -28,6 +28,8 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
+import org.dashj.platform.dashpay.callback.WalletSignerCallback
+import org.dashj.platform.wallet.IdentityVerifyDocument
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -36,6 +38,7 @@ interface PlatformBroadcastService {
     suspend fun broadcastUpdatedProfile(dashPayProfile: DashPayProfile, encryptionKey: KeyParameter): DashPayProfile
     suspend fun sendContactRequest(toUserId: String): DashPayContactRequest
     suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): DashPayContactRequest
+    suspend fun broadcastIdentityVerify(username: String, url: String, encryptionKey: KeyParameter?): IdentityVerifyDocument
 }
 
 class PlatformDocumentBroadcastService @Inject constructor(
@@ -91,6 +94,25 @@ class PlatformDocumentBroadcastService @Inject constructor(
         platformRepo.updateDashPayProfile(toUserId) // update the profile
         platformSyncService.fireContactsUpdatedListeners() // trigger listeners
         return dashPayContactRequest
+    }
+
+    override suspend fun broadcastIdentityVerify(username: String, url: String, encryptionKey: KeyParameter?): IdentityVerifyDocument {
+        val blockchainIdentity = platformRepo.blockchainIdentity
+
+        // Create Identity Verify
+        val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
+        val identityVerifyDocument = platform.identityVerify.createForDashDomain(
+            username,
+            url,
+            blockchainIdentity.identity!!,
+            WalletSignerCallback(walletDataProvider.wallet!!, encryptionKey)
+        )
+        timer.logTiming()
+        log.info("identity verify sent")
+
+        log.info("contact request: $identityVerifyDocument")
+
+        return identityVerifyDocument
     }
 
     @Throws(Exception::class)
