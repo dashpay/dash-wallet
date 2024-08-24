@@ -37,21 +37,20 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
-import org.dashj.platform.dapiclient.SystemIds
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dashpay.UsernameInfo
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dashpay.UsernameStatus
-import org.dashj.platform.dpp.document.Document
+import org.dashj.platform.dashpay.callback.WalletSignerCallback
 import org.dashj.platform.dpp.errors.ConcensusErrorMetadata
 import org.dashj.platform.dpp.errors.concensus.ConcensusException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.IdentityAssetLockTransactionOutPointAlreadyExistsException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofSignatureException
 import org.dashj.platform.dpp.identity.Identity
-import org.dashj.platform.sdk.dashsdk
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
+import org.dashj.platform.wallet.IdentityVerify
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -622,16 +621,10 @@ class CreateIdentityService : LifecycleService() {
             analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME, mapOf())
         }
 
-        // Step 6: A profile will not be created, since the user has not yet specified
-        //         a display name, public message (bio) or an avatarUrl
-        //         However, a default empty profile will be saved to the local database.
-        val emptyProfile = DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
-        platformRepo.updateDashPayProfile(emptyProfile)
-
         addInviteUserAlert()
 
         // check for contested username
-        if (/*blockchainIdentityData.requestedUsername != null && */Names.isUsernameContestable(blockchainIdentityData.username!!)) {
+        if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
             // get the createdAt date to estimate 2 week voting period
             // check that this username is contested and up for a vote
             // save the verification link in a new document
@@ -653,25 +646,27 @@ class CreateIdentityService : LifecycleService() {
                     ?: error("${blockchainIdentityData.username} does not have ${blockchainIdentity.uniqueIdentifier} as a contender")
 
                 val document = DomainDocument(
-                    Document(
-                        dashsdk.platformMobileFetchDocumentDeserializeDocumentSdk(
-                            platformRepo.platform.client.rustSdk,
-                            documentWithVotes.seralizedDocument,
-                            SystemIds.dpnsDataContractId.toNative(),
-                            "domain"
-                        ).unwrap(),
-                        SystemIds.dpnsDataContractId
-                    )
+                        platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument)
                 )
+                blockchainIdentityData.verificationLink?.let { verificationLink ->
+                    IdentityVerify(platformRepo.platform.platform).createForDashDomain(
+                        blockchainIdentityData.username!!,
+                        verificationLink,
+                        blockchainIdentity.identity!!,
+                        WalletSignerCallback(walletApplication.wallet!!, encryptionKey)
+                    )
+                }
 
                 usernameRequestDao.insert(
                     UsernameRequest(
                         blockchainIdentity.uniqueIdString + " " + blockchainIdentityData.username!!,
                         blockchainIdentityData.username!!,
-                        document.createdAt!!,
+                        Names.normalizeString(blockchainIdentityData.username!!),
+                        document.createdAt!! / 1000,
                         blockchainIdentity.uniqueIdString,
                         blockchainIdentityData.verificationLink,
                         documentWithVotes.votes,
+                        contenders.lockVoteTally,
                         false
                     )
                 )
@@ -704,6 +699,12 @@ class CreateIdentityService : LifecycleService() {
         } else {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)
         }
+
+        // Step 6: A profile will not be created, since the user has not yet specified
+        //         a display name, public message (bio) or an avatarUrl
+        //         However, a default empty profile will be saved to the local database.
+        val emptyProfile = DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
+        platformRepo.updateDashPayProfile(emptyProfile)
 
         platformRepo.init()
         platformSyncService.initSync()
@@ -833,25 +834,25 @@ class CreateIdentityService : LifecycleService() {
                             }
 
                             val contestedDocument = DomainDocument(
-                                Document(
-                                    dashsdk.platformMobileFetchDocumentDeserializeDocumentSdk(
-                                        platformRepo.platform.client.rustSdk,
-                                        documentWithVotes.seralizedDocument,
-                                        SystemIds.dpnsDataContractId.toNative(),
-                                        "domain"
-                                    ).unwrap(),
-                                    SystemIds.dpnsDataContractId
-                                )
+                                platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument)
+                            )
+                            blockchainIdentity.currentUsername = contestedDocument.label
+
+                            val verifyDocument = IdentityVerify(platformRepo.platform.platform).get(
+                                blockchainIdentity.uniqueIdentifier,
+                                name
                             )
 
                             usernameRequestDao.insert(
                                 UsernameRequest(
-                                    blockchainIdentity.uniqueIdString + " " + blockchainIdentity.currentUsername!!,
-                                    blockchainIdentity.currentUsername!!,
-                                    contestedDocument.createdAt!!,
+                                    UsernameRequest.getRequestId(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!),
+                                    contestedDocument.label,
+                                    contestedDocument.normalizedLabel,
+                                    contestedDocument.createdAt!! / 1000,
                                     blockchainIdentity.uniqueIdString,
-                                    blockchainIdentityData.verificationLink, // get it from the document
+                                    verifyDocument?.url, // get it from the document
                                     documentWithVotes.votes,
+                                    voteContenders.lockVoteTally,
                                     false
                                 )
                             )
