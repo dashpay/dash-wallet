@@ -209,12 +209,16 @@ class RequestUserNameViewModel @Inject constructor(
     fun verify() {
         viewModelScope.launch {
             identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
-            val usernameRequest = usernameRequestDao.getRequest(UsernameRequest.getRequestId(
-                identityConfig.get(IDENTITY_ID)!!,
-                requestedUserName!!
-            ))
-            usernameRequest!!.link = _requestedUserNameLink.value
-            usernameRequestDao.update(usernameRequest)
+            identityConfig.get(IDENTITY_ID)?.let { identityId ->
+                val usernameRequest = usernameRequestDao.getRequest(
+                    UsernameRequest.getRequestId(
+                        identityId,
+                        requestedUserName!!
+                    )
+                )
+                usernameRequest!!.link = _requestedUserNameLink.value
+                usernameRequestDao.update(usernameRequest)
+            }
             _uiState.update {
                 it.copy(
                     usernameVerified = true

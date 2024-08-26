@@ -646,12 +646,14 @@ class CreateIdentityService : LifecycleService() {
                         platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument)
                 )
                 blockchainIdentityData.verificationLink?.let { verificationLink ->
-                    IdentityVerify(platformRepo.platform.platform).createForDashDomain(
-                        blockchainIdentityData.username!!,
-                        verificationLink,
-                        blockchainIdentity.identity!!,
-                        WalletSignerCallback(walletApplication.wallet!!, encryptionKey)
-                    )
+                    if (verificationLink.startsWith("https://") || verificationLink.startsWith("http://")) {
+                        IdentityVerify(platformRepo.platform.platform).createForDashDomain(
+                            blockchainIdentityData.username!!,
+                            verificationLink,
+                            blockchainIdentity.identity!!,
+                            WalletSignerCallback(walletApplication.wallet!!, encryptionKey)
+                        )
+                    }
                 }
 
                 usernameRequestDao.insert(
