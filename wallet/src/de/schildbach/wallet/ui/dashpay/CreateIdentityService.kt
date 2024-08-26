@@ -569,9 +569,6 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private suspend fun finishRegistration(blockchainIdentity: BlockchainIdentity, encryptionKey: KeyParameter) {
-        // TODO: let's delay to make sure that the identity is propagated
-        // delay(20000)
-
         // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
         if (blockchainIdentityData.creationState <= CreationState.IDENTITY_REGISTERED) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
@@ -601,7 +598,7 @@ class CreateIdentityService : LifecycleService() {
             //
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
-        // delay(30000) // 20 sec delay for platform sync
+
         if (blockchainIdentityData.creationState <= CreationState.USERNAME_REGISTERING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERING)
             //
