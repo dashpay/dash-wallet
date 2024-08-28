@@ -38,23 +38,6 @@ import java.util.concurrent.TimeUnit
 class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_details) {
     private val binding by viewBinding(FragmentVotingRequestDetailsBinding::bind)
     private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
-    override fun onResume() {
-        super.onResume()
-        // Developer Mode Feature
-
-//        lifecycleScope.launchWhenResumed {
-//            binding.username.text =
-//                requestUserNameViewModel.identityConfig.get(BlockchainIdentityConfig.USERNAME)
-//
-//            requestUserNameViewModel.requestedUserNameLink.observe(viewLifecycleOwner) {
-//                it?.let { link ->
-//                    binding.link.text = link
-//                    binding.linkLayout.isVisible = link.isEmpty().not()
-//                    binding.verfiyNowLayout.isVisible = link.isEmpty()
-//                }
-//            }
-//        }
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -119,21 +102,5 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
                 VotingRequestDetailsFragmentDirections.votingRequestDetailsFragmentToUsernameVotingInfoFragment()
             )
         }
-
-//        binding.cancelRequestButton.setOnClickListener {
-//            AdaptiveDialog.create(
-//                R.drawable.ic_warning,
-//                title = getString(R.string.do_you_really_want_to_cancel),
-//                message = getString(R.string.if_you_tap_cancel_request),
-//                positiveButtonText = getString(R.string.cancel_request),
-//                negativeButtonText = getString(android.R.string.cancel)
-//            ).show(requireActivity()) {
-//                if (it == true) {
-//                    requestUserNameViewModel.cancelRequest()
-//                    requireActivity().finish()
-//                }
-//            }
-//            findNavController().popBackStack()
-//        }
     }
 }

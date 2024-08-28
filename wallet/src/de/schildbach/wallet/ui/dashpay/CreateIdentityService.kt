@@ -883,10 +883,8 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 6: Find the profile
             //
-            //platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
             platformRepo.recoverDashPayProfile(blockchainIdentity)
             // blockchainIdentity hasn't changed
-            //platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
             platformSyncService.updateSyncStatus(PreBlockStage.GetProfile)
 
             addInviteUserAlert()

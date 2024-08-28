@@ -44,15 +44,6 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
         const val KEY_PASSWORD = "BroadcastIdentityVerifyWorker.PASSWORD"
         const val KEY_USERNAME = "BroadcastIdentityVerifyWorker.USERNAME"
         const val KEY_URL = "BroadcastIdentityVerifyWorker.URL"
-
-
-//        fun extractUserId(date: Data): String? {
-//            return date.getString(KEY_USER_ID)
-//        }
-//
-//        fun extractToUserId(date: Data): String? {
-//            return date.getString(KEY_TO_USER_ID)
-//        }
     }
 
     override suspend fun doWorkWithBaseProgress(): Result {
