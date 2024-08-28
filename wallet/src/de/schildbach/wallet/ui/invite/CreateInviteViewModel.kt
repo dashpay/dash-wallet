@@ -66,7 +66,7 @@ class CreateInviteViewModel @Inject constructor(
     private fun combineLatestData(): Boolean {
         val isSynced = blockchainStateData.value?.isSynced() ?: false
         val noIdentityCreatedOrInProgress = (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
-        return isSynced && !noIdentityCreatedOrInProgress //&& canAffordIdentityCreation()
+        return isSynced && !noIdentityCreatedOrInProgress
     }
 
     val invitationsLiveData = invitationsDao.observe().asLiveData()

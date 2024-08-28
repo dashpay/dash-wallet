@@ -708,8 +708,7 @@ class MainViewModel @Inject constructor(
             val isSynced = _isBlockchainSynced.value ?: false
             val noIdentityCreatedOrInProgress =
                 (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
-            val canAffordIdentityCreation = walletData.canAffordIdentityCreation()
-            return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress //&& canAffordIdentityCreation
+            return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress
         }
     }
 
