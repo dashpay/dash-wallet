@@ -49,7 +49,6 @@ class SettingsViewModel @Inject constructor(
 
     val isIgnoringBatteryOptimizations: Boolean
         get() = powerManager.isIgnoringBatteryOptimizations(walletApplication.packageName)
-    val voteDashPayIsEnabled = walletUIConfig.observe(WalletUIConfig.VOTE_DASH_PAY_ENABLED)
     val coinJoinMixingMode: Flow<CoinJoinMode>
         get() = coinJoinConfig.observeMode()
     var mixingProgress: Double = 0.0
@@ -70,12 +69,6 @@ class SettingsViewModel @Inject constructor(
 
     val mixedBalance: String
         get() = decimalFormat.format((walletDataProvider.wallet as WalletEx).coinJoinBalance.toBigDecimal())
-
-    fun setVoteDashPay(isEnabled: Boolean) {
-        viewModelScope.launch {
-            walletUIConfig.set(WalletUIConfig.VOTE_DASH_PAY_ENABLED, isEnabled)
-        }
-    }
 
     suspend fun shouldShowCoinJoinInfo(): Boolean {
         return coinJoinConfig.get(CoinJoinConfig.FIRST_TIME_INFO_SHOWN) != true

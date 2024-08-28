@@ -19,25 +19,48 @@ package de.schildbach.wallet.ui.username.voting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CREATION_STATE
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.REQUESTED_USERNAME
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Coin
 import org.dash.wallet.common.WalletDataProvider
+import org.dashj.platform.sdk.platform.Names
 import javax.inject.Inject
 
 data class RequestUserNameUIState(
     val usernameVerified: Boolean = false,
-    val usernameSubmittedSuccess: Boolean = false,
-    val usernameSubmittedError: Boolean = false
+    val usernameRequestSubmitting: Boolean = false,
+    val usernameRequestSubmitted: Boolean = false,
+    val usernameCheckSuccess: Boolean = false,
+    val usernameSubmittedError: Boolean = false,
+    val usernameLengthValid: Boolean = false,
+    val usernameCharactersValid: Boolean = false,
+    val usernameTooShort: Boolean = true,  // default zero length username
+    val usernameContestable: Boolean = false,
+    val usernameContested: Boolean = false,
+    val usernameExists: Boolean = false,
+    val usernameBlocked: Boolean = false,
+    val enoughBalance: Boolean = false,
+    val votingPeriodStart: Long = System.currentTimeMillis()
 )
 
 @HiltViewModel
 class RequestUserNameViewModel @Inject constructor(
-    val dashPayConfig: DashPayConfig,
-    val walletData: WalletDataProvider
+    val walletApplication: WalletApplication,
+    val identityConfig: BlockchainIdentityConfig,
+    val walletData: WalletDataProvider,
+    val platformRepo: PlatformRepo
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
@@ -46,28 +69,49 @@ class RequestUserNameViewModel @Inject constructor(
     val requestedUserNameLink: StateFlow<String?> = _requestedUserNameLink.asStateFlow()
 
     var requestedUserName: String? = null
-    suspend fun isUserNameRequested(): Boolean =
-        dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME).isNullOrEmpty().not()
-    suspend fun isUserHaveCancelledRequest(): Boolean =
-        dashPayConfig.get(DashPayConfig.CANCELED_REQUESTED_USERNAME_LINK) ?: false
 
-    fun canAffordIdentityCreation(): Boolean =
-        walletData.canAffordIdentityCreation()
+    val walletBalance: Coin
+        get() = walletData.getWalletBalance()
+    suspend fun isUserNameRequested(): Boolean {
+        val hasRequestedName = identityConfig.get(REQUESTED_USERNAME).isNullOrEmpty().not()
+        val creationState = BlockchainIdentityData.CreationState.valueOf(
+            identityConfig.get(CREATION_STATE) ?: BlockchainIdentityData.CreationState.NONE.name
+        )
+        return hasRequestedName && creationState != BlockchainIdentityData.CreationState.NONE &&
+                creationState.ordinal <= BlockchainIdentityData.CreationState.VOTING.ordinal
+    }
+    suspend fun hasUserCancelledVerification(): Boolean =
+        identityConfig.get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK) ?: false
+
+    fun canAffordNonContestedUsername(): Boolean = walletBalance >= Constants.DASH_PAY_FEE
+    fun canAffordContestedUsername(): Boolean = walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
+
     init {
 
         viewModelScope.launch {
-            _requestedUserNameLink.value =
-                dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME_LINK)
+            _requestedUserNameLink.value = identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
+        }
+    }
+
+    private fun triggerIdentityCreation(reuseTransaction: Boolean) {
+        val username = requestedUserName!!
+        if (reuseTransaction) {
+            walletApplication.startService(CreateIdentityService.createIntentForNewUsername(walletApplication, username))
+        } else {
+            walletApplication.startService(CreateIdentityService.createIntent(walletApplication, username))
         }
     }
 
     fun submit() {
         // Reset ui state for retry if needed
-        // resetUiForRetrySubmit()
-
-        // TODO("Change to submit USERNAME")
+        resetUiForRetrySubmit()
+        viewModelScope.launch {
+            updateConfig()
+            // send the request / create username, assume not retry
+            triggerIdentityCreation(false)
+        }
         // if call success
-        updateUiForApiSuccess()
+        // updateUiForApiSuccess()
         // else if call failed
         // updateUiForApiError()
     }
@@ -75,28 +119,31 @@ class RequestUserNameViewModel @Inject constructor(
     private fun resetUiForRetrySubmit() {
         _uiState.update {
             it.copy(
-                usernameVerified = false,
-                usernameSubmittedSuccess = false,
-                usernameSubmittedError = false
+                usernameSubmittedError = false,
+                usernameRequestSubmitted = false,
+                usernameRequestSubmitting = false
             )
         }
     }
     fun setRequestedUserNameLink(link: String) {
         _requestedUserNameLink.value = link
     }
-    private fun updateUiForApiSuccess() {
-        viewModelScope.launch {
-            requestedUserName?.let { name ->
-                dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, name)
-            }
-            _requestedUserNameLink.value.let { link ->
-                dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME_LINK, link ?: "")
-            }
-        }
 
+    private suspend fun updateConfig() {
+        requestedUserName?.let { name ->
+            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME, name)
+        }
+        _requestedUserNameLink.value.let { link ->
+            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, link ?: "")
+        }
+    }
+
+    private fun updateUiForApiSuccess() {
         _uiState.update {
             it.copy(
-                usernameSubmittedSuccess = true,
+                usernameCheckSuccess = true,
+                usernameRequestSubmitting = false,
+                usernameRequestSubmitted = true,
                 usernameSubmittedError = false
             )
         }
@@ -104,28 +151,93 @@ class RequestUserNameViewModel @Inject constructor(
     private fun updateUiForApiError() {
         _uiState.update { it ->
             it.copy(
-                usernameSubmittedSuccess = false,
+                usernameCheckSuccess = false,
                 usernameSubmittedError = true
             )
         }
     }
 
+    fun checkUsername(requestedUserName: String?) {
+        viewModelScope.launch {
+            requestedUserName?.let { username ->
+                val usernameSearchResult = platformRepo.getUsername(username)
+                val usernameExists = when (usernameSearchResult.status) {
+                    Status.SUCCESS -> {
+                        usernameSearchResult.data != null
+                    }
+                    else -> false
+                }
+                val usernameContested = false // TODO: make the call
+                val usernameBlocked = false // TODO: make the call
+                _uiState.update {
+                    it.copy(
+                        usernameCheckSuccess = true,
+                        usernameSubmittedError = false,
+                        usernameContested = usernameContested,
+                        usernameExists = usernameExists,
+                        usernameBlocked = usernameBlocked
+                    )
+                }
+            }
+        }
+    }
+
     fun verify() {
         viewModelScope.launch {
-            dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
+            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
             _uiState.update {
                 it.copy(
                     usernameVerified = true
                 )
             }
+            //submit()
         }
     }
 
     fun cancelRequest() {
         viewModelScope.launch {
-            dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME, "")
-            dashPayConfig.set(DashPayConfig.REQUESTED_USERNAME_LINK, "")
-            dashPayConfig.set(DashPayConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
+            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME, "")
+            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, "")
+            identityConfig.set(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
         }
+    }
+
+    private fun validateUsernameSize(uname: String): Boolean {
+        return uname.length in Constants.USERNAME_MIN_LENGTH..Constants.USERNAME_MAX_LENGTH
+    }
+
+    private fun validateUsernameCharacters(uname: String): Pair<Boolean, Boolean> {
+        val alphaNumHyphenValid = !Regex("[^a-zA-Z0-9\\-]").containsMatchIn(uname)
+        val startOrEndWithHyphen = uname.startsWith("-") || uname.endsWith("-")
+        //val containsHyphen = uname.contains("-")
+
+        return Pair(alphaNumHyphenValid, startOrEndWithHyphen)
+    }
+
+    fun checkUsernameValid(username: String): Boolean {
+        val validLength = validateUsernameSize(username)
+        val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
+        val contestable = Names.isUsernameContestable(username)
+        val enoughBalance = if (contestable) {
+            walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
+        } else {
+            walletBalance >= Constants.DASH_PAY_FEE
+        }
+        _uiState.update {
+            it.copy(
+                usernameLengthValid = validLength,
+                usernameCharactersValid = validCharacters && !startOrEndWithHyphen,
+                usernameContestable = contestable,
+                enoughBalance = enoughBalance,
+                usernameTooShort = username.isEmpty(),
+                usernameSubmittedError = false,
+                usernameCheckSuccess = false,
+            )
+        }
+        return validCharacters && validLength
+    }
+
+    fun isUsernameContestable(): Boolean {
+        return Names.isUsernameContestable(requestedUserName!!)
     }
 }

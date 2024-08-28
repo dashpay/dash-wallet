@@ -38,7 +38,7 @@ import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
-class CreateUsernameActivity : InteractionAwareActivity() {
+class CreateUsernameActivity : LockScreenActivity() {
 
     private val dashPayViewModel: DashPayViewModel by viewModels()
 
@@ -126,23 +126,15 @@ class CreateUsernameActivity : InteractionAwareActivity() {
                 fromOnboardng = fromOnboardng
             )
 
-            if (dashPayViewModel.isVotingFlowEnabled()) {
-                if (requestUserNameViewModel.isUserNameRequested()) {
-                    navGraph.setStartDestination(R.id.votingRequestDetailsFragment)
-                } else {
-                    if (!dashPayViewModel.isDashPayInfoShown()) {
-                        navGraph.setStartDestination(R.id.welcomeToDashPayFragment)
-                    } else {
-                        navGraph.setStartDestination(R.id.requestUsernameFragment)
-                    }
-                }
+            if (requestUserNameViewModel.isUserNameRequested()) {
+                navGraph.setStartDestination(R.id.votingRequestDetailsFragment)
             } else {
-                    bundle.putParcelable(
-                        CreateUsernameFragment.CREATE_USER_NAME_ARGS,
-                        dashPayViewModel.createUsernameArgs
-                    )
-                    navGraph.setStartDestination(R.id.createUsernameFragment)
+                if (!dashPayViewModel.isDashPayInfoShown()) {
+                    navGraph.setStartDestination(R.id.welcomeToDashPayFragment)
+                } else {
+                    navGraph.setStartDestination(R.id.requestUsernameFragment)
                 }
+            }
 
 
             navController.graph = navGraph

@@ -25,7 +25,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentVotingRequestDetailsBinding
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -43,7 +43,7 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
 
         lifecycleScope.launchWhenResumed {
             binding.username.text =
-                requestUserNameViewModel.dashPayConfig.get(DashPayConfig.REQUESTED_USERNAME)
+                requestUserNameViewModel.identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME)
 
             requestUserNameViewModel.requestedUserNameLink.observe(viewLifecycleOwner) {
                 it?.let { link ->

@@ -159,9 +159,24 @@ class HistoryHeaderAdapter(
                     when {
                         blockchainIdentityData.creationStateErrorMessage != null -> R.string.processing_username_unavailable_subtitle
                         blockchainIdentityData.restoring -> R.string.processing_home_step_3_restoring
+                        blockchainIdentityData.requestedUsername != null -> R.string.processing_home_step_3_requesting
                         else -> R.string.processing_home_step_3
                     }
                 )
+            }
+            BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKING,
+            BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKED,
+            BlockchainIdentityData.CreationState.REQUESTED_NAME_LINK_SAVING,
+            BlockchainIdentityData.CreationState.REQUESTED_NAME_LINK_SAVED -> {
+                binding.identityCreation.progress.progress = 90
+            }
+            BlockchainIdentityData.CreationState.VOTING -> {
+                binding.identityCreation.icon.visibility = View.GONE
+                binding.identityCreation.forwardArrow.visibility = View.VISIBLE
+                binding.identityCreation.progress.visibility = View.GONE
+                binding.identityCreation.title.text = binding.root.context.getString(R.string.processing_done_title,
+                    blockchainIdentityData.username)
+                binding.identityCreation.subtitle.setText(R.string.processing_voting_subtitle)
             }
             BlockchainIdentityData.CreationState.DONE -> {
                 binding.identityCreation.icon.visibility = View.GONE

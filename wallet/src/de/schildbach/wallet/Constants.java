@@ -286,8 +286,10 @@ public final class Constants {
     //Backup Warnings (true = both seed and backup file, false = seed only)
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
 
-    // 1,500,000,000 credits
-    public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.45");
+    // 2,500,000,000 credits
+    public static final Coin DASH_PAY_FEE_CONTESTED = Coin.parseCoin("0.25");
+    public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.03");
+
     // 150,000,000
     public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);
 

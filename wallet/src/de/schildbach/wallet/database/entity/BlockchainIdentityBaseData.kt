@@ -20,20 +20,30 @@ package de.schildbach.wallet.database.entity
 import de.schildbach.wallet.data.InvitationLinkData
 import org.bitcoinj.core.Sha256Hash
 
-data class BlockchainIdentityBaseData(val id: Int,
-                                      val creationState: BlockchainIdentityData.CreationState,
-                                      val creationStateErrorMessage: String?,
-                                      val username: String?,
-                                      val userId: String?,
-                                      val restoring: Boolean,
-                                      val creditFundingTxId: Sha256Hash? = null,
-                                      val usingInvite: Boolean = false,
-                                      val invite: InvitationLinkData? = null) {
+data class BlockchainIdentityBaseData(
+    val id: Int,
+    val creationState: BlockchainIdentityData.CreationState,
+    val creationStateErrorMessage: String?,
+    val username: String?,
+    val userId: String?,
+    val restoring: Boolean,
+    val creditFundingTxId: Sha256Hash? = null,
+    val usingInvite: Boolean = false,
+    val invite: InvitationLinkData? = null,
+    var requestedUsername: String? = null,
+    var verificationLink: String? = null,
+    val cancelledVerificationLink: Boolean? = null,
+    val usernameRequested: Boolean? = null,
+    val votingPeriodStart: Long? = null
+) {
 
     val creationInProgress: Boolean
         get() = creationState > BlockchainIdentityData.CreationState.NONE &&
-                creationState < BlockchainIdentityData.CreationState.DONE &&
+                creationState < BlockchainIdentityData.CreationState.VOTING &&
                 creationStateErrorMessage == null
+
+    val votingInProgress: Boolean
+        get() = creationState == BlockchainIdentityData.CreationState.VOTING
 
     val creationComplete: Boolean
         get() = creationState >= BlockchainIdentityData.CreationState.DONE

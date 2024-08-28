@@ -212,7 +212,7 @@ class PlatformRepo @Inject constructor(
 
     fun getUsername(username: String): Resource<Document> {
         return try {
-            val nameDocument = platform.names.get(username)
+            val nameDocument = platform.names.get(Names.normalizeString(username))
             Resource.success(nameDocument)
         } catch (e: Exception) {
             Resource.error(e.localizedMessage!!, null)
@@ -506,10 +506,20 @@ class PlatformRepo @Inject constructor(
     //
     // Step 2 is to create the credit funding transaction
     //
-    suspend fun createAssetLockTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, useCoinJoin: Boolean) {
+    suspend fun createAssetLockTransactionAsync(
+        blockchainIdentity: BlockchainIdentity,
+        username: String,
+        keyParameter: KeyParameter?,
+        useCoinJoin: Boolean)
+    {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
-            val cftx = blockchainIdentity.createAssetLockTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin, true)
+            val fee = if (Names.isUsernameContestable(username)) {
+                Constants.DASH_PAY_FEE_CONTESTED
+            } else {
+                Constants.DASH_PAY_FEE
+            }
+            val cftx = blockchainIdentity.createAssetLockTransaction(fee, keyParameter, useCoinJoin, true)
             blockchainIdentity.initializeAssetLockTransaction(cftx)
         }
     }
@@ -537,11 +547,7 @@ class PlatformRepo @Inject constructor(
             assetLockTx.addAssetLockPublicKey(privateKey)
 
             // TODO: when all instantsend locks are deterministic, we don't need the catch block
-            val instantSendLock = try {
-                InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISDLOCK_VERSION)
-            } catch (e: Exception) {
-                InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISLOCK_VERSION)
-            }
+            val instantSendLock = InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISDLOCK_VERSION)
 
             assetLockTx.confidence.setInstantSendLock(instantSendLock)
             blockchainIdentity.initializeAssetLockTransaction(assetLockTx)
@@ -1202,4 +1208,5 @@ class PlatformRepo @Inject constructor(
     suspend fun getIdentityBalance(): CreditBalanceInfo {
         return CreditBalanceInfo(platform.client.getIdentityBalance(blockchainIdentity.uniqueIdentifier))
     }
+
 }

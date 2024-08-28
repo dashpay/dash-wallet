@@ -53,11 +53,11 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
     private val walletUIConfig: WalletUIConfig
 ) : ViewModel() {
 
+    var isContestableUsername: Boolean = false
     private val _uiState = MutableStateFlow(ConfirmUserNameUIState())
     val uiState: StateFlow<ConfirmUserNameUIState> = _uiState.asStateFlow()
-    private val amount by lazy {
-        Coin.valueOf(Constants.DASH_PAY_FEE.value)
-    }
+    private val amount: Coin
+        get() = if (isContestableUsername) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
 
     init {
 

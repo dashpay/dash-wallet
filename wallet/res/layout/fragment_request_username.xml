@@ -43,33 +43,34 @@
             android:layout_marginTop="10dp"
             android:orientation="horizontal">
 
-            <ImageView
-                android:id="@+id/create_a_username_icon"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:layout_constraintEnd_toStartOf="@id/create_a_username_title"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/create_a_username_title"
-                app:srcCompat="@drawable/ic_calendar" />
+<!--            <ImageView-->
+<!--                android:id="@+id/create_a_username_icon"-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                app:layout_constraintEnd_toStartOf="@id/create_a_username_title"-->
+<!--                app:layout_constraintStart_toStartOf="parent"-->
+<!--                app:layout_constraintTop_toTopOf="@+id/create_a_username_title"-->
+<!--                app:srcCompat="@drawable/ic_calendar" />-->
 
-            <TextView
-                style="@style/Caption.SemiBold"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="7dp"
-                android:includeFontPadding="false"
-                android:text="@string/voting"
-                android:textAlignment="gravity" />
+<!--            <TextView-->
+<!--                android:id="@+id/voting_range_label"-->
+<!--                style="@style/Caption.SemiBold"-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_marginStart="7dp"-->
+<!--                android:includeFontPadding="false"-->
+<!--                android:text="@string/voting"-->
+<!--                android:textAlignment="gravity" />-->
 
-            <TextView
-                android:id="@+id/voting_range"
-                style="@style/Caption"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:includeFontPadding="false"
-                android:maxLines="1"
-                android:textAlignment="gravity"
-                tools:text=" 1 Mar – 15 Mar" />
+<!--            <TextView-->
+<!--                android:id="@+id/voting_range"-->
+<!--                style="@style/Caption"-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:includeFontPadding="false"-->
+<!--                android:maxLines="1"-->
+<!--                android:textAlignment="gravity"-->
+<!--                tools:text=" 1 Mar – 15 Mar" />-->
         </LinearLayout>
 
         <org.dash.wallet.common.ui.text.InputWrapper
@@ -93,16 +94,155 @@
                 android:imeOptions="actionNext" />
         </org.dash.wallet.common.ui.text.InputWrapper>
 
-        <TextView
-            android:id="@+id/username_requested"
-            style="@style/Body2"
-            android:visibility="gone"
-            tools:visibility="visible"
+
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:text="@string/this_username_has_already_been_requested"
-            android:textAlignment="gravity" />
+            android:layout_marginTop="8dp">
+
+            <ImageView
+                android:id="@+id/check_length"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_check_circle_green"
+                />
+            <TextView
+                style="@style/Overline.Medium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/request_username_length_requirement"
+                />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+
+        <ImageView
+                android:id="@+id/check_letters"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_check_circle_green"
+                />
+            <TextView
+                style="@style/Overline.Medium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/request_username_character_requirement"
+                />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/wallet_balance_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+            <ImageView
+                android:id="@+id/check_balance"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_error_circle"
+                />
+
+            <TextView
+                style="@style/Overline.Medium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/request_username_balance_requirement"
+                android:maxLines="2"
+                />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/username_available_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+
+            <ImageView
+                android:id="@+id/check_available"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_check_circle_green"
+                />
+            <TextView
+                style="@style/Overline.Medium"
+                android:id="@+id/username_available_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="Username is available"
+                />
+        </LinearLayout>
+
+<!--        <LinearLayout-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content">-->
+<!--            <CheckBox-->
+<!--                android:id="@+id/check_blocked"-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                />-->
+<!--            <TextView-->
+<!--                style="@style/Overline.Medium"-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:text="Username is blocked"-->
+<!--                />-->
+<!--        </LinearLayout>-->
+
+        <LinearLayout
+            android:id="@+id/voting_period_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+
+            <ImageView
+                android:id="@+id/check_voting_period"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_warning_triangle"
+                />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                >
+            <TextView
+                style="@style/Overline.Medium"
+                android:id="@+id/voting_period"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:text="The Dash network will vote on this username. We will notify you of the results on March 14, 2024."
+                />
+            <TextView
+                style="@style/Overline.Medium.Blue"
+                android:id="@+id/username_voting_info_btn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/request_username_username_voting_message"
+                />
+            </LinearLayout>
+        </LinearLayout>
+
+<!--        <TextView-->
+<!--            android:id="@+id/username_requested"-->
+<!--            style="@style/Body2"-->
+<!--            android:visibility="gone"-->
+<!--            tools:visibility="visible"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_marginTop="5dp"-->
+<!--            android:text="@string/this_username_has_already_been_requested"-->
+<!--            android:textAlignment="gravity" />-->
+
     </LinearLayout>
 
     <Button
@@ -116,19 +256,19 @@
         android:text="@string/request_username"
         app:layout_constraintBottom_toBottomOf="parent" />
 
-    <TextView
-        android:id="@+id/balance_requirement_disclaimer"
-        style="@style/Overline"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        android:text="@string/request_username_min_balance_disclaimer"
-        android:visibility="gone"
-        android:gravity="center_horizontal"
-        android:textAlignment="gravity"
-        app:layout_constraintBottom_toTopOf="@id/request_username_button"
-        app:layout_constraintEnd_toEndOf="@id/request_username_button"
-        app:layout_constraintStart_toStartOf="@id/request_username_button"
-        tools:visibility="visible" />
+<!--    <TextView-->
+<!--        android:id="@+id/balance_requirement_disclaimer"-->
+<!--        style="@style/Overline"-->
+<!--        android:layout_width="0dp"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_marginBottom="12dp"-->
+<!--        android:text="@string/request_username_min_balance_disclaimer"-->
+<!--        android:visibility="gone"-->
+<!--        android:gravity="center_horizontal"-->
+<!--        android:textAlignment="gravity"-->
+<!--        app:layout_constraintBottom_toTopOf="@id/request_username_button"-->
+<!--        app:layout_constraintEnd_toEndOf="@id/request_username_button"-->
+<!--        app:layout_constraintStart_toStartOf="@id/request_username_button"-->
+<!--        tools:visibility="visible" />-->
 
 </androidx.constraintlayout.widget.ConstraintLayout>

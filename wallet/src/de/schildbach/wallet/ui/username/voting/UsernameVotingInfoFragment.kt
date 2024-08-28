@@ -7,9 +7,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
+import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameVotingInfoBinding
 import kotlinx.coroutines.launch
@@ -21,6 +23,8 @@ class UsernameVotingInfoFragment : Fragment(R.layout.fragment_username_voting_in
     private val binding by viewBinding(FragmentUsernameVotingInfoBinding::bind)
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
     private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
+    private val args by navArgs<UsernameVotingInfoFragmentArgs>()
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -29,18 +33,14 @@ class UsernameVotingInfoFragment : Fragment(R.layout.fragment_username_voting_in
         }
 
         binding.usernameVotingInfoContinueBtn.setOnClickListener {
-            safeNavigate(
-                UsernameVotingInfoFragmentDirections.usernameVotingInfoFragmentToRequestUsernameFragment()
-            )
+            if (!args.closeInstead) {
+                safeNavigate(
+                    UsernameVotingInfoFragmentDirections.usernameVotingInfoFragmentToRequestUsernameFragment()
+                )
+            } else {
+                findNavController().popBackStack()
+            }
         }
-
-        binding.balanceRequirementDisclaimer.text = getString(
-            R.string.welcome_request_username_min_balance_disclaimer,
-            Constants.DASH_PAY_FEE.toPlainString()
-        )
-        binding.balanceRequirementDisclaimer.isVisible = !requestUserNameViewModel.canAffordIdentityCreation()
-        binding.usernameVotingInfoContinueBtn.isEnabled = requestUserNameViewModel.canAffordIdentityCreation()
-
         lifecycleScope.launchWhenStarted {
             lifecycleScope.launch {
                 dashPayViewModel.setIsDashPayInfoShown(true)

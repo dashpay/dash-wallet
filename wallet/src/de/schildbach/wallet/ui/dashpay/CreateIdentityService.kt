@@ -29,7 +29,6 @@ import org.bitcoinj.core.RejectMessage
 import org.bitcoinj.core.RejectedTransactionException
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.evolution.AssetLockTransaction
-import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.Configuration
@@ -43,6 +42,7 @@ import org.dashj.platform.dpp.errors.concensus.ConcensusException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.IdentityAssetLockTransactionOutPointAlreadyExistsException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofSignatureException
 import org.dashj.platform.dpp.identity.Identity
+import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -264,7 +264,7 @@ class CreateIdentityService : LifecycleService() {
         val timerStep1 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_1)
 
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
-
+        val blockchainIdentityDataBase = platformRepo.loadBlockchainIdentityBaseData() // for other info
         when {
             (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring && blockchainIdentityDataTmp.creationStateErrorMessage == null) -> {
                 // TODO: handle case when blockchain reset has happened and the cftx was not found yet
@@ -282,7 +282,15 @@ class CreateIdentityService : LifecycleService() {
 
             }
             (username != null) -> {
-                blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, username, null, false)
+                blockchainIdentityData = BlockchainIdentityData(
+                    CreationState.NONE,
+                    null,
+                    username,
+                    null,
+                    false,
+                    requestedUsername = blockchainIdentityDataBase?.requestedUsername, // move these back to dashpayconfig?
+                    verificationLink = blockchainIdentityDataBase?.verificationLink
+                )
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
             }
             else -> {
@@ -345,7 +353,7 @@ class CreateIdentityService : LifecycleService() {
             // check to see if the funding transaction exists
             if (blockchainIdentity.assetLockTransaction == null) {
                 val useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE
-                platformRepo.createAssetLockTransactionAsync(blockchainIdentity, encryptionKey, useCoinJoin)
+                platformRepo.createAssetLockTransactionAsync(blockchainIdentity, blockchainIdentityData.username!!, encryptionKey, useCoinJoin)
             }
         }
 
@@ -516,14 +524,14 @@ class CreateIdentityService : LifecycleService() {
                 if (e.status.code == Status.INVALID_ARGUMENT.code) {
                     val exception = GrpcExceptionInfo(e).exception
 
-                        if (exception is IdentityAssetLockTransactionOutPointAlreadyExistsException) {
-                            log.warn("Invite has already been used")
+                    if (exception is IdentityAssetLockTransactionOutPointAlreadyExistsException) {
+                        log.warn("Invite has already been used")
 
-                            // activate link or activity with the link (to show that the invite was used)
-                            // and then, wipe all blockchain identity data and status (NONE)
-                            //
-                            throw IllegalStateException("Invite has already been used", exception)
-                        }
+                        // activate link or activity with the link (to show that the invite was used)
+                        // and then, wipe all blockchain identity data and status (NONE)
+                        //
+                        throw IllegalStateException("Invite has already been used", exception)
+                    }
 
                     log.error(e.toString())
                     throw e
@@ -554,7 +562,7 @@ class CreateIdentityService : LifecycleService() {
 
     private suspend fun finishRegistration(blockchainIdentity: BlockchainIdentity, encryptionKey: KeyParameter) {
         // TODO: let's delay to make sure that the identity is propagated
-        delay(20000)
+        // delay(20000)
 
         // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
         if (blockchainIdentityData.creationState <= CreationState.IDENTITY_REGISTERED) {
@@ -585,7 +593,7 @@ class CreateIdentityService : LifecycleService() {
             //
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
-        delay(30000) // 20 sec delay for platform sync
+        // delay(30000) // 20 sec delay for platform sync
         if (blockchainIdentityData.creationState <= CreationState.USERNAME_REGISTERING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERING)
             //
@@ -611,7 +619,44 @@ class CreateIdentityService : LifecycleService() {
         val emptyProfile = DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
         platformRepo.updateDashPayProfile(emptyProfile)
 
-        addInviteUserAlert(walletApplication.wallet!!)
+        addInviteUserAlert()
+
+        // check for contested username
+        if (blockchainIdentityData.requestedUsername != null && Names.isUsernameContestable(blockchainIdentityData.requestedUsername!!)) {
+            // get the createdAt date to estimate 2 week voting period
+            // check that this username is contested and up for a vote
+            // save the verification link in a new document
+
+            if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_CHECKING) {
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKING)
+
+                blockchainIdentity.currentVotingPeriodStarts = System.currentTimeMillis()
+                blockchainIdentity.currentUsernameRequested = true
+
+                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            }
+
+
+            if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_CHECKED) {
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKED)
+                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            }
+
+            if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_LINK_SAVING) {
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKING)
+                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+
+                // save the verification link
+            }
+
+            if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_LINK_SAVED) {
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKED)
+                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            }
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.VOTING)
+        } else {
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)
+        }
 
         platformRepo.init()
         platformSyncService.initSync()
@@ -621,15 +666,11 @@ class CreateIdentityService : LifecycleService() {
         log.info("username registration complete")
     }
 
-    private suspend fun addInviteUserAlert(wallet: Wallet) {
-        if (blockchainIdentityData.creationState < CreationState.DONE) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)
-
-            // this alert will be shown or not based on the current balance and will be
-            // managed by NotificationsLiveData
-            val userAlert = UserAlert(INVITATION_NOTIFICATION_TEXT, INVITATION_NOTIFICATION_ICON)
-            userAlertDao.insert(userAlert)
-        }
+    private suspend fun addInviteUserAlert() {
+        // this alert will be shown or not based on the current balance and will be
+        // managed by NotificationsLiveData
+        val userAlert = UserAlert(INVITATION_NOTIFICATION_TEXT, INVITATION_NOTIFICATION_ICON)
+        userAlertDao.insert(userAlert)
     }
 
     private fun handleRestoreIdentityAction(identity: ByteArray) {
@@ -643,102 +684,131 @@ class CreateIdentityService : LifecycleService() {
 
     private suspend fun restoreIdentity(identity: ByteArray) {
         log.info("Restoring identity and username")
-        platformSyncService.updateSyncStatus(PreBlockStage.StartRecovery)
+        try {
+            platformSyncService.updateSyncStatus(PreBlockStage.StartRecovery)
 
-        // use an "empty" state for each
-        blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, null, true)
+            // use an "empty" state for each
+            blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, null, true)
 
-        val authExtension = walletApplication.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
-        //authExtension.setWallet(walletApplication.wallet!!) // why is the wallet not set?  we didn't deserialize it probably!
-        val cftxs = authExtension.assetLockTransactions
+            val authExtension =
+                walletApplication.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
+            //authExtension.setWallet(walletApplication.wallet!!) // why is the wallet not set?  we didn't deserialize it probably!
+            val cftxs = authExtension.assetLockTransactions
 
-        val creditFundingTransaction: AssetLockTransaction? = cftxs.find { it.identityId.bytes!!.contentEquals(identity) }
+            val creditFundingTransaction: AssetLockTransaction? =
+                cftxs.find { it.identityId.bytes!!.contentEquals(identity) }
 
-        val existingBlockchainIdentityData = blockchainIdentityDataDao.load()
-        if (existingBlockchainIdentityData != null && !(existingBlockchainIdentityData.restoring /*&& existingBlockchainIdentityData.creationStateErrorMessage != null*/)) {
-            log.info("Attempting restore of existing identity and username; save credit funding txid")
-            val blockchainIdentity = platformRepo.blockchainIdentity
-            blockchainIdentity.assetLockTransaction = creditFundingTransaction
-            existingBlockchainIdentityData.creditFundingTxId = creditFundingTransaction!!.txId
-            platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
-            return
-        }
-
-        val loadingFromAssetLockTransaction = creditFundingTransaction != null
-        val existingIdentity: Identity?
-
-        if (!loadingFromAssetLockTransaction) {
-            existingIdentity = platformRepo.getIdentityFromPublicKeyId()
-            if (existingIdentity == null) {
-                throw IllegalArgumentException("identity $identity does not match a credit funding transaction or it doesn't exist on the network")
+            val existingBlockchainIdentityData = blockchainIdentityDataDao.load()
+            if (existingBlockchainIdentityData != null && !(existingBlockchainIdentityData.restoring /*&& existingBlockchainIdentityData.creationStateErrorMessage != null*/)) {
+                log.info("Attempting restore of existing identity and username; save credit funding txid")
+                val blockchainIdentity = platformRepo.blockchainIdentity
+                blockchainIdentity.assetLockTransaction = creditFundingTransaction
+                existingBlockchainIdentityData.creditFundingTxId = creditFundingTransaction!!.txId
+                platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
+                return
             }
+
+            val loadingFromAssetLockTransaction = creditFundingTransaction != null
+            val existingIdentity: Identity?
+
+            if (!loadingFromAssetLockTransaction) {
+                existingIdentity = platformRepo.getIdentityFromPublicKeyId()
+                if (existingIdentity == null) {
+                    throw IllegalArgumentException("identity $identity does not match a credit funding transaction or it doesn't exist on the network")
+                }
+            }
+
+            val wallet = walletApplication.wallet!!
+            val encryptionKey = platformRepo.getWalletEncryptionKey()
+                ?: throw IllegalStateException("cannot obtain wallet encryption key")
+            val seed = wallet.keyChainSeed ?: throw IllegalStateException("cannot obtain wallet seed")
+
+            // create the Blockchain Identity object
+            val blockchainIdentity = BlockchainIdentity(platformRepo.platform.platform, 0, wallet, authExtension)
+            // this process should have been done already, otherwise the credit funding transaction
+            // will not have the credit burn keys associated with it
+            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+            platformSyncService.updateSyncStatus(PreBlockStage.InitWallet)
+
+            //
+            // Step 2: The credit funding registration exists, no need to create it
+            //
+
+            //
+            // Step 3: Find the identity
+            //
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERING)
+            if (loadingFromAssetLockTransaction) {
+                platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
+            } else {
+                val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
+                platformRepo.recoverIdentityAsync(
+                    blockchainIdentity,
+                    firstIdentityKey.pubKeyHash
+                )
+            }
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
+            platformSyncService.updateSyncStatus(PreBlockStage.GetIdentity)
+
+
+            //
+            // Step 4: We don't need to find the preorder documents
+            //
+
+            //
+            // Step 5: Find the username
+            //
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERING)
+            platformRepo.recoverUsernamesAsync(blockchainIdentity)
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERED)
+            platformSyncService.updateSyncStatus(PreBlockStage.GetName)
+
+            if (blockchainIdentity.currentUsername == null) {
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKING)
+
+                // check if the network has this name in the queue for voting
+
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKED)
+                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+
+
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKING)
+
+
+                // recover the verification link
+
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKED)
+                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+
+            }
+
+            //
+            // Step 6: Find the profile
+            //
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
+            platformRepo.recoverDashPayProfile(blockchainIdentity)
+            // blockchainIdentity hasn't changed
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
+            platformSyncService.updateSyncStatus(PreBlockStage.GetProfile)
+
+            addInviteUserAlert()
+
+            // We are finished recovering
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)
+            blockchainIdentityData.finishRestoration()
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+            // Complete the entire process
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
+
+            platformSyncService.updateSyncStatus(PreBlockStage.RecoveryComplete)
+            platformRepo.init()
+            platformSyncService.initSync()
+        } catch (e: Exception) {
+            platformSyncService.triggerPreBlockDownloadComplete()
+            throw e
         }
-
-        val wallet = walletApplication.wallet!!
-        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
-        val seed = wallet.keyChainSeed ?: throw IllegalStateException("cannot obtain wallet seed")
-
-        // create the Blockchain Identity object
-        val blockchainIdentity = BlockchainIdentity(platformRepo.platform.platform, 0, wallet, authExtension)
-        // this process should have been done already, otherwise the credit funding transaction
-        // will not have the credit burn keys associated with it
-        platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
-        platformSyncService.updateSyncStatus(PreBlockStage.InitWallet)
-
-        //
-        // Step 2: The credit funding registration exists, no need to create it
-        //
-
-        //
-        // Step 3: Find the identity
-        //
-        platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERING)
-        if (loadingFromAssetLockTransaction) {
-            platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
-        } else {
-            val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
-            platformRepo.recoverIdentityAsync(blockchainIdentity,
-                firstIdentityKey.pubKeyHash)
-        }
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-        platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
-        platformSyncService.updateSyncStatus(PreBlockStage.GetIdentity)
-
-
-        //
-        // Step 4: We don't need to find the preorder documents
-        //
-
-        //
-        // Step 5: Find the username
-        //
-        platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERING)
-        platformRepo.recoverUsernamesAsync(blockchainIdentity)
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-        platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERED)
-        platformSyncService.updateSyncStatus(PreBlockStage.GetName)
-
-        //
-        // Step 6: Find the profile
-        //
-        platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATING)
-        platformRepo.recoverDashPayProfile(blockchainIdentity)
-        // blockchainIdentity hasn't changed
-        platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
-        platformSyncService.updateSyncStatus(PreBlockStage.GetProfile)
-
-        addInviteUserAlert(walletApplication.wallet!!)
-
-        // We are finished recovering
-        platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)
-        blockchainIdentityData.finishRestoration()
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
-        // Complete the entire process
-        platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
-
-        platformSyncService.updateSyncStatus(PreBlockStage.RecoveryComplete)
-        platformRepo.init()
-        platformSyncService.initSync()
     }
 
     /**
