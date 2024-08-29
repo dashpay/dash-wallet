@@ -125,13 +125,6 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             showKeyboard()
         }
 
-//        binding.balanceRequirementDisclaimer.text = getString(
-//            R.string.request_username_min_balance_disclaimer,
-//            Constants.DASH_PAY_FEE.toPlainString()
-//        )
-//
-//        binding.balanceRequirementDisclaimer.isVisible = !requestUserNameViewModel.canAffordIdentityCreation()
-
         requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
 //            if (it.usernameSubmittedSuccess) {
 //                requireActivity().finish()

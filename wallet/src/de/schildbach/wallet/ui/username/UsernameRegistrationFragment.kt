@@ -1,5 +1,23 @@
+/*
+ * Copyright 2024 Dash Core Group
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package de.schildbach.wallet.ui.username
 
+import android.annotation.SuppressLint
 import android.graphics.Typeface
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
@@ -21,28 +39,13 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
-import de.schildbach.wallet.data.InvitationLinkData
-import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.ui.SetPinActivity
-import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
-import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
-import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.username.voting.RequestUserNameViewModel
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.FragmentCreateUsernameBinding
 import de.schildbach.wallet_test.databinding.FragmentUsernameRegistrationBinding
-import kotlinx.android.parcel.Parcelize
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.dash.wallet.common.InteractionAwareActivity
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.KeyboardUtil
-import org.dash.wallet.common.util.safeNavigate
 
 
 @AndroidEntryPoint
@@ -55,7 +58,6 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
     private val binding by viewBinding(FragmentUsernameRegistrationBinding::bind)
 
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
-    //private val confirmTransactionSharedViewModel: PlatformPaymentConfirmDialog.SharedViewModel by activityViewModels()
     private val requestUsernameViewModel: RequestUserNameViewModel by activityViewModels()
     private lateinit var walletApplication: WalletApplication
 
@@ -66,29 +68,25 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
     private lateinit var checkUsernameNotExistRunnable: Runnable
 
     private var createUsernameArgs: CreateUsernameArgs? = null
-
-    //private val regularTypeFace by lazy { ResourcesCompat.getFont(requireContext(), R.font.inter_regular) }
-    //private val mediumTypeFace by lazy { ResourcesCompat.getFont(requireContext(), R.font.inter_medium) }
     private val slideInAnimation by lazy { AnimationUtils.loadAnimation(requireContext(), R.anim.slide_in_bottom) }
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(requireContext(), R.anim.fade_out) }
     private lateinit var completeUsername: String
     private var isProcessing = false
 
+    @SuppressLint("ResourceType")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.chooseUsernameTitle.text = getText(R.string.choose_your_username)
         binding.closeBtn.setOnClickListener {
+            if (requestUsernameViewModel.isUsernameContestable()) {
+                startActivity(MainActivity.createIntent(requireContext(), R.id.moreFragment))
+            } else {
+                // go to the home screen
+                startActivity(MainActivity.createIntent(requireContext()))
+            }
             requireActivity().finish()
         }
-//        binding.username.addTextChangedListener(this)
-//        binding.registerBtn.setOnClickListener {
-//            if (reuseTransaction) {
-//                triggerIdentityCreation(true)
-//            } else {
-//                showConfirmationDialog()
-//            }
-//        }
         binding.processingIdentityDismissBtn.setOnClickListener { requireActivity().finish() }
 
         initViewModel()
@@ -120,45 +118,7 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
         }
     }
 
-//    private fun showKeyBoard() {
-//        handler.postDelayed({
-//            KeyboardUtil.showSoftKeyboard(requireContext(), binding.username)
-//        }, 1333)
-//    }
-
     private fun initViewModel() {
-//        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(viewLifecycleOwner) {
-//            dashPayViewModel.logEvent(AnalyticsConstants.CoinJoinPrivacy.USERNAME_PRIVACY_CONFIRMATION_BTN_CONFIRM)
-//            if (createUsernameArgs?.actions == CreateUsernameActions.FROM_INVITE) {
-//                triggerIdentityCreationFromInvite(reuseTransaction)
-//            } else {
-//                triggerIdentityCreation(false)
-//            }
-//        }
-
-//        dashPayViewModel.getUsernameLiveData.observe(viewLifecycleOwner) {
-//            (requireActivity() as? InteractionAwareActivity)?.imitateUserInteraction()
-//            when (it.status) {
-//                Status.LOADING -> {
-//                    // this is delayed by the logic of checkUsernameNotExist(...) method,
-//                    // therefore the UI state is configured before calling it using usernameAvailabilityValidationInProgressState()
-//                }
-//                Status.CANCELED -> {
-//                    // no need to do anything
-//                }
-//                Status.ERROR -> {
-//                    usernameAvailabilityValidationErrorState()
-//                }
-//                Status.SUCCESS -> {
-//                    if (it.data != null) {
-//                        // This user name exists
-//                        usernameAvailabilityValidationTakenState()
-//                    } else {
-//                        usernameAvailabilityValidationAvailableState()
-//                    }
-//                }
-//            }
-//        }
         dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
             when {
                 it?.creationStateErrorMessage != null -> {
@@ -178,104 +138,11 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
         }
     }
 
-//    private fun usernameAvailabilityValidationInProgressState() {
-//        binding.usernameExistsReq.visibility = View.VISIBLE
-//        binding.usernameExistsReqLabel.visibility = View.VISIBLE
-//        binding.usernameExistsReqProgress.visibility = View.VISIBLE
-//        binding.usernameExistsReqImg.visibility = View.INVISIBLE
-//        binding.usernameExistsReqLabel.visibility = View.VISIBLE
-//        binding.usernameExistsReqLabel.typeface = regularTypeFace
-//        binding.usernameExistsReqLabel.setTextColor(ResourcesCompat.getColor(resources, R.color.content_primary, null))
-//        binding.usernameExistsReqLabel.setText(R.string.identity_username_validating)
-//        binding.registerBtn.isEnabled = false
-//    }
-//
-//    private fun usernameAvailabilityValidationErrorState() {
-//        binding.usernameExistsReqProgress.visibility = View.INVISIBLE
-//        binding.usernameExistsReqImg.visibility = View.VISIBLE
-//        binding.usernameExistsReqImg.setImageResource(R.drawable.ic_username_requirement_x)
-//        binding.usernameExistsReqLabel.typeface = mediumTypeFace
-//        binding.usernameExistsReqLabel.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_red, null))
-//        binding.usernameExistsReqLabel.setText(R.string.platform_communication_error)
-//        binding.registerBtn.isEnabled = false
-//    }
-//
-//    private fun usernameAvailabilityValidationTakenState() {
-//        binding.usernameExistsReqProgress.visibility = View.INVISIBLE
-//        binding.usernameExistsReqImg.visibility = View.VISIBLE
-//        binding.usernameExistsReqImg.setImageResource(R.drawable.ic_username_requirement_x)
-//        binding.usernameExistsReqLabel.typeface = mediumTypeFace
-//        binding.usernameExistsReqLabel.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_red, null))
-//        binding.usernameExistsReqLabel.setText(R.string.identity_username_taken)
-//        binding.registerBtn.isEnabled = false
-//    }
-//
-//    private fun usernameAvailabilityValidationAvailableState() {
-//        binding.usernameExistsReqProgress.visibility = View.INVISIBLE
-//        binding.usernameExistsReqImg.visibility = View.VISIBLE
-//        binding.usernameExistsReqImg.setImageResource(R.drawable.ic_username_requirement_checkmark)
-//        binding.usernameExistsReqLabel.typeface = mediumTypeFace
-//        binding.usernameExistsReqLabel.setTextColor(ResourcesCompat.getColor(resources, R.color.content_primary, null))
-//        binding.usernameExistsReqLabel.setText(R.string.identity_username_available)
-//        binding.registerBtn.isEnabled = true
-//    }
-
-//    private fun triggerIdentityCreation(reuseTransaction: Boolean) {
-//        val username = binding.username.text.toString()
-//        if (reuseTransaction) {
-//            requireActivity().startService(CreateIdentityService.createIntentForNewUsername(requireContext(), username))
-//            requireActivity().finish()
-//        } else {
-//            dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
-//                if (it?.creationStateErrorMessage != null) {
-//                    requireActivity().finish()
-//                } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
-//                    completeUsername = it.username ?: ""
-//                    showCompleteState()
-//                }
-//            }
-//            showProcessingState()
-//            requireActivity().startService(CreateIdentityService.createIntent(requireContext(), username))
-//        }
-//    }
-//
-//    private fun triggerIdentityCreationFromInvite(reuseTransaction: Boolean) {
-//        val username = binding.username.text.toString()
-//        if (reuseTransaction) {
-//            requireActivity().startService(CreateIdentityService.createIntentFromInviteForNewUsername(requireContext(), username))
-//            requireActivity().finish()
-//        } else {
-//            val fromOnboarding = createUsernameArgs?.fromOnboardng ?: false
-//            if (fromOnboarding) {
-//                walletApplication.configuration.onboardingInviteUsername = username
-//                val goNextIntent = SetPinActivity.createIntent(requireActivity().application, R.string.set_pin_create_new_wallet, false, null, onboardingInvite = true)
-//                startActivity(OnboardFromInviteActivity.createIntent(requireContext(), OnboardFromInviteActivity.Mode.STEP_2, goNextIntent))
-//                requireActivity().finish()
-//                return
-//            } else {
-//                dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
-//                    if (it?.creationStateErrorMessage != null && !reuseTransaction) {
-//                        requireActivity().finish()
-//                    } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
-//                        completeUsername = it.username ?: ""
-//                        showCompleteState()
-//                    }
-//                }
-//                showProcessingState()
-//                createUsernameArgs?.invite?.let {
-//                    requireActivity().startService(CreateIdentityService.createIntentFromInvite(requireContext(), username, it))
-//                }
-//            }
-//        }
-//        showProcessingState()
-//    }
-
     private fun doneAndDismiss() {
         dashPayViewModel.usernameDoneAndDismiss()
     }
 
     private fun showCompleteState() {
-        //binding.registrationContent.visibility = View.GONE
         binding.processingIdentity.visibility = View.GONE
         binding.chooseUsernameTitle.visibility = View.GONE
         binding.orbitView.findViewById<View>(R.id.placeholder_user_icon).visibility = View.GONE
@@ -292,97 +159,6 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
         binding.identityCompleteText.text = spannableContent
         binding.identityCompleteButton.setOnClickListener { requireActivity().finish() }
     }
-
-//    private fun validateUsernameSize(uname: String): Boolean {
-//        val lengthValid = uname.length in Constants.USERNAME_MIN_LENGTH..Constants.USERNAME_MAX_LENGTH
-//
-//        binding.minCharsReqImg.visibility = if (uname.isNotEmpty()) {
-//            binding.minCharsReqLabel.typeface = mediumTypeFace
-//            View.VISIBLE
-//        } else {
-//            binding.minCharsReqLabel.typeface = regularTypeFace
-//            View.INVISIBLE
-//        }
-//
-//        if (lengthValid) {
-//            binding.minCharsReqImg.setImageResource(R.drawable.ic_username_requirement_checkmark)
-//        } else {
-//            binding.minCharsReqImg.setImageResource(R.drawable.ic_username_requirement_x)
-//        }
-//
-//        return lengthValid
-//    }
-
-//    private fun validateUsernameCharacters(uname: String): Boolean {
-//        val alphaNumHyphenValid = !Regex("[^a-zA-Z0-9\\-]").containsMatchIn(uname)
-//        val startOrEndWithHyphen = uname.startsWith("-") || uname.endsWith("-")
-//        val containsHyphen = uname.contains("-")
-//
-//        binding.alphanumReqImg.visibility = if (uname.isNotEmpty() || !alphaNumHyphenValid) {
-//            binding.alphanumReqLabel.typeface = mediumTypeFace
-//            View.VISIBLE
-//        } else {
-//            binding.alphanumReqLabel.typeface = regularTypeFace
-//            View.INVISIBLE
-//        }
-//
-//        if (alphaNumHyphenValid) {
-//            binding.alphanumReqImg.setImageResource(R.drawable.ic_username_requirement_checkmark)
-//        } else {
-//            binding.alphanumReqImg.setImageResource(R.drawable.ic_username_requirement_x)
-//        }
-//
-//        if (containsHyphen) {
-//            binding.hyphenReqImg.visibility = View.VISIBLE
-//            binding.hyphenReqLabel.visibility = View.VISIBLE
-//            if (!startOrEndWithHyphen) {
-//                // leave isValid with the same value that is already has (same as isValid && true)
-//                binding.hyphenReqImg.setImageResource(R.drawable.ic_username_requirement_checkmark)
-//                binding.hyphenReqLabel.typeface = mediumTypeFace
-//            } else {
-//                binding.hyphenReqImg.setImageResource(R.drawable.ic_username_requirement_x)
-//                binding.hyphenReqLabel.typeface = regularTypeFace
-//            }
-//        } else {
-//            binding.hyphenReqImg.visibility = View.GONE
-//            binding.hyphenReqLabel.visibility = View.GONE
-//        }
-//
-//        return alphaNumHyphenValid && !startOrEndWithHyphen
-//    }
-
-//    private fun checkUsernameNotExist(username: String) {
-//        if (this::checkUsernameNotExistRunnable.isInitialized) {
-//            handler.removeCallbacks(checkUsernameNotExistRunnable)
-//        }
-//        checkUsernameNotExistRunnable = Runnable {
-//            dashPayViewModel.searchUsername(username)
-//        }
-//        handler.postDelayed(checkUsernameNotExistRunnable, 600)
-//    }
-//
-//    override fun afterTextChanged(s: Editable?) {
-//        val username = s?.toString()
-//
-//        if (username != null) {
-//            var usernameIsValid = validateUsernameCharacters(username) and validateUsernameSize(username) // force validateUsernameSize to execute
-//
-//            if (usernameIsValid) { // ensure username meets basic rules before making a Platform query
-//                usernameAvailabilityValidationInProgressState()
-//                checkUsernameNotExist(username)
-//            } else {
-//                binding.usernameExistsReqProgress.visibility = View.INVISIBLE
-//                binding.usernameExistsReqLabel.visibility = View.GONE
-//                binding.usernameExistsReqImg.visibility = View.GONE
-//                binding.registerBtn.isEnabled = false
-//                if (this::checkUsernameNotExistRunnable.isInitialized) {
-//                    handler.removeCallbacks(checkUsernameNotExistRunnable)
-//                    dashPayViewModel.searchUsername(null)
-//                }
-//            }
-//        }
-//        (requireActivity() as? InteractionAwareActivity)?.imitateUserInteraction()
-//    }
 
     private fun showProcessingState() {
         if (!isProcessing) {
@@ -407,19 +183,4 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
             isProcessing = true
         }
     }
-
-//    private fun showConfirmationDialog() {
-//        val upgradeFee = if (createUsernameArgs?.actions == CreateUsernameActions.FROM_INVITE) null else Constants.DASH_PAY_FEE
-//        val username = "<b>“${binding. username.text}”</b>"
-//        val dialogMessage = getString(R.string.new_account_confirm_message, username)
-//        val dialogTitle = getString(R.string.dashpay_upgrade_fee)
-//        val dialog = PlatformPaymentConfirmDialog.createDialog(dialogTitle, dialogMessage, upgradeFee, createUsernameArgs?.invite != null)
-//        dialog.show(requireActivity().supportFragmentManager, "NewAccountConfirmDialog")
-//    }
-
-//    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-//    }
-//
-//    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-//    }
 }

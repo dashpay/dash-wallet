@@ -51,75 +51,6 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="15dp"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:id="@+id/create_a_username_icon"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:layout_constraintEnd_toStartOf="@id/create_a_username_title"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/create_a_username_title"
-                app:srcCompat="@drawable/ic_calendar" />
-
-            <TextView
-                style="@style/Caption.SemiBold"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="7dp"
-                android:includeFontPadding="false"
-                android:text="@string/voting"
-                android:textAlignment="gravity" />
-
-            <TextView
-                android:id="@+id/voting_range"
-                style="@style/Caption"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:includeFontPadding="false"
-                android:maxLines="1"
-                android:textAlignment="gravity"
-                tools:text=" 1 Mar – 15 Mar" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:id="@+id/votes_icon"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:layout_constraintEnd_toStartOf="@id/create_a_username_title"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/create_a_username_title"
-                app:srcCompat="@drawable/ic_thumb_up_fill" />
-
-            <TextView
-                android:id="@+id/votes_number"
-                style="@style/Caption.SemiBold"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="7dp"
-                android:includeFontPadding="false"
-                android:text="@string/votes"
-                android:textAlignment="gravity" />
-
-            <ImageView
-                android:id="@+id/votes_arrow"
-                android:layout_width="wrap_content"
-                android:layout_height="11dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_menu_row_arrow"
-                app:srcCompat="@drawable/ic_menu_row_arrow" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
             android:layout_marginVertical="15dp"
             android:background="@drawable/rounded_background"
             android:orientation="vertical"
@@ -150,7 +81,7 @@
                     android:layout_weight="1"
                     android:gravity="end"
                     android:textAlignment="textEnd"
-                    tools:text="John Doe" />
+                    tools:text="JohnDoe" />
             </LinearLayout>
 
             <LinearLayout
@@ -187,7 +118,7 @@
                         android:textAlignment="textEnd" />
 
                     <TextView
-                        android:id="@+id/verfiy_now"
+                        android:id="@+id/verify"
                         style="@style/Overline.Medium"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -264,34 +195,37 @@
                     android:layout_weight="1"
                     android:gravity="end"
                     android:textAlignment="textEnd"
-                    tools:text="John Doe" />
+                    tools:text="GWRSAVFMjXx8HpQFaNJMqBV7MBgMK4br5UESsB4S31Ec" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingVertical="15dp">
+
+                <TextView
+                    style="@style/Caption.Medium.Tertiary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="15dp"
+                    android:text="@string/results" />
+
+                <TextView
+                    android:id="@+id/voting_range"
+                    style="@style/Caption"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:layout_marginTop="2dp"
+                    android:layout_weight="1"
+                    android:gravity="end"
+                    android:textAlignment="textEnd"
+                    tools:text="March 31, 2024" />
 
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
-
-    <Button
-        android:id="@+id/cancel_request_button"
-        style="@style/Button.Primary.Large.LightRed"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="15dp"
-        android:layout_marginBottom="15dp"
-        android:text="@string/cancel_request"
-        app:layout_constraintBottom_toBottomOf="parent" />
-
-    <TextView
-        android:id="@+id/balance_requirement_disclaimer"
-        style="@style/Overline.Secondary"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        android:gravity="center_horizontal"
-        android:text="@string/if_you_tap_cancel"
-        android:textAlignment="gravity"
-        app:layout_constraintBottom_toTopOf="@id/cancel_request_button"
-        app:layout_constraintEnd_toEndOf="@id/cancel_request_button"
-        app:layout_constraintStart_toStartOf="@id/cancel_request_button"
-        tools:visibility="visible" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

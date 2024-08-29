@@ -21,16 +21,25 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CREATION_STATE
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.REQUESTED_USERNAME
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_ID
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
@@ -60,7 +69,8 @@ class RequestUserNameViewModel @Inject constructor(
     val walletApplication: WalletApplication,
     val identityConfig: BlockchainIdentityConfig,
     val walletData: WalletDataProvider,
-    val platformRepo: PlatformRepo
+    val platformRepo: PlatformRepo,
+    val usernameRequestDao: UsernameRequestDao
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
@@ -73,7 +83,7 @@ class RequestUserNameViewModel @Inject constructor(
     val walletBalance: Coin
         get() = walletData.getWalletBalance()
     suspend fun isUserNameRequested(): Boolean {
-        val hasRequestedName = identityConfig.get(REQUESTED_USERNAME).isNullOrEmpty().not()
+        val hasRequestedName = identityConfig.get(USERNAME).isNullOrEmpty().not()
         val creationState = BlockchainIdentityData.CreationState.valueOf(
             identityConfig.get(CREATION_STATE) ?: BlockchainIdentityData.CreationState.NONE.name
         )
@@ -86,11 +96,25 @@ class RequestUserNameViewModel @Inject constructor(
     fun canAffordNonContestedUsername(): Boolean = walletBalance >= Constants.DASH_PAY_FEE
     fun canAffordContestedUsername(): Boolean = walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
 
-    init {
+    val myUsernameRequest: Flow<UsernameRequest?>
+        get() = _myUsernameRequest
+    private val _myUsernameRequest = MutableStateFlow<UsernameRequest?>(null)
 
+    init {
         viewModelScope.launch {
             _requestedUserNameLink.value = identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
         }
+        identityConfig.observe(IDENTITY_ID)
+            .filterNotNull()
+            .onEach {
+                if (requestedUserName == null) {
+                    requestedUserName = identityConfig.get(USERNAME)
+                }
+            }
+            .flatMapLatest { usernameRequestDao.observeRequest(UsernameRequest.getRequestId(it, requestedUserName!!)) }
+            .onEach { _myUsernameRequest.value = it }
+            .launchIn(viewModelScope)
+
     }
 
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
@@ -131,7 +155,7 @@ class RequestUserNameViewModel @Inject constructor(
 
     private suspend fun updateConfig() {
         requestedUserName?.let { name ->
-            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME, name)
+            identityConfig.set(BlockchainIdentityConfig.USERNAME, name)
         }
         _requestedUserNameLink.value.let { link ->
             identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, link ?: "")
@@ -185,6 +209,16 @@ class RequestUserNameViewModel @Inject constructor(
     fun verify() {
         viewModelScope.launch {
             identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
+            identityConfig.get(IDENTITY_ID)?.let { identityId ->
+                val usernameRequest = usernameRequestDao.getRequest(
+                    UsernameRequest.getRequestId(
+                        identityId,
+                        requestedUserName!!
+                    )
+                )
+                usernameRequest!!.link = _requestedUserNameLink.value
+                usernameRequestDao.update(usernameRequest)
+            }
             _uiState.update {
                 it.copy(
                     usernameVerified = true
@@ -196,7 +230,7 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun cancelRequest() {
         viewModelScope.launch {
-            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME, "")
+            identityConfig.set(BlockchainIdentityConfig.USERNAME, "")
             identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, "")
             identityConfig.set(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
         }
@@ -239,5 +273,14 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun isUsernameContestable(): Boolean {
         return Names.isUsernameContestable(requestedUserName!!)
+    }
+
+    fun publishIdentityVerifyDocument() {
+        _requestedUserNameLink.value?.let { url ->
+            BroadcastIdentityVerifyOperation(walletApplication).create(
+                requestedUserName!!,
+                url
+            )
+        }
     }
 }

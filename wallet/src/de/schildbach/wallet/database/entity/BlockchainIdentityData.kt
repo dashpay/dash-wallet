@@ -36,7 +36,9 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
-import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dashj.platform.dashpay.IdentityStatus
+import org.dashj.platform.dashpay.UsernameRequestStatus
+import org.dashj.platform.dashpay.UsernameStatus
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.toHex
 import org.dashj.platform.dpp.util.Converters
@@ -55,8 +57,8 @@ data class BlockchainIdentityData(
     var usingInvite: Boolean = false,
     var invite: InvitationLinkData? = null,
     var preorderSalt: ByteArray? = null,
-    var registrationStatus: BlockchainIdentity.RegistrationStatus? = null,
-    var usernameStatus: BlockchainIdentity.UsernameStatus? = null,
+    var registrationStatus: IdentityStatus? = null,
+    var usernameStatus: UsernameStatus? = null,
     var privacyMode: CoinJoinMode? = null,
     var creditBalance: Coin? = null,
     var activeKeyCount: Int? = null,
@@ -64,11 +66,10 @@ data class BlockchainIdentityData(
     var keysCreated: Long? = null,
     var currentMainKeyIndex: Int? = null,
     var currentMainKeyType: KeyType? = null,
-    var requestedUsername: String? = null,
     var verificationLink: String? = null,
     val cancelledVerificationLink: Boolean? = null,
-    val usernameRequested: Boolean? = null,
-    val votingPeriodStart: Long? = null
+    var usernameRequested: UsernameRequestStatus? = null,
+    var votingPeriodStart: Long? = null
     ) {
 
     var id = 1
@@ -161,10 +162,10 @@ open class BlockchainIdentityConfig @Inject constructor(
         val PRIVACY_MODE = stringPreferencesKey("privacy_mode")
         val BALANCE = longPreferencesKey("identity_balance")
 
-        val REQUESTED_USERNAME = stringPreferencesKey("requested_username")
+        // val REQUESTED_USERNAME = stringPreferencesKey("requested_username")
         val REQUESTED_USERNAME_LINK = stringPreferencesKey("requested_username_link")
         val CANCELED_REQUESTED_USERNAME_LINK = booleanPreferencesKey("cancelled_requested_username_link")
-        val USERNAME_REQUESTED = booleanPreferencesKey("username_requested")
+        val USERNAME_REQUESTED = stringPreferencesKey("username_requested")
         val VOTING_PERIOD_START = longPreferencesKey("voting_period_start")
 
     }
@@ -182,14 +183,13 @@ open class BlockchainIdentityConfig @Inject constructor(
                 usingInvite = prefs[USING_INVITE] ?: false,
                 invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) },
                 preorderSalt = prefs[PREORDER_SALT]?.let { Converters.fromHex(it) },
-                registrationStatus = prefs[IDENTITY_REGISTRATION_STATUS]?.let { BlockchainIdentity.RegistrationStatus.valueOf(it) },
-                usernameStatus = prefs[USERNAME_REGISTRATION_STATUS]?.let { BlockchainIdentity.UsernameStatus.valueOf(it) },
+                registrationStatus = prefs[IDENTITY_REGISTRATION_STATUS]?.let { IdentityStatus.valueOf(it) },
+                usernameStatus = prefs[USERNAME_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
                 privacyMode = prefs[PRIVACY_MODE]?.let { CoinJoinMode.valueOf(it) },
                 creditBalance = prefs[BALANCE]?.let { Coin.valueOf(it) },
-                requestedUsername = prefs[REQUESTED_USERNAME],
                 verificationLink = prefs[REQUESTED_USERNAME_LINK],
                 cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
-                usernameRequested = prefs[USERNAME_REQUESTED],
+                usernameRequested = prefs[USERNAME_REQUESTED]?.let { UsernameRequestStatus.valueOf(it) },
                 votingPeriodStart = prefs[VOTING_PERIOD_START]
             )
         }
@@ -206,10 +206,9 @@ open class BlockchainIdentityConfig @Inject constructor(
                 creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
                 usingInvite = prefs[USING_INVITE] ?: false,
                 invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) },
-                requestedUsername = prefs[REQUESTED_USERNAME],
                 verificationLink = prefs[REQUESTED_USERNAME_LINK],
                 cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
-                usernameRequested = prefs[USERNAME_REQUESTED],
+                usernameRequested = prefs[USERNAME_REQUESTED]?.let { UsernameRequestStatus.valueOf(it) },
                 votingPeriodStart = prefs[VOTING_PERIOD_START]
             )
         }

@@ -308,6 +308,7 @@
     <string name="request_details_subtitle">Review the posting bellow to verify the ownership of this username</string>
     <string name="vote_to_approve">Vote to Approve</string>
     <string name="identity">Identity</string>
+    <string name="results">Results</string>
     <string name="link">Link</string>
     <string name="link_not_provided">Not provided</string>
     <string name="cancel_approval">Cancel Approval</string>

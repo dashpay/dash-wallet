@@ -1,10 +1,8 @@
 package de.schildbach.wallet.ui.username.voting
 
 import android.os.Bundle
-import android.text.format.DateFormat
 import android.view.View
 import android.widget.Toast
-import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -21,8 +19,6 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
-import java.util.Date
-import java.util.concurrent.TimeUnit
 
 
 @AndroidEntryPoint
@@ -48,8 +44,8 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
         }
 
         binding.linkInput.doOnTextChanged { text, _, _, _ ->
-            val username = text.toString()
-            val isValidLink = username.isNotEmpty()
+            val link = text.toString()
+            val isValidLink = link.startsWith("https://") || link.startsWith("http://")
             binding.verifyBtn.isEnabled = isValidLink
             if (!text.isNullOrEmpty()) {
                 binding.linkInputLayout.hint = getString(R.string.link)
@@ -66,7 +62,23 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
             requestUserNameViewModel.setRequestedUserNameLink(binding.linkInput.text.toString())
             requestUserNameViewModel.verify()
             lifecycleScope.launch {
-                checkViewConfirmDialog()
+                val creationState = dashPayViewModel.blockchainIdentity.value?.creationState ?: BlockchainIdentityData.CreationState.NONE
+                if (creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal) {
+                    checkViewConfirmDialog()
+                    dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+                        if (it?.creationStateErrorMessage != null) {
+                            requireActivity().finish()
+                        } else {
+                            val creationState = it?.creationState ?: BlockchainIdentityData.CreationState.NONE
+                            if (creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal) {
+                                safeNavigate(VerifyIdentityFragmentDirections.verifyToUsernameRegistrationFragment())
+                            }
+                        }
+                    }
+                } else {
+                    requestUserNameViewModel.publishIdentityVerifyDocument()
+                    findNavController().popBackStack()
+                }
             }
             //findNavController().popBackStack()
         }
@@ -87,14 +99,6 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
 //                    checkViewConfirmDialog()
 //                }
 //            }
-        }
-
-        dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
-            if (it?.creationStateErrorMessage != null) {
-                requireActivity().finish()
-            } else if ((it?.creationState?.ordinal ?: 0) > BlockchainIdentityData.CreationState.NONE.ordinal) {
-                safeNavigate(VerifyIdentityFragmentDirections.verifyToUsernameRegistrationFragment())
-            }
         }
     }
 

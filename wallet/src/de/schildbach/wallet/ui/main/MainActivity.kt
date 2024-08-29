@@ -33,11 +33,13 @@ import android.view.MenuItem
 import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.annotation.NavigationRes
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.findNavController
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
@@ -91,9 +93,19 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
         const val EXTRA_RESET_BLOCKCHAIN = "reset_blockchain"
         private const val EXTRA_INVITE = "extra_invite"
+        private const val EXTRA_NAVIGATION_DESTINATION = "extra_destination"
 
         fun createIntent(context: Context): Intent {
-            return Intent(context, MainActivity::class.java)
+            return Intent(context, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+        }
+
+        fun createIntent(context: Context, @NavigationRes destination: Int): Intent {
+            return Intent(context, MainActivity::class.java).apply {
+                putExtra(EXTRA_NAVIGATION_DESTINATION, destination)
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
         }
 
         fun createIntent(context: Context, invite: InvitationLinkData): Intent {
@@ -384,6 +396,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             } else {
                 pendingInvite = invite
             }
+        }
+        if (intent.hasExtra(EXTRA_NAVIGATION_DESTINATION)) {
+            val destination = intent.extras!!.getInt(EXTRA_NAVIGATION_DESTINATION)
+            val navController = findNavController(R.id.nav_host_fragment)
+            navController.navigate(destination)
         }
         val action = intent.action
         val extras = intent.extras

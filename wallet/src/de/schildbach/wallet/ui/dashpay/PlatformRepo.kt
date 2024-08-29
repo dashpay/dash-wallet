@@ -24,6 +24,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.Constants.DASH_PAY_FEE_CONTESTED
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.database.AppDatabase
@@ -61,9 +62,6 @@ import org.dashj.platform.dapiclient.MaxRetriesReachedException
 import org.dashj.platform.dapiclient.NoAvailableAddressesForRetryException
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
 import org.dashj.platform.dashpay.*
-import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
-import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
-import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_UNIQUE
 import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofException
 import org.dashj.platform.dpp.identifier.Identifier
@@ -519,7 +517,15 @@ class PlatformRepo @Inject constructor(
             } else {
                 Constants.DASH_PAY_FEE
             }
-            val cftx = blockchainIdentity.createAssetLockTransaction(fee, keyParameter, useCoinJoin, true)
+            val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
+            val emptyWallet = balance == fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT)
+            val cftx = blockchainIdentity.createAssetLockTransaction(
+                fee,
+                keyParameter,
+                useCoinJoin,
+                returnChange = true,
+                emptyWallet = emptyWallet
+                )
             blockchainIdentity.initializeAssetLockTransaction(cftx)
         }
     }
@@ -527,7 +533,15 @@ class PlatformRepo @Inject constructor(
     suspend fun createTopupTransactionAsync(blockchainIdentity: BlockchainIdentity, topupAmount: Coin, keyParameter: KeyParameter?, useCoinJoin: Boolean) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
-            val cftx = blockchainIdentity.createTopupFundingTransaction(topupAmount, keyParameter, useCoinJoin, true)
+            val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
+            val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
+            val cftx = blockchainIdentity.createTopupFundingTransaction(
+                topupAmount,
+                keyParameter,
+                useCoinJoin,
+                returnChange = true,
+                emptyWallet = emptyWallet
+            )
             blockchainIdentity.initializeAssetLockTransaction(cftx)
         }
     }
@@ -586,7 +600,7 @@ class PlatformRepo @Inject constructor(
 
     suspend fun recoverIdentityAsync(blockchainIdentity: BlockchainIdentity, publicKeyHash: ByteArray) {
         withContext(Dispatchers.IO) {
-            blockchainIdentity.registrationStatus = BlockchainIdentity.RegistrationStatus.UNKNOWN
+            blockchainIdentity.registrationStatus = IdentityStatus.UNKNOWN
             blockchainIdentity.recoverIdentity(publicKeyHash)
         }
     }
@@ -609,7 +623,7 @@ class PlatformRepo @Inject constructor(
     @Deprecated("watch* functions should no longer be used")
     suspend fun isNamePreorderedAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            val set = blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.PREORDER_REGISTRATION_PENDING)
+            val set = blockchainIdentity.getUsernamesWithStatus(UsernameStatus.PREORDER_REGISTRATION_PENDING)
             val saltedDomainHashes = blockchainIdentity.saltedDomainHashesForUsernames(set)
             val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 100, 1000, RetryDelayType.SLOW20)
             if (!result) {
@@ -636,7 +650,7 @@ class PlatformRepo @Inject constructor(
     @Deprecated("watch* functions should no longer be used")
     suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 100, 1000, RetryDelayType.SLOW20)
+            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(UsernameStatus.REGISTRATION_PENDING), 100, 1000, RetryDelayType.SLOW20)
             if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be registered in the allotted amount of time")
             }
@@ -688,18 +702,16 @@ class PlatformRepo @Inject constructor(
         // Syncing complete
         return blockchainIdentity.apply {
             currentUsername = blockchainIdentityData.username
-            registrationStatus = blockchainIdentityData.registrationStatus ?: BlockchainIdentity.RegistrationStatus.NOT_REGISTERED
-            val usernameStatus = HashMap<String, Any>()
+            registrationStatus = blockchainIdentityData.registrationStatus ?: IdentityStatus.NOT_REGISTERED
             // usernameStatus, usernameSalts are not set if preorder hasn't started
             if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.PREORDER_REGISTERING) {
-                if (blockchainIdentityData.preorderSalt != null) {
-                    usernameStatus[BLOCKCHAIN_USERNAME_SALT] = blockchainIdentityData.preorderSalt!!
-                    usernameSalts[currentUsername!!] = blockchainIdentityData.preorderSalt!!
-                }
-                if (blockchainIdentityData.usernameStatus != null) {
-                    usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
-                }
-                usernameStatus[BLOCKCHAIN_USERNAME_UNIQUE] = true
+                var usernameStatus = UsernameInfo(
+                    blockchainIdentityData.preorderSalt,
+                    blockchainIdentityData.usernameStatus ?: UsernameStatus.NOT_PRESENT,
+                    currentUsername,
+                    blockchainIdentityData.usernameRequested,
+                    blockchainIdentityData.votingPeriodStart
+                )
                 currentUsername ?.let {
                     usernameStatuses[it] = usernameStatus
                 }
@@ -712,24 +724,22 @@ class PlatformRepo @Inject constructor(
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
         blockchainIdentityData.apply {
             creditFundingTxId = blockchainIdentity.assetLockTransaction?.txId
-            userId = if (blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED)
+            userId = if (blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED)
                 blockchainIdentity.uniqueIdString
             else null
             identity = blockchainIdentity.identity
             registrationStatus = blockchainIdentity.registrationStatus
             if (blockchainIdentity.currentUsername != null) {
                 username = blockchainIdentity.currentUsername
-                if (blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED) {
+                if (blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED) {
                     preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
                     usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
                 }
+                usernameRequested = blockchainIdentity.getUsernameRequestStatus(username!!)
+                votingPeriodStart = blockchainIdentity.getUsernameVotingStart(username!!)
             }
             creditBalance = blockchainIdentity.creditBalance
-            //activeKeyCount = blockchainIdentity.activeKeyCount
-            //totalKeyCount = blockchainIdentity.totalKeyCount
-            //keysCreated = blockchainIdentity.keysCreated
-            //currentMainKeyIndex = blockchainIdentity.currentMainKeyIndex
-            //currentMainKeyType = blockchainIdentity.currentMainKeyType
+
         }
         updateBlockchainIdentityData(blockchainIdentityData)
     }
@@ -976,11 +986,15 @@ class PlatformRepo @Inject constructor(
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)
+        val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
+        val fee = DASH_PAY_FEE_CONTESTED
+        val emptyWallet = balance == fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT)
         val cftx = blockchainIdentity.createInviteFundingTransaction(
             Constants.DASH_PAY_FEE,
             keyParameter,
             useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE,
-            returnChange = true
+            returnChange = true,
+            emptyWallet = emptyWallet
         )
         val invitation = Invitation(cftx.identityId.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())
