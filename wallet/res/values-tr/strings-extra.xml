@@ -410,4 +410,9 @@
     <string name="masternode_key_not_used">Kullanılmamış</string>
     <string name="masternode_key_revoked">İptal edildi</string>
     <string name="masternode_key_private_public_base64">Özel / Genel Anahtarlar (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">Fiyatlar alınamadı. Fiat değerleri yanlış olabilir.</string>
+    <string name="stale_exchange_rates_stale">Fiyatlar en az 30 dakikalıktır. Fiat değerleri yanlış olabilir.</string>
+    <string name="stale_exchange_rates_volatile">Fiyatlar son güncellemeden bu yana %50\'den fazla dalgalandı.</string>
 </resources>

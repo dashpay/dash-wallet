@@ -297,6 +297,16 @@
     <string name="report_transaction_history_mail_intent_chooser">Transactiegeschiedenis verzenden door gebruikmaking van …</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Transactiegeschiedenis verzenden is mislukt.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Vereenvoudig je crypto belastingen</string>
+    <string name="zenledger_export_all_tx">Exporteer alle transacties</string>
+    <string name="zenledger_export_description">Verbind je crypto portemonnees met het ZenLedger platform. Kom meer te weten en ga aan de slag met je Dash portemonnee transacties.</string>
+    <string name="chain_syncing_default_message">Wacht tot de blockchain volledig is gesynchroniseerd, zodat we je transactiegeschiedenis kunnen bekijken.</string>
+    <string name="zenledger_export_permission">Toestaan ​​dat alle transacties van je Dash portemonnee naar Zenledger worden verzonden?</string>
+    <string name="zenledger_export_error">Er is een fout opgetreden bij het exporteren van de transactiegeschiedenis naar ZenLedger.</string>
+
+
     <string name="about_title">Over</string>
     <string name="about_version_title">Versie</string>
     <string name="about_copyright_title">Auteursrecht</string>

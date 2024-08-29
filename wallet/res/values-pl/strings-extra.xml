@@ -416,4 +416,9 @@
     <string name="masternode_key_not_used">Nie użyte</string>
     <string name="masternode_key_revoked">Unieważniony</string>
     <string name="masternode_key_private_public_base64">Prywatne / Publiczne (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">Nie pobrano cen. Kursy papierowego pieniądza mogą być nieprawidłowe.</string>
+    <string name="stale_exchange_rates_stale">Ceny są sprzed co najmniej 30 minut. Ceny papierowego pieniądza mogą być nieprawidłowe.</string>
+    <string name="stale_exchange_rates_volatile">Ceny zmieniły się o ponad 50% od ostatniej aktualizacji. </string>
 </resources>

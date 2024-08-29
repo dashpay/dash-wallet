@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2015 the original author or authors.
+ * Copyright the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,47 +12,62 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 package de.schildbach.wallet.offline;
 
-import java.io.IOException;
+import static com.google.common.base.Preconditions.checkNotNull;
 
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.wallet.Wallet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import dagger.hilt.android.AndroidEntryPoint;
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.service.PackageInfoProvider;
-import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.Toast;
-import de.schildbach.wallet_test.R;
-
-import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ServiceInfo;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.text.format.DateUtils;
 
+import androidx.annotation.WorkerThread;
+import androidx.core.app.NotificationCompat;
+import androidx.lifecycle.LifecycleService;
+
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.WalletDataProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+
 import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.service.PackageInfoProvider;
+import de.schildbach.wallet_test.R;
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.Toast;
 
 /**
  * @author Andreas Schildbach
  */
 @AndroidEntryPoint
-public final class AcceptBluetoothService extends Service {
-    private WalletApplication application;
-    private Wallet wallet;
+public final class AcceptBluetoothService extends LifecycleService {
+    @Inject
+    protected WalletApplication application;
+    @Inject
+    protected WalletDataProvider walletDataProvider;
+
+    @Inject
+    protected PackageInfoProvider packageInfoProvider;
     private WakeLock wakeLock;
     private AcceptBluetoothThread classicThread;
     private AcceptBluetoothThread paymentProtocolThread;
@@ -65,16 +80,16 @@ public final class AcceptBluetoothService extends Service {
 
     private static final Logger log = LoggerFactory.getLogger(AcceptBluetoothService.class);
 
-    @Inject
-    PackageInfoProvider packageInfoProvider;
-
     @Override
     public IBinder onBind(final Intent intent) {
+        super.onBind(intent);
         return null;
     }
 
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
+        super.onStartCommand(intent, flags, startId);
+
         handler.removeCallbacks(timeoutRunnable);
         handler.postDelayed(timeoutRunnable, TIMEOUT_MS);
 
@@ -87,16 +102,26 @@ public final class AcceptBluetoothService extends Service {
         log.debug(".onCreate()");
 
         super.onCreate();
+        final BluetoothManager bluetoothManager = getSystemService(BluetoothManager.class);
+        final BluetoothAdapter bluetoothAdapter = checkNotNull(bluetoothManager.getAdapter());
+        final PowerManager pm = getSystemService(PowerManager.class);
 
-        this.application = (WalletApplication) getApplication();
-        this.wallet = application.getWallet();
-
-        final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
-        final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
-                getPackageName() + " bluetooth transaction submission");
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, getClass().getName());
         wakeLock.acquire();
+
+        final NotificationCompat.Builder notification = new NotificationCompat.Builder(this,
+                Constants.NOTIFICATION_CHANNEL_ID_ONGOING);
+        notification.setColor(getColor(R.color.fg_network_significant));
+        notification.setSmallIcon(R.drawable.stat_notify_bluetooth_24dp);
+        notification.setContentTitle(getString(R.string.notification_bluetooth_service_listening));
+        notification.setWhen(System.currentTimeMillis());
+        notification.setOngoing(true);
+        notification.setPriority(NotificationCompat.PRIORITY_LOW);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            startForeground(Constants.NOTIFICATION_ID_BLUETOOTH, notification.build(),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+        else
+            startForeground(Constants.NOTIFICATION_ID_BLUETOOTH, notification.build());
 
         registerReceiver(bluetoothStateChangeReceiver, new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
 
@@ -113,35 +138,30 @@ public final class AcceptBluetoothService extends Service {
                     return AcceptBluetoothService.this.handleTx(tx);
                 }
             };
-
-            classicThread.start();
-            paymentProtocolThread.start();
         } catch (final IOException x) {
             new Toast(this).longToast(R.string.error_bluetooth, x.getMessage());
+            log.warn("problem with listening, stopping service", x);
             CrashReporter.saveBackgroundTrace(x, packageInfoProvider.getPackageInfo());
+            stopSelf();
         }
     }
 
+    @WorkerThread
     private boolean handleTx(final Transaction tx) {
-        log.info("tx " + tx.getHashAsString() + " arrived via blueooth");
+        log.info("tx {} arrived via blueooth", tx.getTxId());
 
+        final Wallet wallet = walletDataProvider.getWallet();
         try {
             if (wallet.isTransactionRelevant(tx)) {
                 wallet.receivePending(tx, null);
-
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        application.broadcastTransaction(tx);
-                    }
-                });
+                handler.post(() -> application.broadcastTransaction(tx));
             } else {
-                log.info("tx " + tx.getHashAsString() + " irrelevant");
+                log.info("tx {} irrelevant", tx.getTxId());
             }
 
             return true;
         } catch (final VerificationException x) {
-            log.info("cannot verify tx " + tx.getHashAsString() + " received via bluetooth", x);
+            log.info("cannot verify tx " + tx.getTxId() + " received via bluetooth", x);
         }
 
         return false;
@@ -149,8 +169,10 @@ public final class AcceptBluetoothService extends Service {
 
     @Override
     public void onDestroy() {
-        paymentProtocolThread.stopAccepting();
-        classicThread.stopAccepting();
+        if (paymentProtocolThread != null)
+            paymentProtocolThread.stopAccepting();
+        if (classicThread != null)
+            classicThread.stopAccepting();
 
         unregisterReceiver(bluetoothStateChangeReceiver);
 
@@ -176,12 +198,9 @@ public final class AcceptBluetoothService extends Service {
         }
     };
 
-    private final Runnable timeoutRunnable = new Runnable() {
-        @Override
-        public void run() {
-            log.info("timeout expired, stopping service");
+    private final Runnable timeoutRunnable = () -> {
+        log.info("timeout expired, stopping service");
 
-            stopSelf();
-        }
+        stopSelf();
     };
 }

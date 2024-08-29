@@ -36,6 +36,7 @@ import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
 
+// RequestCoinsFragment in Bitcoin Wallet has the code for Bluetooth support (sharing addresses)
 @AndroidEntryPoint
 class ReceiveFragment : Fragment(R.layout.fragment_receive) {
     private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()

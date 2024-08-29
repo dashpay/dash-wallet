@@ -338,6 +338,7 @@
     <string name="notification_inactivity_message">You still have Dash on this device! Please be sure to write down your recovery phrase before you uninstall the Dash Wallet or you will lose your balance of %s.</string>
     <string name="notification_inactivity_action_dismiss">Remind me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Don\'t remind me</string>
+    <string name="notification_bluetooth_service_listening">Ready to receive payments via Bluetooth</string>
     <string name="appwidget_wallet_balance_title">Dash balance</string>
 
     <!-- generic buttons -->

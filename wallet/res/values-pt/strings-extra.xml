@@ -413,4 +413,9 @@
     <string name="masternode_key_not_used">Não utilizado</string>
     <string name="masternode_key_revoked">Revogado</string>
     <string name="masternode_key_private_public_base64">Chaves Públicas / Privadas (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">Os preços não foram recuperados. Os valores em fiat podem estar incorretos.</string>
+    <string name="stale_exchange_rates_stale">Os preços têm pelo menos 30 minutos de atraso. Os valores em fiat podem estar incorretos.</string>
+    <string name="stale_exchange_rates_volatile">Os preços flutuaram mais de 50% desde a última atualização.</string>
 </resources>

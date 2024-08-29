@@ -297,6 +297,16 @@
     <string name="report_transaction_history_mail_intent_chooser">Şunu kullanarak işlem geçmişini gönder…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">İşlem geçmişi gönderilemedi.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Kripto vergilerinizi basitleştirin</string>
+    <string name="zenledger_export_all_tx">Tüm işlemleri dışa aktar</string>
+    <string name="zenledger_export_description">Kripto cüzdanlarınızı ZenLedger platformuna bağlayın. Daha fazlasını öğrenin ve Dash Cüzdan işlemlerinize başlayın.</string>
+    <string name="chain_syncing_default_message">İşlem geçmişinizi inceleyebilmemiz için zincir tamamen senkronize edilene kadar bekleyin.</string>
+    <string name="zenledger_export_permission">Tüm işlemlerin Dash Cüzdanından Zenledger\'a gönderilmesine izin verilsin mi?</string>
+    <string name="zenledger_export_error">İşlem geçmişinizi ZenLedger\'a aktarırken bir hata oluştu.</string>
+
+
     <string name="about_title">Hakkında</string>
     <string name="about_version_title">Sürüm</string>
     <string name="about_copyright_title">Telif Hakkı</string>

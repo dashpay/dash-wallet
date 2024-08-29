@@ -410,4 +410,9 @@
     <string name="masternode_key_not_used">Δεν χρησιμοποιείται</string>
     <string name="masternode_key_revoked">Ανακλήθηκε</string>
     <string name="masternode_key_private_public_base64">Ιδιωτικά/δημόσια κλειδιά (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">Οι τιμές δεν ανακτήθηκαν. Οι Fiat τιμές ενδέχεται να είναι εσφαλμένες.</string>
+    <string name="stale_exchange_rates_stale">Οι τιμές είναι τουλάχιστον 30 λεπτά παλαιότερες. Οι τιμές Fiat ενδέχεται να είναι λανθασμένες.</string>
+    <string name="stale_exchange_rates_volatile">Οι τιμές έχουν κυμανθεί περισσότερο από 50% από την τελευταία ενημέρωση.</string>
 </resources>

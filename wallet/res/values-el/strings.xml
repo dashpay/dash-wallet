@@ -297,6 +297,16 @@
     <string name="report_transaction_history_mail_intent_chooser">Αποστολή ιστορικού συναλλαγών χρησιμοποιώντας...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Η αποστολή του ιστορικού συναλλαγών απέτυχε.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Απλοποιήστε τους φόρους των κρυπτονομισμάτων σας</string>
+    <string name="zenledger_export_all_tx">Εξαγωγή όλων των συναλλαγών</string>
+    <string name="zenledger_export_description">Συνδέστε τα πορτοφόλια σας με την πλατφόρμα ZenLedger. Μάθετε περισσότερα και ξεκινήστε τις συναλλαγές σας με το Dash Wallet.</string>
+    <string name="chain_syncing_default_message">Περιμένετε μέχρι να συγχρονιστεί πλήρως το blockchain, ώστε να μπορέσουμε να επανεξετάσουμε το ιστορικό των συναλλαγών σας.</string>
+    <string name="zenledger_export_permission">Να επιτρέπεται η αποστολή όλων των συναλλαγών από το Dash Wallet στο Zenledger;</string>
+    <string name="zenledger_export_error">Υπήρξε σφάλμα κατά την εξαγωγή του ιστορικού των συναλλαγών σας στο ZenLedger.</string>
+
+
     <string name="about_title">Πληροφορίες</string>
     <string name="about_version_title">Έκδοση</string>
     <string name="about_copyright_title">Πνευματικά δικαιώματα</string>

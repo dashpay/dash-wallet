@@ -365,7 +365,7 @@
     <string name="today">Dnes</string>
     <string name="yesterday">Včera</string>
 
-    <string name="syncing">Synchronizuje sa</string>
+    <string name="syncing">Synchronizácia</string>
     <string name="syncing_balance">Synchronizuje sa zostatok</string>
     <string name="transaction_count">%d transakcií</string>
     <string name="all_transactions">Všetko</string>
@@ -416,4 +416,9 @@
     <string name="masternode_key_not_used">Nepoužité</string>
     <string name="masternode_key_revoked">Zrušený</string>
     <string name="masternode_key_private_public_base64">Súkromné / Verejné kľúče (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">Nepodarilo sa získať ceny. Hotovostné ceny môžu byť nesprávne.</string>
+    <string name="stale_exchange_rates_stale">Ceny sú staré minimálne 30 minút. Hotovostné ceny môžu byť nesprávne.</string>
+    <string name="stale_exchange_rates_volatile">Ceny sa od poslednej aktualizácie zmenili o viac ako 50 %.</string>
 </resources>

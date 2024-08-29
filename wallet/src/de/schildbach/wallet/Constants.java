@@ -245,8 +245,9 @@ public final class Constants {
     public static final int NOTIFICATION_ID_INACTIVITY = 2;
     public static final int NOTIFICATION_ID_BLOCKCHAIN_SYNC = 3;
     public static final int NOTIFICATION_ID_UPGRADE_WALLET = 4;
-    public static final int NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY = 5;
-    public static final int NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR = 6;
+    public static final int NOTIFICATION_ID_BLUETOOTH = 5;
+    public static final int NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY = 6;
+    public static final int NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR = 7;
 
     public static String NOTIFICATION_CHANNEL_ID_TRANSACTIONS = "dash.notifications.transactions";
     public static String NOTIFICATION_CHANNEL_ID_ONGOING = "dash.notifications.ongoing";

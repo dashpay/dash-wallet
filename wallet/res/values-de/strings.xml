@@ -298,6 +298,16 @@
     <string name="report_transaction_history_mail_intent_chooser">Transaktionsverlauf senden mit...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Das Senden der Transaktionshistorie ist fehlgeschlagen.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Vereinfache deine Krypto-Steuern</string>
+    <string name="zenledger_export_all_tx">Alle Transaktionen exportieren.</string>
+    <string name="zenledger_export_description">Verbinde deine Krypto-Wallets mit der Zenledger Plattform. Lerne mehr darüber und beginne mit deinen Transaktionen in der Dash Wallet.</string>
+    <string name="chain_syncing_default_message">Warte bis die Blockchain komplett synchronisiert ist, damit wir deine Transaktionshistorie überprüfen können.</string>
+    <string name="zenledger_export_permission">Erlaubst du, dass alle Transaktionen von der Dash Wallet an Zenledger gesendet werden?</string>
+    <string name="zenledger_export_error">Bei dem Exportieren deiner Transaktionshistorie nach ZenLedger ist ein Fehler aufgetreten.</string>
+
+
     <string name="about_title">Über</string>
     <string name="about_version_title">Version</string>
     <string name="about_copyright_title">Urheberrecht</string>
