@@ -130,6 +130,7 @@
     <string name="notifications_you_received">%s has sent you a contact request</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
+    <string name="request_complete_message">Your username %s has been successfully requested on the Dash Network</string>
 
     <string name="scan_to_pay_username_dialog_message">Not a valid Dash Username or Identity\n\n%s</string>
     <string name="send_coins_to_username">Sending to</string>

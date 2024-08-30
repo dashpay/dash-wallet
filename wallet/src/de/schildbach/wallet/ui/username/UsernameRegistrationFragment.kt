@@ -73,21 +73,14 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
     private lateinit var completeUsername: String
     private var isProcessing = false
 
-    @SuppressLint("ResourceType")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.chooseUsernameTitle.text = getText(R.string.choose_your_username)
         binding.closeBtn.setOnClickListener {
-            if (requestUsernameViewModel.isUsernameContestable()) {
-                startActivity(MainActivity.createIntent(requireContext(), R.id.moreFragment))
-            } else {
-                // go to the home screen
-                startActivity(MainActivity.createIntent(requireContext()))
-            }
-            requireActivity().finish()
+            closeActivity()
         }
-        binding.processingIdentityDismissBtn.setOnClickListener { requireActivity().finish() }
+        binding.processingIdentityDismissBtn.setOnClickListener { closeActivity() }
 
         initViewModel()
         walletApplication = requireActivity().application as WalletApplication
@@ -106,7 +99,6 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
             }
             CreateUsernameActions.REUSE_TRANSACTION -> {
                 reuseTransaction = true
-                //showKeyBoard()
             }
             CreateUsernameActions.FROM_INVITE -> {
                 // don't show the keyboard if launched from invite
@@ -116,6 +108,17 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
                 // not sure what we need to do here
             }
         }
+    }
+
+    @SuppressLint("ResourceType")
+    private fun closeActivity() {
+        if (requestUsernameViewModel.isUsernameContestable()) {
+            startActivity(MainActivity.createIntent(requireContext(), R.id.moreFragment))
+        } else {
+            // go to the home screen
+            startActivity(MainActivity.createIntent(requireContext(), R.id.walletFragment))
+        }
+        requireActivity().finish()
     }
 
     private fun initViewModel() {
@@ -150,14 +153,21 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
         binding.orbitView.findViewById<View>(R.id.dashpay_user_icon).visibility = View.VISIBLE
         binding.orbitView.findViewById<TextView>(R.id.username_1st_letter).text = completeUsername[0].toString()
 
-        val text = getString(R.string.identity_complete_message, completeUsername)
+        val text = getString(
+            if (requestUsernameViewModel.isUsernameContestable()) {
+                R.string.request_complete_message
+            } else {
+                R.string.identity_complete_message
+            },
+            completeUsername
+        )
 
         val spannableContent = SpannableString(text)
         val start = text.indexOf(completeUsername)
         val end = start + completeUsername.length
         spannableContent.setSpan(StyleSpan(Typeface.BOLD), start, end, 0)
         binding.identityCompleteText.text = spannableContent
-        binding.identityCompleteButton.setOnClickListener { requireActivity().finish() }
+        binding.identityCompleteButton.setOnClickListener { closeActivity() }
     }
 
     private fun showProcessingState() {
