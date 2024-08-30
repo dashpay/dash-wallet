@@ -59,7 +59,7 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
             binding.username.text = myUsernameRequest?.username
             binding.identity.text = myUsernameRequest?.identity
             val votingPeriod = myUsernameRequest?.createdAt?.let { startTime ->
-                val endTime = startTime + TimeUnit.MILLISECONDS.toDays(14)
+                val endTime = startTime + TimeUnit.DAYS.toMillis(14)
                 val dateFormat = DateFormat.getMediumDateFormat(requireContext())
                 dateFormat.format(endTime)
             } ?: "Voting Period not found"
@@ -99,7 +99,7 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
 
         binding.ivInfo.setOnClickListener {
             safeNavigate(
-                VotingRequestDetailsFragmentDirections.votingRequestDetailsFragmentToUsernameVotingInfoFragment()
+                VotingRequestDetailsFragmentDirections.votingRequestDetailsFragmentToUsernameVotingInfoFragment(true)
             )
         }
     }
