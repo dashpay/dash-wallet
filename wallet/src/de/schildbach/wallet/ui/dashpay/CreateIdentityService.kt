@@ -661,7 +661,7 @@ class CreateIdentityService : LifecycleService() {
                         blockchainIdentity.uniqueIdString + " " + blockchainIdentityData.username!!,
                         blockchainIdentityData.username!!,
                         Names.normalizeString(blockchainIdentityData.username!!),
-                        document.createdAt!! / 1000,
+                        document.createdAt!!,
                         blockchainIdentity.uniqueIdString,
                         blockchainIdentityData.verificationLink,
                         documentWithVotes.votes,
@@ -847,7 +847,7 @@ class CreateIdentityService : LifecycleService() {
                                     UsernameRequest.getRequestId(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!),
                                     contestedDocument.label,
                                     contestedDocument.normalizedLabel,
-                                    contestedDocument.createdAt!! / 1000,
+                                    contestedDocument.createdAt!!,
                                     blockchainIdentity.uniqueIdString,
                                     verifyDocument?.url, // get it from the document
                                     documentWithVotes.votes,
