@@ -183,9 +183,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 binding.requestedUsernameContainer.visibility = View.VISIBLE
                 binding.requestedUsernameTitle.text = mainActivityViewModel.getRequestedUsername()
                 val votingPeriod = it.votingPeriodStart?.let { startTime ->
-                    val endTime = startTime + TimeUnit.MILLISECONDS.toDays(14)
+                    val endTime = startTime + TimeUnit.DAYS.toMillis(14)
                     val dateFormat = DateFormat.getMediumDateFormat(requireContext())
-                    String.format("%s - %s", dateFormat.format(startTime), dateFormat.format(endTime))
+                    String.format("%s", dateFormat.format(endTime))
                 } ?: "Voting Period not found"
                 binding.requestedUsernameSubtitleTwo.text = getString(R.string.requested_voting_duration, votingPeriod)
             } else {
@@ -193,19 +193,6 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 binding.requestedUsernameContainer.visibility = View.GONE
             }
         }
-
-//        lifecycleScope.launch {
-//            mainActivityViewModel.getRequestedUsername().also { username ->
-//                if (username.isNotEmpty()) {
-//                    binding.joinDashpayContainer.visibility = View.GONE
-//                    binding.requestedUsernameContainer.visibility = View.VISIBLE
-//                    binding.requestedUsernameTitle.text = username
-//                } else {
-//                    binding.joinDashpayContainer.visibility = View.VISIBLE
-//                    binding.requestedUsernameContainer.visibility = View.GONE
-//                }
-//            }
-//        }
 
         initViewModel()
 
@@ -233,6 +220,12 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 showProfileSection(dashPayProfile)
             }
         }
+        createInviteViewModel.creationState.observe(viewLifecycleOwner) { _ ->
+            editProfileViewModel.dashPayProfile.value?.let { dashPayProfile ->
+                showProfileSection(dashPayProfile)
+            }
+        }
+
         // track the status of broadcast changes to our profile
         editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner) { state ->
             if (state != null) {
@@ -302,25 +295,30 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     private fun showProfileSection(profile: DashPayProfile) {
-        binding.editUpdateSwitcher.visibility = View.VISIBLE
-        binding.editUpdateSwitcher.displayedChild = PROFILE_VIEW
-        if (profile.displayName.isNotEmpty()) {
-            binding.username1.text = profile.displayName
-            binding.username2.text = profile.username
+        if (createInviteViewModel.creationState.value.ordinal >= BlockchainIdentityData.CreationState.DONE.ordinal) {
+            binding.editUpdateSwitcher.visibility = View.VISIBLE
+            binding.editUpdateSwitcher.displayedChild = PROFILE_VIEW
+            if (profile.displayName.isNotEmpty()) {
+                binding.username1.text = profile.displayName
+                binding.username2.text = profile.username
+            } else {
+                binding.username1.text = profile.username
+                binding.username2.visibility = View.GONE
+            }
+
+            ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile)
+
+            binding.editProfile.setOnClickListener {
+                editProfileViewModel.logEvent(AnalyticsConstants.UsersContacts.PROFILE_EDIT_MORE)
+                startActivity(Intent(requireContext(), EditProfileActivity::class.java))
+            }
+            // if the invite section is not visible, show/hide it
+            if (!binding.invite.isVisible) {
+                binding.invite.isVisible = showInviteSection
+            }
         } else {
-            binding.username1.text = profile.username
-            binding.username2.visibility = View.GONE
-        }
-
-        ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile)
-
-        binding.editProfile.setOnClickListener {
-            editProfileViewModel.logEvent(AnalyticsConstants.UsersContacts.PROFILE_EDIT_MORE)
-            startActivity(Intent(requireContext(), EditProfileActivity::class.java))
-        }
-        // if the invite section is not visible, show/hide it
-        if (!binding.invite.isVisible) {
-            binding.invite.isVisible = showInviteSection
+            binding.editUpdateSwitcher.isVisible = false
+            binding.invite.isVisible = true
         }
     }
 
