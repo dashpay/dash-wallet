@@ -645,16 +645,6 @@ class CreateIdentityService : LifecycleService() {
                 val document = DomainDocument(
                         platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument)
                 )
-                blockchainIdentityData.verificationLink?.let { verificationLink ->
-                    if (verificationLink.startsWith("https://") || verificationLink.startsWith("http://")) {
-                        IdentityVerify(platformRepo.platform.platform).createForDashDomain(
-                            blockchainIdentityData.username!!,
-                            verificationLink,
-                            blockchainIdentity.identity!!,
-                            WalletSignerCallback(walletApplication.wallet!!, encryptionKey)
-                        )
-                    }
-                }
 
                 usernameRequestDao.insert(
                     UsernameRequest(
@@ -681,6 +671,17 @@ class CreateIdentityService : LifecycleService() {
             if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_CHECKED) {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKED)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+
+                blockchainIdentityData.verificationLink?.let { verificationLink ->
+                    if (verificationLink.startsWith("https://") || verificationLink.startsWith("http://")) {
+                        IdentityVerify(platformRepo.platform.platform).createForDashDomain(
+                            blockchainIdentityData.username!!,
+                            verificationLink,
+                            blockchainIdentity.identity!!,
+                            WalletSignerCallback(walletApplication.wallet!!, encryptionKey)
+                        )
+                    }
+                }
             }
 
             if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_LINK_SAVING) {
