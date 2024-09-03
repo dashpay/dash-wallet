@@ -64,9 +64,6 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
     private var reuseTransaction: Boolean = false
     private var useInvite: Boolean = false
 
-    private var handler: Handler = Handler()
-    private lateinit var checkUsernameNotExistRunnable: Runnable
-
     private var createUsernameArgs: CreateUsernameArgs? = null
     private val slideInAnimation by lazy { AnimationUtils.loadAnimation(requireContext(), R.anim.slide_in_bottom) }
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(requireContext(), R.anim.fade_out) }
