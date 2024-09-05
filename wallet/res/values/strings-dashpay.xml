@@ -95,7 +95,7 @@
     <string name="accepting_contact_request">Accepting Contact Request</string>
     <string name="accepting_contact_request_short">Accepting</string>
     <string name="search_user_no_results">There are no users that match</string>
-    <string name="search_user_loading">Searching for username <b>"%"</b> on the Dash Network</string>
+    <string name="search_user_loading">Searching for username <b>\"%\"</b> on the Dash Network</string>
     <string name="contact_request_pending">Contact Request Pending</string>
     <string name="pay">Pay</string>
     <string name="contact_request_received_title">%s has requested to be a friend</string>
@@ -253,7 +253,7 @@
     <string name="welcome_to_dash_pay">Welcome to Dash Pay</string>
     <string name="pay_to_usernames">Pay to usernames. No more alphanumeric addresses.</string>
     <string name="create_a_username">Create a username</string>
-    <string name="add_your_friends_family">"Add your friends &amp; family"</string>
+    <string name="add_your_friends_family">Add your friends &amp; family</string>
     <string name="invite_your_family">Invite your family, find your friends by searching their usernames.</string>
     <string name="personalise_profile">Personalise profile</string>
     <string name="upload_your_picture">Upload your picture, personalize your identity.</string>
@@ -302,7 +302,10 @@
     <string name="request_username_available">Username is available</string>
     <string name="request_username_unavailable">Username is unavailable or blocked</string>
     <string name="request_username_taken">Username is taken</string>
-
+    <string name="requesting_your_username_title">Creating your username</string>
+    <string name="requesting_your_username_message">Your username johndoe is being requested on the Dash network. It may take some time.</string>
+    <string name="requesting_your_username_error_title">Your username request failed</string>
+    <string name="requesting_your_username_error_message">For some reason, the request has failed. Please try again.</string>
     <string name="voting">Voting:</string>
     <string name="this_username_has_already_been_requested">This username has already been requested, but you can request it too and let the network vote to decide if you can have it</string>
     <string name="request_details">Request details</string>
@@ -333,7 +336,7 @@
     <string name="vote_submitted">Your vote was submitted</string>
     <string name="vote_cancelled">Your vote was cancelled</string>
     <string name="quick_vote">Quick Voting</string>
-    <string name="quick_vote_subtitle">By tapping the "Vote for All" button, you will automatically vote for all of the filtered usernames (%d) that were submitted first</string>
+    <string name="quick_vote_subtitle">By tapping the \"Vote for All\" button, you will automatically vote for all of the filtered usernames (%d) that were submitted first</string>
     <string name="vote_for_all">Vote for All</string>
     <string name="voting_period_active">Username Voting Period Active</string>
     <string name="there_was_a_network_error">There was a network error, you can try again at no extra cost</string>
@@ -385,7 +388,7 @@
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">Your credit balance is low</string>
     <string name="credit_balance_low_warning_title">Your credit balance is fully depleted</string>
-    <string name="credit_balance_empty_warning_message">"You can continue to use DashPay for payments but you cannot update your profile or add more contacts until you top up your credit balance</string>
+    <string name="credit_balance_empty_warning_message">You can continue to use DashPay for payments but you cannot update your profile or add more contacts until you top up your credit balance</string>
     <string name="credit_balance_low_warning_message">Top-up your credits to continue making changes to your profile and adding contacts</string>
     <string name="credit_balance_button_maybe_later">Maybe later</string>
     <string name="credit_balance_button_buy">Buy Credits</string>
