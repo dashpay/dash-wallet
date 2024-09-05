@@ -225,6 +225,7 @@
                             style="@style/MenuRowSubTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:maxLines="2"
                             android:text="@string/requested_username_has_been" />
 
                         <TextView
@@ -235,6 +236,17 @@
                             android:text="@string/requested_voting_duration"
                             />
                     </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/retry_request_button"
+                        style="@style/Overline.SemiBold.Blue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        android:text="@string/retry"
+                        android:layout_marginEnd="20dp" />
                     <ImageView
                         android:id="@+id/requested_username_arrow"
                         style="@style/MenuRowArrow"

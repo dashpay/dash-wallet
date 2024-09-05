@@ -43,6 +43,7 @@ import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.SettingsActivity
+import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
@@ -60,6 +61,7 @@ import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -81,6 +83,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     private val mainActivityViewModel: MainViewModel by activityViewModels()
     private val editProfileViewModel: EditProfileViewModel by viewModels()
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
+    private val createIdentityViewModel: CreateIdentityViewModel by viewModels()
 
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
     @Inject lateinit var configuration: Configuration
@@ -174,11 +177,33 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         binding.requestedUsernameContainer.setOnClickListener {
-            startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+            if (createIdentityViewModel.creationState.value.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal &&
+                createIdentityViewModel.creationException.value != null) {
+                // Perform Retry
+                createIdentityViewModel.retryCreateIdentity()
+            } else {
+                startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+            }
         }
 
         mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
-            if (it.creationState == BlockchainIdentityData.CreationState.VOTING) {
+            if (it.creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal &&
+                it.creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal &&
+                !Names.isUsernameContestable(it.username!!)) {
+
+                binding.joinDashpayContainer.visibility = View.GONE
+                binding.requestedUsernameContainer.visibility = View.VISIBLE
+                if (it.creationError) {
+                    binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_error_title)
+                    binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_error_message)
+                    binding.retryRequestButton.isVisible = true
+                } else {
+                    // show the status
+                    binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_title)
+                    binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_message)
+                    binding.retryRequestButton.isVisible = false
+                }
+            } else if (it.creationState == BlockchainIdentityData.CreationState.VOTING) {
                 binding.joinDashpayContainer.visibility = View.GONE
                 binding.requestedUsernameContainer.visibility = View.VISIBLE
                 binding.requestedUsernameTitle.text = mainActivityViewModel.getRequestedUsername()
@@ -188,10 +213,15 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                     String.format("%s", dateFormat.format(endTime))
                 } ?: "Voting Period not found"
                 binding.requestedUsernameSubtitleTwo.text = getString(R.string.requested_voting_duration, votingPeriod)
+                binding.retryRequestButton.isVisible = false
             } else {
                 binding.joinDashpayContainer.visibility = View.VISIBLE
                 binding.requestedUsernameContainer.visibility = View.GONE
             }
+        }
+
+        binding.retryRequestButton.setOnClickListener {
+            // TODO: restart CreateIdentityService
         }
 
         initViewModel()
@@ -220,7 +250,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 showProfileSection(dashPayProfile)
             }
         }
-        createInviteViewModel.creationState.observe(viewLifecycleOwner) { _ ->
+        createIdentityViewModel.creationState.observe(viewLifecycleOwner) { _ ->
             editProfileViewModel.dashPayProfile.value?.let { dashPayProfile ->
                 showProfileSection(dashPayProfile)
             }
@@ -295,7 +325,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     private fun showProfileSection(profile: DashPayProfile) {
-        if (createInviteViewModel.creationState.value.ordinal >= BlockchainIdentityData.CreationState.DONE.ordinal) {
+        if (createIdentityViewModel.creationState.value.ordinal >= BlockchainIdentityData.CreationState.DONE.ordinal) {
             binding.editUpdateSwitcher.visibility = View.VISIBLE
             binding.editUpdateSwitcher.displayedChild = PROFILE_VIEW
             if (profile.displayName.isNotEmpty()) {
