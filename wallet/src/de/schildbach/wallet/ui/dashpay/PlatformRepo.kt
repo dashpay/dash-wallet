@@ -577,7 +577,7 @@ class PlatformRepo @Inject constructor(
             for (i in 0 until 3) {
                 try {
                     val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
-                    blockchainIdentity.registerIdentity(keyParameter)
+                    blockchainIdentity.registerIdentity(keyParameter, true, true)
                     timer.logTiming() // we won't log timing for failed registrations
                     return@withContext
                 } catch (e: InvalidInstantAssetLockProofException) {
