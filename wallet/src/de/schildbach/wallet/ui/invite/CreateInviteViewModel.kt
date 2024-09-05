@@ -48,19 +48,6 @@ class CreateInviteViewModel @Inject constructor(
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
-    private val _creationState = MutableStateFlow(BlockchainIdentityData.CreationState.NONE)
-    val creationState: StateFlow<BlockchainIdentityData.CreationState>
-        get() = _creationState
-
-    init {
-        blockchainIdentityDataDao.observe(BlockchainIdentityConfig.CREATION_STATE)
-            .filterNotNull()
-            .onEach {
-                _creationState.value = BlockchainIdentityData.CreationState.valueOf(it)
-            }
-            .launchIn(viewModelScope)
-    }
-
     val blockchainStateData = blockchainStateDao.observeState().asLiveData(viewModelScope.coroutineContext)
     //val blockchainState: LiveData<BlockchainState>
     //    get() = blockchainStateData.asLiveData(viewModelScope)
