@@ -219,6 +219,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     public static final String START_AS_FOREGROUND_EXTRA = "start_as_foreground";
 
+    private final Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
     private MixingStatus mixingStatus = MixingStatus.NOT_STARTED;
     private Double mixingProgress = 0.0;
