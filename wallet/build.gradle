@@ -211,11 +211,8 @@ android {
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
-            }
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
         }
         buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
         buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
