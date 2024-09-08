@@ -84,7 +84,7 @@ class PlanetView @JvmOverloads constructor(
         }
     }
 
-    override fun onDraw(canvas: Canvas?) {
+    override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
         planetDrawable?.setBounds(0, 0, measuredWidth, measuredHeight)
