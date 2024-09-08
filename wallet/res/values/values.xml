@@ -6,6 +6,8 @@
 	<string name="symbol_internal">⇄</string>
 	<string name="app_name">Dash Wallet</string>
 	<string name="app_name_short">Dash</string>
+	<string name="app_name_dashpay_short">DashPay</string>
+	<string name="app_name_dashpay">DashPay</string>
 
 	<string-array name="preferences_precision_values">
 		<item>8</item>
