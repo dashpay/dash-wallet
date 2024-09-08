@@ -71,7 +71,12 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
         binding = ActivityAboutBinding.inflate(layoutInflater)
         binding.appBar.setNavigationOnClickListener { finish() }
 
-        binding.title.text = "${getString(R.string.about_title)} ${getString(R.string.app_name_short)}"
+        val appName = if (Constants.SUPPORTS_PLATFORM) {
+            getString(R.string.app_name_dashpay_short)
+        } else {
+            getString(R.string.app_name_short)
+        }
+        binding.title.text = "${getString(R.string.about_title)} $appName"
         binding.appVersionName.text = getString(R.string.about_version_name, BuildConfig.VERSION_NAME)
         binding.libraryVersionName.text = getString(
             R.string.about_credits_bitcoinj_title,

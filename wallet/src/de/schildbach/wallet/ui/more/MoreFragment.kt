@@ -169,6 +169,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.joinDashpayBtn.setOnClickListener {
             startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
         }
+        binding.usernameVoting.isVisible = Constants.SUPPORTS_PLATFORM
         binding.usernameVoting.setOnClickListener {
             safeNavigate(MoreFragmentDirections.moreToUsernameVoting())
         }
@@ -209,7 +210,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         initViewModel()
 
-        if (Constants.DASHPAY_DISABLED) {
+        if (Constants.SUPPORTS_PLATFORM) {
             binding.usernameVoting.isVisible = false
         }
     }
