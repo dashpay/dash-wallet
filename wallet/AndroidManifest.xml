@@ -436,7 +436,8 @@
             android:permission="android.permission.BIND_JOB_SERVICE" />
         <service
             android:name="de.schildbach.wallet.ui.dashpay.CreateIdentityService"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="dataSync"/>
 
         <service
             android:name="de.schildbach.wallet.ui.notifications.PushMessagingService"
