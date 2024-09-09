@@ -416,4 +416,9 @@
     <string name="masternode_key_not_used">Не використано</string>
     <string name="masternode_key_revoked">Анульовано</string>
     <string name="masternode_key_private_public_base64">Приватні / публічні ключі (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">Ціни не отримано. Фіатні значення можуть бути неправильними.</string>
+    <string name="stale_exchange_rates_stale">Цінам що найменше 30 хвилин. Фіатні значення можуть бути неправильними.</string>
+    <string name="stale_exchange_rates_volatile">З часу останнього оновлення ціни коливалися більш ніж на 50%.</string>
 </resources>

@@ -701,7 +701,7 @@ class MainViewModel @Inject constructor(
     suspend fun getInviteHistory() = invitationsDao.loadAll()
 
     private fun combineLatestData(): Boolean {
-        return if (Constants.DASHPAY_DISABLED) {
+        return if (!Constants.SUPPORTS_PLATFORM) {
             false
         } else {
             val isPlatformAvailable = isPlatformAvailable.value

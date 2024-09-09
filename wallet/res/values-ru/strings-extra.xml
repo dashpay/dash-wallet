@@ -416,4 +416,9 @@
     <string name="masternode_key_not_used">не использован</string>
     <string name="masternode_key_revoked">Аннулирован</string>
     <string name="masternode_key_private_public_base64">Приватные / Публичные ключи (base64)</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">Данные о курсе не были получены. Курс валют может быть неточным.</string>
+    <string name="stale_exchange_rates_stale">Данные о курсе были получены не менее 30 минут назад. Курс валют может быть неточным.</string>
+    <string name="stale_exchange_rates_volatile">Курс изменился более чем на 50% с момента последнего обновления.</string>
 </resources>

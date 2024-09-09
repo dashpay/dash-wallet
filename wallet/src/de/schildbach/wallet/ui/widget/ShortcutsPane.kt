@@ -28,6 +28,7 @@ import com.google.android.flexbox.AlignItems
 import com.google.android.flexbox.FlexDirection
 import com.google.android.flexbox.FlexboxLayout
 import com.google.android.flexbox.JustifyContent
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 import kotlin.math.min
 
@@ -123,7 +124,7 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : FlexboxLayout(conte
             scanToPayButton.shouldAppear = value
             buySellButton.shouldAppear = !value
             payToAddressButton.shouldAppear = value
-            payToContactButton.shouldAppear = value
+            payToContactButton.shouldAppear = if (Constants.SUPPORTS_PLATFORM) value else false
 
             if (field != value) {
                 field = value

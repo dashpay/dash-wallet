@@ -83,6 +83,10 @@ object WalletActivityExt {
         val navController = navHostFragment.navController
         val navView: BottomNavigationView = findViewById(R.id.bottom_navigation)
         setupWithNavController(navView, navController)
+        if (!Constants.SUPPORTS_PLATFORM) {
+            navView.menu.removeItem(R.id.contactsFragment)
+            navView.menu.removeItem(R.id.exploreFragment)
+        }
         navView.itemIconTintList = null
         navView.setOnItemSelectedListener { item: MenuItem ->
             when (item.itemId) {
@@ -115,7 +119,7 @@ object WalletActivityExt {
         navController.addOnDestinationChangedListener { _, _, arguments ->
             navView.isVisible = arguments?.getBoolean("ShowNavBar", false) == true
         }
-        if (Constants.DASHPAY_DISABLED) {
+        if (Constants.SUPPORTS_PLATFORM) {
             navView.menu.findItem(R.id.contactsFragment).isEnabled = false
         }
     }

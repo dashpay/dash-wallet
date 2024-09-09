@@ -1112,7 +1112,7 @@ class PlatformSynchronizationService @Inject constructor(
             lastPreBlockStage = PreBlockStage.None
             preDownloadBlocksFuture = future
             log.info("preBlockDownload: starting")
-            if (Constants.DASHPAY_DISABLED) {
+            if (Constants.SUPPORTS_PLATFORM) {
                 finishPreBlockDownload()
                 return@launch
             }
@@ -1167,7 +1167,9 @@ class PlatformSynchronizationService @Inject constructor(
 
     override suspend fun clearDatabases() {
         // push all changes to platform before clearing the database tables
-        publishChangeCache(System.currentTimeMillis()) // Before now - push everything
+        if (Constants.SUPPORTS_PLATFORM) {
+            publishChangeCache(System.currentTimeMillis()) // Before now - push everything
+        }
         transactionMetadataChangeCacheDao.clear()
         transactionMetadataDocumentDao.clear()
     }

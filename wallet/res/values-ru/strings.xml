@@ -297,6 +297,16 @@
     <string name="report_transaction_history_mail_intent_chooser">Отправить историю транзакций с помощью...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Ошибка при отправке истории транзакций.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Упростите уплату налогов c криптовалюты</string>
+    <string name="zenledger_export_all_tx">Экспортировать все транзакции</string>
+    <string name="zenledger_export_description">Подключите свои криптокошельки к платформе ZenLedger. Узнайте больше и начните с транзакций в Dash Wallet.</string>
+    <string name="chain_syncing_default_message">Дождитесь полной синхронизации сети, чтобы мы могли увидеть вашу историю транзакций.</string>
+    <string name="zenledger_export_permission">Разрешить переcылать все транзакции из Dash Wallet в Zenledger?</string>
+    <string name="zenledger_export_error">При переносе истории транзакций в ZenLedger произошла ошибка.</string>
+
+
     <string name="about_title">О программе</string>
     <string name="about_version_title">Версия</string>
     <string name="about_copyright_title">Авторское право</string>

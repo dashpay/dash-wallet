@@ -814,8 +814,10 @@ public class WalletApplication extends MultiDexApplication
         List<ActivityManager.RunningAppProcessInfo> runningAppProcesses = activityManager != null ? activityManager.getRunningAppProcesses() : null;
         if (runningAppProcesses != null) {
             int importance = runningAppProcesses.get(0).importance;
-            if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND)
-
+            if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
+                if (wallet == null) {
+                    log.warn("wallet does not exist, but starting blockchain service");
+                }
                 if (cancelCoinsReceived) {
                     Intent blockchainServiceCancelCoinsReceivedIntent = new Intent(BlockchainService.ACTION_CANCEL_COINS_RECEIVED, null,
                             this, BlockchainServiceImpl.class);
@@ -823,6 +825,7 @@ public class WalletApplication extends MultiDexApplication
                 } else {
                     startService(blockchainServiceIntent);
                 }
+            }
         }
     }
 

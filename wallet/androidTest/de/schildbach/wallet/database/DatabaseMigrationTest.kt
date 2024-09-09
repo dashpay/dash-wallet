@@ -60,9 +60,7 @@ open class DatabaseMigrationTest {
 
     private val migrations = arrayOf(
         AppDatabaseMigrations.migration11To12,
-        AppDatabaseMigrations.migration12To17,
-        AppDatabaseMigrations.migration17To18,
-        AppDatabaseMigrations.migration18To19
+        AppDatabaseMigrations.migration12To13
     )
 
     @Rule
@@ -91,7 +89,7 @@ open class DatabaseMigrationTest {
             InstrumentationRegistry.getInstrumentation().targetContext,
             AppDatabase::class.java, TEST_DB_NAME
         ).addMigrations(*migrations)
-            .fallbackToDestructiveMigrationFrom(1,2, 3, 4, 5,6, 7,8 ,9, 10)
+            .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7, 8 , 9, 10)
             .build()
 
         // Check that data is valid

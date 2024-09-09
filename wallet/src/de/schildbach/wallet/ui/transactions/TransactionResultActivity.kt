@@ -44,6 +44,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -52,7 +53,6 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class TransactionResultActivity : LockScreenActivity() {
-
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
 
     companion object {
@@ -232,6 +232,11 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private fun onTransactionDetailsDismiss() {
+        if (isFinishing || isDestroyed) {
+            log.warn("Activity is finishing or destroyed. Skipping dismiss actions.")
+            return
+        }
+
         when {
             intent.action == Intent.ACTION_VIEW || intent.action == SendCoinsActivity.ACTION_SEND_FROM_WALLET_URI -> {
                 finish()

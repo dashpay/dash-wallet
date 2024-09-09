@@ -12,6 +12,7 @@
     <string name="blockchain_state_progress_stalled">Usklajevanje zaustavljeno</string>
     <string name="blockchain_state_progress_problem_storage">Usklajevanje: težava s hrambo podatkov</string>
     <string name="blockchain_state_progress_problem_network">Usklajevanje: težava z omrežjem</string>
+    <string name="wallet_address_fragment_clipboard_msg">Dash naslov kopiran na odložišče</string>
     <string name="wallet_address_dialog_fragment_hint">Po prejemu plačila se bo vaš naslov zaradi varnostnih razlogov spremenil.</string>
     <string name="wallet_balance_fragment_too_much">Stanje na vašem računu je visoko. Zaradi varnostnih razlogov priporočamo, da prestavite nekaj kovancev v drugo denarnico.</string>
     <string name="wallet_balance_fragment_replaying">Pregled stanja med ponastavitvijo ni mogoč.</string>
@@ -300,7 +301,4 @@
     <string name="dash_wallet">Denarnica</string>
 
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
-
-    <string name="wallet_address_fragment_clipboard_msg">Dash naslov kopiran v odložišče</string>
-    <string name="activity_security_view_recovery_phrase">Preveri seznam skrivnih besed za obnovo denarnice</string>
     </resources>

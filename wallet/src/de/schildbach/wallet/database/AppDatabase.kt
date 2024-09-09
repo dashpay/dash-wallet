@@ -55,7 +55,8 @@ import org.dash.wallet.features.exploredash.utils.RoomConverters
         TransactionMetadataDocument::class,
         UsernameRequest::class
     ],
-    version = 19 // if increasing version, we need migrations to preserve tx/addr metadata
+    version = 13, // if increasing version, we need migrations to preserve tx/addr metadata,
+    exportSchema = true
 )
 @TypeConverters(RoomConverters::class, BlockchainStateRoomConverters::class)
 abstract class AppDatabase : RoomDatabase() {
