@@ -297,6 +297,16 @@
     <string name="report_transaction_history_mail_intent_chooser">Kirim riwayat transaksi menggunakan…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Gagal mengirim riwayat transaksi.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Sederhanakan pajak kripto Anda</string>
+    <string name="zenledger_export_all_tx">Ekspor semua transaksi</string>
+    <string name="zenledger_export_description">Hubungkan dompet crypto anda ke platform Zenledger. Pelajari lebih lanjut dan mulai dengan transaksi Domept Dash</string>
+    <string name="chain_syncing_default_message">Tunggu hingga rantai disinkronkan sepenuhnya, sehingga kami bisa mengulas riwayat transaksi anda.</string>
+    <string name="zenledger_export_permission">Izinkan mengirim semua transaksi dari dompet Dash ke Zenledger?</string>
+    <string name="zenledger_export_error">Terjadi kesalahan saat mengekspor riwayat transaksi Anda ke ZenLedger.</string>
+
+
     <string name="about_title">Mengenai</string>
     <string name="about_version_title">versi</string>
     <string name="about_copyright_title">Hak cipta</string>

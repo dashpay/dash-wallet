@@ -76,7 +76,7 @@ class OrbitView @JvmOverloads constructor(
         view.y = centerY + sin(angle.toFloat() * Math.PI.toFloat() / 180f) * r
     }
 
-    override fun onDraw(canvas: Canvas?) {
+    override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
         color?.let {

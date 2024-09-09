@@ -407,4 +407,5 @@
     <string name="masternode_key_not_used">ไม่ได้ใช้</string>
     <string name="masternode_key_revoked">ยกเลิก</string>
     <string name="masternode_key_private_public_base64">Private / Public Keys (base64)</string>
-</resources>
+
+    </resources>

@@ -50,7 +50,6 @@ class TransactionResultViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     val walletApplication: WalletApplication
 ) : ViewModel() {
-
     val dashFormat: MonetaryFormat = configuration.format.noCode()
 
     val wallet: Wallet?
@@ -61,7 +60,7 @@ class TransactionResultViewModel @Inject constructor(
 
     private val _transactionMetadata: MutableStateFlow<TransactionMetadata?> = MutableStateFlow(null)
     val transactionMetadata
-        get() = _transactionMetadata.filterNotNull().asLiveData()
+        get() = _transactionMetadata.filterNotNull()
 
     val transactionIcon = _transactionMetadata
         .filterNotNull()

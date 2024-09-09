@@ -297,6 +297,16 @@
     <string name="report_transaction_history_mail_intent_chooser">Magpadala ng history ng transaksyon gamit ang…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Nabigo ang pagpapadala ng history ng transaksyon.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Pasimplehin ang iyong mga buwis sa crypto</string>
+    <string name="zenledger_export_all_tx">I-export ang lahat ng transaksyon</string>
+    <string name="zenledger_export_description">Ikonekta ang iyong mga crypto wallet sa platform ng ZenLedger. Matuto pa at magsimula sa iyong mga transaksyon sa Dash Wallet.</string>
+    <string name="chain_syncing_default_message">Maghintay hanggang sa ganap na ma-sync ang chain, para masuri namin ang iyong history ng transaksyon.</string>
+    <string name="zenledger_export_permission">Payagan ang pagpapadala ng lahat ng mga transaksyon mula sa Dash Wallet sa Zenledger?</string>
+    <string name="zenledger_export_error">Nagkaroon ng error noong ine-export ang iyong history ng transaksyon sa ZenLedger.</string>
+
+
     <string name="about_title">Tungkol sa</string>
     <string name="about_version_title">Bersyon</string>
     <string name="about_copyright_title">Copyright</string>

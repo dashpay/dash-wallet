@@ -80,6 +80,9 @@ public final class Constants {
                 SUPPORTS_PLATFORM = false;
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-devnet.db");
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                if (SUPPORTS_PLATFORM) {
+                    SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
+                }
                 org.dash.wallet.common.util.Constants.FAUCET_URL = "";
                 break;
             }
@@ -92,9 +95,11 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "tdash";
-                SUPPORTS_PLATFORM = true;
+                SUPPORTS_PLATFORM = false;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
+                if (SUPPORTS_PLATFORM) {
+                    SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
+                }
                 org.dash.wallet.common.util.Constants.FAUCET_URL = "http://faucet.testnet.networks.dash.org/";
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-testnet.db");
                 break;
@@ -128,8 +133,6 @@ public final class Constants {
 
     /** Bitcoinj global context. */
     public static final Context CONTEXT = new Context(NETWORK_PARAMETERS);
-    public static final boolean DASHPAY_DISABLED = false;
-
     public final static class Files {
 
         /** Filename of the wallet. */
@@ -245,8 +248,9 @@ public final class Constants {
     public static final int NOTIFICATION_ID_INACTIVITY = 2;
     public static final int NOTIFICATION_ID_BLOCKCHAIN_SYNC = 3;
     public static final int NOTIFICATION_ID_UPGRADE_WALLET = 4;
-    public static final int NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY = 5;
-    public static final int NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR = 6;
+    public static final int NOTIFICATION_ID_BLUETOOTH = 5;
+    public static final int NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY = 6;
+    public static final int NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR = 7;
 
     public static String NOTIFICATION_CHANNEL_ID_TRANSACTIONS = "dash.notifications.transactions";
     public static String NOTIFICATION_CHANNEL_ID_ONGOING = "dash.notifications.ongoing";

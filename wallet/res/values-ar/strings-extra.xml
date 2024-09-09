@@ -420,4 +420,5 @@
     <string name="masternode_key_not_used">غير مستعمل</string>
     <string name="masternode_key_revoked">ملغاة</string>
     <string name="masternode_key_private_public_base64">مفاتيح خاصة / عمومية (base64)</string>
-</resources>
+
+    </resources>

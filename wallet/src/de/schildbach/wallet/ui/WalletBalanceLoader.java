@@ -41,7 +41,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
  * @author Andreas Schildbach
  */
 public final class WalletBalanceLoader extends AsyncTaskLoader<Coin> {
-    private LocalBroadcastManager broadcastManager;
+    private final LocalBroadcastManager broadcastManager;
     private final Wallet wallet;
 
     private static final Logger log = LoggerFactory.getLogger(WalletBalanceLoader.class);

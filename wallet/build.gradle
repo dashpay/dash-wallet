@@ -202,20 +202,17 @@ android {
     android.ndkVersion '21.3.6528147'
 
     defaultConfig {
-        compileSdk 33
+        compileSdk 34
         minSdkVersion 24
-        targetSdkVersion 33
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 90008
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "5.5-dashpay"
+        targetSdkVersion 34
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 103000
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "10.3.0"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
-            }
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
         }
         buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
         buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
