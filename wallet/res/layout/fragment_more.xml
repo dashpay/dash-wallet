@@ -179,59 +179,84 @@
 
             </ViewFlipper>
 
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/requested_username_container"
-                android:visibility="gone"
-                tools:visibility="visible"
-                android:layout_height="110dp"
-                style="@style/MenuRow">
-
-                <ImageView
-                    android:id="@+id/requested_username_icon"
-                    style="@style/MenuRowIcon"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_avatar_blue" />
-
-                <TextView
-                    android:id="@+id/requested_username_title"
-                    style="@style/MenuRowTitle"
-                    app:layout_constraintStart_toEndOf="@+id/requested_username_icon"
-                    app:layout_constraintTop_toTopOf="@+id/requested_username_icon"
-                    tools:text="@string/shortcut_action_join_dashpay" />
-
-                <TextView
-                    android:id="@+id/requested_username_subtitle"
-                    style="@style/MenuRowSubTitle"
-                    android:text="@string/requested_username_has_been"
-                    app:layout_constraintStart_toStartOf="@+id/requested_username_title"
-                    app:layout_constraintTop_toBottomOf="@+id/requested_username_title" />
-
-
-                <TextView
-                    android:id="@+id/requested_username_subtitle_two"
-                    style="@style/MenuRowSubTitle"
-                    android:text="@string/requested_voting_duration"
-                    app:layout_constraintStart_toStartOf="@+id/requested_username_subtitle"
-                    app:layout_constraintTop_toBottomOf="@+id/requested_username_subtitle" />
-
-                <ImageView
-                    android:id="@+id/requested_username_arrow"
-                    style="@style/MenuRowArrow"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_menu_row_arrow" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:animateLayoutChanges="true"
                 android:orientation="vertical"
-                android:paddingTop="20dp">
+                android:paddingTop="0dp">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/requested_username_container"
+                    android:visibility="gone"
+                    tools:visibility="visible"
+                    android:layout_height="76dp"
+                    style="@style/MenuRow">
+
+                    <ImageView
+                        android:id="@+id/requested_username_icon"
+                        style="@style/MenuRowIcon"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_join_dashpay" />
+
+                    <LinearLayout
+                        android:id="@+id/join_dashpay_text_section"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginStart="16dp"
+                        app:layout_constraintStart_toEndOf="@+id/requested_username_icon"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent" >
+
+                        <TextView
+                            android:id="@+id/requested_username_title"
+                            style="@style/MenuRowTitle"
+                            android:layout_marginStart="0dp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            tools:text="requested-username" />
+
+                        <TextView
+                            android:id="@+id/requested_username_subtitle"
+                            style="@style/MenuRowSubTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:maxLines="2"
+                            android:text="@string/requested_username_has_been" />
+
+                        <TextView
+                            android:id="@+id/requested_username_subtitle_two"
+                            style="@style/MenuRowSubTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/requested_voting_duration"
+                            />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/retry_request_button"
+                        style="@style/Overline.SemiBold.Blue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        android:text="@string/retry"
+                        android:layout_marginEnd="20dp" />
+                    <ImageView
+                        android:id="@+id/requested_username_arrow"
+                        style="@style/MenuRowArrow"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_menu_row_arrow" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/invite"

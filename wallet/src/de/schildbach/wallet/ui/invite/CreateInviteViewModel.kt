@@ -29,17 +29,20 @@ import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.util.observe
 import javax.inject.Inject
 
 @HiltViewModel
 class CreateInviteViewModel @Inject constructor(
     private val walletData: WalletDataProvider,
     private val analytics: AnalyticsService,
-    blockchainStateDao: BlockchainStateDao,
+     blockchainStateDao: BlockchainStateDao,
     invitationsDao: InvitationsDao,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao

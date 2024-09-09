@@ -645,23 +645,13 @@ class CreateIdentityService : LifecycleService() {
                 val document = DomainDocument(
                         platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument)
                 )
-                blockchainIdentityData.verificationLink?.let { verificationLink ->
-                    if (verificationLink.startsWith("https://") || verificationLink.startsWith("http://")) {
-                        IdentityVerify(platformRepo.platform.platform).createForDashDomain(
-                            blockchainIdentityData.username!!,
-                            verificationLink,
-                            blockchainIdentity.identity!!,
-                            WalletSignerCallback(walletApplication.wallet!!, encryptionKey)
-                        )
-                    }
-                }
 
                 usernameRequestDao.insert(
                     UsernameRequest(
                         blockchainIdentity.uniqueIdString + " " + blockchainIdentityData.username!!,
                         blockchainIdentityData.username!!,
                         Names.normalizeString(blockchainIdentityData.username!!),
-                        document.createdAt!! / 1000,
+                        document.createdAt!!,
                         blockchainIdentity.uniqueIdString,
                         blockchainIdentityData.verificationLink,
                         documentWithVotes.votes,
@@ -681,6 +671,17 @@ class CreateIdentityService : LifecycleService() {
             if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_CHECKED) {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKED)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+
+                blockchainIdentityData.verificationLink?.let { verificationLink ->
+                    if (verificationLink.startsWith("https://") || verificationLink.startsWith("http://")) {
+                        IdentityVerify(platformRepo.platform.platform).createForDashDomain(
+                            blockchainIdentityData.username!!,
+                            verificationLink,
+                            blockchainIdentity.identity!!,
+                            WalletSignerCallback(walletApplication.wallet!!, encryptionKey)
+                        )
+                    }
+                }
             }
 
             if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_LINK_SAVING) {
@@ -847,7 +848,7 @@ class CreateIdentityService : LifecycleService() {
                                     UsernameRequest.getRequestId(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!),
                                     contestedDocument.label,
                                     contestedDocument.normalizedLabel,
-                                    contestedDocument.createdAt!! / 1000,
+                                    contestedDocument.createdAt!!,
                                     blockchainIdentity.uniqueIdString,
                                     verifyDocument?.url, // get it from the document
                                     documentWithVotes.votes,

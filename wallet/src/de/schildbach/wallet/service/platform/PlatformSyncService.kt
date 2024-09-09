@@ -1025,30 +1025,34 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun updateUsernameRequestsWithVotes() {
-        val contestedNames = platform.platform.names.getContestedNames()
-        for (name in contestedNames) {
-            val voteContender = platform.platform.names.getVoteContenders(name)
-            voteContender.map.forEach { (identifier, contender) ->
+        try {
+            val contestedNames = platform.platform.names.getContestedNames()
+            for (name in contestedNames) {
+                val voteContender = platform.platform.names.getVoteContenders(name)
+                voteContender.map.forEach { (identifier, contender) ->
 
-                val contestedDocument = DomainDocument(
-                    platform.platform.names.deserialize(contender.seralizedDocument)
-                )
+                    val contestedDocument = DomainDocument(
+                        platform.platform.names.deserialize(contender.seralizedDocument)
+                    )
 
-                val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
+                    val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
 
-                val usernameRequest = UsernameRequest(
-                    UsernameRequest.getRequestId(identifier.toString(), name),
-                    contestedDocument.label,
-                    name,
-                    contestedDocument.createdAt?.div(1000) ?: -1L,
-                    identifier.toString(),
-                    identityVerifyDocument?.url,
-                    contender.votes,
-                    voteContender.lockVoteTally,
-                    false
-                )
-                usernameRequestDao.insert(usernameRequest)
+                    val usernameRequest = UsernameRequest(
+                        UsernameRequest.getRequestId(identifier.toString(), name),
+                        contestedDocument.label,
+                        name,
+                        contestedDocument.createdAt?.div(1000) ?: -1L,
+                        identifier.toString(),
+                        identityVerifyDocument?.url,
+                        contender.votes,
+                        voteContender.lockVoteTally,
+                        false
+                    )
+                    usernameRequestDao.insert(usernameRequest)
+                }
             }
+        } catch (e: Exception) {
+            log.info("problem obtaining votes:", e)
         }
     }
 

@@ -43,6 +43,7 @@ import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.SettingsActivity
+import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
@@ -60,6 +61,7 @@ import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -81,6 +83,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     private val mainActivityViewModel: MainViewModel by activityViewModels()
     private val editProfileViewModel: EditProfileViewModel by viewModels()
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
+    private val createIdentityViewModel: CreateIdentityViewModel by viewModels()
 
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
     @Inject lateinit var configuration: Configuration
@@ -175,38 +178,52 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         binding.requestedUsernameContainer.setOnClickListener {
-            startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+            if (createIdentityViewModel.creationState.value.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal &&
+                createIdentityViewModel.creationException.value != null) {
+                // Perform Retry
+                createIdentityViewModel.retryCreateIdentity()
+            } else {
+                startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+            }
         }
 
         mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
-            if (it.creationState == BlockchainIdentityData.CreationState.VOTING) {
+            if (it.creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal &&
+                it.creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal &&
+                !Names.isUsernameContestable(it.username!!)) {
+
+                binding.joinDashpayContainer.visibility = View.GONE
+                binding.requestedUsernameContainer.visibility = View.VISIBLE
+                if (it.creationError) {
+                    binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_error_title)
+                    binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_error_message)
+                    binding.retryRequestButton.isVisible = true
+                } else {
+                    // show the status
+                    binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_title)
+                    binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_message)
+                    binding.retryRequestButton.isVisible = false
+                }
+            } else if (it.creationState == BlockchainIdentityData.CreationState.VOTING) {
                 binding.joinDashpayContainer.visibility = View.GONE
                 binding.requestedUsernameContainer.visibility = View.VISIBLE
                 binding.requestedUsernameTitle.text = mainActivityViewModel.getRequestedUsername()
                 val votingPeriod = it.votingPeriodStart?.let { startTime ->
-                    val endTime = startTime + TimeUnit.MILLISECONDS.toDays(14)
+                    val endTime = startTime + TimeUnit.DAYS.toMillis(14)
                     val dateFormat = DateFormat.getMediumDateFormat(requireContext())
-                    String.format("%s - %s", dateFormat.format(startTime), dateFormat.format(endTime))
+                    String.format("%s", dateFormat.format(endTime))
                 } ?: "Voting Period not found"
                 binding.requestedUsernameSubtitleTwo.text = getString(R.string.requested_voting_duration, votingPeriod)
+                binding.retryRequestButton.isVisible = false
             } else {
                 binding.joinDashpayContainer.visibility = View.VISIBLE
                 binding.requestedUsernameContainer.visibility = View.GONE
             }
         }
 
-//        lifecycleScope.launch {
-//            mainActivityViewModel.getRequestedUsername().also { username ->
-//                if (username.isNotEmpty()) {
-//                    binding.joinDashpayContainer.visibility = View.GONE
-//                    binding.requestedUsernameContainer.visibility = View.VISIBLE
-//                    binding.requestedUsernameTitle.text = username
-//                } else {
-//                    binding.joinDashpayContainer.visibility = View.VISIBLE
-//                    binding.requestedUsernameContainer.visibility = View.GONE
-//                }
-//            }
-//        }
+        binding.retryRequestButton.setOnClickListener {
+            // TODO: restart CreateIdentityService
+        }
 
         initViewModel()
 
@@ -234,6 +251,12 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 showProfileSection(dashPayProfile)
             }
         }
+        createIdentityViewModel.creationState.observe(viewLifecycleOwner) { _ ->
+            editProfileViewModel.dashPayProfile.value?.let { dashPayProfile ->
+                showProfileSection(dashPayProfile)
+            }
+        }
+
         // track the status of broadcast changes to our profile
         editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner) { state ->
             if (state != null) {
@@ -303,25 +326,30 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     private fun showProfileSection(profile: DashPayProfile) {
-        binding.editUpdateSwitcher.visibility = View.VISIBLE
-        binding.editUpdateSwitcher.displayedChild = PROFILE_VIEW
-        if (profile.displayName.isNotEmpty()) {
-            binding.username1.text = profile.displayName
-            binding.username2.text = profile.username
+        if (createIdentityViewModel.creationState.value.ordinal >= BlockchainIdentityData.CreationState.DONE.ordinal) {
+            binding.editUpdateSwitcher.visibility = View.VISIBLE
+            binding.editUpdateSwitcher.displayedChild = PROFILE_VIEW
+            if (profile.displayName.isNotEmpty()) {
+                binding.username1.text = profile.displayName
+                binding.username2.text = profile.username
+            } else {
+                binding.username1.text = profile.username
+                binding.username2.visibility = View.GONE
+            }
+
+            ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile)
+
+            binding.editProfile.setOnClickListener {
+                editProfileViewModel.logEvent(AnalyticsConstants.UsersContacts.PROFILE_EDIT_MORE)
+                startActivity(Intent(requireContext(), EditProfileActivity::class.java))
+            }
+            // if the invite section is not visible, show/hide it
+            if (!binding.invite.isVisible) {
+                binding.invite.isVisible = showInviteSection
+            }
         } else {
-            binding.username1.text = profile.username
-            binding.username2.visibility = View.GONE
-        }
-
-        ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile)
-
-        binding.editProfile.setOnClickListener {
-            editProfileViewModel.logEvent(AnalyticsConstants.UsersContacts.PROFILE_EDIT_MORE)
-            startActivity(Intent(requireContext(), EditProfileActivity::class.java))
-        }
-        // if the invite section is not visible, show/hide it
-        if (!binding.invite.isVisible) {
-            binding.invite.isVisible = showInviteSection
+            binding.editUpdateSwitcher.isVisible = false
+            binding.invite.isVisible = true
         }
     }
 

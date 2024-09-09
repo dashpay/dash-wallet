@@ -45,8 +45,6 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
         binding.titleBar.setNavigationOnClickListener {
             requireActivity().finish()
         }
-        // TODO Mock identity
-
 
         binding.verify.setOnClickListener {
             safeNavigate(
@@ -59,12 +57,12 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
             binding.username.text = myUsernameRequest?.username
             binding.identity.text = myUsernameRequest?.identity
             val votingPeriod = myUsernameRequest?.createdAt?.let { startTime ->
-                val endTime = startTime + TimeUnit.MILLISECONDS.toDays(14)
+                val endTime = startTime + TimeUnit.DAYS.toMillis(14)
                 val dateFormat = DateFormat.getMediumDateFormat(requireContext())
                 dateFormat.format(endTime)
             } ?: "Voting Period not found"
             binding.votingRange.text = votingPeriod
-            if (myUsernameRequest?.link != null) {
+            if (myUsernameRequest?.link != null && myUsernameRequest.link != "") {
                 binding.link.text = myUsernameRequest.link
                 binding.linkLayout.isVisible = true
                 binding.verfiyNowLayout.isVisible = false
@@ -93,13 +91,12 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
                         ""
                     ).show(requireActivity())
                 }
-
             }
         }
 
         binding.ivInfo.setOnClickListener {
             safeNavigate(
-                VotingRequestDetailsFragmentDirections.votingRequestDetailsFragmentToUsernameVotingInfoFragment()
+                VotingRequestDetailsFragmentDirections.votingRequestDetailsFragmentToUsernameVotingInfoFragment(true)
             )
         }
     }

@@ -280,7 +280,7 @@ class RequestUserNameViewModel @Inject constructor(
             BroadcastIdentityVerifyOperation(walletApplication).create(
                 requestedUserName!!,
                 url
-            )
+            ).enqueue()
         }
     }
 }
