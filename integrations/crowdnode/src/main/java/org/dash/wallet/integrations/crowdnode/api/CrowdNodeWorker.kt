@@ -79,7 +79,7 @@ class CrowdNodeWorker @AssistedInject constructor(
                             setForeground(
                                 ForegroundInfo(
                                     operation.hashCode(),
-                                    notification,
+                                    notification
                                 )
                             )
                         }
