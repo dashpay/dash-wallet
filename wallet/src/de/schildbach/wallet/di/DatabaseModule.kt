@@ -39,7 +39,8 @@ object DatabaseModule {
         return Room.databaseBuilder(context, AppDatabase::class.java, "dash-wallet-database")
             .addMigrations(
                 AppDatabaseMigrations.migration11To12,
-                AppDatabaseMigrations.migration12To13
+                AppDatabaseMigrations.migration12To13,
+                AppDatabaseMigrations.migration13to14
             )
             // destructive migrations are used from versions 1 to 11
             .fallbackToDestructiveMigration()
