@@ -60,7 +60,16 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             safeNavigate(UsernameRequestsFragmentDirections.requestsToFilters())
         }
         val adapter = UsernameRequestGroupAdapter {
-            safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(it.requestId))
+            if (it.requestId != "") {
+                safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(it.requestId))
+            } else {
+                // perform block vote
+                if (viewModel.keysAmount > 0) {
+                    safeNavigate(UsernameRequestsFragmentDirections.requestsToAddVotingKeysFragment(it.normalizedLabel, false))
+                } else {
+                    safeNavigate(UsernameRequestsFragmentDirections.requestsToVotingKeyInputFragment(it.requestId, false))
+                }
+            }
         }
         binding.requestGroups.adapter = adapter
 

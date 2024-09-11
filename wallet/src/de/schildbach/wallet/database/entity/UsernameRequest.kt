@@ -35,7 +35,7 @@ data class UsernameRequest(
 ) {
     companion object {
         fun getRequestId(identity: String, username: String): String {
-            return String.format("%s %s", identity, username)
+            return String.format("%s-%s", identity, username)
         }
     }
 }

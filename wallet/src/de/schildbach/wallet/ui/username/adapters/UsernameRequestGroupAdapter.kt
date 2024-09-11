@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui.username.adapters
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
@@ -24,7 +25,9 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.BlockUsernameRequestViewBinding
 import de.schildbach.wallet_test.databinding.UsernameRequestGroupViewBinding
 import de.schildbach.wallet_test.databinding.UsernameRequestViewBinding
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
@@ -79,7 +82,7 @@ class UsernameRequestGroupViewHolder(
         binding.chevron.rotation = if (option.isExpanded) 90f else 270f
 
         if (option.isExpanded) {
-            val adapter = UsernameRequestAdapter {
+            val adapter = UsernameRequestAdapter(option.votes) {
                 usernameClickListener.invoke(it)
             }
             binding.requestsList.adapter = adapter
@@ -91,14 +94,31 @@ class UsernameRequestGroupViewHolder(
                 marginEnd = 0
             )
             binding.requestsList.addItemDecoration(decorator)
-            adapter.submitList(option.requests)
+            val listWithBlock = arrayListOf<UsernameRequest>()
+            listWithBlock.addAll(option.requests)
+            val firstItem = listWithBlock.first()
+            listWithBlock.add(
+                UsernameRequest(
+                    "",
+                    firstItem.username,
+                    firstItem.normalizedLabel,
+                    -1L,
+                    "",
+                    null,
+                    0,
+                    firstItem.lockVotes,
+                    false
+                )
+            )
+            adapter.submitList(listWithBlock)
         }
     }
 }
 
 class UsernameRequestAdapter(
+    private val votes: List<UsernameVote>,
     private val clickListener: (UsernameRequest) -> Unit
-) : ListAdapter<UsernameRequest, UsernameRequestViewHolder>(DiffCallback()) {
+) : ListAdapter<UsernameRequest, AbstractUsernameRequestViewHolder>(DiffCallback()) {
 
     class DiffCallback : DiffUtil.ItemCallback<UsernameRequest>() {
         override fun areItemsTheSame(oldItem: UsernameRequest, newItem: UsernameRequest): Boolean {
@@ -110,31 +130,53 @@ class UsernameRequestAdapter(
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): UsernameRequestViewHolder {
-        val binding = UsernameRequestViewBinding.inflate(
-            LayoutInflater.from(parent.context),
-            parent,
-            false
-        )
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AbstractUsernameRequestViewHolder {
+        if (viewType == 0) {
+            val binding = UsernameRequestViewBinding.inflate(
+                LayoutInflater.from(parent.context),
+                parent,
+                false
+            )
 
-        return UsernameRequestViewHolder(binding)
+            return UsernameRequestViewHolder(binding)
+        } else {
+            val binding = BlockUsernameRequestViewBinding.inflate(
+                LayoutInflater.from(parent.context),
+                parent,
+                false
+            )
+            return BlockViewHolder(binding)
+        }
     }
 
-    override fun onBindViewHolder(holder: UsernameRequestViewHolder, position: Int) {
+    override fun getItemViewType(position: Int): Int {
+        return if (getItem(position).requestId == "") {
+            1
+        } else {
+            0
+        }
+    }
+
+    override fun onBindViewHolder(holder: AbstractUsernameRequestViewHolder, position: Int) {
         val item = currentList[position]
-        holder.bind(item)
-        holder.binding.root.setOnClickListener {
+        holder.bind(item, votes)
+
+        holder.setOnClickListener(item) {
             clickListener.invoke(item)
         }
     }
 }
+abstract class AbstractUsernameRequestViewHolder(root: View): RecyclerView.ViewHolder(root) {
+    abstract fun bind(request: UsernameRequest, votes: List<UsernameVote>)
+    abstract fun setOnClickListener(usernameRequest: UsernameRequest, listener: (UsernameRequest) -> Unit)
+}
 
 class UsernameRequestViewHolder(
     val binding: UsernameRequestViewBinding
-): RecyclerView.ViewHolder(binding.root) {
-    fun bind(request: UsernameRequest) {
+): AbstractUsernameRequestViewHolder(binding.root) {
+    override fun bind(request: UsernameRequest, votes: List<UsernameVote>) {
         binding.dateRegistered.text = DateTimeFormatter.ofPattern("dd MMM yyyy · hh:mm a").format(
-            LocalDateTime.ofEpochSecond(request.createdAt, 0, ZoneOffset.UTC)
+            LocalDateTime.ofEpochSecond(request.createdAt / 1000, 0, ZoneOffset.UTC)
         )
 
         binding.voteAmount.setRoundedBackground(
@@ -158,5 +200,30 @@ class UsernameRequestViewHolder(
 
         binding.voteAmount.text = request.votes.toString()
         binding.linkBadge.isVisible = !request.link.isNullOrEmpty()
+        binding.linkIncluded.isVisible = !request.link.isNullOrEmpty()
+
+        val lastVote = votes.lastOrNull()
+        binding.cancelApprovalButton.isVisible = lastVote != null && lastVote.identity == request.identity && lastVote.type == UsernameVote.APPROVE
+    }
+
+    override fun setOnClickListener(usernameRequest: UsernameRequest, listener: (UsernameRequest) -> Unit) {
+        binding.root.setOnClickListener {
+            listener.invoke(usernameRequest)
+        }
+    }
+}
+
+class BlockViewHolder(val binding: BlockUsernameRequestViewBinding)
+    : AbstractUsernameRequestViewHolder(binding.root) {
+
+    override fun bind(request: UsernameRequest, votes: List<UsernameVote>) {
+        val lastVote = votes.lastOrNull()
+        //binding.cancelBlockButton.isVisible = lastVote != null && lastVote.identity == request.identity && lastVote.type == UsernameVote.APPROVE
+    }
+
+    override fun setOnClickListener(usernameRequest: UsernameRequest, listener: (UsernameRequest) -> Unit) {
+        binding.root.setOnClickListener {
+            listener.invoke(usernameRequest)
+        }
     }
 }

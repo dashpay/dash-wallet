@@ -18,9 +18,13 @@
 package de.schildbach.wallet.ui.username.adapters
 
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.database.entity.UsernameVote
 
 data class UsernameRequestGroupView(
     val username: String,
     val requests: List<UsernameRequest>,
-    var isExpanded: Boolean = false
-)
+    var isExpanded: Boolean = false,
+    var votes: List<UsernameVote>
+) {
+    fun lastVote(): UsernameVote? = votes.lastOrNull()
+}

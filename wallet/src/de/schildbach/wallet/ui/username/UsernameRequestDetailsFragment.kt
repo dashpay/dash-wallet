@@ -42,12 +42,12 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
                 if (request.isApproved) R.style.PrimaryButtonTheme_Large_Red else R.style.PrimaryButtonTheme_Large_Blue
             )
 
-            binding.voteButtonText.setTextColor(
-                resources.getColor(
-                    if (request.isApproved) R.color.system_red else R.color.dash_white,
-                    null
-                )
-            )
+//            binding.voteButtonText.setTextColor(
+//                resources.getColor(
+//                    if (request.isApproved) R.color.system_red else R.color.dash_white,
+//                    null
+//                )
+//            )
 
             binding.voteButtonText.text = getString(
                 if (request.isApproved) R.string.cancel_approval else R.string.vote_to_approve
@@ -59,9 +59,9 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
                     findNavController().popBackStack(R.id.usernameRequestsFragment, false)
                 } else {
                     if (viewModel.keysAmount > 0) {
-                        safeNavigate(UsernameRequestDetailsFragmentDirections.detailsToAddKeys(args.requestId))
+                        safeNavigate(UsernameRequestDetailsFragmentDirections.detailsToAddKeys(args.requestId, true))
                     } else {
-                        safeNavigate(UsernameRequestDetailsFragmentDirections.detailsToVotingKeyInput(args.requestId))
+                        safeNavigate(UsernameRequestDetailsFragmentDirections.detailsToVotingKeyInput(args.requestId, true))
                     }
                 }
             }

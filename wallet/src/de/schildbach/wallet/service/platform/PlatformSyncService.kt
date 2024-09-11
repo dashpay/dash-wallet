@@ -42,6 +42,7 @@ import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
 import de.schildbach.wallet.database.entity.TransactionMetadataDocument
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.SeriousError
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
@@ -75,8 +76,6 @@ import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.wallet.IdentityVerify
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.HashMap
-import java.util.HashSet
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -1042,27 +1041,44 @@ class PlatformSynchronizationService @Inject constructor(
         try {
             val contestedNames = platform.platform.names.getContestedNames()
             for (name in contestedNames) {
-                val voteContender = platform.platform.names.getVoteContenders(name)
-                voteContender.map.forEach { (identifier, contender) ->
+                try {
+                    val voteContender = platform.platform.names.getVoteContenders(name)
 
-                    val contestedDocument = DomainDocument(
-                        platform.platform.names.deserialize(contender.seralizedDocument)
-                    )
+                    voteContender.map.forEach { (identifier, contender) ->
 
-                    val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
+                        val contestedDocument = contender.seralizedDocument?.let { serialized ->
+                            DomainDocument(
+                                platform.platform.names.deserialize(serialized)
+                            )
+                        }
 
-                    val usernameRequest = UsernameRequest(
-                        UsernameRequest.getRequestId(identifier.toString(), name),
-                        contestedDocument.label,
-                        name,
-                        contestedDocument.createdAt?.div(1000) ?: -1L,
-                        identifier.toString(),
-                        identityVerifyDocument?.url,
-                        contender.votes,
-                        voteContender.lockVoteTally,
-                        false
-                    )
-                    usernameRequestDao.insert(usernameRequest)
+                        if (contestedDocument != null) {
+                            val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
+
+                            val requestId = UsernameRequest.getRequestId(identifier.toString(), name)
+                            val previousUsernameRequest = usernameRequestDao.getRequest(requestId)
+
+                            val usernameRequest = UsernameRequest(
+                                requestId = requestId,
+                                username = contestedDocument.label,
+                                normalizedLabel = name,
+                                createdAt = contestedDocument.createdAt ?: -1L,
+                                identity = identifier.toString(),
+                                link = identityVerifyDocument?.url,
+                                votes = contender.votes,
+                                lockVotes = voteContender.lockVoteTally,
+                                isApproved = previousUsernameRequest?.isApproved ?: false
+                            )
+                            usernameRequestDao.insert(usernameRequest)
+                        } else {
+                            // voting is complete
+                            usernameRequestDao.remove(
+                                UsernameRequest.getRequestId(identifier.toString(), name)
+                            )
+                        }
+                    }
+                } catch(e: Exception) {
+                    log.warn("problem getting vote contenders for $name", e)
                 }
             }
         } catch (e: Exception) {
