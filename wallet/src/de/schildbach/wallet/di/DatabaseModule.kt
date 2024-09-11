@@ -111,4 +111,14 @@ object DatabaseModule {
     fun provideUsernameRequestDao(appDatabase: AppDatabase): UsernameRequestDao {
         return appDatabase.usernameRequestDao()
     }
+
+    @Provides
+    fun provideUsernameVotesDao(appDatabase: AppDatabase): UsernameVoteDao {
+        return appDatabase.usernameVoteDao()
+    }
+
+    @Provides
+    fun provideImportedMasternodeKeyDao(appDatabase: AppDatabase): ImportedMasternodeKeyDao {
+        return appDatabase.importedMasternodeKeyDao()
+    }
 }

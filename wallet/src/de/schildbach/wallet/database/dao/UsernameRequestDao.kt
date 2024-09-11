@@ -59,4 +59,12 @@ interface UsernameRequestDao {
 
     @Query("DELETE FROM username_requests")
     suspend fun clear()
+
+    @Query(
+        """
+        DELETE FROM username_requests
+            WHERE requestId = :requestId;
+        """
+    )
+    suspend fun remove(requestId: String)
 }
