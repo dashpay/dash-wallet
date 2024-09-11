@@ -144,12 +144,16 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 if (it.usernameContestable || it.usernameContested) {
                     val startDate = Date(it.votingPeriodStart)
                     val endDate = Date(startDate.time + TimeUnit.DAYS.toMillis(14))
-                    val dateFormat = DateFormat.getMediumDateFormat(context)
-                    binding.votingPeriod.text = getString(
-                        R.string.request_voting_range,
-                        dateFormat.format(endDate)
-                    )
-                    binding.votingPeriodContainer.isVisible = true
+                    if (it.votingPeriodStart == -1L && System.currentTimeMillis() - it.votingPeriodStart > TimeUnit.DAYS.toMillis(7)) {
+                        binding.votingPeriodContainer.isVisible = false
+                    } else {
+                        val dateFormat = DateFormat.getMediumDateFormat(context)
+                        binding.votingPeriod.text = getString(
+                            R.string.request_voting_range,
+                            dateFormat.format(endDate)
+                        )
+                        binding.votingPeriodContainer.isVisible = true
+                    }
                 } else {
                     binding.votingPeriodContainer.isVisible = false
                 }

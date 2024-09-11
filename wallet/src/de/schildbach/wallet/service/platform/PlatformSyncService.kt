@@ -220,6 +220,20 @@ class PlatformSynchronizationService @Inject constructor(
         try {
             val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
             if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+                // Is the Voting Period complete?
+                if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
+                    if (System.currentTimeMillis() - blockchainIdentityData.votingPeriodStart!! >= TimeUnit.DAYS.toMillis(14)) {
+                        val resource = platformRepo.getUsername(blockchainIdentityData.username!!)
+                        if (resource.status == Status.SUCCESS) {
+                            val domainDocument = DomainDocument(resource.data!!)
+                            if (domainDocument.dashUniqueIdentityId == blockchainIdentityData.identity?.id) {
+                                blockchainIdentityData.creationState =
+                                    BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+                                platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                            }
+                        }
+                    }
+                }
                 log.info("update contacts not completed username registration/recovery is not complete")
                 return
             }
@@ -1112,10 +1126,15 @@ class PlatformSynchronizationService @Inject constructor(
             lastPreBlockStage = PreBlockStage.None
             preDownloadBlocksFuture = future
             log.info("preBlockDownload: starting")
-            if (Constants.SUPPORTS_PLATFORM) {
+            if (!Constants.SUPPORTS_PLATFORM) {
                 finishPreBlockDownload()
                 return@launch
             }
+
+            // TODO: ideally we shoud do this, but there is not a good way
+            // to determine if an EvoNode has Evolution
+            // platform.setMasternodeListManager(walletApplication.wallet!!.context.masternodeListManager)
+
 
             // first check to see if there is a blockchain identity
             // or if the previous restore is incomplete
@@ -1142,10 +1161,22 @@ class PlatformSynchronizationService @Inject constructor(
                     finishPreBlockDownload()
                 }
             }
-
             // update contacts, profiles and other platform data
-            else if (!updatingContacts.get()) {
-                updateContactRequests()
+            else {
+                if(identityData.username != null && identityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
+                    val resource = platformRepo.getUsername(identityData.username!!)
+                    if (resource.status == Status.SUCCESS && resource.data != null) {
+                        val domainDocument = DomainDocument(resource.data)
+                        if (domainDocument.dashUniqueIdentityId == identityData.identity?.id) {
+                            identityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+                            platformRepo.updateBlockchainIdentityData(identityData)
+                        }
+                    }
+                }
+
+                if (!updatingContacts.get()) {
+                    updateContactRequests()
+                }
             }
             initSync()
         }

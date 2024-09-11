@@ -67,6 +67,7 @@ import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAsse
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.toHex
+import org.dashj.platform.dpp.voting.Contenders
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
@@ -224,6 +225,14 @@ class PlatformRepo @Inject constructor(
         } catch (e: Exception) {
             formatExceptionMessage("get single user failure", e)
             throw e
+        }
+    }
+
+    fun getVoteContenders(username: String): Contenders {
+        return try {
+            platform.names.getVoteContenders(username)
+        } catch (e: Exception) {
+            Contenders(mapOf(), 0, 0)
         }
     }
 

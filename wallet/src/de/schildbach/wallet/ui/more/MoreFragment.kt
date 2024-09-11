@@ -188,7 +188,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
-            if (it.creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal &&
+            if (!it.restoring && it.creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal &&
                 it.creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal &&
                 !Names.isUsernameContestable(it.username!!)) {
 
@@ -227,7 +227,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         initViewModel()
 
-        if (Constants.SUPPORTS_PLATFORM) {
+        if (!Constants.SUPPORTS_PLATFORM) {
             binding.usernameVoting.isVisible = false
         }
     }

@@ -44,8 +44,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.WalletDataProvider
+import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import javax.inject.Inject
+import kotlin.math.max
 
 data class RequestUserNameUIState(
     val usernameVerified: Boolean = false,
@@ -191,15 +193,32 @@ class RequestUserNameViewModel @Inject constructor(
                     }
                     else -> false
                 }
+                val contenders = platformRepo.getVoteContenders(username)
                 val usernameContested = false // TODO: make the call
-                val usernameBlocked = false // TODO: make the call
+                var maxApprovalVotes = 0
+                val firstCreatedAt = try {
+                    contenders.map.values.minOf { contender ->
+                        val document =  contender.seralizedDocument?.let {
+                            DomainDocument(platformRepo.platform.names.deserialize(it))
+                        }
+                        maxApprovalVotes = max(contender.votes, maxApprovalVotes)
+                        document?.createdAt ?: -1
+                    }
+                } catch (e: NoSuchElementException) {
+                    -1L
+                }
+
+                // is the name blocked
+                val usernameBlocked = firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
+
                 _uiState.update {
                     it.copy(
                         usernameCheckSuccess = true,
                         usernameSubmittedError = false,
                         usernameContested = usernameContested,
                         usernameExists = usernameExists,
-                        usernameBlocked = usernameBlocked
+                        usernameBlocked = usernameBlocked,
+                        votingPeriodStart = if (firstCreatedAt == -1L) System.currentTimeMillis() else firstCreatedAt
                     )
                 }
             }
