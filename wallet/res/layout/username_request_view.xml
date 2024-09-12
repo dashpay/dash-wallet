@@ -38,42 +38,43 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginStart="15dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        >
-    <TextView
-        android:id="@+id/date_registered"
-        style="@style/Overline"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:paddingVertical="3dp"
-        android:layout_marginStart="8dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:text="16 Feb 2023 · 9:45" />
+        app:layout_constraintTop_toTopOf="parent">
 
-    <ImageView
-        android:id="@+id/link_badge"
-        android:layout_width="28dp"
-        android:layout_height="20dp"
-        android:src="@drawable/ic_link"
-        android:layout_marginEnd="3dp"
-        android:padding="3dp"
-        android:background="@drawable/rounded_background"
-        android:theme="@style/LightBlueBadgeTheme"
-        app:layout_constraintTop_toBottomOf="@id/date_registered"
-        app:layout_constraintStart_toStartOf="@id/date_registered"
-        app:layout_constraintBottom_toBottomOf="parent" />
-    <TextView
-        android:id="@+id/link_included"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="link included"
-        style="@style/Caption.Blue"
-        app:layout_constraintTop_toTopOf="@id/link_badge"
-        app:layout_constraintTop_toBottomOf="@id/date_registered"
-        app:layout_constraintStart_toEndOf="@id/link_badge"
-        />
+        <TextView
+            android:id="@+id/date_registered"
+            style="@style/Overline"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/link_badge"
+            app:layout_constraintVertical_chainStyle="packed"
+            tools:text="16 Feb 2023 · 9:45" />
+
+        <ImageView
+            android:id="@+id/link_badge"
+            android:layout_width="28dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_link"
+            android:layout_marginEnd="3dp"
+            android:padding="3dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/LightBlueBadgeTheme"
+            app:layout_constraintTop_toBottomOf="@id/date_registered"
+            app:layout_constraintStart_toStartOf="@id/date_registered"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <TextView
+            android:id="@+id/link_included"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="link included"
+            style="@style/Caption.Blue"
+            app:layout_constraintTop_toTopOf="@id/link_badge"
+            app:layout_constraintStart_toEndOf="@id/link_badge" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <TextView

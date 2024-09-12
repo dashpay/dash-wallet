@@ -41,7 +41,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:paddingVertical="3dp"
-        android:layout_marginStart="8dp"
+        android:layout_marginStart="15dp"
         android:text="Is this username inappropriate? Block its creation on the Dash network."
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/blocked_container"

@@ -262,8 +262,6 @@ class RequestUserNameViewModel @Inject constructor(
     private fun validateUsernameCharacters(uname: String): Pair<Boolean, Boolean> {
         val alphaNumHyphenValid = !Regex("[^a-zA-Z0-9\\-]").containsMatchIn(uname)
         val startOrEndWithHyphen = uname.startsWith("-") || uname.endsWith("-")
-        //val containsHyphen = uname.contains("-")
-
         return Pair(alphaNumHyphenValid, startOrEndWithHyphen)
     }
 

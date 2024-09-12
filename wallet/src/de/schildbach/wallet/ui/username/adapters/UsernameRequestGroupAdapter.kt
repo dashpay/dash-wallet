@@ -20,6 +20,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -199,8 +200,8 @@ class UsernameRequestViewHolder(
         )
 
         binding.voteAmount.text = request.votes.toString()
-        binding.linkBadge.isVisible = !request.link.isNullOrEmpty()
-        binding.linkIncluded.isVisible = !request.link.isNullOrEmpty()
+        binding.linkBadge.isGone = !request.link.isNullOrEmpty()
+        binding.linkIncluded.isGone = !request.link.isNullOrEmpty()
 
         val lastVote = votes.lastOrNull()
         binding.cancelApprovalButton.isVisible = lastVote != null && lastVote.identity == request.identity && lastVote.type == UsernameVote.APPROVE

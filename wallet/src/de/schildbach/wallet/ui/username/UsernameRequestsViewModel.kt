@@ -96,8 +96,7 @@ class UsernameRequestsViewModel @Inject constructor(
     private val usernameVoteDao: UsernameVoteDao,
     private val importedMasternodeKeyDao: ImportedMasternodeKeyDao,
     private val platformSyncService: PlatformSyncService,
-    private val walletDataProvider: WalletDataProvider,
-    private val walletApplication: WalletApplication
+    private val walletDataProvider: WalletDataProvider
 ): ViewModel() {
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
@@ -121,6 +120,7 @@ class UsernameRequestsViewModel @Inject constructor(
     private val masternodeListManager: SimplifiedMasternodeListManager
         get() = walletDataProvider.wallet!!.context.masternodeListManager
 
+    // TODO: remove this
     private val _addedKeys = MutableStateFlow(listOf<ECKey>())
 //    val masternodes: Flow<List<Masternode>> = _addedKeys.map {
 //        val masternodesForKeys = arrayListOf<Masternode>()
