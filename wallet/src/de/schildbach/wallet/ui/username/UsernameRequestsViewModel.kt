@@ -19,10 +19,8 @@ package de.schildbach.wallet.ui.username
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.api.services.drive.model.User
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.ImportedMasternodeKeyDao
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.dao.UsernameVoteDao
@@ -43,6 +41,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -53,11 +52,8 @@ import org.bitcoinj.core.Base58
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.KeyId
-import org.bitcoinj.core.Utils
-import org.bitcoinj.evolution.Masternode
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager
 import org.bitcoinj.wallet.AuthenticationKeyChain
-import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.dash.wallet.common.WalletDataProvider
@@ -212,6 +208,14 @@ class UsernameRequestsViewModel @Inject constructor(
         dashPayConfig.set(DashPayConfig.VOTING_INFO_SHOWN, true)
     }
 
+    suspend fun getVotes(username: String): List<UsernameVote> {
+        return usernameVoteDao.getVotes(username)
+    }
+
+    fun observeVotesCount(username: String): Flow<Int> {
+        return usernameVoteDao.observeVotes(username).flatMapLatest { flowOf(it.size) }
+    }
+
     fun applyFilters(
         sortByOption: UsernameSortOption,
         typeOption: UsernameTypeOption,
@@ -351,6 +355,7 @@ class UsernameRequestsViewModel @Inject constructor(
             UsernameTypeOption.All -> sorted
             UsernameTypeOption.Approved -> sorted.filter { it.isApproved || approvedUsernames.contains(it.username) }
             UsernameTypeOption.NotApproved -> sorted.filter { !it.isApproved && !approvedUsernames.contains(it.username) }
+            UsernameTypeOption.HasBlockedVotes -> sorted.filter { it.lockVotes != 0 }
         }
     }
 
@@ -377,7 +382,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     "https://www.figma.com/file/hh5juOSdGnNNPijJG1NGTi/DashPay%E3%83%BBIn-" +
                         "process%E3%83%BBAndroid?type=design&node-id=752-11735&mode=design&t=zasn6AKlSwb5NuYS-0",
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 1),
                     true
                 )
             )
@@ -391,7 +396,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 1),
                     true
                 )
             )
@@ -405,7 +410,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 1),
                     false
                 )
             )
@@ -418,7 +423,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     "https://twitter.com/ProductHunt/",
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 1),
                     false
                 )
             )
@@ -431,7 +436,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 1),
                     false
                 )
             )
@@ -445,7 +450,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 1),
                     false
                 )
             )
@@ -459,7 +464,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 2),
                     false
                 )
             )

@@ -26,5 +26,14 @@ data class UsernameRequestGroupView(
     var isExpanded: Boolean = false,
     var votes: List<UsernameVote>
 ) {
-    fun lastVote(): UsernameVote? = votes.lastOrNull()
+    val lastVote: UsernameVote?
+        get() = votes.lastOrNull()
+
+    val totalVotes: Int
+        get() = votes.size
+
+    // all username votes should have the same number of lock votes
+    fun lockVotes(): Int {
+        return requests.first().lockVotes
+    }
 }

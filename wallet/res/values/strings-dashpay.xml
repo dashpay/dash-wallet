@@ -293,8 +293,10 @@
         <item>All</item>
         <item>I have approved</item>
         <item>I have not approved</item>
+        <item>Has Blocked votes</item>
     </string-array>
 
+    <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Create your username</string>
     <string name="request_your_hint">Please not that you will not be able to change it in the future</string>
     <string name="request_username">Request Username</string>
@@ -400,5 +402,8 @@
     <string name="request_username_balance_requirement">You need to have 0.25 DASH to create this username</string>
     <string name="request_username_length_requirement">Between 3 and 23 characters</string>
     <string name="request_username_confirm">I accept</string>
-
+    <string name="username_vote_one_left_message">You have already voted for this username %d times. You can only cast one more vote for this username.</string>
+    <string name="username_vote_one_left">One vote left</string>
+    <string name="username_vote_none_left_message">You have already voted for this username %d times. You cannot cast any more votes for this username.</string>
+    <string name="username_vote_none_left">No votes left</string>
 </resources>

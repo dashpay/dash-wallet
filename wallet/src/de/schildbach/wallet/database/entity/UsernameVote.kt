@@ -34,5 +34,6 @@ data class UsernameVote(
         const val APPROVE = "approve"
         const val LOCK = "lock"
         const val ABSTAIN = "abstain"
+        const val MAX_VOTES = 6
     }
 }

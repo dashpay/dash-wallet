@@ -27,6 +27,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupAdapter
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
 import de.schildbach.wallet.ui.username.utils.votingViewModels
@@ -59,15 +61,42 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         binding.filterBtn.setOnClickListener {
             safeNavigate(UsernameRequestsFragmentDirections.requestsToFilters())
         }
-        val adapter = UsernameRequestGroupAdapter {
-            if (it.requestId != "") {
-                safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(it.requestId))
-            } else {
-                // perform block vote
-                if (viewModel.keysAmount > 0) {
-                    safeNavigate(UsernameRequestsFragmentDirections.requestsToAddVotingKeysFragment(it.normalizedLabel, false))
+        val adapter = UsernameRequestGroupAdapter { request ->
+            lifecycleScope.launch {
+                if (request.requestId != "") {
+                    safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(request.requestId))
                 } else {
-                    safeNavigate(UsernameRequestsFragmentDirections.requestsToVotingKeyInputFragment(it.requestId, false))
+                    val usernameVotes = viewModel.getVotes(request.username)
+                    when {
+                        (usernameVotes.size == UsernameVote.MAX_VOTES - 1) -> {
+                            if (AdaptiveDialog.create(
+                                    icon = null,
+                                    getString(R.string.username_vote_one_left),
+                                    getString(R.string.username_vote_one_left_message, UsernameVote.MAX_VOTES - 1),
+                                    getString(R.string.cancel),
+                                    getString(R.string.button_ok)
+                                ).showAsync(requireActivity()) == true
+                            ) {
+                                doBlockVote(request)
+                            }
+                        }
+
+                        // NOT IN THE DESIGN
+                        usernameVotes.size == UsernameVote.MAX_VOTES -> {
+                            AdaptiveDialog.create(
+                                icon = null,
+                                "No votes left",
+                                "You cannot submit anymore votes on this username",
+                                getString(R.string.button_ok)
+                            ).show(requireActivity()) {
+                                // do nothing
+                            }
+                        }
+
+                        else -> {
+                            doBlockVote(request)
+                        }
+                    }
                 }
             }
         }
@@ -132,6 +161,20 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             if (!isDefault) {
                 populateAppliedFilters(state)
             }
+        }
+    }
+
+    private fun doBlockVote(it: UsernameRequest) {
+        // perform block vote
+        if (viewModel.keysAmount > 0) {
+            safeNavigate(
+                UsernameRequestsFragmentDirections.requestsToAddVotingKeysFragment(
+                    it.normalizedLabel,
+                    false
+                )
+            )
+        } else {
+            safeNavigate(UsernameRequestsFragmentDirections.requestsToVotingKeyInputFragment(it.requestId, false))
         }
     }
 

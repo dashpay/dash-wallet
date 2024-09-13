@@ -82,6 +82,10 @@ class UsernameRequestGroupViewHolder(
         binding.requestsList.isVisible = option.isExpanded
         binding.chevron.rotation = if (option.isExpanded) 90f else 270f
 
+        binding.blockVotes.text = binding.root.context.getString(R.string.block_vote_count, option.lockVotes())
+        binding.blockVotes.isVisible = option.lockVotes() != 0
+
+
         if (option.isExpanded) {
             val adapter = UsernameRequestAdapter(option.votes) {
                 usernameClickListener.invoke(it)
@@ -200,8 +204,8 @@ class UsernameRequestViewHolder(
         )
 
         binding.voteAmount.text = request.votes.toString()
-        binding.linkBadge.isGone = !request.link.isNullOrEmpty()
-        binding.linkIncluded.isGone = !request.link.isNullOrEmpty()
+        binding.linkBadge.isGone = request.link.isNullOrEmpty()
+        binding.linkIncluded.isGone = request.link.isNullOrEmpty()
 
         val lastVote = votes.lastOrNull()
         binding.cancelApprovalButton.isVisible = lastVote != null && lastVote.identity == request.identity && lastVote.type == UsernameVote.APPROVE
