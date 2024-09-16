@@ -643,7 +643,7 @@ class CreateIdentityService : LifecycleService() {
                     ?: error("${blockchainIdentityData.username} does not have ${blockchainIdentity.uniqueIdentifier} as a contender")
 
                 val document = DomainDocument(
-                        platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument)
+                    platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument!!)
                 )
                 blockchainIdentityData.verificationLink?.let { verificationLink ->
                     if (verificationLink.startsWith("https://") || verificationLink.startsWith("http://")) {
@@ -833,7 +833,7 @@ class CreateIdentityService : LifecycleService() {
                             }
 
                             val contestedDocument = DomainDocument(
-                                platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument)
+                                platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument!!)
                             )
                             blockchainIdentity.currentUsername = contestedDocument.label
 

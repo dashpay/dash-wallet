@@ -1031,7 +1031,7 @@ class PlatformSynchronizationService @Inject constructor(
             voteContender.map.forEach { (identifier, contender) ->
 
                 val contestedDocument = DomainDocument(
-                    platform.platform.names.deserialize(contender.seralizedDocument)
+                    platform.platform.names.deserialize(contender.seralizedDocument!!)
                 )
 
                 val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
@@ -1108,7 +1108,7 @@ class PlatformSynchronizationService @Inject constructor(
             lastPreBlockStage = PreBlockStage.None
             preDownloadBlocksFuture = future
             log.info("preBlockDownload: starting")
-            if (Constants.SUPPORTS_PLATFORM) {
+            if (!Constants.SUPPORTS_PLATFORM) {
                 finishPreBlockDownload()
                 return@launch
             }

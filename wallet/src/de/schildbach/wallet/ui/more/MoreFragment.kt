@@ -210,7 +210,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         initViewModel()
 
-        if (Constants.SUPPORTS_PLATFORM) {
+        if (!Constants.SUPPORTS_PLATFORM) {
             binding.usernameVoting.isVisible = false
         }
     }
