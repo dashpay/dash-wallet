@@ -1,0 +1,406 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="choose_your_username">Escolha seu <b>nome de usuário
+Dash</b></string>
+    <string name="identity_min_3_chars">Entre 3 e 23 caracteres</string>
+    <string name="identity_alphanum_only">Apenas letras, números e hífens</string>
+    <string name="identity_hyphen_rule">Deve começar e terminar com uma letra ou número</string>
+    <string name="identity_username_validating">Validando nome de usuário...</string>
+    <string name="identity_username_available">Nome de usuário disponível</string>
+    <string name="identity_username_taken">Nome de usuário já foi registrado</string>
+    <string name="platform_communication_error">Erro de comunicação com a Plataforma Dash</string>
+    <string name="register">Registrar</string>
+
+    <string name="new_account_confirm_button_text">Confirme &amp; Pague</string>
+    <string name="invitation_confirm_button_text">Confirmar</string>
+    <string name="new_account_confirm_accept">Eu Aceito</string>
+    <string name="new_account_confirm_upgrade_fee">Taxa de Upgrade</string>
+    <string name="new_account_confirm_message">Você escolheu %s como seu nome de usuário. Por favor, observe que o nome de usuário não pode ser alterado depois de ser registrado.</string>
+    <string name="invitation_confirm_title">Taxa de Convite</string>
+    <string name="invitation_confirm_message">Cada convite será financiado com esse valor para que o destinatário possa criar rapidamente seu nome de usuário na Rede Dash</string>
+    <string name="invitation_init_title">Convidar</string>
+    <string name="invitation_init_header">Convide seus amigos ­​­e família</string>
+    <string name="invitation_init_message">Ajude seus amigos e familiares a ingressarem na Rede Dash. Convide-os para o mundo do social banking.</string>
+    <string name="invitation_init_button_text">Criar Novo Convite</string>
+    <string name="invitation_notifications_hint">Convide seus amigos e familiares para a Rede Dash.</string>
+    <string name="invitation_notifications_hint1">Convidar alguém para se juntar à Rede Dash</string>
+    <string name="invitation_notifications_hint1_or">ou</string>
+    <string name="invitation_created_title">Convite</string>
+    <string name="invitation_created_successfully">Convite Criado com Sucesso</string>
+    <string name="invitation_created_tag_title">Marcar para sua referência</string>
+    <string name="invitation_created_tag">ex: Pai</string>
+    <string name="invitation_created_preview">Visualizar Convite</string>
+    <string name="invitation_created_copy_link">Copiar link de convite </string>
+    <string name="invitation_created_send_invitation">Enviar Convite</string>
+    <string name="invitation_created_send_invitation_again">Enviar novamente</string>
+    <string name="invitation_created_maybe_later">Talvez mais tarde</string>
+    <string name="invitation_preview_title">Entre Agora</string>
+    <string name="invitation_preview_message">Você foi convidado por %s. Comece a usar a criptomoeda Dash.</string>
+    <string name="invitation_preview_close">Fechar</string>
+    <string name="invitation_cant_afford_title">Saldo da Carteira Insuficiente</string>
+    <string name="invitation_cant_afford_message">Você precisa de pelo menos %s Dash para criar um convite</string>
+    <string name="invitation_creating_error_title">Erro ao Criar Convite</string>
+    <string name="invitation_creating_error_message">Houve um problema ao criar seu convite. Por favor, tente novamente.</string>
+    <string name="invitation_creating_error_message_not_synced">Aguarde a sincronização ser concluída e tente novamente.</string>
+    <string name="invitation_creating_progress_title">Criando convite</string>
+    <string name="invitation_verifying_progress_title">Verificando convite</string>
+    <string name="invitation_share_message">Os convites são de uso único apenas. Não compartilhe com um grupo.</string>
+    <string name="invitation_share_title">Convite DashPay</string>
+    <string name="invitation_already_claimed_title">Convite já reivindicado</string>
+    <string name="invitation_already_claimed_message">Seu convite de %s já foi reivindicado</string>
+    <string name="invitation_invalid_invite_title">Convite Inválido</string>
+    <string name="invitation_invalid_invite_message">Seu convite de %s não é válido</string>
+    <string name="invitation_username_already_found_title">Nome de usuário já encontrado</string>
+    <string name="invitation_username_already_found_message">Você não pode reivindicar este convite porque já tem um nome de usuário Dash</string>
+    <string name="invitation_onboarding_has_began_error_title">Erro de Integração</string>
+    <string name="invitation_onboarding_has_began_error">A integração está em andamento. Por favor, reivindique seu convite após ter criado sua carteira.</string>
+    <string name="invitation_accept_title_1">Obtenha seu nome de usuário</string>
+    <string name="invitation_accept_title_2">Adicionar seus Amigos e Família</string>
+    <string name="invitation_accept_message_2">Convide sua família e encontre seus amigos pesquisando seus nomes de usuário</string>
+    <string name="invitation_accept_title_3">Personalizar</string>
+    <string name="invitation_accept_message_3">Carregue sua foto, personalize sua identidade</string>
+    <string name="invitation_accept_continue">Continuar</string>
+    <string name="invitation_contact_request_sent_message">Uma solicitação de contato foi enviada para %s, pois eles te convidaram.</string>
+
+    <string name="username_being_created">Seu nome de usuário %s está sendo criado na Rede Dash</string>
+    <string name="username_being_requested">Seu nome de usuário %s está sendo solicitado na Rede Dash</string>
+
+    <string name="processing_let_me_know">Me avise quando estiver pronto</string>
+    <string name="processing_home_title">Atualizando para Evolution</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) Processando Pagamento</string>
+    <string name="processing_home_step_2">(2/3) Criando ID</string>
+    <string name="processing_home_step_2_restoring">(2/3) Recuperando ID</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Registrando nome de usuário</string>
+    <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Solicitando Nome de Usuário</string>
+    <string name="processing_home_step_3_restoring">(3/3) Recuperando Nome de Usuário</string>
+    <string name="processing_done_title">Olá %s,</string>
+    <string name="processing_done_subtitle">Sua conta está pronta</string>
+    <string name="processing_voting_subtitle">A votação para o seu nome de usuário começou</string>
+    <string name="processing_error_title">Erro no Upgrade</string>
+    <string name="processing_error_title_from_invite">Erro ao atualizar a partir do convite</string>
+    <string name="processing_error_retry">Repetir</string>
+    <string name="processing_username_unavailable_title">Nome de usuário indisponível</string>
+    <string name="processing_username_unavailable_subtitle">Por favor, escolha outro</string>
+
+    <string name="dashpay_upgrade_fee">Taxa de Upgrade</string>
+    <string name="dashpay_invite_fee">Taxa de Convite</string>
+    <string name="dashpay_topup_fee">Taxa de Recarregamento</string>
+    <string name="search_user_find_a_user">Encontre um usuário na rede Dash</string>
+    <string name="search_for_a_user">Pesquisar um Usuário na Rede Dash</string>
+    <string name="search_user_input_placeholder">digite o nome de usuário para pesquisar aqui</string>
+    <string name="add_new_contact">Adicione um Novo Contato</string>
+    <string name="send_contact_request">Enviar Solicitação de Contato</string>
+    <string name="sending_contact_request">Enviando Solicitação de Contato</string>
+    <string name="sending_contact_request_short">Convidando</string>
+    <string name="accepting_contact_request">Aceitando Solicitação de Contato</string>
+    <string name="accepting_contact_request_short">Aceitando</string>
+    <string name="search_user_no_results">Não há usuários que correspondam</string>
+    <string name="search_user_loading">Buscando o nome de usuário <b>\"%\"</b> na Rede Dash</string>
+    <string name="contact_request_pending">Solicitação de Contato Pendente</string>
+    <string name="pay">Pagar</string>
+    <string name="contact_request_received_title">%s pediu para ser seu amigo</string>
+    <string name="contact_request_accept">Aceitar</string>
+    <string name="contact_request_ignore">Ignorar</string>
+
+    <string name="contacts_no_results">Não há contatos que correspondam</string>
+
+    <string name="contacts_title">Contatos</string>
+    <string name="contacts_send_to_contact_title">Enviar para um contato</string>
+    <string name="contacts_search_for">Pesquisar um contato</string>
+    <string name="contact_requests_title">Solicitações de Contato</string>
+    <string name="contacts_add_new_contact">Adicionar novo contato</string>
+    <string name="contacts_contact_requests_count">Solicitações de Contato (%d)</string>
+    <string name="contacts_contact_requests">Solicitações de Contato</string>
+    <string name="contacts_contact_requests_view">ver todos</string>
+    <string name="contacts_my_contacts">Meus Contatos</string>
+    <string name="contacts_sort_order">Ordenar por:</string>
+    <string-array name="contacts_sort">
+        <item>Nome</item>
+    </string-array>
+
+    <string name="notifications_title">Notificações</string>
+    <string name="notifications_title_with_count">Notificações (%d)</string>
+    <string name="notifications_profile_activity">Atividade</string>
+    <string name="notifications_new">Novo</string>
+    <string name="notifications_earlier">Recentes</string>
+    <string name="notifications_none_new">Não há novas notificações</string>
+    <string name="notifications_contact_has_accepted">%s aceitou sua solicitação de contato.</string>
+    <string name="notifications_you_have_accepted">Você aceitou a solicitação de contato de %s</string>
+    <string name="notifications_you_sent">Você enviou uma solicitação de contato para %s</string>
+    <string name="notifications_you_received">%s lhe enviou uma solicitação de contato</string>
+
+    <string name="identity_complete_message">Seu nome de usuário %s foi criado com sucesso na Rede Dash</string>
+    <string name="request_complete_message">Seu nome de usuário %s foi solicitado com sucesso na Rede Dash</string>
+
+    <string name="scan_to_pay_username_dialog_message">Nome de usuário ou identidade Dash inválido\n\n%s</string>
+    <string name="send_coins_to_username">Enviando para</string>
+    <string name="contact_history_disclaimer">Adicione % como seu contato para <b>Pagar Diretamente para o Nome de Usuário</b> e <b>Manter Histórico de Transações Mútuas</b></string>
+    <string name="contact_history_disclaimer_pending">Assim que % aceitar sua solicitação, você poderá <b>Pagar Diretamente para o Nome de Usuário</b></string>
+    <string name="stranger_activity_disclaimer_text">Os pagamentos feitos diretamente para endereços não serão retidos em atividade.</string>
+    <string name="error_loading_identity">Erro ao carregar identidade</string>
+
+    <string name="edit_profile">Editar Perfil</string>
+    <string name="display_name">Nome de Exibição</string>
+    <string name="about_me">Sobre mim</string>
+    <string name="char_count">%1$d/%2$d caracteres</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">Salvar</string>
+    <string name="edit_profile_take_picture">Tirar uma Foto com a Câmera</string>
+    <string name="edit_profile_choose_picture">Selecionar da Galeria</string>
+    <string name="upgrade_to_evolution_title">Junte-se ao DashPay</string>
+    <string name="upgrade_to_evolution_message">Crie seu nome de usuário, encontre amigos e familiares com seus nomes de usuário e adicione-os aos seus contatos</string>
+    <string name="image_cropper_title">Mova e amplie sua foto para encontrar o ajuste perfeito</string>
+    <string name="select">Selecionar</string>
+    <string name="unable_to_load_image">Não foi possível carregar a imagem.</string>
+    <string name="profile_picture_upload_error_title">Erro de Upload</string>
+    <string name="profile_picture_upload_error_message">Não foi possível carregar sua foto. \nPor favor, tente novamente.</string>
+    <string name="profile_picture_upload_try_again">Tentar de novo</string>
+    <string name="profile_picture_uploading_title">Por favor, aguarde</string>
+    <string name="profile_picture_uploading_message">Carregando sua foto para a rede</string>
+    <string name="picture_upload_policy">Política de Upload de Imagens</string>
+    <string name="imgur_policy_1">A imagem que você selecionar será carregada no Imgur anonimamente.</string>
+    <string name="imgur_policy_2">A imagem enviada pode ser vista publicamente por qualquer pessoa.</string>
+    <string name="imgur_policy_3">Você sempre pode excluir a imagem carregada, desde que tenha acesso a esta carteira.</string>
+    <string name="profile_picture_delete_title">Você tem certeza\?</string>
+    <string name="profile_picture_delete_message">Esta imagem não será mais usada na rede Dash</string>
+    <string name="agree">Aceitar</string>
+    <string name="yes">Sim</string>
+    <string name="no">Não</string>
+
+    <string name="updating_profile">Atualizando Perfil na Rede Dash</string>
+    <string name="google_drive_policy_one">Nenhuma informação da conta é armazenada na Rede Dash ou pela carteira DashPay.</string>
+    <string name="google_drive_policy_two">A imagem enviada pode ser vista publicamente por qualquer pessoa.</string>
+    <string name="google_drive_policy_three">Você pode sempre excluir ou alterar a imagem, desde que tenha acesso à carteira neste dispositivo.</string>
+
+    <string name="upload_image_message">Carregando sua foto para a rede</string>
+    <string name="upload_image_please_wait">Por favor, aguarde</string>
+    <string name="upload_image_error_message">Não foi possível enviar sua foto. Por favor, tente novamente.</string>
+    <string name="upload_image_upload_error">Erro de Upload</string>
+
+    <string name="edit_profile_google_drive">Google Drive</string>
+    <string name="edit_profile_imgur">Imgur</string>
+    <string name="google_drive_failed_authorization">Autorização do Google Drive falhou.</string>
+
+
+    <string name="error_updating_profile_try_again">Tentar Novamente</string>
+    <string name="error_updating_profile_cancel">Cancelar</string>
+    <string name="error_updating_profile_msg">Erro ao atualizar o perfil</string>
+    <string name="error_updating_profile_code">Código: %s</string>
+    <string name="edit_profile_public_url">URL Pública</string>
+    <string name="public_url_enter_url">Cole a URL da sua imagem</string>
+    <string name="public_url_error_message">Não foi possível buscar a imagem. Por favor, insira uma URL válida de imagem.</string>
+    <string name="public_url_message">Você pode especificar qualquer URL que esteja disponível publicamente na internet para que os usuários possam visualizá-la na rede Dash.</string>
+    <string name="public_url_more_info">Mais informações</string>
+    <string name="public_url_fetching_image">Buscando imagem</string>
+
+    <string name="gravatar">Gravatar</string>
+    <string name="gravatar_email_prompt">Digite seu ID de e-mail do Gravatar</string>
+    <string name="gravatar_fetching">Buscando seu Gravatar</string>
+    <string name="gravatar_email_sample">exemplo\@email.com</string>
+    <string name="gravatar_disclaimer">Seu e-mail não é armazenado na carteira DashPay nem em nenhum servidor. Ele é usado uma vez para obter os detalhes da sua conta Gravatar e depois descartado.</string>
+    <string name="gravatar_email_error">Não foi possível buscar seu Gravatar. Por favor, insira um ID de e-mail Gravatar válido.</string>
+
+    <string name="where_to_store_your_picture">Onde você gostaria de armazenar sua foto\?</string>
+    <string name="external_storage_disclaimer">Sua imagem estará sempre sob seu controle. A Dash não armazena nenhum dos seus dados, incluindo sua foto de perfil.</string>
+    <string name="select_source_sign_in_required">Autenticação necessária</string>
+    <string name="select_source_google_drive">Google Drive</string>
+    <string name="select_source_no_sign_in_required">Nenhuma conta necessária</string>
+
+    <string name="join_dashpay_subtitle">Crie um Nome de Usuário, adicione seus amigos…</string>
+    <string name="join_dashpay_more_subtitle">Crie seu Nome de Usuário, encontre seus amigos e adicione-os aos seus contatos</string>
+    <string name="join">Juntar-se</string>
+
+    <string name="more_suggestions">Mais Sugestões</string>
+    <string name="users_that_matches">Usuários que correspondem</string>
+    <string name="not_in_your_contacts">que atualmente não estão em seus contatos</string>
+    <string name="no_matching_contacts">Nenhum usuário correspondente nos seus contatos</string>
+    <string name="suggestions_empty_result_part_1">Não há usuários que correspondam ao nome</string>
+    <string name="suggestions_empty_result_part_2">em seus contatos</string>
+    <string name="save_changes">Salvar Alterações</string>
+    <string name="save_profile_reminder_text">Você gostaria de salvar as alterações feitas em seu perfil\?</string>
+    <string name="invitation_notification_text">Convide seus amigos e familiares para participar da Rede Dash.</string>
+    <string name="dashpay_min_balance_disclaimer">Você precisa de pelo menos <b>%s</b> para começar</string>
+    <string name="dashpay_insuffient_credits">Créditos insuficientes para realizar esta ação.</string>
+
+    <string name="about_developer_mode">Modo desenvolvedor ativado: todos os recursos habilitados!</string>
+    <string name="about_developer_mode_disabled">Modo desenvolvedor desativado.</string>
+    <string name="invite_history_create_new_invite">Criar Novo Convite</string>
+    <string name="invitations_history_header">Histórico de Convites</string>
+    <string name="invitations_filter_title">Filtrar Convites</string>
+    <string name="invite_history_empty">Nenhum convite foi criado.</string>
+    <string name="invite_history_empty_claimed">Não há convites reivindicados.</string>
+    <string name="invite_history_empty_pending">Não há convites pendentes.</string>
+    <string name="invitation_details_invite_used_by">Convite utilizado por</string>
+    <string name="invitation_details_invite_without_username">Convite reivindicado. Registro de nome de usuário pendente.</string>
+    <string-array name="invite_filter">
+        <item>Todos</item>
+        <item>Pendente</item>
+        <item>Reivindicar</item>
+    </string-array>
+
+    <!-- Private memo -->
+    <string name="private_memo">Nota Privada</string>
+    <string name="add_note">Adicionar Nota</string>
+    <string name="edit_note">Editar Nota</string>
+    <string name="note">Nota</string>
+
+    <string name="select_privacy_preferences">Selecione suas preferências de privacidade para o nome de usuário</string>
+    <string name="please_note_cant_change_this_later">Por favor, note que você não poderá alterar isso posteriormente</string>
+    <string name="Intermediate_level_WIFI_Warning">O nível de privacidade intermediário exige uma conexão de internet confiável</string>
+    <string name="Advanced_level_WIFI_Warning">O nível de privacidade avançado exige uma conexão de internet confiável</string>
+    <string name="privcay_level_WIFI_warning_desc">É recomendado estar em uma rede Wi-Fi para evitar a perda de qualquer valor</string>
+    <string name="continue_anyway">Continuar mesmo assim</string>
+    <string name="welcome_to_dash_pay">Bem-vindo ao DashPay</string>
+    <string name="pay_to_usernames">Pague aos nomes de usuário. Não há mais endereços alfanuméricos.</string>
+    <string name="create_a_username">Criar um nome de usuário</string>
+    <string name="add_your_friends_family">Adicione seus amigos e familiares</string>
+    <string name="invite_your_family">Convide sua família e encontre seus amigos pesquisando seus nomes de usuário.</string>
+    <string name="personalise_profile">Personalizar perfil</string>
+    <string name="upload_your_picture">Carregue sua foto, personalize sua identidade</string>
+    <string name="in_case_lose_your_passphrase">Caso você perca sua frase de recuperação, perderá o direito ao nome de usuário solicitado.</string>
+    <string name="keep_your_passphrase_safe">Mantenha sua frase de recuperação segura</string>
+    <string name="pay_now">Pague agora e, se não for aprovado, você poderá criar um nome diferente sem pagar novamente [confirme se é verdade]</string>
+    <string name="case_your_request_is_not_approved">Caso sua solicitação não seja aprovada</string>
+    <string name="voting_requirement_subtitle">Qualquer nome de usuário que tiver um número de 2 a 9 ou for mais longo que 20 caracteres será automaticamente aprovado</string>
+    <string name="voting_requirement_title">Votar é obrigatório apenas em alguns casos</string>
+    <string name="dash_network_must_vote_to_approve">A rede Dash deve votar para aprovar o seu nome de usuário antes que ele seja criado.</string>
+    <string name="what_is_username_voting">O que é a votação de nomes de usuário\?</string>
+    <string name="usernames_blocked_title">Algumas contas de usuário podem ser bloqueadas</string>
+    <string name="usernames_blocked_subtitle">Se um número suficiente de pessoas na rede determinar que um nome de usuário é inapropriado, elas podem bloqueá-lo</string>
+    <string name="username_voting">Votação de Nomes de Usuário</string>
+    <string name="username_voting_subtitle">Como proprietário de um masternode, você pode votar para aprovar nomes de usuário solicitados antes que os usuários possam criá-los.</string>
+    <string name="voting_duplicates_only_title">Vote apenas em duplicatas</string>
+    <string name="voting_duplicates_only_message">Você pode revisar todas as solicitações, mas só precisa votar nas duplicatas</string>
+    <string name="all">Todos</string>
+    <string name="n_usernames">%d nomes de usuário</string>
+    <string name="n_requests">%d solicitações</string>
+    <string name="search_by_username">Pesquisar por nome de usuário</string>
+    <string name="type">Tipo</string>
+    <string name="only_duplicates">Apenas duplicados</string>
+    <string name="only_links">Apenas solicitações com links</string>
+    <string name="only_links_short">Com links</string>
+    <string name="date">Data: %s</string>
+    <string name="votes">Votos: %s</string>
+
+    <string-array name="usernames_sort_by_options">
+        <item>Do mais recente para o mais antigo</item>
+        <item>Do mais antigo para o mais recente</item>
+        <item>Do mais alto para o mais baixo</item>
+        <item>Do mais baixo para o mais alto</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>Todos</item>
+        <item>Eu aprovei</item>
+        <item>Eu não aprovei</item>
+    </string-array>
+
+    <string name="request_your_username">Criar seu nome de usuário</string>
+    <string name="request_your_hint">Por favor, note que você não poderá alterar isso no futuro</string>
+    <string name="request_username">Solicitar Nome de Usuário</string>
+    <string name="request_voting_range">A rede Dash fará uma votação para escolher este nome de usuário. Você será notificado sobre o resultado em %s.</string>
+    <string name="request_username_available">Nome de usuário está disponível</string>
+    <string name="request_username_unavailable">Nome de usuário indisponível ou bloqueado</string>
+    <string name="request_username_taken">Nome de usuário já foi registrado</string>
+    <string name="requesting_your_username_title">Criando seu nome de usuário</string>
+    <string name="requesting_your_username_message">Seu nome de usuário johndoe está sendo solicitado na rede Dash. Pode levar algum tempo.</string>
+    <string name="requesting_your_username_error_title">Sua solicitação de nome de usuário falhou</string>
+    <string name="requesting_your_username_error_message">Por algum motivo, a solicitação falhou. Por favor, tente novamente.</string>
+
+    <string name="voting">Votando:</string>
+    <string name="this_username_has_already_been_requested">Esse nome de usuário já foi solicitado, mas você também pode solicitá-lo e deixar a rede votar para decidir se você pode ficar com ele</string>
+    <string name="request_details">Detalhes da solicitação</string>
+    <string name="request_details_subtitle">Revise a postagem abaixo para verificar a propriedade deste nome de usuário</string>
+    <string name="vote_to_approve">Votar para Aprovar</string>
+    <string name="identity">Identidade</string>
+    <string name="results">Resultados</string>
+    <string name="link">Link</string>
+    <string name="link_not_provided">Não fornecido</string>
+    <string name="cancel_approval">Cancelar Aprovação</string>
+    <string name="verify_your_identity">Verifique sua identidade para aumentar suas chances de obter o nome de usuário solicitado</string>
+    <string name="if_somebody">Se alguém mais solicitar o mesmo nome de usuário que você, deixaremos que a rede decida a quem atribuir este nome de usuário</string>
+    <string name="the_link_will_be_visible">O link que você enviar será visível apenas para os proprietários da rede</string>
+    <string name="verify_your_identity_voting">Verifique sua identidade</string>
+    <string name="copy_the_text">Copiar texto</string>
+    <string name="please_vote_to_approve">Por favor, vote para aprovar meu nome de usuário Dash solicitado - %s</string>
+    <string name="prove_your_identity">Prove sua identidade</string>
+    <string name="make_a_post_with_the_text">Faça uma publicação com o texto acima em uma rede social ou plataforma de mensagens conhecida para verificar que você é o proprietário original do nome de usuário solicitado e cole o link abaixo</string>
+    <string name="paste_the_link">Cole o link</string>
+    <string name="voting_key_title">Digite sua chave de votação</string>
+    <string name="voting_key_hint">Chave de Votação de Masternode</string>
+    <string name="voting_key_input_error">Você inseriu uma chave inválida</string>
+    <string name="voting_key_add">Adicione suas chaves de votação</string>
+    <string name="voting_key_add_subtitle">Os endereços de IP abaixo estão associados a esta carteira</string>
+    <string name="masternode_ip">Endereço IP do Masternode</string>
+    <string name="multiple_votes_cast">%d votos serão contabilizados, pois você possui várias chaves de votação armazenadas na carteira </string>
+    <string name="add_masternode_key">Adicionar Chave de Votação de Masternode</string>
+    <string name="vote_submitted">Seu voto foi enviado</string>
+    <string name="vote_cancelled">Seu voto foi cancelado</string>
+    <string name="quick_vote">Votação Rápida</string>
+    <string name="quick_vote_subtitle">Ao clicar no botão \"Votar em todos\", você votará automaticamente em todos os nomes de usuário filtrados (%d) que foram enviados primeiro</string>
+    <string name="vote_for_all">Votar em todos</string>
+    <string name="voting_period_active">Período de Votação de Usuário Ativo</string>
+    <string name="there_was_a_network_error">Ocorreu um erro de rede, mas você pode tentar novamente sem nenhum custo adicional</string>
+    <string name="requested_username_has_been">O nome de usuário foi solicitado.</string>
+    <string name="requested_voting_duration">Resultados em %s.</string>
+    <string name="cancel_request">Cancelar Solicitação</string>
+    <string name="after_the_voting">Após o término da votação, iremos notificá-lo sobre os resultados</string>
+    <string name="none">Nenhuma</string>
+    <string name="verify_now">Verificar Agora</string>
+    <string name="if_you_tap_cancel">Se você tocar em \"Cancelar Solicitação\", ainda terá a chance de solicitar outro nome de usuário sem pagar novamente</string>
+    <string name="do_you_really_want_to_cancel">Você realmente deseja cancelar a solicitação de nome de usuário\?</string>
+    <string name="if_you_tap_cancel_request">Se você tocar em \"Cancelar Solicitação\", ainda terá a chance de solicitar outro nome de usuário sem pagar novamente</string>
+    <string name="cant_open">Não é possível abrir</string>
+    <string name="invalid_link">Link inválido</string>
+    <string name="welcome_request_username_min_balance_disclaimer_all">Você tem %s Dash. Alguns nomes de usuário custam até %s Dash. </string>
+    <string name="welcome_request_username_min_balance_disclaimer_noncontested">Você precisa ter mais de %s Dash para criar um nome de usuário. </string>
+    <string name="request_username_min_balance_disclaimer">Para solicitar um nome de usuário na Rede Dash, você precisa ter mais de %s Dash</string>
+
+    <!-- CoinJoin -->
+    <string name="coinjoin">CoinJoin</string>
+    <string name="turned_off">Desligado</string>
+    <string name="coinjoin_info_subtitle">Misturar suas moedas Dash tornará suas transações mais privadas</string>
+    <string name="coinjoin_description_1">Você só poderá gastar Dash que tenha sido misturado quando isso estiver ativado. Isso pode ser desativado a qualquer momento.</string>
+    <string name="coinjoin_description_2">Dash recém-recebido será automaticamente misturado quando a carteira for aberta</string>
+    <string name="coinjoin_description_3">Ativar essa funcionalidade resultará em um maior consumo de bateria.</string>
+    <string name="coinjoin_mixing_level_title">Selecionar nível de mistura</string>
+    <string name="coinjoin_mixing_level_subtitle">Você pode alterar ou parar o nível de mistura a qualquer momento</string>
+    <string name="coinjoin_mixing_transactions">Misturando Transações</string>
+    <string name="coinjoin_transaction_group">Estas são transações relacionadas à mistura.</string>
+    <string name="intermediate">Intermediário</string>
+    <string name="advanced">Avançado</string>
+    <string name="intermediate_level_card_decs">Usuários avançados com um nível muito alto de conhecimento técnico podem determinar seu histórico de transações</string>
+    <string name="advanced_level_card_decs">Seria muito difícil para usuários avançados com qualquer nível de conhecimento técnico determinar seu histórico de transações</string>
+    <string name="coinjoin_intermediate_time">até 30 minutos</string>
+    <string name="coinjoin_advanced_time">Várias horas</string>
+    <string name="coinjoin_start">Iniciar mistura</string>
+    <string name="coinjoin_stop">Parar mistura</string>
+    <string name="coinjoin_mixing">Misturando</string>
+    <string name="coinjoin_paused">Mistura Pausada</string>
+    <string name="coinjoin_not_started">Não iniciado</string>
+    <string name="coinjoin_progress">%s (%d%%) %s de %s</string>
+    <string name="coinjoin_progress_balance">%1$s de %2$s</string>
+    <string name="coinjoin_progress_finished">Totalmente Misturado</string>
+    <string name="coinjoin_change_level_confirmation">Tem certeza de que deseja mudar o nível de privacidade\?</string>
+    <string name="coinjoin_stop_mixing_title">Tem certeza de que deseja parar a mistura\?</string>
+    <string name="coinjoin_stop_mixing_message">Quaisquer fundos que tenham sido misturados serão combinados com seus fundos não misturados</string>
+    <string name="coinjoin_mixed_balance">Saldo misturado:</string>
+
+    <!-- credit balance messages / buttons -->
+    <string name="credit_balance_empty_warning_title">Seu saldo de crédito está baixo</string>
+    <string name="credit_balance_low_warning_title">Seu saldo de crédito está totalmente esgotado</string>
+    <string name="credit_balance_empty_warning_message">Você pode continuar a usar o DashPay para pagamentos, mas não pode atualizar seu perfil ou adicionar mais contatos até recarregar seu saldo de crédito</string>
+    <string name="credit_balance_low_warning_message">Recarregue seus créditos para continuar fazendo alterações em seu perfil e adicionando contatos</string>
+    <string name="credit_balance_button_maybe_later">Talvez mais tarde</string>
+    <string name="credit_balance_button_buy">Comprar Créditos</string>
+    <string name="credit_balance_insufficient_error_message">Você não tem saldo suficiente para comprar créditos</string>
+    <string name="buy_credits_estimated_items">%s - %d contatos / %d atualizações de perfil</string>
+
+    <string name="request_username_username_voting_message">+ o que é votação de nome de usuário\? </string>
+    <string name="request_username_character_requirement">Apenas letras, números e hífens</string>
+    <string name="request_username_balance_requirement">Você precisa ter 0,25 DASH para criar este nome de usuário</string>
+    <string name="request_username_length_requirement">Entre 3 e 23 caracteres</string>
+    <string name="request_username_confirm">Eu aceito</string>
+
+</resources>

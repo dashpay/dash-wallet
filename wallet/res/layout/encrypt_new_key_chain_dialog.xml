@@ -46,7 +46,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/upgrade"
+            android:text="@string/encrypt_new_key_chain_upgrade_button"
             style="@style/Button.Primary.Blue"/>
 
     </LinearLayout>

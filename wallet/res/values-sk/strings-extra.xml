@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Overuje sa PIN</string>
     <string name="set_pin_message">Tento PIN bude potrebný na odomknutie aplikácie pri každom použití.</string>
     <string name="set_pin_confirm_pin_incorrect">Nesprávny PIN</string>
-
+    
     <string name="home_balance_hide_hint">Klepnutím skryť zostatok</string>
 
     <string name="dialog_confirm_confirm">Potvrdiť</string>
@@ -164,7 +164,7 @@
         <item quantity="other">hodín</item>
     </plurals>
 
-    <string name="upgrade">Aktualizovať</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Aktualizovať</string>
     <string name="encrypt_new_key_chain_dialog_title">Aktualizovať vašu peňaženku</string>
     <string name="encrypt_new_key_chain_dialog_message">Vaša peňaženka bude inovovaná aby podporovala import z a do viacero aplikácií.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Pre dokončenie aktualizácie musíte zadať Vás PIN.</string>

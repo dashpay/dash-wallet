@@ -155,7 +155,7 @@
         <item quantity="other">jam</item>
     </plurals>
 
-    <string name="upgrade">Tingkatkan</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Tingkatkan</string>
     <string name="encrypt_new_key_chain_dialog_title">Tingkatkan dompet anda</string>
     <string name="encrypt_new_key_chain_dialog_message">Dompet Anda akan ditingkatkan untuk mendukung pengimporan dan mengekspor ke lebih banyak aplikasi.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Anda harus memasukkan PIN Anda untuk menyelesaikan proses peningkatan.</string>

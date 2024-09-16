@@ -48,7 +48,7 @@
         android:layout_marginLeft="15dp"
         android:layout_marginRight="15dp"
         android:layout_marginBottom="25dp"
-        android:text="@string/upgrade"
+        android:text="@string/encrypt_new_key_chain_upgrade_button"
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <TextView

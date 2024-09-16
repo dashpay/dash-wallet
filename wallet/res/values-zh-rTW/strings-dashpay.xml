@@ -1,0 +1,342 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="choose_your_username">選擇您的 <b>達世幣
+用戶名稱</b></string>
+    <string name="identity_min_3_chars">名稱介乎3 到 23 個字元之間</string>
+    <string name="identity_alphanum_only">僅限字母、數字和連字符</string>
+    <string name="identity_hyphen_rule">必須以字母或數字來作為開頭和結尾</string>
+    <string name="identity_username_validating">正在驗證用戶名</string>
+    <string name="identity_username_available">用戶名可用</string>
+    <string name="identity_username_taken">用戶名已被使用</string>
+    <string name="platform_communication_error">與 達世幣平台的通訊錯誤</string>
+    <string name="register">注冊</string>
+
+    <string name="new_account_confirm_button_text">確認並付款</string>
+    <string name="invitation_confirm_button_text">確認:</string>
+    <string name="new_account_confirm_accept">我接受</string>
+    <string name="new_account_confirm_upgrade_fee">升級費用</string>
+    <string name="new_account_confirm_message">您已選擇 %s 作為您的用戶名。請注意，用戶名一旦註冊就無法更改。</string>
+    <string name="invitation_confirm_title">邀請費</string>
+    <string name="invitation_confirm_message">每個邀請都將獲得該金額的資助，以便接收者可以在達世幣網絡上快速創建他們的用戶名</string>
+    <string name="invitation_init_title">邀請</string>
+    <string name="invitation_init_header">邀請您的朋友和家人</string>
+    <string name="invitation_init_message">幫助您的朋友和家人加入達世幣網路。邀請他們進入社交銀行的世界。</string>
+    <string name="invitation_init_button_text">創建新的邀請</string>
+    <string name="invitation_notifications_hint">邀請您的朋友和家人加入達世幣網絡</string>
+    <string name="invitation_notifications_hint1">邀請您的家人，通過搜索他們的用戶名找到您的朋友</string>
+    <string name="invitation_notifications_hint1_or">或</string>
+    <string name="invitation_created_title">邀請</string>
+    <string name="invitation_created_successfully">創建邀請成功</string>
+    <string name="invitation_created_tag_title">標記供您參考</string>
+    <string name="invitation_created_tag">例如: 爸爸</string>
+    <string name="invitation_created_preview">預覽邀請</string>
+    <string name="invitation_created_copy_link">複製邀請鏈接</string>
+    <string name="invitation_created_send_invitation">發送邀請</string>
+    <string name="invitation_created_send_invitation_again">重新發送</string>
+    <string name="invitation_created_maybe_later">以後再算</string>
+    <string name="invitation_preview_title">現在加入</string>
+    <string name="invitation_preview_message"> %s已邀請您。開始使用達世幣加密貨幣。</string>
+    <string name="invitation_preview_close">關閉</string>
+    <string name="invitation_cant_afford_title">錢包餘額不足</string>
+    <string name="invitation_cant_afford_message">您至少需要 %s 達世幣才能建立邀請</string>
+    <string name="invitation_creating_error_title">創建邀請時出錯</string>
+    <string name="invitation_creating_error_message">建立您的邀請時出現問題。請再試一次。</string>
+    <string name="invitation_creating_error_message_not_synced">等待同步完成並重試。</string>
+    <string name="invitation_creating_progress_title">創建邀請</string>
+    <string name="invitation_verifying_progress_title">正在驗證邀請</string>
+    <string name="invitation_share_message">邀請函僅供一次性使用。不要與團體分享。</string>
+    <string name="invitation_share_title">達世幣邀請</string>
+    <string name="invitation_already_claimed_title">邀請經己被認領</string>
+    <string name="invitation_already_claimed_message">您來自 %s 的邀請已被領取</string>
+    <string name="invitation_invalid_invite_title">邀請無效</string>
+    <string name="invitation_invalid_invite_message">您來自 %s 的邀請無效</string>
+    <string name="invitation_username_already_found_title">已找到用戶名</string>
+    <string name="invitation_username_already_found_message">由於您已經有達世幣用戶名，因此您無法認領此邀請</string>
+    <string name="invitation_onboarding_has_began_error_title">加載錯誤</string>
+    <string name="invitation_onboarding_has_began_error">加載正在進行中，請在創建錢包後領取邀請函。</string>
+    <string name="invitation_accept_title_1">獲取您的用戶名</string>
+    <string name="invitation_accept_title_2">添加您的朋友和家人</string>
+    <string name="invitation_accept_message_2">邀請您的家人，通過搜索用戶名來找到您的朋友</string>
+    <string name="invitation_accept_title_3">個性化</string>
+    <string name="invitation_accept_message_3">上傳您的照片，個性化您的身份</string>
+    <string name="invitation_accept_continue">繼續</string>
+    <string name="invitation_contact_request_sent_message">自從 %s 邀請您以來，聯絡請求已發送至對方。</string>
+
+    <string name="username_being_created">您的用戶名 %s 正在達世幣網路上創建</string>
+    <string name="username_being_requested">達世幣網路正在請求您的用戶名 %s </string>
+
+    <string name="processing_let_me_know">完成後通知我</string>
+    <string name="processing_home_title">升級到進化版</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) 處理付款中</string>
+    <string name="processing_home_step_2">(2/3) 建立ID</string>
+    <string name="processing_home_step_2_restoring">(2/3) 恢復 ID</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) 正在註冊用戶名</string>
+    <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) 請求用戶名稱</string>
+    <string name="processing_home_step_3_restoring">(3/3) 恢復使用者名稱</string>
+    <string name="processing_done_title">你好 %s,</string>
+    <string name="processing_done_subtitle">您的帳戶已準備好了</string>
+    <string name="processing_voting_subtitle">為您的用戶名的投票已經開始</string>
+    <string name="processing_error_title">錯誤升級</string>
+    <string name="processing_error_title_from_invite">從邀請升級時出錯</string>
+    <string name="processing_error_retry">重試</string>
+    <string name="processing_username_unavailable_title">使用者名稱不可用</string>
+    <string name="processing_username_unavailable_subtitle">請選擇其他</string>
+
+    <string name="dashpay_upgrade_fee">升級費用</string>
+    <string name="dashpay_invite_fee">邀請費</string>
+    <string name="dashpay_topup_fee">儲值費</string>
+    <string name="search_user_find_a_user">在達世幣網絡上查找用戶</string>
+    <string name="search_for_a_user">在達世幣網絡上搜尋用戶</string>
+    <string name="search_user_input_placeholder">在此輸入使用者名稱並進行搜尋</string>
+    <string name="add_new_contact">新增聯絡人</string>
+    <string name="send_contact_request">發送聯繫請求</string>
+    <string name="sending_contact_request">發送聯繫請求</string>
+    <string name="sending_contact_request_short">邀請中</string>
+    <string name="accepting_contact_request">接受聯繫請求</string>
+    <string name="accepting_contact_request_short">接受中</string>
+    <string name="search_user_no_results">沒有匹配的用戶</string>
+    <string name="search_user_loading">在達世幣網路上搜尋用戶名<b>\"%\"</b> </string>
+    <string name="contact_request_pending">有聯繫請求等待批准</string>
+    <string name="pay">付款</string>
+    <string name="contact_request_received_title">%s 已向您請求加為好友</string>
+    <string name="contact_request_accept">接受</string>
+    <string name="contact_request_ignore">忽略</string>
+
+    <string name="contacts_no_results">沒有匹配的聯絡人</string>
+
+    <string name="contacts_title">通訊錄</string>
+    <string name="contacts_send_to_contact_title">發送給聯繫人</string>
+    <string name="contacts_search_for">搜尋聯絡人</string>
+    <string name="contact_requests_title">聯繫請求</string>
+    <string name="contacts_add_new_contact">新增聯絡人</string>
+    <string name="contacts_contact_requests_count">聯絡請求 (%d)</string>
+    <string name="contacts_contact_requests">聯繫請求</string>
+    <string name="contacts_contact_requests_view">看全部</string>
+    <string name="contacts_my_contacts">我的通訊錄</string>
+    <string name="contacts_sort_order">排序方式:</string>
+    <string-array name="contacts_sort">
+        <item>名稱</item>
+    </string-array>
+
+    <string name="notifications_title">通知</string>
+    <string name="notifications_title_with_count">通知 (%d)</string>
+    <string name="notifications_profile_activity">活動</string>
+    <string name="notifications_new">新的</string>
+    <string name="notifications_earlier">之前</string>
+    <string name="notifications_none_new">沒有新的通知</string>
+    <string name="notifications_contact_has_accepted">%s 已接受您的聯絡要求。</string>
+    <string name="notifications_you_have_accepted">您已接受來自 %s的聯絡請求</string>
+    <string name="notifications_you_sent">您發送了聯繫請求至 %s</string>
+    <string name="notifications_you_received">%s 已向您發送聯絡請求</string>
+
+    <string name="identity_complete_message">您的用戶名 %s 已在達世幣網路上成功創建</string>
+    <string name="request_complete_message">您的用戶名  %s 已在達世幣網路上成功請求</string>
+
+    <string name="scan_to_pay_username_dialog_message">不是有效的達世幣使用者名稱或身份\n\n%s</string>
+    <string name="send_coins_to_username">發送到</string>
+    <string name="stranger_activity_disclaimer_text">直接向位址支付的款項不會保留在活動中。</string>
+    <string name="error_loading_identity">載入身份時出錯</string>
+
+    <string name="edit_profile">編輯個人資料</string>
+    <string name="display_name">顯示名稱</string>
+    <string name="about_me">關於我</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">儲存</string>
+    <string name="edit_profile_take_picture">用相機拍照</string>
+    <string name="edit_profile_choose_picture">從圖庫中選擇</string>
+    <string name="upgrade_to_evolution_title">加入 DashPay</string>
+    <string name="upgrade_to_evolution_message">創建您的用戶名，使用朋友和家人的用戶名來搜索並將他們添加到您的聯絡人列表中</string>
+    <string name="image_cropper_title">移動和縮放您的照片以找到最適當的效果</string>
+    <string name="select">選擇</string>
+    <string name="unable_to_load_image">無法載入圖片。</string>
+    <string name="profile_picture_upload_error_title">上傳錯誤</string>
+    <string name="profile_picture_upload_try_again">再試一次</string>
+    <string name="profile_picture_uploading_title">請稍等</string>
+    <string name="profile_picture_uploading_message">將您的圖片上傳到網絡</string>
+    <string name="imgur_policy_1">您選擇的圖像將匿名上傳到 Imgur。</string>
+    <string name="imgur_policy_2">任何人都可以公開查看上傳的圖像。</string>
+    <string name="imgur_policy_3">只要您有權訪問此錢包，您就可以隨時刪除上傳的圖片。</string>
+    <string name="profile_picture_delete_title">你確定嗎\?</string>
+    <string name="agree">同意</string>
+    <string name="yes">是的</string>
+    <string name="no">不是</string>
+
+    <string name="updating_profile">在達世幣網絡上更新個人資料</string>
+    <string name="google_drive_policy_one">達世幣網路或 DashPay 錢包不儲存任何帳戶資訊。</string>
+    <string name="google_drive_policy_two">任何人都可以公開查看上傳的圖像。</string>
+    <string name="google_drive_policy_three">只要您有權存取此裝置上的錢包，您就可以隨時刪除或更改圖片。</string>
+
+    <string name="upload_image_message">將您的圖片上傳到網絡</string>
+    <string name="upload_image_please_wait">請稍等</string>
+    <string name="upload_image_error_message">無法上傳您的圖片。請再試一次。</string>
+    <string name="upload_image_upload_error">上傳錯誤</string>
+
+    <string name="edit_profile_google_drive">Google雲端硬碟</string>
+    <string name="edit_profile_imgur">Imgur</string>
+    <string name="google_drive_failed_authorization">Google 雲端硬碟授權失敗。</string>
+
+
+    <string name="error_updating_profile_try_again">再試一次</string>
+    <string name="error_updating_profile_cancel">取消</string>
+    <string name="error_updating_profile_msg">更新個人檔案時發生錯誤</string>
+    <string name="error_updating_profile_code">程式碼: %s</string>
+    <string name="edit_profile_public_url">公共網址</string>
+    <string name="public_url_enter_url">貼上您的圖片網址</string>
+    <string name="public_url_error_message">無法取得影像。請輸入有效的圖像 URL。</string>
+    <string name="public_url_message">您可以指定在網路上公開的任何 URL，以便使用者可以在達世幣網路上看到它。</string>
+    <string name="public_url_more_info">更多資訊</string>
+    <string name="public_url_fetching_image">獲取圖像</string>
+
+    <string name="gravatar">Gravatar</string>
+    <string name="gravatar_email_prompt">輸入您的 Gravatar 電子郵件 ID</string>
+    <string name="gravatar_fetching">取得您的 Gravatar</string>
+    <string name="gravatar_email_sample">sample\@email.com</string>
+    <string name="gravatar_disclaimer">您的電子郵件不會存儲在 DashPay 錢包或任何服務器上。它用於獲取您的 Gravatar 帳戶詳細信息，然後被丟棄。</string>
+    <string name="gravatar_email_error">無法取得您的頭像。請輸入有效的 Gravatar 電子郵件 ID。</string>
+
+    <string name="where_to_store_your_picture">您想在哪裡儲存您的照片？</string>
+    <string name="external_storage_disclaimer">您的圖片將始終由您掌控。達世幣不會儲存您的任何數據，包括您的個人資料圖片。</string>
+    <string name="select_source_sign_in_required">需要登入</string>
+    <string name="select_source_google_drive">Google雲端硬碟</string>
+    <string name="select_source_no_sign_in_required">無需帳戶</string>
+
+    <string name="join_dashpay_subtitle">建立用戶名，新增您的朋友...</string>
+    <string name="join_dashpay_more_subtitle">建立您的用戶名，找到您的朋友並將他們添加到您的聯絡人中</string>
+    <string name="join">加入</string>
+
+    <string name="more_suggestions">更多建議</string>
+    <string name="users_that_matches">匹配的用戶</string>
+    <string name="not_in_your_contacts">目前不在您的聯絡人中的人</string>
+    <string name="no_matching_contacts">您的聯絡人中沒有匹配的用戶</string>
+    <string name="suggestions_empty_result_part_1">沒有與該名稱相符的用戶</string>
+    <string name="suggestions_empty_result_part_2">在你的通訊錄中</string>
+    <string name="save_changes">保存變更</string>
+    <string name="save_profile_reminder_text">您想保存對個人資料所做的更改嗎\?</string>
+    <string name="invitation_notification_text">邀請您的朋友和家人加入達世幣網絡。</string>
+    <string name="dashpay_min_balance_disclaimer">您至少需要 <b>%s</b> 才能開始</string>
+    <string name="dashpay_insuffient_credits">餘額不足，無法執行此操作。</string>
+
+    <string name="about_developer_mode">開發者模式已啟用: 所有功能均已啟用!</string>
+    <string name="about_developer_mode_disabled">開發者模式已停用。</string>
+    <string name="invite_history_create_new_invite">創建新的邀請</string>
+    <string name="invitations_history_header">邀請記錄</string>
+    <string name="invitations_filter_title">過濾邀請</string>
+    <string name="invite_history_empty">尚未創建任何邀請。</string>
+    <string name="invite_history_empty_claimed">沒有已領取的邀請。</string>
+    <string name="invitation_details_invite_used_by">邀請己被使用</string>
+    <string-array name="invite_filter">
+        <item>所有</item>
+        <item>處理中</item>
+        <item>已被認領</item>
+    </string-array>
+
+    <!-- Private memo -->
+    <string name="private_memo">私人筆記</string>
+    <string name="add_note">新增註釋</string>
+    <string name="edit_note">編輯備註</string>
+    <string name="note">筆記</string>
+
+    <string name="select_privacy_preferences">選擇您的用戶名隱私偏好</string>
+    <string name="please_note_cant_change_this_later">請注意，稍後您將無法變更此設置</string>
+    <string name="Intermediate_level_WIFI_Warning">中級隱私等級需要可靠的網路連接</string>
+    <string name="Advanced_level_WIFI_Warning">高級隱私等級需要可靠的網路連接</string>
+    <string name="privcay_level_WIFI_warning_desc">建議使用 Wi-Fi 網路以避免損失任何資金</string>
+    <string name="continue_anyway">無論如何都要繼續</string>
+    <string name="welcome_to_dash_pay">歡迎使用 Dash Pay</string>
+    <string name="pay_to_usernames">向用戶名付費。無須再使用有字母數字地址。</string>
+    <string name="create_a_username">創建一個用戶名稱</string>
+    <string name="add_your_friends_family">添加您的朋友和家人</string>
+    <string name="invite_your_family">邀請您的家人，透過搜尋用戶名找到您的朋友。</string>
+    <string name="personalise_profile">個性化個人資料</string>
+    <string name="upload_your_picture">上傳您的照片，個人化您的身分。</string>
+    <string name="in_case_lose_your_passphrase">如果您遺失了密碼，您將失去所要求的用戶名稱的權利。</string>
+    <string name="keep_your_passphrase_safe">確保您的密語安全</string>
+    <string name="pay_now">立即進行付款，如果未獲批准，您可以建立一個不同的名稱，並且無需再次付款[檢查是否屬實]</string>
+    <string name="case_your_request_is_not_approved">如果您的申請未獲批准</string>
+    <string name="voting_requirement_subtitle">任何包含數字 2-9 或長度超過 20 個字元的使用者名稱將自動獲得批准</string>
+    <string name="voting_requirement_title">僅在某些情況下才需要投票</string>
+    <string name="dash_network_must_vote_to_approve">在創建用戶名之前，達世幣網路必須投票批准您的用戶名。</string>
+    <string name="what_is_username_voting">什麼是用戶名投票？</string>
+    <string name="usernames_blocked_subtitle">如果有足夠的網路確定使用者認為名稱不合適，他們可以阻止它</string>
+    <string name="username_voting">用戶名投票</string>
+    <string name="username_voting_subtitle">作為主節點擁有者，您可以投票批准所要求的用戶名，然後用戶才能建立它。</string>
+    <string name="voting_duplicates_only_title">僅對重複項目進行投票</string>
+    <string name="voting_duplicates_only_message">您可以審核所有申請，但只需對重複的申請進行投票</string>
+    <string name="all">所有</string>
+    <string name="search_by_username">以用戶名稱搜尋</string>
+    <string name="type">類型</string>
+    <string name="only_duplicates">僅重複的項目</string>
+    <string name="only_links">僅限帶有連結的請求</string>
+    <string-array name="usernames_sort_by_options">
+        <item>從新到舊</item>
+        <item>從舊到新</item>
+        <item>從高到低</item>
+        <item>從低到高</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>所有</item>
+        <item>我已批准的</item>
+        <item>我己否決的</item>
+    </string-array>
+
+    <string name="request_your_hint">請注意，您將來將無法更改它</string>
+    <string name="request_username">申请用戶名</string>
+    <string name="request_voting_range">達世幣網路將對該用戶名進行投票。我們將在 %s通知您結果。</string>
+    <string name="request_username_available">使用者名稱可用</string>
+    <string name="request_username_unavailable">使用者名稱不可用或被阻止</string>
+    <string name="request_username_taken">使用者名稱已被佔用</string>
+    <string name="requesting_your_username_title">建立您的用戶名</string>
+    <string name="requesting_your_username_message">達世幣網路正在請求您的用戶名 johndoe。這可能需要一些時間。</string>
+    <string name="requesting_your_username_error_title">您的使用者名稱請求失敗</string>
+    <string name="voting">表決中：</string>
+    <string name="this_username_has_already_been_requested">該用戶名已被要求，但您也可以要求它，並讓網路投票決定您是否可以擁有它</string>
+    <string name="request_details">索取詳情</string>
+    <string name="vote_to_approve">投票通過</string>
+    <string name="identity">身分</string>
+    <string name="link">連結</string>
+    <string name="cancel_approval">取消批准</string>
+    <string name="verify_your_identity">驗證您的身分以增加獲得您所要求的使用者名稱的機會</string>
+    <string name="if_somebody">如果其他人要求與您相同的用戶名，我們將讓網路決定向誰提供該用戶名</string>
+    <string name="verify_your_identity_voting">驗證您的身份</string>
+    <string name="prove_your_identity">證明您的身份</string>
+    <string name="make_a_post_with_the_text">在知名社交媒體或訊息平台上發布包含上述文字的帖子，以驗證您是所請求用戶名的原始所有者，並貼上下面的鏈接</string>
+    <string name="paste_the_link">貼上連結</string>
+    <string name="voting_key_title">輸入您的投票密鑰</string>
+    <string name="voting_key_hint">主節點投票金鑰</string>
+    <string name="voting_key_input_error">您輸入了無效的密鑰</string>
+    <string name="masternode_ip">主節點IP位址</string>
+    <string name="add_masternode_key">新增主節點投票金鑰</string>
+    <string name="vote_submitted">您的投票已提交</string>
+    <string name="vote_cancelled">您的投票已被取消</string>
+    <string name="quick_vote">快速投票</string>
+    <string name="vote_for_all">給所有人投票</string>
+    <string name="there_was_a_network_error">網路錯誤，您可以重試，無需額外費用</string>
+    <string name="cancel_request">取消申请</string>
+    <string name="after_the_voting">投票結束後，我們將通知您投票結果</string>
+    <string name="none">沒有</string>
+    <string name="if_you_tap_cancel">如果您點擊“取消請求”，您仍然有機會要求另一個用戶名，而無需再次付款</string>
+    <string name="do_you_really_want_to_cancel">您確定要取消使用者名稱申請嗎？</string>
+    <string name="if_you_tap_cancel_request">如果您點擊“取消請求”，您仍然有機會要求另一個用戶名，而無需再次付款</string>
+    <!-- CoinJoin -->
+    <string name="coinjoin">CoinJoin</string>
+    <string name="coinjoin_info_subtitle">混合您的達世幣將使您交易的私隱度更高</string>
+    <string name="coinjoin_description_1">開啟此功能後，您將只能使用已混合的達世幣。該功能可以隨時關閉。</string>
+    <string name="coinjoin_description_2">新收到的達世幣將在錢包打開時自動混合</string>
+    <string name="coinjoin_description_3">打開此功能將導致更高的電池使用率</string>
+    <string name="coinjoin_mixing_level_title">選擇混合級別</string>
+    <string name="intermediate">中間的</string>
+    <string name="advanced">進階</string>
+    <string name="intermediate_level_card_decs">擁有極高技術水平的高級用戶可以確定您的交易歷史記錄</string>
+    <string name="advanced_level_card_decs">即使對於具有任何技術專業水平的高級用戶來說，要確定您的交易歷史記錄都是非常困難的</string>
+    <string name="coinjoin_intermediate_time">最多 30 分鐘</string>
+    <string name="coinjoin_advanced_time">多小時</string>
+    <string name="coinjoin_start">開始混合</string>
+    <string name="coinjoin_stop">停止混合</string>
+    <string name="coinjoin_change_level_confirmation">您確定要變更隱私等級嗎？</string>
+    <string name="coinjoin_stop_mixing_title">您確定要停止混合嗎？</string>
+    <string name="credit_balance_button_maybe_later">以後再算</string>
+    <string name="request_username_character_requirement">僅限字母、數字和連字符</string>
+    <string name="request_username_length_requirement">名稱介乎3 到 23 個字元之間</string>
+    </resources>

@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Επαλήθευση PIN</string>
     <string name="set_pin_message">Αυτός ο κωδικός PIN θα χρειαστεί να ξεκλειδώσετε την εφαρμογή σας κάθε φορά που την χρησιμοποιείτε.</string>
     <string name="set_pin_confirm_pin_incorrect">Λανθασμένο PIN</string>
-
+    
     <string name="home_balance_hide_hint">Πατήστε για να κρύψετε το υπόλοιπο</string>
 
     <string name="dialog_confirm_confirm">Επιβεβαίωση</string>
@@ -158,7 +158,7 @@
         <item quantity="other">ώρες</item>
     </plurals>
 
-    <string name="upgrade">Αναβάθμιση</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Αναβάθμιση</string>
     <string name="encrypt_new_key_chain_dialog_title">Αναβαθμίστε το πορτοφόλι σας</string>
     <string name="encrypt_new_key_chain_dialog_message">το πορτοφόλι σας θα αναβαθμιστεί για να υποστηρίζει την εισαγωγή από και την εξαγωγή σε περισσότερες εφαρμογές.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Θα πρέπει να εισάγετε το PIN σας για να ολοκληρωθεί η αναβάθμιση.</string>

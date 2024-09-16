@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Zweryfikuj PIN</string>
     <string name="set_pin_message">Ten kod PIN będzie wymagany do odblokowania Twojej aplikacji za każdym razem, gdy z niej korzystasz.</string>
     <string name="set_pin_confirm_pin_incorrect">PIN jest niepoprawny</string>
-
+    
     <string name="home_balance_hide_hint">Stuknij by ukryć saldo</string>
 
     <string name="dialog_confirm_confirm">Potwierdź</string>
@@ -164,7 +164,7 @@
         <item quantity="other">godzin</item>
     </plurals>
 
-    <string name="upgrade">Aktualizuj</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Aktualizuj</string>
     <string name="encrypt_new_key_chain_dialog_title">Aktualizuj swój portfel</string>
     <string name="encrypt_new_key_chain_dialog_message">Twój portfel zostanie zaktualizowany aby umożliwić importowanie z oraz eksportowanie do nowych aplikacji.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Musisz wpisać swój PIN aby dokończyć proces aktualizacji.</string>

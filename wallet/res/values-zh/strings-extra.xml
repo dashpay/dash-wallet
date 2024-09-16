@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">验证PIN</string>
     <string name="set_pin_message">每次使用时都需要输入PIN以解锁您的app.</string>
     <string name="set_pin_confirm_pin_incorrect">PIN码错误</string>
-
+    
     <string name="home_balance_hide_hint">点击隐藏余额</string>
 
     <string name="dialog_confirm_confirm">确认</string>
@@ -155,7 +155,7 @@
         <item quantity="other">小时</item>
     </plurals>
 
-    <string name="upgrade">升级</string>
+    <string name="encrypt_new_key_chain_upgrade_button">升级</string>
     <string name="encrypt_new_key_chain_dialog_title">升级您的钱包</string>
     <string name="encrypt_new_key_chain_dialog_message">您的钱包将被升级, 以支持更多APP的导入导出功能.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">您必须输入PIN码才能完成升级过程.</string>
@@ -412,4 +412,4 @@
     <string name="stale_exchange_rates_error">价格未被检索到. 法币价值或许错误.</string>
     <string name="stale_exchange_rates_stale">价格至少有30分钟的延迟. 法币显示价值或许错误.</string>
     <string name="stale_exchange_rates_volatile">价格据上次更新已经有超过50%的波动.</string>
-    </resources>
+</resources>

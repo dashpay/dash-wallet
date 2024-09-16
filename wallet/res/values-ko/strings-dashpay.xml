@@ -1,0 +1,208 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="identity_alphanum_only">글자, 숫자 및 하이픈만 사용할 수 있습니다.</string>
+    <string name="identity_hyphen_rule">시작과 끝은 글자나 숫자여야 합니다</string>
+    <string name="identity_username_validating">사용자 이름 인증 중...</string>
+    <string name="identity_username_available">사용할 수 없는 사용자 이름</string>
+    <string name="identity_username_taken">이미 사용 중인 사용자 이름</string>
+    <string name="register">등록</string>
+
+    <string name="new_account_confirm_button_text">승인 &amp; 지불</string>
+    <string name="invitation_confirm_button_text">승인</string>
+    <string name="new_account_confirm_accept">수락합니다</string>
+    <string name="new_account_confirm_upgrade_fee">업그레이드 수수료</string>
+    <string name="invitation_confirm_title">초대 수수료</string>
+    <string name="invitation_confirm_message">각 초대는 이 금액을 통해 지원되며, 이로써 받는 이가 재빨리 대시 네트워크에 사용자 이름을 생성할 수 있습니다</string>
+    <string name="invitation_init_title">초대하기</string>
+    <string name="invitation_init_header">당신의 친구와 가족을 초대하세요</string>
+    <string name="invitation_init_button_text">새로운 초대 생성하기</string>
+    <string name="invitation_notifications_hint">당신의 친구와 가족을 대시 네트워크에 초대하세요</string>
+    <string name="invitation_notifications_hint1">다른 사람들이 대시 네트워크에 가입하도록 초대하세요</string>
+    <string name="invitation_notifications_hint1_or">혹은</string>
+    <string name="invitation_created_title">초대</string>
+    <string name="invitation_created_successfully">초대가 성공적으로 생성되었습니다</string>
+    <string name="invitation_created_tag_title">당신의 레퍼런스를 위해 태그하세요</string>
+    <string name="invitation_created_tag">예시: 아빠</string>
+    <string name="invitation_created_preview">초대 미리보기</string>
+    <string name="invitation_created_copy_link">초대 링크 복사</string>
+    <string name="invitation_created_send_invitation">초대 전송하기</string>
+    <string name="invitation_created_send_invitation_again">다시 전송하기</string>
+    <string name="invitation_created_maybe_later">나중에요</string>
+    <string name="invitation_preview_title">지금 가입하세요</string>
+    <string name="invitation_preview_close">닫기</string>
+    <string name="invitation_cant_afford_title">지갑 잔고 부족</string>
+    <string name="invitation_already_claimed_title">초대장이 이미 사용되었습니다</string>
+    <string name="invitation_username_already_found_title">사용자 이름을 이미 찾았습니다</string>
+    <string name="invitation_username_already_found_message">이미 대시 사용자 이름을 가지고 있어 이 초대를 수락할 수 없습니다.</string>
+    <string name="invitation_accept_title_1">사용자 이름을 설정하세요</string>
+    <string name="invitation_accept_title_2">친구와 가족 추가</string>
+    <string name="invitation_accept_message_2">가족을 초대하고, 친구들을 사용자 이름으로 검색해 찾아보세요</string>
+    <string name="invitation_accept_title_3">개인화</string>
+    <string name="invitation_accept_message_3">사진을 업로드하고 아이덴티티를 개인화하세요</string>
+    <string name="invitation_accept_continue">계속</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) 지불 처리 중</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) 사용자 이름을 등록하는 중</string>
+    <string name="processing_error_title">업그레이드 오류</string>
+    <string name="processing_error_retry">재시도</string>
+    <string name="dashpay_upgrade_fee">업그레이드 수수료</string>
+    <string name="search_user_find_a_user">대시 네트워크에서 사용자를 검색합니다</string>
+    <string name="search_for_a_user">대시 네트워크에서 사용자 검색</string>
+    <string name="add_new_contact">새로운 연락처 추가하기</string>
+    <string name="send_contact_request">연락처 요청 전송</string>
+    <string name="sending_contact_request">연락처 요청 전송중</string>
+    <string name="contact_request_pending">연락처 요청 대기 중</string>
+    <string name="pay">지불</string>
+    <string name="contact_request_accept">수락</string>
+    <string name="contact_request_ignore">무시</string>
+
+    <string name="contacts_title">연락처</string>
+    <string name="contacts_send_to_contact_title">연락처에 전송하기</string>
+    <string name="contacts_search_for">연락처 검색</string>
+    <string name="contact_requests_title">연락처 요청</string>
+    <string name="contacts_contact_requests">연락처 요청</string>
+    <string name="contacts_my_contacts">나의 연락처</string>
+    <string-array name="contacts_sort">
+        <item>이름</item>
+    </string-array>
+
+    <string name="notifications_title">알림</string>
+    <string name="notifications_profile_activity">활동</string>
+    <string name="notifications_new">새로운 알림</string>
+    <string name="notifications_earlier">이전</string>
+    <string name="notifications_none_new">새로운 알림이 없습니다</string>
+    <string name="send_coins_to_username">다음에 전송합니다</string>
+    <string name="stranger_activity_disclaimer_text">주소로 직접 지불된 경우 활동에서 나타나지 않습니다.</string>
+    <string name="edit_profile">프로필 수정</string>
+    <string name="display_name">이름 표시</string>
+    <string name="about_me">나에 관하여</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">저장</string>
+    <string name="edit_profile_choose_picture">갤러리에서 선택</string>
+    <string name="upgrade_to_evolution_title">대시페이 가입하기</string>
+    <string name="upgrade_to_evolution_message">사용자 이름을 생성하고, 사용자 이름으로 친구와 가족을 찾아 당신의 연락처에 추가하세요.</string>
+    <string name="image_cropper_title">당신의 사진을 이동하고 확대하여 완벽히 맞추어보세요</string>
+    <string name="select">선택</string>
+    <string name="profile_picture_upload_error_title">업로드 오류</string>
+    <string name="profile_picture_upload_try_again">다시 시도하세요</string>
+    <string name="profile_picture_uploading_title">기다려주십시오</string>
+    <string name="profile_picture_uploading_message">당신의 사진을 네트워크에 업로드 중입니다</string>
+    <string name="imgur_policy_1">당신이 선택한 이미지는 Imgur에 익명으로 업로드됩니다.</string>
+    <string name="imgur_policy_2">업로드된 이미지는 누구나 볼 수 있습니다.</string>
+    <string name="imgur_policy_3">이 지갑에 접근이 가능한 경우 언제든 업로드한 이미지를 삭제할 수 있습니다.</string>
+    <string name="profile_picture_delete_title">확실합니까\?</string>
+    <string name="agree">동의합니다</string>
+    <string name="yes">예</string>
+    <string name="no">아니오</string>
+
+    <string name="updating_profile">대시 네트워크에 프로필 업데이트 중</string>
+    <string name="google_drive_policy_two">업로드된 이미지는 누구나 볼 수 있습니다.</string>
+    <string name="upload_image_message">당신의 사진을 네트워크에 업로드 중입니다</string>
+    <string name="upload_image_please_wait">기다려주십시오</string>
+    <string name="upload_image_error_message">사진을 업로드할 수 없습니다. 다시 시도하세요.</string>
+    <string name="upload_image_upload_error">업로드 오류</string>
+
+    <string name="error_updating_profile_try_again">다시 시도하세요</string>
+    <string name="error_updating_profile_cancel">취소</string>
+    <string name="edit_profile_public_url">공개 URL</string>
+    <string name="public_url_enter_url">이미지 URL 붙여넣기</string>
+    <string name="public_url_fetching_image">이미지 불러오는 중</string>
+
+    <string name="gravatar_email_prompt">당신의 Gravatar  이메일 ID를 입력하세요</string>
+    <string name="gravatar_disclaimer">당신의 이메일은 대시페이 지갑 혹은 다른 어떤 서버에도 저장되지 ㅇ낳습니다. 이는 Gravatar 계정 상세 정보에 한 번 사용될 뿐이며, 그 이후로는 폐기됩니다.</string>
+    <string name="join">가입하기</string>
+
+    <string name="more_suggestions">더욱 다양한 제안</string>
+    <string name="save_changes">변경사항 저장</string>
+    <string name="save_profile_reminder_text">프로필 수정 사항을 저장하시겠습니까\?</string>
+    <string name="invitation_notification_text">당신의 친구와 가족이 대시 네트워크에 가입하도록 초대하세요.</string>
+    <string name="invite_history_create_new_invite">새로운 초대 생성하기</string>
+    <string name="invitations_history_header">초대 내역</string>
+    <string name="invitation_details_invite_used_by">다음에 사용된 초대</string>
+    <string-array name="invite_filter">
+        <item>모두</item>
+        <item>대기 중</item>
+        <item>사용중입니다</item>
+    </string-array>
+
+    <string name="welcome_to_dash_pay">대시페이에 오신 것을 환영합니다</string>
+    <string name="pay_to_usernames">사용자 이름으로 지불하세요. 더 이상 알파벳과 숫자로 이루어진 주소는 필요하지 않습니다.</string>
+    <string name="create_a_username">사용자이름 생성하기</string>
+    <string name="add_your_friends_family">당신의 친구 &amp; 가족을 추가하세요</string>
+    <string name="invite_your_family">사용자 이름 검색을 통해 가족을 초대하고, 친구를 초대하세요.</string>
+    <string name="personalise_profile">개인화된 프로필</string>
+    <string name="upload_your_picture">사진을 업로드하고, 아이덴티티를 개인화하세요.</string>
+    <string name="in_case_lose_your_passphrase">복구 문구를 잃어버리는 경우 요청된 사용자이름에 대한 권리 역시 잃게 됩니다.</string>
+    <string name="keep_your_passphrase_safe">당신의 복구 문구를 안전하게 보호하세요</string>
+    <string name="case_your_request_is_not_approved">귀하의 요청이 승인되지 않은 경우</string>
+    <string name="dash_network_must_vote_to_approve">사용자 이름이 생성되기 전 대시 네트워크가 투표를 통해 승인해야 합니다.</string>
+    <string name="what_is_username_voting">사용자이름 투표란 무엇인가요\?</string>
+    <string name="username_voting_subtitle">마스터노드 소유자는 사용자가 사용자 이름을 생성하기 전 이를 위한 요청에 대해 투표 할 수 있습니다.</string>
+    <string name="voting_duplicates_only_title">복사에만 투표하기</string>
+    <string name="voting_duplicates_only_message">모든 요청을 확인할 수 있으나, 복사본에만 투표하면 됩니다.</string>
+    <string name="all">모두</string>
+    <string name="search_by_username">사용자 이름으로 검색</string>
+    <string name="type">유형</string>
+    <string name="only_duplicates">복사만</string>
+    <string name="only_links">링크를 가진 요청만</string>
+    <string-array name="usernames_sort_by_options">
+        <item>현재부터 과거</item>
+        <item>과거부터 현재</item>
+        <item>높음부터 낮음</item>
+        <item>낮음부터 높음</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>모두</item>
+        <item>승인하였습니다</item>
+        <item>승인하지 않았습니다</item>
+    </string-array>
+
+    <string name="request_username">사용자 이름 요청하기</string>
+    <string name="voting">투표중:</string>
+    <string name="this_username_has_already_been_requested">이 사용자 이름은 이미 요청이 진행중이나, 당신도 요청할 수 있으며 누가 가지게 될 지는 네트워크가 투표로 결정합니다</string>
+    <string name="request_details">요청 세부 내용</string>
+    <string name="vote_to_approve">투표하여 승인하기</string>
+    <string name="identity">아이덴티티</string>
+    <string name="link">링크</string>
+    <string name="cancel_approval">승인 취소하기</string>
+    <string name="verify_your_identity">당신의 신원을 인증하여 요청한 사용자 이름을 획득할 확률을 높이세요</string>
+    <string name="if_somebody">만약 다른 사람이 당신과 같은 사용자 이름을 요청하면, 해당 이름을 누구에게 줄 지는 네트워크가 결정하게 됩니다.</string>
+    <string name="verify_your_identity_voting">당신의 신원을 인증하세요</string>
+    <string name="prove_your_identity">당신의 신원을 증명하세요</string>
+    <string name="paste_the_link">링크 붙여넣기</string>
+    <string name="voting_key_title">투표 키를 입력하세요</string>
+    <string name="voting_key_hint">마스터노드 투표 키</string>
+    <string name="voting_key_input_error">유효하지 않은 키를 입력하셨습니다</string>
+    <string name="masternode_ip">마스터노드 IP 주소</string>
+    <string name="vote_submitted">투표가 제출되었습니다</string>
+    <string name="vote_cancelled">투표가 취소되었습니다</string>
+    <string name="quick_vote">빠른 투표</string>
+    <string name="vote_for_all">모두 투표하기</string>
+    <string name="there_was_a_network_error">네트워크에 에러가 발생하여, 추가 요금 없이 다시 시도할 수 있습니다</string>
+    <string name="cancel_request">요청 취소</string>
+    <string name="after_the_voting">투표가 끝나면 결과를 알려드립니다</string>
+    <string name="none">없음</string>
+    <string name="if_you_tap_cancel">\"요청 취소\"를 탭하면 다시 요금을 지불하지 않고도 다른 사용자 이름을 요청할 수 있습니다</string>
+    <string name="do_you_really_want_to_cancel">사용자 이름 요청을 정말 취소하시겠습니까\?</string>
+    <string name="if_you_tap_cancel_request">\"요청 취소\"를 탭하면 다시 요금을 지불하지 않고도 다른 사용자 이름을 요청할 수 있습니다</string>
+    <!-- CoinJoin -->
+    <string name="coinjoin">코인조인</string>
+    <string name="coinjoin_info_subtitle">대시 코인을 믹싱하면 거래 내역이 보다 보호됩니다.</string>
+    <string name="coinjoin_description_1">이 기능이 켜지면 믹싱된 대시만을 사용할 수 있습니다. 이 기능은 언제든 끌 수 있습니다.</string>
+    <string name="coinjoin_description_2">새롭게 수신된 대시는 지갑을 열었을 때 자동으로 믹싱됩니다</string>
+    <string name="coinjoin_description_3">이 기능을 켜면 더 많은 배터리를 사용하게 됩니다.</string>
+    <string name="coinjoin_mixing_level_title">믹싱 수준 선택</string>
+    <string name="intermediate">중급</string>
+    <string name="advanced">고급</string>
+    <string name="intermediate_level_card_decs">높은 수준의 기술적 전문 지식을 가진 고급 사용자의 경우 거래 기록을 결정할 수 있습니다</string>
+    <string name="advanced_level_card_decs">어떤 수준의 기술적 전문 지식을 가진 고급 사용자라고 하더라도 자신의 거래 기록을 결정하는 것은 어려울 수 있습니다.</string>
+    <string name="coinjoin_intermediate_time">최대 30분</string>
+    <string name="coinjoin_advanced_time">다중 시간</string>
+    <string name="coinjoin_start">믹싱 시작</string>
+    <string name="coinjoin_stop">믹싱 중지</string>
+    <string name="coinjoin_change_level_confirmation">정말 프라이버시 수준을 변경하시겠습니까\?</string>
+    <string name="coinjoin_stop_mixing_title">정말 믹싱을 중단하시겠습니까\?</string>
+    <string name="credit_balance_button_maybe_later">나중에요</string>
+    <string name="request_username_character_requirement">글자, 숫자 및 하이픈만 사용할 수 있습니다.</string>
+    </resources>

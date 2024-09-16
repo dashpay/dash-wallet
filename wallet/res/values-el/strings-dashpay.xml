@@ -1,0 +1,298 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="choose_your_username">Επιλέξτε το <b>Dash
+Όνομα χρήστη σας</b></string>
+    <string name="identity_min_3_chars">Μεταξύ 3 και 23 χαρακτήρων</string>
+    <string name="identity_alphanum_only">Μόνο γράμματα, αριθμοί και παύλες</string>
+    <string name="identity_hyphen_rule">Πρέπει να αρχίζει και να τελειώνει με γράμμα ή αριθμό</string>
+    <string name="identity_username_validating">Επικύρωση του ονόματος χρήστη...</string>
+    <string name="identity_username_available">Διαθέσιμο όνομα χρήστη</string>
+    <string name="identity_username_taken">Το όνομα χρήστη είναι κατειλημμένο</string>
+    <string name="platform_communication_error">Σφάλμα επικοινωνίας με την πλατφόρμα Dash</string>
+    <string name="register">Εγγραφή</string>
+
+    <string name="new_account_confirm_button_text">Επιβεβαίωση και Πληρωμή</string>
+    <string name="invitation_confirm_button_text">Επιβεβαίωση</string>
+    <string name="new_account_confirm_accept">Αποδέχομαι</string>
+    <string name="new_account_confirm_upgrade_fee">Προμήθεια Αναβάθμισης</string>
+    <string name="new_account_confirm_message">Έχετε επιλέξει %s ως όνομα χρήστη. Έχετε υπόψιν ότι το όνομα χρήστη ΔΕΝ μπορεί να αλλάξει μετά την καταχώρησή του.</string>
+    <string name="invitation_confirm_title">Παράβολο πρόσκλησης</string>
+    <string name="invitation_confirm_message">Κάθε πρόσκληση θα χρηματοδοτείται με αυτό το ποσό, ώστε ο παραλήπτης να μπορεί να δημιουργήσει γρήγορα το όνομα χρήστη του στο δίκτυο Dash.</string>
+    <string name="invitation_init_title">Πρόσκληση</string>
+    <string name="invitation_init_header">Προσκαλέστε τους φίλους και την οικογένειά σας</string>
+    <string name="invitation_init_message">Βοηθήστε τους φίλους και την οικογένειά σας να ενταχθούν στο δίκτυο του Dash. Προσκαλέστε τους στον κόσμο της κοινωνικής τραπεζικής.</string>
+    <string name="invitation_init_button_text">Δημιουργία νέας πρόσκλησης</string>
+    <string name="invitation_notifications_hint">Προσκαλέστε τους φίλους και την οικογένειά σας στο Dash Network</string>
+    <string name="invitation_notifications_hint1">Προσκαλέστε κάποιον να ενταχθεί στο δίκτυο Dash</string>
+    <string name="invitation_notifications_hint1_or">ή</string>
+    <string name="invitation_created_title">Πρόσκληση</string>
+    <string name="invitation_created_successfully">Πρόσκληση δημιουργήθηκε επιτυχώς</string>
+    <string name="invitation_created_tag_title">Ετικέτα για την αναφορά σας</string>
+    <string name="invitation_created_tag">π.χ.: Μπαμπάς</string>
+    <string name="invitation_created_preview">Προεπισκόπηση πρόσκλησης</string>
+    <string name="invitation_created_copy_link">Αντιγραφή συνδέσμου πρόσκλησης</string>
+    <string name="invitation_created_send_invitation">Αποστολή πρόσκλησης</string>
+    <string name="invitation_created_send_invitation_again">Στείλτε ξανά</string>
+    <string name="invitation_created_maybe_later">Ίσως αργότερα</string>
+    <string name="invitation_preview_title">Εγγραφείτε τώρα</string>
+    <string name="invitation_preview_message">Έχετε προσκληθεί από %s. Ξεκινήστε να χρησιμοποιείτε το κρυπτονόμισμα Dash.</string>
+    <string name="invitation_preview_close">κλείσιμο</string>
+    <string name="invitation_cant_afford_title">Ανεπαρκές υπόλοιπο πορτοφολιού</string>
+    <string name="invitation_cant_afford_message">Χρειάζεστε τουλάχιστον %s Dash για να δημιουργήσετε μια πρόσκληση</string>
+    <string name="invitation_creating_error_title">Σφάλμα δημιουργίας πρόσκλησης</string>
+    <string name="invitation_creating_error_message">Υπήρξε πρόβλημα στη δημιουργία της πρόσκλησής σας. Προσπαθήστε ξανά.</string>
+    <string name="invitation_creating_error_message_not_synced">Περιμένετε να ολοκληρωθεί ο συγχρονισμός και δοκιμάστε ξανά.</string>
+    <string name="invitation_creating_progress_title">Δημιουργία πρόσκλησης</string>
+    <string name="invitation_verifying_progress_title">Επαλήθευση πρόσκλησης</string>
+    <string name="invitation_share_message">Οι προσκλήσεις είναι μόνο για μία χρήση. Μην τις μοιράζεστε με μια ομάδα.</string>
+    <string name="invitation_share_title">Πρόσκληση DashPay</string>
+    <string name="invitation_already_claimed_title">Η πρόσκληση έχει ήδη διεκδικηθεί</string>
+    <string name="invitation_already_claimed_message">Η πρόσκλησή σας από %s έχει ήδη κρατηθεί</string>
+    <string name="invitation_invalid_invite_message">Η πρόσκλησή σας από  %s  δεν είναι έγκυρη</string>
+    <string name="invitation_username_already_found_title">Το όνομα χρήστη έχει ήδη βρεθεί</string>
+    <string name="invitation_username_already_found_message">Δεν μπορείτε να διεκδικήσετε αυτή την πρόσκληση αφού έχετε ήδη ένα όνομα χρήστη Dash.</string>
+    <string name="invitation_onboarding_has_began_error_title">Σφάλμα Onboarding</string>
+    <string name="invitation_onboarding_has_began_error">Το onboarding βρίσκεται σε εξέλιξη, παρακαλούμε διεκδικήστε την πρόσκλησή σας αφού δημιουργήσετε το πορτοφόλι σας.</string>
+    <string name="invitation_accept_title_1">Αποκτήστε το όνομα χρήστη σας</string>
+    <string name="invitation_accept_title_2">Προσθέστε τους φίλους &amp; την οικογένειά σας</string>
+    <string name="invitation_accept_message_2">Προσκαλέστε την οικογένειά σας, βρείτε τους φίλους σας αναζητώντας τα ονόματα χρήστη τους</string>
+    <string name="invitation_accept_title_3">Εξατομίκευση</string>
+    <string name="invitation_accept_message_3">Ανεβάστε τη φωτογραφία σας, εξατομικεύστε την ταυτότητά σας</string>
+    <string name="invitation_accept_continue">Συνέχεια</string>
+    <string name="invitation_contact_request_sent_message">Ένα αίτημα επαφής έχει σταλεί σε %s από τότε που σας προσκάλεσε.</string>
+
+    <string name="username_being_created">Το όνομα χρήστη %s δημιουργείται στο δίκτυο Dash</string>
+    <string name="username_being_requested">Το όνομα χρήστη σας %s ζητείται στο δίκτυο Dash Network</string>
+
+    <string name="processing_let_me_know">Ενημέρωσέ με όταν ολοκληρωθεί</string>
+    <string name="processing_home_title">Γίνεται αναβάθμιση σε Evolution</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) Επεξεργασία Πληρωμής</string>
+    <string name="processing_home_step_2">(2/3) Δημιουργία ταυτότητας</string>
+    <string name="processing_home_step_2_restoring">(2/3) Ανάκτηση ταυτότητας</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Εγγραφή Ονόματος Χρήστη</string>
+    <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Αίτημα για όνομα χρήστη</string>
+    <string name="processing_home_step_3_restoring">(3/3) Ανάκτηση ονόματος χρήστη</string>
+    <string name="processing_done_title">Γεια σας %s,</string>
+    <string name="processing_done_subtitle">Ο λογαριασμός σας είναι έτοιμος</string>
+    <string name="processing_voting_subtitle">Η ψηφοφορία για το όνομα χρήστη σας έχει αρχίσει</string>
+    <string name="processing_error_title">Σφάλμα Αναβάθμισης</string>
+    <string name="processing_error_title_from_invite">Σφάλμα αναβάθμισης από πρόσκληση</string>
+    <string name="processing_error_retry">Επανάληψη</string>
+    <string name="processing_username_unavailable_title">Όνομα χρήστη Μη διαθέσιμο</string>
+    <string name="processing_username_unavailable_subtitle">Παρακαλώ επιλέξτε ένα άλλο</string>
+
+    <string name="dashpay_upgrade_fee">Προμήθεια Αναβάθμισης</string>
+    <string name="dashpay_invite_fee">Τέλος πρόσκλησης</string>
+    <string name="dashpay_topup_fee">Τέλος Topup</string>
+    <string name="search_user_find_a_user">Βρείτε έναν χρήστη στο Δίκτυο του Dash</string>
+    <string name="search_for_a_user">Αναζήτηση για χρήστη στο Dash Δίκτυο</string>
+    <string name="search_user_input_placeholder">πληκτρολογήστε το όνομα χρήστη για αναζήτηση εδώ</string>
+    <string name="add_new_contact">Προσθήκη Νέας Επαφής</string>
+    <string name="send_contact_request">Αποστολή Αιτήματος Επαφής</string>
+    <string name="sending_contact_request">Αποστολή αιτήματος επαφής</string>
+    <string name="sending_contact_request_short">Γίνεται πρόσκληση</string>
+    <string name="accepting_contact_request">Αποδοχή αιτήματος επικοινωνίας</string>
+    <string name="accepting_contact_request_short">Γίνεται αποδοχή</string>
+    <string name="search_user_no_results">Δεν υπάρχουν χρήστες που ταιριάζουν</string>
+    <string name="search_user_loading">Αναζήτηση για το όνομα χρήστη<b>"%"</b> στο δίκτυο Dash</string>
+    <string name="contact_request_pending">Εκκρεμεί Αίτημα Επαφής</string>
+    <string name="pay">πληρώστε</string>
+    <string name="contact_request_received_title">%s ζήτησε να γίνει φίλος</string>
+    <string name="contact_request_accept">Αποδοχή</string>
+    <string name="contact_request_ignore">Παράβλεψη</string>
+
+    <string name="contacts_no_results">Δεν υπάρχουν επαφές που να ταιριάζουν</string>
+
+    <string name="contacts_title">Επαφές</string>
+    <string name="contacts_send_to_contact_title">Στείλτε σε μια επαφή</string>
+    <string name="contacts_search_for">Αναζήτηση επαφής</string>
+    <string name="contact_requests_title">Αιτήματα Επαφών</string>
+    <string name="contacts_add_new_contact">Προσθήκη νέας επαφής</string>
+    <string name="contacts_contact_requests_count">Αιτήματα επαφών (%d)</string>
+    <string name="contacts_contact_requests">Αιτήματα Επαφών</string>
+    <string name="contacts_contact_requests_view">Προβολή Όλων</string>
+    <string name="contacts_my_contacts">Οι Επαφές μου</string>
+    <string name="contacts_sort_order">Ταξινόμηση κατά:</string>
+    <string-array name="contacts_sort">
+        <item>Όνομα</item>
+    </string-array>
+
+    <string name="notifications_title">Ειδοποιήσεις</string>
+    <string name="notifications_title_with_count">Ειδοποιήσεις (%d)</string>
+    <string name="notifications_profile_activity">Δραστηριότητα</string>
+    <string name="notifications_new">Νέο</string>
+    <string name="notifications_earlier">Νωρίτερα</string>
+    <string name="notifications_none_new">Δεν υπάρχουν νέες ειδοποιήσεις</string>
+    <string name="notifications_contact_has_accepted">%s έχει αποδεχτεί το αίτημα επαφής σας</string>
+    <string name="notifications_you_have_accepted">Αποδεχθήκατε το αίτημα επαφής από %s</string>
+    <string name="notifications_you_sent">Στείλατε αίτημα επαφής σε%s</string>
+    <string name="notifications_you_received">%s σας έστειλε αίτημα επαφής</string>
+
+    <string name="identity_complete_message">Το όνομα χρήστη %s δημιουργήθηκε με επιτυχία στο Dash δίκτυο</string>
+    <string name="request_complete_message">Το όνομα χρήστη σας %s ζητήθηκε επιτυχώς στο δίκτυο Dash </string>
+
+    <string name="scan_to_pay_username_dialog_message">Δεν είναι έγκυρο όνομα χρήστη ή ταυτότητα Dash\n\n%s</string>
+    <string name="send_coins_to_username">Αποστολή στο</string>
+    <string name="contact_history_disclaimer">Προσθέστε το % ως επαφή σας για να <b>Πληρώσετε απευθείας στο όνομα χρήστη</b> και <b>Διατηρήσετε το ιστορικό αμοιβαίων συναλλαγών</b></string>
+    <string name="contact_history_disclaimer_pending">Μόλις το % αποδεχτεί το αίτημά σας, μπορείτε να <b>Πληρώσετε απευθείας στο όνομα χρήστη</b></string>
+    <string name="stranger_activity_disclaimer_text">Οι πληρωμές που πραγματοποιούνται απευθείας σε διευθύνσεις δεν θα διατηρούνται σε δραστηριότητα.</string>
+    <string name="error_loading_identity">Σφάλμα φόρτωσης ταυτότητας</string>
+
+    <string name="edit_profile">Επεξεργασία Προφίλ</string>
+    <string name="display_name">Όνομα προβολής</string>
+    <string name="about_me">Σχετικά με εμένα</string>
+    <string name="char_count">%1$d/%2$d χαρακτήρες</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">Αποθήκευση</string>
+    <string name="edit_profile_take_picture">Τραβήξτε μια φωτογραφία με τη κάμερα</string>
+    <string name="edit_profile_choose_picture">Επιλέξτε από την Συλλογή</string>
+    <string name="upgrade_to_evolution_title">Εγγραφείτε στο DashPay</string>
+    <string name="upgrade_to_evolution_message">Δημιουργήστε το Όνομα Χρήστη σας, βρείτε φίλους και συγγενείς με τα ονόματα χρήστη τους και προσθέστε τους στις επαφές σας.</string>
+    <string name="image_cropper_title">Μετακινήστε και μεγεθύνετε τη φωτογραφία σας για να βρείτε την τέλεια εφαρμογή</string>
+    <string name="select">Επιλογή</string>
+    <string name="unable_to_load_image">Αδυναμία φόρτωσης εικόνας.</string>
+    <string name="profile_picture_upload_error_title">Σφάλμα φόρτωσης</string>
+    <string name="profile_picture_upload_error_message">Δεν είναι δυνατή η μεταφόρτωση της εικόνας σας.\nΠαρακαλώ προσπαθήστε ξανά.</string>
+    <string name="profile_picture_upload_try_again">Προσπαθήστε ξανά</string>
+    <string name="profile_picture_uploading_title">Παρακαλώ περιμένετε</string>
+    <string name="profile_picture_uploading_message">Ανέβασμα της εικόνας σας στο δίκτυο</string>
+    <string name="picture_upload_policy">Πολιτική μεταφόρτωσης εικόνων</string>
+    <string name="imgur_policy_1">Η εικόνα που επιλέγετε θα μεταφορτωθεί στο Imgur ανώνυμα.</string>
+    <string name="imgur_policy_2">Η εικόνα που ανεβαίνει μπορεί να προβληθεί δημόσια από οποιονδήποτε.</string>
+    <string name="imgur_policy_3">Μπορείτε πάντα να διαγράψετε την ανεβασμένη εικόνα, εφόσον έχετε πρόσβαση σε αυτό το πορτοφόλι.</string>
+    <string name="profile_picture_delete_title">Είστε σίγουροι;</string>
+    <string name="profile_picture_delete_message">Αυτή η εικόνα δεν θα χρησιμοποιείται πλέον στο δίκτυο Dash.</string>
+    <string name="agree">Συμφωνώ</string>
+    <string name="yes">Ναι</string>
+    <string name="no">Όχι</string>
+
+    <string name="updating_profile">Ενημέρωση προφίλ στο δίκτυο Dash</string>
+    <string name="google_drive_policy_one">Καμία πληροφορία λογαριασμού δεν αποθηκεύεται στο δίκτυο Dash ή στο πορτοφόλι DashPay.</string>
+    <string name="google_drive_policy_two">Η εικόνα που ανεβαίνει μπορεί να προβληθεί δημόσια από οποιονδήποτε.</string>
+    <string name="google_drive_policy_three">Μπορείτε πάντα να διαγράψετε ή να αλλάξετε την εικόνα εφόσον έχετε πρόσβαση στο πορτοφόλι σε αυτή τη συσκευή.</string>
+
+    <string name="upload_image_message">Ανέβασμα της εικόνας σας στο δίκτυο</string>
+    <string name="upload_image_please_wait">Παρακαλώ περιμένετε</string>
+    <string name="upload_image_error_message">Δεν είναι δυνατή η μεταφόρτωση της εικόνας σας. Προσπαθήστε ξανά.</string>
+    <string name="upload_image_upload_error">Σφάλμα φόρτωσης</string>
+
+    <string name="edit_profile_google_drive">Google Drive</string>
+    <string name="edit_profile_imgur">Imgur</string>
+    <string name="google_drive_failed_authorization">Η εξουσιοδότηση του Google Drive απέτυχε.</string>
+
+
+    <string name="error_updating_profile_try_again">Προσπαθήστε ξανά</string>
+    <string name="error_updating_profile_cancel">Ακύρωση</string>
+    <string name="error_updating_profile_msg">Σφάλμα ενημέρωσης του προφίλ</string>
+    <string name="error_updating_profile_code">Κωδικός: %s</string>
+    <string name="edit_profile_public_url">Δημόσια διεύθυνση URL</string>
+    <string name="public_url_enter_url">Επικολλήστε τη διεύθυνση URL της εικόνας σας</string>
+    <string name="public_url_error_message">Αδυναμία λήψης εικόνας. Παρακαλούμε εισάγετε ένα έγκυρο URL εικόνας.</string>
+    <string name="public_url_message">Μπορείτε να καθορίσετε οποιαδήποτε διεύθυνση URL που είναι δημόσια διαθέσιμη στο διαδίκτυο, ώστε οι χρήστες να μπορούν να τη δουν στο δίκτυο Dash.</string>
+    <string name="public_url_more_info">Περισσότερες πληροφορίες</string>
+    <string name="public_url_fetching_image">Λήψη εικόνας</string>
+
+    <string name="gravatar">Gravatar</string>
+    <string name="gravatar_email_prompt">Εισάγετε το Gravatar Email ID σας</string>
+    <string name="gravatar_fetching">Λήψη του Gravatar σας</string>
+    <string name="gravatar_email_sample">sample\@email.com</string>
+    <string name="gravatar_disclaimer">Το email σας δεν αποθηκεύεται στο πορτοφόλι DashPay ούτε σε κανέναν διακομιστή. Χρησιμοποιείται μία φορά για να λάβετε τα στοιχεία του λογαριασμού σας Gravatar και στη συνέχεια απορρίπτεται.</string>
+    <string name="select_source_google_drive">Google Drive</string>
+    <string name="join">Εγγραφείτε </string>
+
+    <string name="more_suggestions">Περισσότερες προτάσεις</string>
+    <string name="save_changes">Αποθήκευση αλλαγών</string>
+    <string name="save_profile_reminder_text">Θέλετε να αποθηκεύσετε τις αλλαγές που κάνατε στο προφίλ σας;</string>
+    <string name="invitation_notification_text">Προσκαλέστε τους φίλους και την οικογένειά σας να ενταχθούν στο δίκτυο Dash.</string>
+    <string name="invite_history_create_new_invite">Δημιουργία νέας πρόσκλησης</string>
+    <string name="invitations_history_header">Ιστορικό προσκλήσεων</string>
+    <string name="invitation_details_invite_used_by">Η πρόσκληση χρησιμοποιείται από</string>
+    <string-array name="invite_filter">
+        <item>Όλα</item>
+        <item>Εκκρεμεί</item>
+        <item>Διεκδικήθηκε</item>
+    </string-array>
+
+    <string name="welcome_to_dash_pay">Καλώς ήρθατε στο Dash Pay</string>
+    <string name="pay_to_usernames">Πληρώστε για ονόματα χρήστη. χωρίς αλφαριθμητικές διευθύνσεις.</string>
+    <string name="create_a_username">Δημιουργία όνομα χρήστη</string>
+    <string name="add_your_friends_family">Προσθέστε τους φίλους &amp; την οικογένειά σας</string>
+    <string name="invite_your_family">Προσκαλέστε την οικογένειά σας, βρείτε τους φίλους σας αναζητώντας τα ονόματα χρήστη τους</string>
+    <string name="personalise_profile">Προσαρμόστε το προφίλ</string>
+    <string name="upload_your_picture">Ανεβάστε τη φωτογραφία σας, εξατομικεύστε την ταυτότητά σας</string>
+    <string name="in_case_lose_your_passphrase">Σε περίπτωση που χάσετε τον φράση πρόσβασής σας, θα χάσετε το δικαίωμα στο όνομα χρήστη σας.</string>
+    <string name="keep_your_passphrase_safe">Διατηρήστε την φράση πρόσβασής σας ασφαλή.</string>
+    <string name="case_your_request_is_not_approved">Σε περίπτωση που ο αίτημά σας δεν εγκριθεί.</string>
+    <string name="dash_network_must_vote_to_approve">Το Dash δίκτυο θα πρέπει να ψηφίσει για να εγκρίνει το όνομα χρήστη σας πριν δημιουργηθεί.</string>
+    <string name="what_is_username_voting">Τι είναι η ψηφοφορία ονόματος χρήστη;</string>
+    <string name="username_voting_subtitle">Ως ιδιοκτήτης ενός masternode μπορείτε να ψηφίσετε για να εγκρίνετε τα ζητούμενα ονόματα χρήστη πριν οι χρήστες μπορέσουν να τα δημιουργήσουν.</string>
+    <string name="voting_duplicates_only_title">Ψηφίστε μόνο για τα διπλότυπα</string>
+    <string name="voting_duplicates_only_message">Μπορείτε να ελέγξετε όλα τα αιτήματα, αλλά χρειάζεται να ψηφίσετε μόνο για τα διπλότυπα.</string>
+    <string name="all">Όλα</string>
+    <string name="search_by_username">Αναζήτηση με βάση το όνομα χρήστη</string>
+    <string name="type">Τύπος</string>
+    <string name="only_duplicates">Μόνο διπλότυπα</string>
+    <string name="only_links">Μόνο αιτήματα με συνδέσμους</string>
+    <string-array name="usernames_sort_by_options">
+        <item>Νέα σε παλιά</item>
+        <item>Παλαιά προς νέα</item>
+        <item>Υψηλά σε χαμηλά</item>
+        <item>Χαμηλά σε υψηλά</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>Όλα</item>
+        <item>Έχω εγκρίνει</item>
+        <item>Δεν έχω εγκρίνει</item>
+    </string-array>
+
+    <string name="request_username">Αίτημα ονόματος χρήστη</string>
+    <string name="voting">Ψηφοφορία:</string>
+    <string name="this_username_has_already_been_requested">Αυτό το όνομα χρήστη έχει ήδη ζητηθεί, αλλά μπορείτε να το ζητήσετε κι εσείς και να αφήσετε το δίκτυο να ψηφίσει για να αποφασίσει αν μπορείτε να το έχετε.</string>
+    <string name="request_details">Λεπτομέρειες αιτήματος</string>
+    <string name="vote_to_approve">Ψηφίστε για Έγκριση</string>
+    <string name="identity">Ταυτότητα</string>
+    <string name="link">Σύνδεσμος</string>
+    <string name="cancel_approval">Ακύρωση Έγκρισης</string>
+    <string name="verify_your_identity">Επαληθεύστε την ταυτότητά σας για να αυξήσετε τις πιθανότητες να λάβετε το όνομα χρήστη που ζητήσατε</string>
+    <string name="if_somebody">Εάν κάποιος άλλος ζητήσει το ίδιο όνομα χρήστη με εσάς, θα αφήσουμε το δίκτυο να αποφασίσει σε ποιον να δώσει αυτό το όνομα χρήστη.</string>
+    <string name="verify_your_identity_voting">Επαληθεύστε την ταυτότητά σας</string>
+    <string name="prove_your_identity">Αποδείξτε την ταυτότητα σας</string>
+    <string name="paste_the_link">Επικολλήστε τον σύνδεσμο</string>
+    <string name="voting_key_title">Εισάγετε το κλειδί ψήφου σας</string>
+    <string name="voting_key_hint">Κλειδί ψήφου του Masternode</string>
+    <string name="voting_key_input_error">Έχετε εισάγει ένα μη έγκυρο κλειδί</string>
+    <string name="masternode_ip">Διεύθυνση IP του Masternode</string>
+    <string name="vote_submitted">Η ψήφος σας υποβλήθηκε.</string>
+    <string name="vote_cancelled">Η ψήφος σας ακυρώθηκε.</string>
+    <string name="quick_vote">Γρήγορη Ψηφοφορία</string>
+    <string name="vote_for_all">Ψηφίστε για Όλους</string>
+    <string name="there_was_a_network_error">Υπήρξε σφάλμα δικτύου, μπορείτε να προσπαθήσετε ξανά χωρίς επιπλέον κόστος</string>
+    <string name="cancel_request">Ακύρωση αιτήματος</string>
+    <string name="after_the_voting">Μετά τη λήξη της ψηφοφορίας θα σας ενημερώσουμε για τα αποτελέσματά της.</string>
+    <string name="none">κανενα</string>
+    <string name="if_you_tap_cancel">Εάν πατήσετε \"Ακύρωση Αίτησης\", θα έχετε ακόμα την ευκαιρία να ζητήσετε άλλο όνομα χρήστη χωρίς να πληρώσετε ξανά.</string>
+    <string name="do_you_really_want_to_cancel">Θέλετε πραγματικά να ακυρώσετε την αίτηση για το όνομα χρήστη;</string>
+    <string name="if_you_tap_cancel_request">Εάν πατήσετε \"Ακύρωση Αίτησης\", θα έχετε ακόμα την ευκαιρία να ζητήσετε άλλο όνομα χρήστη χωρίς να πληρώσετε ξανά.</string>
+    <!-- CoinJoin -->
+    <string name="coinjoin">CoinJoin</string>
+    <string name="coinjoin_info_subtitle">Η μίξη των Dash νομισμάτων σας θα καταστήσει τις συναλλαγές σας πιο ιδιωτικές.</string>
+    <string name="coinjoin_description_1">Θα μπορείτε να ξοδέψετε μόνο τα Dash που έχει αναμιχθεί όταν αυτό είναι ενεργοποιημένο. Αυτό μπορεί να απενεργοποιηθεί οποιαδήποτε στιγμή.</string>
+    <string name="coinjoin_description_2">Τα πρόσφατα ληφθέντα Dash θα αναμειγνύονται αυτόματα κατά το άνοιγμα του πορτοφολιού.</string>
+    <string name="coinjoin_description_3">Ενεργοποιώντας αυτήν τη λειτουργία θα οδηγήσει σε αυξημένη χρήση της μπαταρίας.</string>
+    <string name="coinjoin_mixing_level_title">Επιλέξτε επίπεδο ανάμειξης</string>
+    <string name="intermediate">Intermediate</string>
+    <string name="advanced">Προηγμένα</string>
+    <string name="intermediate_level_card_decs">Οι προχωρημένοι χρήστες που έχουν πολύ υψηλό επίπεδο τεχνικής εξειδίκευσης μπορούν να προσδιορίσουν το ιστορικό των συναλλαγών σας.</string>
+    <string name="advanced_level_card_decs">Θα ήταν πολύ δύσκολο για προχωρημένους χρήστες με οποιοδήποτε επίπεδο τεχνική εξειδίκευση να προσδιορίσουν το ιστορικό συναλλαγών σας.</string>
+    <string name="coinjoin_intermediate_time">μέχρι και 30 λεπτά</string>
+    <string name="coinjoin_advanced_time">Αρκετές ώρες</string>
+    <string name="coinjoin_start">Έναρξη μίξης.</string>
+    <string name="coinjoin_stop">Διακοπή μίξης</string>
+    <string name="coinjoin_change_level_confirmation">Είστε σίγουροι ότι θέλετε να αλλάξετε το επίπεδο απορρήτου;</string>
+    <string name="coinjoin_stop_mixing_title">Είστε σίγουροι ότι θέλετε να σταματήσετε την μίξη;</string>
+    <string name="credit_balance_button_maybe_later">Ίσως αργότερα</string>
+    <string name="request_username_character_requirement">Μόνο γράμματα, αριθμοί και παύλες</string>
+    <string name="request_username_length_requirement">Μεταξύ 3 και 23 χαρακτήρων</string>
+    </resources>
