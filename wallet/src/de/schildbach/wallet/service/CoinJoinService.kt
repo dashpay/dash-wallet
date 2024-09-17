@@ -631,8 +631,8 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     override suspend fun getMixingProgress(): Double {
-        val wallet = walletDataProvider.wallet as WalletEx
-        return wallet.coinJoin.mixingProgress * 100.0
+        val wallet = walletDataProvider.wallet as? WalletEx
+        return wallet?.let { it.coinJoin.mixingProgress * 100.0 } ?: 0.0
     }
 
     private suspend fun updateProgress() {
