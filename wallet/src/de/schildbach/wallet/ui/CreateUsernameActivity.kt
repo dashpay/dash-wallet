@@ -126,7 +126,9 @@ class CreateUsernameActivity : LockScreenActivity() {
                 fromOnboardng = fromOnboardng
             )
 
-            if (requestUserNameViewModel.isUserNameRequested()) {
+            if (requestUserNameViewModel.isUserNameRequested() &&
+                !requestUserNameViewModel.isUserNameRequested() &&
+                !requestUserNameViewModel.isUsernameLostAfterVoting()) {
                 navGraph.setStartDestination(R.id.votingRequestDetailsFragment)
             } else {
                 if (!dashPayViewModel.isDashPayInfoShown()) {
@@ -135,7 +137,6 @@ class CreateUsernameActivity : LockScreenActivity() {
                     navGraph.setStartDestination(R.id.requestUsernameFragment)
                 }
             }
-
 
             navController.graph = navGraph
             navController.setGraph(navController.graph, bundle)
