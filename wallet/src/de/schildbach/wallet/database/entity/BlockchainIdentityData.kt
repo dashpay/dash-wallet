@@ -162,7 +162,6 @@ open class BlockchainIdentityConfig @Inject constructor(
         val PRIVACY_MODE = stringPreferencesKey("privacy_mode")
         val BALANCE = longPreferencesKey("identity_balance")
 
-        // val REQUESTED_USERNAME = stringPreferencesKey("requested_username")
         val REQUESTED_USERNAME_LINK = stringPreferencesKey("requested_username_link")
         val CANCELED_REQUESTED_USERNAME_LINK = booleanPreferencesKey("cancelled_requested_username_link")
         val USERNAME_REQUESTED = stringPreferencesKey("username_requested")

@@ -11,18 +11,21 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dashj.platform.dashpay.UsernameRequestStatus
 import java.util.Date
 import java.util.concurrent.TimeUnit
 
@@ -140,10 +143,9 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 binding.checkAvailable.setImageResource(getCheckMarkImage(!it.usernameExists))
                 binding.checkBalance.setImageResource(getCheckMarkImage(it.enoughBalance))
                 binding.walletBalanceContainer.isVisible = !it.enoughBalance
-
                 if (it.usernameContestable || it.usernameContested) {
                     val startDate = Date(it.votingPeriodStart)
-                    val endDate = Date(startDate.time + TimeUnit.DAYS.toMillis(14))
+                    val endDate = Date(startDate.time + if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET) TimeUnit.DAYS.toMillis(14) else TimeUnit.MINUTES.toMillis(90))
                     if (it.votingPeriodStart == -1L && System.currentTimeMillis() - it.votingPeriodStart > TimeUnit.DAYS.toMillis(7)) {
                         binding.votingPeriodContainer.isVisible = false
                     } else {
@@ -163,10 +165,12 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                     it.usernameBlocked && it.usernameContestable -> {
                         binding.usernameAvailableMessage.text = getString(R.string.request_username_unavailable)
                         binding.checkAvailable.setImageResource(getCheckMarkImage(false))
+                        binding.votingPeriodContainer.isVisible = false
                     }
                     it.usernameExists -> {
                         binding.usernameAvailableMessage.text = getString(R.string.request_username_taken)
                         binding.checkAvailable.setImageResource(getCheckMarkImage(false, false))
+                        binding.votingPeriodContainer.isVisible = false
                     }
                     it.usernameContestable -> {
                         // voting period container will be visible
@@ -199,6 +203,9 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         }
 
         dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+            if (it?.usernameRequested == UsernameRequestStatus.LOST_VOTE || it?.usernameRequested == UsernameRequestStatus.LOCKED) {
+                return@observe
+            }
             if (it?.creationStateErrorMessage != null) {
                 requireActivity().finish()
             } else if ((it?.creationState?.ordinal ?: 0) > BlockchainIdentityData.CreationState.NONE.ordinal) {

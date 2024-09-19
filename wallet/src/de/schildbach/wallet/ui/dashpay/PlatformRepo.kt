@@ -232,7 +232,7 @@ class PlatformRepo @Inject constructor(
         return try {
             platform.names.getVoteContenders(username)
         } catch (e: Exception) {
-            Contenders(mapOf(), 0, 0)
+            Contenders(Optional.empty(), mapOf(), 0, 0)
         }
     }
 
