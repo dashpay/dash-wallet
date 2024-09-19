@@ -304,10 +304,12 @@
     <string name="request_username_available">Username is available</string>
     <string name="request_username_unavailable">Username is unavailable or blocked</string>
     <string name="request_username_taken">Username is taken</string>
+    <string name="request_username_taken_results">Username was taken by another user</string>
     <string name="requesting_your_username_title">Creating your username</string>
-    <string name="requesting_your_username_message">Your username johndoe is being requested on the Dash network. It may take some time.</string>
+    <string name="requesting_your_username_message">Your username %s is being requested on the Dash network. It may take some time.</string>
+    <string name="creating_your_username_message">Your username %s is being created on the Dash network. It may take some time.</string>
     <string name="requesting_your_username_error_title">Your username request failed</string>
-    <string name="requesting_your_username_error_message">For some reason, the request has failed. Please try again.</string>
+    <string name="requesting_your_username_error_message">For some reason, the request for the username %s has failed.</string>
     <string name="voting">Voting:</string>
     <string name="this_username_has_already_been_requested">This username has already been requested, but you can request it too and let the network vote to decide if you can have it</string>
     <string name="request_details">Request details</string>
@@ -406,4 +408,8 @@
     <string name="username_vote_one_left">One vote left</string>
     <string name="username_vote_none_left_message">You have already voted for this username %d times. You cannot cast any more votes for this username.</string>
     <string name="username_vote_none_left">No votes left</string>
+    <string name="request_username_blocked">Requested username has been blocked</string>
+    <string name="request_username_lost_vote">Requested username has been given to someone else</string>
+    <string name="request_username_blocked_message">The username %s was blocked by the Dash Network. Please try again by requesting another username.</string>
+    <string name="request_username_lost_vote_message">Due to the voting process, the Dash Network has decided to assign the username %s to someone else. Please try again by requesting another username.</string>
 </resources>
