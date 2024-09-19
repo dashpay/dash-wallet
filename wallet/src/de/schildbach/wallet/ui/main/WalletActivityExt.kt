@@ -119,9 +119,6 @@ object WalletActivityExt {
         navController.addOnDestinationChangedListener { _, _, arguments ->
             navView.isVisible = arguments?.getBoolean("ShowNavBar", false) == true
         }
-        if (Constants.SUPPORTS_PLATFORM) {
-            navView.menu.findItem(R.id.contactsFragment).isEnabled = false
-        }
     }
 
     fun MainActivity.checkTimeSkew(viewModel: MainViewModel, force: Boolean = false) {
