@@ -67,4 +67,13 @@ interface UsernameRequestDao {
         """
     )
     suspend fun remove(requestId: String)
+
+    @Query(
+        """
+        UPDATE username_requests
+            SET isApproved = false
+            WHERE username = :username;
+        """
+    )
+    suspend fun removeApproval(username: String)
 }

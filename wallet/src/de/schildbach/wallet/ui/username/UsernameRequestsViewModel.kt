@@ -243,6 +243,7 @@ class UsernameRequestsViewModel @Inject constructor(
 
         viewModelScope.launch {
             usernameRequestDao.getRequest(requestId)?.let { request ->
+                usernameRequestDao.removeApproval(request.username)
                 usernameRequestDao.update(request.copy(votes = request.votes + keysAmount, isApproved = true))
                 _uiState.update { it.copy(voteSubmitted = true) }
                 usernameVoteDao.insert(
