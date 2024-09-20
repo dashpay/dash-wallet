@@ -190,10 +190,11 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
-            val username = it.username!!
             if (!it.restoring && it.creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal &&
                 it.creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal &&
-                !Names.isUsernameContestable(username)) {
+                it.username?.let { username ->!Names.isUsernameContestable(username) } == true
+            ) {
+                val username = it.username
 
                 binding.joinDashpayContainer.visibility = View.GONE
                 binding.requestedUsernameContainer.visibility = View.VISIBLE
