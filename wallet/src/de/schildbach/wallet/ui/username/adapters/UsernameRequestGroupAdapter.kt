@@ -215,6 +215,9 @@ class UsernameRequestViewHolder(
         binding.root.setOnClickListener {
             listener.invoke(usernameRequest)
         }
+        binding.cancelApprovalButton.setOnClickListener {
+            listener.invoke(usernameRequest)
+        }
     }
 }
 
