@@ -151,8 +151,17 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
 
         viewModel.dashPayProfile.observe(viewLifecycleOwner) { profile ->
-            ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile, true)
-            setNotificationIndicator()
+            if (viewModel.hasIdentity) {
+                ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile, true)
+                setNotificationIndicator()
+            }
+        }
+
+        viewModel.blockchainIdentity.observe(viewLifecycleOwner) { identity ->
+            if (identity?.creationComplete == true) {
+                ProfilePictureDisplay.display(binding.dashpayUserAvatar, viewModel.dashPayProfile.value, true)
+                setNotificationIndicator()
+            }
         }
 
         viewModel.notificationCountData.observe(viewLifecycleOwner) { setNotificationIndicator() }
