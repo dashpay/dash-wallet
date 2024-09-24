@@ -724,4 +724,8 @@ class MainViewModel @Inject constructor(
         val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
         (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
     }
+
+    fun isTestNet(): Boolean {
+        return walletData.wallet?.params?.id != NetworkParameters.ID_MAINNET
+    }
 }
