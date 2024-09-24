@@ -630,7 +630,7 @@ class CreateIdentityService : LifecycleService() {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKING)
 
 
-                val contenders = platformRepo.platform.names.getVoteContenders(blockchainIdentityData.username!!)
+                val contenders = platformRepo.getVoteContenders(blockchainIdentityData.username!!)
 
                 blockchainIdentity.currentVotingPeriodStarts = System.currentTimeMillis()
                 blockchainIdentity.currentUsernameRequested = true
@@ -820,7 +820,7 @@ class CreateIdentityService : LifecycleService() {
                 val contestedNames = platformRepo.platform.names.getContestedNames()
 
                 contestedNames.forEach { name ->
-                    val voteContenders = platformRepo.platform.names.getVoteContenders(name)
+                    val voteContenders = platformRepo.getVoteContenders(name)
                     val winner = voteContenders.winner
                     voteContenders.map.forEach { (identifier, documentWithVotes) ->
                         if (blockchainIdentity.uniqueIdentifier == identifier) {

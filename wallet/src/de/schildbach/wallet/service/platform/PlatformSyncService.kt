@@ -1046,7 +1046,7 @@ class PlatformSynchronizationService @Inject constructor(
             val myIdentifier = platformRepo.blockchainIdentity.uniqueIdentifier
             for (name in contestedNames) {
                 try {
-                    val voteContender = platform.platform.names.getVoteContenders(name)
+                    val voteContender = platformRepo.getVoteContenders(name)
 
                     voteContender.map.forEach { (identifier, contender) ->
 

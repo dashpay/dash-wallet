@@ -230,7 +230,7 @@ class PlatformRepo @Inject constructor(
 
     fun getVoteContenders(username: String): Contenders {
         return try {
-            platform.names.getVoteContenders(username)
+            platform.names.getVoteContenders(Names.normalizeString(username))
         } catch (e: Exception) {
             Contenders(Optional.empty(), mapOf(), 0, 0)
         }
