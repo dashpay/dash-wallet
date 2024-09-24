@@ -79,6 +79,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.lang.IllegalStateException
 import java.util.*
 import javax.inject.Inject
 
@@ -97,6 +98,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
         fun createIntent(context: Context): Intent {
             return Intent(context, MainActivity::class.java).apply {
+                putExtra(EXTRA_NAVIGATION_DESTINATION, R.id.walletFragment)
                 addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
         }
@@ -398,9 +400,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             }
         }
         if (intent.hasExtra(EXTRA_NAVIGATION_DESTINATION)) {
-            val destination = intent.extras!!.getInt(EXTRA_NAVIGATION_DESTINATION)
-            val navController = findNavController(R.id.nav_host_fragment)
-            navController.navigate(destination)
+            try {
+                val destination = intent.extras!!.getInt(EXTRA_NAVIGATION_DESTINATION)
+                val navController = findNavController(R.id.nav_host_fragment)
+                navController.navigate(destination)
+            } catch (e: IllegalStateException) {
+                // swallow for now, this happens when the MainActivity is first created?
+            }
         }
         val action = intent.action
         val extras = intent.extras
