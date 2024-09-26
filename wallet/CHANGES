@@ -1,4 +1,8 @@
 Dash Wallet
+v10.3.0
+* Add CoinJoin Support
+* Merge and hide DashPay functionality
+
 v10.2.1
 * Target Android 14
 * Fix rare crash when displaying transaction details
