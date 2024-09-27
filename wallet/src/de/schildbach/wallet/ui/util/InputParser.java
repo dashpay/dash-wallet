@@ -129,6 +129,14 @@ public abstract class InputParser {
 
                     error(x, R.string.input_parser_invalid_address);
                 }
+            } else if (PATTERN_DASH_IDENTITY.matcher(input).matches()) {
+                try {
+                    handlePaymentIntent(PaymentIntent.fromUserId(input));
+                } catch (final AddressFormatException x) {
+                    log.info("got invalid dash identity", x);
+
+                    error(x, R.string.input_parser_invalid_address);
+                }
             } else if (PATTERN_DUMPED_PRIVATE_KEY_UNCOMPRESSED.matcher(input).matches()
                     || PATTERN_DUMPED_PRIVATE_KEY_COMPRESSED.matcher(input).matches()) {
                 try {
@@ -410,7 +418,7 @@ public abstract class InputParser {
 
             final PaymentIntent paymentIntent = new PaymentIntent(PaymentIntent.Standard.BIP70, pkiName, pkiCaName,
                     outputs.toArray(new PaymentIntent.Output[0]), memo, paymentUrl, merchantData, null,
-                    paymentRequestHash, paymentSession.getExpires());
+                    paymentRequestHash, paymentSession.getExpires(), null, null);
 
             if (paymentIntent.hasPaymentUrl() && !paymentIntent.isSupportedPaymentUrl())
                 throw new PaymentProtocolException.InvalidPaymentURL(
@@ -452,4 +460,6 @@ public abstract class InputParser {
             .compile("6P" + "[" + new String(Base58.ALPHABET) + "]{56}");
     private static final Pattern PATTERN_TRANSACTION = Pattern
             .compile("[0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$\\*\\+\\-\\.\\/\\:]{100,}");
+    private static final Pattern PATTERN_DASH_IDENTITY = Pattern
+            .compile("[" + new String(Base58.ALPHABET) + "]{43,44}");
 }

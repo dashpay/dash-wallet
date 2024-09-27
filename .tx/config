@@ -50,6 +50,13 @@ source_lang = en
 type        = ANDROID
 lang_map    = sl_SI: sl, zh_TW: zh-rTW
 
+[o:dash:p:dash-mobile-wallets:r:strings-dashpay]
+file_filter = wallet/res/values-<lang>/strings-dashpay.xml
+source_file = wallet/res/values/strings-dashpay.xml
+source_lang = en
+type        = ANDROID
+lang_map    = sl_SI: sl, zh_TW: zh-rTW
+
 [o:dash:p:dash-mobile-wallets:r:strings-uphold]
 file_filter = integrations/uphold/src/main/res/values-<lang>/strings-uphold.xml
 source_file = integrations/uphold/src/main/res/values/strings-uphold.xml

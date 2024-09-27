@@ -90,6 +90,9 @@ class SetupPinDuringUpgradeDialog(
                 Status.LOADING -> {
                     setState(State.DECRYPTING)
                 }
+                else -> {
+                    // ignore
+                }
             }
         }
     }

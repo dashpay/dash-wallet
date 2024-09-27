@@ -29,8 +29,10 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.payments.ConfirmTransactionLauncher
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.*
 import de.schildbach.wallet.service.AndroidActionsService
 import de.schildbach.wallet.service.AppRestartService
@@ -38,7 +40,9 @@ import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.more.tools.ZenLedgerApi
 import de.schildbach.wallet.ui.more.tools.ZenLedgerClient
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
+import de.schildbach.wallet_test.BuildConfig
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.LockScreenBroadcaster
@@ -49,12 +53,18 @@ import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApiAggregator
 import org.dash.wallet.integrations.uphold.api.UpholdClient
+import org.dash.wallet.features.exploredash.network.service.stubs.FakeDashDirectSendService
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class AppModule {
     companion object {
+        @Provides
+        fun provideContext(@ApplicationContext context: Context): Context {
+            return context
+        }
+
         @Provides
         fun provideApplication(
             @ApplicationContext context: Context
@@ -88,17 +98,29 @@ abstract class AppModule {
         @Provides
         fun provideConfiguration(@ApplicationContext context: Context): Configuration =
             Configuration(PreferenceManager.getDefaultSharedPreferences(context), context.resources)
+
+        @Provides
+        fun provideSendPaymentService(
+            walletData: WalletDataProvider,
+            walletApplication: WalletApplication,
+            securityFunctions: SecurityFunctions,
+            packageInfoProvider: PackageInfoProvider,
+            coinJoinConfig: CoinJoinConfig
+        ): SendPaymentService {
+            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, coinJoinConfig)
+
+            return if (BuildConfig.FLAVOR.lowercase() == "prod") {
+                realService
+            } else {
+                FakeDashDirectSendService(realService, walletData)
+            }
+        }
     }
 
     @Binds
     abstract fun bindAnalyticsService(
         analyticsService: FirebaseAnalyticsServiceImpl
     ): AnalyticsService
-
-    @Binds
-    abstract fun bindSendPaymentService(
-        sendCoinsTaskRunner: SendCoinsTaskRunner
-    ): SendPaymentService
 
     @Binds
     abstract fun bindConfirmTransactionService(

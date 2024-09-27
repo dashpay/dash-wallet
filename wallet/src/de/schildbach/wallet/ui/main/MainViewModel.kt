@@ -20,19 +20,66 @@ package de.schildbach.wallet.ui.main
 import android.os.LocaleList
 import android.telephony.TelephonyManager
 import androidx.annotation.VisibleForTesting
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.MAX_ALLOWED_AHEAD_TIMESKEW
+import de.schildbach.wallet.service.MAX_ALLOWED_BEHIND_TIMESKEW
+import de.schildbach.wallet.service.MixingStatus
+import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
+import de.schildbach.wallet.transactions.coinjoin.CoinJoinTxWrapperFactory
+import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
+import de.schildbach.wallet.ui.dashpay.NotificationCountLiveData
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.transactions.TransactionRowView
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import de.schildbach.wallet.util.getTimeSkew
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.CurrencyInfo
@@ -48,38 +95,55 @@ import org.dash.wallet.common.services.RateRetrievalState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsTimer
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
-import org.dash.wallet.common.util.Constants.HTTP_CLIENT
-import org.dash.wallet.common.util.head
-import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
+import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
+import kotlin.math.abs
+import java.text.DecimalFormat
 import java.util.Currency
 import java.util.Locale
 import javax.inject.Inject
-import kotlin.math.abs
+import kotlin.collections.set
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val analytics: AnalyticsService,
+    val analytics: AnalyticsService,
     private val config: Configuration,
     private val walletUIConfig: WalletUIConfig,
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
+    private val walletApplication: WalletApplication,
+    val platformRepo: PlatformRepo,
+    val platformService: PlatformService,
+    val platformSyncService: PlatformSyncService,
+    blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val savedStateHandle: SavedStateHandle,
     private val metadataProvider: TransactionMetadataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
     val biometricHelper: BiometricHelper,
-    private val telephonyManager: TelephonyManager
-) : ViewModel() {
+    private val telephonyManager: TelephonyManager,
+    private val invitationsDao: InvitationsDao,
+    userAlertDao: UserAlertDao,
+    dashPayProfileDao: DashPayProfileDao,
+    private val dashPayConfig: DashPayConfig,
+    private val coinJoinConfig: CoinJoinConfig,
+    private val coinJoinService: CoinJoinService
+) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     companion object {
         private const val THROTTLE_DURATION = 500L
         private const val DIRECTION_KEY = "tx_direction"
+        private const val TIME_SKEW_TOLERANCE = 3600000L // seconds (1 hour)
+
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
 
     private val workerJob = SupervisorJob()
+
     @VisibleForTesting
     val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
@@ -144,14 +208,71 @@ class MainViewModel @Inject constructor(
 
     val showTapToHideHint = walletUIConfig.observe(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT).asLiveData()
 
-    val isPassphraseVerified: Boolean
-        get() = !config.remindBackupSeed
+    private val _isNetworkUnavailable = MutableLiveData<Boolean>()
+    val isNetworkUnavailable: LiveData<Boolean>
+        get() = _isNetworkUnavailable
 
     private val _stakingAPY = MutableLiveData<Double>()
+
+    val isPassphraseVerified: Boolean
+        get() = !config.remindBackupSeed
     val stakingAPY: LiveData<Double>
         get() = _stakingAPY
 
     val currencyChangeDetected = SingleLiveEvent<Pair<String, String>>()
+
+    // CoinJoin
+    val coinJoinMode: Flow<CoinJoinMode>
+        get() = coinJoinConfig.observeMode()
+    val mixingState: Flow<MixingStatus>
+        get() = coinJoinService.observeMixingState()
+    val mixingProgress: Flow<Double>
+        get() = coinJoinService.observeMixingProgress()
+    val mixingSessions: Flow<Int>
+        get() = coinJoinService.observeActiveSessions()
+
+    var decimalFormat: DecimalFormat = DecimalFormat("0.000")
+    val walletBalance: String
+        get() = decimalFormat.format(walletData.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED).toBigDecimal())
+
+    val mixedBalance: String
+        get() = decimalFormat.format((walletData.wallet as WalletEx).coinJoinBalance.toBigDecimal())
+
+    // DashPay
+    private val isPlatformAvailable = MutableStateFlow(false)
+
+
+    val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
+        addSource(isPlatformAvailable.asLiveData()) {
+            value = combineLatestData()
+        }
+        addSource(_isBlockchainSynced) {
+            value = combineLatestData()
+        }
+        addSource(blockchainIdentity) {
+            value = combineLatestData()
+        }
+        addSource(_balance) {
+            value = combineLatestData()
+        }
+    }
+
+    val isAbleToCreateIdentity: Boolean
+        get() = isAbleToCreateIdentityLiveData.value ?: false
+
+    val showCreateUsernameEvent = SingleLiveEvent<Unit>()
+    val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
+    val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
+    var processingSeriousError = false
+
+    val notificationCountData =
+        NotificationCountLiveData(walletApplication, platformRepo, platformSyncService, dashPayConfig, viewModelScope)
+    val notificationCount: Int
+        get() = notificationCountData.value ?: 0
+
+    private var contactRequestTimer: AnalyticsTimer? = null
+
+    // end DashPay
 
     init {
         transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
@@ -203,6 +324,38 @@ class MainViewModel @Inject constructor(
                 exchangeRatesProvider.observeStaleRates(code)
             }
             .onEach(_rateStale::emit)
+            .launchIn(viewModelScope)
+
+        // DashPay
+        startContactRequestTimer()
+
+        dashPayConfig.observe(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME)
+            .filterNotNull()
+            .distinctUntilChanged()
+            .onEach { lastSeenNotification ->
+                startContactRequestTimer()
+                forceUpdateNotificationCount()
+
+                if (lastSeenNotification != DashPayConfig.DISABLE_NOTIFICATIONS) {
+                    userAlertDao.observe(lastSeenNotification)
+                        .filterNotNull()
+                        .distinctUntilChanged()
+                        .onEach { forceUpdateNotificationCount() }
+                }
+            }
+            .launchIn(viewModelScope)
+
+        blockchainStateProvider.observeSyncStage()
+            .distinctUntilChanged()
+            .onEach { syncStage ->
+                if (syncStage == PeerGroup.SyncStage.PREBLOCKS || syncStage == PeerGroup.SyncStage.BLOCKS && !isPlatformAvailable.value) {
+                    isPlatformAvailable.value = if (Constants.SUPPORTS_PLATFORM) {
+                        platformService.isPlatformAvailable()
+                    } else {
+                        false
+                    }
+                }
+            }
             .launchIn(viewModelScope)
     }
 
@@ -256,16 +409,24 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    suspend fun getDeviceTimeSkew(): Long {
+    suspend fun getCoinJoinMode(): CoinJoinMode {
+        return coinJoinConfig.getMode()
+    }
+
+    suspend fun getDeviceTimeSkew(force: Boolean): Pair<Boolean, Long> {
         return try {
-            val systemTimeMillis = System.currentTimeMillis()
-            val result = HTTP_CLIENT.head("https://www.dash.org/")
-            val networkTime = result.headers.getDate("date")?.time
-            requireNotNull(networkTime)
-            abs(systemTimeMillis - networkTime)
+            val timeSkew = getTimeSkew(force)
+            val maxAllowedTimeSkew: Long = if (coinJoinConfig.getMode() == CoinJoinMode.NONE) {
+                TIME_SKEW_TOLERANCE
+            } else {
+                if (timeSkew > 0) MAX_ALLOWED_AHEAD_TIMESKEW * 3 else MAX_ALLOWED_BEHIND_TIMESKEW * 2
+            }
+            coinJoinService.updateTimeSkew(timeSkew)
+            log.info("timeskew: {} ms", timeSkew)
+            return Pair(abs(timeSkew) > maxAllowedTimeSkew, timeSkew)
         } catch (ex: Exception) {
             // Ignore errors
-            0L
+            Pair(false, 0)
         }
     }
 
@@ -322,20 +483,50 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun refreshTransactions(filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
+    private suspend fun refreshTransactions(filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
         walletData.wallet?.let { wallet ->
+            val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
+
+            if (platformRepo.hasIdentity) {
+                val contacts = platformRepo.searchContacts(
+                    "",
+                    UsernameSortOrderBy.LAST_ACTIVITY,
+                    false
+                )
+                contacts.data?.forEach { result ->
+                    contactsByIdentity[result.dashPayProfile.userId] = result.dashPayProfile
+                }
+            }
+
             val transactionViews = walletData.wrapAllTransactions(
-                FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
+                FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet),
+                CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
             ).filter { it.passesFilter(filter, metadata) }
                 .sortedWith(TransactionWrapperComparator())
                 .map {
+                    var contact: DashPayProfile? = null
+                    val tx = it.transactions.first()
+                    val isInternal = tx.isEntirelySelf(wallet)
+
+                    if (it.transactions.size == 1) {
+                        if (!isInternal && platformRepo.hasIdentity) {
+                            val contactId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
+
+                            if (contactId != null) {
+                                contact = contactsByIdentity[contactId]
+                            }
+                        }
+                    }
+
                     TransactionRowView.fromTransactionWrapper(
                         it,
                         walletData.transactionBag,
                         Constants.CONTEXT,
+                        contact,
                         metadata[it.transactions.first().txId]
                     )
                 }
+
             _transactions.postValue(transactionViews)
         }
     }
@@ -356,6 +547,7 @@ class MainViewModel @Inject constructor(
         }
 
         _isBlockchainSyncFailed.postValue(state.syncFailed())
+        _isNetworkUnavailable.postValue(state.impediments.contains(BlockchainState.Impediment.NETWORK))
     }
 
     private fun updatePercentage(state: BlockchainState) {
@@ -460,5 +652,81 @@ class MainViewModel @Inject constructor(
 
     private fun getCurrentCountry(): String {
         return LocaleList.getDefault()[0].country
+    }
+
+    // DashPay
+
+    fun reportContactRequestTime() {
+        contactRequestTimer?.logTiming()
+        contactRequestTimer = null
+    }
+
+    private fun forceUpdateNotificationCount() {
+        notificationCountData.onContactsUpdated()
+        viewModelScope.launch(Dispatchers.IO) {
+            platformSyncService.updateContactRequests()
+        }
+    }
+
+    suspend fun dismissUsernameCreatedCardIfDone(): Boolean {
+        val data = blockchainIdentityDataDao.loadBase()
+
+        if (data.creationState == BlockchainIdentityData.CreationState.DONE) {
+            platformRepo.doneAndDismiss()
+            return true
+        }
+
+        return false
+    }
+
+    fun dismissUsernameCreatedCard() {
+        viewModelScope.launch {
+            platformRepo.doneAndDismiss()
+        }
+    }
+
+    fun joinDashPay() {
+        showCreateUsernameEvent.call()
+    }
+
+    fun startBlockchainService() {
+        walletApplication.startBlockchainService(true)
+    }
+
+    suspend fun getProfile(profileId: String): DashPayProfile? {
+        return platformRepo.loadProfileByUserId(profileId)
+    }
+
+    suspend fun getRequestedUsername(): String =
+        blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME) ?: ""
+    suspend fun getInviteHistory() = invitationsDao.loadAll()
+
+    private fun combineLatestData(): Boolean {
+        return if (!Constants.SUPPORTS_PLATFORM) {
+            false
+        } else {
+            val isPlatformAvailable = isPlatformAvailable.value
+            val isSynced = _isBlockchainSynced.value ?: false
+            val noIdentityCreatedOrInProgress =
+                (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
+            return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress
+        }
+    }
+
+    private fun startContactRequestTimer() {
+        contactRequestTimer = AnalyticsTimer(
+            analytics,
+            log,
+            AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_RECEIVE
+        )
+    }
+
+    fun addCoinJoinToWallet() {
+        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
+        (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
+    }
+
+    fun isTestNet(): Boolean {
+        return walletData.wallet?.params?.id != NetworkParameters.ID_MAINNET
     }
 }

@@ -1,0 +1,406 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="choose_your_username">选择您的 <b>Dash
+用户名</b></string>
+    <string name="identity_min_3_chars">3-23个字符之间</string>
+    <string name="identity_alphanum_only">仅限字母, 数字和连字符</string>
+    <string name="identity_hyphen_rule">首尾必须是字母或数字</string>
+    <string name="identity_username_validating">正在验证用户名...</string>
+    <string name="identity_username_available">用户名可用</string>
+    <string name="identity_username_taken">用户名已被使用</string>
+    <string name="platform_communication_error">与Dash 平台通信错误</string>
+    <string name="register">注册</string>
+
+    <string name="new_account_confirm_button_text">确认并付款</string>
+    <string name="invitation_confirm_button_text">确认</string>
+    <string name="new_account_confirm_accept">我同意</string>
+    <string name="new_account_confirm_upgrade_fee">升级费用</string>
+    <string name="new_account_confirm_message">您已经选择了%s作为您的用户名. 请注意用户名一旦注册, 便无法再更改.</string>
+    <string name="invitation_confirm_title">邀请费用</string>
+    <string name="invitation_confirm_message">每个邀请都将获得该金额的资助, 以便收款人可以在Dash网络上快速创建他们的用户名</string>
+    <string name="invitation_init_title">邀请</string>
+    <string name="invitation_init_header">邀请您的朋友和家人</string>
+    <string name="invitation_init_message">帮助您的亲友加入Dash网络. 邀请他们进入社交银行.</string>
+    <string name="invitation_init_button_text">创建新的邀请</string>
+    <string name="invitation_notifications_hint">邀请您的朋友和家人加入Dash网络</string>
+    <string name="invitation_notifications_hint1">邀请他人加入Dash网络</string>
+    <string name="invitation_notifications_hint1_or">或</string>
+    <string name="invitation_created_title">邀请</string>
+    <string name="invitation_created_successfully">成功创建邀请</string>
+    <string name="invitation_created_tag_title">标记仅供参考</string>
+    <string name="invitation_created_tag">例: 爸吧</string>
+    <string name="invitation_created_preview">预览链接</string>
+    <string name="invitation_created_copy_link">复制邀请链接</string>
+    <string name="invitation_created_send_invitation">发送邀请</string>
+    <string name="invitation_created_send_invitation_again">重新发送</string>
+    <string name="invitation_created_maybe_later">以后再说</string>
+    <string name="invitation_preview_title">立刻加入</string>
+    <string name="invitation_preview_message">您已被%s邀请. 开始使用 Dash 加密数字货币.</string>
+    <string name="invitation_preview_close">关闭</string>
+    <string name="invitation_cant_afford_title">钱包余额不足</string>
+    <string name="invitation_cant_afford_message">您需要至少%s Dash 来创建一个邀请</string>
+    <string name="invitation_creating_error_title">创建邀请时出错</string>
+    <string name="invitation_creating_error_message">创建您的邀请时出现了一个问题. 请重试一次.</string>
+    <string name="invitation_creating_error_message_not_synced">等待同步以完成并再试一次.</string>
+    <string name="invitation_creating_progress_title">正在创建邀请</string>
+    <string name="invitation_verifying_progress_title">正在验证邀请</string>
+    <string name="invitation_share_message">邀请仅单次使用. 请不要分享到群中.</string>
+    <string name="invitation_share_title">DashPay 邀请</string>
+    <string name="invitation_already_claimed_title">邀请已被认领</string>
+    <string name="invitation_already_claimed_message">您来自%s的邀请已被接受</string>
+    <string name="invitation_invalid_invite_title">无效邀请</string>
+    <string name="invitation_invalid_invite_message">您来自%s的邀请无效</string>
+    <string name="invitation_username_already_found_title">已找到的用户名</string>
+    <string name="invitation_username_already_found_message">由于您已经有了 Dash用户名, 因此无法认领此邀请</string>
+    <string name="invitation_onboarding_has_began_error_title">登入错误</string>
+    <string name="invitation_onboarding_has_began_error">登入正在进行, 请在完成钱包创建后接受您的邀请.</string>
+    <string name="invitation_accept_title_1">获取您的用户名</string>
+    <string name="invitation_accept_title_2">添加您的朋友和家人</string>
+    <string name="invitation_accept_message_2">邀请您的家人, 通过搜索用户名找到您的朋友</string>
+    <string name="invitation_accept_title_3">个性化</string>
+    <string name="invitation_accept_message_3">上传您的照片, 个性化您的身份信息</string>
+    <string name="invitation_accept_continue">继续</string>
+    <string name="invitation_contact_request_sent_message">一个好友请求已被发送到%s因为他们邀请了您.</string>
+
+    <string name="username_being_created">您的用户名%s已经在 Dash 网络被创建</string>
+    <string name="username_being_requested">您的用户名%s正在 Dash 网络中被请求</string>
+
+    <string name="processing_let_me_know">完成后通知我</string>
+    <string name="processing_home_title">正在升级到进化版</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) 正在处理付款</string>
+    <string name="processing_home_step_2">(2/3) ID 创建中</string>
+    <string name="processing_home_step_2_restoring">(2/3) ID 找回中</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) 正在注册用户名</string>
+    <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) 用户名请求中</string>
+    <string name="processing_home_step_3_restoring">(3/3) 用户名找回中</string>
+    <string name="processing_done_title">您好 %s,</string>
+    <string name="processing_done_subtitle">您的账户已就绪</string>
+    <string name="processing_voting_subtitle">对于您的用户名投票已开始</string>
+    <string name="processing_error_title">错误升级</string>
+    <string name="processing_error_title_from_invite">来自邀请的升级出错</string>
+    <string name="processing_error_retry">重试</string>
+    <string name="processing_username_unavailable_title">用户名不可用</string>
+    <string name="processing_username_unavailable_subtitle">请选择另一个</string>
+
+    <string name="dashpay_upgrade_fee">升级费用</string>
+    <string name="dashpay_invite_fee">邀请费用</string>
+    <string name="dashpay_topup_fee">充值费用</string>
+    <string name="search_user_find_a_user">在Dash网络上查找用户</string>
+    <string name="search_for_a_user">在Dash网络上搜索用户</string>
+    <string name="search_user_input_placeholder">这里输入用户名来搜索</string>
+    <string name="add_new_contact">添加新朋友</string>
+    <string name="send_contact_request">发送朋友申请</string>
+    <string name="sending_contact_request">发送好友申请</string>
+    <string name="sending_contact_request_short">邀请</string>
+    <string name="accepting_contact_request">正在接受好友请求</string>
+    <string name="accepting_contact_request_short">正在接受</string>
+    <string name="search_user_no_results">没有找到匹配用户</string>
+    <string name="search_user_loading">在 Dash 网络正在搜索用户名 <b>"%"</b> </string>
+    <string name="contact_request_pending">朋友申请等待中</string>
+    <string name="pay">支付</string>
+    <string name="contact_request_received_title">%s已被邀请成为好友</string>
+    <string name="contact_request_accept">同意</string>
+    <string name="contact_request_ignore">忽略</string>
+
+    <string name="contacts_no_results">没有匹配的联系人</string>
+
+    <string name="contacts_title">通讯录</string>
+    <string name="contacts_send_to_contact_title">发送给一个联系人</string>
+    <string name="contacts_search_for">搜索朋友</string>
+    <string name="contact_requests_title">朋友申请</string>
+    <string name="contacts_add_new_contact">添加新的联系人</string>
+    <string name="contacts_contact_requests_count">好友申请 (%d)</string>
+    <string name="contacts_contact_requests">朋友申请</string>
+    <string name="contacts_contact_requests_view">查看全部</string>
+    <string name="contacts_my_contacts">我的通讯录</string>
+    <string name="contacts_sort_order">排列方式:</string>
+    <string-array name="contacts_sort">
+        <item>名称</item>
+    </string-array>
+
+    <string name="notifications_title">通知</string>
+    <string name="notifications_title_with_count">通知 (%d)</string>
+    <string name="notifications_profile_activity">活动</string>
+    <string name="notifications_new">新的</string>
+    <string name="notifications_earlier">先前的</string>
+    <string name="notifications_none_new">没有新的通知</string>
+    <string name="notifications_contact_has_accepted">%s已通过了您的好友请求.</string>
+    <string name="notifications_you_have_accepted">您已接受来自%s的好友请求</string>
+    <string name="notifications_you_sent">您发送了好友请求到%s</string>
+    <string name="notifications_you_received">%s向您发送了好友请求</string>
+
+    <string name="identity_complete_message">您的用户名%s已成功在 Dash 网络被创建</string>
+    <string name="request_complete_message">您的用户名%s已成功在 Dash 网络被请求</string>
+
+    <string name="scan_to_pay_username_dialog_message">不是一个有效的 Dash 用户名或身份\n\n%s</string>
+    <string name="send_coins_to_username">正在发送至</string>
+    <string name="contact_history_disclaimer">添加 % 作为您的联系人来 <b>直接向其用户名付款</b> 并 <b>保留相互的交易历史记录</b></string>
+    <string name="contact_history_disclaimer_pending">一旦 % 接受了您的好友请求您可以 <b>直接向其用户名付款</b></string>
+    <string name="stranger_activity_disclaimer_text">直接向地址支付的款项不会保留在活动中.</string>
+    <string name="error_loading_identity">加载身份出错</string>
+
+    <string name="edit_profile">编辑个人资料</string>
+    <string name="display_name">显示名称</string>
+    <string name="about_me">关于我</string>
+    <string name="char_count">%1$d/%2$d 字符</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">保存</string>
+    <string name="edit_profile_take_picture">使用照相机拍照</string>
+    <string name="edit_profile_choose_picture">从图库中选择</string>
+    <string name="upgrade_to_evolution_title">加入 DashPay</string>
+    <string name="upgrade_to_evolution_message">创建您的用户名, 搜索朋友和家人的用户名并添加到您的通讯录中</string>
+    <string name="image_cropper_title">移动并缩放您的照片以找到最适合的效果</string>
+    <string name="select">选择</string>
+    <string name="unable_to_load_image">无法加载图片.</string>
+    <string name="profile_picture_upload_error_title">上传错误</string>
+    <string name="profile_picture_upload_error_message">无法上传您的照片.\n请再试一次.</string>
+    <string name="profile_picture_upload_try_again">再试一次</string>
+    <string name="profile_picture_uploading_title">请稍等</string>
+    <string name="profile_picture_uploading_message">正在上传您的图片到网络</string>
+    <string name="picture_upload_policy">上传图片政策</string>
+    <string name="imgur_policy_1">您选择的图片将匿名上传到 Imgur.</string>
+    <string name="imgur_policy_2">上传的图片可以被所有人查看.</string>
+    <string name="imgur_policy_3">只要您有权访问此钱包, 您就可以随时删除上传的图片.</string>
+    <string name="profile_picture_delete_title">您确定吗\?</string>
+    <string name="profile_picture_delete_message">此图片将不在 Dash 网络上被使用</string>
+    <string name="agree">同意</string>
+    <string name="yes">是的</string>
+    <string name="no">不是</string>
+
+    <string name="updating_profile">在Dash网络更新个人资料</string>
+    <string name="google_drive_policy_one">没有账户信息被储存在 Dash 网络或 DashPay钱包.</string>
+    <string name="google_drive_policy_two">上传的图片可以被所有人查看.</string>
+    <string name="google_drive_policy_three">只要您能够访问此设备的钱包便可以随时删除或更改图片.</string>
+
+    <string name="upload_image_message">正在上传您的图片到网络</string>
+    <string name="upload_image_please_wait">请稍等</string>
+    <string name="upload_image_error_message">无法上传您的图片. 请再试一次.</string>
+    <string name="upload_image_upload_error">上传错误</string>
+
+    <string name="edit_profile_google_drive">Google Drive</string>
+    <string name="edit_profile_imgur">Imgur</string>
+    <string name="google_drive_failed_authorization">Google Drive 验证失败.</string>
+
+
+    <string name="error_updating_profile_try_again">再试一次</string>
+    <string name="error_updating_profile_cancel">取消</string>
+    <string name="error_updating_profile_msg">更新个人资料出错</string>
+    <string name="error_updating_profile_code">代码: %s</string>
+    <string name="edit_profile_public_url">公共链接</string>
+    <string name="public_url_enter_url">粘贴您的图片链接</string>
+    <string name="public_url_error_message">无法获取图像. 请输入有效的图像URL.</string>
+    <string name="public_url_message">您可以在网络上指定任何公开可用的URL, 以便用户可以在 Dash 网络上看到它.</string>
+    <string name="public_url_more_info">更多信息</string>
+    <string name="public_url_fetching_image">获取图像</string>
+
+    <string name="gravatar">头像</string>
+    <string name="gravatar_email_prompt">输入您的Gravatar邮箱 ID</string>
+    <string name="gravatar_fetching">正在获取您的头像</string>
+    <string name="gravatar_email_sample">sample\@email.com</string>
+    <string name="gravatar_disclaimer">您的电子邮箱不会存储在 DashPay钱包或任何服务器上. 它用于获取您的 Gravatar账户详细信息, 之后会被丢弃.</string>
+    <string name="gravatar_email_error">无法获取您的头像. 请输入有效的头像邮箱 ID.</string>
+
+    <string name="where_to_store_your_picture">您想把您的照片存储在哪\?</string>
+    <string name="external_storage_disclaimer">您的图片始终在您的掌控中. Dash 不会存储您的任何数据, 包括您的个人资料图片.</string>
+    <string name="select_source_sign_in_required">需要登录</string>
+    <string name="select_source_google_drive">Google Drive</string>
+    <string name="select_source_no_sign_in_required">无需账户</string>
+
+    <string name="join_dashpay_subtitle">创建用户名, 添加您的好友...</string>
+    <string name="join_dashpay_more_subtitle">创建您的用户名, 查找您的好友并添加他们到您的联系人</string>
+    <string name="join">加入</string>
+
+    <string name="more_suggestions">更多建议</string>
+    <string name="users_that_matches">匹配的用户</string>
+    <string name="not_in_your_contacts">他当前未在您联系人中</string>
+    <string name="no_matching_contacts">联系人中未找到相匹配用户</string>
+    <string name="suggestions_empty_result_part_1">没有与此用户名匹配的用户</string>
+    <string name="suggestions_empty_result_part_2">在您的联系人中</string>
+    <string name="save_changes">保存更改</string>
+    <string name="save_profile_reminder_text">您向保存对个人资料所作的修改吗\?</string>
+    <string name="invitation_notification_text">邀请您的朋友和家人加入Dash网络.</string>
+    <string name="dashpay_min_balance_disclaimer">您需要至少 <b>%s</b> 来开始</string>
+    <string name="dashpay_insuffient_credits">没有足够的积分来执行此操作.</string>
+
+    <string name="about_developer_mode">开发者模式启动: 所有功能启动!</string>
+    <string name="about_developer_mode_disabled">开发者模式停用.</string>
+    <string name="invite_history_create_new_invite">创建新的邀请</string>
+    <string name="invitations_history_header">邀请记录</string>
+    <string name="invitations_filter_title">过滤邀请</string>
+    <string name="invite_history_empty">没创建任何邀请.</string>
+    <string name="invite_history_empty_claimed">没有被接受的邀请.</string>
+    <string name="invite_history_empty_pending">没有等待中的请求.</string>
+    <string name="invitation_details_invite_used_by">邀请已用于</string>
+    <string name="invitation_details_invite_without_username">邀请已接受. 用户名注册等待中.</string>
+    <string-array name="invite_filter">
+        <item>所有</item>
+        <item>等待中</item>
+        <item>已认领</item>
+    </string-array>
+
+    <!-- Private memo -->
+    <string name="private_memo">私人笔记</string>
+    <string name="add_note">添加笔记</string>
+    <string name="edit_note">编辑笔记</string>
+    <string name="note">笔记</string>
+
+    <string name="select_privacy_preferences">选择您的用户名隐私偏好</string>
+    <string name="please_note_cant_change_this_later">请注意您在之后无法再进行更改</string>
+    <string name="Intermediate_level_WIFI_Warning">中等隐私级别需要稳定的网络连接</string>
+    <string name="Advanced_level_WIFI_Warning">高等隐私级别需要稳定的网络连接</string>
+    <string name="privcay_level_WIFI_warning_desc">建议连接到Wi-Fi网络以避免任何资金损失</string>
+    <string name="continue_anyway">仍然继续</string>
+    <string name="welcome_to_dash_pay">欢迎来到 DashPay</string>
+    <string name="pay_to_usernames">以用户名支付. 无需使用字母数字地址.</string>
+    <string name="create_a_username">创建一个用户名</string>
+    <string name="add_your_friends_family">添加您的朋友 &amp; 家人</string>
+    <string name="invite_your_family">邀请您的家人, 通过搜索用户名找到您的朋友.</string>
+    <string name="personalise_profile">个性化的个人资料</string>
+    <string name="upload_your_picture">上传您的照片, 个性化您的身份信息.</string>
+    <string name="in_case_lose_your_passphrase">如果您丢失了您的密码, 您将会失去您申请用户名的权力.</string>
+    <string name="keep_your_passphrase_safe">保证您的密码安全</string>
+    <string name="pay_now">现在支付, 若未通过, 您可以创建另一个用户名无需再次支付 [检查是否为真]</string>
+    <string name="case_your_request_is_not_approved">如果您的申请没有被通过</string>
+    <string name="voting_requirement_subtitle">任何包括数字 2-9 或超过20个字符的用户名将自动被通过</string>
+    <string name="voting_requirement_title">仅在一些情况下需要投票</string>
+    <string name="dash_network_must_vote_to_approve">在用户名被创建前, Dash网络必须投票来通过您的申请.</string>
+    <string name="what_is_username_voting">什么是用户名投票\?</string>
+    <string name="usernames_blocked_title">一些用户名会被禁止</string>
+    <string name="usernames_blocked_subtitle">如果足够的网络节点认为此用户名不合适, 他们能够屏蔽它</string>
+    <string name="username_voting">用户名投票</string>
+    <string name="username_voting_subtitle">作为主节点用户, 您可以在用户能够创建用户名之前投票通过申请的用户名.</string>
+    <string name="voting_duplicates_only_title">只对重复项投票</string>
+    <string name="voting_duplicates_only_message">您能够查看所有申请, 但您只需对重复项投票</string>
+    <string name="all">所有</string>
+    <string name="n_usernames">%d 用户名</string>
+    <string name="n_requests">%d 请求</string>
+    <string name="search_by_username">以用户名搜索</string>
+    <string name="type">类型</string>
+    <string name="only_duplicates">仅重复项</string>
+    <string name="only_links">仅以链接申请</string>
+    <string name="only_links_short">伴有链接</string>
+    <string name="date">日期: %s</string>
+    <string name="votes">投票数: %s</string>
+
+    <string-array name="usernames_sort_by_options">
+        <item>新到旧</item>
+        <item>旧到新</item>
+        <item>从高到低</item>
+        <item>低到高</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>所有</item>
+        <item>我已通过的</item>
+        <item>我已否决的</item>
+    </string-array>
+
+    <string name="request_your_username">创建您的用户名</string>
+    <string name="request_your_hint">请注意您在之后将无法进行更改</string>
+    <string name="request_username">申请用户名</string>
+    <string name="request_voting_range">Dash 网络将对此用户名进行投票. 我们将通知您之后的结果 %s.</string>
+    <string name="request_username_available">用户名可用</string>
+    <string name="request_username_unavailable">用户名不可用或被禁止</string>
+    <string name="request_username_taken">用户名已被使用</string>
+    <string name="requesting_your_username_title">正在创建您的用户名</string>
+    <string name="requesting_your_username_message">您的用户名 某某 正在 Dash 网络中被请求. 它将会花费几分钟.</string>
+    <string name="requesting_your_username_error_title">您的用户名请求失败</string>
+    <string name="requesting_your_username_error_message">出于一些原因, 请求已失败. 请再试一次.</string>
+
+    <string name="voting">投票:</string>
+    <string name="this_username_has_already_been_requested">这个用户名已经被申请, 但您仍可以申请并让网络投票决定您是否可以获得它</string>
+    <string name="request_details">申请的细节</string>
+    <string name="request_details_subtitle">查看下方内容来验证此用户名的所有权</string>
+    <string name="vote_to_approve">投票通过</string>
+    <string name="identity">身份</string>
+    <string name="results">结果</string>
+    <string name="link">链接</string>
+    <string name="link_not_provided">未提供</string>
+    <string name="cancel_approval">取消通过</string>
+    <string name="verify_your_identity">验证您的身份来增加您获得所申请用户名的机会</string>
+    <string name="if_somebody">如果其他人像您一样也申请了相同的用户名, 我们将让网络决定谁能够得到它.</string>
+    <string name="the_link_will_be_visible">您发送的链接将仅对网络所有者可见</string>
+    <string name="verify_your_identity_voting">验证您的身份</string>
+    <string name="copy_the_text">复制文本</string>
+    <string name="please_vote_to_approve">请投票通过我所申请的 Dash 用户名 - %s</string>
+    <string name="prove_your_identity">证明您的身份</string>
+    <string name="make_a_post_with_the_text">在知名社交媒体或信息平台使用上述文本发布一个帖子以证明您是所申请用户名的原始持有者, 并将链接粘贴在下方</string>
+    <string name="paste_the_link">粘贴链接</string>
+    <string name="voting_key_title">输入您的投票私钥</string>
+    <string name="voting_key_hint">主节点投票密钥</string>
+    <string name="voting_key_input_error">您已输入了无效的密钥</string>
+    <string name="voting_key_add">添加您的投票私钥</string>
+    <string name="voting_key_add_subtitle">下列的 (多个) IP 地址与这个钱包相关联</string>
+    <string name="masternode_ip">主节点 IP 地址</string>
+    <string name="multiple_votes_cast">由于您的钱包存储了多个投票私钥, 您可以进行多次 %d 投票</string>
+    <string name="add_masternode_key">添加主节点投票私钥</string>
+    <string name="vote_submitted">您的投票已被提交</string>
+    <string name="vote_cancelled">您的投票已被取消</string>
+    <string name="quick_vote">快速投票</string>
+    <string name="quick_vote_subtitle">通过点击“投给所有”按钮, 您将自动为所有最先提交的过滤用户名 (%d) 投票</string>
+    <string name="vote_for_all">投给所有</string>
+    <string name="voting_period_active">用户名投票活跃周期</string>
+    <string name="there_was_a_network_error">产生了一个网络错误, 您可以再试一次无需额外费用</string>
+    <string name="requested_username_has_been">用户名已被请求.</string>
+    <string name="requested_voting_duration">结果在 %s.</string>
+    <string name="cancel_request">取消申请</string>
+    <string name="after_the_voting">当投票结束后我们将向您通知结果</string>
+    <string name="none">无</string>
+    <string name="verify_now">现在验证</string>
+    <string name="if_you_tap_cancel">如果您点击 “取消申请”, 您仍然可以再申请另一个用户名无需再次付款</string>
+    <string name="do_you_really_want_to_cancel">您真的想要取消用户名申请\?</string>
+    <string name="if_you_tap_cancel_request">如果您点击 “取消申请”, 您仍然可以再申请另一个用户名无需再次付款</string>
+    <string name="cant_open">无法打开</string>
+    <string name="invalid_link">无效的链接</string>
+    <string name="welcome_request_username_min_balance_disclaimer_all">您拥有 %s Dash. 一些用户名会至多花费 %s Dash.</string>
+    <string name="welcome_request_username_min_balance_disclaimer_noncontested">您需要拥有超过 %s Dash来创建一个用户名.</string>
+    <string name="request_username_min_balance_disclaimer">在 Dash 网络上申请一个用户名, 您需要持有超过 %s Dash</string>
+
+    <!-- CoinJoin -->
+    <string name="coinjoin">CoinJoin</string>
+    <string name="turned_off">已关闭</string>
+    <string name="coinjoin_info_subtitle">通过混合您的Dash将使您的交易更具隐私性</string>
+    <string name="coinjoin_description_1">这项功能被打开时, 您将只能花费已经混币的 Dash. 这项功能可以随时被关闭.</string>
+    <string name="coinjoin_description_2">当钱包打开时新接收的 Dash 将自动被混币</string>
+    <string name="coinjoin_description_3">打开这项功能将导致更高的电池使用率</string>
+    <string name="coinjoin_mixing_level_title">选择混币级别</string>
+    <string name="coinjoin_mixing_level_subtitle">您可以随时改变或停止混币级别</string>
+    <string name="coinjoin_mixing_transactions">混币交易</string>
+    <string name="coinjoin_transaction_group">这些是与混币相关的交易.</string>
+    <string name="intermediate">常规</string>
+    <string name="advanced">进阶</string>
+    <string name="intermediate_level_card_decs">具有高水平技术专长的进阶用户可以决定您的交易历史记录</string>
+    <string name="advanced_level_card_decs">具有任何水平技术专长的进阶用户都很难决定您的交易历史记录</string>
+    <string name="coinjoin_intermediate_time">最多30分钟</string>
+    <string name="coinjoin_advanced_time">多小时</string>
+    <string name="coinjoin_start">开始混币</string>
+    <string name="coinjoin_stop">停止混币</string>
+    <string name="coinjoin_mixing">混币</string>
+    <string name="coinjoin_paused">混币暂停</string>
+    <string name="coinjoin_not_started">尚未开始</string>
+    <string name="coinjoin_progress">%s中的 %s (%d%%) %s</string>
+    <string name="coinjoin_progress_balance">%2$s中的%1$s</string>
+    <string name="coinjoin_progress_finished">完全混币</string>
+    <string name="coinjoin_change_level_confirmation">您确定要改变隐私级别吗\?</string>
+    <string name="coinjoin_stop_mixing_title">您确定要停止混币吗\?</string>
+    <string name="coinjoin_stop_mixing_message">任何已混币的资金将会与您未混币的资金相加</string>
+    <string name="coinjoin_mixed_balance">混币余额:</string>
+
+    <!-- credit balance messages / buttons -->
+    <string name="credit_balance_empty_warning_title">您的积分余额不足</string>
+    <string name="credit_balance_low_warning_title">您的积分余额已用尽</string>
+    <string name="credit_balance_empty_warning_message">您可以继续使用 DashPay 进行支付, 但在充值积分余额之前您无法更新个人资料或添加更多联系人</string>
+    <string name="credit_balance_low_warning_message">充值您的积分余额, 以继续更改个人资料和添加联系人</string>
+    <string name="credit_balance_button_maybe_later">以后再说</string>
+    <string name="credit_balance_button_buy">购买积分</string>
+    <string name="credit_balance_insufficient_error_message">您没有足够的资金购买积分</string>
+    <string name="buy_credits_estimated_items">%s - %d 联系人 / %d 个人资料更新</string>
+
+    <string name="request_username_username_voting_message">+ 什么是用户名投票\?</string>
+    <string name="request_username_character_requirement">仅限字母, 数字和连字符</string>
+    <string name="request_username_balance_requirement">您需要拥有 0.25 DASH 来创建此用户名</string>
+    <string name="request_username_length_requirement">3-23个字符之间</string>
+    <string name="request_username_confirm">我同意</string>
+
+</resources>

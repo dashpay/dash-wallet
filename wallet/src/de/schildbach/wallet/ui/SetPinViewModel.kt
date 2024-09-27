@@ -90,6 +90,7 @@ class SetPinViewModel @Inject constructor(
     }
 
     fun initWallet() {
+        walletApplication.saveWalletAndFinalizeInitialization()
         startNextActivity.call(configuration.remindBackupSeed)
     }
 

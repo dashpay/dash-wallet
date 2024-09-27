@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingBottom="15dp"
+    tools:ignore="ContentDescription">
+
+    <ImageView
+        android:id="@+id/collapse_button"
+        android:layout_width="48dp"
+        android:layout_height="14dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        android:visibility="gone"
+        app:srcCompat="@drawable/ic_expand_less" />
+
+    <LinearLayout
+        android:id="@+id/gravatar"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@drawable/selectable_background_dark"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
+
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="31dp"
+            android:layout_marginEnd="23dp"
+            app:srcCompat="@drawable/ic_gravatar" />
+
+        <TextView
+            style="@style/Body1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="31dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="@string/gravatar" />
+
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:background="#c7c7c7" />
+
+    <LinearLayout
+        android:id="@+id/external_url"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@drawable/selectable_background_dark"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
+
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="31dp"
+            android:layout_marginEnd="23dp"
+            app:srcCompat="@drawable/ic_external_url" />
+
+        <TextView
+            style="@style/Body1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="31dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="@string/edit_profile_public_url" />
+
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:background="#c7c7c7" />
+
+
+    <LinearLayout
+        android:id="@+id/take_picture"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@drawable/selectable_background_dark"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
+
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="31dp"
+            android:layout_marginEnd="23dp"
+            app:srcCompat="@drawable/ic_take_picture" />
+
+        <TextView
+            style="@style/Body1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="31dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="@string/edit_profile_take_picture" />
+
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:background="#c7c7c7" />
+
+    <LinearLayout
+        android:id="@+id/choose_picture"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@drawable/selectable_background_dark"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
+
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="31dp"
+            android:layout_marginEnd="23dp"
+            app:srcCompat="@drawable/ic_select_image" />
+
+        <TextView
+            style="@style/Body1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="31dp"
+            android:text="@string/edit_profile_choose_picture" />
+
+    </LinearLayout>
+
+
+</LinearLayout>

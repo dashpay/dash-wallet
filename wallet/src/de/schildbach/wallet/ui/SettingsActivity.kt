@@ -23,11 +23,17 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.viewModels
+import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
-import de.schildbach.wallet.ui.main.WalletActivity
+import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.MixingStatus
+import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.AboutActivity
 import de.schildbach.wallet.ui.more.SettingsViewModel
 import de.schildbach.wallet_test.R
@@ -42,6 +48,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
+import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -49,14 +56,13 @@ import javax.inject.Inject
 class SettingsActivity : LockScreenActivity() {
     private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
     private lateinit var binding: ActivitySettingsBinding
+    private val viewModel: SettingsViewModel by viewModels()
     @Inject
     lateinit var analytics: AnalyticsService
     @Inject
     lateinit var systemActions: SystemActionsService
     @Inject
     lateinit var walletUIConfig: WalletUIConfig
-
-    val viewModel by viewModels<SettingsViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -125,11 +131,57 @@ class SettingsActivity : LockScreenActivity() {
             }
         }
         setBatteryOptimizationText()
+        binding.coinjoin.setOnClickListener {
+            lifecycleScope.launch {
+                val shouldShowFirstTimeInfo = viewModel.shouldShowCoinJoinInfo()
+
+                if (shouldShowFirstTimeInfo) {
+                    viewModel.setCoinJoinInfoShown()
+                }
+
+                val intent = Intent(this@SettingsActivity, CoinJoinActivity::class.java)
+                intent.putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, shouldShowFirstTimeInfo)
+                startActivity(intent)
+            }
+        }
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .onEach { binding.localCurrencySymbol.text = it }
             .launchIn(lifecycleScope)
+
+        viewModel.coinJoinMixingMode.observe(this) { mode ->
+            if (mode == CoinJoinMode.NONE) {
+                binding.coinjoinSubtitle.text = getText(R.string.turned_off)
+                binding.coinjoinSubtitleIcon.isVisible = false
+                binding.progressBar.isVisible = false
+                binding.balance.isVisible = false
+                binding.coinjoinProgress.isVisible = false
+            } else {
+                if (viewModel.coinJoinMixingStatus == MixingStatus.FINISHED) {
+                    binding.coinjoinSubtitle.text = getString(R.string.coinjoin_progress_finished)
+                    binding.coinjoinSubtitleIcon.isVisible = false
+                    binding.progressBar.isVisible = false
+                    binding.coinjoinProgress.isVisible = false
+                } else {
+                    @StringRes val statusId = when(viewModel.coinJoinMixingStatus) {
+                        MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
+                        MixingStatus.MIXING -> R.string.coinjoin_mixing
+                        MixingStatus.PAUSED -> R.string.coinjoin_paused
+                        MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
+                        else -> R.string.error
+                    }
+
+                    binding.coinjoinSubtitle.text = getString(statusId)
+                    binding.coinjoinSubtitleIcon.isVisible = true
+                    binding.progressBar.isVisible = viewModel.coinJoinMixingStatus == MixingStatus.MIXING
+                    binding.coinjoinProgress.text = getString(R.string.percent, viewModel.mixingProgress.toInt())
+                    binding.coinjoinProgress.isVisible = true
+                    binding.balance.isVisible = true
+                    binding.balance.text = getString(R.string.coinjoin_progress_balance, viewModel.mixedBalance, viewModel.walletBalance)
+                }
+            }
+        }
     }
 
     private fun setBatteryOptimizationText() {
@@ -161,7 +213,7 @@ class SettingsActivity : LockScreenActivity() {
 
                 walletApplication.resetBlockchain()
                 configuration.updateLastBlockchainResetTime()
-                startActivity(WalletActivity.createIntent(this@SettingsActivity))
+                startActivity(MainActivity.createIntent(this@SettingsActivity))
             } else {
                 analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, mapOf())
             }

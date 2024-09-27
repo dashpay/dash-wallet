@@ -3,7 +3,7 @@ buildscript {
         kotlin_version = '1.9.23'
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.9.1'
-        dashjVersion = '21.0.0'
+        dashjVersion = '21.1.0'
         hiltVersion = '2.51'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.0.0'
@@ -22,7 +22,7 @@ buildscript {
         preferenceVersion = '1.2.0'
 
         // Utils
-        slf4jVersion = '1.7.32'
+        slf4jVersion = '2.0.7'
         desugaringLibraryVersion = '1.1.5'
 
         // UI

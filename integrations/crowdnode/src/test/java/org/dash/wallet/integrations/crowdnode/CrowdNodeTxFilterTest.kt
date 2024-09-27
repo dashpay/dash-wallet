@@ -223,6 +223,23 @@ class CrowdNodeTxFilterTest {
     }
 
     @Test
+    fun internalTxWithAcceptTermsAmount_doesNotMatch() {
+        val bagMock = mock<TransactionBag> {
+            on { isPubKeyHashMine(any(), any()) } doReturn true
+        }
+
+        val connectedData = "0100000001a144eb2405271f2a56332ba40e61c4248a42c45dbc7ca453c5ac6bd1ca13f4ed170000006b483045022100a84e01ee3b13b6056d3a2e3ae2e000aa08897f6b8769c149ae940ad0d348305702207f494646bf8789610d2a44642dbf3136519c93c0a97df885ae8fba81848361850121022bc500272dc2263fda23e4ccd99d39942ad92127e8d43581876038c9b9014517ffffffff03409c0000000000001976a9147b5bea31861a1cfca6cb5cb93277fb7515bda7df88acabc55101000000001976a91486c1305dc7b556051ef2f3c1a7f8671f1abc349988ac8016a437000000001976a914ae0621debab253e792f2558dd1889b5c29110dff88ac00000000" // ktlint-disable max-line-length
+        val connectedTx = Transaction(networkParams, Utils.HEX.decode(connectedData))
+
+        val txData = "01000000017f8b38abf42bce8bfbfc9c5965096a9cfed3ef0a1fc7fe8a79881a90a393a790020000006a47304402203545c3a1ee67fef9f4733caa38619affd92e012271b01078a7eb80b179c56355022040ad74e6521c659104aec47621f7c8cf8defd1eb1c3f5484ada3b124cad4454a01210221a2fb697857eeb83d47a57050f27a38c84958ce7b79741d7f686c2867a4a895ffffffff03224e0000000000001976a914197b4429f61bdb64a859567b441a23e6630d533588ac224e0000000000001976a914f850a88d4f515ea7b92908ad4d08e7383922ca0988ac3779a337000000001976a914b658c3dac62e4c570b08cf317fb70436ea37870088ac00000000" // ktlint-disable max-line-length
+        val internalTx = Transaction(networkParams, Utils.HEX.decode(txData))
+        internalTx.inputs[0].connect(connectedTx.outputs[0])
+
+        val possibleAcceptTermsFilter = PossibleAcceptTermsResponse(bagMock, null)
+        assertFalse("Tx matches but should not", possibleAcceptTermsFilter.matches(internalTx))
+    }
+
+    @Test
     fun crowdNodeAPIConfirmationForwarded_correctMatch() {
         val txData = "01000000016fdb75611fd8892d8d19707f0d0958da5b930c635750f2c8c5bf5a48458a8ffd000000006b483045022100ff77055377b33afb8fc2f622fda59816394a567c50e98569fe8ab68d797948b802204b05504b3f837e80f4d0d8c3c6d98107e770572a8eaae66ddd14a660fe9674f101210275ab1f1c864e594c5e075ac45fbd01a45285701e429b842f8d0a1c872cf3a7baffffffff0149d00000000000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888ac00000000" // ktlint-disable max-line-length
         val forwardedTx = Transaction(networkParams, Utils.HEX.decode(txData))

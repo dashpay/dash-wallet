@@ -37,5 +37,9 @@
     <dimen name="verify_seed_word_text_button_size">12dp</dimen>
     <dimen name="verify_seed_word_button_padding">10dp</dimen>
 
+    <dimen name="create_username_orbits_translation_x">100dp</dimen>
+
+    <dimen name="identity_complete_text_size">24sp</dimen>
+    <dimen name="invite_header_size">16sp</dimen>
     <dimen name="home_toolbar_height">60dp</dimen>
 </resources>

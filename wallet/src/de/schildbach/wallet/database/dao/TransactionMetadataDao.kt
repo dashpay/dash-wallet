@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.TaxCategory
-import org.dash.wallet.common.data.entity.IconBitmap
 import org.dash.wallet.common.data.entity.TransactionMetadata
 
 /**
@@ -53,7 +52,6 @@ interface TransactionMetadataDao {
         """SELECT txId, memo, service, customIconId FROM transaction_metadata 
         WHERE memo != '' OR service IS NOT NULL OR customIconId IS NOT NULL"""
     )
-
     fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>
 
     @Query("SELECT * FROM transaction_metadata WHERE timestamp <= :end and timestamp >= :start")
@@ -61,6 +59,9 @@ interface TransactionMetadataDao {
 
     @Query("UPDATE transaction_metadata SET taxCategory = :taxCategory WHERE txid = :txId")
     suspend fun updateTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory)
+
+    @Query("UPDATE transaction_metadata SET timestamp = :timestamp WHERE txid = :txId")
+    suspend fun updateSentTime(txId: Sha256Hash, timestamp: Long)
 
     @Query("UPDATE transaction_metadata SET memo = :memo WHERE txid = :txId")
     suspend fun updateMemo(txId: Sha256Hash, memo: String)

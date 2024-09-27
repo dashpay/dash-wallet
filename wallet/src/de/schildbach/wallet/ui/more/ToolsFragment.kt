@@ -41,6 +41,7 @@ import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentToolsBinding
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
@@ -52,6 +53,7 @@ import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+@FlowPreview
 @AndroidEntryPoint
 class ToolsFragment : Fragment(R.layout.fragment_tools) {
     @Inject lateinit var authManager: SecurityFunctions

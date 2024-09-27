@@ -19,10 +19,15 @@ package org.dash.wallet.common.services.analytics
 
 // Event names should be <= 40 chars
 object AnalyticsConstants {
+    const val CALLING_ACTIVITY = "calling_activity"
+
     enum class Parameter(val paramName: String) {
         // When adding a parameter, make sure to create a custom definition for it in Firebase Analytics.
         // Better yet, use one of the parameters already added here.
-        VALUE("value")
+        VALUE("value"),
+        TIME("time"),
+        ARG1("arg1"),
+        ARG2("arg2")
     }
 
     object Uphold {
@@ -115,6 +120,72 @@ object AnalyticsConstants {
         const val TRANSACTION_FILTER = "home_transaction_filter"
         const val SEND_RECEIVE_BUTTON = "bottom_nav_payments"
         const val NO_ADDRESS_COPIED = "shortcut_send_no_address_copied"
+    }
+
+    object Invites {
+        const val ERROR_USERNAME_TAKEN = "invite_username_already_found"
+        const val INVITE_CONTACTS = "invite_from_contacts"
+        const val CREATE_MORE = "invite_create_from_more_menu"
+        const val INVITE_FRIEND = "invite_friend"
+        const val ERROR_CREATE = "invite_error_creating"
+        const val ERROR_ALREADY_CLAIMED = "invite_already_claimed"
+        const val ERROR_INVALID = "invite_invalid"
+        const val ERROR_INSUFFICIENT_FUNDS = "invite_insufficient_funds"
+        const val CREATED_COPY_LINK = "invite_created_copy_link"
+        const val DETAILS_COPY_LINK = "invite_details_copy_link"
+        const val CREATED_SEND = "invite_created_send"
+        const val DETAILS_SEND_AGAIN = "invite_details_send_again"
+        const val CREATED_LATER = "invite_created_maybe_later"
+        const val CREATED_TAG = "invite_created_send_with_tag"
+        const val DETAILS_TAG = "invite_details_send_again_with_tag"
+        const val CREATED_PREVIEW = "invite_created_preview"
+        const val DETAILS_PREVIEW = "invite_details_preview"
+        const val CREATE_HISTORY = "invite_create_from_history"
+        const val HISTORY_FILTER = "invite_history_filter"
+        const val DETAILS = "invite_details"
+        const val NEW_WALLET = "invite_new_wallet"
+    }
+
+    object UsersContacts {
+        const val CREATE_USERNAME = "create_username"
+        const val SEARCH_CONTACTS = "contacts_search"
+        const val SEARCH_DASH_NETWORK = "contacts_search_dash_network"
+        const val SEARCH_USER_ICON = "contacts_search_user_icon"
+        const val SEND_REQUEST = "contacts_send_request"
+        const val ACCEPT_REQUEST = "contacts_accept_request"
+        const val NOTIFICATIONS_HOME_SCREEN = "notifications_home_screen"
+        const val NOTIFICATIONS_ACCEPT_REQUEST = "notifications_accept_contact_request"
+        const val NOTIFICATIONS_CONTACT_DETAILS = "notifications_contact_details"
+        const val PROFILE_EDIT_MORE = "profile_edit_from_more"
+        const val PROFILE_EDIT_HOME = "profile_edit_from_home"
+        const val PROFILE_CHANGE_NAME = "profile_change_display_name"
+        const val PROFILE_NAME_LENGTH = "profile_display_name_length"
+        const val PROFILE_CHANGE_ABOUT_ME = "profile_change_about_me"
+        const val PROFILE_ABOUT_ME_LENGTH = "profile_about_me_length"
+        const val PROFILE_CHANGE_PICTURE_GRAVATAR = "profile_change_picture_gravatar"
+        const val PROFILE_CHANGE_PICTURE_PUBLIC_URL = "profile_change_picture_public_url"
+        const val PROFILE_CHANGE_PICTURE_CAMERA = "profile_change_picture_camera_photo"
+        const val PROFILE_CHANGE_PICTURE_GALLERY = "profile_change_picture_gallery"
+        const val TAB_SEND_TO_CONTACT = "send_tab_send_to_contact"
+        const val SHORTCUT_SEND_TO_CONTACT = "shortcut_send_to_contact"
+    }
+
+    object Process {
+        const val PROCESS_USERNAME_CREATE_STEP_1 = "process_username_create_1"
+        const val PROCESS_USERNAME_CREATE_STEP_2 = "process_username_create_2"
+        const val PROCESS_USERNAME_CREATE_STEP_3 = "process_username_create_3"
+        const val PROCESS_USERNAME_CREATE = "process_username_create"
+        const val PROCESS_USERNAME_CREATE_ISLOCK = "process_username_create_islock"
+        const val PROCESS_USERNAME_IDENTITY_CREATE = "process_username_identity_create"
+        const val PROCESS_USERNAME_PREORDER_CREATE = "process_username_preorder_create"
+        const val PROCESS_USERNAME_DOMAIN_CREATE = "process_username_domain_create"
+        const val PROCESS_INVITATION_CLAIM = "process_invitation_claim"
+        const val PROCESS_USERNAME_SEARCH_QUERY = "process_username_search_query"
+        const val PROCESS_USERNAME_SEARCH_UI = "process_username_search_ui"
+        const val PROCESS_CONTACT_REQUEST_SEND = "process_contact_request_send"
+        const val PROCESS_CONTACT_REQUEST_RECEIVE = "process_contact_request_receive"
+        const val PROCESS_PROFILE_CREATE = "process_profile_create"
+        const val PROCESS_PROFILE_UPDATE = "process_profile_update"
     }
 
     object Explore {
@@ -315,5 +386,13 @@ object AnalyticsConstants {
         const val TRANSFER_SUCCESS_CLOSE = "coinbase_transfer_success_b_close"
         const val TRANSFER_ERROR_RETRY = "coinbase_transfer_error_b_retry"
         const val TRANSFER_ERROR_CLOSE = "coinbase_transfer_error_b_close"
+    }
+
+    object CoinJoinPrivacy {
+        const val USERNAME_PRIVACY_BTN_CONTINUE = "username_privacy_btn_continue"
+        const val USERNAME_PRIVACY_WIFI_BTN_CONTINUE = "username_privacy_wifi_btn_continue"
+        const val USERNAME_PRIVACY_WIFI_BTN_CANCEL = "username_privacy_wifi_btn_cancel"
+        const val USERNAME_PRIVACY_CONFIRMATION_BTN_CONFIRM = "username_privacy_confirmation_btn_confirm"
+        const val USERNAME_PRIVACY_CONFIRMATION_BTN_CANCEL = "username_privacy_confirmation_btn_cancel"
     }
 }

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/transaction_details_dialog_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_gravity="center"
+    android:background="#66000000"
+    android:padding="20dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/transaction_details_dialog_content_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:background="@drawable/round_corners_white_bg">
+
+        <TextView
+            android:id="@+id/title"
+            style="@style/Headline6"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="@string/picture_upload_policy"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/icon_1"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="26dp"
+            android:layout_marginTop="26dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/title"
+            app:srcCompat="@drawable/ic_activity_info" />
+
+        <TextView
+            android:id="@+id/policy_text_one"
+            style="@style/Body1.Secondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="26dp"
+            android:text="@string/imgur_policy_1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/icon_1"
+            app:layout_constraintTop_toTopOf="@id/icon_1" />
+
+        <ImageView
+            android:id="@+id/icon_2"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="26dp"
+            android:layout_marginTop="24dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/policy_text_one"
+            app:srcCompat="@drawable/ic_activity_info" />
+
+        <TextView
+            android:id="@+id/policy_text_two"
+            style="@style/Body1.Secondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="26dp"
+            android:text="@string/imgur_policy_2"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/icon_2"
+            app:layout_constraintTop_toTopOf="@id/icon_2" />
+
+        <ImageView
+            android:id="@+id/icon_3"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="26dp"
+            android:layout_marginTop="24dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/policy_text_two"
+            app:srcCompat="@drawable/ic_activity_info" />
+
+        <TextView
+            android:id="@+id/policy_text_three"
+            style="@style/Body1.Secondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="26dp"
+            android:text="@string/imgur_policy_3"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/icon_2"
+            app:layout_constraintTop_toTopOf="@id/icon_3" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="28dp"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/policy_text_three">
+
+            <Button
+                android:id="@+id/agree_btn"
+                style="@style/Button.Primary.Blue"
+                android:layout_width="110dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="5dp"
+                android:text="@string/agree" />
+
+            <Button
+                android:id="@+id/cancel_btn"
+                style="@style/Button.Secondary.Blue"
+                android:layout_width="110dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:text="@string/button_cancel" />
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</RelativeLayout>

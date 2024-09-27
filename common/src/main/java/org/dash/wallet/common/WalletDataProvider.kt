@@ -22,9 +22,11 @@ import org.bitcoinj.core.*
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletExtension
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.TransactionWrapperFactory
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import kotlin.jvm.Throws
 
@@ -47,6 +49,8 @@ interface WalletDataProvider {
         coinSelector: CoinSelector? = null
     ): Flow<Coin>
 
+    fun canAffordIdentityCreation(): Boolean
+
     // Treat @withConfidence with care - it may produce a lot of events and affect performance.
     fun observeTransactions(withConfidence: Boolean = false, vararg filters: TransactionFilter): Flow<Transaction>
 
@@ -56,7 +60,7 @@ interface WalletDataProvider {
 
     fun getTransactions(vararg filters: TransactionFilter): Collection<Transaction>
 
-    fun wrapAllTransactions(vararg wrappers: TransactionWrapper): Collection<TransactionWrapper>
+    fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
 
     fun attachOnWalletWipedListener(listener: () -> Unit)
 

@@ -63,6 +63,7 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.ExchangeRatesProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.ui.CurrencyTextView;
+import org.dash.wallet.common.ui.FancyAlertDialog;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,6 +93,7 @@ import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
 
 import static com.google.common.base.Preconditions.checkState;
 

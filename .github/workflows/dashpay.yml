@@ -1,0 +1,97 @@
+name: DashPay CI
+
+on:
+  push:
+    branches: [ dashpay ]
+  pull_request:
+    branches: [ dashpay, dashpay-* ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Get build number from run id
+      run: |
+          echo "build_number=$((80000))" >> $GITHUB_ENV
+          
+    - name: Get the support email
+      env:
+        SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
+      run: |
+        echo "SUPPORT_EMAIL=$SUPPORT_EMAIL" >> $GITHUB_ENV
+    
+    - uses: actions/checkout@v3
+    - name: set up JDK
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'adopt'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.0.3'
+        
+    - name: Generate cache key
+      run: bash .deploy/checksum.sh checksum.txt
+      
+    - name: Gem caching
+      uses: actions/cache@v2
+      continue-on-error: true
+      with:
+        path: vendor/bundle
+        key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+        restore-keys: |
+            ${{ runner.os }}-gems-
+            
+    - name: Setup fastlane
+      run: |
+        gem install bundler:2.2.26
+        gem install google-cloud-storage
+        bundle config path vendor/bundle
+        bundle install --jobs 4 --retry 3
+        
+    - name: Cache Gradle packages
+      uses: actions/cache@v2
+      continue-on-error: true
+      with:
+        path: |
+          ~/.gradle/caches/modules-*
+          ~/.gradle/caches/jars-*
+          ~/.gradle/caches/build-cache-*
+        key: ${{ runner.os }}-gradle-${{ hashFiles('checksum.txt') }}
+      
+    - name: Decrypt secrets
+      run: |
+        gpg -d --passphrase "${{ secrets.KEYSTORE_KEY }}" --batch .deploy/keystore.jks.gpg > .deploy/keystore.jks
+        
+    - name: Extract Secrets
+      run: |
+        echo "$GOOGLE_SERVICES_JSON" > wallet/google-services.json
+        echo "$SERVICE_PROPERTIES" > service.properties
+        echo "$LOCAL_PROPERTIES" > local.properties
+        echo "$APP_DISTRIBUTION_KEY_JSON" > .deploy/app-distribution-key.json
+        echo "$GC_STORAGE_SERVICE_ACCOUNT_KEY_JSON" > .deploy/gc-storage-service-account.json
+      env:
+        GOOGLE_SERVICES_JSON : ${{secrets.GOOGLE_SERVICES_JSON}}
+        SERVICE_PROPERTIES: ${{secrets.SERVICE_PROPERTIES}}
+        LOCAL_PROPERTIES: ${{secrets.LOCAL_PROPERTIES}}
+        APP_DISTRIBUTION_KEY_JSON: ${{secrets.APP_DISTRIBUTION_KEY_JSON}}
+        GC_STORAGE_SERVICE_ACCOUNT_KEY_JSON: ${{secrets.GC_STORAGE_SERVICE_ACCOUNT_KEY_JSON}}
+    
+    - name: Test
+      run: bundle exec fastlane test flavor:"" type:"debug"
+      
+    - name: Build
+      if: github.event_name == 'pull_request'
+      run: bundle exec fastlane build flavor:"staging" type:"release" storepass:"${{ secrets.SIGNING_STORE_PASS }}" versioncode:"${{ env.build_number }}"
+      
+    - name: Staging Build and Firebase Distribution
+      if: github.event_name == 'push'
+      run: bundle exec fastlane build_distribute flavor:"staging" type:"release" storepass:"${{ secrets.SIGNING_STORE_PASS }}" versioncode:"${{ env.build_number }}" comment:"Up to date Dash Wallet TestNet build" appid:"1:1039839682638:android:bbcfa8c9939ee993ea631f" testgroup:"qa"

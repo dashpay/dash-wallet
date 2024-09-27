@@ -33,15 +33,17 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.main.MainActivity
+import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
+import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.PackageInfoProvider
-import de.schildbach.wallet.service.RestartService
-import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import javax.inject.Inject
@@ -95,6 +97,8 @@ class SetPinActivity : InteractionAwareActivity() {
         private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
         private const val EXTRA_PASSWORD = "extra_password"
         private const val CHANGE_PIN = "change_pin"
+        private const val EXTRA_ONBOARDING = "onboarding"
+        private const val EXTRA_ONBOARDING_INVITE = "onboarding_invite"
         private const val UPGRADING_WALLET = "upgrading_wallet"
 
         @JvmOverloads
@@ -102,12 +106,16 @@ class SetPinActivity : InteractionAwareActivity() {
         fun createIntent(
             context: Context, titleResId: Int,
             changePin: Boolean = false, pin: String? = null,
+            onboarding: Boolean = false,
+            onboardingInvite: Boolean = false,
             upgradingWallet: Boolean = false
         ): Intent {
             val intent = Intent(context, SetPinActivity::class.java)
             intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
             intent.putExtra(CHANGE_PIN, changePin)
             intent.putExtra(EXTRA_PASSWORD, pin)
+            intent.putExtra(EXTRA_ONBOARDING, onboarding || onboardingInvite)
+            intent.putExtra(EXTRA_ONBOARDING_INVITE, onboardingInvite)
             intent.putExtra(UPGRADING_WALLET, upgradingWallet)
             return intent
         }
@@ -156,6 +164,16 @@ class SetPinActivity : InteractionAwareActivity() {
             } else {
                 seed = viewModel.walletData.wallet!!.keyChainSeed.mnemonicCode!!
             }
+        }
+        if (intent.getBooleanExtra(EXTRA_ONBOARDING, false)) {
+            OnboardingState.add()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (intent.getBooleanExtra(EXTRA_ONBOARDING, false)) {
+            OnboardingState.remove()
         }
     }
 
@@ -423,6 +441,9 @@ class SetPinActivity : InteractionAwareActivity() {
                         }
                     }
                 }
+                else -> {
+                    // ignore
+                }
             }
         }
         viewModel.checkPinLiveData.observe(this) {
@@ -446,10 +467,12 @@ class SetPinActivity : InteractionAwareActivity() {
                     viewModel.resetFailedPinAttempts()
                     setState(State.SET_PIN)
                 }
+                else -> {
+                    // ignore
+                }
             }
         }
         viewModel.startNextActivity.observe(this) {
-            setResult(Activity.RESULT_OK)
             if (it) {
                 startVerifySeedActivity()
             } else {
@@ -524,13 +547,24 @@ class SetPinActivity : InteractionAwareActivity() {
     }
 
     private fun startVerifySeedActivity() {
-        startActivity(VerifySeedActivity.createIntent(this, seed.toTypedArray(), true))
-        finish()
+        val onboardingInvite = intent.getBooleanExtra(EXTRA_ONBOARDING_INVITE, false)
+        val onboarding = onboardingInvite || intent.getBooleanExtra(EXTRA_ONBOARDING, false)
+        val verifySeedActivityIntent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
+        if (onboardingInvite) {
+            startActivity(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_3, verifySeedActivityIntent))
+        } else {
+            startActivity(verifySeedActivityIntent)
+        }
+        finishAffinity()
     }
 
     private fun goHome() {
-        startActivity(WalletActivity.createIntent(this))
-        finish()
+        startActivity(MainActivity.createIntent(this))
+        if (intent.getBooleanExtra(EXTRA_ONBOARDING, false)) {
+            finishAffinity()
+        } else {
+            finish()
+        }
     }
 
     override fun onPause() {

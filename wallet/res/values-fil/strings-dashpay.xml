@@ -1,0 +1,259 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="choose_your_username">Piliin ang iyong <b>Dash
+Username</b></string>
+    <string name="identity_min_3_chars">Sa pagitan ng 3 at 23 na mga karakter</string>
+    <string name="identity_alphanum_only">Mga titik, numero at gitling lamang</string>
+    <string name="identity_hyphen_rule">Dapat magsimula at magtapos sa isang titik o numero</string>
+    <string name="identity_username_validating">Pagpapatunay ng username...</string>
+    <string name="identity_username_available">Available ang username</string>
+    <string name="identity_username_taken">Kinuha na Username</string>
+    <string name="platform_communication_error">Pagkakamali sa komunikasyon sa Dash Platform</string>
+    <string name="register">Magparehistro</string>
+
+    <string name="new_account_confirm_button_text">Kumpirmahin &amp; Magbayad</string>
+    <string name="invitation_confirm_button_text">Kumpirmahin</string>
+    <string name="new_account_confirm_accept">Tinatanggap Ko</string>
+    <string name="new_account_confirm_upgrade_fee">Bayad sa Pag-upgrade</string>
+    <string name="new_account_confirm_message">Pinili mo ang %s bilang iyong username. Pakitandaan na HINDI maaaring baguhin ang username kapag ito ay nakarehistro na.</string>
+    <string name="invitation_confirm_title">Bayad sa Imbitasyon</string>
+    <string name="invitation_confirm_message">Ang bawat imbitasyon ay popondohan ng halagang ito upang mabilis na magawa ng tatanggap ang kanilang username sa Dash Network</string>
+    <string name="invitation_init_title">Mag-imbita</string>
+    <string name="invitation_init_header">Imbitahin ang iyong mga kaibigan at pamilya</string>
+    <string name="invitation_init_message">Tulungan ang iyong mga kaibigan at pamilya na sumali sa Dash Network. Anyayahan sila sa mundo ng social banking.</string>
+    <string name="invitation_init_button_text">Gumawa ng bagong Imbitasyon</string>
+    <string name="invitation_notifications_hint">Imbitahin ang iyong mga kaibigan at pamilya na sumali sa Dash Network.</string>
+    <string name="invitation_notifications_hint1">Mag-imbita ng isang tao na sumali sa Dash Network</string>
+    <string name="invitation_notifications_hint1_or">o</string>
+    <string name="invitation_created_title">Imbitasyon</string>
+    <string name="invitation_created_successfully">Matagumpay na Nagawa ang Imbitasyon</string>
+    <string name="invitation_created_tag_title">I-tag para sa iyong reperensiya</string>
+    <string name="invitation_created_tag">hal: Tatay</string>
+    <string name="invitation_created_preview">I-preview ang Imbitasyon</string>
+    <string name="invitation_created_copy_link">Kopyahin ang Link ng Imbitasyon</string>
+    <string name="invitation_created_send_invitation">Magpadala ng imbitasyon</string>
+    <string name="invitation_created_send_invitation_again">Magpadala muli</string>
+    <string name="invitation_created_maybe_later">Baka mamaya</string>
+    <string name="invitation_preview_title">Sumali ka na</string>
+    <string name="invitation_preview_message">Inimbitahan ka ni %s. Simulan ang paggamit ng Dash cryptocurrency.</string>
+    <string name="invitation_preview_close">Sarado</string>
+    <string name="invitation_cant_afford_title">Hindi sapat na Balanse sa Wallet</string>
+    <string name="invitation_cant_afford_message">Kailangan mo ng kahit man lang %s Dash para gumawa ng imbitasyon</string>
+    <string name="invitation_creating_error_title">Pagkakamali sa Paggawa ng Imbitasyon</string>
+    <string name="invitation_creating_error_message">Nagkaroon ng problema sa paggawa ng iyong imbitasyon. Pakisubukang muli.</string>
+    <string name="invitation_creating_error_message_not_synced">Hintaying makumpleto ang pag-sync at subukang muli.</string>
+    <string name="invitation_creating_progress_title">Paggawa ng imbitasyon</string>
+    <string name="invitation_verifying_progress_title">Bine-verify ang imbitasyon</string>
+    <string name="invitation_share_message">Ang mga imbitasyon ay pang-isahang gamit lamang. Huwag ibahagi sa isang grupo.</string>
+    <string name="invitation_share_title">Imbitasyon sa DashPay</string>
+    <string name="invitation_already_claimed_title">Na-claim na ang imbitasyon</string>
+    <string name="invitation_already_claimed_message">Na-claim na ang iyong imbitasyon mula sa %s</string>
+    <string name="invitation_invalid_invite_title">Di-wastong Imbitasyon</string>
+    <string name="invitation_invalid_invite_message">Ang iyong imbitasyon mula sa %s ay hindi wasto</string>
+    <string name="invitation_username_already_found_title">Nahanap na ang username</string>
+    <string name="invitation_username_already_found_message">Hindi mo ma-claim ang imbitasyong ito dahil mayroon ka nang Dash username</string>
+    <string name="invitation_onboarding_has_began_error_title">Pagkakamali sa Onboarding</string>
+    <string name="invitation_onboarding_has_began_error">Nasa proseso ang onboarding, paki-claim ang iyong imbitasyon pagkatapos mong gawin ang iyong wallet.</string>
+    <string name="invitation_accept_title_1">Kunin ang iyong Username</string>
+    <string name="invitation_accept_title_2">Idagdag ang iyong Mga Kaibigan at Pamilya</string>
+    <string name="invitation_accept_message_2">Imbitahin ang iyong pamilya, hanapin ang iyong mga kaibigan sa pamamagitan ng paghahanap sa kanilang mga username</string>
+    <string name="invitation_accept_title_3">I-personalize</string>
+    <string name="invitation_accept_message_3">I-upload ang iyong larawan, i-personalize ang iyong pagkakakilanlan</string>
+    <string name="invitation_accept_continue">Ipagpatuloy</string>
+    <string name="username_being_created">Ang iyong username %s ay nilikha sa Network ng Dash</string>
+    <string name="processing_let_me_know">Ipaalam sa akin kapag ito ay tapos na</string>
+    <string name="processing_home_title">Mag-upgrade sa Ebolusyon</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) Pagproseso ng Bayad</string>
+    <string name="processing_home_step_2">(2/3) Paggawa ng ID</string>
+    <string name="processing_home_step_2_restoring">(2/3) Pagbawi ng ID</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Pagrerehistro ng Username</string>
+    <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Humihiling ng Username</string>
+    <string name="processing_home_step_3_restoring">(3/3) Pagbawi ng Username</string>
+    <string name="processing_done_title">Hello %s,</string>
+    <string name="processing_done_subtitle">Handa na ang iyong account</string>
+    <string name="processing_voting_subtitle">Nagsimula na ang pagboto para sa iyong username</string>
+    <string name="processing_error_title">Kamalian sa Pag-upgrade</string>
+    <string name="processing_error_title_from_invite">Kamalian sa Pag-upgrade mula sa imbitasyon</string>
+    <string name="processing_error_retry">Subukang muli</string>
+    <string name="processing_username_unavailable_title">Hindi available ang username</string>
+    <string name="processing_username_unavailable_subtitle">Mangyaring pumili ng isa pa</string>
+
+    <string name="dashpay_upgrade_fee">Bayad sa Pag-upgrade</string>
+    <string name="dashpay_invite_fee">Bayad sa Pag-imbita</string>
+    <string name="dashpay_topup_fee">Bayad sa Topup</string>
+    <string name="search_user_find_a_user">Maghanap ng gumagamit sa Network ng Dash</string>
+    <string name="search_for_a_user">Maghanap para sa isang Gumagamit sa Network ng Dash</string>
+    <string name="add_new_contact">Magdagdag ng Bagong Contact</string>
+    <string name="send_contact_request">Magpadala ng Kahilingan sa Pakikipag-ugnay</string>
+    <string name="sending_contact_request">Nagpapadala ng Kahilingan sa Pakikipag-ugnayan</string>
+    <string name="sending_contact_request_short">Nag-iimbita</string>
+    <string name="accepting_contact_request">Pagtanggap ng Kahilingan sa Pakikipag-ugnayan</string>
+    <string name="accepting_contact_request_short">Pagtanggap</string>
+    <string name="search_user_no_results">Walang mga user na tumutugma</string>
+    <string name="search_user_loading">Naghahanap ng username <b>"%"</b> sa Network ng Dash</string>
+    <string name="contact_request_pending">Nakabinbin ang Kahilingan sa Pakikipag-ugnay</string>
+    <string name="pay">Magbayad</string>
+    <string name="contact_request_accept">Tanggapin</string>
+    <string name="contact_request_ignore">Huwag pansinin</string>
+
+    <string name="contacts_no_results">Walang mga contact na tumutugma</string>
+
+    <string name="contacts_title">Mga Contact</string>
+    <string name="contacts_send_to_contact_title">Ipadala sa isang Contact</string>
+    <string name="contacts_search_for">Maghanap para sa isang contact</string>
+    <string name="contact_requests_title">Mga Kahilingan sa Pakikipag-ugnay</string>
+    <string name="contacts_add_new_contact">Magdagdag ng bagong contact</string>
+    <string name="contacts_contact_requests">Mga Kahilingan sa Pakikipag-ugnay</string>
+    <string name="contacts_my_contacts">Ang Aking mga Contacts</string>
+    <string name="contacts_sort_order">Pagbukud-bukurin ayon sa:</string>
+    <string-array name="contacts_sort">
+        <item>Pangalan</item>
+    </string-array>
+
+    <string name="notifications_title">Mga Notipikasyon</string>
+    <string name="notifications_title_with_count">Mga Notipikasyon (%d)</string>
+    <string name="notifications_profile_activity">Aktibidad</string>
+    <string name="notifications_new">Bago</string>
+    <string name="notifications_earlier">Mas maaga</string>
+    <string name="notifications_none_new">Walang mga bagong notipikasyon</string>
+    <string name="notifications_contact_has_accepted">%s ay tinanggap ang iyong kahilingan sa pakikipag-ugnay.</string>
+    <string name="notifications_you_have_accepted">Tinanggap mo ang kahilingan sa pakikipag-ugnayan mula sa %s</string>
+    <string name="notifications_you_sent">Nagpadala ka ng kahilingan sa pakikipag-ugnayan sa %s</string>
+    <string name="send_coins_to_username">Nagpapadala kay</string>
+    <string name="stranger_activity_disclaimer_text">Ang mga pagbabayad na direktang ginawa sa mga address ay hindi pananatilihin sa aktibidad.</string>
+    <string name="edit_profile">I-edit ang profile</string>
+    <string name="display_name">I-display ang pangalan</string>
+    <string name="about_me">Tungkol sa Akin</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">I-save</string>
+    <string name="edit_profile_take_picture">Kumuha ng Larawan gamit ang Camera</string>
+    <string name="edit_profile_choose_picture">Pumili mula sa Gallery</string>
+    <string name="upgrade_to_evolution_title">Sumali sa DashPay</string>
+    <string name="upgrade_to_evolution_message">Lumikha ng iyong Username, maghanap ng mga kaibigan at pamilya gamit ang kanilang mga username at idagdag sila sa iyong mga contact</string>
+    <string name="image_cropper_title">Ilipat at I-zoom ang iyong larawan upang mahanap ang perpektong akma</string>
+    <string name="select">Pumili</string>
+    <string name="profile_picture_upload_error_title">Error sa Pag-upload</string>
+    <string name="profile_picture_upload_try_again">Subukan muli</string>
+    <string name="profile_picture_uploading_title">Mangyaring maghintay</string>
+    <string name="profile_picture_uploading_message">Pag-upload ng iyong larawan sa network</string>
+    <string name="imgur_policy_1">Ang larawang pipiliin mo ay ia-upload sa Imgur nang hindi nagpapakilala.</string>
+    <string name="imgur_policy_2">Ang larawang na-upload ay maaaring matingnan sa publiko ng sinuman.</string>
+    <string name="imgur_policy_3">Maaari mong i-delete anumang oras ang larawang na-upload, hangga\'t may access ka sa wallet na ito.</string>
+    <string name="profile_picture_delete_title">Sigurado ka ba\?</string>
+    <string name="agree">Sumang-ayon</string>
+    <string name="yes">Oo</string>
+    <string name="no">Hindi</string>
+
+    <string name="updating_profile">Pag-update ng Profile sa Dash Network</string>
+    <string name="google_drive_policy_two">Ang larawang na-upload ay maaaring matingnan sa publiko ng sinuman.</string>
+    <string name="upload_image_message">Pag-upload ng iyong larawan sa network</string>
+    <string name="upload_image_please_wait">Mangyaring maghintay</string>
+    <string name="upload_image_error_message">Hindi ma-upload ang iyong larawan. Pakisubukang muli.</string>
+    <string name="upload_image_upload_error">Error sa Pag-upload</string>
+
+    <string name="error_updating_profile_try_again">Subukan muli</string>
+    <string name="error_updating_profile_cancel">Kanselahin</string>
+    <string name="edit_profile_public_url">Pampublikong URL</string>
+    <string name="public_url_enter_url">I-paste ang URL ng iyong larawan</string>
+    <string name="public_url_fetching_image">Kinukuha ang Larawan</string>
+
+    <string name="gravatar_email_prompt">Ilagay ang iyong Gravatar Email ID</string>
+    <string name="gravatar_disclaimer">Ang iyong Email ay hindi nakaimbak sa DashPay wallet o sa anumang mga server. Ginagamit ito nang isang beses upang makuha ang mga detalye ng iyong Gravatar account at pagkatapos ay itapon.</string>
+    <string name="join">Sumali</string>
+
+    <string name="more_suggestions">Higit pang mga Mungkahi</string>
+    <string name="save_changes">I-save ang mga pagbabago</string>
+    <string name="save_profile_reminder_text">Gusto mo bang i-save ang mga pagbabagong ginawa mo sa iyong profile\?</string>
+    <string name="invitation_notification_text">Imbitahin ang iyong mga kaibigan at pamilya na sumali sa Dash Network.</string>
+    <string name="invite_history_create_new_invite">Gumawa ng bagong Imbitasyon</string>
+    <string name="invitations_history_header">Kasaysayan ng mga Imbitasyon</string>
+    <string name="invitation_details_invite_used_by">Imbitasyon na ginamit ni</string>
+    <string-array name="invite_filter">
+        <item>Lahat</item>
+        <item>Nakabitin</item>
+        <item>Inangkin</item>
+    </string-array>
+
+    <string name="welcome_to_dash_pay">Maligayang pagdating sa Dash Pay</string>
+    <string name="pay_to_usernames">Magbayad sa mga username. Wala nang mga alphanumeric na address.</string>
+    <string name="create_a_username">Gumawa ng username</string>
+    <string name="add_your_friends_family">Idagdag ang iyong Mga Kaibigan at Pamilya</string>
+    <string name="invite_your_family">Imbitahin ang iyong pamilya, hanapin ang iyong mga kaibigan sa pamamagitan ng paghahanap sa kanilang mga username</string>
+    <string name="personalise_profile">I-personalize ang profile</string>
+    <string name="upload_your_picture">I-upload ang iyong larawan, i-personalize ang iyong pagkakakilanlan.</string>
+    <string name="in_case_lose_your_passphrase">Kung sakaling mawala mo ang iyong passphrase mawawala ang iyong karapatan sa iyong hiniling na username.</string>
+    <string name="keep_your_passphrase_safe">Panatilihing ligtas ang iyong passphrase</string>
+    <string name="case_your_request_is_not_approved">Kung sakaling hindi maaprubahan ang iyong kahilingan</string>
+    <string name="dash_network_must_vote_to_approve">Dapat bumoto ang Dash network upang aprubahan ang iyong username bago ito malikha.</string>
+    <string name="what_is_username_voting">Ano ang pagboto ng username\?</string>
+    <string name="username_voting_subtitle">Bilang may-ari ng masternode maaari kang bumoto upang aprubahan ang mga hiniling na username bago ito magawa ng mga user.</string>
+    <string name="voting_duplicates_only_title">Bumoto lamang sa mga duplicate</string>
+    <string name="voting_duplicates_only_message">Maaari mong suriin ang lahat ng mga kahilingan ngunit kailangan mo lamang bumoto sa mga duplicate</string>
+    <string name="all">Lahat</string>
+    <string name="search_by_username">Maghanap sa pamamagitan ng username</string>
+    <string name="type">Uri</string>
+    <string name="only_duplicates">Mga duplicate lang</string>
+    <string name="only_links">Mga kahilingan lamang na may mga link</string>
+    <string-array name="usernames_sort_by_options">
+        <item>Bago sa luma</item>
+        <item>Luma sa bago</item>
+        <item>Mataas hanggang mababa</item>
+        <item>Mababa hanggang mataas</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>Lahat</item>
+        <item>Naaprubahan ko na</item>
+        <item>hindi ko na inaprubahan</item>
+    </string-array>
+
+    <string name="request_username">Humiling ng Username</string>
+    <string name="voting">Pagboto:</string>
+    <string name="this_username_has_already_been_requested">Ang username na ito ay hiniling na, ngunit maaari mo rin itong hilingin at hayaan ang network na bumoto upang magpasya kung maaari mong makuha ito</string>
+    <string name="request_details">Mga detalye ng kahilingan</string>
+    <string name="vote_to_approve">Bumoto para Aprubahan</string>
+    <string name="identity">Pagkakakilanlan</string>
+    <string name="link">Link</string>
+    <string name="cancel_approval">Kanselahin ang Pag-apruba</string>
+    <string name="verify_your_identity">I-verify ang iyong pagkakakilanlan upang mapahusay ang iyong mga pagkakataong makuha ang iyong hiniling na username</string>
+    <string name="if_somebody">Kung may ibang humiling ng parehong username gaya mo, hahayaan namin ang network na magpasya kung kanino ibibigay ang username na ito</string>
+    <string name="verify_your_identity_voting">I-verify ang iyong pagkakakilanlan</string>
+    <string name="prove_your_identity">Patunayan ang iyong pagkakakilanlan</string>
+    <string name="paste_the_link">Idikit ang link</string>
+    <string name="voting_key_title">Ilagay ang iyong voting key</string>
+    <string name="voting_key_hint">Masternode Voting Key</string>
+    <string name="voting_key_input_error">Naglagay ka ng di-wastong key</string>
+    <string name="masternode_ip">Masternode IP address</string>
+    <string name="vote_submitted">Naisumite ang iyong boto</string>
+    <string name="vote_cancelled">Kinansela ang iyong boto</string>
+    <string name="quick_vote">Mabilis na Pagboto</string>
+    <string name="vote_for_all">Bumoto para sa Lahat</string>
+    <string name="there_was_a_network_error">Nagkaroon ng error sa network, maaari mong subukang muli nang walang karagdagang gastos</string>
+    <string name="cancel_request">Kanselahin ang Kahilingan</string>
+    <string name="after_the_voting">Pagkatapos ng pagboto ay aabisuhan ka namin tungkol sa mga resulta nito</string>
+    <string name="none">Wala</string>
+    <string name="if_you_tap_cancel">Kung tapikin mo ang \"Kanselahin ang Kahilingan\", magkakaroon ka pa rin ng pagkakataong humiling ng isa pang username nang hindi nagbabayad muli</string>
+    <string name="do_you_really_want_to_cancel">Gusto mo ba talagang kanselahin ang kahilingan sa username\?</string>
+    <string name="if_you_tap_cancel_request">Kung tapikin mo ang \"Kanselahin ang Kahilingan\", magkakaroon ka pa rin ng pagkakataong humiling ng isa pang username nang hindi nagbabayad muli</string>
+    <!-- CoinJoin -->
+    <string name="coinjoin">CoinJoin</string>
+    <string name="coinjoin_info_subtitle">Ang paghahalo ng iyong mga Dash coins ay gagawing mas pribado ang iyong mga transaksyon</string>
+    <string name="coinjoin_description_1">Magagawa mo lang gumastos ng Dash na pinaghalo kapag naka-on ito. Maaari itong i-off anumang oras.</string>
+    <string name="coinjoin_description_2">Awtomatikong ihahalo ang bagong natanggap na Dash kapag binuksan ang wallet</string>
+    <string name="coinjoin_description_3">Ang pag-on sa feature na ito ay magreresulta ng mas mataas na paggamit ng baterya</string>
+    <string name="coinjoin_mixing_level_title">Piliin ang antas ng paghahalo</string>
+    <string name="intermediate">Intermediate</string>
+    <string name="advanced">Advanced</string>
+    <string name="intermediate_level_card_decs">Maaaring matukoy ng mga advanced na user na may napakataas na antas ng teknikal na kadalubhasaan ang iyong history ng transaksyon</string>
+    <string name="advanced_level_card_decs">Napakahirap para sa mga advanced na user na may anumang antas ng teknikal na kadalubhasaan na matukoy ang iyong kasaysayan ng transaksyon</string>
+    <string name="coinjoin_intermediate_time">hanggang 30 minuto</string>
+    <string name="coinjoin_advanced_time">Maramihang oras</string>
+    <string name="coinjoin_start">Simulan ang Paghahalo</string>
+    <string name="coinjoin_stop">Itigil ang Paghahalo</string>
+    <string name="coinjoin_change_level_confirmation">Sigurado ka bang gusto mong baguhin ang antas ng privacy\?</string>
+    <string name="coinjoin_stop_mixing_title">Sigurado ka bang gusto mong ihinto ang paghahalo\?</string>
+    <string name="credit_balance_button_maybe_later">Baka mamaya</string>
+    <string name="request_username_character_requirement">Mga titik, numero at gitling lamang</string>
+    <string name="request_username_length_requirement">Sa pagitan ng 3 at 23 na mga karakter</string>
+    </resources>

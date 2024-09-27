@@ -27,18 +27,24 @@ import android.os.Bundle
 import android.text.TextUtils
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.activity.viewModels
+import androidx.core.view.isVisible
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import androidx.lifecycle.Observer
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.security.PinRetryController
-import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
-import de.schildbach.wallet.ui.main.WalletActivity
+import de.schildbach.wallet.ui.main.MainActivity
+import de.schildbach.wallet.security.PinRetryController
+import de.schildbach.wallet_test.BuildConfig
+import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardingBinding
 import de.schildbach.wallet_test.databinding.ActivityOnboardingPermLockBinding
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.getMainTask
@@ -55,8 +61,10 @@ private const val UPGRADE_NONENCRYPTED_FLOW_TUTORIAL_REQUEST_CODE = 4
 class OnboardingActivity : RestoreFromFileActivity() {
 
     companion object {
-        private val log = LoggerFactory.getLogger(OnboardingActivity::class.java)
+        private const val EXTRA_INVITE = "extra_invite"
         private const val EXTRA_UPGRADE = "upgrade"
+        private val log = LoggerFactory.getLogger(OnboardingActivity::class.java)
+
         @JvmStatic
         @JvmOverloads
         fun createIntent(context: Context, upgrade: Boolean = false): Intent {
@@ -81,6 +89,12 @@ class OnboardingActivity : RestoreFromFileActivity() {
                     log.info("removing previous task < Android Q")
                     mainTask.finishAndRemoveTask()
                 }
+            }
+        }
+
+        fun createIntent(context: Context, invite: InvitationLinkData): Intent {
+            return Intent(context, OnboardingActivity::class.java).apply {
+                putExtra(EXTRA_INVITE, invite)
             }
         }
     }
@@ -109,7 +123,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 finish()
             }
             binding.wipeWallet.setOnClickListener {
-                ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
+                ResetWalletDialog.newInstance(viewModel.analytics).show(supportFragmentManager, "reset_wallet_dialog")
             }
             return
         }
@@ -122,6 +136,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
             binding.slogan.paddingRight,
             getStatusBarHeightPx()
         )
+
+        OnboardingState.init(walletApplication.configuration)
+        OnboardingState.clear()
 
         // TODO: we should decouple the logic from view interactions
         // and move some of this to the viewModel, wrapping it in tests.
@@ -148,6 +165,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 }
             }
         }
+
         // during an upgrade, for some reason the previous screen is still in the recent app list
         // this will find it and close it
         if (intent.extras?.getBoolean(EXTRA_UPGRADE) == true) {
@@ -206,7 +224,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun startMainActivity() {
-        val intent = Intent(this, WalletActivity::class.java).apply {
+        val intent = Intent(this, MainActivity::class.java).apply {
             putExtras(this@OnboardingActivity.intent.extras ?: Bundle())
         }
         startActivity(intent)
@@ -225,12 +243,16 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private fun initView() {
         binding.createNewWallet.setOnClickListener {
-            viewModel.createNewWallet()
+            val onboardingInvite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
+            viewModel.createNewWallet(onboardingInvite)
         }
         binding.recoveryWallet.setOnClickListener {
             walletApplication.initEnvironmentIfNeeded()
             startActivityForResult(Intent(this, RestoreWalletFromSeedActivity::class.java), REQUEST_CODE_RESTORE_WALLET)
         }
+        // hide restore wallet from file if an invite is being used
+        // remove this line after backup file recovery supports invites
+        binding.restoreWallet.isVisible = !intent.hasExtra(EXTRA_INVITE) || BuildConfig.DEBUG
         binding.restoreWallet.setOnClickListener {
             restoreWalletFromFile()
         }

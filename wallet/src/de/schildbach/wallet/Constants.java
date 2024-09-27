@@ -24,10 +24,12 @@ import android.text.format.DateUtils;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.OuzoDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -38,6 +40,7 @@ import java.io.File;
 import java.util.EnumSet;
 
 import de.schildbach.wallet_test.BuildConfig;
+import okhttp3.HttpUrl;
 
 /**
  * @author Andreas Schildbach
@@ -48,6 +51,7 @@ public final class Constants {
     public static final NetworkParameters NETWORK_PARAMETERS;
 
     private static String FILENAME_NETWORK_SUFFIX;
+    private static String FEE_NETWORK_SUFFIX;
 
     /** Currency code for the wallet name resolver. */
     public static String WALLET_NAME_CURRENCY_CODE;
@@ -56,8 +60,11 @@ public final class Constants {
 
     public static final boolean IS_PROD_BUILD;
 
+    public static boolean SUPPORTS_PLATFORM;
+
     public static final EnumSet<MasternodeSync.SYNC_FLAGS> SYNC_FLAGS = MasternodeSync.SYNC_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.VERIFY_FLAGS> VERIFY_FLAGS = MasternodeSync.VERIFY_DEFAULT_SPV;
+    public static final EnumSet<MasternodeSync.FEATURE_FLAGS> FEATURE_FLAGS = MasternodeSync.FEATURES_SPV;
 
     static {
         switch (BuildConfig.FLAVOR) {
@@ -67,33 +74,52 @@ public final class Constants {
                 NETWORK_PARAMETERS = MainNetParams.get();
                 IS_PROD_BUILD = true;
                 FILENAME_NETWORK_SUFFIX = "";
+                FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "dash";
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore.db");
+                SUPPORTS_PLATFORM = false;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                if (SUPPORTS_PLATFORM) {
+                    SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
+                }
+                org.dash.wallet.common.util.Constants.FAUCET_URL = "";
                 break;
             }
+            case "staging":
             case "_testNet3": {
-                DNS_SEED = new String[]{"testnet-seed.dashdot.io", "95.183.51.146", "35.161.101.35", "54.91.130.170"};
+                DNS_SEED = new String[]{"testnet-seed.dashdot.io"};
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = TestNet3Params.get();
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-testnet";
+                FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "tdash";
-                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-testnet.db");
+                SUPPORTS_PLATFORM = false;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                if (SUPPORTS_PLATFORM) {
+                    SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
+                }
+                org.dash.wallet.common.util.Constants.FAUCET_URL = "http://faucet.testnet.networks.dash.org/";
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-testnet.db");
                 break;
             }
             case "devnet": {
-                // Devnet
+                // Schnapps Devnet
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = OuzoDevNetParams.get();
-                // TODO: remove this next line when Platform Supports Core 0.18
+                String devNetName = ((DevNetParams)NETWORK_PARAMETERS).getDevNetName();
+                devNetName = devNetName.substring(devNetName.indexOf("-") + 1);
                 DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
                 IS_PROD_BUILD = false;
-                FILENAME_NETWORK_SUFFIX = "-chacha";
+                FILENAME_NETWORK_SUFFIX = "-" + devNetName;
+                FEE_NETWORK_SUFFIX = "-testnet"; // use the same fee file as testnet
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 org.dash.wallet.common.util.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-devnet.db";
+                SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
+                org.dash.wallet.common.util.Constants.FAUCET_URL = String.format("http://faucet.%s.networks.dash.org/", devNetName);
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-testnet.db");
                 break;
             }
             default: {
@@ -101,11 +127,11 @@ public final class Constants {
             }
         }
         org.dash.wallet.common.util.Constants.INSTANCE.setMAX_MONEY(NETWORK_PARAMETERS.getMaxMoney());
+        org.dash.wallet.common.util.Constants.INSTANCE.setBUILD_FLAVOR(BuildConfig.FLAVOR);
     }
 
     /** Bitcoinj global context. */
     public static final Context CONTEXT = new Context(NETWORK_PARAMETERS);
-
     public final static class Files {
 
         /** Filename of the wallet. */
@@ -152,10 +178,15 @@ public final class Constants {
         public static final String QRINFO_BOOTSTRAP_FILENAME = "qrinfo" + FILENAME_NETWORK_SUFFIX + ".dat";
 
         /** Filename of the fees files. */
-        public static final String FEES_FILENAME = "fees" + FILENAME_NETWORK_SUFFIX + ".txt";
+        public static final String FEES_FILENAME = "fees" + FEE_NETWORK_SUFFIX + ".txt";
 
         /** Filename of the file containing Electrum servers. */
-        public static final String ELECTRUM_SERVERS_FILENAME = "electrum-servers.txt";
+        public static final String ELECTRUM_SERVERS_FILENAME = "electrum-servers" + FILENAME_NETWORK_SUFFIX + ".txt";
+
+        public static final String PROFILE_PICTURE_FILENAME = "profileimage.jpg";
+
+        public static final String INVITATION_PREVIEW_IMAGE_FILENAME = "invitation-preview.jpg";
+
     }
 
     /** Maximum size of backups. Files larger will be rejected. */
@@ -217,10 +248,18 @@ public final class Constants {
     public static final int NOTIFICATION_ID_BLOCKCHAIN_SYNC = 3;
     public static final int NOTIFICATION_ID_UPGRADE_WALLET = 4;
     public static final int NOTIFICATION_ID_BLUETOOTH = 5;
+    public static final int NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY = 6;
+    public static final int NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR = 7;
 
     public static String NOTIFICATION_CHANNEL_ID_TRANSACTIONS = "dash.notifications.transactions";
     public static String NOTIFICATION_CHANNEL_ID_ONGOING = "dash.notifications.ongoing";
     public static String NOTIFICATION_CHANNEL_ID_GENERIC = "dash.notifications.generic";
+    public static String NOTIFICATION_CHANNEL_ID_DASHPAY = "dash.notifications.dashpay";
+
+    public static int USERNAME_MIN_LENGTH = 3;
+    public static int USERNAME_MAX_LENGTH = 23;
+    public static int DISPLAY_NAME_MAX_LENGTH = 25;
+    public static int ABOUT_ME_MAX_LENGTH = 140;
 
     /** Desired number of scrypt iterations for deriving the spending PIN */
     public static final int SCRYPT_ITERATIONS_TARGET = 65536;
@@ -249,4 +288,29 @@ public final class Constants {
 
     //Backup Warnings (true = both seed and backup file, false = seed only)
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
+
+    // 2,500,000,000 credits
+    public static final Coin DASH_PAY_FEE_CONTESTED = Coin.parseCoin("0.25");
+    public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.03");
+
+    // 150,000,000
+    public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);
+
+    public static boolean IS_TESTNET_BUILD = Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_TESTNET);
+
+    public interface Invitation {
+
+        /*** MIME type used for sharing invitations*/
+        String MIMETYPE = "text/plain";
+        String MIMETYPE_WITH_IMAGE = "image/webp";
+
+        String DOMAIN_URI_PREFIX = "https://invitations.dashpay.io/link";
+
+        String IOS_APP_BUNDLEID = "org.dashfoundation.dashpaytnt";
+        String IOS_APP_APPSTOREID = "1563288407";
+
+        String UTM_SOURCE = "DashPay Android";
+        String UTM_CAMPAIGN = "DashPay Alpha Program";
+        String UTM_MEDIUM = "email";
+    }
 }

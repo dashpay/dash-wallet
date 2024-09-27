@@ -21,6 +21,14 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import de.schildbach.wallet.database.dao.*
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.DashPayContactRequest
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.entity.Invitation
+import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
+import de.schildbach.wallet.database.entity.TransactionMetadataDocument
+import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.ui.dashpay.UserAlert
 import org.dash.wallet.common.data.entity.AddressMetadata
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -38,9 +46,17 @@ import org.dash.wallet.features.exploredash.utils.RoomConverters
         TransactionMetadata::class,
         AddressMetadata::class,
         IconBitmap::class,
-        GiftCard::class
+        GiftCard::class,
+        DashPayProfile::class,
+        DashPayContactRequest::class,
+        UserAlert::class,
+        Invitation::class,
+        TransactionMetadataCacheItem::class,
+        TransactionMetadataDocument::class,
+        UsernameRequest::class
     ],
-    version = 12 // if increasing version, we need migrations to preserve tx/addr metadata
+    version = 13, // if increasing version, we need migrations to preserve tx/addr metadata,
+    exportSchema = true
 )
 @TypeConverters(RoomConverters::class, BlockchainStateRoomConverters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -50,4 +66,11 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun addressMetadataDao(): AddressMetadataDao
     abstract fun iconBitmapDao(): IconBitmapDao
     abstract fun giftCardDao(): GiftCardDao
+    abstract fun dashPayProfileDao(): DashPayProfileDao
+    abstract fun dashPayContactRequestDao(): DashPayContactRequestDao
+    abstract fun invitationsDao(): InvitationsDao
+    abstract fun transactionMetadataCacheDao(): TransactionMetadataChangeCacheDao
+    abstract fun transactionMetadataDocumentDao(): TransactionMetadataDocumentDao
+    abstract fun userAlertDao(): UserAlertDao
+    abstract fun usernameRequestDao(): UsernameRequestDao
 }

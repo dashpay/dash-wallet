@@ -16,15 +16,19 @@
 
 package de.schildbach.wallet.ui.send
 
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.TextUtils
 import android.view.View
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.preference.PreferenceManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogConfirmTransactionBinding
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import kotlin.coroutines.resume
@@ -32,7 +36,7 @@ import kotlin.coroutines.resumeWithException
 
 @AndroidEntryPoint
 class ConfirmTransactionDialog(
-    private val onTransactionConfirmed: ((Boolean) -> Unit)? = null
+    private var onTransactionConfirmed: ((Boolean) -> Unit)? = null
 ) : OffsetDialogFragment(R.layout.dialog_confirm_transaction) {
 
     companion object {
@@ -45,6 +49,10 @@ class ConfirmTransactionDialog(
         private const val ARG_BUTTON_TEXT = "arg_button_text"
         private const val ARG_PAYEE_NAME = "arg_payee_name"
         private const val ARG_PAYEE_VERIFIED_BY = "arg_payee_verified_by"
+        private const val ARG_PAYEE_USERNAME = "arg_payee_username"
+        private const val ARG_PAYEE_DISPLAYNAME = "arg_payee_displayname"
+        private const val ARG_PAYEE_AVATAR_URL = "arg_payee_avatar_url"
+        private const val ARG_PAYEE_PENDING_CONTACT_REQUEST = "arg_payee_contact_request"
 
         private fun setBundle(
             address: String,
@@ -54,7 +62,11 @@ class ConfirmTransactionDialog(
             total: String,
             payeeName: String? = null,
             payeeVerifiedBy: String? = null,
-            buttonText: String? = null
+            buttonText: String? = null,
+            username: String? = null,
+            displayName: String? = null,
+            avatarUrl: String? = null,
+            pendingContactRequest: Boolean = false
         ): Bundle {
             return Bundle().apply {
                 putString(ARG_ADDRESS, address)
@@ -65,6 +77,14 @@ class ConfirmTransactionDialog(
                 putString(ARG_PAYEE_NAME, payeeName)
                 putString(ARG_PAYEE_VERIFIED_BY, payeeVerifiedBy)
                 putString(ARG_BUTTON_TEXT, buttonText)
+
+                if (displayName != null) {
+                    putString(ARG_PAYEE_DISPLAYNAME, displayName)
+                    putString(ARG_PAYEE_AVATAR_URL, avatarUrl)
+                    putString(ARG_PAYEE_USERNAME, username)
+                }
+
+                putBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, pendingContactRequest)
             }
         }
 
@@ -83,7 +103,14 @@ class ConfirmTransactionDialog(
             amount: String,
             exchangeRate: ExchangeRate?,
             fee: String,
-            total: String
+            total: String,
+            payeeName: String? = null,
+            payeeVerifiedBy: String? = null,
+            buttonText: String? = null,
+            username: String? = null,
+            displayName: String? = null,
+            avatarUrl: String? = null,
+            pendingContactRequest: Boolean = false
         ) = suspendCancellableCoroutine<Boolean> { coroutine ->
             val confirmTransactionDialog = ConfirmTransactionDialog {
                 if (coroutine.isActive) {
@@ -91,7 +118,8 @@ class ConfirmTransactionDialog(
                 }
             }
             try {
-                val bundle = setBundle(address, amount, exchangeRate, fee, total)
+                val bundle = setBundle(address, amount, exchangeRate, fee, total,
+                    payeeName, payeeVerifiedBy, buttonText, username, displayName, avatarUrl, pendingContactRequest)
                 show(confirmTransactionDialog, bundle, activity)
             } catch (e: Exception) {
                 if (coroutine.isActive) {
@@ -104,12 +132,32 @@ class ConfirmTransactionDialog(
     private val binding by viewBinding(DialogConfirmTransactionBinding::bind)
     override val backgroundStyle = R.style.PrimaryBackground
 
+    private val autoAcceptPrefsKey by lazy {
+        "auto_accept:$username"
+    }
+
+    private val prefs: SharedPreferences by lazy {
+        PreferenceManager.getDefaultSharedPreferences(requireContext())
+    }
+
+    private val username by lazy {
+        requireArguments().getString(ARG_PAYEE_USERNAME)
+    }
+
+    private val pendingContactRequest by lazy {
+        requireArguments().getBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, false)
+    }
+
+    var autoAcceptContactRequest: Boolean = false
+        private set
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.amountView.dashToFiat = true
         binding.amountView.showCurrencySelector = false
 
+        maybeCleanUpPrefs()
         requireArguments().apply {
             val exchangeRate = getSerializable(ARG_EXCHANGE_RATE) as? ExchangeRate
 
@@ -118,6 +166,8 @@ class ConfirmTransactionDialog(
             binding.transactionFee.text = getString(ARG_FEE)
             binding.totalAmount.text = getString(ARG_TOTAL)
 
+            val displayNameText = getString(ARG_PAYEE_DISPLAYNAME)
+            val avatarUrl = getString(ARG_PAYEE_AVATAR_URL)
             val payeeName = getString(ARG_PAYEE_NAME)
             val payeeVerifiedBy = getString(ARG_PAYEE_VERIFIED_BY)
 
@@ -131,7 +181,20 @@ class ConfirmTransactionDialog(
                 }
                 binding.address.setOnClickListener(forceMarqueeOnClickListener)
                 binding.payeeSecuredBy.setOnClickListener(forceMarqueeOnClickListener)
+            } else if (displayNameText != null) {
+                binding.address.visibility = View.GONE
+                binding.displayname.text = displayNameText
+
+                ProfilePictureDisplay.display(binding.avatar, avatarUrl!!, null, username!!)
+                binding.confirmAutoAccept.isChecked = autoAcceptLastValue
+                if (pendingContactRequest) {
+                    binding.confirmAutoAccept.visibility = View.VISIBLE
+                } else {
+                    binding.confirmAutoAccept.visibility = View.GONE
+                }
             } else {
+                binding.sendtouser.visibility = View.GONE
+                binding.confirmAutoAccept.visibility = View.GONE
                 binding.address.ellipsize = TextUtils.TruncateAt.MIDDLE
                 binding.address.text = getString(ARG_ADDRESS)
             }
@@ -141,12 +204,71 @@ class ConfirmTransactionDialog(
         }
 
         binding.confirmPayment.setOnClickListener {
+            autoAcceptLastValue = binding.confirmAutoAccept.isChecked
+            autoAcceptContactRequest = pendingContactRequest && binding.confirmAutoAccept.isChecked
             onTransactionConfirmed?.invoke(true)
             dismiss()
         }
 
         binding.dismissBtn.setOnClickListener {
             dismiss()
+        }
+    }
+
+    suspend fun show(
+        activity: FragmentActivity,
+        address: String,
+        amount: String,
+        exchangeRate: ExchangeRate?,
+        fee: String,
+        total: String,
+        payeeName: String? = null,
+        payeeVerifiedBy: String? = null,
+        buttonText: String? = null,
+        username: String? = null,
+        displayName: String? = null,
+        avatarUrl: String? = null,
+        pendingContactRequest: Boolean = false
+    ): Boolean? {
+        if (!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            return null
+        }
+
+        return suspendCancellableCoroutine { coroutine ->
+            this.onTransactionConfirmed = { result ->
+                if (coroutine.isActive) {
+                    coroutine.resume(result)
+                }
+            }
+
+            try {
+                val bundle = setBundle(
+                    address, amount, exchangeRate, fee, total,
+                    payeeName, payeeVerifiedBy, buttonText,
+                    username, displayName, avatarUrl, pendingContactRequest
+                )
+                show(this, bundle, activity)
+            } catch (ex: Exception) {
+                if (coroutine.isActive) {
+                    coroutine.resumeWithException(ex)
+                }
+            }
+        }
+    }
+
+    private var autoAcceptLastValue: Boolean
+        get() = if (username != null) {
+            prefs.getBoolean(autoAcceptPrefsKey, true)
+        } else {
+            true
+        }
+        set(value) {
+            prefs.edit().putBoolean(autoAcceptPrefsKey, value).apply()
+        }
+
+    private fun maybeCleanUpPrefs() {
+        if (username != null && !pendingContactRequest && prefs.contains(autoAcceptPrefsKey)) {
+            prefs.edit().remove(autoAcceptPrefsKey).apply()
         }
     }
 }

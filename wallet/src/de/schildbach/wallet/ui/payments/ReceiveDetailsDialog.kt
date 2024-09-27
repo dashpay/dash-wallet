@@ -58,6 +58,7 @@ class ReceiveDetailsDialog : OffsetDialogFragment(R.layout.dialog_receive_detail
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         requireArguments().apply {
             val address = getSerializable(ARG_ADDRESS) as Address
             val dashAmount = getSerializable(ARG_DASH_AMOUNT) as Coin

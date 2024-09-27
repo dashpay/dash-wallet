@@ -18,6 +18,9 @@ package de.schildbach.wallet.ui
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.WalletApplication
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -41,7 +44,9 @@ class TransactionResultViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
     val walletData: WalletDataProvider,
-    private val configuration: Configuration,
+    val configuration: Configuration,
+    private val dashPayProfileDao: DashPayProfileDao,
+    private val platformRepo: PlatformRepo,
     private val analytics: AnalyticsService,
     val walletApplication: WalletApplication
 ) : ViewModel() {
@@ -72,11 +77,16 @@ class TransactionResultViewModel @Inject constructor(
         .filterNotNull()
         .asLiveData()
 
+    private val _contact = MutableLiveData<DashPayProfile?>()
+    val contact: LiveData<DashPayProfile?>
+        get() = _contact
+
     fun init(txId: Sha256Hash?) {
         txId?.let {
             this.transaction = walletData.wallet!!.getTransaction(txId)
             this.transaction?.let {
                 monitorTransactionMetadata(it.txId)
+                findContact(it)
             }
         }
     }
@@ -114,6 +124,25 @@ class TransactionResultViewModel @Inject constructor(
         }
     }
 
+    private fun findContact(tx: Transaction) {
+        if (!platformRepo.hasIdentity) {
+            _contact.postValue(null)
+            return
+        }
+
+        val userId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
+
+        if (userId == null) {
+            _contact.postValue(null)
+            return
+        }
+
+        dashPayProfileDao.observeByUserId(userId)
+            .distinctUntilChanged()
+            .onEach(_contact::postValue)
+            .launchIn(viewModelScope)
+    }
+    
     fun rescanBlockchain() {
         analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, mapOf())
         walletApplication.resetBlockchain()

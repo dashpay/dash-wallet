@@ -234,7 +234,9 @@ object PaymentIntentParser {
                 paymentSession.merchantData,
                 null,
                 paymentRequestHash,
-                paymentSession.expires
+                paymentSession.expires,
+                null,
+                null
             )
 
             if (paymentIntent.hasPaymentUrl() && !paymentIntent.isSupportedPaymentUrl) {

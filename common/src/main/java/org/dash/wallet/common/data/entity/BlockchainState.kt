@@ -36,7 +36,7 @@ data class BlockchainState(var bestChainDate: Date?,
 
     @PrimaryKey
     var id = 1
-        set(value) {
+        set(@Suppress("UNUSED_PARAMETER") value) {
             field = 1
         }
 

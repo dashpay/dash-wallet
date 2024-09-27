@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_host_invite_friends"
+    app:startDestination="@+id/inviteFriendFragment">
+    <fragment
+        android:id="@+id/inviteFriendFragment"
+        android:name="de.schildbach.wallet.ui.invite.InviteFriendFragment"
+        tools:layout="@layout/fragment_invite_friend">
+
+        <action
+            android:id="@+id/inviteFriendFragment_to_username_privacy"
+            app:destination="@id/createUsernamePrivacyFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+        <action
+            android:id="@+id/inviteFriendFragment_to_inviteCreatedFragment"
+            app:destination="@id/inviteCreatedFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+        <argument
+            android:name="started_from_history"
+            android:defaultValue="false"
+            app:argType="boolean" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/inviteCreatedFragment"
+        android:name="de.schildbach.wallet.ui.invite.InviteCreatedFragment"
+        tools:layout="@layout/fragment_invite_created">
+
+        <argument
+            android:name="started_from_history"
+            android:defaultValue="false"
+            app:argType="boolean" />
+
+        <argument
+            android:name="identity_id"
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/inviteDetailsFragment"
+        android:name="de.schildbach.wallet.ui.invite.InviteDetailsFragment"
+        tools:layout="@layout/fragment_invite_details">
+
+        <argument
+            android:name="started_from_history"
+            android:defaultValue="false"
+            app:argType="boolean" />
+        <argument
+            android:name="invite_index"
+            app:argType="integer" />
+        <argument
+            android:name="identity_id"
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/createUsernamePrivacyFragment"
+        android:name="de.schildbach.wallet.ui.coinjoin.CoinJoinLevelFragment"
+        tools:layout="@layout/fragment_coinjoin_level"/>
+</navigation>

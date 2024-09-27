@@ -46,6 +46,8 @@ import org.bitcoinj.crypto.KeyCrypterScrypt;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseDialogFragment;
+import org.dash.wallet.common.util.KeyboardUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -235,6 +237,8 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         if (this.dialog != null && this.dialog.isShowing()) {
             this.dialog.dismiss();
         }
+
+        KeyboardUtil.Companion.hideKeyboard(getActivity(), oldPasswordView);
 
         this.dialog = null;
 

@@ -24,7 +24,7 @@ import org.bitcoinj.core.VarInt
 import org.bitcoinj.wallet.CoinSelection
 import org.bitcoinj.wallet.CoinSelector
 
-class MaxOutputAmountCoinSelector: CoinSelector {
+open class MaxOutputAmountCoinSelector: CoinSelector {
     companion object {
         private const val TX_OUTPUT_SIZE = 34 // estimated size for a typical transaction output
         private const val TX_INPUT_SIZE = 148 // estimated size for a typical compact pubkey transaction input

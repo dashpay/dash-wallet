@@ -7,6 +7,7 @@
     android:animateLayoutChanges="true"
     android:background="@color/background_primary"
     android:orientation="vertical"
+    android:paddingBottom="@dimen/bottom_nav_bar_height"
     tools:context="de.schildbach.wallet.ui.more.MoreFragment">
 
     <include
@@ -17,184 +18,439 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:animateLayoutChanges="true"
+        android:orientation="vertical">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:clipToPadding="false"
+            android:orientation="vertical">
+
+        <LinearLayout
+            android:id="@+id/dashpay_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            tools:visibility="visible"
             android:orientation="vertical">
 
             <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/buy_and_sell"
+                android:id="@+id/join_dashpay_container"
                 style="@style/MenuRow"
-                android:layout_marginTop="25dp">
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="0dp"
+                android:visibility="gone"
+                tools:visibility="visible">
 
-                <ImageView
-                    android:id="@+id/buy_dash_icon"
-                    style="@style/MenuRowIcon"
-                    app:layout_constraintBottom_toBottomOf="parent"
+                <TextView
+                    android:id="@+id/join_dashpay_title"
+                    style="@style/Subtitle2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/shortcut_action_join_dashpay"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_menu_buy_sell_dash" />
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
-                    android:id="@+id/buy_dash_title"
-                    style="@style/MenuRowTitle"
-                    android:text="@string/menu_buy_and_sell_title"
-                    app:layout_constraintStart_toEndOf="@+id/buy_dash_icon"
-                    app:layout_constraintTop_toTopOf="@+id/buy_dash_icon" />
+                    android:id="@+id/join_dashpay_subtitle"
+                    style="@style/Overline.Secondary"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="26dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginEnd="26dp"
+                    android:layout_marginBottom="22dp"
+                    android:gravity="center"
+                    android:textAlignment="gravity"
+                    android:text="@string/join_dashpay_more_subtitle"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/join_dashpay_title" />
 
-                <TextView
-                    android:id="@+id/buy_dash_subtitle"
-                    style="@style/MenuRowSubTitle"
-                    android:text="@string/menu_buy_and_sell_subtitle"
-                    app:layout_constraintStart_toStartOf="@+id/buy_dash_title"
-                    app:layout_constraintTop_toBottomOf="@+id/buy_dash_title" />
+                <Button
+                    android:id="@+id/join_dashpay_btn"
+                    style="@style/Button.Primary.Blue"
+                    android:layout_width="110dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="30dp"
+                    android:layout_marginBottom="14dp"
+                    android:text="@string/join"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/join_dashpay_subtitle"
+                    app:layout_constraintVertical_bias="0" />
+
 
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+        </LinearLayout>
+
+            <ViewFlipper
+                android:id="@+id/edit_update_switcher"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:animateFirstView="false"
+                android:inAnimation="@android:anim/fade_in"
+                android:measureAllChildren="false"
+                android:outAnimation="@android:anim/fade_out">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/userInfoContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <ImageView
+                        android:id="@+id/dashpayUserAvatar"
+                        android:layout_width="134dp"
+                        android:layout_height="134dp"
+                        android:layout_marginTop="35dp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintVertical_bias="0"
+                        tools:src="@drawable/user5" />
+
+                    <ImageButton
+                        android:id="@+id/profile_qr_icon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/transparent_button_background"
+                        app:layout_constraintBottom_toBottomOf="@id/dashpayUserAvatar"
+                        app:layout_constraintEnd_toEndOf="@id/dashpayUserAvatar"
+                        app:srcCompat="@drawable/ic_profile_qr" />
+
+                    <TextView
+                        android:id="@+id/username1"
+                        style="@style/Headline5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        app:layout_constraintEnd_toEndOf="@id/dashpayUserAvatar"
+                        app:layout_constraintStart_toStartOf="@id/dashpayUserAvatar"
+                        app:layout_constraintTop_toBottomOf="@id/dashpayUserAvatar"
+                        tools:text="Katie Rennie" />
+
+                    <TextView
+                        android:id="@+id/username2"
+                        style="@style/Body1.Secondary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        app:layout_constraintEnd_toEndOf="@id/username1"
+                        app:layout_constraintStart_toStartOf="@id/username1"
+                        app:layout_constraintTop_toBottomOf="@id/username1"
+                        tools:text="katierennie09" />
+
+                    <Button
+                        android:id="@+id/edit_profile"
+                        style="@style/Button.Tertiary.Large.Blue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="top|center_horizontal"
+                        android:text="@string/edit_profile"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="@id/username2"
+                        app:layout_constraintStart_toStartOf="@id/username2"
+                        app:layout_constraintTop_toBottomOf="@id/username2" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <include
+                    android:id="@+id/update_profile"
+                    layout="@layout/fragment_updating_profile" />
+
+                <include
+                    android:id="@+id/error_updating_profile"
+                    layout="@layout/update_profile_error" />
+
+                <include
+                    android:id="@+id/update_profile_network_error"
+                    layout="@layout/update_profile_network_unavailable" />
+
+            </ViewFlipper>
 
             <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/explore"
+                android:id="@+id/requested_username_container"
+                android:visibility="gone"
+                tools:visibility="visible"
+                android:layout_height="110dp"
                 style="@style/MenuRow">
 
-                <!-- TODO: need to change back ic_explore colors when doing redesign of this screen -->
                 <ImageView
-                    android:id="@+id/explore_icon"
+                    android:id="@+id/requested_username_icon"
                     style="@style/MenuRowIcon"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_explore" />
+                    app:srcCompat="@drawable/ic_avatar_blue" />
 
                 <TextView
-                    android:id="@+id/explore_title"
+                    android:id="@+id/requested_username_title"
                     style="@style/MenuRowTitle"
-                    android:text="@string/menu_explore_title"
-                    app:layout_constraintStart_toEndOf="@+id/explore_icon"
-                    app:layout_constraintTop_toTopOf="@+id/explore_icon" />
+                    app:layout_constraintStart_toEndOf="@+id/requested_username_icon"
+                    app:layout_constraintTop_toTopOf="@+id/requested_username_icon"
+                    tools:text="@string/shortcut_action_join_dashpay" />
 
                 <TextView
-                    android:id="@+id/explore_subtitle"
+                    android:id="@+id/requested_username_subtitle"
                     style="@style/MenuRowSubTitle"
-                    android:text="@string/menu_explore_subtitle"
-                    app:layout_constraintStart_toStartOf="@+id/explore_title"
-                    app:layout_constraintTop_toBottomOf="@+id/explore_title" />
-            </androidx.constraintlayout.widget.ConstraintLayout>
+                    android:text="@string/requested_username_has_been"
+                    app:layout_constraintStart_toStartOf="@+id/requested_username_title"
+                    app:layout_constraintTop_toBottomOf="@+id/requested_username_title" />
 
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/security"
-                style="@style/MenuRow">
+
+                <TextView
+                    android:id="@+id/requested_username_subtitle_two"
+                    style="@style/MenuRowSubTitle"
+                    android:text="@string/requested_voting_duration"
+                    app:layout_constraintStart_toStartOf="@+id/requested_username_subtitle"
+                    app:layout_constraintTop_toBottomOf="@+id/requested_username_subtitle" />
 
                 <ImageView
-                    android:id="@+id/security_icon"
-                    style="@style/MenuRowIcon"
+                    android:id="@+id/requested_username_arrow"
+                    style="@style/MenuRowArrow"
                     app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_menu_security" />
-
-                <TextView
-                    android:id="@+id/security_title"
-                    style="@style/MenuRowTitle"
-                    android:text="@string/menu_security_title"
-                    app:layout_constraintStart_toEndOf="@+id/security_icon"
-                    app:layout_constraintTop_toTopOf="@+id/security_icon" />
-
-                <TextView
-                    android:id="@+id/security_subtitle"
-                    style="@style/MenuRowSubTitle"
-                    android:text="@string/menu_security_subtitle"
-                    app:layout_constraintStart_toStartOf="@+id/security_title"
-                    app:layout_constraintTop_toBottomOf="@+id/security_title" />
+                    app:srcCompat="@drawable/ic_menu_row_arrow" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/settings"
-                style="@style/MenuRow">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:animateLayoutChanges="true"
+                android:orientation="vertical"
+                android:paddingTop="20dp">
 
-                <ImageView
-                    android:id="@+id/setting_icon"
-                    style="@style/MenuRowIcon"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_menu_settings" />
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/invite"
+                    style="@style/MenuRow">
 
-                <TextView
-                    android:id="@+id/settings_title"
-                    style="@style/MenuRowTitle"
-                    android:text="@string/menu_settings_title"
-                    app:layout_constraintStart_toEndOf="@+id/setting_icon"
-                    app:layout_constraintTop_toTopOf="@+id/setting_icon" />
+                    <ImageView
+                        android:id="@+id/invite_icon"
+                        style="@style/MenuRowIcon"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_menu_invite" />
 
-                <TextView
-                    android:id="@+id/settings_subtitle"
-                    style="@style/MenuRowSubTitle"
-                    android:text="@string/menu_settings_subtitle"
-                    app:layout_constraintStart_toStartOf="@+id/settings_title"
-                    app:layout_constraintTop_toBottomOf="@+id/settings_title" />
+                    <TextView
+                        android:id="@+id/invite_title"
+                        style="@style/MenuRowTitle"
+                        android:text="@string/menu_invite_title"
+                        app:layout_constraintStart_toEndOf="@+id/invite_icon"
+                        app:layout_constraintTop_toTopOf="@+id/invite_icon" />
 
-            </androidx.constraintlayout.widget.ConstraintLayout>
+                    <TextView
+                        android:id="@+id/invite_subtitle"
+                        style="@style/MenuRowSubTitle"
+                        android:text="@string/menu_invite_subtitle"
+                        app:layout_constraintStart_toStartOf="@+id/invite_title"
+                        app:layout_constraintTop_toBottomOf="@+id/invite_title" />
 
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/tools"
-                style="@style/MenuRow">
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
-                <ImageView
-                    android:id="@+id/tools_icon"
-                    style="@style/MenuRowIcon"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_menu_tools" />
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/buy_and_sell"
+                    style="@style/MenuRow">
 
-                <TextView
-                    android:id="@+id/tools_title"
-                    style="@style/MenuRowTitle"
-                    android:text="@string/menu_tools_title"
-                    app:layout_constraintStart_toEndOf="@+id/tools_icon"
-                    app:layout_constraintTop_toTopOf="@+id/tools_icon" />
+                    <ImageView
+                        android:id="@+id/buy_dash_icon"
+                        style="@style/MenuRowIcon"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_menu_buy_sell_dash" />
 
-                <TextView
-                    android:id="@+id/tools_subtitle"
-                    style="@style/MenuRowSubTitle"
-                    android:text="@string/menu_tools_subtitle"
-                    app:layout_constraintStart_toStartOf="@+id/tools_title"
-                    app:layout_constraintTop_toBottomOf="@+id/tools_title" />
+                    <TextView
+                        android:id="@+id/buy_dash_title"
+                        style="@style/MenuRowTitle"
+                        android:text="@string/menu_buy_and_sell_title"
+                        app:layout_constraintStart_toEndOf="@+id/buy_dash_icon"
+                        app:layout_constraintTop_toTopOf="@+id/buy_dash_icon" />
 
-            </androidx.constraintlayout.widget.ConstraintLayout>
+                    <TextView
+                        android:id="@+id/buy_dash_subtitle"
+                        style="@style/MenuRowSubTitle"
+                        android:text="@string/menu_buy_and_sell_subtitle"
+                        app:layout_constraintStart_toStartOf="@+id/buy_dash_title"
+                        app:layout_constraintTop_toBottomOf="@+id/buy_dash_title" />
 
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/contact_support"
-                style="@style/MenuRow">
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
-                <ImageView
-                    android:id="@+id/contact_support_icon"
-                    style="@style/MenuRowIcon"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_contact_support" />
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/explore"
+                    style="@style/MenuRow">
 
-                <TextView
-                    android:id="@+id/contact_support_title"
-                    style="@style/MenuRowTitle"
-                    android:text="@string/menu_contact_support_title"
-                    app:layout_constraintStart_toEndOf="@+id/contact_support_icon"
-                    app:layout_constraintTop_toTopOf="@+id/contact_support_icon" />
+                    <!-- TODO: need to change back ic_explore colors when doing redesign of this screen -->
+                    <ImageView
+                        android:id="@+id/explore_icon"
+                        style="@style/MenuRowIcon"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_explore" />
 
-                <TextView
-                    android:id="@+id/contact_support_subtitle"
-                    style="@style/MenuRowSubTitle"
-                    android:text="@string/menu_contact_support_subtitle"
-                    app:layout_constraintStart_toStartOf="@+id/contact_support_title"
-                    app:layout_constraintTop_toBottomOf="@+id/contact_support_title" />
+                    <TextView
+                        android:id="@+id/explore_title"
+                        style="@style/MenuRowTitle"
+                        android:text="@string/menu_explore_title"
+                        app:layout_constraintStart_toEndOf="@+id/explore_icon"
+                        app:layout_constraintTop_toTopOf="@+id/explore_icon" />
 
-            </androidx.constraintlayout.widget.ConstraintLayout>
+                    <TextView
+                        android:id="@+id/explore_subtitle"
+                        style="@style/MenuRowSubTitle"
+                        android:text="@string/menu_explore_subtitle"
+                        app:layout_constraintStart_toStartOf="@+id/explore_title"
+                        app:layout_constraintTop_toBottomOf="@+id/explore_title" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/security"
+                    style="@style/MenuRow">
+
+                    <ImageView
+                        android:id="@+id/security_icon"
+                        style="@style/MenuRowIcon"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_menu_security" />
+
+                    <TextView
+                        android:id="@+id/security_title"
+                        style="@style/MenuRowTitle"
+                        android:text="@string/menu_security_title"
+                        app:layout_constraintStart_toEndOf="@+id/security_icon"
+                        app:layout_constraintTop_toTopOf="@+id/security_icon" />
+
+                    <TextView
+                        android:id="@+id/security_subtitle"
+                        style="@style/MenuRowSubTitle"
+                        android:text="@string/menu_security_subtitle"
+                        app:layout_constraintStart_toStartOf="@+id/security_title"
+                        app:layout_constraintTop_toBottomOf="@+id/security_title" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/settings"
+                    style="@style/MenuRow">
+
+                    <ImageView
+                        android:id="@+id/setting_icon"
+                        style="@style/MenuRowIcon"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_menu_settings" />
+
+                    <TextView
+                        android:id="@+id/settings_title"
+                        style="@style/MenuRowTitle"
+                        android:text="@string/menu_settings_title"
+                        app:layout_constraintStart_toEndOf="@+id/setting_icon"
+                        app:layout_constraintTop_toTopOf="@+id/setting_icon" />
+
+                    <TextView
+                        android:id="@+id/settings_subtitle"
+                        style="@style/MenuRowSubTitle"
+                        android:text="@string/menu_settings_subtitle"
+                        app:layout_constraintStart_toStartOf="@+id/settings_title"
+                        app:layout_constraintTop_toBottomOf="@+id/settings_title" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/tools"
+                    style="@style/MenuRow">
+
+                    <ImageView
+                        android:id="@+id/tools_icon"
+                        style="@style/MenuRowIcon"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_menu_tools" />
+
+                    <TextView
+                        android:id="@+id/tools_title"
+                        style="@style/MenuRowTitle"
+                        android:text="@string/menu_tools_title"
+                        app:layout_constraintStart_toEndOf="@+id/tools_icon"
+                        app:layout_constraintTop_toTopOf="@+id/tools_icon" />
+
+                    <TextView
+                        android:id="@+id/tools_subtitle"
+                        style="@style/MenuRowSubTitle"
+                        android:text="@string/menu_tools_subtitle"
+                        app:layout_constraintStart_toStartOf="@+id/tools_title"
+                        app:layout_constraintTop_toBottomOf="@+id/tools_title" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <LinearLayout
+                    android:id="@+id/username_voting"
+                    android:orientation="horizontal"
+                    style="@style/MenuRow">
+
+                    <ImageView
+                        android:id="@+id/voting_icon"
+                        style="@style/MenuRowIcon"
+                        android:layout_gravity="center_vertical"
+                        app:srcCompat="@drawable/ic_voting" />
+
+                    <TextView
+                        android:id="@+id/voting_title"
+                        style="@style/MenuRowTitle"
+                        android:layout_gravity="center_vertical"
+                        android:text="@string/username_voting" />
+                </LinearLayout>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/contact_support"
+                    style="@style/MenuRow">
+
+                    <ImageView
+                        android:id="@+id/contact_support_icon"
+                        style="@style/MenuRowIcon"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_contact_support" />
+
+                    <TextView
+                        android:id="@+id/contact_support_title"
+                        style="@style/MenuRowTitle"
+                        android:text="@string/menu_contact_support_title"
+                        app:layout_constraintStart_toEndOf="@+id/contact_support_icon"
+                        app:layout_constraintTop_toTopOf="@+id/contact_support_icon" />
+
+                    <TextView
+                        android:id="@+id/contact_support_subtitle"
+                        style="@style/MenuRowSubTitle"
+                        android:text="@string/menu_contact_support_subtitle"
+                        app:layout_constraintStart_toStartOf="@+id/contact_support_title"
+                        app:layout_constraintTop_toBottomOf="@+id/contact_support_title" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </LinearLayout>
+
         </LinearLayout>
 
     </ScrollView>
 
 </LinearLayout>
+

@@ -43,6 +43,10 @@ enum class TaxCategory(val value: Int) {
             return values()[value];
         }
 
+        fun fromValue(name: String): TaxCategory? {
+            return values().find { it.name.lowercase() == name.lowercase() }
+        }
+
         fun getDefault(isIncoming: Boolean, isTransfer: Boolean): TaxCategory {
             return when {
                 isIncoming && !isTransfer -> defaultIncoming

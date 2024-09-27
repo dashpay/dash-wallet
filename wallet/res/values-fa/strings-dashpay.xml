@@ -1,0 +1,405 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="choose_your_username"><b>نام کاربری دش</b> برای خودتان انتخاب کنید</string>
+    <string name="identity_min_3_chars">بین ۳ تا ۲۳ کاراکتر</string>
+    <string name="identity_alphanum_only">فقط حرف، عدد و خط‌تیره</string>
+    <string name="identity_hyphen_rule">باید با یک حرف یا عدد شروع و تمام شود </string>
+    <string name="identity_username_validating">بررسی نام کاربری ...</string>
+    <string name="identity_username_available">نام کاربری موجود است</string>
+    <string name="identity_username_taken">نام کاربری قبلا انتخاب شده</string>
+    <string name="platform_communication_error">خطا در برقراری ارتباط با پلتفرم دش</string>
+    <string name="register">ثبت‌</string>
+
+    <string name="new_account_confirm_button_text">تائيد و پرداخت</string>
+    <string name="invitation_confirm_button_text">تائید</string>
+    <string name="new_account_confirm_accept">قبول می‌کنم</string>
+    <string name="new_account_confirm_upgrade_fee">کارمزد ارتقاء</string>
+    <string name="new_account_confirm_message">شما %s را به عنوان نام کاربری انتخاب کردید. لطفا به خاطر ذاشته باشبد که پس از ثبت نام کاربری، دیگر نمی‌توانید آن را تغییر دهید.</string>
+    <string name="invitation_confirm_title">کارمزد دعوت</string>
+    <string name="invitation_confirm_message">برای هر دعوت، این مبلغ اختصاص می‌یابد تا دریافت‌کننده بتواند نام کاربری‌اش را در شبکه دش ایجاد کتد.</string>
+    <string name="invitation_init_title">دعوت</string>
+    <string name="invitation_init_header">دوستان و اعضای خانواده‌تان را دعوت کنید.</string>
+    <string name="invitation_init_message">به دوستان و اعضای خانواده‌تان کمک کنید به شبکه دش بپیوندند. آنها را به دنیای بانکداری اجتماعی دعوت کنید. </string>
+    <string name="invitation_init_button_text">دعوتنامه جدید ایجاد کنید</string>
+    <string name="invitation_notifications_hint">دوستان و اعضای خانواده‌تان را به شبکه دش دعوت کنید. </string>
+    <string name="invitation_notifications_hint1">یک نفر را به شبکه دش دعوت کنید</string>
+    <string name="invitation_notifications_hint1_or">یا</string>
+    <string name="invitation_created_title">دعوتنامه</string>
+    <string name="invitation_created_successfully">دعوتنامه با موفقیت ایجاد شد</string>
+    <string name="invitation_created_tag_title">برای دسته‌بندی بهتر، تگ‌گذاری کنید</string>
+    <string name="invitation_created_tag">مثلا: بابا</string>
+    <string name="invitation_created_preview">مشاهده دعوتنامه</string>
+    <string name="invitation_created_copy_link">کپی لینک دعوتنامه</string>
+    <string name="invitation_created_send_invitation">ارسال دعوتنامه</string>
+    <string name="invitation_created_send_invitation_again">ارسال دوباره</string>
+    <string name="invitation_created_maybe_later">شاید بعدا</string>
+    <string name="invitation_preview_title">الان بپیوندید</string>
+    <string name="invitation_preview_message">شما توسط %s دعوت شدید. استفاده از رمزارز دش را آغاز کنید.</string>
+    <string name="invitation_preview_close">بستن</string>
+    <string name="invitation_cant_afford_title">موجودی کیف پول کافی نیست</string>
+    <string name="invitation_cant_afford_message">به حداقل %s دش برای ایجاد دعوتنامه نیاز دارید. </string>
+    <string name="invitation_creating_error_title">خطا در ایجاد دعوتنامه</string>
+    <string name="invitation_creating_error_message">خطایی در ایجاد دعوتامه صورت گرفت. لطفا دوباره امتحان کنید. </string>
+    <string name="invitation_creating_error_message_not_synced">منتظر همزمان‌سازی بمانید و دوباره تلاش کنید.</string>
+    <string name="invitation_creating_progress_title">ایجاد دعوتنامه</string>
+    <string name="invitation_verifying_progress_title">بررسی دعوتنامه</string>
+    <string name="invitation_share_message">دعوتنامه‌ها یک‌بار مصرف هستند. آنها را در گروه به اشتراک نگذارید. </string>
+    <string name="invitation_share_title">دعوتنامه دش‌پی</string>
+    <string name="invitation_already_claimed_title">این دعوتنامه قبلا استفاده شده است</string>
+    <string name="invitation_already_claimed_message">دعوتانامه شما از %s قبلا استفاده شده است</string>
+    <string name="invitation_invalid_invite_title">دعوتامه نامعتبر</string>
+    <string name="invitation_invalid_invite_message">دعوتنامه شما از %s معتبر نیست</string>
+    <string name="invitation_username_already_found_title">نام کاربری قبلا پیدا شده</string>
+    <string name="invitation_username_already_found_message">نمی‌توانید این دعوتنامه را بپذیرید، چون قبلا نام کاربری دش به آن اختصاص یافته است</string>
+    <string name="invitation_onboarding_has_began_error_title">خطا در ادامه فرایند</string>
+    <string name="invitation_onboarding_has_began_error">فرایند در جریان است. لطفا پس از ایجاد کیف پول، این دعوتنامه را بپذیرید.</string>
+    <string name="invitation_accept_title_1">انتتخاب نام کاربری</string>
+    <string name="invitation_accept_title_2">اضافه کردن دوستان و اعضای خانواده</string>
+    <string name="invitation_accept_message_2">با جستجوی نام‌های کاربری، دوستان‌تان را بیابید و اعضای خانواده‌تان را دعوت کنید.</string>
+    <string name="invitation_accept_title_3">شخصی‌سازی</string>
+    <string name="invitation_accept_message_3">عکس‌تان را آپلود کنید، هویت‌تان را شخصی‌سازی کنید. </string>
+    <string name="invitation_accept_continue">ادامه</string>
+    <string name="invitation_contact_request_sent_message">یک درخواست ارتباط به %s ارسال شد، چون او را دعوت کردید. </string>
+
+    <string name="username_being_created">نام کاربری‌تان با عنوان %s در شبکه دش در حال ایجاد است</string>
+    <string name="username_being_requested">نام کاربری‌تان با عنوان %s در شبکه دش درخواست می‌شود</string>
+
+    <string name="processing_let_me_know">اگر انجام شد، به من اطلاع بده</string>
+    <string name="processing_home_title">ارتقاء به اولوشن</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(۱/۳) پردازش پرداخت</string>
+    <string name="processing_home_step_2">(۲/۳) ایجاد شناسه کاربری</string>
+    <string name="processing_home_step_2_restoring">(۲/۳) بازیابی شناسه کاربری</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(۳/۳) ثبت نام کاربری</string>
+    <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(۳/۳) درخواست نام کاربری</string>
+    <string name="processing_home_step_3_restoring">(۳/۳) بازیابی نام کاربری</string>
+    <string name="processing_done_title">سلام %s</string>
+    <string name="processing_done_subtitle">حسابتان آماده است</string>
+    <string name="processing_voting_subtitle">رای‌گیری برای نام کاربری‌تان آغاز شده است</string>
+    <string name="processing_error_title">خطا در ارتقاء</string>
+    <string name="processing_error_title_from_invite">خطا در ارتقاء از دعوتنامه</string>
+    <string name="processing_error_retry">تلاش دوباره</string>
+    <string name="processing_username_unavailable_title">نام کاربری موجود نیست</string>
+    <string name="processing_username_unavailable_subtitle">لطفا یک نام کاربری دیگر انتخاب کنید</string>
+
+    <string name="dashpay_upgrade_fee">کارمزد ارتقاء</string>
+    <string name="dashpay_invite_fee">کارمزد دعوتنامه</string>
+    <string name="dashpay_topup_fee">کارمزد اضافه</string>
+    <string name="search_user_find_a_user">یک کاربر را در شبکه دش بیابید</string>
+    <string name="search_for_a_user">جستجو برای یک کاربر در شبکه دش</string>
+    <string name="search_user_input_placeholder">نام کاربری را برای جستجو اینجا وارد کنید</string>
+    <string name="add_new_contact">یک مخاطب جدید اضافه کنید</string>
+    <string name="send_contact_request">درخواست تماس به مخاطب بفرستید</string>
+    <string name="sending_contact_request">در حال ارسال درخواست تماس به مخاطب</string>
+    <string name="sending_contact_request_short">دعوت</string>
+    <string name="accepting_contact_request">پذیرش درخواست مخاطب</string>
+    <string name="accepting_contact_request_short">در حال پذیرش</string>
+    <string name="search_user_no_results">هیچ کاربری با این مشخصات یافت نشد</string>
+    <string name="search_user_loading">جستجو برای نام کاربری<b> "%"</b> در شبکه دش</string>
+    <string name="contact_request_pending">درخواست تماس پاسخی دریافت نکرده است</string>
+    <string name="pay">پرداخت</string>
+    <string name="contact_request_received_title">%sدرخواست ارتباط با شما داده است</string>
+    <string name="contact_request_accept">قبول</string>
+    <string name="contact_request_ignore">رد</string>
+
+    <string name="contacts_no_results">هیچ مخاطبی با این مشخصات یافت نشد</string>
+
+    <string name="contacts_title">مخاطبان</string>
+    <string name="contacts_send_to_contact_title">ارسال برای یک مخاطب</string>
+    <string name="contacts_search_for">جستجو برای یک مخاطب</string>
+    <string name="contact_requests_title">درخواست ارتباط</string>
+    <string name="contacts_add_new_contact">اضافه کردن یک مخاطب جدید</string>
+    <string name="contacts_contact_requests_count">درخواست‌های مخاطبان (%d)</string>
+    <string name="contacts_contact_requests">درخواست ارتباط با مخاطب</string>
+    <string name="contacts_contact_requests_view">مشاهده همه</string>
+    <string name="contacts_my_contacts">مخاطبان من</string>
+    <string name="contacts_sort_order">دسته‌بندی بر اساس:</string>
+    <string-array name="contacts_sort">
+        <item>نام</item>
+    </string-array>
+
+    <string name="notifications_title">اعلانات</string>
+    <string name="notifications_title_with_count">اعلانات (%d)</string>
+    <string name="notifications_profile_activity">فعالیت</string>
+    <string name="notifications_new">جدید</string>
+    <string name="notifications_earlier">قدیمی‌تر</string>
+    <string name="notifications_none_new">هیچ اعلانی وجود ندارد</string>
+    <string name="notifications_contact_has_accepted">%sدرخواست ارتباط شما را پذیرفت</string>
+    <string name="notifications_you_have_accepted">شما درخواست ارتباط %sرا پذیرفتید</string>
+    <string name="notifications_you_sent">یک درخواست ارتباط با %sارسال کردید</string>
+    <string name="notifications_you_received">%sیک درخواست ارتباط برایتان فرستاد</string>
+
+    <string name="identity_complete_message">نام کاربری‌تان با عنوان %sبا موفقیت روی شبکه دش ایجاد شد</string>
+    <string name="request_complete_message">نام کاربری‌تان با عنوان %s با موفقیت روی شبکه دش درخواست شد</string>
+
+    <string name="scan_to_pay_username_dialog_message">این نام کاربری یا هویت در شبکه دش معتبر نیست\n\n%s</string>
+    <string name="send_coins_to_username">ارسال برای </string>
+    <string name="contact_history_disclaimer">اضافه کردن % به عنوان مخاطب به <b>پرداخت مستقیم به نام کاربری</b> و <b>حفظ سابقه تراکنش‌های مشترک</b></string>
+    <string name="contact_history_disclaimer_pending">به محص اینکه % درخواست‌تان را پذیرفت، می‌توانید <b>به صورت مستقیم به نام کاربری پرداخت کنید</b></string>
+    <string name="stranger_activity_disclaimer_text">پرداخت‌هایی که به صورت مستقیم به نشانی کیف پول ارسال می‌شود، در سابقه فعالیت ثبت نمی‌شود. </string>
+    <string name="error_loading_identity">خطا در بارگذاری هویت</string>
+
+    <string name="edit_profile">ویرایش پروفایل</string>
+    <string name="display_name">نمایش نام</string>
+    <string name="about_me">درباره من</string>
+    <string name="char_count">%1$d/%2$dکاراکتر</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">ذخیره</string>
+    <string name="edit_profile_take_picture">عکس گرفتن با دوربین</string>
+    <string name="edit_profile_choose_picture">انتخاب از گالری</string>
+    <string name="upgrade_to_evolution_title">به دش‌پی بپیوندید</string>
+    <string name="upgrade_to_evolution_message">نام کاربری‌تان را ایجاد کنید، دوستان و اعضای خانواده‌تان را با نام کاربری‌شان بیابید و آنها را به مخاطبان‌تان اضافه کنید</string>
+    <string name="image_cropper_title">حرکت دهید و روی عکس‌تان زوم کنید تا بهترین حالت را بیابید</string>
+    <string name="select">انتخاب</string>
+    <string name="unable_to_load_image">بارگذاری تصویر ناموفق بود</string>
+    <string name="profile_picture_upload_error_title">خطا در آپلود</string>
+    <string name="profile_picture_upload_error_message">آپلود عکس ناموفق بود\nلطفا دوباره تلاش کنید</string>
+    <string name="profile_picture_upload_try_again">دوباره تلاش کنید</string>
+    <string name="profile_picture_uploading_title">لطفا منتظر بمانید</string>
+    <string name="profile_picture_uploading_message">عکس‌تان را روی شبکه آپلود کنید</string>
+    <string name="picture_upload_policy">سیاست آپلود عکس</string>
+    <string name="imgur_policy_1">تصویری که انتخاب می‌کنید به صورت بدون نام روی پلتفرم ایمجور آپلود می‌شود</string>
+    <string name="imgur_policy_2">تصایر آپلود شده به صورت عمومی قابل مشاهده است</string>
+    <string name="imgur_policy_3">همیشه می‌توانید عکس‌ آپلودشده راحذف کنید، به شرط اینکه دسترسی به کیف‌پول‌تان داشته باشید</string>
+    <string name="profile_picture_delete_title">آیا مطمئن هستید؟</string>
+    <string name="profile_picture_delete_message">این تصویر دیگر در شبکه دش استفاده نمی‌شود</string>
+    <string name="agree">موافقت</string>
+    <string name="yes">بله</string>
+    <string name="no">خیر</string>
+
+    <string name="updating_profile">به‌روزرسانی پروفایل روی شبکه دش</string>
+    <string name="google_drive_policy_one">هیچ اطلاعات حسابی روی شبکه دش یا توسط کیف پول دش‌پی ذخیره نمی‌شود </string>
+    <string name="google_drive_policy_two">تصایر آپلود شده به صورت عمومی قابل مشاهده است</string>
+    <string name="google_drive_policy_three">همیشه می‌توانید تصویر را تغییر داده یا حذف کنید، تا وقتی که به کیف پول‌تان روی این دستگاه دسترسی دارید</string>
+
+    <string name="upload_image_message">عکس‌تان را روی شبکه آپلود کنید</string>
+    <string name="upload_image_please_wait">لطفا منتظر بمانید</string>
+    <string name="upload_image_error_message">آپلود عکس ناموفق بود. لطفا دوباره تلاش کنید.</string>
+    <string name="upload_image_upload_error">خطا در آپلود</string>
+
+    <string name="edit_profile_google_drive">گوگل درایو</string>
+    <string name="edit_profile_imgur">ایمجور</string>
+    <string name="google_drive_failed_authorization">اعتبارسنجی گوگل‌درایو موفق نبود</string>
+
+
+    <string name="error_updating_profile_try_again">دوباره امتحان کنید</string>
+    <string name="error_updating_profile_cancel">لغو</string>
+    <string name="error_updating_profile_msg">خطا در به‌روزرسانی پروفایل</string>
+    <string name="error_updating_profile_code">کد: %s</string>
+    <string name="edit_profile_public_url">نشانی اینترنتی عمومی</string>
+    <string name="public_url_enter_url">نشانی اینترنتی را اینجا بچسبانید</string>
+    <string name="public_url_error_message">دسترسی به تصویر ناموفق بود. لطفا یک نشانی اینترنتی معتبر برای تصویر وارد کنید.</string>
+    <string name="public_url_message">می‌توانید هر نشانی اینترنی که به صورت عمومی در اینترنت در دسترس است را وارد کنید تا کاربران بتوانند آن را در شبکه دش ببینند. </string>
+    <string name="public_url_more_info">اطلاعات بیشتر</string>
+    <string name="public_url_fetching_image">در حال دریافت تصویر</string>
+
+    <string name="gravatar">گراواتار</string>
+    <string name="gravatar_email_prompt">شناسه ایمیل گراواتار خود را وارد کنید</string>
+    <string name="gravatar_fetching">در حال دریافت گراواتار</string>
+    <string name="gravatar_email_sample">sample\@email.com</string>
+    <string name="gravatar_disclaimer">این ایمیل در کیف پول دش‌بی یا هر سرور دیگری ذخیره نخواهد شد. این ایمیل یک بار برای دریافت جزئیات حساب گراواتار استفاده می‌شود و سپس از حذف می‌شود. </string>
+    <string name="gravatar_email_error">دسترسی به گراواتار ناموفق بود. لطفا یک شناسه معتبر ایمیل گراواتار وارد کنید.</string>
+
+    <string name="where_to_store_your_picture">آیا مایلید تصویرتان را ذخیره کنید؟</string>
+    <string name="external_storage_disclaimer">مدیریت تصویرتان همیشه در اختیار خودتان خواهد بود. دش هیچ اطلاعاتی، از جمله تصویر پروفایل‌تان را ذخیره نمی‌کند. </string>
+    <string name="select_source_sign_in_required">نیازمند ورود به حساب</string>
+    <string name="select_source_google_drive">گوگل درایو</string>
+    <string name="select_source_no_sign_in_required">نیاز به حساب کاربری نیست</string>
+
+    <string name="join_dashpay_subtitle">نام کاربری بسازید، دوستان‌تان را اضافه کنید...</string>
+    <string name="join_dashpay_more_subtitle">نام کاربری بسازید، دوستان‌تان را بیابید و آنها را به فهرست مخاطبان‌تان اضافه کنید.</string>
+    <string name="join">پیوستم</string>
+
+    <string name="more_suggestions">پیشنهادات بیشتر</string>
+    <string name="users_that_matches">کاربران مرتبط</string>
+    <string name="not_in_your_contacts">کسانی که در حال حاضر در فهرست مخاطبان شما نیستند</string>
+    <string name="no_matching_contacts">هیچ کاربری با این مشخصات در فهرست مخاطبان شما نیست</string>
+    <string name="suggestions_empty_result_part_1">هیچ کاربری با این نام در فهرست مخاطبان شما نیست</string>
+    <string name="suggestions_empty_result_part_2">در مخاطبان شما</string>
+    <string name="save_changes">ذخیره تغییرات</string>
+    <string name="save_profile_reminder_text">آیا مایلید تغییراتی که در پروفایل‌تان ایجاد کردید را ذخیره کنید؟</string>
+    <string name="invitation_notification_text">دوستان و اعضای خانواده‌تان را به شبکه دش دعوت کنید</string>
+    <string name="dashpay_min_balance_disclaimer">برای شروع به حداقل<b>%s</b>نیاز داریدی</string>
+    <string name="dashpay_insuffient_credits">اعتبارتان برای انجام این کار کافی نیست</string>
+
+    <string name="about_developer_mode">فعال شدن حالت دولوپری: همه قابلیت‌ها فعال هستند!</string>
+    <string name="about_developer_mode_disabled">حالت دولوپری غیرفعال شد.</string>
+    <string name="invite_history_create_new_invite">ایجاد یک دعوتنامه جدید</string>
+    <string name="invitations_history_header">سابقه دعوتنامه‌ها</string>
+    <string name="invitations_filter_title">فیلتر دعوتنامه‌ها</string>
+    <string name="invite_history_empty">هیچ دعوتنامه‌ای ایجاد نشده است</string>
+    <string name="invite_history_empty_claimed">هیچ دعوت‌نامه‌ای پذیرفته نشده است</string>
+    <string name="invite_history_empty_pending">هیچ دعوت‌نامه معلقی وجود ندارد</string>
+    <string name="invitation_details_invite_used_by">دعوتنامه‌های استفاده شده توسط</string>
+    <string name="invitation_details_invite_without_username">دعوتنامه پذیرفته شد. ثبت نام کاربری تکمیل نشده است.</string>
+    <string-array name="invite_filter">
+        <item>همه</item>
+        <item>معلق</item>
+        <item>پذیرفته‌شده</item>
+    </string-array>
+
+    <!-- Private memo -->
+    <string name="private_memo">یادداشت خصوصی</string>
+    <string name="add_note">اضافه کردن یادداشت</string>
+    <string name="edit_note">ویرایش یادداشت</string>
+    <string name="note">یادداشت</string>
+
+    <string name="select_privacy_preferences">الگوی محرمانگی نام کاربری‌تان را انتخاب کنید</string>
+    <string name="please_note_cant_change_this_later">لطفا دقت داشته باشید که نمی‌توانید بعدا این را تغییر دهید</string>
+    <string name="Intermediate_level_WIFI_Warning">سطح میانی محرمانگی نیازمند اتصال اینترنتی مطمئن است</string>
+    <string name="Advanced_level_WIFI_Warning">سطح بالای مخرمانگی نیازمند اتصال اینترنتی مطمئن است.</string>
+    <string name="privcay_level_WIFI_warning_desc">توصیه می‌شود از شبکه وای-فای استفاده کنید تا پولی از دست ندهید</string>
+    <string name="continue_anyway">در هر صورت، ادامه بده</string>
+    <string name="welcome_to_dash_pay">به دش پی خوش آمدید</string>
+    <string name="pay_to_usernames">پرداخت به نام کاربری. بدون نیاز به نشانی طولانی کیف پول</string>
+    <string name="create_a_username">ایجاد یک حساب کاربری</string>
+    <string name="add_your_friends_family">اضافه کردن دوستان و اعضای خانواده</string>
+    <string name="invite_your_family">با جستجوی نام‌های کاربری، دوستان‌تان را بیابید و اعضای خانواده‌تان را دعوت کنید.</string>
+    <string name="personalise_profile">شخصی‌سازی پروفایل</string>
+    <string name="upload_your_picture">تصویرتان را به‌روزرسانی کنید، هویت‌تان را شخصی‌سازی کنید</string>
+    <string name="in_case_lose_your_passphrase">در صورتی که عبارت بازیابی را گم کنید، حق دسترسی به نام کاربری درخواستی را از دست خواهید داد. </string>
+    <string name="keep_your_passphrase_safe">عبارت بازیابی را در جایی امن نگه دارید.</string>
+    <string name="pay_now">همین حالا پرداخت کنید و اگر مورد تائید نبود، می‌توانید یک نام کاربری دیگر، بدون پرداخت، ایحاد کنید [بررسی در صورت درست بود]</string>
+    <string name="case_your_request_is_not_approved">در صورتی که درخواست‌تان تائيد نشد</string>
+    <string name="voting_requirement_subtitle">هر نام کاربری که دارای اعداد ۲ تا ۹ باشد و یا طولانی‌تر از ۲۰ کاراکتر باشد، به صورت خودکار تائید می‌شود.</string>
+    <string name="voting_requirement_title">در برخی موارد، نیاز به رای‌گیری است</string>
+    <string name="dash_network_must_vote_to_approve">شبکه دش باید برای تائید نام کاربری‌تان، پیش از ایجاد، رای‌گیری کند.</string>
+    <string name="what_is_username_voting">رای‌گیری نام کاربری چیست؟</string>
+    <string name="usernames_blocked_title">برخی از نام‌های کاربری ممکن است بلاک شوند</string>
+    <string name="usernames_blocked_subtitle">در صورتی که درصدی شمخص از شبکه به این نتیجه برسند که نام کاربری‌تان نامناسب است، می‌توانند آن را بلاک کنند.</string>
+    <string name="username_voting">رای‌گیری نام کاربری</string>
+    <string name="username_voting_subtitle">به عنوان مالک یک مسترنود، می‌توانید در رای‌گیری شرکت کنید تا پیش از ایجاد نام کاربری توسط کاربر، آن را تائید کنید. </string>
+    <string name="voting_duplicates_only_title">فقط در صورت تکراری بودن رای دهید</string>
+    <string name="voting_duplicates_only_message">می‌توانید همه درخواست‌ها را مشاهده کنید، اما فقط در رای‌گیری تکراری‌ها باید شرکت کنید</string>
+    <string name="all">همه</string>
+    <string name="n_usernames">%dنام کاربری</string>
+    <string name="n_requests">%dدرخواست</string>
+    <string name="search_by_username">جستجو بر اساس نام کاربری</string>
+    <string name="type">نوع</string>
+    <string name="only_duplicates">فقط تکراری‌ها</string>
+    <string name="only_links">فقط درخواست‌ها با لینک</string>
+    <string name="only_links_short">با لینک</string>
+    <string name="date">تاریخ: %s</string>
+    <string name="votes">رای‌ها: %s</string>
+
+    <string-array name="usernames_sort_by_options">
+        <item>از جدید به قدیم</item>
+        <item>از قدیم به جدید</item>
+        <item>زیاد به کم</item>
+        <item>کم به زیاد</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>همه</item>
+        <item>مواردی که تائید کردم</item>
+        <item>مواردی که تائيد نکردم</item>
+    </string-array>
+
+    <string name="request_your_username">نام کاربری‌تان را ایجاد کنید</string>
+    <string name="request_your_hint">دقت داشته باشید که نمی‌توانید بعدا آن را تغییر دهید</string>
+    <string name="request_username">درخواست نام کاربری</string>
+    <string name="request_voting_range">شبکه دش برای این نام کاربری رای‌گیری می‌کند. نتیجه را در %s به شما اطلاع می‌دهیم. </string>
+    <string name="request_username_available">نام کاربری موجود است</string>
+    <string name="request_username_unavailable">نام کاربری موجود نیست یا بلاک شده است</string>
+    <string name="request_username_taken">این نام کاربری قبلا گرفته شده است</string>
+    <string name="requesting_your_username_title">ایجاد نام کاربری</string>
+    <string name="requesting_your_username_message">درخواست نام کاربری‌تان به شبکه دش ارسال شده است. ممکن است کمی زمان ببرد.</string>
+    <string name="requesting_your_username_error_title">درخواست نام کاربری‌تان ناموفق بود</string>
+    <string name="requesting_your_username_error_message">بنا به برخی دلایل، درخواست‌تان رد شد. لطفا دوباره تلاش کنید.</string>
+
+    <string name="voting">رای‌گیری:</string>
+    <string name="this_username_has_already_been_requested">این نام کاربری قبلا درخواست شده، اما شما نیز می‌توانید آن را  درخواست کنید و تائید آن را به شبکه واگذار کنید.</string>
+    <string name="request_details">جزئیات درخواست</string>
+    <string name="request_details_subtitle">متن زیر را بخوانید تا مالکیت این نام کاربری را تائید کنید.</string>
+    <string name="vote_to_approve">رای‌گیری برای تائید</string>
+    <string name="identity">هویت</string>
+    <string name="results">نتایج</string>
+    <string name="link">لینک</string>
+    <string name="link_not_provided">ارائه نشده</string>
+    <string name="cancel_approval">لغو تائید</string>
+    <string name="verify_your_identity">هویت‌تان را احراز کنید </string>
+    <string name="if_somebody">اگر شخص دیگری همین نام کاربری را درخواست کند، تصمیم‌گیری درباره اینکه این نام کاربری به چه کسی داده شود را به شبکه می‌سپاریم.</string>
+    <string name="the_link_will_be_visible">لینکی که فرستادید فقط برای مالکان شبکه قابل مشاهده خواهد بود.</string>
+    <string name="verify_your_identity_voting">احراز هویت کنید</string>
+    <string name="copy_the_text">متن را کپی کن</string>
+    <string name="please_vote_to_approve">لطفا برای تائید این نام کاربری من در دش رای دهید: %s</string>
+    <string name="prove_your_identity">هویت‌تان را اثبات کنید</string>
+    <string name="make_a_post_with_the_text">یک پست با متن بالا در یک شبکه اجتماعی سرشناس و یا یک پلتفرم پیام‌رسان منتشر کنید تا مشخص شود شما مالک اصلی نام کاربری درخواست شده هستید و لینک زیر را در آن بچسبانید</string>
+    <string name="paste_the_link">چسباندن لینک</string>
+    <string name="voting_key_title">کلید رای‌گیری‌تان را وارد کنید</string>
+    <string name="voting_key_hint">کلید رای‌دهی مسترنود</string>
+    <string name="voting_key_input_error">کلید اشتباه وارد کردید</string>
+    <string name="voting_key_add">کلیدهای رای‌دهی‌تان را اضافه کنید</string>
+    <string name="voting_key_add_subtitle">آی‌پی‌ آدرس‌(های) زیر مربوط به این کیف پول هستند</string>
+    <string name="masternode_ip">آی‌پی‌ آدرس مسترنود</string>
+    <string name="multiple_votes_cast">%dرای در نظر گرفته می شود چون چند کلید رای‌دهی در کیف پول‌تان دارید</string>
+    <string name="add_masternode_key">اضافه کردن کلید رای‌دهی مسترنود</string>
+    <string name="vote_submitted">رای‌تان ثبت شد</string>
+    <string name="vote_cancelled">رای‌تان لغو شد</string>
+    <string name="quick_vote">رای‌دهی سریع</string>
+    <string name="quick_vote_subtitle">با زدن دگمه «رای‌دهی برای همه»، به صورت خودکار به همه نام‌های کاربری فیلتر شده (%d) که ابتدا ثبت شدند رای می‌دهید</string>
+    <string name="vote_for_all">رای‌دهی برای همه</string>
+    <string name="voting_period_active">فعال بودن دوره رای‌دهی برای نام کاربری</string>
+    <string name="there_was_a_network_error">خطایی در شبکه روی داد. می‌توانید بدون هزینه، دوباره امتحان کنید</string>
+    <string name="requested_username_has_been">نام کاربردی درخواست شده است.</string>
+    <string name="requested_voting_duration">نتایج برای %s.</string>
+    <string name="cancel_request">لغو درخواست</string>
+    <string name="after_the_voting">پس از پایان رای‌گیری، نتایج به اطلاع‌تان می‌رسد</string>
+    <string name="none">هیچ کدام</string>
+    <string name="verify_now">همین حالا اعتبارسنجی کن</string>
+    <string name="if_you_tap_cancel">اگر دگمه «لغو درخواست» را بزنید، همچنان این فرصت را دارید تا یک نام کاربری دیگر را بدون پرداخت دوباره درخواست کنید</string>
+    <string name="do_you_really_want_to_cancel">آیا مطمئنید که می‌خواهید درخواست نام کاربری را لغو کنید</string>
+    <string name="if_you_tap_cancel_request">اگر دگمه «لغو درخواست» را بزنید، همچنان این فرصت را دارید تا یک نام کاربری دیگر را بدون پرداخت دوباره درخواست کنید</string>
+    <string name="cant_open">باز نمی‌شود</string>
+    <string name="invalid_link">لینک نامعتبر است</string>
+    <string name="welcome_request_username_min_balance_disclaimer_all">شما %sدش دارید. قیمت برخی از نام‌های کاربری %sدش است. </string>
+    <string name="welcome_request_username_min_balance_disclaimer_noncontested">برای ایجاد نام کاربری باید بیش از %s دش داشته باشید. </string>
+    <string name="request_username_min_balance_disclaimer">برای درخواست نام کاربری روی شبکه دش، باید بیش از %sدش داشته باشید</string>
+
+    <!-- CoinJoin -->
+    <string name="coinjoin">کوین‌جوین</string>
+    <string name="turned_off">خاموش شده</string>
+    <string name="coinjoin_info_subtitle">ترکیب کوین‌های دش موجب می‌شود تراکنش‌هایتان محرمانه‌تر شود</string>
+    <string name="coinjoin_description_1">فقط وقتی می‌توانید دش‌های ترکیب‌شده‌تان را خرج کنید که این گزینه روشن باشد. می‌توانید هر وقت که بخواهید، آن را خاموش کنید. </string>
+    <string name="coinjoin_description_2">دش‌هایی که به تازگی دریافت شده وقتی که کیف پول باز می‌شود، به صورت خودکار ترکیب خواهد شد</string>
+    <string name="coinjoin_description_3">روشن کردن این قابلیت موجب استفاده بیشتر از باتری می‌شود</string>
+    <string name="coinjoin_mixing_level_title">انتخاب سطح ترکیب</string>
+    <string name="coinjoin_mixing_level_subtitle">می‌توانید سطح ترکیب را هر زمانی تغییر داده یا متوقف کنید</string>
+    <string name="coinjoin_mixing_transactions">ترکیب تراکنش‌ها</string>
+    <string name="coinjoin_transaction_group">اینها تراکنش‌های ترکیب‌شده هستند</string>
+    <string name="intermediate">متوسط</string>
+    <string name="advanced">پیشرفته</string>
+    <string name="intermediate_level_card_decs">کاربران پیشرفته که سطح بالایی از تخصص فنی را دارند می‌توانند سابقه تراکنش شما را تعیین کنند.</string>
+    <string name="advanced_level_card_decs">حتی برای کاربران با تخصص فنی بالا نیز تعیین سابقه تراکنش شما دشوار است</string>
+    <string name="coinjoin_intermediate_time">تا ۳۰ دقیقه</string>
+    <string name="coinjoin_advanced_time">چند ساعت</string>
+    <string name="coinjoin_start">آغاز ترکیب</string>
+    <string name="coinjoin_stop">توقف ترکیب</string>
+    <string name="coinjoin_mixing">در حال ترکیب</string>
+    <string name="coinjoin_paused">توقف موقت ترکیب</string>
+    <string name="coinjoin_not_started">شروع نشده</string>
+    <string name="coinjoin_progress">%s(%d%%) %s از %s</string>
+    <string name="coinjoin_progress_balance">%1$s از %2$s</string>
+    <string name="coinjoin_progress_finished">کاملا ترکیب شده</string>
+    <string name="coinjoin_change_level_confirmation">آیا مطمئن هستید که می‌خواهید سطح محرمانگی را تغییر دهید؟</string>
+    <string name="coinjoin_stop_mixing_title">آیا مطمئن هستید که می‌خواهید ترکیب را متوقف کنید؟</string>
+    <string name="coinjoin_stop_mixing_message">هر مبلغی که ترکیب شده، با مبالغ ترکیب‌نشده شما ترکیب خواهد شد</string>
+    <string name="coinjoin_mixed_balance">موجودی ترکیب شده:</string>
+
+    <!-- credit balance messages / buttons -->
+    <string name="credit_balance_empty_warning_title">موجودی اعتباری‌تان پائین است</string>
+    <string name="credit_balance_low_warning_title">موجودی اعتباری‌تان پایان یافته است</string>
+    <string name="credit_balance_empty_warning_message">همچنان می‌توانید از دش‌پی برای پرداخت‌ها استفاده کنید، ولی نمی‌توانید پروفایل‌تان را به‌روزرسانی کرده و یا مخاطبان بیشتری اضافه کنید، تا وقتی که موجودی اعتبارتان را افزایش دهید</string>
+    <string name="credit_balance_low_warning_message">برای ادامه اعمال تغییرات به پروفایل و اضافه کردن مخاطب، اعتبارتان را افزایش دهید</string>
+    <string name="credit_balance_button_maybe_later">شاید بعدا</string>
+    <string name="credit_balance_button_buy">خرید اعتبار</string>
+    <string name="credit_balance_insufficient_error_message">موجودی کافی برای خرید اعتبار ندارید</string>
+    <string name="buy_credits_estimated_items">%s - %d مخاطب / %d به‌روزرسانی پروفایل</string>
+
+    <string name="request_username_username_voting_message">+ رای‌گیری نام کاربری چیست</string>
+    <string name="request_username_character_requirement">حرف، عدد و خط‌تیره</string>
+    <string name="request_username_balance_requirement">برا ایجاد نام کاربری باید ۰.۲۵ دش داشته باشید</string>
+    <string name="request_username_length_requirement">بین ۳ تا ۲۳ کاراکتر</string>
+    <string name="request_username_confirm">قبول می‌کنم</string>
+
+</resources>

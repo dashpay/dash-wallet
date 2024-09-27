@@ -75,7 +75,7 @@ class StakingActivity : LockScreenActivity() {
         when (request) {
             NavigationRequest.BackupPassphrase -> checkPinAndBackupPassphrase()
             NavigationRequest.RestoreWallet -> {
-                ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
+                ResetWalletDialog.newInstance(viewModel.analytics).show(supportFragmentManager, "reset_wallet_dialog")
             }
             NavigationRequest.BuyDash -> {
                 // TODO: replace with navController navigation when Staking is integrated into nav_home

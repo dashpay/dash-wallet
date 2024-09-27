@@ -21,6 +21,8 @@ import android.graphics.Bitmap
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.annotation.StyleRes
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
 import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.*
@@ -37,10 +39,12 @@ data class TransactionRowView(
     val txId: Sha256Hash,
     val value: Coin,
     val exchangeRate: ExchangeRate?,
+    val contact: DashPayProfile?,
     @DrawableRes val icon: Int,
     val iconBitmap: Bitmap?,
     @StyleRes val iconBackground: Int?,
     @StringRes val statusRes: Int,
+    val comment: String,
     val transactionAmount: Int,
     val time: Long,
     val timeFormat: Int,
@@ -53,29 +57,51 @@ data class TransactionRowView(
             txWrapper: TransactionWrapper,
             bag: TransactionBag,
             context: Context,
+            contact: DashPayProfile?,
             metadata: PresentableTxMetadata? = null
         ): TransactionRowView {
             val lastTx = txWrapper.transactions.last()
 
-            return if (txWrapper is FullCrowdNodeSignUpTxSet) {
-                TransactionRowView(
-                    ResourceString(R.string.crowdnode_account),
+            return when (txWrapper) {
+                is FullCrowdNodeSignUpTxSet -> TransactionRowView(
+                        ResourceString(R.string.crowdnode_account),
+                        lastTx.txId,
+                        txWrapper.getValue(bag),
+                        lastTx.exchangeRate,
+                        null,
+                        R.drawable.ic_crowdnode_logo,
+                        null,
+                        R.style.TxNoBackground,
+                        -1,
+                        metadata?.memo ?: "",
+                        txWrapper.transactions.size,
+                        lastTx.updateTime.time,
+                        TxResourceMapper().dateTimeFormat,
+                        false,
+                        ServiceName.CrowdNode,
+                        txWrapper
+                    )
+
+                is CoinJoinMixingTxSet -> TransactionRowView(
+                    ResourceString(R.string.coinjoin_mixing_transactions),
                     lastTx.txId,
                     txWrapper.getValue(bag),
                     lastTx.exchangeRate,
-                    R.drawable.ic_crowdnode_logo,
+                    null,
+                    R.drawable.ic_coinjoin_mixing_group,
                     null,
                     R.style.TxNoBackground,
                     -1,
+                    metadata?.memo ?: "",
                     txWrapper.transactions.size,
                     lastTx.updateTime.time,
                     TxResourceMapper().dateTimeFormat,
                     false,
-                    ServiceName.CrowdNode,
+                    ServiceName.Unknown,
                     txWrapper
                 )
-            } else {
-                fromTransaction(lastTx, bag, context, metadata)
+
+                else -> fromTransaction(lastTx, bag, context, metadata, contact)
             }
         }
 
@@ -84,6 +110,7 @@ data class TransactionRowView(
             bag: TransactionBag,
             context: Context,
             metadata: PresentableTxMetadata? = null,
+            contact: DashPayProfile? = null,
             resourceMapper: TxResourceMapper = TxResourceMapper()
         ): TransactionRowView {
             val value = tx.getValue(bag)
@@ -132,10 +159,12 @@ data class TransactionRowView(
                 tx.txId,
                 if (removeFee) value.add(tx.fee) else value,
                 tx.exchangeRate,
+                contact,
                 icon,
                 metadata?.icon,
                 iconBackground,
                 status,
+                metadata?.memo ?: "",
                 1,
                 tx.updateTime.time,
                 resourceMapper.dateTimeFormat,

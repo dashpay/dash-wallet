@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.ui.main
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.os.Bundle
@@ -24,6 +26,17 @@ import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.style.StyleSpan
 import android.view.View
+import android.widget.Toast
+import androidx.fragment.app.activityViewModels
+import androidx.recyclerview.widget.ConcatAdapter
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.ui.CreateUsernameActivity
+import de.schildbach.wallet.ui.DashPayUserActivity
+import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.SearchUserActivity
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService
+import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
+import de.schildbach.wallet.ui.invite.InviteHandler
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -62,20 +75,24 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             viewModel.balanceDashFormat,
             resources,
             true
-        ) { rowView, _ ->
+        ) { rowView, _, isProfileClick ->
             if (rowView is TransactionRowView) {
-                val fragment = if (rowView.txWrapper != null) {
-                    viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                    TransactionGroupDetailsFragment(rowView.txWrapper)
-                } else if (rowView.service == ServiceName.DashDirect) {
-                    viewModel.logEvent(AnalyticsConstants.DashDirect.DETAILS_GIFT_CARD)
-                    GiftCardDetailsDialog.newInstance(rowView.txId)
+                if (isProfileClick && rowView.contact != null) {
+                    requireContext().startActivity(DashPayUserActivity.createIntent(requireContext(), rowView.contact))
                 } else {
-                    viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                    TransactionDetailsDialogFragment.newInstance(rowView.txId)
-                }
+                    val fragment = if (rowView.txWrapper != null) {
+                        viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                        TransactionGroupDetailsFragment(rowView.txWrapper)
+                    } else if (rowView.service == ServiceName.DashDirect) {
+                        viewModel.logEvent(AnalyticsConstants.DashDirect.DETAILS_GIFT_CARD)
+                        GiftCardDetailsDialog.newInstance(rowView.txId)
+                    } else {
+                        viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                        TransactionDetailsDialogFragment.newInstance(rowView.txId)
+                    }
 
-                fragment.show(requireActivity())
+                    fragment.show(requireActivity())
+                }
             }
         }
 
@@ -96,9 +113,24 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             dialogFragment.show(requireActivity())
         }
 
+        val header = HistoryHeaderAdapter(
+            requireContext().getSharedPreferences(
+                HistoryHeaderAdapter.PREFS_FILE_NAME,
+                Context.MODE_PRIVATE
+            )
+        )
+
+        header.setOnIdentityRetryClicked { retryIdentityCreation(header) }
+        header.setOnIdentityClicked { openIdentityCreation() }
+        header.setOnJoinDashPayClicked { onJoinDashPayClicked() }
+
         binding.walletTransactionsList.setHasFixedSize(true)
         binding.walletTransactionsList.layoutManager = LinearLayoutManager(requireContext())
-        binding.walletTransactionsList.adapter = adapter
+        binding.walletTransactionsList.adapter = ConcatAdapter(header, adapter)
+
+        viewLifecycleOwner.observeOnDestroy {
+            binding.walletTransactionsList.adapter = null
+        }
 
         val horizontalMargin = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
         val verticalMargin = resources.getDimensionPixelOffset(R.dimen.default_vertical_padding)
@@ -138,6 +170,17 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 adapter.submitList(groupedByDate)
                 showTransactionList()
             }
+        }
+
+        viewModel.blockchainIdentity.observe(viewLifecycleOwner) { identity ->
+            if (identity != null) {
+                (requireActivity() as? LockScreenActivity)?.imitateUserInteraction()
+                header.blockchainIdentityData = identity
+            }
+        }
+
+        viewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) { canJoinDashPay ->
+            header.canJoinDashPay = canJoinDashPay
         }
 
         viewLifecycleOwner.observeOnDestroy {
@@ -185,5 +228,53 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun showEmptyView() {
         binding.walletTransactionsEmpty.isVisible = true
         binding.walletTransactionsList.isVisible = false
+    }
+
+    private fun retryIdentityCreation(header: HistoryHeaderAdapter) {
+        viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
+            // check to see if an invite was used
+            if (!blockchainIdentityData.usingInvite) {
+                requireActivity().startService(
+                    CreateIdentityService.createIntentForRetry(
+                        requireActivity(),
+                        false
+                    )
+                )
+            } else {
+                // handle errors from using an invite
+                val handler = InviteHandler(requireActivity(), viewModel.analytics)
+
+                if (handler.handleError(blockchainIdentityData)) {
+                    header.blockchainIdentityData = null
+                } else {
+                    requireActivity().startService(
+                        CreateIdentityService.createIntentForRetryFromInvite(
+                            requireActivity(),
+                            false
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private fun openIdentityCreation() {
+        viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
+            if (blockchainIdentityData.creationStateErrorMessage != null) {
+                if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING) {
+                    startActivity(CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), blockchainIdentityData))
+                } else {
+                    Toast.makeText(requireContext(), blockchainIdentityData.creationStateErrorMessage, Toast.LENGTH_LONG).show()
+                }
+            } else if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
+                startActivity(Intent(requireActivity(), SearchUserActivity::class.java))
+                //hide "Hello Card" after first click
+                viewModel.dismissUsernameCreatedCard()
+            }
+        }
+    }
+
+    private fun onJoinDashPayClicked() {
+        viewModel.joinDashPay()
     }
 }

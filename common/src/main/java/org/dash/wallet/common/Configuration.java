@@ -77,6 +77,15 @@ public class Configuration {
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
     public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
     public static final String PREFS_PIN_LENGTH = "pin_length";
+    private static final String PREFS_IMGUR_DELETE_HASH = "imgur_delete_hash";
+    private static final String PREFS_UPLOAD_POLICY = "upload_policy_accepted_";
+    private static final String PREFS_DEV_MODE = "developer_mode";
+    private static final String PREFS_INVITER = "inviter";
+    private static final String PREFS_INVITER_CONTACT_REQUEST_SENT_INFO = "inviter_contact_request_sent_info";
+    private static final String PREFS_ONBOARDING_STAGE = "onboarding_state";
+    private static final String PREFS_ONBOARDING_INVITE = "inviter_onboarding_invite";
+    private static final String PREFS_ONBOARDING_INVITE_USERNAME = "inviter_onboarding_invite_username";
+    private static final String PREFS_ONBOARDING_INVITE_PROCESSING = "inviter_onboarding_invite_processing";
 
     public static final String PREFS_KEY_LAST_UPHOLD_BALANCE = "last_uphold_balance";
 
@@ -87,6 +96,8 @@ public class Configuration {
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER = "show_tax_catagory_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME = "show_tax_catagory_install_time";
 
+    private static final long DISABLE_NOTIFICATIONS = -1;
+    
     // CrowdNode
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
     public static final String PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS = "crowdnode_primary_address";
@@ -220,6 +231,10 @@ public class Configuration {
 
     public boolean getRemindBackupSeed() {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true);
+    }
+
+    public void setLastRestoreTime() {
+        prefs.edit().putLong(PREFS_KEY_LAST_RESTORE, System.currentTimeMillis());
     }
 
     public long getLastRestoreTime() {
@@ -359,6 +374,80 @@ public class Configuration {
 
     public void setPinLength(int pinLength) {
         prefs.edit().putInt(PREFS_PIN_LENGTH, pinLength).apply();
+    }
+
+    public String getImgurDeleteHash() {
+        return prefs.getString(PREFS_IMGUR_DELETE_HASH, "");
+    }
+
+    public void setImgurDeleteHash(String deleteHash) {
+        prefs.edit().putString(PREFS_IMGUR_DELETE_HASH, deleteHash).apply();
+    }
+
+    public Boolean getAcceptedUploadPolicy(String service) {
+        return prefs.getBoolean(PREFS_UPLOAD_POLICY + service, false);
+    }
+
+    public void setAcceptedUploadPolicy(String service, Boolean accepted) {
+        prefs.edit().putBoolean(PREFS_UPLOAD_POLICY + service, accepted).apply();
+    }
+
+    public Boolean getDeveloperMode() {
+        return BuildConfig.DEBUG || prefs.getBoolean(PREFS_DEV_MODE, false);
+    }
+
+    public void setDeveloperMode(boolean activate) {
+        prefs.edit().putBoolean(PREFS_DEV_MODE, activate).apply();
+    }
+
+    public String getInviter() {
+        return prefs.getString(PREFS_INVITER, null);
+    }
+
+    public void setInviter(String iviter) {
+        prefs.edit().putString(PREFS_INVITER, iviter).apply();
+    }
+
+    public Boolean getInviterContactRequestSentInfoShown() {
+        return prefs.getBoolean(PREFS_INVITER_CONTACT_REQUEST_SENT_INFO, false);
+    }
+
+    public void setInviterContactRequestSentInfoShown(Boolean shown) {
+        prefs.edit().putBoolean(PREFS_INVITER_CONTACT_REQUEST_SENT_INFO, shown).apply();
+    }
+
+    public boolean getOnboardingInviteProcessing() {
+        return getOnboardingInvite() != null && prefs.getBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, true);
+    }
+
+    public void setOnboardingInviteProcessingDone() {
+        prefs.edit().putBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, false).apply();
+    }
+
+    public int getOnboardingStage() {
+        return prefs.getInt(PREFS_ONBOARDING_STAGE, 0);
+    }
+
+    public void setOnboardingStage(final int onboardingStage) {
+        prefs.edit().putInt(PREFS_ONBOARDING_STAGE, onboardingStage).apply();
+    }
+
+    public Uri getOnboardingInvite() {
+        String invite = prefs.getString(PREFS_ONBOARDING_INVITE, null);
+        return invite != null ? Uri.parse(invite) : null;
+    }
+
+    public void setOnboardingInvite(final Uri onboardingInvite) {
+        prefs.edit().putBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, true).apply();
+        prefs.edit().putString(PREFS_ONBOARDING_INVITE, onboardingInvite.toString()).apply();
+    }
+
+    public String getOnboardingInviteUsername() {
+        return prefs.getString(PREFS_ONBOARDING_INVITE_USERNAME, null);
+    }
+
+    public void setOnboardingInviteUsername(final String username) {
+        prefs.edit().putString(PREFS_ONBOARDING_INVITE_USERNAME, username).apply();
     }
 
     public long getLastEncryptKeysTime() {

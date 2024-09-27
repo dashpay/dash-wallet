@@ -10,7 +10,7 @@ on:
       flavor:
         description: 'Flavor'
         required: true
-        default: '_testNet3'
+        default: 'staging'
       type:
         description: 'Type'
         required: true
@@ -37,11 +37,8 @@ jobs:
             "staging": {
               "firebase_app_id": "1:1039839682638:android:bbcfa8c9939ee993ea631f"
             },
-            "schnapps": {
-              "firebase_app_id": "1:1039839682638:android:12d2ad31cc39093cea631f"
-            },
             "devnet": {
-              "firebase_app_id": "1:1039839682638:android:fdff563e24b69c5fea631f"
+              "firebase_app_id": "1:1039839682638:android:12d2ad31cc39093cea631f"
             }
           }
           
@@ -122,6 +119,6 @@ jobs:
 
     - name: Test
       run: bundle exec fastlane test flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" versioncode:"${{ env.build_number }}" storepass:"${{ secrets.SIGNING_STORE_PASS }}"
-      
+
     - name: Build and Firebase Distribution
       run: bundle exec fastlane build_distribute flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" versioncode:"${{ env.build_number }}" storepass:"${{ secrets.SIGNING_STORE_PASS }}" comment:"${{ github.event.inputs.taskID }}" appid:"${{ env.firebase_app_id }}" testgroup:"qa"

@@ -25,6 +25,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.WalletFactory
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet.util.MnemonicCodeExt
 import de.schildbach.wallet_test.R
@@ -42,10 +43,13 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val walletFactory: WalletFactory,
     private val configuration: Configuration,
-    private val securityFunctions: SecurityFunctions
+    private val securityFunctions: SecurityFunctions,
+    private val dashPayConfig: DashPayConfig
 ) : ViewModel() {
 
     private val log = LoggerFactory.getLogger(RestoreWalletFromSeedViewModel::class.java)
+
+    internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
     private val securityGuard = SecurityGuard()
 
@@ -81,8 +85,9 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
             log.info("successfully restored wallet from seed")
             configuration.disarmBackupSeedReminder()
             configuration.isRestoringBackup = true
+            viewModelScope.launch { dashPayConfig.disableNotifications() }
             walletApplication.resetBlockchainState()
-            startActivityAction.call(SetPinActivity.createIntent(walletApplication, R.string.set_pin_restore_wallet))
+            startActivityAction.call(SetPinActivity.createIntent(walletApplication, R.string.set_pin_restore_wallet, onboarding = true))
         }
     }
 

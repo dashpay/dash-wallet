@@ -20,6 +20,7 @@ package org.dash.wallet.common.ui
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import androidx.annotation.DrawableRes
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import coil.load
@@ -49,12 +50,12 @@ class PaymentHeaderView @JvmOverloads constructor(
         binding.paymentAddressViewIcon.isVisible = true
     }
 
-    fun setPaymentAddressViewIcon(imageUrl: String?) {
+    fun setPaymentAddressViewIcon(imageUrl: String?, @DrawableRes placeholder: Int) {
         imageUrl?.let {
             binding.paymentAddressViewIcon.load(it) {
                 crossfade(200)
-                placeholder(R.drawable.ic_image_placeholder)
-                error(R.drawable.ic_image_placeholder)
+                placeholder(placeholder)
+                error(placeholder)
                 transformations(CircleCropTransformation())
             }
             binding.paymentAddressViewIcon.isVisible = true
@@ -63,6 +64,10 @@ class PaymentHeaderView @JvmOverloads constructor(
 
     fun setTitle(title: String) {
         binding.paymentAddressViewTitle.text = title
+    }
+
+    fun setBalanceTitle(title: String) {
+        binding.paymentAddressViewBalanceTitle.text = title
     }
 
     fun setProposition(title: String) {

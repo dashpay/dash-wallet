@@ -22,15 +22,18 @@ import android.os.Bundle
 import android.view.MenuItem
 import androidx.annotation.LayoutRes
 import androidx.appcompat.widget.Toolbar
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
  */
 @SuppressLint("Registered")
+@AndroidEntryPoint
 abstract class BaseMenuActivity : LockScreenActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(getLayoutId())

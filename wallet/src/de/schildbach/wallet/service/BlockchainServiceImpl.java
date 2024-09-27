@@ -54,7 +54,6 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.CheckpointManager;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.FilteredBlock;
-import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
@@ -65,6 +64,8 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
+import org.bitcoinj.core.listeners.PreBlocksDownloadListener;
+import org.bitcoinj.evolution.AssetLockTransaction;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
 import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
@@ -82,14 +83,18 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.WalletUIConfig;
+import org.dash.wallet.common.data.NetworkStatus;
+import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.NotificationService;
 import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
-import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.transactions.TransactionUtils;
 import org.dash.wallet.common.util.FlowExtKt;
+import org.dash.wallet.common.util.MonetaryExtKt;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi;
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositReceivedResponse;
@@ -103,6 +108,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -123,21 +129,23 @@ import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.WalletApplicationExt;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
 import org.dash.wallet.common.data.entity.BlockchainState;
 import de.schildbach.wallet.database.dao.BlockchainStateDao;
 import de.schildbach.wallet.database.dao.ExchangeRatesDao;
+import de.schildbach.wallet.service.platform.PlatformSyncService;
 import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener;
+import de.schildbach.wallet.ui.dashpay.PlatformRepo;
+import de.schildbach.wallet.ui.dashpay.PreBlockStage;
 import de.schildbach.wallet.ui.staking.StakingActivity;
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
-import kotlin.Unit;
-import kotlin.coroutines.Continuation;
-import kotlinx.coroutines.flow.FlowCollector;
 
 import static org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO;
 
@@ -154,12 +162,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject CrowdNodeBlockchainApi crowdNodeBlockchainApi;
     @Inject CrowdNodeConfig crowdNodeConfig;
     @Inject BlockchainStateDao blockchainStateDao;
-    @Inject BlockchainStateDataProvider blockchainStateDataProvider;
     @Inject ExchangeRatesDao exchangeRatesDao;
     @Inject TransactionMetadataProvider transactionMetadataProvider;
+    @Inject PlatformSyncService platformSyncService;
+    @Inject PlatformRepo platformRepo;
     @Inject PackageInfoProvider packageInfoProvider;
     @Inject ConnectivityManager connectivityManager;
-
+    @Inject BlockchainStateDataProvider blockchainStateDataProvider;
+    @Inject CoinJoinService coinJoinService; // not used in this class, but we need to create it
     private BlockStore blockStore;
     private BlockStore headerStore;
     private File blockChainFile;
@@ -179,9 +189,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private PeerConnectivityListener peerConnectivityListener;
     private NotificationManager nm;
     private final Set<BlockchainState.Impediment> impediments = EnumSet.noneOf(BlockchainState.Impediment.class);
+    private BlockchainState blockchainState = new BlockchainState(null, 0, false, impediments, 0, 0, 0);
     private int notificationCount = 0;
     private Coin notificationAccumulatedAmount = Coin.ZERO;
-    private final List<Address> notificationAddresses = new LinkedList<Address>();
+    private final List<Address> notificationAddresses = new LinkedList<>();
     private AtomicInteger transactionsReceived = new AtomicInteger();
     private AtomicInteger mnListDiffsReceived = new AtomicInteger();
     private long serviceCreatedAt;
@@ -208,7 +219,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     public static final String START_AS_FOREGROUND_EXTRA = "start_as_foreground";
 
+    private final Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
+    private MixingStatus mixingStatus = MixingStatus.NOT_STARTED;
+    private Double mixingProgress = 0.0;
+    private ForegroundService foregroundService = ForegroundService.NONE;
 
     // Risk Analyser for Transactions that is PeerGroup Aware
     AllowLockTimeRiskAnalysis.Analyzer riskAnalyzer;
@@ -249,6 +264,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
             boolean insideTxExchangeRateTimeThreshold = (now - blockChainHeadTime) < TX_EXCHANGE_RATE_TIME_THRESHOLD_MS;
 
+            log.info("onCoinsReceived: {}; rate: {}; replaying: {}; inside: {}, confid: {}; will update {}",
+                    tx.getTxId(), tx.getExchangeRate(), replaying, insideTxExchangeRateTimeThreshold, tx.getConfidence().getConfidenceType(),
+                    tx.getExchangeRate() == null && ((!replaying || insideTxExchangeRateTimeThreshold) || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING));
+
             // only set an exchange rate if the tx has no exchange rate and:
             //   1. the blockchain is not being rescanned nor the wallet is being restored OR
             //   2. the transaction is less than three hours old OR
@@ -270,7 +289,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             }
 
             transactionsReceived.incrementAndGet();
-
 
             final Address address = TransactionUtils.INSTANCE.getWalletAddressOfReceived(tx, wallet);
             final Coin amount = tx.getValue(wallet);
@@ -306,6 +324,22 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
+
+            log.info("onCoinsSent: {}", tx.getTxId());
+
+
+            if(AssetLockTransaction.isAssetLockTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
+                // Handle credit function transactions (username creation, topup, invites)
+                AuthenticationGroupExtension authExtension =
+                        (AuthenticationGroupExtension) wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
+                AssetLockTransaction cftx = authExtension.getAssetLockTransaction(tx);
+
+                long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
+                platformRepo.handleSentAssetLockTransaction(cftx, blockChainHeadTime);
+
+                // TODO: if we detect a username creation that we haven't processed, should we?
+            }
+
             handleMetadata(tx);
             updateAppWidget();
         }
@@ -427,6 +461,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         private void changed(final int numPeers) {
             if (stopped.get())
                 return;
+            NetworkStatus networkStatus = blockchainStateDataProvider.getNetworkStatus();
+            if (numPeers > 0 && networkStatus == NetworkStatus.CONNECTING)
+                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.CONNECTED);
+            else if (numPeers == 0 && networkStatus == NetworkStatus.DISCONNECTING)
+                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTED);
 
             handler.post(() -> {
                 final boolean connectivityNotificationEnabled = config.getConnectivityNotificationEnabled();
@@ -764,23 +803,31 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     }
                 });
 
+                peerGroup.addPreBlocksDownloadListener(executor, preBlocksDownloadListener);
                 // Use our custom risk analysis that allows v2 tx with absolute LockTime
                 riskAnalyzer = new AllowLockTimeRiskAnalysis.Analyzer(peerGroup);
                 wallet.setRiskAnalyzer(riskAnalyzer);
 
                 // start peergroup
+                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.CONNECTING);
                 peerGroup.startAsync();
                 peerGroup.startBlockChainDownload(blockchainDownloadListener);
+                platformSyncService.addPreBlockProgressListener(blockchainDownloadListener);
+
             } else if (!impediments.isEmpty() && peerGroup != null) {
+                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.NOT_AVAILABLE);
                 application.getWallet().getContext().close();
                 log.info("stopping peergroup");
                 peerGroup.removeDisconnectedEventListener(peerConnectivityListener);
                 peerGroup.removeConnectedEventListener(peerConnectivityListener);
+                peerGroup.removePreBlocksDownloadedListener(preBlocksDownloadListener);
                 peerGroup.removeWallet(wallet);
+                platformSyncService.removePreBlockProgressListener(blockchainDownloadListener);
                 peerGroup.stopAsync();
                 // use the offline risk analyzer
                 wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
                 riskAnalyzer.shutdown();
+
                 peerGroup = null;
 
                 log.debug("releasing wakelock");
@@ -840,7 +887,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         builder.append(", ");
                     builder.append(entry);
                 }
-                log.info("History of transactions/blocks/headers/mnlistdiff: " + builder);
+                log.info("History of transactions/blocks/headers/mnlistdiff: " +
+                        (mixingStatus == MixingStatus.MIXING ? "[mixing] " : "") + builder);
 
                 // determine if block and transaction activity is idling
                 boolean isIdle = false;
@@ -862,7 +910,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 }
 
                 // if idling, shutdown service
-                if (isIdle) {
+                if (isIdle && mixingStatus != MixingStatus.MIXING) {
                     log.info("idling detected, stopping service");
                     stopSelf();
                 }
@@ -973,6 +1021,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         try {
             blockChain = new BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore);
             headerChain = new BlockChain(Constants.NETWORK_PARAMETERS, headerStore);
+            blockchainStateDataProvider.setBlockChain(blockChain);
         } catch (final BlockStoreException x) {
             throw new Error("blockchain cannot be created", x);
         }
@@ -991,12 +1040,64 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
         peerDiscoveryList.add(dnsDiscovery);
+
+        if (Constants.SUPPORTS_PLATFORM) {
+            platformRepo.getPlatform().setMasternodeListManager(application.getWallet().getContext().masternodeListManager);
+            platformSyncService.resume();
+        }
+
         updateAppWidget();
         FlowExtKt.observe(blockchainStateDao.observeState(), this, (blockchainState, continuation) -> {
-            handleBlockchainStateNotification((BlockchainState) blockchainState);
+            handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress);
             return null;
         });
         registerCrowdNodeConfirmedAddressFilter();
+
+        FlowExtKt.observe(coinJoinService.observeMixingState(), this, (mixingStatus, continuation) -> {
+            handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress);
+            return null;
+        });
+
+        FlowExtKt.observe(coinJoinService.observeMixingProgress(), this, (mixingProgress, continuation) -> {
+            handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress);
+            return null;
+        });
+    }
+
+    private Notification createCoinJoinNotification() {
+        Coin mixedBalance = ((WalletEx)application.getWallet()).getCoinJoinBalance();
+        Coin totalBalance = application.getWallet().getBalance();
+        Intent notificationIntent = OnboardingActivity.createIntent(this);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+                notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        DecimalFormat decimalFormat = new DecimalFormat("0.000");
+        int statusStringId = R.string.error;
+        switch(mixingStatus) {
+            case MIXING:
+                statusStringId = R.string.coinjoin_mixing;
+                break;
+            case PAUSED:
+                statusStringId = R.string.coinjoin_paused;
+                break;
+            case FINISHED:
+                statusStringId = R.string.coinjoin_progress_finished;
+                break;
+        }
+        final String message = getString(
+                R.string.coinjoin_progress,
+                getString(statusStringId),
+                mixingProgress.intValue(),
+                decimalFormat.format(MonetaryExtKt.toBigDecimal(mixedBalance)),
+                decimalFormat.format(MonetaryExtKt.toBigDecimal(totalBalance))
+        );
+
+        return new NotificationCompat.Builder(this,
+                Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
+                .setSmallIcon(R.drawable.ic_dash_d_white)
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(message)
+                .setContentIntent(pendingIntent).build();
     }
 
     private void resetMNLists(boolean requestFreshList) {
@@ -1062,6 +1163,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     log.info("peergroup not available, not broadcasting transaction {}", tx.getTxId());
                     tx.getConfidence().setPeerInfo(0, 1);
                 }
+            } else if(BlockchainService.ACTION_RESET_BLOOMFILTERS.equals(action)) {
+                if (peerGroup != null) {
+                    log.info("recalculating bloom filters");
+                    peerGroup.recalculateFastCatchupAndFilter(PeerGroup.FilterRecalculateMode.FORCE_SEND_FOR_REFRESH);
+                } else {
+                    log.info("peergroup not available, not recalculating bloom filers");
+                }
             }
         } else {
             log.warn("service restart, although it was started as non-sticky");
@@ -1079,6 +1187,15 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
         else
             startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+        foregroundService = ForegroundService.BLOCKCHAIN_SYNC;
+    }
+
+    private void startForegroundCoinJoin() {
+        // Shows ongoing notification promoting service to foreground service and
+        // preventing it from being killed in Android 26 or later
+        Notification notification = createCoinJoinNotification();
+        startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+        foregroundService = ForegroundService.COINJOIN_MIXING;
     }
 
     @Override
@@ -1096,12 +1213,17 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         unregisterReceiver(connectivityReceiver);
 
+        platformSyncService.shutdown();
+
         if (peerGroup != null) {
             application.getWallet().getContext().close();
             peerGroup.removeDisconnectedEventListener(peerConnectivityListener);
             peerGroup.removeConnectedEventListener(peerConnectivityListener);
             peerGroup.removeWallet(application.getWallet());
+            platformSyncService.removePreBlockProgressListener(blockchainDownloadListener);
+            blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING);
             peerGroup.stop();
+            blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED);
             application.getWallet().setRiskAnalyzer(defaultRiskAnalyzer);
             riskAnalyzer.shutdown();
 
@@ -1115,6 +1237,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         try {
             blockStore.close();
             headerStore.close();
+            blockchainStateDataProvider.setBlockChain(null);
         } catch (final BlockStoreException x) {
             throw new RuntimeException(x);
         }
@@ -1139,6 +1262,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 log.info("removing wallet file and app data");
                 application.finalizeWipe();
             }
+            //Clear the blockchain identity
+            WalletApplicationExt.INSTANCE.clearDatabases(application, false);
         }
 
         closeStream(mnlistinfoBootStrapStream);
@@ -1166,7 +1291,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         final String message = (blockchainState != null)
                 ? BlockchainStateUtils.getSyncStateString(blockchainState, this)
-                : getString(R.string.blockchain_state_progress_downloading);
+                : getString(R.string.blockchain_state_progress_downloading, 0);
 
         return new NotificationCompat.Builder(this,
                 Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
@@ -1181,7 +1306,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private void updateBlockchainState() {
-        blockchainStateDataProvider.updateBlockchainState(blockChain, impediments, percentageSync());
+        blockchainStateDataProvider.updateBlockchainState(
+                blockChain, impediments, percentageSync(),
+                peerGroup != null ? peerGroup.getSyncStage() : null
+        );
     }
 
     @Override
@@ -1222,26 +1350,44 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
     }
 
-    private void handleBlockchainStateNotification(BlockchainState blockchainState) {
+    private void handleBlockchainStateNotification(BlockchainState blockchainState, MixingStatus mixingStatus, double mixingProgress) {
         // send this out for the Network Monitor, other activities observe the database
         final Intent broadcast = new Intent(ACTION_BLOCKCHAIN_STATE);
         broadcast.setPackage(getPackageName());
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
-
+        // log.info("handle blockchain state notification: {}, {}", foregroundService, mixingStatus);
+        this.mixingProgress = mixingProgress;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && blockchainState != null
                 && blockchainState.getBestChainDate() != null) {
             //Handle Ongoing notification state
             boolean syncing = blockchainState.getBestChainDate().getTime() < (Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS); //1 hour
-            if (!syncing && blockchainState.getBestChainHeight() == config.getBestChainHeightEver()) {
+            if (!syncing && blockchainState.getBestChainHeight() == config.getBestChainHeightEver() && mixingStatus != MixingStatus.MIXING) {
                 //Remove ongoing notification if blockchain sync finished
                 stopForeground(true);
+                foregroundService = ForegroundService.NONE;
                 nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
             } else if (blockchainState.getReplaying() || syncing) {
                 //Shows ongoing notification when synchronizing the blockchain
                 Notification notification = createNetworkSyncNotification(blockchainState);
                 nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+            } else if (mixingStatus == MixingStatus.MIXING || mixingStatus == MixingStatus.PAUSED) {
+                log.info("foreground service: {}", foregroundService);
+                if (foregroundService == ForegroundService.NONE) {
+                    log.info("foreground service not active, create notification");
+                    startForegroundCoinJoin();
+                    //Notification notification = createCoinJoinNotification();
+                    //nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+                    foregroundService = ForegroundService.COINJOIN_MIXING;
+                } else {
+                    log.info("foreground service active, update notification");
+                    Notification notification = createCoinJoinNotification();
+                    //nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
+                    nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+                }
             }
         }
+        this.blockchainState = blockchainState;
+        this.mixingStatus = mixingStatus;
     }
 
     private int percentageSync() {
@@ -1261,6 +1407,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             startForeground();
         }
     }
+
+    private PreBlocksDownloadListener preBlocksDownloadListener = new PreBlocksDownloadListener() {
+        @Override
+        public void onPreBlocksDownload(Peer peer) {
+            log.info("onPreBlocksDownload using peer {}", peer);
+            platformSyncService.preBlockDownload(peerGroup.getPreBlockDownloadFuture());
+        }
+    };
 
     private void registerCrowdNodeConfirmedAddressFilter() {
         String apiAddressStr = config.getCrowdNodeAccountAddress();

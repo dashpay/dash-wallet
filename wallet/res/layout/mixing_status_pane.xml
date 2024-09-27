@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_height="wrap_content"
+    android:layout_width="match_parent">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/mixing_status_pane2"
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
+        android:background="@drawable/white_background_rounded">
+
+        <ImageView
+            android:id="@+id/mixing_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="15dp"
+            android:src="@drawable/ic_mixing_icon"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="5dp"
+            style="@style/Widget.AppCompat.ProgressBar"
+            app:layout_constraintStart_toEndOf="@id/mixing_icon"
+            app:layout_constraintTop_toTopOf="@id/mixing_mode"
+            app:layout_constraintBottom_toBottomOf="@id/mixing_mode"
+            android:indeterminate="true"
+            android:indeterminateDrawable="@drawable/animated_circular_progress_indictator"/>
+
+
+        <TextView
+            android:id="@+id/mixing_mode"
+            style="@style/Overline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="@string/coinjoin_mixing"
+            app:layout_constraintStart_toEndOf="@id/progress_bar"
+            app:layout_constraintTop_toTopOf="@id/mixing_icon" />
+
+        <TextView
+            android:id="@+id/mixing_sessions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toEndOf="@id/mixing_mode"
+            app:layout_constraintTop_toTopOf="@id/mixing_mode"
+            tools:text="...."
+            />
+
+        <TextView
+            android:id="@+id/mixing_percent"
+            style="@style/Overline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="3dp"
+            app:layout_constraintStart_toEndOf="@+id/mixing_mode"
+            app:layout_constraintEnd_toStartOf="@id/balance"
+            app:layout_constraintTop_toTopOf="@id/mixing_mode"
+            tools:text="50%" />
+
+        <TextView
+            android:id="@+id/balance"
+            style="@style/Overline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="3dp"
+            app:layout_constraintEnd_toStartOf="@id/dash_icon"
+            app:layout_constraintTop_toTopOf="@id/mixing_mode"
+            tools:text="0.012 of 0.028 DASH" />
+
+        <ImageView
+            android:id="@+id/dash_icon"
+            android:layout_width="11dp"
+            android:layout_height="11dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginTop="3dp"
+            android:layout_marginEnd="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/mixing_mode"
+            app:srcCompat="@drawable/ic_dash"
+            app:tint="@color/content_primary" />
+
+        <ProgressBar
+            android:id="@+id/mixing_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="8dp"
+            android:progress="50"
+            app:layout_constraintEnd_toEndOf="@id/dash_icon"
+            app:layout_constraintStart_toEndOf="@id/mixing_icon"
+            app:layout_constraintTop_toBottomOf="@id/mixing_mode" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</RelativeLayout>

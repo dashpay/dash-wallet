@@ -184,6 +184,9 @@ open class CheckPinDialog(
                 Status.SUCCESS -> {
                     dismiss(it.data!!)
                 }
+                else -> {
+                    // ignore
+                }
             }
         }
     }

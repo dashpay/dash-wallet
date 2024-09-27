@@ -47,6 +47,8 @@ object Constants {
     const val ANDROID_KEY_STORE = "AndroidKeyStore"
 
     lateinit var EXPLORE_GC_FILE_PATH: String
+    lateinit var FAUCET_URL: String
+    lateinit var BUILD_FLAVOR: String
     var DEEP_LINK_PREFIX = "android-app://hashengineering.darkcoin.wallet"
 
     const val DASH_CURRENCY = "DASH"

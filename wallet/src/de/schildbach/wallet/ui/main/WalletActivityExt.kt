@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,11 +48,15 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI.onNavDestinationSelected
 import androidx.navigation.ui.NavigationUI.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
+import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.ui.more.MoreFragment
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -63,9 +68,9 @@ import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog.Companion.create
 import org.dash.wallet.common.util.openCustomTab
+import kotlin.math.abs
 
 object WalletActivityExt {
-    private const val TIME_SKEW_TOLERANCE = 60 // minutes
     private const val STORAGE_TOLERANCE = 500 // MB
     private var timeSkewDialogShown = false
     private var lowStorageDialogShown = false
@@ -74,15 +79,28 @@ object WalletActivityExt {
     private const val BROWSER_ACTION_KEY = "browser"
     private const val ACTION_URL_KEY = "url"
 
-    fun WalletActivity.setupBottomNavigation(viewModel: MainViewModel) {
+    fun MainActivity.setupBottomNavigation(viewModel: MainViewModel) {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navView: BottomNavigationView = findViewById(R.id.bottom_navigation)
         setupWithNavController(navView, navController)
+        if (!Constants.SUPPORTS_PLATFORM) {
+            navView.menu.removeItem(R.id.contactsFragment)
+            navView.menu.removeItem(R.id.exploreFragment)
+        }
         navView.itemIconTintList = null
         navView.setOnItemSelectedListener { item: MenuItem ->
             when (item.itemId) {
-                R.id.walletFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_HOME)
+                R.id.walletFragment -> {
+                    viewModel.logEvent(AnalyticsConstants.Home.NAV_HOME)
+                    navController.navigate(
+                        R.id.walletFragment,
+                        null,
+                        NavOptions.Builder()
+                            .setPopUpTo(navController.graph.startDestinationId, true)
+                            .build()
+                    )
+                }
                 R.id.paymentsFragment -> viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
                 R.id.moreFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_MORE)
                 else -> { }
@@ -96,27 +114,46 @@ object WalletActivityExt {
             } else if (item.itemId == R.id.walletFragment) {
                 navHostFragment.childFragmentManager.fragments.firstOrNull { it is WalletFragment }?.let {
                     (it as WalletFragment).scrollToTop()
+                } ?: navController.navigate(
+                    R.id.walletFragment,
+                    null,
+                    NavOptions.Builder()
+                        .setPopUpTo(navController.graph.startDestinationId, true)
+                        .build()
+                )
+            } else if (item.itemId == R.id.moreFragment) {
+                if (navHostFragment.childFragmentManager.fragments.firstOrNull { it is MoreFragment } == null) {
+                    navController.navigate(
+                        R.id.moreFragment,
+                        null,
+                        NavOptions.Builder()
+                            .setPopUpTo(navController.graph.startDestinationId, true)
+                            .build()
+                    )
                 }
             }
         }
         navController.addOnDestinationChangedListener { _, _, arguments ->
             navView.isVisible = arguments?.getBoolean("ShowNavBar", false) == true
         }
+        if (Constants.SUPPORTS_PLATFORM) {
+            navView.menu.findItem(R.id.contactsFragment).isEnabled = false
+        }
     }
 
-    fun WalletActivity.checkTimeSkew(viewModel: MainViewModel) {
+    fun MainActivity.checkTimeSkew(viewModel: MainViewModel, force: Boolean = false) {
         lifecycleScope.launch {
-            val timeSkew = viewModel.getDeviceTimeSkew()
-            val inMinutes = timeSkew / 1000 / 60
-
-            if (inMinutes > TIME_SKEW_TOLERANCE && !timeSkewDialogShown) {
+            val (isTimeSkewed, timeSkew) = viewModel.getDeviceTimeSkew(force)
+            val coinJoinOn = viewModel.getCoinJoinMode() != CoinJoinMode.NONE
+            if (isTimeSkewed && (!timeSkewDialogShown || force)) {
                 timeSkewDialogShown = true
-                showTimeSkewAlertDialog(inMinutes)
+                // add 1 to round up so 2.2 seconds appears as 3
+                showTimeSkewAlertDialog((if (timeSkew > 0) 1 else -1) + timeSkew / 1000L, coinJoinOn)
             }
         }
     }
 
-    fun WalletActivity.checkLowStorageAlert() {
+    fun MainActivity.checkLowStorageAlert() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val storageManager = applicationContext.getSystemService<StorageManager>()!!
             val storageUUID = storageManager.getUuidForPath(filesDir)
@@ -137,7 +174,7 @@ object WalletActivityExt {
         }
     }
 
-    fun WalletActivity.handleFirebaseAction(extras: Bundle) {
+    fun MainActivity.handleFirebaseAction(extras: Bundle) {
         when (extras.getString(NOTIFICATION_ACTION_KEY)) {
             BROWSER_ACTION_KEY -> {
                 extras.getString(ACTION_URL_KEY)?.let { url ->
@@ -155,7 +192,7 @@ object WalletActivityExt {
      *
      * @param newCurrencyCode currency code.
      */
-    fun WalletActivity.showFiatCurrencyChangeDetectedDialog(
+    fun MainActivity.showFiatCurrencyChangeDetectedDialog(
         viewModel: MainViewModel,
         currentCurrencyCode: String,
         newCurrencyCode: String
@@ -181,14 +218,19 @@ object WalletActivityExt {
         }
     }
 
-    private fun WalletActivity.showTimeSkewAlertDialog(diffMinutes: Long) {
+    private fun MainActivity.showTimeSkewAlertDialog(diffSeconds: Long, coinJoin: Boolean) {
         val settingsIntent = Intent(Settings.ACTION_DATE_SETTINGS)
         val hasSettings = packageManager.resolveActivity(settingsIntent, 0) != null
 
         AdaptiveDialog.create(
             R.drawable.ic_warning,
             getString(R.string.wallet_timeskew_dialog_title),
-            getString(R.string.wallet_timeskew_dialog_msg, diffMinutes),
+            if (coinJoin) {
+                val position = getString(if (diffSeconds > 0) R.string.timeskew_ahead else R.string.timeskew_behind)
+                getString(R.string.wallet_coinjoin_timeskew_dialog_msg, position, abs(diffSeconds))
+            } else {
+                getString(R.string.wallet_timeskew_dialog_msg, diffSeconds / 1000)
+            },
             getString(R.string.button_dismiss),
             if (hasSettings) getString(R.string.button_settings) else null
         ).show(this) { openSettings ->
@@ -198,9 +240,8 @@ object WalletActivityExt {
         }
     }
 
-    private fun WalletActivity.showLowStorageAlertDialog() {
-        val storageManagerIntent =
-            Intent(
+    private fun MainActivity.showLowStorageAlertDialog() {
+        val storageManagerIntent = Intent(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     StorageManager.ACTION_MANAGE_STORAGE
                 } else {
@@ -228,7 +269,7 @@ object WalletActivityExt {
      * [.onLockScreenDeactivated] and [.onStart].
      * Android 12 and below - show a explainer dialog once only.
      */
-    fun WalletActivity.explainPushNotifications() {
+    fun MainActivity.explainPushNotifications() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(
                 this,
@@ -252,7 +293,7 @@ object WalletActivityExt {
         configuration.showNotificationsExplainer = false
     }
 
-    fun WalletActivity.requestDisableBatteryOptimisation() {
+    fun MainActivity.requestDisableBatteryOptimisation() {
         val powerManager: PowerManager = getSystemService(PowerManager::class.java)
         if (ContextCompat.checkSelfPermission(
                 walletApplication,
@@ -282,7 +323,7 @@ object WalletActivityExt {
     /**
      * show a single toast that is created with Compose
      */
-    private fun WalletActivity.showToast(
+    private fun MainActivity.showToast(
         visible: Boolean,
         imageResource: ToastImageResource? = null,
         messageText: String? = null,
@@ -292,7 +333,7 @@ object WalletActivityExt {
     ) {
         if (composeHostFrameLayout == null) {
             composeHostFrameLayout = ComposeHostFrameLayout(this)
-            composeHostFrameLayout.layoutParams =
+            composeHostFrameLayout?.layoutParams =
                 FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.WRAP_CONTENT // Convert dp to pixels for height
@@ -302,7 +343,7 @@ object WalletActivityExt {
             val rootView = findViewById<ViewGroup>(android.R.id.content)
             rootView.addView(composeHostFrameLayout)
         }
-        composeHostFrameLayout.setContent {
+        composeHostFrameLayout?.setContent {
             if (visible && messageText != null) {
                 var showToast by remember { mutableStateOf(true) }
                 if (showToast) {
@@ -340,7 +381,7 @@ object WalletActivityExt {
         }
     }
 
-    fun WalletActivity.showStaleRatesToast() {
+    fun MainActivity.showStaleRatesToast() {
         val staleRateState = viewModel.currentStaleRateState
         val message = when {
             staleRateState.volatile -> getString(R.string.stale_exchange_rates_volatile)

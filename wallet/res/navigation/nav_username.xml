@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    app:startDestination="@id/createUsernameFragment"
+    android:id="@+id/nav_username">
+
+    <fragment
+        android:id="@+id/createUsernameFragment"
+        android:name="de.schildbach.wallet.ui.username.CreateUsernameFragment"
+        tools:layout="@layout/fragment_create_username">
+
+        <argument
+            android:name="createUsernameFragmentArgs"
+            app:argType="de.schildbach.wallet.ui.username.CreateUsernameArgs" />
+
+        <action
+            android:id="@+id/create_username_to_username_privacy"
+            app:destination="@id/createUsernamePrivacyFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/createUsernamePrivacyFragment"
+        android:name="de.schildbach.wallet.ui.coinjoin.CoinJoinLevelFragment"
+        tools:layout="@layout/fragment_coinjoin_level">
+        <action
+            android:id="@+id/username_privacy_to_createUsernameFragment"
+            app:popUpTo="@+id/createUsernameFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/welcomeToDashPayFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.WelcomeToDashPayFragment"
+        tools:layout="@layout/fragment_welcome_to_dashpay">
+        <action
+            android:id="@+id/welcomeToDashPayFragment_to_UsernameVotingInfoFragment"
+            app:destination="@id/usernameVotingInfoFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/usernameVotingInfoFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.UsernameVotingInfoFragment"
+        tools:layout="@layout/fragment_username_voting_info">
+
+        <action
+            android:id="@+id/usernameVotingInfoFragment_to_requestUsernameFragment"
+            app:destination="@id/requestUsernameFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            app:popUpTo="@id/requestUsernameFragment" />
+        <argument android:name="closeInstead" app:argType="boolean" android:defaultValue="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/requestUsernameFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.RequestUsernameFragment"
+        tools:layout="@layout/fragment_request_username">
+        <action
+            android:id="@+id/requestUsernameFragment_to_verifyIdentityFragment"
+            app:destination="@id/verifyIdentityFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            app:popUpTo="@id/requestUsernameFragment" />
+
+        <action
+            android:id="@+id/requests_to_confirmUsernameRequestDialog"
+            app:destination="@id/confirmUsernameRequestDialog"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/requests_to_usernameVotingInfoFragment"
+            app:destination="@id/usernameVotingInfoFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/requests_toUsernameRegistrationFragment"
+            app:destination="@id/usernameRegistrationFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/votingRequestDetailsFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.VotingRequestDetailsFragment"
+        tools:layout="@layout/fragment_voting_request_details">
+        <action
+            android:id="@+id/votingRequestDetailsFragment_to_verifyIdentityFragment"
+            app:destination="@id/verifyIdentityFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            app:popUpTo="@id/requestUsernameFragment" />
+        <action
+            android:id="@+id/votingRequestDetailsFragment_to_usernameVotingInfoFragment"
+            app:destination="@id/usernameVotingInfoFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/verifyIdentityFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.VerifyIdentityFragment"
+        tools:layout="@layout/fragment_verfiy_identity">
+
+        <argument
+            android:name="username"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/verifyIdentityFragment_to_confirmUsernameRequestDialog"
+            app:destination="@id/confirmUsernameRequestDialog"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/verify_toUsernameRegistrationFragment"
+            app:destination="@id/usernameRegistrationFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/usernameRegistrationFragment"
+        android:name="de.schildbach.wallet.ui.username.UsernameRegistrationFragment"
+        tools:layout="@layout/fragment_verfiy_identity">
+    </fragment>
+
+
+    <dialog
+        android:id="@+id/confirmUsernameRequestDialog"
+        android:name="de.schildbach.wallet.ui.username.voting.ConfirmUsernameRequestDialogFragment"
+        android:label="ConfirmUsernameRequestDialogFragment"
+        tools:layout="@layout/dialog_confirm_username_request">
+        <argument android:name="username" app:argType="string" />
+    </dialog>
+</navigation>

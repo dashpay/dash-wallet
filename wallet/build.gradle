@@ -33,6 +33,8 @@ dependencies {
     }
 
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$desugaringLibraryVersion"
+    implementation 'com.google.android.material:material:1.3.0'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
     // Android arch
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
@@ -49,21 +51,24 @@ dependencies {
 
     implementation 'org.bouncycastle:bcprov-jdk15to18:1.74'
     implementation "org.dashj:dashj-core:$dashjVersion"
+    implementation 'org.dashj.platform:dash-sdk-java:1.0-SNAPSHOT'
+    implementation 'org.dashj.platform:dash-sdk-kotlin:1.0-SNAPSHOT'
+    implementation 'org.dashj.platform:dash-sdk-android:1.0-SNAPSHOT'
+    implementation 'io.grpc:grpc-stub:1.54.0' // CURRENT_GRPC_VERSION
     implementation "org.dashj.android:dashj-bls-android:1.0.0"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
     implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
-    implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation 'com.google.guava:guava:29.0-android'
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
 
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
-    implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
+    implementation('com.github.tony19:logback-android:3.0.0') {
         exclude(group: 'com.google.android', module: 'android')
     }
-    implementation 'com.github.tony19:logback-android-core:1.1.1-6'
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
     implementation 'com.tbuonomo:dotsindicator:4.2'
+    implementation 'com.github.amulyakhare:textdrawable:558677ea31'
 
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
 
@@ -120,16 +125,17 @@ dependencies {
     implementation 'com.google.firebase:firebase-inappmessaging-display'
     implementation 'com.google.firebase:firebase-installations'
     implementation 'com.google.firebase:firebase-messaging-ktx'
+    implementation 'com.google.firebase:firebase-dynamic-links'
 
     // Google Drive Dependencies
-    implementation('com.google.api-client:google-api-client-android:1.26.0') {
+    implementation ('com.google.api-client:google-api-client-android:1.26.0') {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
     implementation('com.google.apis:google-api-services-drive:v3-rev173-1.25.0') {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
 
-    implementation('com.google.http-client:google-http-client-gson:1.26.0') { // do we need this
+    implementation ('com.google.http-client:google-http-client-gson:1.26.0') { // do we need this
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
 
@@ -164,15 +170,22 @@ dependencies {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
-}
 
+    // DI for instrumentation tests
+    androidTestImplementation  "com.google.dagger:hilt-android-testing:$hiltVersion"
+    kspAndroidTest "com.google.dagger:hilt-compiler:$hiltVersion"
 
-ext {
-    archivesBaseName = 'dash-wallet'
+    // DI for local unit tests
+    testImplementation "com.google.dagger:hilt-android-testing:$hiltVersion"
+    kspTest "com.google.dagger:hilt-compiler:$hiltVersion"
 }
 
 hilt {
     enableAggregatingTask = true
+}
+
+ext {
+    archivesBaseName = 'dash-wallet'
 }
 
 def props = new Properties()
@@ -192,17 +205,14 @@ android {
         compileSdk 34
         minSdkVersion 24
         targetSdkVersion 34
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 102011
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "10.2.1"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 103009
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "10.3.0"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
-            }
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
         }
         buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
         buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
@@ -223,11 +233,24 @@ android {
 
     buildTypes {
         all {
+            def imgurClientId = props.getProperty("IMGUR_CLIENT_ID")
+            def imgurClientSecret = props.getProperty("IMGUR_CLIENT_SECRET")
+            if (imgurClientId == null) {
+                imgurClientId = "\"IMGUR_CLIENT_ID\""
+            }
+            if (imgurClientSecret == null) {
+                imgurClientSecret = "\"IMGUR_CLIENT_SECRET\""
+            }
+            buildConfigField("String", "IMGUR_CLIENT_ID", imgurClientId)
+            buildConfigField("String", "IMGUR_CLIENT_SECRET", imgurClientSecret)
+        }
+        release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'
             testProguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg', 'proguardTest-rules.txt'
         }
         debug {
+            multiDexEnabled true
             minifyEnabled false
             debuggable true
             def supportEmail = localProps.getProperty("INTERNAL_SUPPORT_EMAIL")
@@ -257,6 +280,9 @@ android {
         }
         _testNet3 {
             res.srcDirs = ["testNet3/res"]
+        }
+        staging {
+            res.srcDirs = ["staging/res"]
         }
         devnet {
             res.srcDirs = ["schnapps/res"]
@@ -309,8 +335,48 @@ android {
             buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
             buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
+            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
+            if (dashDirectClientId == null) {
+                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
+            }
+            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
+        }
+        staging {
+            applicationId = "org.dash.dashpay.testnet"
+            def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
+            def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
+            if (imgurClientId == null) {
+                imgurClientId = "\"UPHOLD_CLIENT_ID\""
+            }
+            if (imgurClientSecret == null) {
+                imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
+            }
+            buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
+            def topperKeyId = props.getProperty("TOPPER_KEY_ID_SANDBOX", "\"TOPPER_KEY_ID\"")
+            def topperWidgetId = props.getProperty("TOPPER_WIDGET_ID_SANDBOX", "\"TOPPER_WIDGET_ID\"")
+            def topperPrivateKey = props.getProperty("TOPPER_PRIVATE_KEY_SANDBOX", "\"TOPPER_PRIVATE_KEY\"")
+            buildConfigField("String", "TOPPER_KEY_ID", topperKeyId)
+            buildConfigField("String", "TOPPER_WIDGET_ID", topperWidgetId)
+            buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
+            buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
+            buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
+            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
+            if (dashDirectClientId == null) {
+                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
+            }
+            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
         devnet {
+            applicationId = "org.dash.dashpay.schnapps"
+            def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
+            def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
+            if (imgurClientId == null) {
+                imgurClientId = "\"UPHOLD_CLIENT_ID\""
+            }
+            if (imgurClientSecret == null) {
+                imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
+            }
             applicationId = "org.dash.wallet.devnet"
             buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
@@ -353,6 +419,10 @@ android {
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.11"
+    }
+    testOptions {
+        unitTests.includeAndroidResources  = true
+        unitTests.returnDefaultValues = true
     }
     lint {
         abortOnError false

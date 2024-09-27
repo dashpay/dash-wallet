@@ -41,7 +41,9 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySendCoinsBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.bitcoinj.core.Coin
 import org.bitcoinj.protocols.payments.PaymentProtocol
+import org.bitcoinj.script.ScriptBuilder
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.ResourceString
 import java.io.FileNotFoundException
@@ -53,6 +55,7 @@ open class SendCoinsActivity : LockScreenActivity() {
     companion object {
         const val ACTION_SEND_FROM_WALLET_URI = "de.schildbach.wallet.action.SEND_FROM_WALLET_URI"
         const val INTENT_EXTRA_PAYMENT_INTENT = "paymentIntent"
+        const val INTENT_EXTRA_BUY_CREDITS = "buyCredits"
 
         fun start(context: Context, paymentIntent: PaymentIntent?) {
             start(context, null, paymentIntent, false)
@@ -67,6 +70,23 @@ open class SendCoinsActivity : LockScreenActivity() {
 
             intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent)
             intent.putExtra(INTENT_EXTRA_KEEP_UNLOCKED, keepUnlocked)
+            context.startActivity(intent)
+        }
+
+        fun startBuyCredits(context: Context) {
+            val intent = Intent(context, SendCoinsActivity::class.java)
+
+            val paymentIntent = PaymentIntent(
+                PaymentIntent.Standard.BIP21,
+                "topup",
+                null,
+                listOf(PaymentIntent.Output(Coin.ZERO, ScriptBuilder.createOpReturnScript(ByteArray(20)))).toTypedArray(),
+                "topup", null, null, null, null,
+                null, null, null
+            )
+            intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent)
+            intent.putExtra(INTENT_EXTRA_BUY_CREDITS, true)
+            intent.putExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
             context.startActivity(intent)
         }
 
@@ -212,10 +232,13 @@ open class SendCoinsActivity : LockScreenActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.nav_send)
+        val buyCredits = intent.extras?.get(INTENT_EXTRA_BUY_CREDITS) ?: false
 
         navGraph.setStartDestination(
             if (paymentIntent.hasPaymentRequestUrl()) {
                 R.id.paymentProtocolFragment
+            } else if (buyCredits == true) {
+                R.id.buyCreditsFragment
             } else {
                 R.id.sendCoinsFragment
             }
@@ -224,7 +247,8 @@ open class SendCoinsActivity : LockScreenActivity() {
         navController.setGraph(
             navGraph,
             bundleOf(
-                INTENT_EXTRA_PAYMENT_INTENT to paymentIntent
+                INTENT_EXTRA_PAYMENT_INTENT to paymentIntent,
+                INTENT_EXTRA_BUY_CREDITS to buyCredits
             )
         )
     }
