@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">กำลังตรวจสอบเลขรหัสส่วนตัว</string>
     <string name="set_pin_message">ต้องใช้ PIN นี้เพื่อปลดล็อคแอพของคุณทุกครั้งที่ใช้</string>
     <string name="set_pin_confirm_pin_incorrect">PIN ไม่ถูกต้อง</string>
-
+    
     <string name="home_balance_hide_hint">กดเพื่อซ่อนยอดคงเหลือ</string>
 
     <string name="dialog_confirm_confirm">ยืนยัน</string>
@@ -155,7 +155,7 @@
         <item quantity="other">ชั่วโมง</item>
     </plurals>
 
-    <string name="upgrade">อัพเกรด</string>
+    <string name="encrypt_new_key_chain_upgrade_button">อัพเกรด</string>
     <string name="encrypt_new_key_chain_dialog_title">อัพเกรดกระเป๋าสตางค์ของคุณ</string>
     <string name="encrypt_new_key_chain_dialog_message">กระเป๋าสตางค์ของคุณจะได้รับการอัพเกรดเพื่อรองรับการนำเข้าและส่งออกไปยังแอพพลิเคชันอื่น ๆ</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">คุณต้องป้อนรหัส PIN เพื่อดำเนินการขั้นตอนการอัพเกรดให้สำเร็จ</string>

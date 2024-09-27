@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Підтвердження PIN</string>
     <string name="set_pin_message">Цей PIN-код необхідний, щоб розблокувати вашу програму кожного разу, коли ви її використовуєте.</string>
     <string name="set_pin_confirm_pin_incorrect">Неправильний PIN-код</string>
-
+    
     <string name="home_balance_hide_hint">Торкніться, щоб приховати баланс</string>
 
     <string name="dialog_confirm_confirm">Підтверджую</string>

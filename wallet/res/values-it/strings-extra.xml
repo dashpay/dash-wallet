@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Questo PIN ti sarà richiesto per sbloccare l\'app ogni volta che la usi.</string>
     <string name="set_pin_confirm_pin_incorrect">PIN non valido</string>
-
+    
     <string name="home_balance_hide_hint">Tocca per nascondere il saldo</string>
 
     <string name="dialog_confirm_confirm">Conferma</string>
@@ -161,7 +161,7 @@
         <item quantity="other">ore</item>
     </plurals>
 
-    <string name="upgrade">Aggiorna </string>
+    <string name="encrypt_new_key_chain_upgrade_button">Aggiorna </string>
     <string name="encrypt_new_key_chain_dialog_title">Aggiorna il tuo portafoglio</string>
     <string name="encrypt_new_key_chain_dialog_message">Il tuo portafoglio verrà aggiornato per supportare l\'importazione e l\'esportazione verso più app.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Devi immettere il tuo PIN per terminare il processo di  aggiornamento</string>

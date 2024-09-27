@@ -142,7 +142,7 @@
         <item quantity="other">giờ</item>
     </plurals>
 
-    <string name="upgrade">Nâng cấp</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Nâng cấp</string>
     <string name="encrypt_new_key_chain_dialog_title">Nâng cấp ví</string>
     <string name="encrypt_new_key_chain_dialog_message">Ví của bạn sẽ được nâng cấp để hỗ trợ việc đưa dữ liệu vào hoặc xuất dữ liệu ra cho các app khác.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Bạn phải nhập mã PIN của bạn để hoàn tất việc nâng cấp.</string>

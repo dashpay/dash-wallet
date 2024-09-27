@@ -144,7 +144,7 @@
         <item quantity="other">часа</item>
     </plurals>
 
-    <string name="upgrade">Надграждане</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Надграждане</string>
     <string name="encrypt_new_key_chain_dialog_title">Надгради своят портфейл</string>
     <string name="encrypt_new_key_chain_dialog_message">Вашият портфейл ще бъде надграден, за да поддържа импортирането и експортирането в още приложения.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Трябва да въведете вашият ПИН за да завършите процесът на надграждане.</string>

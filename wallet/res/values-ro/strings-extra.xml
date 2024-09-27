@@ -81,7 +81,7 @@
         <item quantity="other">ore</item>
     </plurals>
 
-	<string name="upgrade">Actualizează</string>
+	<string name="encrypt_new_key_chain_upgrade_button">Actualizează</string>
     <string name="encrypt_new_key_chain_dialog_title">Actualizează portofelul</string>
     <string name="encrypt_new_key_chain_dialog_message">Portofelul tău va fi actualizat pentru a permite importarea și exportul către mai multe aplicații.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Trebuie să introduci codul PIN pentru a termina procesul de actualizare.</string>

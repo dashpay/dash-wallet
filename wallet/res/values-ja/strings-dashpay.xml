@@ -1,0 +1,405 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="choose_your_username"><b>Dashのユーザー名</b>を選びます</string>
+    <string name="identity_min_3_chars">3〜23文字以内</string>
+    <string name="identity_alphanum_only">英字、数字、ハイフンのみ</string>
+    <string name="identity_hyphen_rule">英字または数字で始まり、英字または数字で終える必要があります</string>
+    <string name="identity_username_validating">ユーザー名の有効化中...</string>
+    <string name="identity_username_available">ユーザー名は使用可能です</string>
+    <string name="identity_username_taken">ユーザー名を取得しました</string>
+    <string name="platform_communication_error">Dashプラットフォームの通信エラー</string>
+    <string name="register">登録する</string>
+
+    <string name="new_account_confirm_button_text">確認 &amp; 支払い</string>
+    <string name="invitation_confirm_button_text">確認する</string>
+    <string name="new_account_confirm_accept">承認しました</string>
+    <string name="new_account_confirm_upgrade_fee">アップグレード料金</string>
+    <string name="new_account_confirm_message">ユーザー名に%sを選択しました。一度登録したユーザー名は変更できませんのでご注意ください。</string>
+    <string name="invitation_confirm_title">招待料</string>
+    <string name="invitation_confirm_message">招待状はこの金額で提供され、受取人はDashネットワーク上で速やかにユーザー名を作成できます。</string>
+    <string name="invitation_init_title">招待する</string>
+    <string name="invitation_init_header">友達や家族を招待する</string>
+    <string name="invitation_init_message">ご友人やご家族をDashネットワークにお誘いください。ソーシャルバンキングの世界にご招待しましょう。</string>
+    <string name="invitation_init_button_text">新しい招待状を作成</string>
+    <string name="invitation_notifications_hint">友達や家族をDashネットワークに招待する</string>
+    <string name="invitation_notifications_hint1">Dashネットワークに人を招待する</string>
+    <string name="invitation_notifications_hint1_or">または</string>
+    <string name="invitation_created_title">招待状</string>
+    <string name="invitation_created_successfully">招待状の作成に成功しました</string>
+    <string name="invitation_created_tag_title">参考タグ</string>
+    <string name="invitation_created_tag">例：お父さん</string>
+    <string name="invitation_created_preview">招待状プレビュー</string>
+    <string name="invitation_created_copy_link">招待リンクをコピーする</string>
+    <string name="invitation_created_send_invitation">招待状を送る</string>
+    <string name="invitation_created_send_invitation_again">もう一度送金する</string>
+    <string name="invitation_created_maybe_later">後で</string>
+    <string name="invitation_preview_title">今すぐ参加する</string>
+    <string name="invitation_preview_message">お客様は%sから招待されています。仮想通貨Dashの利用を開始します。</string>
+    <string name="invitation_preview_close">閉じる</string>
+    <string name="invitation_cant_afford_title">ウォレットの残高不足</string>
+    <string name="invitation_cant_afford_message">招待状を作成するには、%sDash以上必要です。</string>
+    <string name="invitation_creating_error_title">招待状作成時のエラー</string>
+    <string name="invitation_creating_error_message">招待状の作成時に問題が発生しました。もう一度やり直してください。</string>
+    <string name="invitation_creating_error_message_not_synced">同期が完了するまで待ち、再試行してください。</string>
+    <string name="invitation_creating_progress_title">招待状の作成</string>
+    <string name="invitation_verifying_progress_title">招待状の確認</string>
+    <string name="invitation_share_message">招待状は1回限り有効です。複数人で共有しないでください。</string>
+    <string name="invitation_share_title">DashPayの招待状</string>
+    <string name="invitation_already_claimed_title">招待状はすでに請求されました</string>
+    <string name="invitation_already_claimed_message">%sからの招待状はすでに請求されています</string>
+    <string name="invitation_invalid_invite_title">無効な招待状</string>
+    <string name="invitation_invalid_invite_message">%sからの招待状は無効です</string>
+    <string name="invitation_username_already_found_title">ユーザー名はすでに登録済みです</string>
+    <string name="invitation_username_already_found_message">すでにDashのユーザー名を持っているため、この招待状を請求できません。</string>
+    <string name="invitation_onboarding_has_began_error_title">オンボーディングエラー</string>
+    <string name="invitation_onboarding_has_began_error">オンボーディング中です。ウォレットを作成後、招待状を申請してください。</string>
+    <string name="invitation_accept_title_1">ユーザー名を取得する</string>
+    <string name="invitation_accept_title_2">友達・家族を追加する</string>
+    <string name="invitation_accept_message_2">家族を招待したり、ユーザー名を検索して友人を見つけることができます。</string>
+    <string name="invitation_accept_title_3">カスタマイズする</string>
+    <string name="invitation_accept_message_3">写真をアップロードして、自分のIDをパーソナライズする</string>
+    <string name="invitation_accept_continue">続ける</string>
+    <string name="invitation_contact_request_sent_message">お客様を招待したため、%sに連絡先リクエストが送信されました。</string>
+
+    <string name="username_being_created">%sのユーザー名をDashネットワークで作成中です</string>
+    <string name="username_being_requested">%sのユーザー名をDashネットワークで申請中です</string>
+
+    <string name="processing_let_me_know">完了次第お知らせください</string>
+    <string name="processing_home_title">Evolutionにアップグレード中</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) 支払い手続き中</string>
+    <string name="processing_home_step_2">(2/3) IDを作成中</string>
+    <string name="processing_home_step_2_restoring">(2/3) IDをリカバリー中</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) ユーザー名の登録中</string>
+    <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) ユーザー名のリクエスト中</string>
+    <string name="processing_home_step_3_restoring">(3/3) ユーザー名のリカバリー中</string>
+    <string name="processing_done_title">こんにちは、%sさん</string>
+    <string name="processing_done_subtitle">お客様のアカウントは準備完了です</string>
+    <string name="processing_voting_subtitle">ユーザー名の投票が始まりました</string>
+    <string name="processing_error_title">アップグレード中のエラー</string>
+    <string name="processing_error_title_from_invite">招待からアップグレード中のエラー</string>
+    <string name="processing_error_retry">リトライ</string>
+    <string name="processing_username_unavailable_title">ユーザー名は使用できません</string>
+    <string name="processing_username_unavailable_subtitle">別のものをお選びください</string>
+
+    <string name="dashpay_upgrade_fee">アップグレード料金</string>
+    <string name="dashpay_invite_fee">招待料</string>
+    <string name="dashpay_topup_fee">チャージ料金</string>
+    <string name="search_user_find_a_user">Dashネットワークでユーザーを探す</string>
+    <string name="search_for_a_user">Dashネットワークのユーザーを検索</string>
+    <string name="search_user_input_placeholder">ユーザー名を入力してここから検索</string>
+    <string name="add_new_contact">新しい連絡先を追加</string>
+    <string name="send_contact_request">連絡先リクエストを送信する</string>
+    <string name="sending_contact_request">連絡先リクエストを送信中</string>
+    <string name="sending_contact_request_short">招待中</string>
+    <string name="accepting_contact_request">連絡先リクエストを承認中</string>
+    <string name="accepting_contact_request_short">承認中</string>
+    <string name="search_user_no_results">該当するユーザーがいません</string>
+    <string name="search_user_loading">Dashネットワークで<b>"%"</b>というユーザー名を検索中</string>
+    <string name="contact_request_pending">連絡先リクエストを保留中</string>
+    <string name="pay">支払う</string>
+    <string name="contact_request_received_title">%sさんが友達リクエストを送信しました</string>
+    <string name="contact_request_accept">承認</string>
+    <string name="contact_request_ignore">無視する</string>
+
+    <string name="contacts_no_results">該当する連絡先がありません</string>
+
+    <string name="contacts_title">連絡先</string>
+    <string name="contacts_send_to_contact_title">連絡先に送信する</string>
+    <string name="contacts_search_for">連絡先を検索</string>
+    <string name="contact_requests_title">連絡先リクエスト</string>
+    <string name="contacts_add_new_contact">新しい連絡先を追加する</string>
+    <string name="contacts_contact_requests_count">連絡先リクエスト (%d)</string>
+    <string name="contacts_contact_requests">連絡先リクエスト</string>
+    <string name="contacts_contact_requests_view">全て表示</string>
+    <string name="contacts_my_contacts">私の連絡先</string>
+    <string name="contacts_sort_order">表示順：</string>
+    <string-array name="contacts_sort">
+        <item>名前</item>
+    </string-array>
+
+    <string name="notifications_title">通知</string>
+    <string name="notifications_title_with_count">通知 (%d)</string>
+    <string name="notifications_profile_activity">活動</string>
+    <string name="notifications_new">新規</string>
+    <string name="notifications_earlier">以前</string>
+    <string name="notifications_none_new">新しい通知はありません。</string>
+    <string name="notifications_contact_has_accepted">%sはあなたの連絡先リクエストを承認しました。</string>
+    <string name="notifications_you_have_accepted">%sからの連絡先リクエストを承認しました</string>
+    <string name="notifications_you_sent">%sに連絡先リクエストを送信しました</string>
+    <string name="notifications_you_received">%sはあなたに連絡先リクエストを送信しました</string>
+
+    <string name="identity_complete_message">%sのユーザー名をDashネットワークで正常に作成できました</string>
+    <string name="request_complete_message">%sのユーザー名をDashネットワークで正常に申請できました</string>
+
+    <string name="scan_to_pay_username_dialog_message">有効なDashのユーザー名またはIDではありません\n\n%s</string>
+    <string name="send_coins_to_username">に送信</string>
+    <string name="contact_history_disclaimer">%を連絡先に追加し、<b>ユーザー名に直接支払い</b>、<b>双方の取引履歴を保持する</b></string>
+    <string name="contact_history_disclaimer_pending">%があなたのリクエストを承認すると、<b>ユーザー名に直接支払える</b>ようになります</string>
+    <string name="stranger_activity_disclaimer_text">アドレスに直接支払われたものは、アクティビティに保持されません。</string>
+    <string name="error_loading_identity">IDの読み込みエラー</string>
+
+    <string name="edit_profile">プロフィールを編集</string>
+    <string name="display_name">表示名</string>
+    <string name="about_me">プロフィール</string>
+    <string name="char_count">%1$d〜%2$d文字</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">保存</string>
+    <string name="edit_profile_take_picture">カメラで写真を撮影する</string>
+    <string name="edit_profile_choose_picture">ギャラリーから選択する</string>
+    <string name="upgrade_to_evolution_title">DashPayに参加する</string>
+    <string name="upgrade_to_evolution_message">ユーザー名を作成し、そのユーザー名で友達や家族を探し、連絡先に追加することができます。</string>
+    <string name="image_cropper_title">写真を移動・拡大し、最適なサイズに調整できます</string>
+    <string name="select">選択する</string>
+    <string name="unable_to_load_image">画像を読み込めません。</string>
+    <string name="profile_picture_upload_error_title">アップロードエラー</string>
+    <string name="profile_picture_upload_error_message">お客様の写真をアップロードできませんでした。\nもう一度やり直してください。</string>
+    <string name="profile_picture_upload_try_again">もう一度お試しください</string>
+    <string name="profile_picture_uploading_title">お待ちください</string>
+    <string name="profile_picture_uploading_message">ネットワークに写真をアップロード中</string>
+    <string name="picture_upload_policy">画像のアップロードに関する方針</string>
+    <string name="imgur_policy_1">選択した画像は、匿名でImgurにアップロードされます。</string>
+    <string name="imgur_policy_2">アップロードされた画像は、誰でも自由に閲覧できます。</string>
+    <string name="imgur_policy_3">このウォレットにアクセスできる限り、アップロードした画像はいつでも削除できます。</string>
+    <string name="profile_picture_delete_title">本当によろしいですか。</string>
+    <string name="profile_picture_delete_message">この画像は今後Dashネットワークでは使用されません</string>
+    <string name="agree">同意する</string>
+    <string name="yes">はい</string>
+    <string name="no">いいえ</string>
+
+    <string name="updating_profile">Dashネットワークのプロフィールを更新中</string>
+    <string name="google_drive_policy_one">アカウント情報は、DashネットワークにもDashPay ウォレットにも保存されていません。</string>
+    <string name="google_drive_policy_two">アップロードされた画像は、誰でも自由に閲覧できます。</string>
+    <string name="google_drive_policy_three">このデバイスでウォレットにアクセスできる限り、画像の削除や変更はいつでもできます。</string>
+
+    <string name="upload_image_message">ネットワークに写真をアップロード中</string>
+    <string name="upload_image_please_wait">お待ちください</string>
+    <string name="upload_image_error_message">写真をアップロードできません。もう一度お試しください。</string>
+    <string name="upload_image_upload_error">アップロードエラー</string>
+
+    <string name="edit_profile_google_drive">Google Drive</string>
+    <string name="edit_profile_imgur">Imgur</string>
+    <string name="google_drive_failed_authorization">Googleドライブの認証に失敗しました。</string>
+
+
+    <string name="error_updating_profile_try_again">再試行する</string>
+    <string name="error_updating_profile_cancel">キャンセル</string>
+    <string name="error_updating_profile_msg">プロフィール更新時のエラー</string>
+    <string name="error_updating_profile_code">コード：%s</string>
+    <string name="edit_profile_public_url">パブリックURL</string>
+    <string name="public_url_enter_url">画像のURLを貼り付ける</string>
+    <string name="public_url_error_message">画像を取り込めません。有効な画像URLを入力してください。</string>
+    <string name="public_url_message">インターネット上で公開されている任意のURLを指定できるため、ユーザーはDashネットワーク上でそのURLを閲覧することができます。</string>
+    <string name="public_url_more_info">さらに詳しく</string>
+    <string name="public_url_fetching_image">画像を取り込んでいます</string>
+
+    <string name="gravatar">Gravatar</string>
+    <string name="gravatar_email_prompt">GravatarのEmail IDを入力してください</string>
+    <string name="gravatar_fetching">Gravatarを取り込み中</string>
+    <string name="gravatar_email_sample">sample\@email.com</string>
+    <string name="gravatar_disclaimer">お客様のメールアドレスは、DashPayウォレットにもサーバーにも保存されません。Gravatarアカウントの詳細を取得するために一度だけ使用され、その後は破棄されます。</string>
+    <string name="gravatar_email_error">Gravatarを取り込めません。有効なGravatarのメールIDを入力してください。</string>
+
+    <string name="where_to_store_your_picture">どこに写真を保存しますか。</string>
+    <string name="external_storage_disclaimer">お客様の画像はいつでもご自身で管理することができるようになっています。Dashは、プロフィール画像を含むお客様のデータを一切保存することはありません。</string>
+    <string name="select_source_sign_in_required">サインインが必要です</string>
+    <string name="select_source_google_drive">Googleドライブ</string>
+    <string name="select_source_no_sign_in_required">アカウント不要</string>
+
+    <string name="join_dashpay_subtitle">ユーザー名を作成して、友達を追加します...</string>
+    <string name="join_dashpay_more_subtitle">ユーザー名を作成し、友達を見つけ、連絡先に追加する</string>
+    <string name="join">参加する</string>
+
+    <string name="more_suggestions">提案の追加</string>
+    <string name="users_that_matches">該当するユーザー</string>
+    <string name="not_in_your_contacts">現在連絡先に入っていない人</string>
+    <string name="no_matching_contacts">連絡先に該当するユーザーがいません</string>
+    <string name="suggestions_empty_result_part_1">この名前に該当するユーザーがいません</string>
+    <string name="suggestions_empty_result_part_2">連絡先に</string>
+    <string name="save_changes">変更を保存する</string>
+    <string name="save_profile_reminder_text">プロフィールの変更を保存しますか。</string>
+    <string name="invitation_notification_text">友達や家族をDashネットワークに招待してみましょう。</string>
+    <string name="dashpay_min_balance_disclaimer">開始するには、<b>%s</b>以上が必要です</string>
+    <string name="dashpay_insuffient_credits">この作業を実行するには、残高が不足しています。</string>
+
+    <string name="about_developer_mode">開発者モードはアクティブ中：全ての機能が利用可能！</string>
+    <string name="about_developer_mode_disabled">開発者モードが非アクティブ中。</string>
+    <string name="invite_history_create_new_invite">新しい招待状を作成する</string>
+    <string name="invitations_history_header">招待状の履歴</string>
+    <string name="invitations_filter_title">招待状を絞り込む</string>
+    <string name="invite_history_empty">招待状は作成されていません。</string>
+    <string name="invite_history_empty_claimed">招待状の申請はありません。</string>
+    <string name="invite_history_empty_pending">申請中の招待状はありません。</string>
+    <string name="invitation_details_invite_used_by">使用された招待状</string>
+    <string name="invitation_details_invite_without_username">招待状を申請しました。 ユーザー名の登録は申請中です。</string>
+    <string-array name="invite_filter">
+        <item>全て</item>
+        <item>保留中</item>
+        <item>請求しました</item>
+    </string-array>
+
+    <!-- Private memo -->
+    <string name="private_memo">プライバシーノート</string>
+    <string name="add_note">ノートを追加する</string>
+    <string name="edit_note">ノートを編集する</string>
+    <string name="note">ノート</string>
+
+    <string name="select_privacy_preferences">ユーザー名のプライバシー設定を選択する</string>
+    <string name="please_note_cant_change_this_later">この設定は後で変更することはできませんのでご注意ください</string>
+    <string name="Intermediate_level_WIFI_Warning">中程度のプライバシーレベルには、安定したインターネット接続が必要です</string>
+    <string name="Advanced_level_WIFI_Warning">高度のプライバシーレベルには、安定したインターネット接続が必要です</string>
+    <string name="privcay_level_WIFI_warning_desc">資金の損失を防止するため、Wi-Fiネットワークに接続することを推奨します</string>
+    <string name="continue_anyway">このまま続行する</string>
+    <string name="welcome_to_dash_pay">Dash Payへようこそ</string>
+    <string name="pay_to_usernames">ユーザー名に支払い。英数字のアドレスはもう不要。</string>
+    <string name="create_a_username">ユーザー名を作成する</string>
+    <string name="add_your_friends_family">友人や家族を追加</string>
+    <string name="invite_your_family">家族を招待したり、ユーザー名を検索して友人を見つけることができます。</string>
+    <string name="personalise_profile">プロフィールをカスタマイズする</string>
+    <string name="upload_your_picture">写真をアップロードして、自分のIDをパーソナライズする</string>
+    <string name="in_case_lose_your_passphrase">パスフレーズを紛失した場合、お客様が請求したユーザー名を使用する権利を失います。</string>
+    <string name="keep_your_passphrase_safe">パスフレーズを安全に保つ</string>
+    <string name="pay_now">今すぐ支払いを選択しても承認されなかった場合、再度支払うことなく別の名前を作成することができます [ 該当する場合はチェック]</string>
+    <string name="case_your_request_is_not_approved">お客様の請求が承認されない場合</string>
+    <string name="voting_requirement_subtitle">2〜9の数字を含む、または20文字以上のユーザー名は自動的に承認されます</string>
+    <string name="voting_requirement_title">投票が必要な場合もあります</string>
+    <string name="dash_network_must_vote_to_approve">Dashネットワークでお客様のユーザー名が投票で承認されると、そのユーザー名が作成されます。</string>
+    <string name="what_is_username_voting">ユーザー名投票とは\?</string>
+    <string name="usernames_blocked_title">一部のユーザー名をブロックできます</string>
+    <string name="usernames_blocked_subtitle">ネットワーク上の多数のユーザーがそのユーザー名を不適切と判断した場合、それをブロックできます</string>
+    <string name="username_voting">ユーザー名投票</string>
+    <string name="username_voting_subtitle">マスターノードの所有者として、お客様が投票で請求されたユーザー名を承認すると、ユーザーはそのユーザー名を作成できるようになります。</string>
+    <string name="voting_duplicates_only_title">重複分にのみ投票</string>
+    <string name="voting_duplicates_only_message">全ての請求を確認できますが、重複する請求にのみ投票する必要があります</string>
+    <string name="all">全て</string>
+    <string name="n_usernames">%dのユーザー名</string>
+    <string name="n_requests">%dのリクエスト</string>
+    <string name="search_by_username">ユーザー名で検索</string>
+    <string name="type">種類</string>
+    <string name="only_duplicates">重複分のみ</string>
+    <string name="only_links">リンク付きの請求のみ</string>
+    <string name="only_links_short">リンク付き</string>
+    <string name="date">日程：%s</string>
+    <string name="votes">投票数：%s</string>
+
+    <string-array name="usernames_sort_by_options">
+        <item>新しい順</item>
+        <item>古い順</item>
+        <item>高から低</item>
+        <item>低から高</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>全て</item>
+        <item>承認しました</item>
+        <item>承認しませんでした</item>
+    </string-array>
+
+    <string name="request_your_username">ユーザー名の作成</string>
+    <string name="request_your_hint">一度作成したユーザー名は後で変更することはできませんのでご注意ください</string>
+    <string name="request_username">ユーザー名の申請</string>
+    <string name="request_voting_range">Dashネットワークはこのユーザー名に投票することになります。投票結果は%sに通知されます。</string>
+    <string name="request_username_available">ユーザー名は使用可能です</string>
+    <string name="request_username_unavailable">ユーザー名は使用不可またはブロックされています</string>
+    <string name="request_username_taken">ユーザー名はすでに使用されています</string>
+    <string name="requesting_your_username_title">ユーザー名の作成中</string>
+    <string name="requesting_your_username_message">あなたのユーザー名のjohndoeは、Dashネットワークで申請中です。申請には時間がかかる場合があります。</string>
+    <string name="requesting_your_username_error_title">ユーザー名の申請に失敗しました</string>
+    <string name="requesting_your_username_error_message">何らかの理由で申請に失敗しました。もう一度やり直してください。</string>
+
+    <string name="voting">投票：</string>
+    <string name="this_username_has_already_been_requested">このユーザー名はすでに申請されていますが、お客様も同じものを申請でき、ネットワークの投票によってユーザー名の使用可否が決定されます。</string>
+    <string name="request_details">詳細の申請</string>
+    <string name="request_details_subtitle">以下の投稿を閲覧し、このユーザー名の所有権を確認してください</string>
+    <string name="vote_to_approve">承認に投票</string>
+    <string name="identity">アイデンティティ</string>
+    <string name="results">結果</string>
+    <string name="link">リンク</string>
+    <string name="link_not_provided">提供されていません</string>
+    <string name="cancel_approval">キャンセルの承認</string>
+    <string name="verify_your_identity">本人確認を行ってご希望のユーザー名を取得しましょう</string>
+    <string name="if_somebody">他の利用者がお客様と同じユーザー名を希望した場合、そのユーザー名を付与する人物はネットワークが決定することになります。</string>
+    <string name="the_link_will_be_visible">送信したリンクは、ネットワークの所有者にのみ表示されます</string>
+    <string name="verify_your_identity_voting">本人確認を行う</string>
+    <string name="copy_the_text">テキストをコピーする</string>
+    <string name="please_vote_to_approve">%sという私のDashのユーザー名を承認する投票をお願いします</string>
+    <string name="prove_your_identity">お客様の身元を証明する</string>
+    <string name="make_a_post_with_the_text">よく知られたSNSやメッセージング・プラットフォームに上記の文章を投稿し、ご自身が申請されたユーザー名の本来の所有者であることを確認した上で、以下のリンクを貼り付けてください</string>
+    <string name="paste_the_link">リンクを貼り付ける</string>
+    <string name="voting_key_title">投票キーを入力する</string>
+    <string name="voting_key_hint">マスターノードの投票キー</string>
+    <string name="voting_key_input_error">無効なキーが入力されています</string>
+    <string name="voting_key_add">投票キーを追加する</string>
+    <string name="voting_key_add_subtitle">以下のIPアドレスは、このウォレットに紐付けられています</string>
+    <string name="masternode_ip">マスターノードのIPアドレス</string>
+    <string name="multiple_votes_cast">ウォレットに複数の投票キーが保管されているため、%d票の投票が行われます</string>
+    <string name="add_masternode_key">マスターノードの投票キーを追加する</string>
+    <string name="vote_submitted">投票が提出されました</string>
+    <string name="vote_cancelled">投票がキャンセルされました</string>
+    <string name="quick_vote">クイック投票</string>
+    <string name="quick_vote_subtitle">「全てに投票」ボタンをタップすると、絞り込んだユーザー名のうち、最初に投稿されたもの(%d)全てに自動的に投票されます</string>
+    <string name="vote_for_all">全てに投票</string>
+    <string name="voting_period_active">ユーザー名の投票期間が有効です</string>
+    <string name="there_was_a_network_error">ネットワークエラーが発生しました、追加料金なしで再試行できます</string>
+    <string name="requested_username_has_been">ユーザー名を申請しました</string>
+    <string name="requested_voting_duration">%sの結果。</string>
+    <string name="cancel_request">キャンセルの申請</string>
+    <string name="after_the_voting">投票終了後、投票結果をお知らせします</string>
+    <string name="none">無し</string>
+    <string name="verify_now">今すぐ検証する</string>
+    <string name="if_you_tap_cancel">「キャンセルの申請」をタップしても、再度支払わずに別のユーザー名を申請できます。</string>
+    <string name="do_you_really_want_to_cancel">ユーザー名の申請を本当にキャンセルしますか。</string>
+    <string name="if_you_tap_cancel_request">「キャンセルの申請」をタップしても、再度支払わずに別のユーザー名を申請できます。</string>
+    <string name="cant_open">開けません</string>
+    <string name="invalid_link">リンクが無効です</string>
+    <string name="welcome_request_username_min_balance_disclaimer_all">%sDashを持っています。ユーザー名によっては、最大%sDashかかります。</string>
+    <string name="welcome_request_username_min_balance_disclaimer_noncontested">ユーザー名を作成するには、%sDash以上が必要です。</string>
+    <string name="request_username_min_balance_disclaimer">Dashネットワークでユーザー名を申請するには、%sDash以上が必要です</string>
+
+    <!-- CoinJoin -->
+    <string name="coinjoin">CoinJoin</string>
+    <string name="turned_off">オフ</string>
+    <string name="coinjoin_info_subtitle">Dashコインをミキシングすると、よりプライベートな取引ができるようになります</string>
+    <string name="coinjoin_description_1">これがオンになっている場合のみ、ミキシングされたDashを使用することができます。これはいつでもオフにすることができます。</string>
+    <string name="coinjoin_description_2">新たに受け取ったDashは、ウォレットを開いたときに自動的にミキシングされます</string>
+    <string name="coinjoin_description_3">この機能をオンにすると、バッテリーの消費量が増えます</string>
+    <string name="coinjoin_mixing_level_title">ミキシングレベルを選択する</string>
+    <string name="coinjoin_mixing_level_subtitle">ミキシングレベルはいつでも変更や停止ができます</string>
+    <string name="coinjoin_mixing_transactions">ミキシングの取引</string>
+    <string name="coinjoin_transaction_group">ミキシングに関する取引があります。</string>
+    <string name="intermediate">通常のもの</string>
+    <string name="advanced">高度なもの</string>
+    <string name="intermediate_level_card_decs">非常に高いレベルの技術的な専門知識を持つ上級ユーザーは、取引履歴を判別することができます</string>
+    <string name="advanced_level_card_decs">技術的な専門知識を持つ上級ユーザーにとっても、取引履歴を確認することは非常に困難です</string>
+    <string name="coinjoin_intermediate_time">最長30分</string>
+    <string name="coinjoin_advanced_time">数時間</string>
+    <string name="coinjoin_start">ミキシングを開始する</string>
+    <string name="coinjoin_stop">ミキシングを停止する</string>
+    <string name="coinjoin_mixing">ミキシング中</string>
+    <string name="coinjoin_paused">ミキシングを一時停止しました</string>
+    <string name="coinjoin_not_started">開始していません</string>
+    <string name="coinjoin_progress">%sの%s (%d%%) と%s</string>
+    <string name="coinjoin_progress_balance">%2$sの%1$s</string>
+    <string name="coinjoin_progress_finished">ミキシング完了しました</string>
+    <string name="coinjoin_change_level_confirmation">プライバシーレベルを変更してよろしいですか。</string>
+    <string name="coinjoin_stop_mixing_title">ミキシングを停止してもよろしいですか。</string>
+    <string name="coinjoin_stop_mixing_message">ミキシングした資金は、ミキシングしていない資金と合算されます</string>
+    <string name="coinjoin_mixed_balance">ミキシング後の残高：</string>
+
+    <!-- credit balance messages / buttons -->
+    <string name="credit_balance_empty_warning_title">Dashの残高が不足しています</string>
+    <string name="credit_balance_low_warning_title">Dashの残高が0になっています</string>
+    <string name="credit_balance_empty_warning_message">お支払いには引き続きDashPayをご利用いただけますが、残高をチャージしていただけるまでは、プロフィールの更新や連絡先の追加はできません</string>
+    <string name="credit_balance_low_warning_message">プロフィールの変更や連絡先の追加を続けるには、残高をチャージしてください</string>
+    <string name="credit_balance_button_maybe_later">後で</string>
+    <string name="credit_balance_button_buy">Dashを購入する</string>
+    <string name="credit_balance_insufficient_error_message">Dashを購入する資金が不足しています</string>
+    <string name="buy_credits_estimated_items">%s〜%dの連絡先 / %dのプロフィール更新</string>
+
+    <string name="request_username_username_voting_message">＋ユーザー名投票とは\?</string>
+    <string name="request_username_character_requirement">英字、数字、ハイフンのみ</string>
+    <string name="request_username_balance_requirement">このユーザー名を作成するには、0.25DASHが必要です</string>
+    <string name="request_username_length_requirement">3〜23文字以内</string>
+    <string name="request_username_confirm">承認します</string>
+
+</resources>

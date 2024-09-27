@@ -95,6 +95,7 @@ class TransferDashViewModel @Inject constructor(
 
     init {
         getUserAccountAddress()
+        getUserData()
         walletDataProvider.observeBalance()
             .onEach(_dashBalanceInWalletState::postValue)
             .launchIn(viewModelScope)
