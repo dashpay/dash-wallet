@@ -21,6 +21,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.ImportedMasternodeKeyDao
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.dao.UsernameVoteDao
@@ -29,6 +30,7 @@ import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesOperation
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +59,8 @@ import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.dash.wallet.common.WalletDataProvider
+import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.sdk.platform.Names
 import java.util.UUID
 import javax.inject.Inject
@@ -92,7 +96,8 @@ class UsernameRequestsViewModel @Inject constructor(
     private val usernameVoteDao: UsernameVoteDao,
     private val importedMasternodeKeyDao: ImportedMasternodeKeyDao,
     private val platformSyncService: PlatformSyncService,
-    private val walletDataProvider: WalletDataProvider
+    private val walletDataProvider: WalletDataProvider,
+    private val walletApplication: WalletApplication
 ): ViewModel() {
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
@@ -243,6 +248,12 @@ class UsernameRequestsViewModel @Inject constructor(
 
         viewModelScope.launch {
             usernameRequestDao.getRequest(requestId)?.let { request ->
+                BroadcastUsernameVotesOperation(walletApplication).create(
+                    listOf(request.normalizedLabel),
+                    listOf(ResourceVoteChoice.towardsIdentity(Identifier.from(request.identity))),
+                    masternodes.value.map { it.votingPrivateKey }
+                ).enqueue()
+
                 usernameRequestDao.removeApproval(request.username)
                 usernameRequestDao.update(request.copy(votes = request.votes + keysAmount, isApproved = true))
                 _uiState.update { it.copy(voteSubmitted = true) }
@@ -264,6 +275,11 @@ class UsernameRequestsViewModel @Inject constructor(
 
         viewModelScope.launch {
             usernameRequestDao.getRequest(requestId)?.let { request ->
+                BroadcastUsernameVotesOperation(walletApplication).create(
+                    listOf(request.normalizedLabel),
+                    listOf(ResourceVoteChoice.abstain()),
+                    masternodes.value.map { it.votingPrivateKey }
+                ).enqueue()
                 usernameRequestDao.update(request.copy(votes = request.votes - keysAmount, isApproved = false))
                 _uiState.update { it.copy(voteCancelled = true) }
                 usernameVoteDao.insert(
@@ -296,6 +312,21 @@ class UsernameRequestsViewModel @Inject constructor(
                 keysAmount
             )
             _uiState.update { it.copy(voteSubmitted = true) }
+
+            val usernames = arrayListOf<String>()
+            val voteChoices = arrayListOf<ResourceVoteChoice>()
+            requestIds.forEach {
+                usernameRequestDao.getRequest(it)?.let { request ->
+                    usernames.add(request.normalizedLabel)
+                    voteChoices.add(ResourceVoteChoice.towardsIdentity(Identifier.from(request.identity)))
+                }
+            }
+
+            BroadcastUsernameVotesOperation(walletApplication).create(
+                usernames,
+                voteChoices,
+                masternodes.value.map { it.votingPrivateKey }
+            ).enqueue()
         }
     }
 
@@ -472,23 +503,28 @@ class UsernameRequestsViewModel @Inject constructor(
         }
     }
 
-    fun block(requestId: String) {
+    fun block(username: String) {
         if (keysAmount == 0) {
             return
         }
 
         viewModelScope.launch {
-            usernameRequestDao.getRequest(requestId)?.let { request ->
-                usernameRequestDao.update(request.copy(lockVotes = request.lockVotes + keysAmount, isApproved = true))
+           // usernameRequestDao.getRequest(requestId)?.let { request ->
+                BroadcastUsernameVotesOperation(walletApplication).create(
+                    listOf(username),
+                    listOf(ResourceVoteChoice.lock()),
+                    masternodes.value.map { it.votingPrivateKey }
+                ).enqueue()
+                //usernameRequestDao.update(request.copy(lockVotes = request.lockVotes + keysAmount, isApproved = true))
                 _uiState.update { it.copy(voteSubmitted = true) }
                 usernameVoteDao.insert(
                     UsernameVote(
-                        request.username,
-                        request.identity,
+                        username,
+                        "",
                         UsernameVote.LOCK
                     )
                 )
             }
-        }
+        //}
     }
 }

@@ -1046,7 +1046,8 @@ class PlatformSynchronizationService @Inject constructor(
         checkUsernameVotingStatus()
         try {
             val contestedNames = platform.platform.names.getContestedNames()
-            val myIdentifier = platformRepo.blockchainIdentity.uniqueIdentifier
+            // usernameRequestDao.clear()
+            // val myIdentifier = platformRepo.blockchainIdentity.uniqueIdentifier
             for (name in contestedNames) {
                 try {
                     val voteContender = platformRepo.getVoteContenders(name)
