@@ -259,7 +259,7 @@
     <string name="upload_your_picture">Upload your picture, personalize your identity.</string>
     <string name="in_case_lose_your_passphrase">In case you lose your passphrase you will lose your right to your requested username.</string>
     <string name="keep_your_passphrase_safe">Keep your passphrase safe</string>
-    <string name="pay_now">Pay now and if not approved, you can create a different name without paying again [check if true]</string>
+    <string name="pay_now">Pay now and if not approved, you can create a different name without paying again</string>
     <string name="case_your_request_is_not_approved">In case your request is not approved</string>
     <string name="voting_requirement_subtitle">Any username that has a number 2–9 or is longer than 20 characters will be automatically approved</string>
     <string name="voting_requirement_title">Voting is only required in some cases</string>

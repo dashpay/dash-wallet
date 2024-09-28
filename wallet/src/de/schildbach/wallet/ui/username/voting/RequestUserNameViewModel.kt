@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.WalletDataProvider
 import org.dashj.platform.dashpay.UsernameRequestStatus
+import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import javax.inject.Inject
@@ -86,6 +87,7 @@ class RequestUserNameViewModel @Inject constructor(
 
     var identity: BlockchainIdentityData? = null
     var requestedUserName: String? = null
+    var identityBalance: Long = 0L
 
     val walletBalance: Coin
         get() = walletData.getWalletBalance()
@@ -94,8 +96,7 @@ class RequestUserNameViewModel @Inject constructor(
         val creationState = BlockchainIdentityData.CreationState.valueOf(
             identityConfig.get(CREATION_STATE) ?: BlockchainIdentityData.CreationState.NONE.name
         )
-        return hasRequestedName && creationState != BlockchainIdentityData.CreationState.NONE &&
-                creationState.ordinal <= BlockchainIdentityData.CreationState.VOTING.ordinal
+        return hasRequestedName && creationState != BlockchainIdentityData.CreationState.NONE && creationState.ordinal <= BlockchainIdentityData.CreationState.VOTING.ordinal
     }
     suspend fun isUsernameLocked(): Boolean {
         return isUserNameRequested() &&
@@ -125,6 +126,9 @@ class RequestUserNameViewModel @Inject constructor(
             .filterNotNull()
             .onEach {
                 identity = identityConfig.load()
+                identityBalance = identity?.let { identity ->
+                    platformRepo.getIdentityBalance(Identifier.from(identity.userId)).balance
+                } ?: 0
                 if (requestedUserName == null) {
                     requestedUserName = identityConfig.get(USERNAME)
                 }
@@ -150,7 +154,6 @@ class RequestUserNameViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
-
     }
 
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
@@ -195,7 +198,7 @@ class RequestUserNameViewModel @Inject constructor(
 
     private suspend fun updateConfig() {
         requestedUserName?.let { name ->
-            identityConfig.set(BlockchainIdentityConfig.USERNAME, name)
+            identityConfig.set(USERNAME, name)
         }
         _requestedUserNameLink.value.let { link ->
             identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, link ?: "")
@@ -306,6 +309,13 @@ class RequestUserNameViewModel @Inject constructor(
         val validLength = validateUsernameSize(username)
         val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
         val contestable = Names.isUsernameContestable(username)
+
+        // if we have an identity, then we must use our identity balance
+        val enoughIdentityBalance = if (contestable) {
+            identityBalance >= Constants.DASH_PAY_FEE_CONTESTED.value * 1000
+        } else {
+            identityBalance >= Constants.DASH_PAY_FEE.value / 3 * 1000
+        }
         val enoughBalance = if (contestable) {
             walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
         } else {
@@ -316,7 +326,7 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameLengthValid = validLength,
                 usernameCharactersValid = validCharacters && !startOrEndWithHyphen,
                 usernameContestable = contestable,
-                enoughBalance = enoughBalance,
+                enoughBalance = if (identityBalance > 0) enoughIdentityBalance else enoughBalance,
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameCheckSuccess = false,

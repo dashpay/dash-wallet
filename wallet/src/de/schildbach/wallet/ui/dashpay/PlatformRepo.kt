@@ -1228,8 +1228,11 @@ class PlatformRepo @Inject constructor(
         return report.toString()
     }
 
-    suspend fun getIdentityBalance(): CreditBalanceInfo {
+    fun getIdentityBalance(): CreditBalanceInfo {
         return CreditBalanceInfo(platform.client.getIdentityBalance(blockchainIdentity.uniqueIdentifier))
     }
 
+    fun getIdentityBalance(identifier: Identifier): CreditBalanceInfo {
+        return CreditBalanceInfo(platform.client.getIdentityBalance(identifier))
+    }
 }

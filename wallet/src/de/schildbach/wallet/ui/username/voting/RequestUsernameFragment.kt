@@ -51,22 +51,13 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 requestUserNameViewModel.canAffordNonContestedUsername()
 
             binding.inputWrapper.isEndIconVisible = username.isNotEmpty()
-            // TODO: Replace with api to verify username
-            val isUsernameValid = binding.usernameInput.text.contentEquals("test") ||
-                binding.usernameInput.text.contentEquals("admin")
 
-
-            if (username != null) {
+            if (username.isNotEmpty()) {
                 val usernameIsValid = requestUserNameViewModel.checkUsernameValid(username)
 
                 if (usernameIsValid) { // ensure username meets basic rules before making a Platform query
-                    // usernameAvailabilityValidationInProgressState()
                     checkUsername(username)
                 } else {
-//                binding.usernameExistsReqProgress.visibility = View.INVISIBLE
-//                binding.usernameExistsReqLabel.visibility = View.GONE
-//                binding.usernameExistsReqImg.visibility = View.GONE
-//                binding.registerBtn.isEnabled = false
                     if (this::checkUsernameNotExistRunnable.isInitialized) {
                         handler.removeCallbacks(checkUsernameNotExistRunnable)
                         dashPayViewModel.searchUsername(null)
@@ -74,8 +65,6 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 }
             }
             (requireActivity() as? InteractionAwareActivity)?.imitateUserInteraction()
-
-            // binding.usernameRequested.isVisible = isUsernameValid
         }
 
         binding.inputWrapper.endIconMode = TextInputLayout.END_ICON_CUSTOM

@@ -127,7 +127,7 @@ class CreateUsernameActivity : LockScreenActivity() {
             )
 
             if (requestUserNameViewModel.isUserNameRequested() &&
-                !requestUserNameViewModel.isUserNameRequested() &&
+                !requestUserNameViewModel.isUsernameLocked() &&
                 !requestUserNameViewModel.isUsernameLostAfterVoting()) {
                 navGraph.setStartDestination(R.id.votingRequestDetailsFragment)
             } else {

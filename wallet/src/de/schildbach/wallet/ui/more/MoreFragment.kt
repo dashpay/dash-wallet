@@ -191,8 +191,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
             if (!it.restoring && it.creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal &&
-                it.creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal &&
-                it.username?.let { username ->!Names.isUsernameContestable(username) } == true
+                it.creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal //&&
             ) {
                 val username = it.username
 

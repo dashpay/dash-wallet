@@ -48,7 +48,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
     private val binding by viewBinding(FragmentUsernameRequestsBinding::bind)
     private var itemList = listOf<UsernameRequestGroupView>()
     private lateinit var keyboardUtil: KeyboardUtil
-
+    private var isShowingFirstTimeDialog = false
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -177,17 +177,20 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             safeNavigate(UsernameRequestsFragmentDirections.requestsToVotingKeyInputFragment(it.requestId, false))
         }
     }
-
     private fun showFirstTimeInfo() {
-        lifecycleScope.launch {
-            delay(200)
-            AdaptiveDialog.create(
-                R.drawable.ic_user_list,
-                getString(R.string.voting_duplicates_only_title),
-                getString(R.string.voting_duplicates_only_message),
-                getString(R.string.button_ok)
-            ).showAsync(requireActivity())
-            viewModel.setFirstTimeInfoShown()
+        if (!isShowingFirstTimeDialog) {
+            isShowingFirstTimeDialog = true
+            lifecycleScope.launch {
+                delay(200)
+                AdaptiveDialog.create(
+                    R.drawable.ic_user_list,
+                    getString(R.string.voting_duplicates_only_title),
+                    getString(R.string.voting_duplicates_only_message),
+                    getString(R.string.button_ok)
+                ).showAsync(requireActivity())
+                isShowingFirstTimeDialog = false
+                viewModel.setFirstTimeInfoShown()
+            }
         }
     }
 
