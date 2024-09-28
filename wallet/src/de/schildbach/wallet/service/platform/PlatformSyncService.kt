@@ -99,6 +99,7 @@ interface PlatformSyncService {
     suspend fun updateContactRequests()
     fun postUpdateBloomFilters()
     suspend fun updateUsernameRequestsWithVotes()
+    suspend fun checkUsernameVotingStatus()
 
     fun addContactsUpdatedListener(listener: OnContactsUpdated)
     fun removeContactsUpdatedListener(listener: OnContactsUpdated?)
@@ -125,7 +126,8 @@ class PlatformSynchronizationService @Inject constructor(
     private val dashPayProfileDao: DashPayProfileDao,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
     private val invitationsDao: InvitationsDao,
-    private val usernameRequestDao: UsernameRequestDao
+    private val usernameRequestDao: UsernameRequestDao,
+    private val identityConfig: BlockchainIdentityConfig
 ) : PlatformSyncService {
 
     companion object {
@@ -1041,6 +1043,7 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun updateUsernameRequestsWithVotes() {
+        checkUsernameVotingStatus()
         try {
             val contestedNames = platform.platform.names.getContestedNames()
             val myIdentifier = platformRepo.blockchainIdentity.uniqueIdentifier
@@ -1185,46 +1188,59 @@ class PlatformSynchronizationService @Inject constructor(
             }
             // update contacts, profiles and other platform data
             else {
-                if(identityData.username != null && identityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
-                    // query username first to load the data contract cache
-                    val resource = platformRepo.getUsername(identityData.username!!)
-                    val voteResults = platformRepo.getVoteContenders(identityData.username!!)
-                    if (voteResults.winner.isPresent) {
-                        val winner = voteResults.winner.get().first
-                        when {
-                            winner.isLocked -> {
-                                identityData.usernameRequested = UsernameRequestStatus.LOCKED
-                                syncScope.launch { platformRepo.updateBlockchainIdentityData(identityData) }
-                            }
-                            winner.isWinner(Identifier.from(identityData.userId)) -> {
-                                identityData.usernameRequested = UsernameRequestStatus.APPROVED
-                                syncScope.launch { platformRepo.updateBlockchainIdentityData(identityData) }
-                            }
-                            winner.noWinner -> {
-                                // ?
-                            }
-                            else -> {
-                                identityData.usernameRequested = UsernameRequestStatus.LOST_VOTE
-                                syncScope.launch { platformRepo.updateBlockchainIdentityData(identityData) }
-                            }
-                        }
-                        if (resource.status == Status.SUCCESS && resource.data != null) {
-                            val domainDocument = DomainDocument(resource.data)
-                            if (domainDocument.dashUniqueIdentityId == identityData.identity?.id) {
-                                identityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
-                                platformRepo.updateBlockchainIdentityData(identityData)
-                            }
-                        } else {
-
-                        }
-                    }
-                }
+                checkVotingStatus(identityData)
 
                 if (!updatingContacts.get()) {
                     updateContactRequests()
                 }
             }
             initSync()
+        }
+    }
+
+    override suspend fun checkUsernameVotingStatus() {
+        identityConfig.load()?.let {
+            checkVotingStatus(it)
+        }
+    }
+
+    suspend fun checkVotingStatus(identityData: BlockchainIdentityData) {
+        if (identityData.username != null && identityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
+            // query username first to load the data contract cache
+            val resource = platformRepo.getUsername(identityData.username!!)
+            val voteResults = platformRepo.getVoteContenders(identityData.username!!)
+            if (voteResults.winner.isPresent) {
+                val winner = voteResults.winner.get().first
+                when {
+                    winner.isLocked -> {
+                        identityData.usernameRequested = UsernameRequestStatus.LOCKED
+                        syncScope.launch { platformRepo.updateBlockchainIdentityData(identityData) }
+                    }
+
+                    winner.isWinner(Identifier.from(identityData.userId)) -> {
+                        identityData.usernameRequested = UsernameRequestStatus.APPROVED
+                        syncScope.launch { platformRepo.updateBlockchainIdentityData(identityData) }
+                    }
+
+                    winner.noWinner -> {
+                        // ?
+                    }
+
+                    else -> {
+                        identityData.usernameRequested = UsernameRequestStatus.LOST_VOTE
+                        syncScope.launch { platformRepo.updateBlockchainIdentityData(identityData) }
+                    }
+                }
+                if (resource.status == Status.SUCCESS && resource.data != null) {
+                    val domainDocument = DomainDocument(resource.data)
+                    if (domainDocument.dashUniqueIdentityId == identityData.identity?.id) {
+                        identityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+                        platformRepo.updateBlockchainIdentityData(identityData)
+                    }
+                } else {
+
+                }
+            }
         }
     }
 
