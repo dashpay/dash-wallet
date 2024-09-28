@@ -6,6 +6,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -20,7 +21,8 @@ class CreateIdentityViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val analytics: AnalyticsService,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
-    dashPayProfileDao: DashPayProfileDao
+    dashPayProfileDao: DashPayProfileDao,
+    val dashPayConfig: DashPayConfig
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
     private val _creationState = MutableStateFlow(BlockchainIdentityData.CreationState.NONE)
@@ -56,4 +58,6 @@ class CreateIdentityViewModel @Inject constructor(
             )
         }
     }
+
+    suspend fun shouldShowMixDash(): Boolean = dashPayConfig.get(DashPayConfig.MIX_DASH_SHOWN)?.not() ?: true
 }

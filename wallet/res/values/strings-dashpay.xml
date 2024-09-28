@@ -412,4 +412,7 @@
     <string name="request_username_lost_vote">Requested username has been given to someone else</string>
     <string name="request_username_blocked_message">The username %s was blocked by the Dash Network. Please try again by requesting another username.</string>
     <string name="request_username_lost_vote_message">Due to the voting process, the Dash Network has decided to assign the username %s to someone else. Please try again by requesting another username.</string>
+    <string name="mix_dash_mix">Mix Balance</string>
+    <string name="mix_dash_title">Mix your Dash</string>
+    <string name="mix_dash_message">To help prevent other people from seeing who you make payments to, it is recommended to mix your balance before you create your username.</string>
 </resources>
