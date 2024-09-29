@@ -53,9 +53,10 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         super.onViewCreated(view, savedInstanceState)
 
         val binding = this.binding
-        binding.toolbar.setOnClickListener {
-            viewModel.prepopulateList()
-        }
+        // TODO: remove when development is complete
+//        binding.toolbar.setOnClickListener {
+//            viewModel.prepopulateList()
+//        }
 
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
         binding.filterBtn.setOnClickListener {

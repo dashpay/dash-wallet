@@ -1080,11 +1080,9 @@ class PlatformSynchronizationService @Inject constructor(
                             usernameRequestDao.insert(usernameRequest)
                         } else {
                             // voting is complete
-                            //if (name != blockchainIdentityDataDao.loadBase().username) {
-                                usernameRequestDao.remove(
-                                    UsernameRequest.getRequestId(identifier.toString(), name)
-                                )
-                            //}
+                            usernameRequestDao.remove(
+                                UsernameRequest.getRequestId(identifier.toString(), name)
+                            )
                         }
                     }
                 } catch(e: Exception) {

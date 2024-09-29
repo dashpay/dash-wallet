@@ -121,30 +121,11 @@ class UsernameRequestsViewModel @Inject constructor(
     private val masternodeListManager: SimplifiedMasternodeListManager
         get() = walletDataProvider.wallet!!.context.masternodeListManager
 
-    // TODO: remove this
     private val _addedKeys = MutableStateFlow(listOf<ECKey>())
-//    val masternodes: Flow<List<Masternode>> = _addedKeys.map {
-//        val masternodesForKeys = arrayListOf<Masternode>()
-//        it.forEach { key ->
-//            val entries = masternodeListManager.listAtChainTip.getMasternodesByVotingKey(KeyId.fromBytes(key.pubKeyHash))
-//            masternodesForKeys.addAll(entries)
-//        }
-//        masternodesForKeys
-//    }
-
     private val _masternodes =  MutableStateFlow<List<ImportedMasternodeKey>>(listOf())
-    val masternodes: StateFlow<List<ImportedMasternodeKey>>// = importedMasternodeKeyDao.observeAll()
+    val masternodes: StateFlow<List<ImportedMasternodeKey>>
         get() = _masternodes
-//        .onEach {
-//            val masternodesForKeys = arrayListOf<Masternode>()
-//            it.forEach { key ->
-//                val entries = masternodeListManager.listAtChainTip.getMasternodesByVotingKey(KeyId.fromBytes(key.pubKeyHash))
-//                masternodesForKeys.addAll(entries)
-//            }
-//            masternodesForKeys
-//        }
-//        .launchIn(viewModelScope)
-//    }
+
     private val currentImportedKeys = listOf<ImportedMasternodeKey>()
     private val currentMasternodeKeyUsage = listOf<AuthenticationKeyUsage>()
 
@@ -184,8 +165,6 @@ class UsernameRequestsViewModel @Inject constructor(
     private suspend fun updateMasternodeKeys(importedKeyList: List<ImportedMasternodeKey>, usage: List<AuthenticationKeyUsage>) {
         val allKeys = arrayListOf<ImportedMasternodeKey>()
         allKeys.addAll(importedKeyList)
-
-        //val authenticationGroupExtension = walletDataProvider.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
 
         usage.forEach {
             if ((it.type == AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING ||
@@ -396,6 +375,7 @@ class UsernameRequestsViewModel @Inject constructor(
     }
 
     private var nameCount = 1
+    // TODO: remove this when development is completed.
     fun prepopulateList() {
         nameCount++
         val now = System.currentTimeMillis()// / 1000

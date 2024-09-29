@@ -33,9 +33,6 @@ interface ImportedMasternodeKeyDao {
     @Update
     suspend fun update(importedMasternodeKey: ImportedMasternodeKey)
 
-//    @Query("UPDATE username_votes SET votes = votes + :votesAmount, isApproved = 1 WHERE requestId IN (:requestIds)")
-//    suspend fun voteForRequest(requestIds: List<String>, votesAmount: Int)
-
     @Query("SELECT * FROM imported_masternode_keys")
     suspend fun getAll(): List<ImportedMasternodeKey>
 
