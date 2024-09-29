@@ -449,7 +449,9 @@ public class WalletApplication extends MultiDexApplication
             createNotificationChannels();
         }
 
-        initPlatform();
+        if (Constants.SUPPORTS_PLATFORM) {
+            initPlatform();
+        }
         initUphold();
         initCoinbase();
         initDashDirect();
