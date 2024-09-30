@@ -51,9 +51,9 @@ dependencies {
 
     implementation 'org.bouncycastle:bcprov-jdk15to18:1.74'
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation 'org.dashj.platform:dash-sdk-java:1.0-SNAPSHOT'
-    implementation 'org.dashj.platform:dash-sdk-kotlin:1.0-SNAPSHOT'
-    implementation 'org.dashj.platform:dash-sdk-android:1.0-SNAPSHOT'
+    implementation "org.dashj.platform:dash-sdk-java:$dppVersion"
+    implementation "org.dashj.platform:dash-sdk-kotlin:$dppVersion"
+    implementation "org.dashj.platform:dash-sdk-android:$dppVersion"
     implementation 'io.grpc:grpc-stub:1.54.0' // CURRENT_GRPC_VERSION
     implementation "org.dashj.android:dashj-bls-android:1.0.0"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
