@@ -227,6 +227,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                         binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_title)
                         binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_message, username)
                         binding.retryRequestButton.isVisible = false
+                        binding.requestedUsernameArrow.isVisible = false
+                        binding.requestedUsernameContainer.isEnabled = false
                     }
                 }
             } else if (it.creationState == BlockchainIdentityData.CreationState.VOTING) {

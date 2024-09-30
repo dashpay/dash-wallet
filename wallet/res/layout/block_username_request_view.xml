@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-  ~ Copyright 2023 Dash Core Group.
+  ~ Copyright 2024 Dash Core Group.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -24,16 +24,6 @@
     android:focusable="true"
     android:background="?attr/selectableItemBackground"
     tools:context="de.schildbach.wallet.ui.username.adapters.UsernameRequestViewHolder">
-
-<!--    <View-->
-<!--        android:id="@+id/bullet"-->
-<!--        android:layout_width="3dp"-->
-<!--        android:layout_height="3dp"-->
-<!--        android:background="@color/content_primary"-->
-<!--        android:layout_marginStart="15dp"-->
-<!--        app:layout_constraintStart_toStartOf="parent"-->
-<!--        app:layout_constraintTop_toTopOf="parent"-->
-<!--        app:layout_constraintBottom_toBottomOf="parent" />-->
 
     <TextView
         android:id="@+id/block_description"

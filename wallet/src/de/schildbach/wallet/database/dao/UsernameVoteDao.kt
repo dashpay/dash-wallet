@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,12 +25,6 @@ import kotlinx.coroutines.flow.Flow
 interface UsernameVoteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(usernameVote: UsernameVote)
-
-    @Update
-    suspend fun update(usernameVote: UsernameVote)
-
-//    @Query("UPDATE username_votes SET votes = votes + :votesAmount, isApproved = 1 WHERE requestId IN (:requestIds)")
-//    suspend fun voteForRequest(requestIds: List<String>, votesAmount: Int)
 
     @Query("SELECT * FROM username_votes WHERE username = :username")
     suspend fun getVotes(username: String): List<UsernameVote>

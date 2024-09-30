@@ -25,16 +25,6 @@
     android:background="?attr/selectableItemBackground"
     tools:context="de.schildbach.wallet.ui.username.adapters.UsernameRequestViewHolder">
 
-<!--    <View-->
-<!--        android:id="@+id/bullet"-->
-<!--        android:layout_width="3dp"-->
-<!--        android:layout_height="3dp"-->
-<!--        android:background="@color/content_primary"-->
-<!--        android:layout_marginStart="15dp"-->
-<!--        app:layout_constraintStart_toStartOf="parent"-->
-<!--        app:layout_constraintTop_toTopOf="parent"-->
-<!--        app:layout_constraintBottom_toBottomOf="parent" />-->
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
