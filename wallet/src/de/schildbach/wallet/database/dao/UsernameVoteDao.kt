@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,25 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.username.adapters
+package de.schildbach.wallet.database.dao
 
-import de.schildbach.wallet.database.entity.UsernameRequest
+import androidx.room.*
 import de.schildbach.wallet.database.entity.UsernameVote
+import kotlinx.coroutines.flow.Flow
 
-data class UsernameRequestGroupView(
-    val username: String,
-    val requests: List<UsernameRequest>,
-    var isExpanded: Boolean = false,
-    var votes: List<UsernameVote>
-) {
-    val lastVote: UsernameVote?
-        get() = votes.lastOrNull()
+@Dao
+interface UsernameVoteDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(usernameVote: UsernameVote)
 
-    val totalVotes: Int
-        get() = votes.size
+    @Query("SELECT * FROM username_votes WHERE username = :username")
+    suspend fun getVotes(username: String): List<UsernameVote>
 
-    // all username votes should have the same number of lock votes
-    fun lockVotes(): Int {
-        return requests.first().lockVotes
-    }
+    @Query("SELECT * FROM username_votes WHERE username = :username")
+    fun observeVotes(username: String): Flow<List<UsernameVote>>
+
+    @Query("DELETE FROM username_votes")
+    suspend fun clear()
 }

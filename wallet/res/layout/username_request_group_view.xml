@@ -38,6 +38,17 @@
         tools:text="John" />
 
     <TextView
+        android:id="@+id/block_votes"
+        style="@style/Body2.Medium.Red"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:paddingVertical="17dp"
+        android:layout_marginStart="15dp"
+        app:layout_constraintStart_toEndOf="@id/username"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="(1s Blocks)" />
+
+    <TextView
         android:id="@+id/requests_amount"
         style="@style/Overline.Tertiary"
         android:layout_width="0dp"

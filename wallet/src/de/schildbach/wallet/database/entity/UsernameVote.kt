@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,22 +20,20 @@ package de.schildbach.wallet.database.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "username_requests")
-data class UsernameRequest(
-    @PrimaryKey
-    val requestId: String,
+@Entity(tableName = "username_votes")
+data class UsernameVote(
+    @PrimaryKey(autoGenerate = true)
+    val id: Int,
     val username: String,
-    val normalizedLabel: String,
-    val createdAt: Long,
     val identity: String,
-    var link: String?,
-    val votes: Int,
-    val lockVotes: Int,
-    val isApproved: Boolean
+    val type: String, // approve, abstain, lock
+    val timestamp: Long = System.currentTimeMillis()
 ) {
+    constructor(username: String, identity: String, type: String): this(0, username, identity, type)
     companion object {
-        fun getRequestId(identity: String, username: String): String {
-            return String.format("%s-%s", identity, username)
-        }
+        const val APPROVE = "approve"
+        const val LOCK = "lock"
+        const val ABSTAIN = "abstain"
+        const val MAX_VOTES = 6
     }
 }

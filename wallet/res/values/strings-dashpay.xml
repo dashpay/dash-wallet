@@ -259,7 +259,7 @@
     <string name="upload_your_picture">Upload your picture, personalize your identity.</string>
     <string name="in_case_lose_your_passphrase">In case you lose your passphrase you will lose your right to your requested username.</string>
     <string name="keep_your_passphrase_safe">Keep your passphrase safe</string>
-    <string name="pay_now">Pay now and if not approved, you can create a different name without paying again [check if true]</string>
+    <string name="pay_now">Pay now and if not approved, you can create a different name without paying again</string>
     <string name="case_your_request_is_not_approved">In case your request is not approved</string>
     <string name="voting_requirement_subtitle">Any username that has a number 2–9 or is longer than 20 characters will be automatically approved</string>
     <string name="voting_requirement_title">Voting is only required in some cases</string>
@@ -269,8 +269,8 @@
     <string name="usernames_blocked_subtitle">If enough of the network determines that a username is inappropriate, they can block it</string>
     <string name="username_voting">Username Voting</string>
     <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before users will be able to create it.</string>
-    <string name="voting_duplicates_only_title">Vote only on duplicates</string>
-    <string name="voting_duplicates_only_message">You can review all requests but you only need to vote on duplicates</string>
+    <string name="voting_duplicates_only_title">Default filter setting</string>
+    <string name="voting_duplicates_only_message">The default filter shows only duplicate usernames that you have NOT voted on, but you can see all contested usernames by changing the filter</string>
     <string name="all">All</string>
     <string name="n_usernames">%d usernames</string>
     <string name="n_requests">%d requests</string>
@@ -293,8 +293,10 @@
         <item>All</item>
         <item>I have approved</item>
         <item>I have not approved</item>
+        <item>Has Blocked votes</item>
     </string-array>
 
+    <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Create your username</string>
     <string name="request_your_hint">Please not that you will not be able to change it in the future</string>
     <string name="request_username">Request Username</string>
@@ -302,10 +304,12 @@
     <string name="request_username_available">Username is available</string>
     <string name="request_username_unavailable">Username is unavailable or blocked</string>
     <string name="request_username_taken">Username is taken</string>
+    <string name="request_username_taken_results">Username was taken by another user</string>
     <string name="requesting_your_username_title">Creating your username</string>
-    <string name="requesting_your_username_message">Your username johndoe is being requested on the Dash network. It may take some time.</string>
+    <string name="requesting_your_username_message">Your username %s is being requested on the Dash network. It may take some time.</string>
+    <string name="creating_your_username_message">Your username %s is being created on the Dash network. It may take some time.</string>
     <string name="requesting_your_username_error_title">Your username request failed</string>
-    <string name="requesting_your_username_error_message">For some reason, the request has failed. Please try again.</string>
+    <string name="requesting_your_username_error_message">For some reason, the request for the username %s has failed.</string>
     <string name="voting">Voting:</string>
     <string name="this_username_has_already_been_requested">This username has already been requested, but you can request it too and let the network vote to decide if you can have it</string>
     <string name="request_details">Request details</string>
@@ -400,5 +404,12 @@
     <string name="request_username_balance_requirement">You need to have 0.25 DASH to create this username</string>
     <string name="request_username_length_requirement">Between 3 and 23 characters</string>
     <string name="request_username_confirm">I accept</string>
-
+    <string name="username_vote_one_left_message">You have already voted for this username %d times. You can only cast one more vote for this username.</string>
+    <string name="username_vote_one_left">One vote left</string>
+    <string name="username_vote_none_left_message">You have already voted for this username %d times. You cannot cast any more votes for this username.</string>
+    <string name="username_vote_none_left">No votes left</string>
+    <string name="request_username_blocked">Requested username has been blocked</string>
+    <string name="request_username_lost_vote">Requested username has been given to someone else</string>
+    <string name="request_username_blocked_message">The username %s was blocked by the Dash Network. Please try again by requesting another username.</string>
+    <string name="request_username_lost_vote_message">Due to the voting process, the Dash Network has decided to assign the username %s to someone else. Please try again by requesting another username.</string>
 </resources>

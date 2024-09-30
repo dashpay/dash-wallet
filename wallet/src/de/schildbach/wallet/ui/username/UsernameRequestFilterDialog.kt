@@ -43,7 +43,8 @@ enum class UsernameSortOption {
 enum class UsernameTypeOption {
     All,
     Approved,
-    NotApproved;
+    NotApproved,
+    HasBlockedVotes;
 
     companion object {
         val defaultOption = NotApproved

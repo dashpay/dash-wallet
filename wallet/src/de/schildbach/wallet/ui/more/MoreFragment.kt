@@ -53,6 +53,7 @@ import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -61,6 +62,7 @@ import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
@@ -188,33 +190,74 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
-            if (it.creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal &&
-                it.creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal &&
-                !Names.isUsernameContestable(it.username!!)) {
+            if (!it.restoring && it.creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal &&
+                it.creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal //&&
+            ) {
+                val username = it.username
 
                 binding.joinDashpayContainer.visibility = View.GONE
                 binding.requestedUsernameContainer.visibility = View.VISIBLE
                 if (it.creationError) {
                     binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_error_title)
-                    binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_error_message)
+                    binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_error_message, mainActivityViewModel.getRequestedUsername())
                     binding.retryRequestButton.isVisible = true
+                    binding.retryRequestButton.text = getString(R.string.retry)
+                    binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay_red)
                 } else {
-                    // show the status
-                    binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_title)
-                    binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_message)
-                    binding.retryRequestButton.isVisible = false
+                    if (it.usernameRequested == UsernameRequestStatus.NONE) {
+                        binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_title)
+                        binding.requestedUsernameSubtitle.text = getString(R.string.creating_your_username_message, username)
+                        binding.retryRequestButton.isVisible = false
+                        binding.requestedUsernameArrow.isVisible = false
+                        binding.requestedUsernameContainer.isEnabled = false
+                    } else {
+                        binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_title)
+                        binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_message, username)
+                        binding.retryRequestButton.isVisible = false
+                    }
                 }
             } else if (it.creationState == BlockchainIdentityData.CreationState.VOTING) {
                 binding.joinDashpayContainer.visibility = View.GONE
                 binding.requestedUsernameContainer.visibility = View.VISIBLE
-                binding.requestedUsernameTitle.text = mainActivityViewModel.getRequestedUsername()
                 val votingPeriod = it.votingPeriodStart?.let { startTime ->
-                    val endTime = startTime + TimeUnit.DAYS.toMillis(14)
+                    val endTime = startTime + if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET) TimeUnit.DAYS.toMillis(14) else TimeUnit.MINUTES.toMillis(90)
                     val dateFormat = DateFormat.getMediumDateFormat(requireContext())
                     String.format("%s", dateFormat.format(endTime))
                 } ?: "Voting Period not found"
-                binding.requestedUsernameSubtitleTwo.text = getString(R.string.requested_voting_duration, votingPeriod)
-                binding.retryRequestButton.isVisible = false
+                when (it.usernameRequested) {
+                    UsernameRequestStatus.SUBMITTING,
+                    UsernameRequestStatus.SUBMITTED,
+                    UsernameRequestStatus.VOTING -> {
+                        binding.requestedUsernameTitle.text = mainActivityViewModel.getRequestedUsername()
+                        binding.requestedUsernameSubtitleTwo.text =
+                            getString(R.string.requested_voting_duration, votingPeriod)
+                        binding.retryRequestButton.isVisible = false
+                        binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay)
+                        binding.requestedUsernameArrow.isVisible = true
+                    }
+                    UsernameRequestStatus.LOCKED -> {
+                        binding.requestedUsernameTitle.text = getString(R.string.request_username_blocked)
+                        binding.requestedUsernameSubtitleTwo.text =
+                            getString(R.string.request_username_blocked_message, mainActivityViewModel.getRequestedUsername())
+                        binding.requestedUsernameSubtitle.maxLines = 4
+                        binding.retryRequestButton.isVisible = true
+                        binding.retryRequestButton.text = getString(R.string.try_again)
+                        binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay_red)
+                        binding.requestedUsernameArrow.isVisible = false
+                    }
+                    UsernameRequestStatus.LOST_VOTE -> {
+                        binding.requestedUsernameTitle.text = getString(R.string.request_username_lost_vote)
+                        binding.requestedUsernameSubtitle.text =
+                            getString(R.string.request_username_lost_vote_message, mainActivityViewModel.getRequestedUsername())
+                        binding.requestedUsernameSubtitle.maxLines = 4
+                        binding.requestedUsernameSubtitleTwo.isVisible = false
+                        binding.retryRequestButton.isVisible = true
+                        binding.retryRequestButton.text = getString(R.string.try_again)
+                        binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay_red)
+                        binding.requestedUsernameArrow.isVisible = false
+                    }
+                    else -> error("${it.usernameRequested} is not valid")
+                }
             } else {
                 binding.joinDashpayContainer.visibility = View.VISIBLE
                 binding.requestedUsernameContainer.visibility = View.GONE
@@ -227,7 +270,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         initViewModel()
 
-        if (Constants.SUPPORTS_PLATFORM) {
+        if (!Constants.SUPPORTS_PLATFORM) {
             binding.usernameVoting.isVisible = false
         }
     }

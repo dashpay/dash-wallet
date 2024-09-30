@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,23 +19,17 @@ package de.schildbach.wallet.database.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import org.bitcoinj.core.ECKey
+import org.bitcoinj.core.Sha256Hash
 
-@Entity(tableName = "username_requests")
-data class UsernameRequest(
+@Entity(tableName = "imported_masternode_keys")
+data class ImportedMasternodeKey(
     @PrimaryKey
-    val requestId: String,
-    val username: String,
-    val normalizedLabel: String,
-    val createdAt: Long,
-    val identity: String,
-    var link: String?,
-    val votes: Int,
-    val lockVotes: Int,
-    val isApproved: Boolean
+    val proTxHash: Sha256Hash,
+    val address: String,
+    val votingPrivateKey: ByteArray,
+    val votingPublicKey: ByteArray,
+    val votingPubKeyHash: ByteArray
 ) {
-    companion object {
-        fun getRequestId(identity: String, username: String): String {
-            return String.format("%s-%s", identity, username)
-        }
-    }
+    fun toECKey(): ECKey = ECKey.fromPrivateAndPrecalculatedPublic(votingPrivateKey, votingPrivateKey)
 }

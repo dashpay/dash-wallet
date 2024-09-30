@@ -57,14 +57,15 @@ class VotingKeyInputFragment : Fragment(R.layout.fragment_voting_key_input) {
         }
 
         binding.verifyButton.setOnClickListener {
-            val key = binding.keyInput.text.toString()
+            val wifKey = binding.keyInput.text.toString()
 
-            if (viewModel.verifyKey(key)) {
-                viewModel.addKey(key)
+            if (viewModel.verifyKey(wifKey)) {
+                val key = viewModel.getKeyFromWIF(wifKey)!!
                 lifecycleScope.launch {
+                    viewModel.addKey(key)
                     KeyboardUtil.hideKeyboard(requireContext(), binding.keyInput)
                     delay(200)
-                    safeNavigate(VotingKeyInputFragmentDirections.votingKeyInputToAddKeys(args.requestId))
+                    safeNavigate(VotingKeyInputFragmentDirections.votingKeyInputToAddKeys(args.requestId, args.approve))
                 }
             } else {
                 binding.inputWrapper.isErrorEnabled = true

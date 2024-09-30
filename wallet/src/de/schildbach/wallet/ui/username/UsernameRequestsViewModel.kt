@@ -20,10 +20,17 @@ package de.schildbach.wallet.ui.username
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.dao.ImportedMasternodeKeyDao
 import de.schildbach.wallet.database.dao.UsernameRequestDao
+import de.schildbach.wallet.database.dao.UsernameVoteDao
+import de.schildbach.wallet.database.entity.ImportedMasternodeKey
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesOperation
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,12 +43,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.Base58
+import org.bitcoinj.core.DumpedPrivateKey
+import org.bitcoinj.core.ECKey
+import org.bitcoinj.core.KeyId
+import org.bitcoinj.evolution.SimplifiedMasternodeListManager
+import org.bitcoinj.wallet.AuthenticationKeyChain
+import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
+import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
+import org.dash.wallet.common.WalletDataProvider
+import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.sdk.platform.Names
 import java.util.UUID
 import javax.inject.Inject
@@ -74,7 +93,11 @@ data class FiltersUIState(
 class UsernameRequestsViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
     private val usernameRequestDao: UsernameRequestDao,
-    private val platformSyncService: PlatformSyncService
+    private val usernameVoteDao: UsernameVoteDao,
+    private val importedMasternodeKeyDao: ImportedMasternodeKeyDao,
+    private val platformSyncService: PlatformSyncService,
+    private val walletDataProvider: WalletDataProvider,
+    private val walletApplication: WalletApplication
 ): ViewModel() {
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
@@ -95,19 +118,19 @@ class UsernameRequestsViewModel @Inject constructor(
                 .distinctUntilChanged()
         }
 
-    private val validKeys = listOf(
-        "kn2GwaSZkoY8qg6i2dPCpDtDoBCftJWMzZXtHDDJ1w7PjFYfq",
-        "n6YtJ7pdDYPTa57imEHEp8zinq1oNGUdwZQdnGk1MMpCWBHEq",
-        "maEiRZeKXNLZovNqoS3HkmZJGmACbro7s3eC8GenExLF7QMQs"
-    )
+    private val masternodeListManager: SimplifiedMasternodeListManager
+        get() = walletDataProvider.wallet!!.context.masternodeListManager
 
-    private val _addedKeys = MutableStateFlow(listOf<String>())
-    val masternodeIPs: Flow<List<String>> = _addedKeys.map {
-        List(it.size) { i -> "323.232.23.$i" }
-    }
+    private val _addedKeys = MutableStateFlow(listOf<ECKey>())
+    private val _masternodes =  MutableStateFlow<List<ImportedMasternodeKey>>(listOf())
+    val masternodes: StateFlow<List<ImportedMasternodeKey>>
+        get() = _masternodes
+
+    private val currentImportedKeys = listOf<ImportedMasternodeKey>()
+    private val currentMasternodeKeyUsage = listOf<AuthenticationKeyUsage>()
 
     val keysAmount: Int
-        get() = _addedKeys.value.size
+        get() = masternodes.value.size
 
     init {
         dashPayConfig.observe(DashPayConfig.VOTING_INFO_SHOWN)
@@ -120,19 +143,61 @@ class UsernameRequestsViewModel @Inject constructor(
                     duplicates.groupBy { it.username }
                         .map { (username, list) ->
                             val sortedList = list.sortAndFilter()
-                            UsernameRequestGroupView(username, sortedList, isExpanded = isExpanded(username))
+                            val votes = usernameVoteDao.getVotes(username)
+                            UsernameRequestGroupView(username, sortedList, isExpanded = isExpanded(username), votes)
                         }.filterNot { it.requests.isEmpty() }
                 }
         }.onEach { requests -> _uiState.update { it.copy(filteredUsernameRequests = requests) } }
             .launchIn(viewModelWorkerScope)
+
+        importedMasternodeKeyDao.observeAll()
+            .onEach { updateMasternodeKeys(it, currentMasternodeKeyUsage) }
+            .launchIn(viewModelScope)
+
+        walletDataProvider.observeAuthenticationKeyUsage()
+            .onEach { updateMasternodeKeys(currentImportedKeys, it)}
 
         viewModelWorkerScope.launch {
             platformSyncService.updateUsernameRequestsWithVotes()
         }
     }
 
+    private suspend fun updateMasternodeKeys(importedKeyList: List<ImportedMasternodeKey>, usage: List<AuthenticationKeyUsage>) {
+        val allKeys = arrayListOf<ImportedMasternodeKey>()
+        allKeys.addAll(importedKeyList)
+
+        usage.forEach {
+            if ((it.type == AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING ||
+                it.type == AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER) &&
+                it.status == AuthenticationKeyStatus.CURRENT) {
+
+                val entries = masternodeListManager.listAtChainTip.getMasternodesByVotingKey(KeyId.fromBytes(it.key.pubKeyHash))
+                entries.forEach { masternode ->
+                    importedMasternodeKeyDao.insert(
+                        ImportedMasternodeKey(
+                            masternode.proTxHash,
+                            masternode.service.socketAddress.address.hostAddress!!,
+                            it.key.privKeyBytes,
+                            it.key.pubKey,
+                            it.key.pubKeyHash
+                        )
+                    )
+                }
+            }
+        }
+        _masternodes.value = allKeys
+    }
+
     suspend fun setFirstTimeInfoShown() {
         dashPayConfig.set(DashPayConfig.VOTING_INFO_SHOWN, true)
+    }
+
+    suspend fun getVotes(username: String): List<UsernameVote> {
+        return usernameVoteDao.getVotes(username)
+    }
+
+    fun observeVotesCount(username: String): Flow<Int> {
+        return usernameVoteDao.observeVotes(username).flatMapLatest { flowOf(it.size) }
     }
 
     fun applyFilters(
@@ -162,8 +227,22 @@ class UsernameRequestsViewModel @Inject constructor(
 
         viewModelScope.launch {
             usernameRequestDao.getRequest(requestId)?.let { request ->
+                BroadcastUsernameVotesOperation(walletApplication).create(
+                    listOf(request.normalizedLabel),
+                    listOf(ResourceVoteChoice.towardsIdentity(Identifier.from(request.identity))),
+                    masternodes.value.map { it.votingPrivateKey }
+                ).enqueue()
+
+                usernameRequestDao.removeApproval(request.username)
                 usernameRequestDao.update(request.copy(votes = request.votes + keysAmount, isApproved = true))
                 _uiState.update { it.copy(voteSubmitted = true) }
+                usernameVoteDao.insert(
+                    UsernameVote(
+                        request.username,
+                        request.identity,
+                        UsernameVote.APPROVE
+                    )
+                )
             }
         }
     }
@@ -175,8 +254,20 @@ class UsernameRequestsViewModel @Inject constructor(
 
         viewModelScope.launch {
             usernameRequestDao.getRequest(requestId)?.let { request ->
+                BroadcastUsernameVotesOperation(walletApplication).create(
+                    listOf(request.normalizedLabel),
+                    listOf(ResourceVoteChoice.abstain()),
+                    masternodes.value.map { it.votingPrivateKey }
+                ).enqueue()
                 usernameRequestDao.update(request.copy(votes = request.votes - keysAmount, isApproved = false))
                 _uiState.update { it.copy(voteCancelled = true) }
+                usernameVoteDao.insert(
+                    UsernameVote(
+                        request.username,
+                        request.identity,
+                        UsernameVote.ABSTAIN
+                    )
+                )
             }
         }
     }
@@ -200,6 +291,21 @@ class UsernameRequestsViewModel @Inject constructor(
                 keysAmount
             )
             _uiState.update { it.copy(voteSubmitted = true) }
+
+            val usernames = arrayListOf<String>()
+            val voteChoices = arrayListOf<ResourceVoteChoice>()
+            requestIds.forEach {
+                usernameRequestDao.getRequest(it)?.let { request ->
+                    usernames.add(request.normalizedLabel)
+                    voteChoices.add(ResourceVoteChoice.towardsIdentity(Identifier.from(request.identity)))
+                }
+            }
+
+            BroadcastUsernameVotesOperation(walletApplication).create(
+                usernames,
+                voteChoices,
+                masternodes.value.map { it.votingPrivateKey }
+            ).enqueue()
         }
     }
 
@@ -208,11 +314,33 @@ class UsernameRequestsViewModel @Inject constructor(
     }
 
     fun verifyKey(key: String): Boolean {
-        return validKeys.contains(key)
+        return getKeyFromWIF(key) != null
     }
 
-    fun addKey(key: String) {
-        _addedKeys.value = _addedKeys.value + key
+    fun getKeyFromWIF(key: String): ECKey? {
+        return try {
+            DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, key).key
+        } catch (e: AddressFormatException) {
+            null
+        }
+    }
+
+    suspend fun addKey(key: ECKey) {
+        if (!_addedKeys.value.contains(key)) {
+            _addedKeys.value += key
+        }
+        val entries = masternodeListManager.listAtChainTip.getMasternodesByVotingKey(KeyId.fromBytes(key.pubKeyHash))
+        entries.forEach {
+            importedMasternodeKeyDao.insert(
+                ImportedMasternodeKey(
+                    it.proTxHash,
+                    it.service.socketAddress.address.hostAddress!!,
+                    key.privKeyBytes,
+                    key.pubKey,
+                    key.pubKeyHash
+                )
+            )
+        }
     }
 
     private fun observeUsernames(): Flow<List<UsernameRequest>> {
@@ -233,11 +361,12 @@ class UsernameRequestsViewModel @Inject constructor(
                 UsernameSortOption.VotesDescending -> compareByDescending { it.votes }
             }
         )
-
+        val approvedUsernames = sorted.filter { it.isApproved }.map { it.username }
         return when (_filterState.value.typeOption) {
             UsernameTypeOption.All -> sorted
-            UsernameTypeOption.Approved -> sorted.filter { it.isApproved }
-            UsernameTypeOption.NotApproved -> sorted.filter { !it.isApproved }
+            UsernameTypeOption.Approved -> sorted.filter { it.isApproved || approvedUsernames.contains(it.username) }
+            UsernameTypeOption.NotApproved -> sorted.filter { !it.isApproved && !approvedUsernames.contains(it.username) }
+            UsernameTypeOption.HasBlockedVotes -> sorted.filter { it.lockVotes != 0 }
         }
     }
 
@@ -246,11 +375,12 @@ class UsernameRequestsViewModel @Inject constructor(
     }
 
     private var nameCount = 1
+    // TODO: remove this when development is completed.
     fun prepopulateList() {
         nameCount++
-        val now = System.currentTimeMillis() / 1000
+        val now = System.currentTimeMillis()// / 1000
         val names = listOf("John", "doe", "Sarah", "Jane", "jack", "Jill", "Bob")
-        val from = 1658290321L
+        val from = 1658290321000L
 
         viewModelScope.launch {
             var name = names[Random.nextInt(0, min(names.size, nameCount))]
@@ -264,7 +394,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     "https://www.figma.com/file/hh5juOSdGnNNPijJG1NGTi/DashPay%E3%83%BBIn-" +
                         "process%E3%83%BBAndroid?type=design&node-id=752-11735&mode=design&t=zasn6AKlSwb5NuYS-0",
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 1),
                     true
                 )
             )
@@ -278,7 +408,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 1),
                     true
                 )
             )
@@ -292,7 +422,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 1),
                     false
                 )
             )
@@ -305,7 +435,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     "https://twitter.com/ProductHunt/",
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 1),
                     false
                 )
             )
@@ -318,7 +448,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 1),
                     false
                 )
             )
@@ -332,7 +462,7 @@ class UsernameRequestsViewModel @Inject constructor(
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 1),
                     false
                 )
             )
@@ -346,10 +476,35 @@ class UsernameRequestsViewModel @Inject constructor(
                     Base58.encode(UUID.randomUUID().toString().toByteArray()),
                     null,
                     Random.nextInt(0, 15),
-                    Random.nextInt(0, 15),
+                    Random.nextInt(0, 2),
                     false
                 )
             )
         }
+    }
+
+    fun block(username: String) {
+        if (keysAmount == 0) {
+            return
+        }
+
+        viewModelScope.launch {
+           // usernameRequestDao.getRequest(requestId)?.let { request ->
+                BroadcastUsernameVotesOperation(walletApplication).create(
+                    listOf(username),
+                    listOf(ResourceVoteChoice.lock()),
+                    masternodes.value.map { it.votingPrivateKey }
+                ).enqueue()
+                //usernameRequestDao.update(request.copy(lockVotes = request.lockVotes + keysAmount, isApproved = true))
+                _uiState.update { it.copy(voteSubmitted = true) }
+                usernameVoteDao.insert(
+                    UsernameVote(
+                        username,
+                        "",
+                        UsernameVote.LOCK
+                    )
+                )
+            }
+        //}
     }
 }

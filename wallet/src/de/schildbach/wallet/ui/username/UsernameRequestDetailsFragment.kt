@@ -2,13 +2,19 @@ package de.schildbach.wallet.ui.username
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.ui.username.utils.votingViewModels
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameRequestDetailsBinding
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.setRoundedRippleBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
@@ -32,9 +38,11 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
             binding.identity.text = request.identity
 
             if (request.link.isNullOrEmpty()) {
+                binding.link.isVisible = false
                 binding.link.text = getString(R.string.link_not_provided)
                 binding.link.setTextColor(resources.getColor(R.color.content_tertiary, null))
             } else {
+                binding.link.isVisible = true
                 binding.link.text = request.link
             }
 
@@ -42,31 +50,73 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
                 if (request.isApproved) R.style.PrimaryButtonTheme_Large_Red else R.style.PrimaryButtonTheme_Large_Blue
             )
 
-            binding.voteButtonText.setTextColor(
-                resources.getColor(
-                    if (request.isApproved) R.color.system_red else R.color.dash_white,
-                    null
-                )
-            )
-
             binding.voteButtonText.text = getString(
                 if (request.isApproved) R.string.cancel_approval else R.string.vote_to_approve
             )
 
+            viewModel.observeVotesCount(request.username).observe(viewLifecycleOwner) { myVoteCount ->
+                binding.voteButton.isEnabled = (myVoteCount < UsernameVote.MAX_VOTES)
+            }
+
             binding.voteButton.setOnClickListener {
-                if (request.isApproved) {
-                    viewModel.revokeVote(args.requestId)
-                    findNavController().popBackStack(R.id.usernameRequestsFragment, false)
-                } else {
-                    if (viewModel.keysAmount > 0) {
-                        safeNavigate(UsernameRequestDetailsFragmentDirections.detailsToAddKeys(args.requestId))
-                    } else {
-                        safeNavigate(UsernameRequestDetailsFragmentDirections.detailsToVotingKeyInput(args.requestId))
+                lifecycleScope.launch {
+                    val usernameVotes = viewModel.getVotes(request.username)
+                    when {
+                        (usernameVotes.size == UsernameVote.MAX_VOTES - 1) -> {
+                            AdaptiveDialog.create(
+                                icon = null,
+                                getString(R.string.username_vote_one_left),
+                                getString(R.string.username_vote_one_left_message, UsernameVote.MAX_VOTES - 1),
+                                getString(R.string.cancel),
+                                getString(R.string.button_ok)
+                            ).show(requireActivity()) {
+                                if (it == true) {
+                                    doVote(request)
+                                }
+                            }
+                        }
+
+                        // NOT IN THE DESIGN
+                        usernameVotes.size == UsernameVote.MAX_VOTES -> {
+                            AdaptiveDialog.create(
+                                icon = null,
+                                getString(R.string.username_vote_none_left),
+                                getString(R.string.username_vote_none_left_message),
+                                getString(R.string.button_ok)
+                            ).showAsync(requireActivity())
+                        }
+
+                        else -> {
+                            doVote(request)
+                        }
                     }
                 }
             }
         }
 
         viewModel.selectUsernameRequest(args.requestId)
+    }
+
+    private fun doVote(request: UsernameRequest) {
+        if (request.isApproved) {
+            viewModel.revokeVote(args.requestId)
+            findNavController().popBackStack(R.id.usernameRequestsFragment, false)
+        } else {
+            if (viewModel.keysAmount > 0) {
+                safeNavigate(
+                    UsernameRequestDetailsFragmentDirections.detailsToAddKeys(
+                        args.requestId,
+                        true
+                    )
+                )
+            } else {
+                safeNavigate(
+                    UsernameRequestDetailsFragmentDirections.detailsToVotingKeyInput(
+                        args.requestId,
+                        true
+                    )
+                )
+            }
+        }
     }
 }

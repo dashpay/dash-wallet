@@ -27,6 +27,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupAdapter
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
 import de.schildbach.wallet.ui.username.utils.votingViewModels
@@ -46,21 +48,58 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
     private val binding by viewBinding(FragmentUsernameRequestsBinding::bind)
     private var itemList = listOf<UsernameRequestGroupView>()
     private lateinit var keyboardUtil: KeyboardUtil
-
+    private var isShowingFirstTimeDialog = false
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val binding = this.binding
-        binding.toolbar.setOnClickListener {
-            viewModel.prepopulateList()
-        }
+        // TODO: remove when development is complete
+//        binding.toolbar.setOnClickListener {
+//            viewModel.prepopulateList()
+//        }
 
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
         binding.filterBtn.setOnClickListener {
             safeNavigate(UsernameRequestsFragmentDirections.requestsToFilters())
         }
-        val adapter = UsernameRequestGroupAdapter {
-            safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(it.requestId))
+        val adapter = UsernameRequestGroupAdapter { request ->
+            lifecycleScope.launch {
+                if (request.requestId != "") {
+                    safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(request.requestId))
+                } else {
+                    val usernameVotes = viewModel.getVotes(request.username)
+                    when {
+                        (usernameVotes.size == UsernameVote.MAX_VOTES - 1) -> {
+                            if (AdaptiveDialog.create(
+                                    icon = null,
+                                    getString(R.string.username_vote_one_left),
+                                    getString(R.string.username_vote_one_left_message, UsernameVote.MAX_VOTES - 1),
+                                    getString(R.string.cancel),
+                                    getString(R.string.button_ok)
+                                ).showAsync(requireActivity()) == true
+                            ) {
+                                doBlockVote(request)
+                            }
+                        }
+
+                        // NOT IN THE DESIGN
+                        usernameVotes.size == UsernameVote.MAX_VOTES -> {
+                            AdaptiveDialog.create(
+                                icon = null,
+                                "No votes left",
+                                "You cannot submit anymore votes on this username",
+                                getString(R.string.button_ok)
+                            ).show(requireActivity()) {
+                                // do nothing
+                            }
+                        }
+
+                        else -> {
+                            doBlockVote(request)
+                        }
+                    }
+                }
+            }
         }
         binding.requestGroups.adapter = adapter
 
@@ -126,16 +165,33 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         }
     }
 
+    private fun doBlockVote(it: UsernameRequest) {
+        // perform block vote
+        if (viewModel.keysAmount > 0) {
+            safeNavigate(
+                UsernameRequestsFragmentDirections.requestsToAddVotingKeysFragment(
+                    it.normalizedLabel,
+                    false
+                )
+            )
+        } else {
+            safeNavigate(UsernameRequestsFragmentDirections.requestsToVotingKeyInputFragment(it.requestId, false))
+        }
+    }
     private fun showFirstTimeInfo() {
-        lifecycleScope.launch {
-            delay(200)
-            AdaptiveDialog.create(
-                R.drawable.ic_user_list,
-                getString(R.string.voting_duplicates_only_title),
-                getString(R.string.voting_duplicates_only_message),
-                getString(R.string.button_ok)
-            ).showAsync(requireActivity())
-            viewModel.setFirstTimeInfoShown()
+        if (!isShowingFirstTimeDialog) {
+            isShowingFirstTimeDialog = true
+            lifecycleScope.launch {
+                delay(200)
+                AdaptiveDialog.create(
+                    R.drawable.ic_user_list,
+                    getString(R.string.voting_duplicates_only_title),
+                    getString(R.string.voting_duplicates_only_message),
+                    getString(R.string.button_ok)
+                ).showAsync(requireActivity())
+                isShowingFirstTimeDialog = false
+                viewModel.setFirstTimeInfoShown()
+            }
         }
     }
 

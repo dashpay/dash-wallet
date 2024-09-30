@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2024 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clickable="true"
+    android:focusable="true"
+    android:background="?attr/selectableItemBackground"
+    tools:context="de.schildbach.wallet.ui.username.adapters.UsernameRequestViewHolder">
+
+    <TextView
+        android:id="@+id/block_description"
+        style="@style/Overline"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:paddingVertical="3dp"
+        android:layout_marginStart="15dp"
+        android:text="Is this username inappropriate? Block its creation on the Dash network."
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/blocked_container"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/blocked_container"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="8dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        >
+        <ImageView
+            android:id="@+id/block_icon"
+            android:layout_width="28dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_red_circle_minus"
+            android:layout_marginEnd="3dp"
+            android:padding="3dp"
+            app:layout_constraintTop_toBottomOf="@id/date_registered"
+            app:layout_constraintStart_toStartOf="@id/date_registered"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="@string/block"
+            style="@style/Body2.Medium.Red"
+    />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

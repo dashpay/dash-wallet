@@ -187,12 +187,13 @@
                 android:orientation="vertical"
                 android:paddingTop="0dp">
 
+
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/requested_username_container"
+                    style="@style/MenuRow"
+                    android:layout_height="wrap_content"
                     android:visibility="gone"
-                    tools:visibility="visible"
-                    android:layout_height="76dp"
-                    style="@style/MenuRow">
+                    tools:visibility="visible">
 
                     <ImageView
                         android:id="@+id/requested_username_icon"
@@ -204,20 +205,21 @@
 
                     <LinearLayout
                         android:id="@+id/join_dashpay_text_section"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
                         android:layout_marginStart="16dp"
+                        android:orientation="vertical"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@+id/request_button_container"
                         app:layout_constraintStart_toEndOf="@+id/requested_username_icon"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent" >
+                        app:layout_constraintTop_toTopOf="parent">
 
                         <TextView
                             android:id="@+id/requested_username_title"
                             style="@style/MenuRowTitle"
-                            android:layout_marginStart="0dp"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="0dp"
                             tools:text="requested-username" />
 
                         <TextView
@@ -225,7 +227,7 @@
                             style="@style/MenuRowSubTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:maxLines="2"
+                            android:maxLines="3"
                             android:text="@string/requested_username_has_been" />
 
                         <TextView
@@ -233,30 +235,34 @@
                             style="@style/MenuRowSubTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/requested_voting_duration"
-                            />
+                            android:text="@string/requested_voting_duration" />
                     </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/retry_request_button"
-                        style="@style/Overline.SemiBold.Blue"
+                    <LinearLayout
+                        android:id="@+id/request_button_container"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        android:text="@string/retry"
-                        android:layout_marginEnd="20dp" />
-                    <ImageView
-                        android:id="@+id/requested_username_arrow"
-                        style="@style/MenuRowArrow"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:srcCompat="@drawable/ic_menu_row_arrow" />
+                        app:layout_constraintTop_toTopOf="parent">
 
+                        <TextView
+                            android:id="@+id/retry_request_button"
+                            style="@style/Overline.SemiBold.Blue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_marginEnd="20dp"
+                            android:text="@string/retry" />
+
+                        <ImageView
+                            android:id="@+id/requested_username_arrow"
+                            style="@style/MenuRowArrow"
+                            app:srcCompat="@drawable/ic_menu_row_arrow" />
+                    </LinearLayout>
                 </androidx.constraintlayout.widget.ConstraintLayout>
-
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/invite"
