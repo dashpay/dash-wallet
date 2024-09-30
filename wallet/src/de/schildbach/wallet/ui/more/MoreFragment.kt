@@ -178,13 +178,11 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.joinDashpayBtn.setOnClickListener {
             lifecycleScope.launch {
                 val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
-                //withContext(Dispatchers.Main) {
-                    if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
-                        startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
-                    } else {
-                        MixDashFirstDialogFragment().show(requireActivity())
-                    }
-                //}
+                if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
+                    startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+                } else {
+                    MixDashFirstDialogFragment().show(requireActivity())
+                }
             }
         }
         binding.usernameVoting.isVisible = Constants.SUPPORTS_PLATFORM
