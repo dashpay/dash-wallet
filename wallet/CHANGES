@@ -1,4 +1,7 @@
 Dash Wallet
+v10.3.1
+* Hot fix: prevent crash in some upgrade scenarios
+
 v10.3.0
 * Add CoinJoin Support
 * Merge and hide DashPay functionality
