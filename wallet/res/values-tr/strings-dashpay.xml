@@ -1,0 +1,208 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="identity_alphanum_only">Yalnızca harfler, sayılar ve kısa çizgiler</string>
+    <string name="identity_hyphen_rule">Bir harf veya sayı ile başlamalı ve bitmelidir</string>
+    <string name="identity_username_validating">Kullanıcı adı doğrulanıyor…</string>
+    <string name="identity_username_available">Kullanıcı adı uygun</string>
+    <string name="identity_username_taken">Kullanıcı adı alınmış</string>
+    <string name="register">Kayıt ol</string>
+
+    <string name="new_account_confirm_button_text">Onayla ve Öde</string>
+    <string name="invitation_confirm_button_text">Onayla</string>
+    <string name="new_account_confirm_accept">Kabul ediyorum</string>
+    <string name="new_account_confirm_upgrade_fee">Yükseltme Ücreti</string>
+    <string name="invitation_confirm_title">Davet Ücreti</string>
+    <string name="invitation_confirm_message">Her davetiye, alıcının Dash Ağında kullanıcı adını hızlı bir şekilde oluşturabilmesi için bu tutarla finanse edilecektir.</string>
+    <string name="invitation_init_title">Davet etmek</string>
+    <string name="invitation_init_header">Arkadaşlarınızı ve ailenizi davet edin</string>
+    <string name="invitation_init_button_text">Yeni bir Davetiye oluştur</string>
+    <string name="invitation_notifications_hint">Arkadaşlarınızı ve ailenizi Dash Network\'e davet edin</string>
+    <string name="invitation_notifications_hint1">Birini Dash Ağına davet edin</string>
+    <string name="invitation_notifications_hint1_or">veya</string>
+    <string name="invitation_created_title">Davetiye</string>
+    <string name="invitation_created_successfully">Davetiye Başarıyla Oluşturuldu</string>
+    <string name="invitation_created_tag_title">Referansınız için etiketleyin</string>
+    <string name="invitation_created_tag">örneğin: Baba</string>
+    <string name="invitation_created_preview">Önizleme Davetiyesi</string>
+    <string name="invitation_created_copy_link">Davet Linkini Kopyala</string>
+    <string name="invitation_created_send_invitation">Davetiye gönder</string>
+    <string name="invitation_created_send_invitation_again">Tekrar gönder</string>
+    <string name="invitation_created_maybe_later">Belki sonra</string>
+    <string name="invitation_preview_title">Şimdi Katıl</string>
+    <string name="invitation_preview_close">Kapat</string>
+    <string name="invitation_cant_afford_title">Yetersiz Cüzdan Bakiyesi</string>
+    <string name="invitation_already_claimed_title">Davetiye zaten talep edildi</string>
+    <string name="invitation_username_already_found_title">Kullanıcı adı zaten bulundu</string>
+    <string name="invitation_username_already_found_message">Zaten bir Dash kullanıcı adınız olduğundan bu daveti talep edemezsiniz</string>
+    <string name="invitation_accept_title_1">Kullanıcı adınızı alın</string>
+    <string name="invitation_accept_title_2">Arkadaşlarınızı ve Ailenizi ekleyin</string>
+    <string name="invitation_accept_message_2">Ailenizi davet edin, kullanıcı adlarını aratarak arkadaşlarınızı bulun</string>
+    <string name="invitation_accept_title_3">Kişiselleştir</string>
+    <string name="invitation_accept_message_3">Resminizi yükleyin, kimliğinizi kişiselleştirin</string>
+    <string name="invitation_accept_continue">Devam</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) Ödeme İşleniyor</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Kullanıcı Adı Kaydediliyor</string>
+    <string name="processing_error_title">Yükseltme Hatası</string>
+    <string name="processing_error_retry">Tekrar dene</string>
+    <string name="dashpay_upgrade_fee">Yükseltme Ücreti</string>
+    <string name="search_user_find_a_user">Dash Ağında bir kullanıcı bulun</string>
+    <string name="search_for_a_user">Dash Ağındaki bir Kullanıcıyı Ara</string>
+    <string name="add_new_contact">Yeni Kişi Ekle</string>
+    <string name="send_contact_request">İletişim İsteği Gönderin</string>
+    <string name="sending_contact_request">İletişim Talebi Gönderme</string>
+    <string name="contact_request_pending">Bekleyen İletişim Talebi</string>
+    <string name="pay">Ödeme</string>
+    <string name="contact_request_accept">Kabul et</string>
+    <string name="contact_request_ignore">Yoksay</string>
+
+    <string name="contacts_title">Kişiler</string>
+    <string name="contacts_send_to_contact_title">Bir Kişiye Gönder</string>
+    <string name="contacts_search_for">Kişi arayın</string>
+    <string name="contact_requests_title">İletişim Talebi</string>
+    <string name="contacts_contact_requests">İletişim Talebi</string>
+    <string name="contacts_my_contacts">Kişilerim</string>
+    <string-array name="contacts_sort">
+        <item>İsim</item>
+    </string-array>
+
+    <string name="notifications_title">Bildirimler</string>
+    <string name="notifications_profile_activity">Faaliyet</string>
+    <string name="notifications_new">Yeni</string>
+    <string name="notifications_earlier">Önceki</string>
+    <string name="notifications_none_new">Yeni bildirim yok</string>
+    <string name="send_coins_to_username">Gönderiliyor</string>
+    <string name="stranger_activity_disclaimer_text">Doğrudan adreslere yapılan ödemeler etkinlikte tutulmaz.</string>
+    <string name="edit_profile">Profili Düzenle</string>
+    <string name="display_name">Ekran adı</string>
+    <string name="about_me">Hakkımda</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">Kaydet</string>
+    <string name="edit_profile_choose_picture">Galeriden seçin</string>
+    <string name="upgrade_to_evolution_title">DashPay\'e Katılın</string>
+    <string name="upgrade_to_evolution_message">Kullanıcı adınızı oluşturun, kullanıcı adlarıyla arkadaşlarınızı ve ailenizi bulup kişilerinize ekleyin</string>
+    <string name="image_cropper_title">Mükemmel uyumu bulmak için fotoğrafınızı hareket ettirin ve yakınlaştırın</string>
+    <string name="select">Seç</string>
+    <string name="profile_picture_upload_error_title">Yükleme Hatası</string>
+    <string name="profile_picture_upload_try_again">Tekrar dene</string>
+    <string name="profile_picture_uploading_title">Lütfen Bekleyin</string>
+    <string name="profile_picture_uploading_message">Resminizi ağa yükleme</string>
+    <string name="imgur_policy_1">Seçtiğiniz resim anonim olarak Imgur\'a yüklenecektir.</string>
+    <string name="imgur_policy_2">Yüklenen resim herkese açık olarak görüntülenebilir.</string>
+    <string name="imgur_policy_3">Bu cüzdana erişiminiz olduğu sürece, yüklenen görseli her zaman silebilirsiniz.</string>
+    <string name="profile_picture_delete_title">Emin misiniz\?</string>
+    <string name="agree">Kabul etmek</string>
+    <string name="yes">Evet</string>
+    <string name="no">Hayır</string>
+
+    <string name="updating_profile">Dash Network\'te Profil Güncelleme</string>
+    <string name="google_drive_policy_two">Yüklenen resim herkese açık olarak görüntülenebilir.</string>
+    <string name="upload_image_message">Resminizi ağa yükleme</string>
+    <string name="upload_image_please_wait">Lütfen Bekleyin</string>
+    <string name="upload_image_error_message">Resminiz yüklenemedi. Lütfen tekrar deneyin.</string>
+    <string name="upload_image_upload_error">Yükleme Hatası</string>
+
+    <string name="error_updating_profile_try_again">Tekrar Dene</string>
+    <string name="error_updating_profile_cancel">İptal et</string>
+    <string name="edit_profile_public_url">Genel URL</string>
+    <string name="public_url_enter_url">Resim URL\'nizi yapıştırın</string>
+    <string name="public_url_fetching_image">Resim getiriliyor</string>
+
+    <string name="gravatar_email_prompt">Gravatar E-posta Kimliğinizi girin</string>
+    <string name="gravatar_disclaimer">E-postanız DashPay cüzdanında veya herhangi bir sunucuda saklanmaz. Gravatar hesap ayrıntılarınızı almak için bir kez kullanılır ve ardından yok edilir.</string>
+    <string name="join">Katılmak</string>
+
+    <string name="more_suggestions">Daha Fazla Öneri</string>
+    <string name="save_changes">Değişiklikleri Kaydet</string>
+    <string name="save_profile_reminder_text">Profilinizde yaptığınız değişiklikleri kaydetmek ister misiniz\?</string>
+    <string name="invitation_notification_text">Arkadaşlarınızı ve ailenizi Dash Ağı\'na katılmaya davet edin.</string>
+    <string name="invite_history_create_new_invite">Yeni bir davetiye oluştur</string>
+    <string name="invitations_history_header">Davetiye Geçmişi</string>
+    <string name="invitation_details_invite_used_by">Davetiyeyi kullanan kişi</string>
+    <string-array name="invite_filter">
+        <item>Hepsi</item>
+        <item>Bekliyor</item>
+        <item>Talep Edildi</item>
+    </string-array>
+
+    <string name="welcome_to_dash_pay">Dash Pay\'e hoş geldiniz</string>
+    <string name="pay_to_usernames">Kullanıcı adlarına ödeme yapın. Artık alfanümerik adres yok.</string>
+    <string name="create_a_username">Kullanıcı adı oluştur</string>
+    <string name="add_your_friends_family">Arkadaşlarınızı ve ailenizi ekleyin</string>
+    <string name="invite_your_family">Ailenizi davet edin, arkadaşlarınızı kullanıcı adlarını arayarak bulun.</string>
+    <string name="personalise_profile">Profili kişiselleştir</string>
+    <string name="upload_your_picture">Resminizi yükleyin, kimliğinizi kişiselleştirin.</string>
+    <string name="in_case_lose_your_passphrase">Parolanızı kaybetmeniz durumunda, istediğiniz kullanıcı adı hakkını kaybedersiniz.</string>
+    <string name="keep_your_passphrase_safe">Parolanızı güvende tutun</string>
+    <string name="case_your_request_is_not_approved">Talebinizin onaylanmaması durumunda</string>
+    <string name="dash_network_must_vote_to_approve">Dash ağı, kullanıcı adınızı oluşturmadan önce bu işlemi onaylamak için oy kullanmalıdır.</string>
+    <string name="what_is_username_voting">Kullanıcı adı oylaması nedir\?</string>
+    <string name="username_voting_subtitle">Bir ana düğüm sahibi olarak, diğer kullanıcılar kullanıcı adı oluşturmadan önce istenen kullanıcı adlarını onaylamak için oy kullanabilirsiniz.</string>
+    <string name="voting_duplicates_only_title">Yalnızca kopyalara oy ver</string>
+    <string name="voting_duplicates_only_message">Tüm istekleri inceleyebilirsiniz ancak yalnızca kopyalara oy vermeniz gerekir</string>
+    <string name="all">Hepsi</string>
+    <string name="search_by_username">Kullanıcı adına göre ara</string>
+    <string name="type">Tip</string>
+    <string name="only_duplicates">Yalnızca kopyalar</string>
+    <string name="only_links">Yalnızca bağlantı içeren istekler</string>
+    <string-array name="usernames_sort_by_options">
+        <item>Yeniden eskiye</item>
+        <item>Eskiden yeniye</item>
+        <item>Yüksekten alçağa</item>
+        <item>Alçaktan yükseğe</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>Hepsi</item>
+        <item>Onayladım</item>
+        <item>Onaylamadım</item>
+    </string-array>
+
+    <string name="request_username">Kullanıcı Adı İste</string>
+    <string name="voting">Oylama:</string>
+    <string name="this_username_has_already_been_requested">Bu kullanıcı adı zaten istendi, ancak siz de talep edebilirsiniz ve ağın sizin adınıza sahip olup olamayacağınıza karar vermesine izin verebilirsiniz.</string>
+    <string name="request_details">İstek detayları</string>
+    <string name="vote_to_approve">Onaylamak için oy verin</string>
+    <string name="identity">Kimlik</string>
+    <string name="link">Bağlantı</string>
+    <string name="cancel_approval">Onayı İptal Et</string>
+    <string name="verify_your_identity">İstediğiniz kullanıcı adını alma şansınızı artırmak için kimliğinizi doğrulayın</string>
+    <string name="if_somebody">Başka biri sizinle aynı kullanıcı adını isterse, bu kullanıcı adını kime vereceğine ağın karar vermesine izin vereceğiz</string>
+    <string name="verify_your_identity_voting">Kimliğinizi doğrulayın</string>
+    <string name="prove_your_identity">Kimliğinizi kanıtlayın</string>
+    <string name="paste_the_link">Bağlantıyı yapıştırın</string>
+    <string name="voting_key_title">Oylama anahtarınızı girin</string>
+    <string name="voting_key_hint">Ana düğüm Oylama Anahtarı</string>
+    <string name="voting_key_input_error">Geçersiz bir anahtar girdiniz</string>
+    <string name="masternode_ip">Ana düğüm IP adresi</string>
+    <string name="vote_submitted">Oyunuz gönderildi</string>
+    <string name="vote_cancelled">Oyunuz iptal edildi</string>
+    <string name="quick_vote">Hızlı Oylama</string>
+    <string name="vote_for_all">Herkese Oy Ver</string>
+    <string name="there_was_a_network_error">Bir ağ hatası oluştu, hiçbir ek ücret ödemeden tekrar deneyebilirsiniz</string>
+    <string name="cancel_request">İsteği iptal et</string>
+    <string name="after_the_voting">Oylama bittikten sonra sonuçları size bildireceğiz</string>
+    <string name="none">Hiçbiri</string>
+    <string name="if_you_tap_cancel">“İsteği İptal Et”e tıklarsanız, tekrar ödeme yapmadan başka bir kullanıcı adı talep etme şansınız devam edecek</string>
+    <string name="do_you_really_want_to_cancel">Kullanıcı adı isteğini gerçekten iptal etmek istiyor musunuz\?</string>
+    <string name="if_you_tap_cancel_request">“İsteği İptal Et”e tıklarsanız, tekrar ödeme yapmadan başka bir kullanıcı adı talep etme şansınız devam edecek</string>
+    <!-- CoinJoin -->
+    <string name="coinjoin">CoinJoin</string>
+    <string name="coinjoin_info_subtitle">Dash’inizi karıştırmak işlemlerinizi daha özel hale getirir</string>
+    <string name="coinjoin_description_1">Bu aktive edildiğinde yalnızca karıştırılmış olan Dash\'ı harcayabileceksiniz. İstediğiniz bir zaman bunu kapatabilirsiniz.</string>
+    <string name="coinjoin_description_2">Yeni alınan Dash, cüzdan başlatıldığında otomatik olarak karıştırılacaktır.</string>
+    <string name="coinjoin_description_3">Bu özelliğin açılması daha yüksek pil kullanımına neden olur</string>
+    <string name="coinjoin_mixing_level_title">Karıştırma seviyesini seçin</string>
+    <string name="intermediate">Orta seviye</string>
+    <string name="advanced">Gelişmiş</string>
+    <string name="intermediate_level_card_decs">Yüksek düzeyde teknik uzmanlığa sahip ileri düzey kullanıcılar, işlem geçmişinizi belirleyebilir.</string>
+    <string name="advanced_level_card_decs">Herhangi bir düzeyde teknik uzmanlığa sahip ileri düzey kullanıcıların işlem geçmişinizi belirlemesi çok zor olacaktır.</string>
+    <string name="coinjoin_intermediate_time">30 dakikaya kadar</string>
+    <string name="coinjoin_advanced_time">Birden fazla saat</string>
+    <string name="coinjoin_start">Karıştırmaya Başla</string>
+    <string name="coinjoin_stop">Karıştırmayı Durdur</string>
+    <string name="coinjoin_change_level_confirmation">Gizlilik düzeyini değiştirmek istediğinizden emin misiniz\?</string>
+    <string name="coinjoin_stop_mixing_title">Karıştırmayı sonlandırmak istediğinizden emin misiniz\?</string>
+    <string name="credit_balance_button_maybe_later">Belki sonra</string>
+    <string name="request_username_character_requirement">Yalnızca harfler, sayılar ve kısa çizgiler</string>
+    </resources>

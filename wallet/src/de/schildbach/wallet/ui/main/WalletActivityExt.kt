@@ -56,6 +56,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.ui.more.MoreFragment
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -113,6 +114,22 @@ object WalletActivityExt {
             } else if (item.itemId == R.id.walletFragment) {
                 navHostFragment.childFragmentManager.fragments.firstOrNull { it is WalletFragment }?.let {
                     (it as WalletFragment).scrollToTop()
+                } ?: navController.navigate(
+                    R.id.walletFragment,
+                    null,
+                    NavOptions.Builder()
+                        .setPopUpTo(navController.graph.startDestinationId, true)
+                        .build()
+                )
+            } else if (item.itemId == R.id.moreFragment) {
+                if (navHostFragment.childFragmentManager.fragments.firstOrNull { it is MoreFragment } == null) {
+                    navController.navigate(
+                        R.id.moreFragment,
+                        null,
+                        NavOptions.Builder()
+                            .setPopUpTo(navController.graph.startDestinationId, true)
+                            .build()
+                    )
                 }
             }
         }

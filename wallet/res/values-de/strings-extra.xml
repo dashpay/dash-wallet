@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Verifiziere PIN</string>
     <string name="set_pin_message">Die PIN muss bei jedem Verwenden der App zum Entsperren eingegeben werden.</string>
     <string name="set_pin_confirm_pin_incorrect">Falsche PIN</string>
-
+    
     <string name="home_balance_hide_hint">Zum Verbergen des Guthabens tippen</string>
 
     <string name="dialog_confirm_confirm">Bestätigen</string>
@@ -158,7 +158,7 @@
         <item quantity="other">Stunden</item>
     </plurals>
 
-    <string name="upgrade">Upgrade</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Upgrade</string>
     <string name="encrypt_new_key_chain_dialog_title">Wallet aktualisieren</string>
     <string name="encrypt_new_key_chain_dialog_message">Deine Wallet wird aktualisiert, damit sie den Import und Export zu mehr Apps unterstützt.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Du musst deinen PIN eingeben, um den Aktualisierungsvorgang abzuschließen.</string>

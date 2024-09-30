@@ -162,7 +162,7 @@
         <item quantity="other">hodin</item>
     </plurals>
 
-    <string name="upgrade">Aktualizace</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Aktualizace</string>
     <string name="encrypt_new_key_chain_dialog_title">Aktualizovat peněženku</string>
     <string name="encrypt_new_key_chain_dialog_message">Peněženka bude aktualizována, aby mohla podporovat importování z a exportovaní do jiných aplikací.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Musíte zadat PIN pro dokončení procesu aktualizace.</string>

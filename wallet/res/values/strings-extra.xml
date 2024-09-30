@@ -165,7 +165,7 @@
         <item quantity="other">hours</item>
     </plurals>
 
-    <string name="upgrade">Upgrade</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Upgrade</string>
     <string name="encrypt_new_key_chain_dialog_title">Upgrade your wallet</string>
     <string name="encrypt_new_key_chain_dialog_message">Your wallet will be upgraded to support importing from and exporting to more apps.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">You must enter your PIN to finish the upgrade process.</string>

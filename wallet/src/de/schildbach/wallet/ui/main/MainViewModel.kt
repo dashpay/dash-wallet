@@ -73,6 +73,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -723,5 +724,9 @@ class MainViewModel @Inject constructor(
     fun addCoinJoinToWallet() {
         val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
         (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
+    }
+
+    fun isTestNet(): Boolean {
+        return walletData.wallet?.params?.id != NetworkParameters.ID_MAINNET
     }
 }

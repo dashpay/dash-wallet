@@ -71,6 +71,7 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
             handleStakingNavigation()
         }
 
+        binding.faucetBtn.isVisible = viewModel.isTestNet()
         binding.faucetBtn.setOnClickListener {
             safeNavigate(ExploreFragmentDirections.exploreToFaucet())
         }

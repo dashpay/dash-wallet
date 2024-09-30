@@ -15,13 +15,13 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- enable when Bluetooth functionality is completely restored -->
+    <!--uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" /-->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- dangerous permissions -->
     <uses-permission android:name="android.permission.CAMERA" /> <!-- group: CAMERA -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -414,10 +414,11 @@
             android:name="de.schildbach.wallet.service.BlockchainServiceImpl"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
-        <service
+
+        <!--service
             android:name="de.schildbach.wallet.offline.AcceptBluetoothService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="connectedDevice" /-->
 
         <receiver
             android:name="de.schildbach.wallet.service.BootstrapReceiver"

@@ -1,4 +1,16 @@
 Dash Wallet
+v10.3.1
+* Hot fix: prevent crash in some upgrade scenarios
+
+v10.3.0
+* Add CoinJoin Support
+* Merge and hide DashPay functionality
+
+v10.2.1
+* Target Android 14
+* Fix rare crash when displaying transaction details
+* Fix rare crash when prompting the user for the PIN
+
 v10.2.0
 * Support Core 21
 * Fix syncing stuck at 30% or 31% bug

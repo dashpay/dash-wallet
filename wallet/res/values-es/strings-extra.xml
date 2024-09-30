@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Este PIN será requerido para desbloquear tu app cada vez que la utilices.</string>
     <string name="set_pin_confirm_pin_incorrect">PIN incorrecto</string>
-
+    
     <string name="home_balance_hide_hint">Tocar para ocultar saldo</string>
 
     <string name="dialog_confirm_confirm">Confirmar</string>
@@ -161,7 +161,7 @@
         <item quantity="other">horas</item>
     </plurals>
 
-    <string name="upgrade">Actualizar</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Actualizar</string>
     <string name="encrypt_new_key_chain_dialog_title">Actualiza tu billetera</string>
     <string name="encrypt_new_key_chain_dialog_message">Tu billetera será actualizada para admitir la importación y exportación a otras aplicaciones.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Debes ingresar tu PIN para finalizar el proceso de actualización.</string>

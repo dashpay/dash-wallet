@@ -17,7 +17,7 @@
     <string name="set_pin_verifying_pin">PINを検証中</string>
     <string name="set_pin_message">このアプリをアンロックして使用するときは必ずこのPINが必要となります</string>
     <string name="set_pin_confirm_pin_incorrect">不正な暗証番号</string>
-
+    
     <string name="home_balance_hide_hint">タップして残高を非表示にする</string>
 
     <string name="dialog_confirm_confirm">承認</string>
@@ -155,7 +155,7 @@
         <item quantity="other">時間</item>
     </plurals>
 
-    <string name="upgrade">アップグレード</string>
+    <string name="encrypt_new_key_chain_upgrade_button">アップグレード</string>
     <string name="encrypt_new_key_chain_dialog_title">あなたのウォレットをアップグレードします。</string>
     <string name="encrypt_new_key_chain_dialog_message">あなたのウォレットはより多くのアプリにインポートとエクスポートをサポートするようにアップグレードされます。</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">アップグレードを完了するために、あなたのPINコードを入力してください。</string>
