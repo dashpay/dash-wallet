@@ -64,7 +64,7 @@
             android:layout_marginStart="6dp"
             android:text="@string/block"
             style="@style/Body2.Medium.Red"
-    />
+        />
 
     </LinearLayout>
 

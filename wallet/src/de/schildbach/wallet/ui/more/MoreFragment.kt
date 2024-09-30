@@ -43,6 +43,7 @@ import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.SettingsActivity
+import de.schildbach.wallet.ui.coinjoin.CoinJoinLevelViewModel
 import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.display
@@ -52,7 +53,9 @@ import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -86,6 +89,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     private val editProfileViewModel: EditProfileViewModel by viewModels()
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
     private val createIdentityViewModel: CreateIdentityViewModel by viewModels()
+    private val coinJoinViewModel: CoinJoinLevelViewModel by viewModels()
 
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
     @Inject lateinit var configuration: Configuration
@@ -172,7 +176,14 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.errorUpdatingProfile.cancel.setOnClickListener { dismissProfileError() }
         binding.editUpdateSwitcher.isVisible = false
         binding.joinDashpayBtn.setOnClickListener {
-            startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+            lifecycleScope.launch {
+                val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
+                if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
+                    startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+                } else {
+                    MixDashFirstDialogFragment().show(requireActivity())
+                }
+            }
         }
         binding.usernameVoting.isVisible = Constants.SUPPORTS_PLATFORM
         binding.usernameVoting.setOnClickListener {
@@ -214,6 +225,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                         binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_title)
                         binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_message, username)
                         binding.retryRequestButton.isVisible = false
+                        binding.requestedUsernameArrow.isVisible = false
+                        binding.requestedUsernameContainer.isEnabled = false
                     }
                 }
             } else if (it.creationState == BlockchainIdentityData.CreationState.VOTING) {

@@ -60,6 +60,7 @@
     <string name="button_understand">I understand</string>
     <string name="button_okay">Okay</string>
     <string name="button_share">Share</string>
+    <string name="button_skip">Skip</string>
     <string name="share_address">Share Address</string>
     <string name="verify">Verify</string>
     <string name="receive_enter_amount_button">Specify Amount</string>
