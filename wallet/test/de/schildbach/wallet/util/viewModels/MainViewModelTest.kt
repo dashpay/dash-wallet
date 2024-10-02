@@ -32,6 +32,7 @@ import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.transactions.TxFilterType
 import androidx.datastore.preferences.core.Preferences
+import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
@@ -55,6 +56,7 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.RateRetrievalState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.Before
@@ -135,6 +137,10 @@ class MainViewModelTest {
         every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns MutableStateFlow("USD")
     }
 
+    private val userAgentDaoMock = mockk<UserAlertDao> {
+        every { observe(any()) } returns flow { }
+    }
+
     private val platformRepo = mockk<PlatformRepo>()
 
     @get:Rule
@@ -169,7 +175,8 @@ class MainViewModelTest {
                 0
             )
         }
-
+        every { exchangeRatesMock.observeStaleRates(any())} returns flow { RateRetrievalState(false, false, false) }
+        every { }
         mockkStatic(WalletApplication::class)
         every { WalletApplication.getInstance() } returns walletApp
 
@@ -200,7 +207,7 @@ class MainViewModelTest {
                 analyticsService, configMock, uiConfigMock,
                 exchangeRatesMock, walletDataMock, walletApp, platformRepo,
                 mockk(), mockk(), blockchainIdentityConfigMock, savedStateMock, transactionMetadataMock,
-                blockchainStateMock, mockk(), mockk(), mockk(), mockk(), mockk(), mockDashPayConfig, mockk(), mockk()
+                blockchainStateMock, mockk(), mockk(), mockk(), userAgentDaoMock, mockk(), mockDashPayConfig, mockk(), mockk()
             )
         )
 
