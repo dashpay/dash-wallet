@@ -686,6 +686,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
                 log.info("starting peergroup");
                 peerGroup = new PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain);
+                if (Constants.SUPPORTS_PLATFORM) {
+                    platformRepo.getPlatform().setMasternodeListManager(application.getWallet().getContext().masternodeListManager);
+                    platformSyncService.resume();
+                }
                 if (resetMNListsOnPeerGroupStart) {
                     resetMNListsOnPeerGroupStart = false;
                     application.getWallet().getContext().masternodeListManager.setBootstrap(mnlistinfoBootStrapStream, qrinfoBootStrapStream, SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION);
@@ -1040,11 +1044,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
         peerDiscoveryList.add(dnsDiscovery);
-
-        if (Constants.SUPPORTS_PLATFORM) {
-            platformRepo.getPlatform().setMasternodeListManager(application.getWallet().getContext().masternodeListManager);
-            platformSyncService.resume();
-        }
 
         updateAppWidget();
         FlowExtKt.observe(blockchainStateDao.observeState(), this, (blockchainState, continuation) -> {
