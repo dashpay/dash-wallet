@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.*
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
@@ -155,6 +156,7 @@ class MainViewModelTest {
         every { configMock.registerOnSharedPreferenceChangeListener(any()) } just runs
 
         every { blockchainStateMock.observeState() } returns flow { BlockchainState() }
+        every { blockchainStateMock.observeSyncStage() } returns MutableStateFlow(PeerGroup.SyncStage.BLOCKS)
         every { exchangeRatesMock.observeExchangeRate(any()) } returns flow { ExchangeRate("USD", "100") }
         every { walletDataMock.observeBalance() } returns flow { Coin.COIN }
         every { walletDataMock.observeMostRecentTransaction() } returns flow {
@@ -175,8 +177,7 @@ class MainViewModelTest {
                 0
             )
         }
-        every { exchangeRatesMock.observeStaleRates(any())} returns flow { RateRetrievalState(false, false, false) }
-        every { }
+        every { exchangeRatesMock.observeStaleRates(any()) } returns flow { RateRetrievalState(false, false, false) }
         mockkStatic(WalletApplication::class)
         every { WalletApplication.getInstance() } returns walletApp
 
@@ -202,6 +203,7 @@ class MainViewModelTest {
     @Test
     fun observeBlockchainState_replaying_notSynced() {
         every { blockchainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
+
         val viewModel = spyk(
             MainViewModel(
                 analyticsService, configMock, uiConfigMock,
