@@ -104,7 +104,6 @@ class EditProfileActivity : LockScreenActivity() {
     private var uploadProfilePictureStateDialog: UploadProfilePictureStateDialog? = null
     private lateinit var takePicturePermissionLauncher: ActivityResultLauncher<String>
     private lateinit var takePictureLauncher: ActivityResultLauncher<Uri>
-    //private lateinit var choosePicturePermissionLauncher: ActivityResultLauncher<String>
     private lateinit var chooseImageLauncher: ActivityResultLauncher<PickVisualMediaRequest>
     private lateinit var cropImageLauncher: ActivityResultLauncher<Intent>
     private lateinit var googleDriveSignInLauncher: ActivityResultLauncher<Intent>
@@ -235,13 +234,6 @@ class EditProfileActivity : LockScreenActivity() {
             turnOnAutoLogout()
         }
 
-//        choosePicturePermissionLauncher =  registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-//            if (isGranted) {
-//                choosePicture()
-//            } else {
-//                // Handle the case where permission is denied
-//            }
-//        }
         // Initialize the launchers
         chooseImageLauncher = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { selectedImage: Uri? ->
             // Handle the picked image
@@ -493,24 +485,6 @@ class EditProfileActivity : LockScreenActivity() {
             takePicturePermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
-
-//    private fun choosePictureWithPermission() {
-//        // TODO: see https://android-developers.googleblog.com/2023/08/choosing-right-storage-experience.html
-//        // for android 14 changes
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-//            (ContextCompat.checkSelfPermission(this, READ_MEDIA_IMAGES) == PERMISSION_GRANTED)
-//        ) {
-//            // Full access on Android 13+
-//            choosePicture()
-//        } else if (ContextCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE) == PERMISSION_GRANTED) {
-//            // Full access up to Android 12
-//            choosePicture()
-//        } else {
-//            // Access denied, so ask for permission
-//            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) READ_MEDIA_IMAGES else READ_EXTERNAL_STORAGE
-//            choosePicturePermissionLauncher.launch(permission)
-//        }
-//    }
 
     private fun selectImage() {
         SelectProfilePictureDialog.createDialog()
