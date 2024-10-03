@@ -57,6 +57,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
@@ -161,6 +162,7 @@ class ContactsFragment : Fragment(),
 
             // Developer Mode Feature
             // Hide the invite UI
+            emptyStatePane.inviteHintLayout.root.isVisible = de.schildbach.wallet.Constants.SUPPORTS_INVITES
             emptyStatePane.inviteHintLayout.inviteFriendHint.setOnClickListener {
                 lifecycleScope.launch {
                     val inviteHistory = dashPayViewModel.getInviteHistory()

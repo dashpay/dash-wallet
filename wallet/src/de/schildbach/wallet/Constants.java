@@ -61,6 +61,8 @@ public final class Constants {
     public static final boolean IS_PROD_BUILD;
 
     public static boolean SUPPORTS_PLATFORM;
+    // TODO: remove all references to this when invites are enabled and functional
+    public static boolean SUPPORTS_INVITES;
 
     public static final EnumSet<MasternodeSync.SYNC_FLAGS> SYNC_FLAGS = MasternodeSync.SYNC_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.VERIFY_FLAGS> VERIFY_FLAGS = MasternodeSync.VERIFY_DEFAULT_SPV;

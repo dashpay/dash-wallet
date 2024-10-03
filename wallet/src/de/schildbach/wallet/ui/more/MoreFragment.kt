@@ -378,7 +378,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         // show the invite section only after the profile section is visible
         // to avoid flickering
         if (binding.editUpdateSwitcher.isVisible) {
-            binding.invite.isVisible = showInviteSection
+            //TODO: remove && Constants.SUPPORTS_INVITES when INVITES are supported
+            binding.invite.isVisible = showInviteSection && Constants.SUPPORTS_INVITES
         }
     }
 
@@ -402,7 +403,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             }
             // if the invite section is not visible, show/hide it
             if (!binding.invite.isVisible) {
-                binding.invite.isVisible = showInviteSection
+                //TODO: remove && Constants.SUPPORTS_INVITES when INVITES are supported
+                binding.invite.isVisible = showInviteSection && Constants.SUPPORTS_INVITES
             }
         } else {
             binding.editUpdateSwitcher.isVisible = false
@@ -412,10 +414,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
     override fun onResume() {
         super.onResume()
-        // Developer Mode Feature
-        binding.invite.isVisible = showInviteSection
-        lifecycleScope.launchWhenResumed {
-
-        }
+        //TODO: remove && Constants.SUPPORTS_INVITES when INVITES are supported
+        binding.invite.isVisible = showInviteSection && Constants.SUPPORTS_INVITES
     }
 }
