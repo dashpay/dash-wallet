@@ -136,7 +136,7 @@ class PlatformRepo @Inject constructor(
     suspend fun init() {
         // load the dash-sdk library
         System.loadLibrary("sdklib")
-        authenticationGroupExtension = walletApplication.wallet?.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
+        authenticationGroupExtension = walletApplication.wallet?.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as? AuthenticationGroupExtension
         blockchainIdentityDataDao.load()?.let {
             blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet!!)
             initializeStateRepository()
