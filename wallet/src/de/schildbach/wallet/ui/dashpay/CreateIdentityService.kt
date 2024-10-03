@@ -331,6 +331,13 @@ class CreateIdentityService : LifecycleService() {
             } else if (blockchainIdentityData.creationState >= CreationState.IDENTITY_REGISTERED) {
                 isRetry = true
             }
+
+            if (blockchainIdentityData.creationState == CreationState.USERNAME_REGISTERING) {
+                if (blockchainIdentityData.creationStateErrorMessage?.contains("preorderDocument was not found with a salted domain hash") == true) {
+                    blockchainIdentityData.creationState = CreationState.PREORDER_REGISTERING
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                }
+            }
         }
 
         platformRepo.resetIdentityCreationStateError(blockchainIdentityData)
