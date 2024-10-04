@@ -104,7 +104,7 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : FlexboxLayout(conte
         secureNowButton,
         explore,
         receiveButton,
-        payToContactButton,
+        if (Constants.SUPPORTS_PLATFORM) payToContactButton else payToAddressButton,
         buySellButton,
         scanToPayButton
     )
