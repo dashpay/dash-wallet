@@ -31,6 +31,7 @@ import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_ID
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
@@ -39,8 +40,15 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.data.WalletUIConfig
@@ -50,6 +58,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 open class DashPayViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
@@ -63,6 +72,7 @@ open class DashPayViewModel @Inject constructor(
     val platformSyncService: PlatformSyncService,
     private val platformBroadcastService: PlatformBroadcastService,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
+    private val contactRequestDao: DashPayContactRequestDao,
     private val dashPayConfig: DashPayConfig
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
@@ -98,6 +108,28 @@ open class DashPayViewModel @Inject constructor(
     val recentlyModifiedContactsLiveData = MutableLiveData<HashSet<String>>()
 
     private var timerUsernameSearch: AnalyticsTimer? = null
+
+
+
+    private val _hasContacts = MutableStateFlow(false)
+    val hasContacts: Flow<Boolean>
+        get() = _hasContacts
+
+    init {
+        blockchainIdentityDataDao.observe(IDENTITY_ID)
+            .filterNotNull()
+            .flatMapLatest {
+                val size = contactRequestDao.loadFromOthers(it).size
+                println(size)
+                contactRequestDao.observeReceivedRequestsCount(it)
+
+            }
+            .onEach {
+                _hasContacts.value = it != 0
+            }
+            .launchIn(viewModelScope)
+
+    }
 
     suspend fun isDashPayInfoShown(): Boolean =
         dashPayConfig.get(DashPayConfig.HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN) ?: false

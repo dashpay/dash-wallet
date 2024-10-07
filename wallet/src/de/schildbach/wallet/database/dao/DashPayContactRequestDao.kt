@@ -49,7 +49,8 @@ interface DashPayContactRequestDao {
 
     @Query("SELECT COUNT(*) FROM dashpay_contact_request")
     suspend fun countAllRequests(): Int
-
+    @Query("SELECT COUNT(*) FROM dashpay_contact_request WHERE toUserId = :userId")
+    fun observeReceivedRequestsCount(userId: String): Flow<Int>
     @Query("DELETE FROM dashpay_contact_request")
     suspend fun clear()
 }
