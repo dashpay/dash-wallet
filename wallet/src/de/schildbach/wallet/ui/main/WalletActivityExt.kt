@@ -143,7 +143,7 @@ object WalletActivityExt {
 
     fun MainActivity.checkTimeSkew(viewModel: MainViewModel, force: Boolean = false) {
         lifecycleScope.launch {
-            val (isTimeSkewed, timeSkew) = viewModel.getDeviceTimeSkew(force)
+            val (isTimeSkewed, timeSkew) = withContext(Dispatchers.IO) { viewModel.getDeviceTimeSkew(force) }
             val coinJoinOn = viewModel.getCoinJoinMode() != CoinJoinMode.NONE
             if (isTimeSkewed && (!timeSkewDialogShown || force)) {
                 timeSkewDialogShown = true
