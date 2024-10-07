@@ -49,6 +49,7 @@ import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
+import de.schildbach.wallet.ui.coinjoin.CoinJoinLevelViewModel
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet.ui.invite.InviteHandler
@@ -60,13 +61,16 @@ import de.schildbach.wallet.ui.main.WalletActivityExt.requestDisableBatteryOptim
 import de.schildbach.wallet.ui.main.WalletActivityExt.setupBottomNavigation
 import de.schildbach.wallet.ui.main.WalletActivityExt.showFiatCurrencyChangeDetectedDialog
 import de.schildbach.wallet.ui.main.WalletActivityExt.showStaleRatesToast
+import de.schildbach.wallet.ui.more.MixDashFirstDialogFragment
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.Nfc
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityMainBinding
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.wallet.DerivationPathFactory
 import org.bitcoinj.wallet.Wallet
@@ -120,6 +124,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private val baseAlertDialogBuilder = BaseAlertDialogBuilder(this)
     val viewModel: MainViewModel by viewModels()
+    private val createIdentityViewModel: CreateIdentityViewModel by viewModels()
+    private val coinJoinViewModel: CoinJoinLevelViewModel by viewModels()
     @Inject
     lateinit var config: Configuration
     private lateinit var binding: ActivityMainBinding
@@ -248,7 +254,14 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             }
         }
         viewModel.showCreateUsernameEvent.observe(this) {
-            startActivity(Intent(this, CreateUsernameActivity::class.java))
+            lifecycleScope.launch {
+                val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
+                if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
+                    startActivity(Intent(this@MainActivity, CreateUsernameActivity::class.java))
+                } else {
+                    MixDashFirstDialogFragment().show(this@MainActivity)
+                }
+            }
         }
         viewModel.sendContactRequestState.observe(this) {
             config.inviter?.also { initInvitationUserId ->

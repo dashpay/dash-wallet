@@ -211,6 +211,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 if (it.creationError) {
                     binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_error_title)
                     binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_error_message, username)
+                    binding.requestedUsernameSubtitleTwo.isVisible = false
                     binding.retryRequestButton.isVisible = true
                     binding.retryRequestButton.text = getString(R.string.retry)
                     binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay_red)
@@ -251,8 +252,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                     }
                     UsernameRequestStatus.LOCKED -> {
                         binding.requestedUsernameTitle.text = getString(R.string.request_username_blocked)
-                        binding.requestedUsernameSubtitleTwo.text =
+                        binding.requestedUsernameSubtitle.text =
                             getString(R.string.request_username_blocked_message, mainActivityViewModel.getRequestedUsername())
+                        binding.requestedUsernameSubtitleTwo.isVisible = false
                         binding.requestedUsernameSubtitle.maxLines = 4
                         binding.retryRequestButton.isVisible = true
                         binding.retryRequestButton.text = getString(R.string.try_again)
