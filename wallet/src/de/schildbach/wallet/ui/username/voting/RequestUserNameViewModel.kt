@@ -21,6 +21,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CREATION_STATE
@@ -30,6 +31,7 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.U
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
@@ -45,6 +47,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dpp.identifier.Identifier
@@ -77,7 +80,8 @@ class RequestUserNameViewModel @Inject constructor(
     val identityConfig: BlockchainIdentityConfig,
     val walletData: WalletDataProvider,
     val platformRepo: PlatformRepo,
-    val usernameRequestDao: UsernameRequestDao
+    val usernameRequestDao: UsernameRequestDao,
+    val coinJoinConfig: CoinJoinConfig
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
@@ -89,8 +93,9 @@ class RequestUserNameViewModel @Inject constructor(
     var requestedUserName: String? = null
     var identityBalance: Long = 0L
 
-    val walletBalance: Coin
-        get() = walletData.getWalletBalance()
+    private val _walletBalance = MutableStateFlow(Coin.ZERO)
+    val walletBalance: StateFlow<Coin>// = Coin.ZERO
+        get() = _walletBalance
     suspend fun isUserNameRequested(): Boolean {
         val hasRequestedName = identityConfig.get(USERNAME).isNullOrEmpty().not()
         val creationState = BlockchainIdentityData.CreationState.valueOf(
@@ -111,8 +116,8 @@ class RequestUserNameViewModel @Inject constructor(
     suspend fun hasUserCancelledVerification(): Boolean =
         identityConfig.get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK) ?: false
 
-    fun canAffordNonContestedUsername(): Boolean = walletBalance >= Constants.DASH_PAY_FEE
-    fun canAffordContestedUsername(): Boolean = walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
+    fun canAffordNonContestedUsername(): Boolean = _walletBalance.value >= Constants.DASH_PAY_FEE
+    fun canAffordContestedUsername(): Boolean = _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
 
     val myUsernameRequest: Flow<UsernameRequest?>
         get() = _myUsernameRequest
@@ -152,6 +157,21 @@ class RequestUserNameViewModel @Inject constructor(
                         )
                     }
                 }
+            }
+            .launchIn(viewModelScope)
+
+        coinJoinConfig.observeMode()
+            .flatMapLatest { coinJoinMode ->
+                walletData.observeBalance(
+                    if (coinJoinMode == CoinJoinMode.NONE) {
+                        Wallet.BalanceType.ESTIMATED_SPENDABLE
+                    } else {
+                        Wallet.BalanceType.COINJOIN_SPENDABLE
+                    }
+                )
+            }
+            .onEach {
+                _walletBalance.value = it
             }
             .launchIn(viewModelScope)
     }
@@ -317,9 +337,9 @@ class RequestUserNameViewModel @Inject constructor(
             identityBalance >= Constants.DASH_PAY_FEE.value / 3 * 1000
         }
         val enoughBalance = if (contestable) {
-            walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
+            _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
         } else {
-            walletBalance >= Constants.DASH_PAY_FEE
+            _walletBalance.value >= Constants.DASH_PAY_FEE
         }
         _uiState.update {
             it.copy(
