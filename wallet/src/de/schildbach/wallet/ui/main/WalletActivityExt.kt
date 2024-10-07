@@ -58,8 +58,10 @@ import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.more.MoreFragment
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.ComposeHostFrameLayout
 import org.dash.wallet.common.ui.components.Toast
