@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, pozadu %2$d dní</string>
     <string name="blockchain_state_progress_weeks">%1$s, pozadu %2$d týždňov</string>
     <string name="blockchain_state_progress_months">%1$s, pozadu %2$d mesiacov</string>
-    <string name="blockchain_state_progress_downloading">Synchronizácia so sieťou</string>
     <string name="blockchain_state_progress_stalled">Synchronizácia pozastavená</string>
     <string name="blockchain_state_progress_problem_storage">Synchronizácia: Problém s dátovým úložiskom</string>
     <string name="blockchain_state_progress_problem_network">Synchronizácia: Problém so sieťou</string>
@@ -145,7 +144,7 @@
     <string name="transaction_row_message_received_dust">Takéto malé množstvo zrejme nebude možné minúť.</string>
     <string name="transaction_row_message_received_pay_to_many">Táto platba je pre viac peňaženiek než len pre Vašu, čo môže spomaliť časom túto aplikáciu. Pokiaľ môžete, pokúste sa prijímať platby, ktoré sú iba pre vás.</string>
     <string name="transaction_row_message_received_rbf">U tejto platby došlo k meškaniu, pretože odosielateľ použil nezabezpečený spôsob platby.</string>
-    <string name="transaction_row_status_received">Prijté</string>
+    <string name="transaction_row_status_received">Prijaté</string>
     <string name="transaction_row_status_sent">Poslané</string>
     <string name="transaction_row_status_sending">Odosielam</string>
     <string name="transaction_row_status_sent_internally">Interná</string>
@@ -404,4 +403,5 @@
     <string name="battery_optimization_dialog_unrestricted_title">Chcete dostávať platby na pozadí?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Táto aplikácia je nakonfigurovaná tak, aby bola spustená aj vtedy, keď nebude nejaký čas viditeľná.\n\nOdporúčame tejto aplikácii povoliť, aby mala vždy aktuálne informácie o blockchaine, a to aj na pozadí.\n\nNebojte sa, vždy nám bude záležať na spotrebe batérie.</string>
     <string name="battery_optimization_dialog_button_change">Otvoriť nastavenia</string>
+
 </resources>

@@ -8,7 +8,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d zile în urmă</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d săptămâni în urmă</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d luni în urmă</string>
-    <string name="blockchain_state_progress_downloading">Sincronizare cu rețeaua</string>
     <string name="blockchain_state_progress_stalled">Sincronizarea s-a blocat</string>
     <string name="blockchain_state_progress_problem_storage">Sincronizare: Problemă de stocare</string>
     <string name="blockchain_state_progress_problem_network">Sincronizare: Problemă de rețea</string>

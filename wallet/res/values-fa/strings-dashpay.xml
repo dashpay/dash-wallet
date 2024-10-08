@@ -259,7 +259,6 @@
     <string name="upload_your_picture">تصویرتان را به‌روزرسانی کنید، هویت‌تان را شخصی‌سازی کنید</string>
     <string name="in_case_lose_your_passphrase">در صورتی که عبارت بازیابی را گم کنید، حق دسترسی به نام کاربری درخواستی را از دست خواهید داد. </string>
     <string name="keep_your_passphrase_safe">عبارت بازیابی را در جایی امن نگه دارید.</string>
-    <string name="pay_now">همین حالا پرداخت کنید و اگر مورد تائید نبود، می‌توانید یک نام کاربری دیگر، بدون پرداخت، ایحاد کنید [بررسی در صورت درست بود]</string>
     <string name="case_your_request_is_not_approved">در صورتی که درخواست‌تان تائيد نشد</string>
     <string name="voting_requirement_subtitle">هر نام کاربری که دارای اعداد ۲ تا ۹ باشد و یا طولانی‌تر از ۲۰ کاراکتر باشد، به صورت خودکار تائید می‌شود.</string>
     <string name="voting_requirement_title">در برخی موارد، نیاز به رای‌گیری است</string>
@@ -269,8 +268,6 @@
     <string name="usernames_blocked_subtitle">در صورتی که درصدی شمخص از شبکه به این نتیجه برسند که نام کاربری‌تان نامناسب است، می‌توانند آن را بلاک کنند.</string>
     <string name="username_voting">رای‌گیری نام کاربری</string>
     <string name="username_voting_subtitle">به عنوان مالک یک مسترنود، می‌توانید در رای‌گیری شرکت کنید تا پیش از ایجاد نام کاربری توسط کاربر، آن را تائید کنید. </string>
-    <string name="voting_duplicates_only_title">فقط در صورت تکراری بودن رای دهید</string>
-    <string name="voting_duplicates_only_message">می‌توانید همه درخواست‌ها را مشاهده کنید، اما فقط در رای‌گیری تکراری‌ها باید شرکت کنید</string>
     <string name="all">همه</string>
     <string name="n_usernames">%dنام کاربری</string>
     <string name="n_requests">%dدرخواست</string>
@@ -303,10 +300,7 @@
     <string name="request_username_unavailable">نام کاربری موجود نیست یا بلاک شده است</string>
     <string name="request_username_taken">این نام کاربری قبلا گرفته شده است</string>
     <string name="requesting_your_username_title">ایجاد نام کاربری</string>
-    <string name="requesting_your_username_message">درخواست نام کاربری‌تان به شبکه دش ارسال شده است. ممکن است کمی زمان ببرد.</string>
     <string name="requesting_your_username_error_title">درخواست نام کاربری‌تان ناموفق بود</string>
-    <string name="requesting_your_username_error_message">بنا به برخی دلایل، درخواست‌تان رد شد. لطفا دوباره تلاش کنید.</string>
-
     <string name="voting">رای‌گیری:</string>
     <string name="this_username_has_already_been_requested">این نام کاربری قبلا درخواست شده، اما شما نیز می‌توانید آن را  درخواست کنید و تائید آن را به شبکه واگذار کنید.</string>
     <string name="request_details">جزئیات درخواست</string>
@@ -401,5 +395,4 @@
     <string name="request_username_balance_requirement">برا ایجاد نام کاربری باید ۰.۲۵ دش داشته باشید</string>
     <string name="request_username_length_requirement">بین ۳ تا ۲۳ کاراکتر</string>
     <string name="request_username_confirm">قبول می‌کنم</string>
-
-</resources>
+    </resources>

@@ -149,6 +149,11 @@
     <string name="buy_gift_card_with_dash_text">使用Dash购买礼品卡.</string>
     <string name="redeem_gift_card_text">在线上或收银台几秒内兑换您的礼品卡.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Test Dash没有任何实际价值, 但您可以与其他 DashPay 测试用户进行收发.</string>
+    <string name="explore_test_dash_title">我如何获得 Test Dash?</string>
+    <string name="explore_get_test_dash">获得 Test Dash</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">同步中… 结果可能不完整.</string>
     <string name="sync_in_progress_error">同步中... 出现一个错误.</string>

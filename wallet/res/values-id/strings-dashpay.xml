@@ -1,21 +1,27 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources  xmlns:tools="http://schemas.android.com/tools">
 
+    <string name="choose_your_username">Pilih  <b>Nama pengguna
+Dash</b> anda</string>
+    <string name="identity_min_3_chars">Antara 3 dan 23 karakter</string>
     <string name="identity_alphanum_only">Hanya huruf, angka, dan tanda hubung</string>
     <string name="identity_hyphen_rule">Harus dimulai dan diakhiri dengan huruf atau angka</string>
     <string name="identity_username_validating">Memvalidasi nama pengguna…</string>
     <string name="identity_username_available">Nama pengguna tersedia</string>
     <string name="identity_username_taken">Nama pengguna telah diambil</string>
+    <string name="platform_communication_error">Kesalahan komunikasi dengan Platform Dash</string>
     <string name="register">Daftar</string>
 
     <string name="new_account_confirm_button_text">konfirmasi &amp; bayar</string>
     <string name="invitation_confirm_button_text">Memastikan</string>
     <string name="new_account_confirm_accept">Saya terima</string>
     <string name="new_account_confirm_upgrade_fee">Biaya peningkatan</string>
+    <string name="new_account_confirm_message">Anda telah memilih %s sebagai nama pengguna. Perlu dicatat nama pengguna tidak bisa diubah setelah didaftarkan.</string>
     <string name="invitation_confirm_title">Biaya Undangan</string>
     <string name="invitation_confirm_message">Setiap undangan akan didanai dengan jumlah ini sehingga penerima dapat dengan cepat membuat nama pengguna mereka di Jaringan Dash</string>
     <string name="invitation_init_title">Undang</string>
     <string name="invitation_init_header">Ajak teman &amp; keluargamu</string>
+    <string name="invitation_init_message">Bantu teman dan keluarga anda bergabung ke Jaringan Dash. Undang mereka kedunia perbankan sosial.</string>
     <string name="invitation_init_button_text">Buat Undangan baru</string>
     <string name="invitation_notifications_hint">Undang teman dan keluarga Anda ke Jaringan Dash</string>
     <string name="invitation_notifications_hint1">Undang seseorang untuk bergabung ke jaringan Dash</string>
@@ -30,101 +36,221 @@
     <string name="invitation_created_send_invitation_again">Kirim lagi</string>
     <string name="invitation_created_maybe_later">Mungkin nanti</string>
     <string name="invitation_preview_title">Bergabung Sekarang</string>
+    <string name="invitation_preview_message">Anda telah diundang oleh %s. Mulai gunakan mata uang kripto Dash.</string>
     <string name="invitation_preview_close">Tutup</string>
     <string name="invitation_cant_afford_title">Saldo Wallet tidak mencukupi</string>
+    <string name="invitation_cant_afford_message">Anda membutuhkan setidaknya %s Dash untuk membuat undangan</string>
+    <string name="invitation_creating_error_title">Kesalahan saat membuat Undangan</string>
+    <string name="invitation_creating_error_message">Ada masalah saat membuat undangan anda. Silahkan coba lagi.</string>
+    <string name="invitation_creating_error_message_not_synced">Tunggu sinkronisasi selesai lalu coba lagi.</string>
+    <string name="invitation_creating_progress_title">Membuat undangan</string>
+    <string name="invitation_verifying_progress_title">Memverifikasi undangan</string>
+    <string name="invitation_share_message">Undangan hanya dapat digunakan sekali saja. Jangan dibagikan ke grup.</string>
+    <string name="invitation_share_title">Undangan DashPay</string>
     <string name="invitation_already_claimed_title">Undangan sudah diklaim</string>
+    <string name="invitation_already_claimed_message">Undangan anda dari %s telah diklaim</string>
+    <string name="invitation_invalid_invite_title">Undangan Tidak valid</string>
+    <string name="invitation_invalid_invite_message">Undangan anda dari %s tidak valid</string>
     <string name="invitation_username_already_found_title">Nama pengguna sudah ditemukan</string>
     <string name="invitation_username_already_found_message">Anda tidak dapat mengklaim undangan ini karena Anda sudah memiliki nama pengguna Dash</string>
+    <string name="invitation_onboarding_has_began_error_title">Kesalahan Pendaftaran</string>
+    <string name="invitation_onboarding_has_began_error">Pendaftaran sedang dalam proses, silakan klaim undangan Anda setelah Anda membuat dompet.</string>
     <string name="invitation_accept_title_1">Dapatkan Nama Pengguna Anda</string>
     <string name="invitation_accept_title_2">Tambahkan Teman &amp; Keluarga Anda</string>
     <string name="invitation_accept_message_2">Undang keluarga Anda, temukan teman Anda dengan mencari nama pengguna mereka</string>
     <string name="invitation_accept_title_3">Personalisasi</string>
     <string name="invitation_accept_message_3">Unggah gambar Anda, sesuaikan identitas Anda</string>
     <string name="invitation_accept_continue">Teruskan</string>
+    <string name="invitation_contact_request_sent_message">Permintaan kontak telah dikirim ke %s karena mereka mengundang Anda.</string>
+
+    <string name="username_being_created">Nama pengguna anda %s sendag dibuat di jaringan Dash</string>
+    <string name="username_being_requested">Nama pengguna anda %s sedang diminta di jaringan Dash</string>
+
+    <string name="processing_let_me_know">Beritahu saya ketika selesai</string>
+    <string name="processing_home_title">Meningkatkan ke Evolusi</string>
     <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) Memproses Pembayaran</string>
+    <string name="processing_home_step_2">(2/3) Membuat ID</string>
+    <string name="processing_home_step_2_restoring">(2/3) Memulihkan ID</string>
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Mendaftarkan Nama Pengguna</string>
+    <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Meminta Nama Pengguna</string>
+    <string name="processing_home_step_3_restoring">(3/3) Memulihkan Nama Pengguna</string>
+    <string name="processing_done_title">Halo %s,</string>
+    <string name="processing_done_subtitle">Akun anda telah siap</string>
+    <string name="processing_voting_subtitle">Pemungutan suara untuk nama pengguna Anda telah dimulai</string>
     <string name="processing_error_title">Kesalahan Mengupgrade</string>
+    <string name="processing_error_title_from_invite">Kesalahan saat mengupgrade dari undangan</string>
     <string name="processing_error_retry">Coba lagi</string>
+    <string name="processing_username_unavailable_title">Nama pengguna tak tersedia</string>
+    <string name="processing_username_unavailable_subtitle">Silahkan pilih yang lain</string>
+
     <string name="dashpay_upgrade_fee">Biaya peningkatan</string>
+    <string name="dashpay_invite_fee">Biaya Undangan</string>
+    <string name="dashpay_topup_fee">Biaya Isi ulang</string>
     <string name="search_user_find_a_user">Temukan pengguna di Jaringan Dash</string>
     <string name="search_for_a_user">Cari Pengguna di Jaringan Dash</string>
+    <string name="search_user_input_placeholder">Masukkan nama pengguna disini untuk mencari</string>
     <string name="add_new_contact">Tambahkan Kontak Baru</string>
     <string name="send_contact_request">Kirim Permintaan Kontak</string>
     <string name="sending_contact_request">Mengirim Permintaan Kontak</string>
+    <string name="sending_contact_request_short">Mengundang</string>
+    <string name="accepting_contact_request">Menerima permintaan kontak</string>
+    <string name="accepting_contact_request_short">Menerima</string>
+    <string name="search_user_no_results">Tidak ada pengguna yang cocok</string>
+    <string name="search_user_loading">Mencari nama pengguna <b>"%"</b> di jaringan Dash</string>
     <string name="contact_request_pending">Permintaan Kontak Tertunda</string>
     <string name="pay">Bayar</string>
+    <string name="contact_request_received_title">%s telah meminta pertemanan</string>
     <string name="contact_request_accept">Terima</string>
     <string name="contact_request_ignore">Abaikan</string>
+
+    <string name="contacts_no_results">Tidak ada kontak yang cocok</string>
 
     <string name="contacts_title">Kontak</string>
     <string name="contacts_send_to_contact_title">Kirim Ke Kontak</string>
     <string name="contacts_search_for">Cari kontak</string>
     <string name="contact_requests_title">Permintaan Kontak</string>
+    <string name="contacts_add_new_contact">Tambahkan kontak baru</string>
+    <string name="contacts_contact_requests_count">Meminta kontak (%d)</string>
     <string name="contacts_contact_requests">Permintaan Kontak</string>
+    <string name="contacts_contact_requests_view">Lihat semua</string>
     <string name="contacts_my_contacts">Kontak saya</string>
+    <string name="contacts_sort_order">Urutkan dengan:</string>
     <string-array name="contacts_sort">
         <item>Nama</item>
     </string-array>
 
     <string name="notifications_title">Pemberitahuan</string>
+    <string name="notifications_title_with_count">Pemberitahuan (%d)</string>
     <string name="notifications_profile_activity">Aktivitas</string>
     <string name="notifications_new">Baru</string>
     <string name="notifications_earlier">Sebelumnya</string>
     <string name="notifications_none_new">Tidak ada pemberitahuan baru</string>
+    <string name="notifications_contact_has_accepted">%s telah menerima permintaan kontak anda.</string>
+    <string name="notifications_you_have_accepted">Anda telah menerima permintaan kontak dari %s</string>
+    <string name="notifications_you_sent">Anda mengirim permintaan kontal ke %s</string>
+    <string name="notifications_you_received">%s telah minhirim anda permintaan kontak</string>
+
+    <string name="identity_complete_message">Nama pengguna anda %s telah selesai dibuat di jaringan Dash</string>
+    <string name="request_complete_message">Nama pengguna anda %s telah selesai diminta di jaringan Dash</string>
+
+    <string name="scan_to_pay_username_dialog_message">Bukan Nama pengguna Dash atau identitas yang valid\n\n%s</string>
     <string name="send_coins_to_username">Mengirim ke</string>
+    <string name="contact_history_disclaimer">Tambahkan % sebagai kontak Anda untuk <b>Membayar Langsung ke Nama Pengguna</b> dan<b>Menyimpan Riwayat Transaksi Bersama</b></string>
+    <string name="contact_history_disclaimer_pending">Setelah % menerima permintaan Anda, Anda dapat <b>Membayar Langsung ke Nama Pengguna</b></string>
     <string name="stranger_activity_disclaimer_text">Pembayaran yang dilakukan langsung ke alamat tidak akan disimpan dalam aktivitas.</string>
+    <string name="error_loading_identity">Kesalahan memuat identitas</string>
+
     <string name="edit_profile">Sunting profil</string>
     <string name="display_name">Nama Tampilan</string>
     <string name="about_me">Tentang saya</string>
+    <string name="char_count">%1$d/%2$d karakter</string>
     <!-- overrides default TextInputLayout value. Do not change the name -->
     <string name="save">Simpan</string>
+    <string name="edit_profile_take_picture">Ambil foto menggunakan kamera</string>
     <string name="edit_profile_choose_picture">Pilih dari galeri</string>
     <string name="upgrade_to_evolution_title">Gabung DashPay</string>
     <string name="upgrade_to_evolution_message">Buat Nama Pengguna Anda, temukan teman &amp; keluarga dengan nama pengguna mereka dan tambahkan ke kontak Anda</string>
     <string name="image_cropper_title">Pindahkan dan Perbesar foto Anda untuk menemukan yang pas</string>
     <string name="select">Pilih</string>
+    <string name="unable_to_load_image">Tidak dapat memuat gambar.</string>
     <string name="profile_picture_upload_error_title">Kesalahan Unggah</string>
+    <string name="profile_picture_upload_error_message">Tidak dapat mengunggah gambar anda.\nSilahkan coba lagi.</string>
     <string name="profile_picture_upload_try_again">Coba lagi</string>
     <string name="profile_picture_uploading_title">Silahkan tunggu</string>
     <string name="profile_picture_uploading_message">Mengunggah gambar Anda ke jaringan</string>
+    <string name="picture_upload_policy">Kebijakan Pengunggahan Gambar</string>
     <string name="imgur_policy_1">Gambar yang Anda pilih akan diunggah ke Imgur secara anonim.</string>
     <string name="imgur_policy_2">Gambar yang diunggah dapat dilihat secara publik oleh siapa saja.</string>
     <string name="imgur_policy_3">Anda selalu dapat menghapus gambar yang diunggah, selama Anda memiliki akses ke dompet ini.</string>
     <string name="profile_picture_delete_title">Apakah anda yakin\?</string>
+    <string name="profile_picture_delete_message">Gambar ini tidak akan lagi digunakan di jaringan Dash</string>
     <string name="agree">Setuju</string>
     <string name="yes">Ya</string>
     <string name="no">Tidak</string>
 
     <string name="updating_profile">Memperbarui Profil di Jaringan Dash</string>
+    <string name="google_drive_policy_one">Tidak ada informasi akun yang disimpan di Jaringan Dash atau dompet DashPay.</string>
     <string name="google_drive_policy_two">Gambar yang diunggah dapat dilihat secara publik oleh siapa saja.</string>
+    <string name="google_drive_policy_three">Anda selalu dapat menghapus atau mengubah gambar selama Anda memiliki akses ke dompet di perangkat ini.</string>
+
     <string name="upload_image_message">Mengunggah gambar Anda ke jaringan</string>
     <string name="upload_image_please_wait">Silahkan tunggu</string>
     <string name="upload_image_error_message">Tidak dapat mengunggah gambar Anda. Silakan coba lagi.</string>
     <string name="upload_image_upload_error">Kesalahan Unggah</string>
 
+    <string name="edit_profile_google_drive">Google Drive</string>
+    <string name="edit_profile_imgur">Imgur</string>
+    <string name="google_drive_failed_authorization">Otorisasi Google Drive gagal.</string>
+
+
     <string name="error_updating_profile_try_again">Coba lagi</string>
     <string name="error_updating_profile_cancel">Batal</string>
+    <string name="error_updating_profile_msg">Terjadi kesalahan saat memperbarui profil</string>
+    <string name="error_updating_profile_code">Kode: %s</string>
     <string name="edit_profile_public_url">URL publik</string>
     <string name="public_url_enter_url">Tempel URL gambar Anda</string>
+    <string name="public_url_error_message">Tidak dapat mengambil gambar. Harap masukkan URL gambar yang valid.</string>
+    <string name="public_url_message">Anda dapat menentukan URL apa pun yang tersedia untuk umum di internet sehingga pengguna dapat melihatnya di jaringan Dash.</string>
+    <string name="public_url_more_info">Info lebih lanjut</string>
     <string name="public_url_fetching_image">Memuat Gambar</string>
 
+    <string name="gravatar">Gravatar</string>
     <string name="gravatar_email_prompt">Masukkan ID Email Gravatar Anda</string>
+    <string name="gravatar_fetching">Mengambil Gravatar anda</string>
+    <string name="gravatar_email_sample">sample\@email.com</string>
     <string name="gravatar_disclaimer">Email Anda tidak disimpan di dompet DashPay atau di server mana pun. Ini digunakan sekali untuk mendapatkan detail akun Gravatar Anda dan kemudian dibuang.</string>
+    <string name="gravatar_email_error">Tidak dapat mengambil Gravatar Anda. Harap masukkan ID email gravatar yang valid.</string>
+
+    <string name="where_to_store_your_picture">Di mana Anda ingin menyimpan gambar Anda\?</string>
+    <string name="external_storage_disclaimer">Gambar Anda akan selalu berada dalam kendali Anda. Dash tidak menyimpan data apa pun termasuk gambar profil Anda.</string>
+    <string name="select_source_sign_in_required">Diperlukan masuk</string>
+    <string name="select_source_google_drive">Google Drive</string>
+    <string name="select_source_no_sign_in_required">Tidak diperlukan akun</string>
+
+    <string name="join_dashpay_subtitle">Buat Nama Pengguna, tambahkan teman Anda…</string>
+    <string name="join_dashpay_more_subtitle">Buat Nama Pengguna Anda, temukan teman Anda dan tambahkan mereka ke kontak Anda</string>
     <string name="join">Bergabung</string>
 
     <string name="more_suggestions">Lebih Banyak Saran</string>
+    <string name="users_that_matches">Pengguna yang cocok</string>
+    <string name="not_in_your_contacts">yang saat ini tidak ada dalam kontak Anda</string>
+    <string name="no_matching_contacts">Tidak ada pengguna yang cocok di kontak Anda</string>
+    <string name="suggestions_empty_result_part_1">Tidak ada pengguna yang cocok dengan nama tersebut</string>
+    <string name="suggestions_empty_result_part_2">di kontak Anda</string>
     <string name="save_changes">Simpan Perubahan</string>
     <string name="save_profile_reminder_text">Apakah Anda ingin menyimpan perubahan yang Anda buat pada profil Anda\?</string>
     <string name="invitation_notification_text">Undang teman dan keluarga Anda untuk bergabung dengan Dash Network.</string>
+    <string name="dashpay_min_balance_disclaimer">Anda membutuhkan setidaknya <b>%s</b> untuk memulai</string>
+    <string name="dashpay_insuffient_credits">Kredit tidak cukup untuk melakukan tindakan ini.</string>
+
+    <string name="about_developer_mode">Mode pengembang diaktifkan: semua fitur diaktifkan!</string>
+    <string name="about_developer_mode_disabled">Mode pengembang dinonaktifkan.</string>
     <string name="invite_history_create_new_invite">Buat Undangan baru</string>
     <string name="invitations_history_header">Riwayat Undangan</string>
+    <string name="invitations_filter_title">Saring Undangan</string>
+    <string name="invite_history_empty">Tidak ada undangan dibuat</string>
+    <string name="invite_history_empty_claimed">Tidak ada undangan untuk diklaim.</string>
+    <string name="invite_history_empty_pending">Tidak ada undangan tertunda.</string>
     <string name="invitation_details_invite_used_by">Undangan telah digunakan oleh</string>
+    <string name="invitation_details_invite_without_username">Undangan telah diklaim. Pendaftaran nama pengguna tertunda.</string>
     <string-array name="invite_filter">
         <item>Semua</item>
         <item>Tertunda</item>
         <item>Diklaim</item>
     </string-array>
 
+    <!-- Private memo -->
+    <string name="private_memo">Catatan Pribadi</string>
+    <string name="add_note">Tambahkan Catatan</string>
+    <string name="edit_note">Edit Catatan</string>
+    <string name="note">Catatan</string>
+
+    <string name="select_privacy_preferences">Pilih preferensi privasi nama pengguna Anda</string>
+    <string name="please_note_cant_change_this_later">Harap dicatat bahwa Anda tidak akan dapat mengubahnya nanti</string>
+    <string name="Intermediate_level_WIFI_Warning">Tingkat privasi menengah memerlukan koneksi internet yang andal</string>
+    <string name="Advanced_level_WIFI_Warning">Tingkat privasi tingkat lanjut memerlukan koneksi internet yang andal</string>
+    <string name="privcay_level_WIFI_warning_desc">Disarankan untuk berada di jaringan Wi-Fi untuk menghindari kehilangan dana</string>
+    <string name="continue_anyway">Lanjutkan</string>
     <string name="welcome_to_dash_pay">Selamat Datang ke Dash Pay</string>
     <string name="pay_to_usernames">Bayar ke nama pengguna. Tidak ada lagi alamat alfanumerik.</string>
     <string name="create_a_username">Buat Nama Pengguna</string>
@@ -134,17 +260,27 @@
     <string name="upload_your_picture">Unggah gambar, personalisasi identitas anda</string>
     <string name="in_case_lose_your_passphrase">Jika Anda kehilangan frasa sandi, Anda akan kehilangan hak atas nama pengguna yang Anda minta.</string>
     <string name="keep_your_passphrase_safe">Simpan frasa sandi Anda dengan aman</string>
+    <string name="pay_now">Bayar sekarang dan jika tidak disetujui, Anda dapat membuat nama lain tanpa membayar lagi</string>
     <string name="case_your_request_is_not_approved">Jika permintaan Anda tidak disetujui</string>
+    <string name="voting_requirement_subtitle">Nama pengguna apa pun yang memiliki angka 2–9 atau lebih dari 20 karakter akan disetujui secara otomatis</string>
+    <string name="voting_requirement_title">Pemungutan suara hanya diperlukan dalam beberapa kasus</string>
     <string name="dash_network_must_vote_to_approve">Jaringan Dash harus memilih untuk menyetujui nama pengguna Anda sebelum dibuat.</string>
     <string name="what_is_username_voting">Apa itu voting nama pengguna\?</string>
+    <string name="usernames_blocked_title">Beberapa nama pengguna dapat diblokir</string>
+    <string name="usernames_blocked_subtitle">Jika cukup banyak jaringan yang menentukan bahwa nama pengguna tidak pantas, mereka dapat memblokirnya</string>
+    <string name="username_voting">Voting nama pengguna</string>
     <string name="username_voting_subtitle">Sebagai pemilik masternode, Anda dapat memilih untuk menyetujui nama pengguna yang diminta sebelum pengguna dapat membuatnya.</string>
-    <string name="voting_duplicates_only_title">Pilih hanya pada duplikat</string>
-    <string name="voting_duplicates_only_message">Anda dapat meninjau semua permintaan tetapi Anda hanya perlu memilih duplikat</string>
     <string name="all">Semua</string>
+    <string name="n_usernames">%d nama pengguna</string>
+    <string name="n_requests">%d permintaan</string>
     <string name="search_by_username">Cari dengan nama pengguna</string>
     <string name="type">Tipe</string>
     <string name="only_duplicates">Hanya duplikat</string>
     <string name="only_links">Hanya permintaan dengan tautan</string>
+    <string name="only_links_short">dengan tautan</string>
+    <string name="date">Tanggal: %s</string>
+    <string name="votes">Suara: %s</string>
+
     <string-array name="usernames_sort_by_options">
         <item>Baru ke Lama</item>
         <item>Lama ke Baru</item>
@@ -158,41 +294,75 @@
         <item>Saya tidak menyetujui</item>
     </string-array>
 
+    <string name="request_your_username">Buat Nama Pengguna anda</string>
+    <string name="request_your_hint">Mohon diperhatikan bahwa Anda tidak akan dapat mengubahnya di masa mendatang</string>
     <string name="request_username">Minta Nama Pengguna</string>
+    <string name="request_voting_range">Jaringan Dash akan memberikan suara pada nama pengguna ini. Kami akan memberitahukan Anda hasilnya pada %s.</string>
+    <string name="request_username_available">Nama pengguna tersedia</string>
+    <string name="request_username_unavailable">Nama pengguna tidak tersedia atau diblokir</string>
+    <string name="request_username_taken">Nama pengguna telah diambil</string>
+    <string name="requesting_your_username_title">Membuat Nama Pengguna anda</string>
+    <string name="requesting_your_username_error_title">Permintaan nama pengguna Anda gagal</string>
     <string name="voting">Voting:</string>
     <string name="this_username_has_already_been_requested">Nama pengguna ini telah diminta, namun Anda juga dapat memintanya dan membiarkan jaringan memberikan suara untuk memutuskan apakah Anda dapat memilikinya</string>
     <string name="request_details">Detail Permintaan</string>
+    <string name="request_details_subtitle">Tinjau postingan di bawah untuk memverifikasi kepemilikan nama pengguna ini</string>
     <string name="vote_to_approve">Pilih untuk Setujui</string>
     <string name="identity">Identitas</string>
+    <string name="results">Hasil</string>
     <string name="link">Tautan</string>
+    <string name="link_not_provided">Tidak disediakan</string>
     <string name="cancel_approval">Batalkan Persetujuan</string>
     <string name="verify_your_identity">Verifikasi identitas Anda untuk memperbesar peluang mendapatkan nama pengguna yamg diminta</string>
     <string name="if_somebody">Jika orang lain meminta nama pengguna yang sama dengan Anda, kami akan membiarkan jaringan memutuskan siapa yang akan memberikan nama pengguna tersebut</string>
+    <string name="the_link_will_be_visible">Tautan yang Anda kirimkan hanya akan terlihat oleh pemilik jaringan</string>
     <string name="verify_your_identity_voting">Verifikasi identitas Anda</string>
+    <string name="copy_the_text">Salin teks</string>
+    <string name="please_vote_to_approve">Silakan pilih untuk menyetujui nama pengguna Dash yang saya minta - %s</string>
     <string name="prove_your_identity">Buktikan identitas anda</string>
+    <string name="make_a_post_with_the_text">Buat postingan dengan teks di atas di media sosial atau platform perpesanan terkenal untuk memverifikasi bahwa Anda adalah pemilik asli nama pengguna yang diminta dan tempel tautan di bawah</string>
     <string name="paste_the_link">Tempel tautannya</string>
     <string name="voting_key_title">Masukkan kunci pemungutan suara Anda</string>
     <string name="voting_key_hint">Kunci Voting Masternode</string>
     <string name="voting_key_input_error">Anda telah memasukkan kunci yang tidak valid</string>
+    <string name="voting_key_add">Tambahkan kunci pemungutan suara Anda</string>
+    <string name="voting_key_add_subtitle">Alamat IP di bawah ini terkait dengan dompet ini</string>
     <string name="masternode_ip">Alamat IP masternode</string>
+    <string name="multiple_votes_cast">%d suara akan diberikan karena Anda memiliki beberapa kunci pemungutan suara yang disimpan di dompet</string>
+    <string name="add_masternode_key">Tambahkan Kunci Pemungutan Suara Masternode</string>
     <string name="vote_submitted">Pilihan anda telah diserahkan</string>
     <string name="vote_cancelled">Pilihan anda telah dibatalkan</string>
     <string name="quick_vote">Voting Cepat</string>
+    <string name="quick_vote_subtitle">Dengan mengetuk tombol \"Pilih Semua\", Anda akan secara otomatis memilih semua nama pengguna yang difilter (%d) yang dikirimkan terlebih dahulu</string>
     <string name="vote_for_all">Pilih untuk semua</string>
+    <string name="voting_period_active">Username Masa Voting Aktif</string>
     <string name="there_was_a_network_error">Ada kendala jaringan, anda dapat mencoba kembali tanpa biaya tambahan</string>
+    <string name="requested_username_has_been">Nama pengguna telah diminta.</string>
+    <string name="requested_voting_duration">Hasil pada %s.</string>
     <string name="cancel_request">Batalkan Permintaan</string>
     <string name="after_the_voting">Setelah voting berakhir kami akan memberitahu anda hasilnya</string>
     <string name="none">Tidak ada</string>
+    <string name="verify_now">Periksa Sekarang</string>
     <string name="if_you_tap_cancel">Jika Anda mengetuk “Batalkan Permintaan”, Anda masih memiliki kesempatan untuk meminta nama pengguna lain tanpa membayar lagi</string>
     <string name="do_you_really_want_to_cancel">Apakah Anda benar-benar ingin membatalkan permintaan nama pengguna\?</string>
     <string name="if_you_tap_cancel_request">Jika Anda mengetuk “Batalkan Permintaan”, Anda masih memiliki kesempatan untuk meminta nama pengguna lain tanpa membayar lagi</string>
+    <string name="cant_open">Tidak dapat membuka</string>
+    <string name="invalid_link">Tautan tidak valid</string>
+    <string name="welcome_request_username_min_balance_disclaimer_all">Anda mempunyai %s Dash. Beberapa nama pengguna membutuhkan biaya sampai dengan %s Dash.</string>
+    <string name="welcome_request_username_min_balance_disclaimer_noncontested">Anda harus memiliki lebih dari %s Dash untuk membuat nama pengguna</string>
+    <string name="request_username_min_balance_disclaimer">Untuk meminta nama pengguna di jaringan Dash, anda harus memiliki lebih dari %s Dash</string>
+
     <!-- CoinJoin -->
     <string name="coinjoin">CoinJoin</string>
+    <string name="turned_off">Mati</string>
     <string name="coinjoin_info_subtitle">Mencampur koin Dash Anda akan membuat transaksi Anda lebih pribadi</string>
     <string name="coinjoin_description_1">Anda hanya dapat menggunakan Dash yang sudah tercampur saat ini diaktifkan. Ini dapat dimatikan kapan saja.</string>
     <string name="coinjoin_description_2">Dash yang baru diterima akan otomatis tercampur saat dompet dibuka</string>
     <string name="coinjoin_description_3">Mengaktifkan fitur ini akan menghasilkan penggunaan baterai yang lebih tinggi</string>
     <string name="coinjoin_mixing_level_title">Pilih level mixing</string>
+    <string name="coinjoin_mixing_level_subtitle">Anda dapat mengubah atau menghentikan level pencampuran kapan saja</string>
+    <string name="coinjoin_mixing_transactions">Mencampur Transaksi</string>
+    <string name="coinjoin_transaction_group">Ini adalah pencampuran transaksi terkait.</string>
     <string name="intermediate">Menengah</string>
     <string name="advanced">Lanjutan</string>
     <string name="intermediate_level_card_decs">Pengguna tingkat lanjut yang memiliki tingkat keahlian teknis sangat tinggi dapat mengetahui riwayat transaksi Anda</string>
@@ -201,8 +371,30 @@
     <string name="coinjoin_advanced_time">Beberapa jam</string>
     <string name="coinjoin_start">Mulai Mixing</string>
     <string name="coinjoin_stop">Hentikan Mixing</string>
+    <string name="coinjoin_mixing">Pencampuran</string>
+    <string name="coinjoin_paused">Pencampuran Dijeda</string>
+    <string name="coinjoin_not_started">Tidak Dimulai</string>
+    <string name="coinjoin_progress">%s (%d%%) %s dari %s</string>
+    <string name="coinjoin_progress_balance">%1$s dari %2$s</string>
+    <string name="coinjoin_progress_finished">Tercampur Sepenuhnya</string>
     <string name="coinjoin_change_level_confirmation">Apakah Anda yakin ingin mengubah tingkat privasi\?</string>
     <string name="coinjoin_stop_mixing_title">Apakah Anda yakin ingin berhenti mencampur\?</string>
+    <string name="coinjoin_stop_mixing_message">Dana apa pun yang sudah tercampur akan digabungkan dengan dana Anda yang belum tercampur</string>
+    <string name="coinjoin_mixed_balance">Saldo campuran:</string>
+
+    <!-- credit balance messages / buttons -->
+    <string name="credit_balance_empty_warning_title">Saldo kredit Anda rendah</string>
+    <string name="credit_balance_low_warning_title">Saldo kredit Anda telah habis sepenuhnya</string>
+    <string name="credit_balance_empty_warning_message">Anda dapat terus menggunakan DashPay untuk pembayaran tetapi Anda tidak dapat memperbarui profil Anda atau menambahkan lebih banyak kontak sampai Anda mengisi saldo kredit Anda</string>
+    <string name="credit_balance_low_warning_message">Isi ulang kredit Anda untuk terus melakukan perubahan pada profil Anda dan menambahkan kontak</string>
     <string name="credit_balance_button_maybe_later">Mungkin nanti</string>
+    <string name="credit_balance_button_buy">Beli Kredit</string>
+    <string name="credit_balance_insufficient_error_message">Anda tidak memiliki cukup dana untuk membeli kredit</string>
+    <string name="buy_credits_estimated_items">%s - %d kontak / %d profil diperbaharui</string>
+
+    <string name="request_username_username_voting_message">+ apa itu voting nama pengguna\?</string>
     <string name="request_username_character_requirement">Hanya huruf, angka, dan tanda hubung</string>
+    <string name="request_username_balance_requirement">Anda perlu memiliki 0.25 DASH untuk membuat nama pengguna ini</string>
+    <string name="request_username_length_requirement">Antara 3 dan 23 karakter</string>
+    <string name="request_username_confirm">Saya terima</string>
     </resources>

@@ -10,7 +10,6 @@
     <string name="blockchain_state_progress_days">%1$s، %2$d روز گذشته</string>
     <string name="blockchain_state_progress_weeks">%1$s، %2$d هفته گذشته</string>
     <string name="blockchain_state_progress_months">%1$s، %2$d ماه گذشته</string>
-    <string name="blockchain_state_progress_downloading">هماهنگ‌سازی با شبکه</string>
     <string name="blockchain_state_progress_stalled">توقف هماهنگ‌سازی</string>
     <string name="blockchain_state_progress_problem_storage">هماهنگ‌سازی: مشکل در فضای ذخیره</string>
     <string name="blockchain_state_progress_problem_network">هماهنگ‌سازی: مشکل در شبکه</string>
@@ -410,4 +409,5 @@
 پیشنهاد می‌کنیم اجازه دهید این اپلیکیشن همچنان با بلاکچین هماهنگ باشد، حتی در مواقعی که در پس‌زمینه فعال است. 
 نگران نباشید! ما همیشه به مقدار مصرف باتری شما اهمیت می‌دهیم. </string>
     <string name="battery_optimization_dialog_button_change">باز کردن تنظیمات</string>
+
 </resources>

@@ -149,6 +149,11 @@
     <string name="buy_gift_card_with_dash_text">Beli kartu hadiah dengan Dash.</string>
     <string name="redeem_gift_card_text">Tukarkan kartu hadiah Anda secara online dalam hitungan detik atau di kasir.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Test Dash tidak memiliki nilai apa pun di dunia nyata tetapi Anda dapat mengirim dan menerimanya dengan pengguna DashPay Alpha lainnya.</string>
+    <string name="explore_test_dash_title">Bagaimana saya mendapatkan tes Dash?</string>
+    <string name="explore_get_test_dash">Dapatkan Tes Dash</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">Sinkronisasi sedang berlangsung... Hasil mungkin tidak lengkap.</string>
     <string name="sync_in_progress_error">Sinkronisasi sedang berlangsung... Terjadi kesalahan.</string>

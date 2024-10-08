@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">CrowdNode ใช้ที่อยู่นี้เป็นรหัสบัญชีของคุณ คุณจะสูญเสียการเข้าถึงเงินทุนของคุณภายในกระเป๋าเงินนี้และบัญชี CrowdNode ของคุณหากคุณสูญเสียวลีรหัสผ่านที่เกี่ยวข้องกับที่อยู่นี้</string>
     <string name="crowdnode_new_account_warning_2">Dash จำนวนน้อยมากจะถูกส่งไปและกลับจาก CrowdNode เพื่อตรวจสอบว่าคุณเป็นเจ้าของที่อยู่กระเป๋าเงินนี้</string>
     <string name="crowdnode_link_account_description">การถ่ายโอนทั้งหมดไปและกลับจาก CrowdNode จากอุปกรณ์นี้จะดำเนินการด้วยที่อยู่ DASH ด้านล่างจากอุปกรณ์นี้</string>
-    <string name="dash_address">ที่อยู่ Dash </string>
     <string name="primary_dash_address">ที่อยู่หลัก Dash </string>
     <string name="crowdnode_secure_wallet">สำรองข้อมูลรหัสผ่านของคุณเพื่อสร้างบัญชี CrowdNode</string>
     <string name="crowdnode_secure_wallet_explainer">หากคุณสูญเสียวลีรหัสผ่านสำหรับกระเป๋าเงินนี้และสูญเสียอุปกรณ์นี้หรือถอนการติดตั้งกระเป๋าเงิน Dash คุณจะสูญเสียการเข้าถึงเงินทุนของคุณใน CrowdNode และเงินทุนภายในกระเป๋าเงินนี้</string>

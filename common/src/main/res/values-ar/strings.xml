@@ -21,8 +21,8 @@
     <string name="transfer_dash">تحويل داش</string>
     <string name="login_error_title">غير قادر على تسجيل الدخول إلى حسابك %s</string>
     <string name="login_error_message">حدث خطأ أثناء تسجيل الدخول إلى حسابك %s.</string>
+    <string name="dash_address">عنوان داش</string>
     <string name="balance">الرصيد:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">جيرنزي جنيه</string>
     <!-- Local Currency List: JEP -->
@@ -55,11 +55,11 @@
     <string name="button_understand">أفهم</string>
     <string name="button_okay">اوك</string>
     <string name="button_share">مشاركة</string>
+    <string name="button_skip">تخطي</string>
     <string name="share_address">شارك العنوان</string>
     <string name="verify">تحقق</string>
     <string name="receive_enter_amount_button">حدد المبلغ</string>
     <string name="account_create">إنشاء حساب</string>
-
     <!-- Design system UI elements -->
     <string name="search_hint">بحث</string>
     <string name="permission_allow">السماح</string>
@@ -101,4 +101,4 @@
 
     <string name="chain_syncing">السلسلة قيد المزامنة ...</string>
 
-</resources>
+    </resources>

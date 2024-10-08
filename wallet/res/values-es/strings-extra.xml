@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Crear una Nueva Billetera</string>
     <string name="onboarding_recover_wallet">Restaurar billetera desde la frase de recuperación</string>
@@ -25,13 +25,15 @@
     <string name="dialog_confirm_secured_by">Protegido por</string>
     <string name="dialog_confirm_fee">Comisión de red</string>
     <string name="dialog_confirm_total">Total</string>
-
+    <string name="shortcut_action_join_dashpay">Unirse a DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Respaldo</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Explorar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Enviar</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_contact">Enviar a contacto</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Comprar y Vender</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -75,6 +77,9 @@
     <string name="payments_title">Pagos</string>
     <string name="payments_tab_pay_label">Enviar</string>
     <string name="payments_tab_receive_label">Recibir</string>
+    <string name="payments_pay_to_contact_title">Enviar a un contacto</string>
+    <string name="payments_pay_to_contact_sub_title">Una persona en tus contactos</string>
+    <string name="payments_pay_to_contact_button">Seleccionar</string>
     <string name="payments_pay_by_qr_title">Enviar por</string>
     <string name="payments_pay_by_qr_sub_title">Escaneando código QR</string>
     <string name="payments_pay_to_clipboard_title">Enviar a dirección copiada</string>
@@ -186,7 +191,6 @@
     <string name="notification_settings_title">Notificaciones</string>
     <string name="notification_explainer_title">La billetera de Dash desea enviarte notificaciones</string>
     <string name="notification_explainer_message">Las notificaciones pueden incluir alertas, sonidos e íconos distintivos. Estos se pueden configurar en la configuración del teléfono.</string>
-
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Usa tu huella para desbloquear.</string>
@@ -242,6 +246,7 @@
     <string name="transaction_details_sent_from">Enviado de</string>
     <string name="transaction_details_sent_to">Enviado a</string>
     <string name="transaction_details_received_at">Recibido en</string>
+    <string name="transaction_details_received_from">Recibido de</string>
     <string name="transaction_details_moved_from">Movido de</string>
     <string name="transaction_details_moved_internally_to">Movido internamente para</string>
     <string name="transaction_failed_details">Transferencia fallida</string>
@@ -255,6 +260,7 @@
     <string name="authenticate_switch_to_fingerprint">Usar huella dactilar</string>
     <string name="authenticate_switch_to_pin">Usar PIN</string>
 
+    <string name="menu_invite_title">Invitar</string>
     <string name="menu_buy_and_sell_title">Comprar &amp; Vender Dash</string>
     <string name="menu_buy_and_sell_subtitle">Conectar con exchanges de terceros</string>
     <string name="liquid_unavailable">La integración líquida con la billetera de Dash ya no está disponible</string>
@@ -334,6 +340,12 @@
     <string name="welcome_screen_title_3">Más Control</string>
     <string name="welcome_screen_subtitle_3">Ten control completo y configura tu billetera de acuerdo a tus necesidades</string>
 
+    <string-array name="history_filter">
+        <item>Todos</item>
+        <item>Recibido</item>
+        <item>Enviado</item>
+    </string-array>
+
     <string name="sync_status_wait">Por favor espera hasta que se complete la sincronización</string>
     <string name="sync_status_syncing_sub_title">con la blockchain de Dash</string>
     <string name="sync_status_unable_to_connect">No fue posible conectarse</string>
@@ -358,7 +370,18 @@
     <string name="import_image_no_private_key_copied">No se copió la clave privada</string>
     <string name="import_image_import_valid_private_key">Copie una clave privada válida para importar Dash desde ella</string>
     <string name="import_image_invalid_private">Clave Privada Inválida</string>
+    <string name="okay">¡Listo!</string>
 
+    <string name="onboard_from_invite_subtitle">Bienvenido a DashPay</string>
+    <string name="onboard_from_invite_step1_title">Elige tu nombre de usuario</string>
+    <string name="onboard_from_invite_step2_title">Establece tu PIN</string>
+    <string name="onboard_from_invite_step3_title">Asegura tu billetera</string>
+
+    <string name="restore_wallet_please_wait">Por favor espera</string>
+    <string name="network_unavailable">Red no disponible</string>
+    <string name="network_error_contact_details">No se pueden obtener los datos de contacto</string>
+    <string name="network_error_user_search">No se puede buscar un usuario</string>
+    <string name="network_error_contact_suggestions">No se pueden proporcionar sugerencias</string>
     <string name="today">Hoy</string>
     <string name="yesterday">Ayer</string>
 
@@ -383,6 +406,10 @@
     <string name="launch_reset_wallet_extra_message">Haz una copia de seguridad de tu frase de recuperación</string>
     <string name="start_reset_wallet_title">Puedes perder %s</string>
     <string name="reset_wallet_text">Reiniciar billetera</string>
+
+
+
+    <!-- Tax category -->
     <string name="reclassify_transactions_title">Reclasifica tus transacciones</string>
     <string name="reclassify_transactions_title_message">Estas clasificaciones se reflejarán en la exportación CSV que se pueden usar para importar a los servicios de informes de impuestos.</string>
     <string name="reclassify_transactions_question">¿Dónde puedo cambiar la categoría fiscal?</string>
@@ -413,7 +440,6 @@
     <string name="masternode_key_not_used">No usada</string>
     <string name="masternode_key_revoked">Revocado</string>
     <string name="masternode_key_private_public_base64">Llaves privadas / públicas (base64)</string>
-
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Los precios no fueron encontrados. Los valores mostrados en FIAT pueden estar equivocados.</string>
     <string name="stale_exchange_rates_stale">Los precios mostrados tienen al menos 30 minutos de antiguedad. Los valores en FIAT pueden ser incorrectos.</string>

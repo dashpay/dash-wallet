@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d дней отставания</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d недель отставания</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d месяцев отставания</string>
-    <string name="blockchain_state_progress_downloading">Синхронизация с сетью</string>
     <string name="blockchain_state_progress_stalled">Синхронизация зависла</string>
     <string name="blockchain_state_progress_problem_storage">Синхронизация: проблема со свободным местом</string>
     <string name="blockchain_state_progress_problem_network">Синхронизация: проблема с сетью</string>
@@ -404,4 +403,5 @@
     <string name="battery_optimization_dialog_unrestricted_title">Хотите получать переводы в фоновом режиме?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Это приложение настроено на продолжение работы спустя некоторое время после сворачивания.\n\nМы рекомендуем разрешить приложению всегда проверять обновления блокчейна, даже в при работе в фоновом режиме.\n\nНе волнуйтесь, мы всегда помним о расходе батареи. </string>
     <string name="battery_optimization_dialog_button_change">Открыть настройки</string>
+
 </resources>

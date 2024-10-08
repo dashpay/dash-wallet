@@ -21,8 +21,9 @@
     <string name="transfer_dash">轉賬達世幣</string>
     <string name="login_error_title">無法登錄您的 %s 帳戶</string>
     <string name="login_error_message">登錄您的 %s 帳戶時出錯。</string>
+    <string name="dash_address">達世幣位址</string>
+    <string name="username">用戶名稱</string>
     <string name="balance">結餘:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -55,11 +56,11 @@
     <string name="button_understand">我明白</string>
     <string name="button_okay">好的</string>
     <string name="button_share">分享</string>
+    <string name="button_skip">略過</string>
     <string name="share_address">分享位址</string>
     <string name="verify">檢查</string>
     <string name="receive_enter_amount_button">指定金額</string>
     <string name="account_create">創建帳號</string>
-
     <!-- Design system UI elements -->
     <string name="search_hint">搜索</string>
     <string name="permission_allow">允許</string>
@@ -101,4 +102,4 @@
 
     <string name="chain_syncing">區塊鏈正在同步…</string>
 
-</resources>
+    </resources>

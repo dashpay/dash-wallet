@@ -21,8 +21,9 @@
     <string name="transfer_dash">Transfer Dash</string>
     <string name="login_error_title">Tidak dapat masuk ke akun  %s Anda</string>
     <string name="login_error_message">Terjadi kesalahan saat masuk ke akun %s Anda.</string>
+    <string name="dash_address">Alamat Dash</string>
+    <string name="username">Nama pengguna</string>
     <string name="balance">Saldo:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Pound Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -55,11 +56,11 @@
     <string name="button_understand">Saya Mengerti</string>
     <string name="button_okay">Oke</string>
     <string name="button_share">Berbagi</string>
+    <string name="button_skip">Lewati</string>
     <string name="share_address">Bagikan Alamat</string>
     <string name="verify">Memeriksa</string>
     <string name="receive_enter_amount_button">Tentukan Jumlah</string>
     <string name="account_create">Buat Akun</string>
-
     <!-- Design system UI elements -->
     <string name="search_hint">Cari</string>
     <string name="permission_allow">Izinkan</string>
@@ -101,4 +102,4 @@
 
     <string name="chain_syncing">Rantai sedang menyinkronkan…</string>
 
-</resources>
+    </resources>

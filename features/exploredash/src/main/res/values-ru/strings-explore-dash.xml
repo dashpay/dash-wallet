@@ -161,6 +161,11 @@
     <string name="buy_gift_card_with_dash_text">Купите подарочную карту с помощью Dash.</string>
     <string name="redeem_gift_card_text">Используйте подарочную карту сразу же онлайн или в кассе.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Тестовый Dash не обладает никакой ценностью в реальном мире, но вы можете обмениваться этими монетами с другими пользователями DashPay Alpha</string>
+    <string name="explore_test_dash_title">Как получить тестовый Dash?</string>
+    <string name="explore_get_test_dash">Получить тестовый Dash</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">Синхронизация… Результаты могут быть неполными.</string>
     <string name="sync_in_progress_error">Синхронизация… Произошла ошибка.</string>

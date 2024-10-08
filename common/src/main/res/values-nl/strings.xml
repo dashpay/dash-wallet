@@ -21,8 +21,9 @@
     <string name="transfer_dash">Dash overzetten</string>
     <string name="login_error_title">Kan niet inloggen op je %s account</string>
     <string name="login_error_message">Er is een fout opgetreden tijdens het inloggen op je %s account.</string>
+    <string name="dash_address">Dashadres</string>
+    <string name="username">Gebruikersnaam</string>
     <string name="balance">Saldo:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -55,11 +56,11 @@
     <string name="button_understand">ik snap het</string>
     <string name="button_okay">Oké</string>
     <string name="button_share">Deel</string>
+    <string name="button_skip">Overslaan</string>
     <string name="share_address">Deel adres</string>
     <string name="verify">Verifiëren</string>
     <string name="receive_enter_amount_button">Specificeer bedrag</string>
     <string name="account_create">Maak account aan</string>
-
     <!-- Design system UI elements -->
     <string name="search_hint">Zoek</string>
     <string name="permission_allow">Sta toe</string>
@@ -101,4 +102,4 @@
 
     <string name="chain_syncing">De blockchain wordt gesynchroniseerd...</string>
 
-</resources>
+    </resources>
