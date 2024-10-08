@@ -58,8 +58,10 @@ import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.more.MoreFragment
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.ComposeHostFrameLayout
 import org.dash.wallet.common.ui.components.Toast
@@ -143,7 +145,7 @@ object WalletActivityExt {
 
     fun MainActivity.checkTimeSkew(viewModel: MainViewModel, force: Boolean = false) {
         lifecycleScope.launch {
-            val (isTimeSkewed, timeSkew) = viewModel.getDeviceTimeSkew(force)
+            val (isTimeSkewed, timeSkew) = withContext(Dispatchers.IO) { viewModel.getDeviceTimeSkew(force) }
             val coinJoinOn = viewModel.getCoinJoinMode() != CoinJoinMode.NONE
             if (isTimeSkewed && (!timeSkewDialogShown || force)) {
                 timeSkewDialogShown = true
