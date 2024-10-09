@@ -703,12 +703,19 @@ class MainViewModel @Inject constructor(
 
     private fun combineLatestData(): Boolean {
         return if (!Constants.SUPPORTS_PLATFORM) {
+            log.info("platform is not supported")
             false
         } else {
             val isPlatformAvailable = isPlatformAvailable.value
             val isSynced = _isBlockchainSynced.value ?: false
             val noIdentityCreatedOrInProgress =
                 (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
+            log.info(
+                "platform available: {}; isSynced: {}: no identity creation is progress: {}",
+                isPlatformAvailable,
+                isSynced,
+                noIdentityCreatedOrInProgress
+            )
             return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress
         }
     }

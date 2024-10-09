@@ -34,36 +34,33 @@
                 android:paddingHorizontal="15dp"
                 android:paddingBottom="10dp">
 
-                <ImageView
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
-                    android:padding="9dp"
-                    android:src="@drawable/ic_payments_send_to_contact"
-                    android:background="@drawable/rounded_background"
-                    android:theme="@style/EncircledIconBlueTheme"
-                    app:tint="@android:color/white"
-                    tools:background="@color/dash_blue" />
-
-                <TextView
-                    style="@style/Body2.Medium"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="15dp"
-                    android:text="@string/payments_pay_to_contact_title"
-                    android:layout_gravity="center_vertical" />
+                    android:orientation="horizontal" >
+                    <ImageView
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:padding="9dp"
+                        android:src="@drawable/ic_payments_send_to_contact"
+                        android:background="@drawable/rounded_background"
+                        android:theme="@style/EncircledIconBlueTheme"
+                        app:tint="@android:color/white"
+                        tools:background="@color/dash_blue" />
 
-                <FrameLayout
-                    android:id="@+id/frequent_contacts_rv_top_line"
-                    android:layout_width="match_parent"
-                    android:layout_height="1px"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"
-                    android:background="@color/dash_gray" />
+                    <TextView
+                        style="@style/Body2.Medium"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="15dp"
+                        android:text="@string/payments_pay_to_contact_title"
+                        android:layout_gravity="center_vertical" />
+                </LinearLayout>
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/frequent_contacts_rv"
-                    android:layout_width="match_parent"
-                    android:layout_height="84dp" />
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/frequent_contacts_rv"
+                        android:layout_width="match_parent"
+                        android:layout_height="84dp" />
             </LinearLayout>
 
             <LinearLayout

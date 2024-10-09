@@ -202,7 +202,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
             if (!it.restoring && it.creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal &&
-                it.creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal //&&
+                it.creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal
             ) {
                 val username = it.username
 
@@ -210,7 +210,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 binding.requestedUsernameContainer.visibility = View.VISIBLE
                 if (it.creationError) {
                     binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_error_title)
-                    binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_error_message, mainActivityViewModel.getRequestedUsername())
+                    binding.requestedUsernameSubtitle.text = getString(R.string.requesting_your_username_error_message, username)
+                    binding.requestedUsernameSubtitleTwo.isVisible = false
                     binding.retryRequestButton.isVisible = true
                     binding.retryRequestButton.text = getString(R.string.retry)
                     binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay_red)
@@ -218,6 +219,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                     if (it.usernameRequested == UsernameRequestStatus.NONE) {
                         binding.requestedUsernameTitle.text = getString(R.string.requesting_your_username_title)
                         binding.requestedUsernameSubtitle.text = getString(R.string.creating_your_username_message, username)
+                        binding.requestedUsernameSubtitleTwo.isVisible = false
                         binding.retryRequestButton.isVisible = false
                         binding.requestedUsernameArrow.isVisible = false
                         binding.requestedUsernameContainer.isEnabled = false
@@ -250,8 +252,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                     }
                     UsernameRequestStatus.LOCKED -> {
                         binding.requestedUsernameTitle.text = getString(R.string.request_username_blocked)
-                        binding.requestedUsernameSubtitleTwo.text =
+                        binding.requestedUsernameSubtitle.text =
                             getString(R.string.request_username_blocked_message, mainActivityViewModel.getRequestedUsername())
+                        binding.requestedUsernameSubtitleTwo.isVisible = false
                         binding.requestedUsernameSubtitle.maxLines = 4
                         binding.retryRequestButton.isVisible = true
                         binding.retryRequestButton.text = getString(R.string.try_again)
@@ -377,7 +380,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         // show the invite section only after the profile section is visible
         // to avoid flickering
         if (binding.editUpdateSwitcher.isVisible) {
-            binding.invite.isVisible = showInviteSection
+            //TODO: remove && Constants.SUPPORTS_INVITES when INVITES are supported
+            binding.invite.isVisible = showInviteSection && Constants.SUPPORTS_INVITES
         }
     }
 
@@ -401,7 +405,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             }
             // if the invite section is not visible, show/hide it
             if (!binding.invite.isVisible) {
-                binding.invite.isVisible = showInviteSection
+                //TODO: remove && Constants.SUPPORTS_INVITES when INVITES are supported
+                binding.invite.isVisible = showInviteSection && Constants.SUPPORTS_INVITES
             }
         } else {
             binding.editUpdateSwitcher.isVisible = false
@@ -411,10 +416,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
     override fun onResume() {
         super.onResume()
-        // Developer Mode Feature
-        binding.invite.isVisible = showInviteSection
-        lifecycleScope.launchWhenResumed {
-
-        }
+        //TODO: remove && Constants.SUPPORTS_INVITES when INVITES are supported
+        binding.invite.isVisible = showInviteSection && Constants.SUPPORTS_INVITES
     }
 }

@@ -70,7 +70,9 @@ dependencies {
     implementation 'com.tbuonomo:dotsindicator:4.2'
     implementation 'com.github.amulyakhare:textdrawable:558677ea31'
 
+    // google play services
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
+    implementation 'com.google.android.gms:play-services-base:18.5.0'
 
     // Network
     implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
@@ -205,8 +207,8 @@ android {
         compileSdk 34
         minSdkVersion 24
         targetSdkVersion 34
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 103010
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "10.3.1"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 110043
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.0-beta"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true

@@ -420,6 +420,16 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice" /-->
 
+        <!-- Prompt Google Play services to install the backported photo picker module -->
+        <!-- required to support Android 7 to 12 -->
+        <service android:name="com.google.android.gms.metadata.ModuleDependencies" android:enabled="false" android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.android.gms.metadata.MODULE_DEPENDENCIES" />
+            </intent-filter>
+
+            <meta-data android:name="photopicker_activity:0:required" android:value="" />
+        </service>
+
         <receiver
             android:name="de.schildbach.wallet.service.BootstrapReceiver"
             android:exported="true">

@@ -136,7 +136,7 @@ class PlatformServiceImplementation @Inject constructor(
             for (check in checks) {
                 success += if (check.await()) 1 else 0
             }
-
+            log.info("platform available $success of 3: ${ success > 2}")
             return@withContext success >= 2
         }
     }
