@@ -259,7 +259,7 @@
     <string name="upload_your_picture">Uploadez votre image, personnalisez votre identité.</string>
     <string name="in_case_lose_your_passphrase">En cas de perte de votre phrase de passe, vous perdrez votre droit pour votre nom d\'utilisateur demandé.</string>
     <string name="keep_your_passphrase_safe">Gardez secrète votre phrase de passe</string>
-    <string name="pay_now">Payez maintenant et, en cas de refus, vous pourrez créer un nom différent sans payer à nouveau [cochez si vrai]</string>
+    <string name="pay_now">Veuillez payer maintenant. En cas de non-approbation, vous pourrez créer un nom différent sans repayer</string>
     <string name="case_your_request_is_not_approved">Dans le cas où votre demande n\'est pas approuvée</string>
     <string name="voting_requirement_subtitle">Un nom d\'utilisateur qui contient au moins un chiffre de 2 à 9, ou bien qui a une longueur de plus de 20 caractères, sera approuvé automatiquement</string>
     <string name="voting_requirement_title">Voter est requis seulement dans certains cas</string>
@@ -269,8 +269,6 @@
     <string name="usernames_blocked_subtitle">Si une proportion suffisante du réseau pense qu\'un nom d\'utilisateur est inapproprié, il peut le bloquer</string>
     <string name="username_voting">Vote des noms d\'utilisateur</string>
     <string name="username_voting_subtitle">En tant que propriétaire de masternode, vous pouvez voter pour approuver les noms d\'utilisateur demandés, avant que les utilisateurs ne puissent les créer.</string>
-    <string name="voting_duplicates_only_title">Voter seulement sur les doublons</string>
-    <string name="voting_duplicates_only_message">Vous pouvez consulter toutes les requêtes, mais vous n\'avez besoin que de voter sur les doublons</string>
     <string name="all">Tous</string>
     <string name="n_usernames">%d noms d\'utilisateur</string>
     <string name="n_requests">%d demandes</string>
@@ -303,10 +301,7 @@
     <string name="request_username_unavailable">Le nom d\'utilisateur n\'est pas disponible, ou il est bloqué</string>
     <string name="request_username_taken">Le nom d\'utilisateur est déjà pris</string>
     <string name="requesting_your_username_title">Création de votre nom d\'utilisateur</string>
-    <string name="requesting_your_username_message">Votre nom d\'utilisateur johndoe est en cours de demande sur le réseau Dash. Cela peut prendre un peu de temps.</string>
     <string name="requesting_your_username_error_title">Votre demande de nom d\'utilisateur a échoué</string>
-    <string name="requesting_your_username_error_message">Pour quelque raison, la demande a échoué. Veuillez réessayer.</string>
-
     <string name="voting">Votation :</string>
     <string name="this_username_has_already_been_requested">Le nom d\'utilisateur a déjà été demandé, mais vous pouvez aussi le demander et laisser le réseau voter et décider si vous pouvez l\'obtenir</string>
     <string name="request_details">Détails de la demande</string>
@@ -401,5 +396,4 @@
     <string name="request_username_balance_requirement">Vous devez avoir 0,25 dashs pour créer ce nom d\'utilisateur</string>
     <string name="request_username_length_requirement">entre 3 et 23 caractères</string>
     <string name="request_username_confirm">J\'accepte</string>
-
-</resources>
+    </resources>

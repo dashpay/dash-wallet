@@ -157,6 +157,11 @@
     <string name="buy_gift_card_with_dash_text">Achetez une carte-cadeau avec Dash.</string>
     <string name="redeem_gift_card_text">Profitez en ligne de votre carte-cadeau en quelques secondes ou auprès du responsable de la caisse.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Les dashs de test n\'ont pas de valeur réelle, mais vous pouvez les envoyer et recevoir avec d\'autres utilisateurs DashPay Alpha.</string>
+    <string name="explore_test_dash_title">Comment puis-je obtenir des dashs de test ?</string>
+    <string name="explore_get_test_dash">Obtenir des dashs de test</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">Synchronisation en cours… Les résultats peuvent être encore incomplets.</string>
     <string name="sync_in_progress_error">Synchronisation en cours… Une erreur a été rencontrée.</string>

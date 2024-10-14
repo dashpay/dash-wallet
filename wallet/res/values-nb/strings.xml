@@ -7,7 +7,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d dager bak</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d uker bak</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d måneder bak</string>
-    <string name="blockchain_state_progress_downloading">Synkroniserer med nettverk</string>
     <string name="blockchain_state_progress_stalled">Synkronisering står stille</string>
     <string name="blockchain_state_progress_problem_storage">Synkroniserer: Plassproblem</string>
     <string name="blockchain_state_progress_problem_network">Synkroniserer: Nettverksproblem</string>

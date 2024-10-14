@@ -21,8 +21,9 @@
     <string name="transfer_dash">Dash übertragen</string>
     <string name="login_error_title">Du kannst dich nicht in dein %s Konto einloggen.</string>
     <string name="login_error_message">Beim Einloggen in dein %s Konto ist ein Fehler aufgetreten.</string>
+    <string name="dash_address">Dash Adresse</string>
+    <string name="username">Nutzername</string>
     <string name="balance">Guthaben:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pfund</string>
     <!-- Local Currency List: JEP -->
@@ -55,11 +56,11 @@
     <string name="button_understand">Ich verstehe</string>
     <string name="button_okay">OK</string>
     <string name="button_share">Teilen</string>
+    <string name="button_skip">Überspringen</string>
     <string name="share_address">Adresse teilen</string>
     <string name="verify">Verifizieren</string>
     <string name="receive_enter_amount_button">Betrag festsetzen</string>
     <string name="account_create">Konto erstellen</string>
-
     <!-- Design system UI elements -->
     <string name="search_hint">Suchen</string>
     <string name="permission_allow">Erlauben</string>
@@ -101,4 +102,4 @@
 
     <string name="chain_syncing">Die Chain synchronisiert...</string>
 
-</resources>
+    </resources>

@@ -32,6 +32,7 @@ import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.transactions.TxFilterType
 import androidx.datastore.preferences.core.Preferences
+import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
@@ -45,6 +46,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.*
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
@@ -55,6 +57,7 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.RateRetrievalState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.Before
@@ -135,6 +138,10 @@ class MainViewModelTest {
         every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns MutableStateFlow("USD")
     }
 
+    private val userAgentDaoMock = mockk<UserAlertDao> {
+        every { observe(any()) } returns flow { }
+    }
+
     private val platformRepo = mockk<PlatformRepo>()
 
     @get:Rule
@@ -149,6 +156,7 @@ class MainViewModelTest {
         every { configMock.registerOnSharedPreferenceChangeListener(any()) } just runs
 
         every { blockchainStateMock.observeState() } returns flow { BlockchainState() }
+        every { blockchainStateMock.observeSyncStage() } returns MutableStateFlow(PeerGroup.SyncStage.BLOCKS)
         every { exchangeRatesMock.observeExchangeRate(any()) } returns flow { ExchangeRate("USD", "100") }
         every { walletDataMock.observeBalance() } returns flow { Coin.COIN }
         every { walletDataMock.observeMostRecentTransaction() } returns flow {
@@ -169,7 +177,7 @@ class MainViewModelTest {
                 0
             )
         }
-
+        every { exchangeRatesMock.observeStaleRates(any()) } returns flow { RateRetrievalState(false, false, false) }
         mockkStatic(WalletApplication::class)
         every { WalletApplication.getInstance() } returns walletApp
 
@@ -195,12 +203,13 @@ class MainViewModelTest {
     @Test
     fun observeBlockchainState_replaying_notSynced() {
         every { blockchainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
+
         val viewModel = spyk(
             MainViewModel(
                 analyticsService, configMock, uiConfigMock,
                 exchangeRatesMock, walletDataMock, walletApp, platformRepo,
                 mockk(), mockk(), blockchainIdentityConfigMock, savedStateMock, transactionMetadataMock,
-                blockchainStateMock, mockk(), mockk(), mockk(), mockk(), mockk(), mockDashPayConfig, mockk(), mockk()
+                blockchainStateMock, mockk(), mockk(), mockk(), userAgentDaoMock, mockk(), mockDashPayConfig, mockk(), mockk()
             )
         )
 

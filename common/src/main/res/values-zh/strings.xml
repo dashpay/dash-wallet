@@ -21,8 +21,9 @@
     <string name="transfer_dash">转账 Dash</string>
     <string name="login_error_title">无法登录您%s的账户</string>
     <string name="login_error_message">当登录您%s的账户时发生了一个错误.</string>
+    <string name="dash_address">Dash地址</string>
+    <string name="username">用户名</string>
     <string name="balance">余额:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey镑</string>
     <!-- Local Currency List: JEP -->
@@ -55,11 +56,11 @@
     <string name="button_understand">我明白</string>
     <string name="button_okay">好的</string>
     <string name="button_share">分享</string>
+    <string name="button_skip">跳过</string>
     <string name="share_address">分享地址</string>
     <string name="verify">验证</string>
     <string name="receive_enter_amount_button">指定数额</string>
     <string name="account_create">创建账户</string>
-
     <!-- Design system UI elements -->
     <string name="search_hint">搜索</string>
     <string name="permission_allow">允许</string>
@@ -101,4 +102,4 @@
 
     <string name="chain_syncing">区块链正在同步...</string>
 
-</resources>
+    </resources>

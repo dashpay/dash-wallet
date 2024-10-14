@@ -63,11 +63,15 @@ suspend fun getTimeSkew(force: Boolean = false): Long {
             networkTimes.add(time)
         }
     }
-    networkTimes.sort()
-    when (networkTimes.size) {
-        3 -> networkTime = networkTimes[2]
-        2 -> networkTime = (networkTimes[0] + networkTimes[1]) / 2
-        else -> { }
+    if (networkTimes.size > 1) {
+        val sortedTimes = networkTimes.sorted()
+        val middleIndex = sortedTimes.size / 2
+
+        if (sortedTimes.size % 2 == 0) {
+            networkTime = (sortedTimes[middleIndex - 1] + sortedTimes[middleIndex]) / 2
+        } else {
+            networkTime = sortedTimes[middleIndex]
+        }
     }
 
     if (networkTime == null) {

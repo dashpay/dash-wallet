@@ -21,8 +21,8 @@
     <string name="transfer_dash">انتقال دش</string>
     <string name="login_error_title">ورود به حساب %s شما ناموفق بود</string>
     <string name="login_error_message">در هنگام تلاش برای ورود به حساب %s شما، خطایی روی داد. </string>
+    <string name="dash_address">نشانی دش</string>
     <string name="balance">موجودی: </string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">گرنزی پاوند</string>
     <!-- Local Currency List: JEP -->
@@ -55,11 +55,11 @@
     <string name="button_understand">متوجه شدم</string>
     <string name="button_okay">باشه</string>
     <string name="button_share">به اشتراک گذاری</string>
+    <string name="button_skip">رد کردن</string>
     <string name="share_address">به اشتراک‌گذاری نشانی</string>
     <string name="verify">تائید</string>
     <string name="receive_enter_amount_button">مبلغ را مشخص کنید</string>
     <string name="account_create">ایجاد حساب</string>
-
     <!-- Design system UI elements -->
     <string name="search_hint">جستجو</string>
     <string name="permission_allow">اجازه می‌دهم</string>
@@ -101,4 +101,4 @@
 
     <string name="chain_syncing">بلاکچین در حال به‌روزرسانی...</string>
 
-</resources>
+    </resources>

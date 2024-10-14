@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">Huli ng %1$s, %2$d araw</string>
     <string name="blockchain_state_progress_weeks">Huli ng %1$s, %2$d linggo</string>
     <string name="blockchain_state_progress_months">Huli ng %1$s, %2$d buwan</string>
-    <string name="blockchain_state_progress_downloading">Pagtutugma sa network</string>
     <string name="blockchain_state_progress_stalled">Naantala ang pagtutugma</string>
     <string name="blockchain_state_progress_problem_storage">Pagtutugma: Problema sa storage</string>
     <string name="blockchain_state_progress_problem_network">Pagtutugma: Problema sa network</string>
@@ -404,4 +403,5 @@
     <string name="battery_optimization_dialog_unrestricted_title">Gusto mo bang makatanggap ng mga pagbabayad sa background?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Ang app na ito ay na-configure upang magpatuloy sa pagtakbo pagkatapos na hindi makita sa loob ng ilang oras.\n\nIminumungkahi namin na payagan ang app na ito na laging manatiling up-to-date sa blockchain, kahit na nasa background.\n\nHuwag mag-alala, gagawin namin laging isipin ang iyong paggamit ng baterya.</string>
     <string name="battery_optimization_dialog_button_change">Buksan ang settings</string>
+
 </resources>

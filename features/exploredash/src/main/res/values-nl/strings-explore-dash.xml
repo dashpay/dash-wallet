@@ -153,6 +153,11 @@
     <string name="buy_gift_card_with_dash_text">Koop een geschenkbon met Dash.</string>
     <string name="redeem_gift_card_text">Wissel je geschenkbon online in binnen een paar seconden of bij de kassa. </string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Test Dash heeft geen enkele waarde in de echte wereld, maar je kunt het verzenden en ontvangen met andere DashPay Alpha-gebruikers.</string>
+    <string name="explore_test_dash_title">Hoe verkrijg ik test Dash?</string>
+    <string name="explore_get_test_dash">Verkrijg test Dash</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">Synchronisatie bezig... Resultaten zijn mogelijk niet compleet.</string>
     <string name="sync_in_progress_error">Synchronisatie bezig... Er heeft zich een probleem voorgedaan.</string>

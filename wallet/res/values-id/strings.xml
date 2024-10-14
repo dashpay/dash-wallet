@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d hari terlambat</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d minggu terlambat</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d bulan terlambat</string>
-    <string name="blockchain_state_progress_downloading">Mensinkronisasi dgn jaringan</string>
     <string name="blockchain_state_progress_stalled">Sinkronisasi terhenti</string>
     <string name="blockchain_state_progress_problem_storage">Sinkronisasi: Masalah penyimpanan</string>
     <string name="blockchain_state_progress_problem_network">Sinkronisasi: Masalah jaringan</string>
@@ -404,4 +403,5 @@
     <string name="battery_optimization_dialog_unrestricted_title">Apakah anda ingin menerima pembayaran di latar belakang?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Aplikasi ini dikonfigurasi untuk terus berjalan setelah tidak terlihat selama beberapa waktu.\n\nKami menyarankan agar aplikasi ini selalu mengikuti perkembangan blockchain, bahkan di latar belakang.\n\nJangan khawatir, kami akan melakukannya selalu perhatikan penggunaan baterai Anda.</string>
     <string name="battery_optimization_dialog_button_change">Buka Pengaturan</string>
+
 </resources>

@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">Crowdnode nutzt die Adresse als deine Konto ID. Wenn du die zugehörige Passphrase zu der Adresse verlierst, wirst du auch keinen Zugriff auf dein Guthaben und dein Crowdnode Konto mehr besitzen.</string>
     <string name="crowdnode_new_account_warning_2">Es werden nun kleine Dash Beträge nach und von Crowdnode gesendet um dich als Besitzer deiner Adresse zu verifizieren.</string>
     <string name="crowdnode_link_account_description">Alle Transfers von und zu Crowdnode auf diesem Gerät werden über die unten stehende Dash Adresse abgewickelt.</string>
-    <string name="dash_address">Dash Adresse</string>
     <string name="primary_dash_address">Primäre Dash Adresse</string>
     <string name="crowdnode_secure_wallet">Sichere deine Passphrase um ein Crowdnode Konto zu erstellen</string>
     <string name="crowdnode_secure_wallet_explainer">Wenn du die Passphrase für diese Wallet verlierst und das Gerät verloren geht oder die Dash Wallet deinstalliert wird, wirst du auch den Zugang zu Crowdnode und all dein Guthaben verlieren.</string>
