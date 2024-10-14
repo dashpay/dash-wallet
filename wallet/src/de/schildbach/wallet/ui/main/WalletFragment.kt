@@ -116,6 +116,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
         binding.homeToolbar.setOnClickListener { scrollToTop() }
         binding.notificationBell.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Home.NOTIFICATIONS)
             findNavController().navigate(
                 R.id.showNotificationsFragment,
                 bundleOf("mode" to NotificationsFragment.MODE_NOTIFICATIONS),
@@ -125,7 +126,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
             )
         }
         binding.dashpayUserAvatar.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.UsersContacts.PROFILE_EDIT_HOME)
+            viewModel.logEvent(AnalyticsConstants.Home.AVATAR)
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
 

@@ -33,6 +33,7 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.toBigDecimal
 import java.text.DecimalFormat
 import javax.inject.Inject
@@ -43,7 +44,8 @@ class SettingsViewModel @Inject constructor(
     private val walletUIConfig: WalletUIConfig,
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService,
-    private val walletDataProvider: WalletDataProvider
+    private val walletDataProvider: WalletDataProvider,
+    private val analytics: AnalyticsService
 ) : ViewModel() {
     private val powerManager: PowerManager = walletApplication.getSystemService(PowerManager::class.java)
 
@@ -76,5 +78,9 @@ class SettingsViewModel @Inject constructor(
 
     suspend fun setCoinJoinInfoShown() {
         coinJoinConfig.set(CoinJoinConfig.FIRST_TIME_INFO_SHOWN, true)
+    }
+
+    fun logEvent(event: String) {
+        analytics.logEvent(event, mapOf())
     }
 }

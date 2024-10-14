@@ -59,6 +59,8 @@ import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.sdk.platform.Names
@@ -97,7 +99,8 @@ class UsernameRequestsViewModel @Inject constructor(
     private val importedMasternodeKeyDao: ImportedMasternodeKeyDao,
     private val platformSyncService: PlatformSyncService,
     private val walletDataProvider: WalletDataProvider,
-    private val walletApplication: WalletApplication
+    private val walletApplication: WalletApplication,
+    private val analytics: AnalyticsService
 ): ViewModel() {
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
@@ -233,7 +236,7 @@ class UsernameRequestsViewModel @Inject constructor(
         if (keysAmount == 0) {
             return
         }
-
+        logEvent(AnalyticsConstants.UsernameVoting.VOTE)
         viewModelScope.launch {
             usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
@@ -260,7 +263,7 @@ class UsernameRequestsViewModel @Inject constructor(
         if (keysAmount == 0) {
             return
         }
-
+        logEvent(AnalyticsConstants.UsernameVoting.VOTE_CANCEL)
         viewModelScope.launch {
             usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
@@ -503,7 +506,7 @@ class UsernameRequestsViewModel @Inject constructor(
         if (keysAmount == 0) {
             return
         }
-
+        logEvent(AnalyticsConstants.UsernameVoting.BLOCK)
         viewModelScope.launch {
            // usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
@@ -522,5 +525,9 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             }
         //}
+    }
+
+    fun logEvent(event: String) {
+        analytics.logEvent(event, mapOf())
     }
 }

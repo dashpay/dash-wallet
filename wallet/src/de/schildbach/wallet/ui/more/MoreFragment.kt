@@ -66,7 +66,6 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dashj.platform.dashpay.UsernameRequestStatus
-import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -156,7 +155,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.invite.setOnClickListener {
             lifecycleScope.launch {
                 val inviteHistory = mainActivityViewModel.getInviteHistory()
-
+                mainActivityViewModel.logEvent(AnalyticsConstants.MoreMenu.INVITE)
                 if (inviteHistory.isEmpty()) {
                     InviteFriendActivity.startOrError(requireActivity())
                 } else {
@@ -178,6 +177,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.joinDashpayBtn.setOnClickListener {
             lifecycleScope.launch {
                 val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
+                mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.JOIN_DASHPAY)
                 if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
                     startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
                 } else {
@@ -187,6 +187,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
         binding.usernameVoting.isVisible = Constants.SUPPORTS_PLATFORM
         binding.usernameVoting.setOnClickListener {
+            mainActivityViewModel.logEvent(AnalyticsConstants.MoreMenu.USERNAME_VOTING)
             safeNavigate(MoreFragmentDirections.moreToUsernameVoting())
         }
 
@@ -194,6 +195,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             if (createIdentityViewModel.creationState.value.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal &&
                 createIdentityViewModel.creationException.value != null) {
                 // Perform Retry
+                mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
                 createIdentityViewModel.retryCreateIdentity()
             } else {
                 startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))

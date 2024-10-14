@@ -37,6 +37,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameRequestsBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
@@ -66,6 +67,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         val adapter = UsernameRequestGroupAdapter { request ->
             lifecycleScope.launch {
                 if (request.requestId != "") {
+                    viewModel.logEvent(AnalyticsConstants.UsernameVoting.DETAILS)
                     safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(request.requestId))
                 } else {
                     val usernameVotes = viewModel.getVotes(request.username)

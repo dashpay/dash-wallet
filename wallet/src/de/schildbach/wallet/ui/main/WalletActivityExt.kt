@@ -116,6 +116,8 @@ object WalletActivityExt {
                 }
                 R.id.paymentsFragment -> viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
                 R.id.moreFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_MORE)
+                R.id.contactsFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_CONTACTS)
+                R.id.exploreFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_EXPLORE)
                 else -> { }
             }
             onNavDestinationSelected(item, navController)
