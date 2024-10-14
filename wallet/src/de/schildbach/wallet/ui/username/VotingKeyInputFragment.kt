@@ -33,6 +33,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
+import org.dash.wallet.common.util.onUserInteraction
 import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
@@ -54,6 +55,7 @@ class VotingKeyInputFragment : Fragment(R.layout.fragment_voting_key_input) {
             binding.inputWrapper.isEndIconVisible = key.isNotEmpty()
             binding.inputWrapper.isErrorEnabled = false
             binding.inputError.isVisible = false
+            onUserInteraction()
         }
 
         binding.verifyButton.setOnClickListener {
