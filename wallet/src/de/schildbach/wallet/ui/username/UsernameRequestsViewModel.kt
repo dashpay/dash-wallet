@@ -317,6 +317,13 @@ class UsernameRequestsViewModel @Inject constructor(
         return getKeyFromWIF(key) != null
     }
 
+    fun verifyMasterVotingKey(key: ECKey): Boolean {
+        return masternodeListManager
+            .listAtChainTip
+            .getMasternodesByVotingKey(KeyId.fromBytes(key.pubKeyHash))
+            .isNotEmpty()
+    }
+
     fun getKeyFromWIF(key: String): ECKey? {
         return try {
             DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, key).key

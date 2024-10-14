@@ -332,6 +332,7 @@
     <string name="voting_key_title">Enter your voting key</string>
     <string name="voting_key_hint">Masternode Voting Key</string>
     <string name="voting_key_input_error">You have entered an invalid key</string>
+    <string name="voting_key_input_not_active_error">You have entered a key that is not associated to an active Masternode</string>
     <string name="voting_key_add">Add your voting keys</string>
     <string name="voting_key_add_subtitle">The IP address(es) below are associated with this wallet</string>
     <string name="masternode_ip">Masternode IP address</string>

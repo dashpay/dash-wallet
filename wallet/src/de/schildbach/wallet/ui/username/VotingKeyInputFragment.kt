@@ -61,13 +61,28 @@ class VotingKeyInputFragment : Fragment(R.layout.fragment_voting_key_input) {
 
             if (viewModel.verifyKey(wifKey)) {
                 val key = viewModel.getKeyFromWIF(wifKey)!!
-                lifecycleScope.launch {
-                    viewModel.addKey(key)
-                    KeyboardUtil.hideKeyboard(requireContext(), binding.keyInput)
-                    delay(200)
-                    safeNavigate(VotingKeyInputFragmentDirections.votingKeyInputToAddKeys(args.requestId, args.approve))
+                val isValidMasternode = viewModel.verifyMasterVotingKey(key)
+                binding.inputWrapper.isErrorEnabled = false
+                binding.inputError.isVisible = false
+                if (isValidMasternode) {
+                    lifecycleScope.launch {
+                        viewModel.addKey(key)
+                        KeyboardUtil.hideKeyboard(requireContext(), binding.keyInput)
+                        delay(200)
+                        safeNavigate(
+                            VotingKeyInputFragmentDirections.votingKeyInputToAddKeys(
+                                args.requestId,
+                                args.approve
+                            )
+                        )
+                    }
+                } else {
+                    binding.inputError.text = getString(R.string.voting_key_input_not_active_error)
+                    binding.inputWrapper.isErrorEnabled = true
+                    binding.inputError.isVisible = true
                 }
             } else {
+                binding.inputError.text = getString(R.string.voting_key_input_error)
                 binding.inputWrapper.isErrorEnabled = true
                 binding.inputError.isVisible = true
             }
