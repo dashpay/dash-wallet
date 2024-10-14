@@ -21,8 +21,9 @@
     <string name="transfer_dash">Μεταφορά Dash</string>
     <string name="login_error_title">Αδυναμία σύνδεσης στο λογαριασμό σας %s</string>
     <string name="login_error_message">Προέκυψε σφάλμα κατά τη σύνδεση σας στο %s λογαριασμό</string>
+    <string name="dash_address">Διεύθυνση Dash</string>
+    <string name="username">Όνομα Χρήστη:</string>
     <string name="balance">Υπόλοιπο:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Γκέρνσεϊ Λίρα</string>
     <!-- Local Currency List: JEP -->
@@ -55,11 +56,11 @@
     <string name="button_understand">Καταλαβαίνω</string>
     <string name="button_okay">Εντάξει</string>
     <string name="button_share">Μοιραστείτε</string>
+    <string name="button_skip">Παράλειψη</string>
     <string name="share_address">Διαμοιρασμός διεύθυνσης</string>
     <string name="verify">Επιβεβαίωση</string>
     <string name="receive_enter_amount_button">Καθορίστε το ποσό</string>
     <string name="account_create">Δημιουργία λογαριασμού</string>
-
     <!-- Design system UI elements -->
     <string name="search_hint">Αναζήτηση</string>
     <string name="permission_allow">Επιτρέπετε</string>
@@ -101,4 +102,4 @@
 
     <string name="chain_syncing">Το blockchain συγχρονίζεται...</string>
 
-</resources>
+    </resources>

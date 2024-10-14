@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d日遅れ</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d週遅れ</string>
     <string name="blockchain_state_progress_months">%1$s, %2$dか月遅れ</string>
-    <string name="blockchain_state_progress_downloading">ネットワークと同期中</string>
     <string name="blockchain_state_progress_stalled">同期が停滞しています</string>
     <string name="blockchain_state_progress_problem_storage">同期：ストレージに問題があります</string>
     <string name="blockchain_state_progress_problem_network">同期：ネットワークに問題があります</string>
@@ -404,4 +403,5 @@
     <string name="battery_optimization_dialog_unrestricted_title">バックグラウンドで支払いを受け取りたいですか。</string>
     <string name="battery_optimization_dialog_message_not_optimized">このアプリは、しばらく表示されなくても動作し続けるように設定されています。\n\nバックグラウンドでも、このアプリが常にブロックチェーンの最新情報を取得できるようにすることをお勧めします。\n\nバッテリーの使用量は常に管理していますのでご安心ください。</string>
     <string name="battery_optimization_dialog_button_change">設定を開く</string>
+
 </resources>

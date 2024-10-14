@@ -7,7 +7,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d päivää takana</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d viikkoa takana</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d kuukautta takana</string>
-    <string name="blockchain_state_progress_downloading">Synkronoidaan verkon kanssa</string>
     <string name="blockchain_state_progress_stalled">Synkronointi pysäytetty</string>
     <string name="blockchain_state_progress_problem_storage">Synkronointi: Tilaongelma</string>
     <string name="blockchain_state_progress_problem_network">Synkronointi: Verkko-ongelma</string>

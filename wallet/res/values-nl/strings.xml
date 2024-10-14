@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d dagen achter</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d weken achter</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d maanden achter</string>
-    <string name="blockchain_state_progress_downloading">Synchroniseren met netwerk</string>
     <string name="blockchain_state_progress_stalled">Synchronisatie is tot stilstand gekomen</string>
     <string name="blockchain_state_progress_problem_storage">Synchronisatie: Opslagprobleem</string>
     <string name="blockchain_state_progress_problem_network">Synchronisatie: Netwerkprobleem</string>
@@ -404,4 +403,5 @@
     <string name="battery_optimization_dialog_unrestricted_title">Wilt je betalingen op de achtergrond ontvangen?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Deze app is geconfigureerd om actief te blijven nadat hij enige tijd niet zichtbaar is geweest.\n\nWe raden aan deze app altijd up-to-date te laten blijven met de blockchain, zelfs op de achtergrond.\n\nMaak je geen zorgen, we houden rekening met je batterijgebruik.</string>
     <string name="battery_optimization_dialog_button_change">Open instellingen</string>
+
 </resources>

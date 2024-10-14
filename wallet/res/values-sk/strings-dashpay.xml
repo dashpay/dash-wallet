@@ -271,6 +271,7 @@ používateľské meno</b></string>
     <string name="username_voting">Hlasovanie o používateľskom mene</string>
     <string name="voting_duplicates_only_title">Predvolené nastavenie filtra</string>
     <string name="voting_duplicates_only_message">Predvolený filter zobrazuje iba duplicitné používateľské mená, za ktoré ste NEHLASOVALI, ale zmenou filtra môžete zobraziť všetky sporné používateľské mená</string>
+    <string name="username_voting_subtitle">Ako vlastník Masternode môžete hlasovať za schválenie požadovaných používateľských mien predtým, ako ich používatelia budú môcť vytvoriť.</string>
     <string name="all">Všetko</string>
     <string name="n_usernames">%d používateľských mien</string>
     <string name="n_requests">%d žiadostí</string>
@@ -415,4 +416,4 @@ používateľské meno</b></string>
     <string name="mix_dash_mix">Miešaný zostatok</string>
     <string name="mix_dash_title">Namiešajte váš Dash</string>
     <string name="mix_dash_message">Ak chcete zabrániť tomu, aby ostatní ľudia videli, komu uskutočňujete platby, odporúča sa pred vytvorením používateľského mena zmiešať zostatok.</string>
-</resources>
+    </resources>

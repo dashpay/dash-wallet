@@ -268,6 +268,7 @@
     <string name="usernames_blocked_title">一些用户名会被禁止</string>
     <string name="usernames_blocked_subtitle">如果足够的网络节点认为此用户名不合适, 他们能够屏蔽它</string>
     <string name="username_voting">用户名投票</string>
+    <string name="username_voting_subtitle">作为主节点用户, 您可以在用户能够创建用户名之前投票通过申请的用户名.</string>
     <string name="all">所有</string>
     <string name="n_usernames">%d 用户名</string>
     <string name="n_requests">%d 请求</string>

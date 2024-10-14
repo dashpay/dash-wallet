@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d일 이전으로부터 동기화 중</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d주 이전으로부터 동기화 중</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d개월 이전으로부터 동기화 중</string>
-    <string name="blockchain_state_progress_downloading">네트워크 동기화 중</string>
     <string name="blockchain_state_progress_stalled">동기화 멈춤</string>
     <string name="blockchain_state_progress_problem_storage">동기화 중 : 저장 공간 문제 발생</string>
     <string name="blockchain_state_progress_problem_network">동기화 중 : 네트워크에 문제 발생</string>
@@ -404,4 +403,5 @@
     <string name="battery_optimization_dialog_unrestricted_title">백그라운드에서 지불을 받으시겠습니까?</string>
     <string name="battery_optimization_dialog_message_not_optimized">이 어플은 일정 시간동안 화면에 보이지 않은 경우에도 게속 실행되도록 설정되었습니다.\n\n우리는 백그라운드에서도 이 어플이 언제나 블록체인의 최신 상태에 맞도록 유지할 것을 권장합니다\n\n걱정마세요, 언제나 당신의 배터리 사용량을 신경쓸게요.</string>
     <string name="battery_optimization_dialog_button_change">설정 열기</string>
+
 </resources>

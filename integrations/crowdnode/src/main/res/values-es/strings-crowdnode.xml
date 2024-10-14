@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">CrowdNode usa esta dirección como tu ID de cuenta. Perderás el acceso a tus fondos dentro de esta billetera y tu cuenta de CrowdNode si pierdes la contraseña asociada a esta dirección.</string>
     <string name="crowdnode_new_account_warning_2">Se enviarán cantidades muy pequeñas de Dash hacia y desde CrowdNode para verificar que tu eres el propietario de esta dirección de billetera.</string>
     <string name="crowdnode_link_account_description">Todas las transferencias hacia y desde CrowdNode desde este dispositivo se realizarán con la siguiente dirección Dash desde este dispositivo.</string>
-    <string name="dash_address">Dirección de Dash</string>
     <string name="primary_dash_address">Dirección de Dash primaria</string>
     <string name="crowdnode_secure_wallet">Haz una copia de seguridad de tu contraseña para crear una cuenta de CrowdNode</string>
     <string name="crowdnode_secure_wallet_explainer">Si pierdes tu contraseña para esta billetera y pierdes este dispositivo o desinstalas la billetera de Dash, perderás el acceso a tus fondos en CrowdNode y a los fondos dentro de esta billetera.</string>

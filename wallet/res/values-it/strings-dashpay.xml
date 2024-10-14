@@ -271,6 +271,7 @@ Username</b></string>
     <string name="username_voting">Votazione Username contestati</string>
     <string name="voting_duplicates_only_title">Impostazione del filtro predefinita</string>
     <string name="voting_duplicates_only_message">Il filtro predefinito mostra solo i nomi utente duplicati per i quali NON hai votato, ma puoi vedere tutti i nomi utente contestati modificando il filtro</string>
+    <string name="username_voting_subtitle">Come proprietario di un masternode puoi votare per approvare i nomi utente richiesti prima che gli utenti possano crearli.</string>
     <string name="all">Tutte</string>
     <string name="n_usernames">%d nomi utente</string>
     <string name="n_requests">%d richieste</string>
@@ -415,4 +416,4 @@ Username</b></string>
     <string name="mix_dash_mix">Mescolare Bilancio</string>
     <string name="mix_dash_title">Mescola i tuoi Dash</string>
     <string name="mix_dash_message">Per evitare che altre persone vedano a chi effettui i pagamenti, ti consigliamo di mescolare il tuo saldo prima di creare il tuo nome utente.</string>
-</resources>
+    </resources>

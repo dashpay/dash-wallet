@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d 天延遲</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d 星期延遲</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d 月延遲</string>
-    <string name="blockchain_state_progress_downloading">與網路同步中</string>
     <string name="blockchain_state_progress_stalled">同步停滯</string>
     <string name="blockchain_state_progress_problem_storage">同步中: 出現儲存問題</string>
     <string name="blockchain_state_progress_problem_network">同步中: 出現網路問題</string>
@@ -404,4 +403,5 @@
     <string name="battery_optimization_dialog_unrestricted_title">您想在後台接收付款嗎？</string>
     <string name="battery_optimization_dialog_message_not_optimized">此應用程式被設置為在後台運行後繼續運行。\n\n我們建議允許此應用程式始終與區塊鏈保持最新狀態，即使在後台也是如此。\n\n不用擔心，我們會的經常提醒你電池的使用情況。</string>
     <string name="battery_optimization_dialog_button_change">開啟設定</string>
+
 </resources>

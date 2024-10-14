@@ -262,12 +262,14 @@
     <string name="keep_your_passphrase_safe">Διατηρήστε την φράση πρόσβασής σας ασφαλή.</string>
     <string name="pay_now">Πληρώστε τώρα και αν δεν εγκριθεί, μπορείτε να δημιουργήσετε ένα διαφορετικό όνομα χωρίς να πληρώσετε ξανά.</string>
     <string name="case_your_request_is_not_approved">Σε περίπτωση που ο αίτημά σας δεν εγκριθεί.</string>
+    <string name="voting_requirement_subtitle">Οποιοδήποτε όνομα χρήστη που έχει αριθμό 2-9 ή είναι μεγαλύτερο από 20 χαρακτήρες θα εγκριθεί αυτόματα.</string>
     <string name="voting_requirement_title">Η ψηφοφορία απαιτείται μόνο σε ορισμένες περιπτώσεις</string>
     <string name="dash_network_must_vote_to_approve">Το Dash δίκτυο θα πρέπει να ψηφίσει για να εγκρίνει το όνομα χρήστη σας πριν δημιουργηθεί.</string>
     <string name="what_is_username_voting">Τι είναι η ψηφοφορία ονόματος χρήστη;</string>
     <string name="usernames_blocked_title">Ορισμένα ονόματα χρηστών μπορούν να μπλοκαριστούν</string>
     <string name="usernames_blocked_subtitle">Εάν αρκετά μέλη του δικτύου διαπιστώσουν ότι ένα όνομα χρήστη είναι ακατάλληλο, μπορούν να το μπλοκάρουν.</string>
     <string name="username_voting">Ψηφοφορία ονόματος χρήστη</string>
+    <string name="username_voting_subtitle">Ως ιδιοκτήτης ενός masternode μπορείτε να ψηφίσετε για να εγκρίνετε τα ζητούμενα ονόματα χρήστη πριν οι χρήστες μπορέσουν να τα δημιουργήσουν.</string>
     <string name="all">Όλα</string>
     <string name="n_usernames">%d ονόματα χρήστη</string>
     <string name="n_requests">%d αιτήματα</string>

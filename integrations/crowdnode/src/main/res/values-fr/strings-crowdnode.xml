@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">CrowdNode utilise cette adresse comme identifiant de votre compte. Vous perdrez l\'accès à vos fonds dans ce portefeuille et dans votre compte CrowdNode si vous perdez la phrase de passe associée à cette adresse.</string>
     <string name="crowdnode_new_account_warning_2">De très petits montants en dashs seront envoyés vers et depuis CrowdNode, pour vérifier que vous êtes le propriétaire de cette adresse de portefeuille.</string>
     <string name="crowdnode_link_account_description">Tous les transferts vers et depuis CrowdNode, à partir de cet appareil, seront exécutés avec l\'adresse Dash ci-dessus.</string>
-    <string name="dash_address">Adresse Dash</string>
     <string name="primary_dash_address">Adresse Dash principale</string>
     <string name="crowdnode_secure_wallet">Sauvegardez votre phrase de passe pour créer un compte CrowdNode</string>
     <string name="crowdnode_secure_wallet_explainer">Si vous perdez votre phrase de passe pour ce portefeuille, ou si vous perdez cet appareil, ou si vous désinstallez Dash Wallet, vous perdrez l\'accès à vos fonds sur CrowdNode ainsi que les fonds dans ce portefeuille.</string>

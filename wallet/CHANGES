@@ -1,4 +1,10 @@
 Dash Wallet
+v10.3.2
+* Fix ANR when using CoinJoin
+* Fix missing Send button on Home Screen
+* Fix CrowdNode Online Signup Crash on Android 14
+* Update checkpoints
+
 v10.3.1
 * Hot fix: prevent crash in some upgrade scenarios
 

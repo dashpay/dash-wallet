@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">创建一个新钱包</string>
     <string name="onboarding_recover_wallet">通过助记词还原钱包</string>
@@ -25,13 +25,15 @@
     <string name="dialog_confirm_secured_by">受保护</string>
     <string name="dialog_confirm_fee">网络手续费</string>
     <string name="dialog_confirm_total">总计</string>
-
+    <string name="shortcut_action_join_dashpay">加入 DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">备份</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">扫描</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">发送</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_contact">发送给联系人</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">购买 &amp; 出售</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -75,6 +77,9 @@
     <string name="payments_title">交易</string>
     <string name="payments_tab_pay_label">发送</string>
     <string name="payments_tab_receive_label">接收</string>
+    <string name="payments_pay_to_contact_title">发送给一个联系人</string>
+    <string name="payments_pay_to_contact_sub_title">通讯录中的一个人</string>
+    <string name="payments_pay_to_contact_button">选择</string>
     <string name="payments_pay_by_qr_title">发送者</string>
     <string name="payments_pay_by_qr_sub_title">正在扫描二维码</string>
     <string name="payments_pay_to_clipboard_title">发送至复制地址</string>
@@ -180,7 +185,6 @@
     <string name="notification_settings_title">通知</string>
     <string name="notification_explainer_title">Dash钱包想向您发送通知</string>
     <string name="notification_explainer_message">通知可能包括警报, 声音和图标标记. 这些可以在手机设置中进行配置.</string>
-
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">使用您的指纹解锁.</string>
@@ -236,6 +240,7 @@
     <string name="transaction_details_sent_from">来自</string>
     <string name="transaction_details_sent_to">发送至</string>
     <string name="transaction_details_received_at">接收于</string>
+    <string name="transaction_details_received_from">接收于</string>
     <string name="transaction_details_moved_from">移动于</string>
     <string name="transaction_details_moved_internally_to">内部移动至</string>
     <string name="transaction_failed_details">交易失败</string>
@@ -249,6 +254,7 @@
     <string name="authenticate_switch_to_fingerprint">使用指纹</string>
     <string name="authenticate_switch_to_pin">使用PIN</string>
 
+    <string name="menu_invite_title">邀请</string>
     <string name="menu_buy_and_sell_title">买 &amp; 卖 Dash</string>
     <string name="menu_buy_and_sell_subtitle">与第三方交易所连接</string>
     <string name="liquid_unavailable">Liquid 与 Dash钱包的整合功能已经不能再使用</string>
@@ -328,6 +334,12 @@
     <string name="welcome_screen_title_3">更多控制</string>
     <string name="welcome_screen_subtitle_3">完全控制并根据需求定制您的钱包</string>
 
+    <string-array name="history_filter">
+        <item>所有</item>
+        <item>已接收</item>
+        <item>已发送</item>
+    </string-array>
+
     <string name="sync_status_wait">请等待同步完成</string>
     <string name="sync_status_syncing_sub_title">以Dash区块链</string>
     <string name="sync_status_unable_to_connect">无法连接</string>
@@ -352,7 +364,18 @@
     <string name="import_image_no_private_key_copied">未复制私钥</string>
     <string name="import_image_import_valid_private_key">复制一个有效的私钥并将其中的Dash导入</string>
     <string name="import_image_invalid_private">无效的私钥</string>
+    <string name="okay">好的</string>
 
+    <string name="onboard_from_invite_subtitle">欢迎来到 DashPay</string>
+    <string name="onboard_from_invite_step1_title">选择您的用户名</string>
+    <string name="onboard_from_invite_step2_title">设置您的密码</string>
+    <string name="onboard_from_invite_step3_title">保护您的钱包</string>
+
+    <string name="restore_wallet_please_wait">请稍等</string>
+    <string name="network_unavailable">网络不可用</string>
+    <string name="network_error_contact_details">无法获取联系人详细资料</string>
+    <string name="network_error_user_search">无法搜索到该用户</string>
+    <string name="network_error_contact_suggestions">无法提供建议</string>
     <string name="today">今天</string>
     <string name="yesterday">昨天</string>
 
@@ -377,6 +400,10 @@
     <string name="launch_reset_wallet_extra_message">备份助记词</string>
     <string name="start_reset_wallet_title">您或许将丢失%s</string>
     <string name="reset_wallet_text">重置钱包</string>
+
+
+
+    <!-- Tax category -->
     <string name="reclassify_transactions_title">重新分类您的交易</string>
     <string name="reclassify_transactions_title_message">这些分类将反映在可用于导入税务报告服务的 CSV文件中.</string>
     <string name="reclassify_transactions_question">我在哪离可以更改税务种类?</string>
@@ -407,7 +434,6 @@
     <string name="masternode_key_not_used">未使用</string>
     <string name="masternode_key_revoked">已撤销</string>
     <string name="masternode_key_private_public_base64">私钥 / 公钥 (base64)</string>
-
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">价格未被检索到. 法币价值或许错误.</string>
     <string name="stale_exchange_rates_stale">价格至少有30分钟的延迟. 法币显示价值或许错误.</string>

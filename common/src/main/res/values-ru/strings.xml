@@ -21,8 +21,9 @@
     <string name="transfer_dash">Перевести Dash</string>
     <string name="login_error_title">Невозможно войти в ваш аккаунт %s</string>
     <string name="login_error_message">Во время входа в ваш аккаунт %s произошла ошибка.</string>
+    <string name="dash_address">Адрес Dash</string>
+    <string name="username">Имя пользователя</string>
     <string name="balance">Баланс:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсийский фунт</string>
     <!-- Local Currency List: JEP -->
@@ -55,11 +56,11 @@
     <string name="button_understand">Я понимаю</string>
     <string name="button_okay">Да</string>
     <string name="button_share">Поделиться</string>
+    <string name="button_skip">Пропустить</string>
     <string name="share_address">Поделиться адресом</string>
     <string name="verify">Подтвердить</string>
     <string name="receive_enter_amount_button">Введите сумму</string>
     <string name="account_create">Создать аккаунт</string>
-
     <!-- Design system UI elements -->
     <string name="search_hint">Поиск</string>
     <string name="permission_allow">Разрешить</string>
@@ -101,4 +102,4 @@
 
     <string name="chain_syncing">Блокчейн синхронизируется...</string>
 
-</resources>
+    </resources>

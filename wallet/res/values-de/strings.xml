@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, hinkt %2$d Tage hinterher</string>
     <string name="blockchain_state_progress_weeks">%1$s, hinkt %2$d Wochen hinterher</string>
     <string name="blockchain_state_progress_months">%1$s, hinkt %2$d Monate hinterher</string>
-    <string name="blockchain_state_progress_downloading">Synchronisiere mit Netzwerk</string>
     <string name="blockchain_state_progress_stalled">Synchronisation blockiert</string>
     <string name="blockchain_state_progress_problem_storage">Synchronisation: Speicherplatz-Problem</string>
     <string name="blockchain_state_progress_problem_network">Synchronisation: Netzwerk-Problem</string>
@@ -405,4 +404,5 @@
     <string name="battery_optimization_dialog_unrestricted_title">Möchtest du Zahlungen im Hintergrund erhalten?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Diese App wurde so eingestellt, dass sie endet, wenn sie seit langem nicht mehr angeschaut wurde.\n\nWir empfehlen, diese App immer up-to-date mit der Blockchain zu halten, selbst wenn sie im Hintergrund läuft.\n\nMach dir keine Sorgen. Wir achten immer auf ausgewogene Akkunutzung.</string>
     <string name="battery_optimization_dialog_button_change">Einstellungen öffnen</string>
+
 </resources>

@@ -263,11 +263,13 @@ Username</b></string>
     <string name="pay_now">Magbayad ngayon at kung hindi naaprubahan, maaari kang lumikha ng ibang pangalan nang hindi nagbabayad muli</string>
     <string name="case_your_request_is_not_approved">Kung sakaling hindi maaprubahan ang iyong kahilingan</string>
     <string name="voting_requirement_title">Ang pagboto ay kinakailangan lamang sa ilang mga kaso</string>
+    <string name="voting_requirement_subtitle">Awtomatikong maaaprubahan ang anumang username na mayroong numero 2–9 o mas mahaba sa 20 karakter</string>
     <string name="dash_network_must_vote_to_approve">Dapat bumoto ang Dash network upang aprubahan ang iyong username bago ito malikha.</string>
     <string name="what_is_username_voting">Ano ang pagboto ng username\?</string>
     <string name="usernames_blocked_title">Maaaring i-block ang ilang mga username</string>
     <string name="usernames_blocked_subtitle">Kung matukoy ng sapat na network na hindi naaangkop ang isang username, maaari nilang i-block ito</string>
     <string name="username_voting">Pagboto ng username</string>
+    <string name="username_voting_subtitle">Bilang may-ari ng masternode maaari kang bumoto upang aprubahan ang mga hiniling na username bago ito magawa ng mga user.</string>
     <string name="all">Lahat</string>
     <string name="n_usernames">%d mga username</string>
     <string name="n_requests">%d mga kahilingan</string>

@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">CrowdNodeは、このアドレスをお客様のアカウントIDとして使用します。このアドレスに割り当てられたパスフレーズを紛失すると、このウォレットとCrowdNodeのアカウントにある資金へのアクセスが出来なくなります。</string>
     <string name="crowdnode_new_account_warning_2">このウォレットのアドレスの所有者であることを認証するために、極めて少額のDashがCrowdNodeで行き来することになります。</string>
     <string name="crowdnode_link_account_description">このデバイスからCrowdNodeへの全ての金銭取引は、同デバイスから下記のDashアドレスで行われることになります。</string>
-    <string name="dash_address">Dashアドレス</string>
     <string name="primary_dash_address">メインのDashアドレス</string>
     <string name="crowdnode_secure_wallet">CrowdNodeのアカウントを作成するためのパスフレーズをバックアップします</string>
     <string name="crowdnode_secure_wallet_explainer">このウォレットのパスフレーズを紛失したり、このデバイスをなくしたり、Dash Walletをアンインストールすると、CrowdNode上の資金とこのウォレット内の資金にアクセスできなくなります。</string>

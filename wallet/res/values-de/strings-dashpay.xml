@@ -269,6 +269,7 @@ Benutzernamen</b></string>
     <string name="usernames_blocked_title">Manche Benutzernamen können blockiert werden</string>
     <string name="usernames_blocked_subtitle">Wenn genügend Mitglieder des Netzwerkes feststellen, dass ein Benutzername unangemessen ist, könne diese ihn sperren</string>
     <string name="username_voting">Abstimmung über Benutzernamen</string>
+    <string name="username_voting_subtitle">Als Masternode-Besitzer kannst du abstimmen, um beantragte Benutzernamen zu bewilligen, bevor andere Nutzer diese erstellen können.</string>
     <string name="voting_duplicates_only_title">Standardmäßige Filtereinstellung</string>
     <string name="voting_duplicates_only_message">Die standardmäßige Filtereinstellung zeigt nur doppelte Benutzernamen über die noch NICHT abgestimmt wurde. Um alle strittigen Benutzernamen sehen zu können, ändere den Filter.</string>
     <string name="all">Alles</string>
@@ -415,4 +416,4 @@ Benutzernamen</b></string>
     <string name="mix_dash_mix">Gemixtes Guthaben</string>
     <string name="mix_dash_title">Mixe deine Dash</string>
     <string name="mix_dash_message">Um zu verhindern, dass andere Personen sehen können, an wen du Zahlungen vornimmst, wird empfohlen, dein Guthaben zu mixen, bevor du deinen Benutzernamen erstellst.</string>
-</resources>
+    </resources>

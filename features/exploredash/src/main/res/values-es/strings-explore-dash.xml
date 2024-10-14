@@ -157,6 +157,11 @@
     <string name="buy_gift_card_with_dash_text">Compra un tarjeta de regalo con tus Dash.</string>
     <string name="redeem_gift_card_text">Canjea tu tarjeta de regalo en línea en segundos o en el cajero.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Los Dash de prueba no tienen ningún valor en el mundo real, pero puedes enviarlos y recibirlos con otros usuarios de DashPay Alpha.</string>
+    <string name="explore_test_dash_title">¿Cómo obtengo Dash de prueba?</string>
+    <string name="explore_get_test_dash">Obtener Dash de prueba</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">Sincronización en curso… Es posible que los resultados no estén completos.</string>
     <string name="sync_in_progress_error">Sincronización en curso… Ha ocurrido un error.</string>

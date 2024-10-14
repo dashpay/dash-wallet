@@ -18,6 +18,8 @@
 package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
+import android.content.pm.ServiceInfo
+import android.os.Build
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
@@ -65,7 +67,22 @@ class CrowdNodeWorker @AssistedInject constructor(
                             intent = crowdNodeApi.notificationIntent
                         )
                         log.info("calling setForeground")
-                        setForeground(ForegroundInfo(operation.hashCode(), notification))
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            setForeground(
+                                ForegroundInfo(
+                                    operation.hashCode(),
+                                    notification,
+                                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                                )
+                            )
+                        } else {
+                            setForeground(
+                                ForegroundInfo(
+                                    operation.hashCode(),
+                                    notification
+                                )
+                            )
+                        }
                         crowdNodeApi.signUp(address)
                     }
                 }

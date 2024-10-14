@@ -267,6 +267,7 @@
     <string name="usernames_blocked_title">Niektóre nazwy użytkowników mogą zostać zablokowane</string>
     <string name="usernames_blocked_subtitle">Jeśli wystarczająca liczba użytkowników w sieci uzna, że ​​nazwa użytkownika jest nieodpowiednia, mogą oni ją zablokować</string>
     <string name="username_voting">Głosowanie nad nazwą użytkownika</string>
+    <string name="username_voting_subtitle">Jako właściciel masternodu możesz głosować nad zatwierdzeniem żądanych nazw użytkowników, zanim zostaną one stworzone. </string>
     <string name="all">Całość</string>
     <string name="n_usernames">%d nazwy użytkowników</string>
     <string name="n_requests">%d żądań</string>

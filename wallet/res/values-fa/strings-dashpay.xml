@@ -270,6 +270,7 @@
     <string name="username_voting">رای‌گیری نام کاربری</string>
     <string name="voting_duplicates_only_title">تنظیمات پیش‌فرض فیلتر</string>
     <string name="voting_duplicates_only_message">فیلتر پیشفرض فقط نام‌های کاربری تکراری که رای ندارند را نشان می‌دهد، ولی می‌توانید همه با تغییر فیلتر، همه نام‌های کاربری مورد مناقشه را ببینید. </string>
+    <string name="username_voting_subtitle">به عنوان مالک یک مسترنود، می‌توانید در رای‌گیری شرکت کنید تا پیش از ایجاد نام کاربری توسط کاربر، آن را تائید کنید. </string>
     <string name="all">همه</string>
     <string name="n_usernames">%dنام کاربری</string>
     <string name="n_requests">%dدرخواست</string>
@@ -414,4 +415,4 @@
     <string name="mix_dash_mix">ترکیب موجودی</string>
     <string name="mix_dash_title">دش‌تان را ترکیب کنید</string>
     <string name="mix_dash_message">برای اینکه افراد دیگر نتوانند پرداخت‌هایتان را ببینند، توصیه می‌شود پیش از ایجاد نام کاربری، موجودی‌تان را ترکیب کنید. </string>
-</resources>
+    </resources>

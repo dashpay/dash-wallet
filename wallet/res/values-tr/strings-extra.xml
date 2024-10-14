@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Yeni Cüzdan Oluştur</string>
     <string name="onboarding_recover_wallet">Kurtarma Sözcük Grubundan Geri Yükle</string>
@@ -25,13 +25,15 @@
     <string name="dialog_confirm_secured_by">ile güvence altına alınmış</string>
     <string name="dialog_confirm_fee">Ağ ücreti</string>
     <string name="dialog_confirm_total">Toplam</string>
-
+    <string name="shortcut_action_join_dashpay">DashPay\'e Katılın</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Yedekle</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Tara</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Gönder</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_contact">Kişiye Gönder</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Al &amp; Sat</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -75,6 +77,9 @@
     <string name="payments_title">Tüm Ödemeler</string>
     <string name="payments_tab_pay_label">Gönder</string>
     <string name="payments_tab_receive_label">Al</string>
+    <string name="payments_pay_to_contact_title">Bir Kişiye Gönder</string>
+    <string name="payments_pay_to_contact_sub_title">Kişilerinizden biri</string>
+    <string name="payments_pay_to_contact_button">Seç</string>
     <string name="payments_pay_by_qr_title">Tarafından Gönderildi</string>
     <string name="payments_pay_by_qr_sub_title">QR kodu taranıyor</string>
     <string name="payments_pay_to_clipboard_title">Kopyalanan adrese gönder</string>
@@ -183,7 +188,6 @@
     <string name="notification_settings_title">Bildirimler</string>
     <string name="notification_explainer_title">Dash Cüzdanı size bildirim göndermek istiyor</string>
     <string name="notification_explainer_message">Bildirimler, uyarıları, sesleri ve simge rozetlerini içerebilir. Bunlar telefon Ayarlarında yapılandırılabilir.</string>
-
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Açmak için parmak izini kullan.</string>
@@ -239,6 +243,7 @@
     <string name="transaction_details_sent_from">Tarafından Gönderildi</string>
     <string name="transaction_details_sent_to">Gönderildi</string>
     <string name="transaction_details_received_at">Alındı</string>
+    <string name="transaction_details_received_from">Gönderen</string>
     <string name="transaction_details_moved_from">Taşındı</string>
     <string name="transaction_details_moved_internally_to">Dahili olarak taşındı</string>
     <string name="transaction_failed_details">İşlem başarısız</string>
@@ -252,6 +257,7 @@
     <string name="authenticate_switch_to_fingerprint">Parmak izinizi kullanın</string>
     <string name="authenticate_switch_to_pin">PİN Kullan</string>
 
+    <string name="menu_invite_title">Davet etmek</string>
     <string name="menu_buy_and_sell_title">Dash Al &amp; Sat</string>
     <string name="menu_buy_and_sell_subtitle">Üçüncü parti borsalara bağlanın</string>
     <string name="liquid_unavailable">Dash Cüzdanı ile Liquid entegrasyonu artık yok</string>
@@ -331,6 +337,12 @@
     <string name="welcome_screen_title_3">Daha Fazla Kontrol</string>
     <string name="welcome_screen_subtitle_3">Tam kontrol sahibi olun ve cüzdanınızı ihtiyacınıza göre özelleştirin</string>
 
+    <string-array name="history_filter">
+        <item>Hepsi</item>
+        <item>Alınan</item>
+        <item>Gönderilen</item>
+    </string-array>
+
     <string name="sync_status_wait">Lütfen senkronizasyonun tamamlanmasını bekleyin</string>
     <string name="sync_status_syncing_sub_title">Dash blok zinciri ile</string>
     <string name="sync_status_unable_to_connect">Bağlanılamıyor</string>
@@ -355,7 +367,18 @@
     <string name="import_image_no_private_key_copied">Kopyalanan bir özel anahtar yok</string>
     <string name="import_image_import_valid_private_key">Dash\'i içe aktarmak için geçerli bir özel anahtar kopyalayın</string>
     <string name="import_image_invalid_private">Geçersiz Özel Anahtar</string>
+    <string name="okay">Tamam</string>
 
+    <string name="onboard_from_invite_subtitle">DashPay\'e hoş geldiniz</string>
+    <string name="onboard_from_invite_step1_title">Kullanıcı adınızı seçin</string>
+    <string name="onboard_from_invite_step2_title">PIN\'inizi Ayarlayın</string>
+    <string name="onboard_from_invite_step3_title">Cüzdanınızı Güvende Tutun</string>
+
+    <string name="restore_wallet_please_wait">Lütfen Bekleyin</string>
+    <string name="network_unavailable">Ağ Kullanılamıyor</string>
+    <string name="network_error_contact_details">Kişi ayrıntıları alınamıyor</string>
+    <string name="network_error_user_search">Bir kullanıcı aranamıyor</string>
+    <string name="network_error_contact_suggestions">Öneri verilemiyor</string>
     <string name="today">Bugün</string>
     <string name="yesterday">Dün</string>
 
@@ -380,6 +403,10 @@
     <string name="launch_reset_wallet_extra_message">Kurtarma ifadenizi yedekleyin</string>
     <string name="start_reset_wallet_title">%s kaybedebilirsiniz</string>
     <string name="reset_wallet_text">Cüzdanı Sıfırla</string>
+
+
+
+    <!-- Tax category -->
     <string name="reclassify_transactions_title">İşlemlerinizi Yeniden Sınıflandırın</string>
     <string name="reclassify_transactions_title_message">Bu sınıflandırmalar, vergi raporlama hizmetlerine içe aktarılmak için kullanılabilecek CSV aktarımlarına yansıyacaktır.</string>
     <string name="reclassify_transactions_question">Vergi kategorisini nereden değiştirebilirim?</string>
@@ -410,7 +437,6 @@
     <string name="masternode_key_not_used">Kullanılmamış</string>
     <string name="masternode_key_revoked">İptal edildi</string>
     <string name="masternode_key_private_public_base64">Özel / Genel Anahtarlar (base64)</string>
-
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Fiyatlar alınamadı. Fiat değerleri yanlış olabilir.</string>
     <string name="stale_exchange_rates_stale">Fiyatlar en az 30 dakikalıktır. Fiat değerleri yanlış olabilir.</string>

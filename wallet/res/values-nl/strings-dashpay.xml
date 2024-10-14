@@ -272,6 +272,7 @@ gebruikersnaam</b></string>
     <string name="username_voting">Stemmen op gebruikersnamen</string>
     <string name="voting_duplicates_only_title">Standaard filterinstelling</string>
     <string name="voting_duplicates_only_message">Het standaardfilter toont alleen dubbele gebruikersnamen waar je NIET op hebt gestemd, maar je kan alle betwiste gebruikersnamen zien door het filter te wijzigen</string>
+    <string name="username_voting_subtitle">Als eigenaar van een masternode kan je stemmen om aangevraagde gebruikersnamen goed te keuren voordat gebruikers deze kunnen aanmaken.</string>
     <string name="all">Alles</string>
     <string name="n_usernames">%d gebruikersnamen</string>
     <string name="n_requests">%d verzoeken</string>
@@ -416,4 +417,4 @@ gebruikersnaam</b></string>
     <string name="mix_dash_mix">Gemixt saldo</string>
     <string name="mix_dash_title">Mix je Dash</string>
     <string name="mix_dash_message">Om te voorkomen dat anderen kunnen zien aan wie je betalingen doet, raden wij u aan om je saldo te mixen voordat je je gebruikersnaam aanmaakt.</string>
-</resources>
+    </resources>

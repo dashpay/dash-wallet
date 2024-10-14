@@ -267,6 +267,7 @@
     <string name="usernames_blocked_title">一部のユーザー名をブロックできます</string>
     <string name="usernames_blocked_subtitle">ネットワーク上の多数のユーザーがそのユーザー名を不適切と判断した場合、それをブロックできます</string>
     <string name="username_voting">ユーザー名投票</string>
+    <string name="username_voting_subtitle">マスターノードの所有者として、お客様が投票で請求されたユーザー名を承認すると、ユーザーはそのユーザー名を作成できるようになります。</string>
     <string name="all">全て</string>
     <string name="n_usernames">%dのユーザー名</string>
     <string name="n_requests">%dのリクエスト</string>

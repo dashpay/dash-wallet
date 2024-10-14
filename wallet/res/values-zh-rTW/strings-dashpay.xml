@@ -271,6 +271,7 @@
     <string name="username_voting">用戶名投票</string>
     <string name="voting_duplicates_only_title">預設過濾器設定</string>
     <string name="voting_duplicates_only_message">預設過濾器僅顯示您未投票的重複用戶名，但您可以透過更改過濾器來查看所有有爭議的用戶名</string>
+    <string name="username_voting_subtitle">作為主節點擁有者，您可以投票批准所要求的用戶名，然後用戶才能建立它。</string>
     <string name="all">所有</string>
     <string name="n_usernames">%d 使用者名稱</string>
     <string name="n_requests">%d 請求</string>

@@ -21,8 +21,9 @@
     <string name="transfer_dash">Preniesť Dash</string>
     <string name="login_error_title">Nedá sa prihlásiť na váš účet %s</string>
     <string name="login_error_message">Pri prihlasovaní do vášho účtu %s sa vyskytla chyba</string>
+    <string name="dash_address">Dash adresa</string>
+    <string name="username">Používateľské meno</string>
     <string name="balance">Zostatok:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernseyova libra</string>
     <!-- Local Currency List: JEP -->
@@ -55,11 +56,11 @@
     <string name="button_understand">Rozumiem</string>
     <string name="button_okay">Dobre</string>
     <string name="button_share">Zdieľať</string>
+    <string name="button_skip">Preskočiť</string>
     <string name="share_address">Zdieľať adresu</string>
     <string name="verify">Overiť</string>
     <string name="receive_enter_amount_button">Zadať množstvo</string>
     <string name="account_create">Vytvoriť účet</string>
-
     <!-- Design system UI elements -->
     <string name="search_hint">Hľadať</string>
     <string name="permission_allow">Povoliť</string>
@@ -101,4 +102,4 @@
 
     <string name="chain_syncing">Reťazec sa synchronizuje...</string>
 
-</resources>
+    </resources>

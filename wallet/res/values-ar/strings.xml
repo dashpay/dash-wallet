@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d متأخر ايام</string>
     <string name="blockchain_state_progress_weeks">%1$s, متأخر %2$d اسابيع</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d متأخر أشهر</string>
-    <string name="blockchain_state_progress_downloading">يتم التزامن مع الشبكة</string>
     <string name="blockchain_state_progress_stalled">تعطل التزامن</string>
     <string name="blockchain_state_progress_problem_storage">مزامنة: مشكلة في التخزين</string>
     <string name="blockchain_state_progress_problem_network">مزامنة: مشكلة في الشبكة</string>

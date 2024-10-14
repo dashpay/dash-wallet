@@ -21,8 +21,9 @@
     <string name="transfer_dash">Transfer Dash</string>
     <string name="login_error_title">%s hesabınızda oturum açılamıyor</string>
     <string name="login_error_message">%s hesabınızda oturum açılırken bir hata oluştu.</string>
+    <string name="dash_address">Dash Adresi</string>
+    <string name="username">Kullanıcı Adı</string>
     <string name="balance">Bakiye:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Lirası</string>
     <!-- Local Currency List: JEP -->
@@ -55,11 +56,11 @@
     <string name="button_understand">Anladım</string>
     <string name="button_okay">Tamam</string>
     <string name="button_share">Paylaş</string>
+    <string name="button_skip">Atla</string>
     <string name="share_address">Adresi Paylaş</string>
     <string name="verify">Onayla</string>
     <string name="receive_enter_amount_button">Tutarı Belirleyin</string>
     <string name="account_create">Hesab Oluştur</string>
-
     <!-- Design system UI elements -->
     <string name="search_hint">Ara</string>
     <string name="permission_allow">İzin ver</string>
@@ -101,4 +102,4 @@
 
     <string name="chain_syncing">Zincir senkronize ediliyor…</string>
 
-</resources>
+    </resources>

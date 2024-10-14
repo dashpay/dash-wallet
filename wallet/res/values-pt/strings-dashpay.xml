@@ -268,6 +268,7 @@ Dash</b></string>
     <string name="usernames_blocked_title">Algumas contas de usuário podem ser bloqueadas</string>
     <string name="usernames_blocked_subtitle">Se um número suficiente de pessoas na rede determinar que um nome de usuário é inapropriado, elas podem bloqueá-lo</string>
     <string name="username_voting">Votação de Nomes de Usuário</string>
+    <string name="username_voting_subtitle">Como proprietário de um masternode, você pode votar para aprovar nomes de usuário solicitados antes que os usuários possam criá-los.</string>
     <string name="all">Todos</string>
     <string name="n_usernames">%d nomes de usuário</string>
     <string name="n_requests">%d solicitações</string>

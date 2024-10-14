@@ -262,11 +262,13 @@
     <string name="pay_now">Bayar sekarang dan jika tidak disetujui, Anda dapat membuat nama lain tanpa membayar lagi</string>
     <string name="case_your_request_is_not_approved">Jika permintaan Anda tidak disetujui</string>
     <string name="voting_requirement_title">Pemungutan suara hanya diperlukan dalam beberapa kasus</string>
+    <string name="voting_requirement_subtitle">Nama pengguna apa pun yang memiliki angka 2–9 atau lebih dari 20 karakter akan disetujui secara otomatis</string>
     <string name="dash_network_must_vote_to_approve">Jaringan Dash harus memilih untuk menyetujui nama pengguna Anda sebelum dibuat.</string>
     <string name="what_is_username_voting">Apa itu voting nama pengguna\?</string>
     <string name="usernames_blocked_title">Beberapa nama pengguna dapat diblokir</string>
     <string name="usernames_blocked_subtitle">Jika cukup banyak jaringan yang menentukan bahwa nama pengguna tidak pantas, mereka dapat memblokirnya</string>
     <string name="username_voting">Voting nama pengguna</string>
+    <string name="username_voting_subtitle">Sebagai pemilik masternode, Anda dapat memilih untuk menyetujui nama pengguna yang diminta sebelum pengguna dapat membuatnya.</string>
     <string name="all">Semua</string>
     <string name="n_usernames">%d nama pengguna</string>
     <string name="n_requests">%d permintaan</string>
@@ -292,6 +294,7 @@
     </string-array>
 
     <string name="request_your_username">Buat Nama Pengguna anda</string>
+    <string name="request_your_hint">Mohon diperhatikan bahwa Anda tidak akan dapat mengubahnya di masa mendatang</string>
     <string name="request_username">Minta Nama Pengguna</string>
     <string name="request_voting_range">Jaringan Dash akan memberikan suara pada nama pengguna ini. Kami akan memberitahukan Anda hasilnya pada %s.</string>
     <string name="request_username_available">Nama pengguna tersedia</string>

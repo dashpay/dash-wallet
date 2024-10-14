@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Створити новий гаманець</string>
     <string name="onboarding_recover_wallet">Відновити гаманець фразою відновлення</string>
@@ -25,13 +25,15 @@
     <string name="dialog_confirm_secured_by">Захищено</string>
     <string name="dialog_confirm_fee">Комісія мережі</string>
     <string name="dialog_confirm_total">Всього</string>
-
+    <string name="shortcut_action_join_dashpay">Приєднатись до DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Резервне копіювання</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Сканувати</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Відправити</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_contact">Надіслати контакту</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Купити &amp; Продати</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -75,6 +77,9 @@
     <string name="payments_title">Платежі</string>
     <string name="payments_tab_pay_label">Відправити</string>
     <string name="payments_tab_receive_label">Отримати</string>
+    <string name="payments_pay_to_contact_title">Надіслати контакту</string>
+    <string name="payments_pay_to_contact_sub_title">Людина у ваших контактах</string>
+    <string name="payments_pay_to_contact_button">Вибрати</string>
     <string name="payments_pay_by_qr_title">Надіслати</string>
     <string name="payments_pay_by_qr_sub_title">Сканування QR коду</string>
     <string name="payments_pay_to_clipboard_title">Надіслати на скопійовану адресу</string>
@@ -189,7 +194,6 @@
     <string name="notification_settings_title">Сповіщення</string>
     <string name="notification_explainer_title">Dash Wallet хоче надсилати вам сповіщення</string>
     <string name="notification_explainer_message">Сповіщення можуть включати сповіщення, звуки та піктограми. Їх можна налаштувати в налаштуваннях телефону.</string>
-
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Для розблокування використовуйте відбиток пальця</string>
@@ -245,6 +249,7 @@
     <string name="transaction_details_sent_from">Відправлено з</string>
     <string name="transaction_details_sent_to">Відправити</string>
     <string name="transaction_details_received_at">Отримано на</string>
+    <string name="transaction_details_received_from">Отримано з</string>
     <string name="transaction_details_moved_from">Переміщено з</string>
     <string name="transaction_details_moved_internally_to">Внутрішньо переміщено в</string>
     <string name="transaction_failed_details">Помилка транзакції</string>
@@ -258,6 +263,7 @@
     <string name="authenticate_switch_to_fingerprint">Використати відбиток пальця</string>
     <string name="authenticate_switch_to_pin">Використати PIN-код</string>
 
+    <string name="menu_invite_title">Запросити</string>
     <string name="menu_buy_and_sell_title">Купити &amp; Продати Dash</string>
     <string name="menu_buy_and_sell_subtitle">Підключитися до сторонніх бірж</string>
     <string name="liquid_unavailable">Інтеграція Liquid з Dash Wallet більше недоступна</string>
@@ -337,6 +343,12 @@
     <string name="welcome_screen_title_3">Більше контролю</string>
     <string name="welcome_screen_subtitle_3">Отримайте повний контроль і налаштуйте свій гаманець для своїх потреб</string>
 
+    <string-array name="history_filter">
+        <item>Все</item>
+        <item>Отримано</item>
+        <item>Відправлено</item>
+    </string-array>
+
     <string name="sync_status_wait">Будь ласка, зачекайте на завершення синхронізації</string>
     <string name="sync_status_syncing_sub_title">З блокчейном Dash</string>
     <string name="sync_status_unable_to_connect">Не вдалось підключитись</string>
@@ -361,7 +373,18 @@
     <string name="import_image_no_private_key_copied">Приватний ключ не скопійовано</string>
     <string name="import_image_import_valid_private_key">Скопіюйте дійсний приватний ключ, щоб імпортувати з нього Dash</string>
     <string name="import_image_invalid_private">Неправильний приватний ключ</string>
+    <string name="okay">Згода</string>
 
+    <string name="onboard_from_invite_subtitle">Ласкаво просимо до DashPay</string>
+    <string name="onboard_from_invite_step1_title">Виберіть своє ім\'я користувача</string>
+    <string name="onboard_from_invite_step2_title">Встановіть PIN-код</string>
+    <string name="onboard_from_invite_step3_title">Захистіть свій гаманець</string>
+
+    <string name="restore_wallet_please_wait">Будь ласка, зачекайте</string>
+    <string name="network_unavailable">Мережа Недоступна</string>
+    <string name="network_error_contact_details">Не вдалося отримати контактні дані</string>
+    <string name="network_error_user_search">Не вдалося знайти користувача</string>
+    <string name="network_error_contact_suggestions">Неможливо надати пропозиції</string>
     <string name="today">Сьогодні</string>
     <string name="yesterday">Вчора</string>
 
@@ -386,6 +409,10 @@
     <string name="launch_reset_wallet_extra_message">Зробіть резервну копію фрази відновлення</string>
     <string name="start_reset_wallet_title">Ви можете втратити %s</string>
     <string name="reset_wallet_text">Скидання гаманця</string>
+
+
+
+    <!-- Tax category -->
     <string name="reclassify_transactions_title">Перекласифікуйте свої транзакції</string>
     <string name="reclassify_transactions_title_message">Ці класифікації буде відображено в файлі експорту CSV, який можна використовувати для імпорту в служби податкової звітності.</string>
     <string name="reclassify_transactions_question">Де можна змінити податкову категорію?</string>
@@ -416,7 +443,6 @@
     <string name="masternode_key_not_used">Не використано</string>
     <string name="masternode_key_revoked">Анульовано</string>
     <string name="masternode_key_private_public_base64">Приватні / публічні ключі (base64)</string>
-
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Ціни не отримано. Фіатні значення можуть бути неправильними.</string>
     <string name="stale_exchange_rates_stale">Цінам що найменше 30 хвилин. Фіатні значення можуть бути неправильними.</string>

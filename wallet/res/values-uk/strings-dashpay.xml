@@ -135,7 +135,7 @@
     <string name="scan_to_pay_username_dialog_message">Недійсне ім’я користувача чи ідентифікатор Dash\n\n%s</string>
     <string name="send_coins_to_username">Відправка</string>
     <string name="contact_history_disclaimer">Додайте % до свого списку контактів, щоб <b>переказувати платежі за Ім\'ям користувача</b> та <b>зберігати історію взаємних транзакцій</b></string>
-    <string name="contact_history_disclaimer_pending">Щойно % прийме ваш запит, ви зможете здійснити <b>оплату безпосередньо на ім’я користувача</b></string>
+    <string name="contact_history_disclaimer_pending">Щойно % прийме ваш запит, ви зможете здійснити <b>оплату безпосередньо на ім\’я користувача</b></string>
     <string name="stranger_activity_disclaimer_text">Платежі, здійснені безпосередньо на адреси, не будуть збережені.</string>
     <string name="error_loading_identity">Помилка завантаження ідентифікатора</string>
 
@@ -267,6 +267,7 @@
     <string name="usernames_blocked_title">Деякі імена користувачів можуть бути заблоковані</string>
     <string name="usernames_blocked_subtitle">Якщо значна частина мережі визначить, що ім’я користувача є невідповідним, вони можуть заблокувати його</string>
     <string name="username_voting">Голосування за імʼя користува</string>
+    <string name="username_voting_subtitle">Як власник майстерноди, ви можете голосувати за схвалення запитуваних імен користувачів, перш ніж користувачі зможуть їх створити.</string>
     <string name="all">Все</string>
     <string name="n_usernames">%d імена користувачів</string>
     <string name="n_requests">%d запитів</string>
