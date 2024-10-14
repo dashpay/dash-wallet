@@ -474,10 +474,12 @@ class PlatformRepo @Inject constructor(
             return 0
         }
 
-        if (shouldShowAlert()) {
-            val alert = userAlertDao.load(date)
-            if (alert != null) {
-                count++
+        if (Constants.SUPPORTS_INVITES) {
+            if (shouldShowAlert()) {
+                val alert = userAlertDao.load(date)
+                if (alert != null) {
+                    count++
+                }
             }
         }
 
