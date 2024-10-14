@@ -62,19 +62,17 @@ import javax.inject.Inject
 @HiltViewModel
 open class DashPayViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
-    private val walletUIConfig: WalletUIConfig,
     private val analytics: AnalyticsService,
     private val platformRepo: PlatformRepo,
-    private val blockchainState: BlockchainStateDao,
+    blockchainState: BlockchainStateDao,
     dashPayProfileDao: DashPayProfileDao,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val invitations: InvitationsDao,
     val platformSyncService: PlatformSyncService,
     private val platformBroadcastService: PlatformBroadcastService,
-    private val dashPayContactRequestDao: DashPayContactRequestDao,
-    private val contactRequestDao: DashPayContactRequestDao,
+    contactRequestDao: DashPayContactRequestDao,
     private val dashPayConfig: DashPayConfig
-) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
+) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, contactRequestDao) {
 
     companion object {
         private val log = LoggerFactory.getLogger(DashPayViewModel::class.java)
@@ -108,28 +106,6 @@ open class DashPayViewModel @Inject constructor(
     val recentlyModifiedContactsLiveData = MutableLiveData<HashSet<String>>()
 
     private var timerUsernameSearch: AnalyticsTimer? = null
-
-
-
-    private val _hasContacts = MutableStateFlow(false)
-    val hasContacts: Flow<Boolean>
-        get() = _hasContacts
-
-    init {
-        blockchainIdentityDataDao.observe(IDENTITY_ID)
-            .filterNotNull()
-            .flatMapLatest {
-                val size = contactRequestDao.loadFromOthers(it).size
-                println(size)
-                contactRequestDao.observeReceivedRequestsCount(it)
-
-            }
-            .onEach {
-                _hasContacts.value = it != 0
-            }
-            .launchIn(viewModelScope)
-
-    }
 
     suspend fun isDashPayInfoShown(): Boolean =
         dashPayConfig.get(DashPayConfig.HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN) ?: false
@@ -334,7 +310,7 @@ open class DashPayViewModel @Inject constructor(
     suspend fun getInviteHistory() = invitations.loadAll()
 
     fun contactRequestsTo(userId: String): LiveData<List<DashPayContactRequest>> =
-        dashPayContactRequestDao.observeToOthers(userId).distinctUntilChanged().asLiveData()
+        contactRequestDao.observeToOthers(userId).distinctUntilChanged().asLiveData()
 
     private inner class UserSearch(
         val text: String,
