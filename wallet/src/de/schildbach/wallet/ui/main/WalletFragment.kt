@@ -215,6 +215,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 viewModel.walletBalance
             )
         }
+
+        viewModel.hasContacts.observe(viewLifecycleOwner) {
+            refreshShortcutBar()
+        }
     }
 
     fun scrollToTop() {
@@ -289,6 +293,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun refreshShortcutBar() {
         showHideSecureAction()
         refreshIfUserHasBalance()
+        refreshIfUserHasIdentity()
     }
 
     private fun showHideSecureAction() {
@@ -298,6 +303,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun refreshIfUserHasBalance() {
         val balance: Coin = viewModel.balance.value ?: Coin.ZERO
         binding.shortcutsPane.userHasBalance = balance.isPositive
+    }
+
+    private fun refreshIfUserHasIdentity() {
+        binding.shortcutsPane.userHasContacts = viewModel.hasIdentity && viewModel.hasContacts.value
     }
 
     private fun updateSyncState() {

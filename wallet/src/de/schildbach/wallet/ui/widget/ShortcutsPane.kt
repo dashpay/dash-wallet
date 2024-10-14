@@ -104,6 +104,7 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : FlexboxLayout(conte
         secureNowButton,
         explore,
         receiveButton,
+        payToAddressButton,
         payToContactButton,
         buySellButton,
         scanToPayButton
@@ -123,8 +124,19 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : FlexboxLayout(conte
         set(value) {
             scanToPayButton.shouldAppear = value
             buySellButton.shouldAppear = !value
-            payToAddressButton.shouldAppear = value
-            payToContactButton.shouldAppear = if (Constants.SUPPORTS_PLATFORM) value else false
+            payToAddressButton.shouldAppear = value && !userHasContacts
+            payToContactButton.shouldAppear = value && userHasContacts
+
+            if (field != value) {
+                field = value
+                refresh()
+            }
+        }
+
+    var userHasContacts: Boolean = false
+        set(value) {
+            payToAddressButton.shouldAppear = !value && userHasBalance
+            payToContactButton.shouldAppear = value && userHasBalance
 
             if (field != value) {
                 field = value
