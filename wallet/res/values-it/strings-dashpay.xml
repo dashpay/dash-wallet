@@ -260,7 +260,7 @@ Username</b></string>
     <string name="upload_your_picture">Carica la tua foto, personalizza la tua identità.</string>
     <string name="in_case_lose_your_passphrase">Nel caso in cui perdi la passphrase perderai il diritto al nome utente richiesto.</string>
     <string name="keep_your_passphrase_safe">Mantieni la tua passphrase al sicuro</string>
-    <string name="pay_now">Paga ora e, se non approvato, puoi creare un nome diverso senza pagare nuovamente [controlla se vero]</string>
+    <string name="pay_now">Paga ora e se non approvato</string>
     <string name="case_your_request_is_not_approved">Nel caso in cui la tua richiesta non venga approvata</string>
     <string name="voting_requirement_subtitle">Qualsiasi nome utente che abbia un numero compreso tra 2 e 9 o che contenga più di 20 caratteri verrà approvato automaticamente</string>
     <string name="voting_requirement_title">La votazione è necessaria solo in alcuni casi</string>
@@ -270,8 +270,6 @@ Username</b></string>
     <string name="usernames_blocked_subtitle">Se un numero sufficiente di membri della rete determina che un nome utente non è appropriato, possono bloccarlo</string>
     <string name="username_voting">Votazione Nome utente Votazione </string>
     <string name="username_voting_subtitle">Come proprietario di un masternode puoi votare per approvare i nomi utente richiesti prima che gli utenti possano crearli.</string>
-    <string name="voting_duplicates_only_title">Vota solo sui duplicati</string>
-    <string name="voting_duplicates_only_message">Puoi rivedere tutte le richieste ma devi votare solo i duplicati</string>
     <string name="all">Tutte</string>
     <string name="n_usernames">%d nomi utente</string>
     <string name="n_requests">%d richieste</string>
@@ -304,10 +302,7 @@ Username</b></string>
     <string name="request_username_unavailable">Il nome utente non è disponibile o è bloccato</string>
     <string name="request_username_taken">Il nome utente è preso</string>
     <string name="requesting_your_username_title">Creazione del tuo nome utente</string>
-    <string name="requesting_your_username_message">Il tuo nome utente Johndoe è stato richiesto sulla rete Dash. Potrebbe volerci del tempo.</string>
     <string name="requesting_your_username_error_title">La tua richiesta di nome utente non è riuscita</string>
-    <string name="requesting_your_username_error_message">Per qualche motivo, la richiesta non è riuscita. Per favore riprova.</string>
-
     <string name="voting">Voto:</string>
     <string name="this_username_has_already_been_requested">Questo nome utente è già stato richiesto, ma puoi richiederlo anche tu e lasciare che sia la rete a votare per decidere se puoi averlo</string>
     <string name="request_details">Richiedi dettagli</string>
@@ -402,5 +397,4 @@ Username</b></string>
     <string name="request_username_balance_requirement">Devi avere 0,25 DASH per creare questo nome utente</string>
     <string name="request_username_length_requirement">Tra 3 e 23 caratteri</string>
     <string name="request_username_confirm">Accetto</string>
-
-</resources>
+    </resources>

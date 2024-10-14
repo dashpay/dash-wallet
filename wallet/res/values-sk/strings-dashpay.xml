@@ -260,7 +260,7 @@ používateľské meno</b></string>
     <string name="upload_your_picture">Nahrajte svoj obrázok, prispôsobte si svoju identitu.</string>
     <string name="in_case_lose_your_passphrase">V prípade, že stratíte svoju prístupovú frázu, stratíte právo na požadované používateľské meno.</string>
     <string name="keep_your_passphrase_safe">Udržujte svoju prístupovú frázu v bezpečí</string>
-    <string name="pay_now">Zaplatiť teraz a v prípade neschválenia si môžete vytvoriť iné meno bez opätovného platenia [zaškrtnite ak súhlasíte]</string>
+    <string name="pay_now">Zaplaťte teraz a v prípade neschválenia si môžete vytvoriť iné meno bez toho, aby ste museli platiť znova</string>
     <string name="case_your_request_is_not_approved">V prípade, že vaša žiadosť nebude schválená</string>
     <string name="voting_requirement_subtitle">Každé používateľské meno, ktoré má číslo 2 až 9 alebo je dlhšie ako 20 znakov, bude automaticky schválené</string>
     <string name="voting_requirement_title">Hlasovanie je potrebné len v niektorých prípadoch</string>
@@ -270,8 +270,6 @@ používateľské meno</b></string>
     <string name="usernames_blocked_subtitle">Ak dostatočná časť siete zistí, že používateľské meno je nevhodné, môže ho zablokovať</string>
     <string name="username_voting">Hlasovanie o používateľskom mene</string>
     <string name="username_voting_subtitle">Ako vlastník Masternode môžete hlasovať za schválenie požadovaných používateľských mien predtým, ako ich používatelia budú môcť vytvoriť.</string>
-    <string name="voting_duplicates_only_title">Hlasovať len za duplikáty</string>
-    <string name="voting_duplicates_only_message">Môžete skontrolovať všetky žiadosti, ale hlasovať potrebujete iba o duplikátoch</string>
     <string name="all">Všetko</string>
     <string name="n_usernames">%d používateľských mien</string>
     <string name="n_requests">%d žiadostí</string>
@@ -304,10 +302,7 @@ používateľské meno</b></string>
     <string name="request_username_unavailable">Používateľské meno je nedostupné alebo zablokované</string>
     <string name="request_username_taken">Používateľské meno sa už používa</string>
     <string name="requesting_your_username_title">Vytvorenie vášho používateľského mena</string>
-    <string name="requesting_your_username_message">O vaše používateľské meno johndoe je požiadané v sieti Dash. Môže to chvíľu trvať.</string>
     <string name="requesting_your_username_error_title">Žiadosť o používateľské meno zlyhala</string>
-    <string name="requesting_your_username_error_message">Z nejakého dôvodu žiadosť zlyhala. Skúste to znova.</string>
-
     <string name="voting">Hlasovanie:</string>
     <string name="this_username_has_already_been_requested">Toto používateľské meno už bolo vyžiadané, ale môžete si ho vyžiadať aj vy a nechať hlasovanie siete, aby rozhodla, či ho môžete mať</string>
     <string name="request_details">Vyžiadať podrobnosti</string>
@@ -360,19 +355,19 @@ používateľské meno</b></string>
     <!-- CoinJoin -->
     <string name="coinjoin">CoinJoin</string>
     <string name="turned_off">Vypnuté</string>
-    <string name="coinjoin_info_subtitle">Miešaním vašich Dashov budú vaše transakcie súkromnejšie</string>
-    <string name="coinjoin_description_1">Keď je toto zapnuté, budete môcť minúť iba zmiešaný Dash. Toto je možné kedykoľvek vypnúť.</string>
-    <string name="coinjoin_description_2">Novo prijaté Dashe budú automaticky zmiešaný pri otvorení peňaženky</string>
+    <string name="coinjoin_info_subtitle">Miešanie vašich Dashov spraví vaše transakcie súkromnejšie</string>
+    <string name="coinjoin_description_1">Keď je miešanie zapnuté, budete môcť minúť iba zmiešané Dashe. Toto je možné kedykoľvek vypnúť.</string>
+    <string name="coinjoin_description_2">Novo prijaté Dashe budú automaticky zmiešané pri otvorení peňaženky</string>
     <string name="coinjoin_description_3">Zapnutie tejto funkcie spôsobí vyššiu spotrebu batérie</string>
     <string name="coinjoin_mixing_level_title">Zvoliť úroveň miešania</string>
-    <string name="coinjoin_mixing_level_subtitle">Úroveň miešania môžete kedykoľvek zmeniť alebo zastaviť</string>
+    <string name="coinjoin_mixing_level_subtitle">Miešanie môžete kedykoľvek zastaviť, alebo zmeniť jeho úroveň</string>
     <string name="coinjoin_mixing_transactions">Miešacie transakcie</string>
     <string name="coinjoin_transaction_group">Tieto transakcie majú súvis s miešaním.</string>
-    <string name="intermediate">Stredne pokročilý</string>
-    <string name="advanced">Pokročilé</string>
+    <string name="intermediate">Stredne pokročilá</string>
+    <string name="advanced">Pokročilá</string>
     <string name="intermediate_level_card_decs">Pokročilí používatelia, ktorí majú veľmi vysokú úroveň technických znalostí, môžu určiť vašu históriu transakcií</string>
-    <string name="advanced_level_card_decs">Pre pokročilých používateľov s vysokou úrovňou technických znalostí by bolo veľmi ťažké určiť vašu históriu transakcií</string>
-    <string name="coinjoin_intermediate_time">do 30 minút</string>
+    <string name="advanced_level_card_decs">Pre pokročilých používateľov s vysokou úrovňou technických znalostí, by bolo veľmi ťažké určiť vašu históriu transakcií</string>
+    <string name="coinjoin_intermediate_time">Do 30 minút</string>
     <string name="coinjoin_advanced_time">Niekoľko hodín</string>
     <string name="coinjoin_start">Začať miešanie</string>
     <string name="coinjoin_stop">Zastaviť miešanie</string>
@@ -402,5 +397,4 @@ používateľské meno</b></string>
     <string name="request_username_balance_requirement">Na vytvorenie tohto používateľského mena potrebujete mať 0,25 DASH</string>
     <string name="request_username_length_requirement">Medzi 3 a 23 znakmi</string>
     <string name="request_username_confirm">Prijímam</string>
-
-</resources>
+    </resources>

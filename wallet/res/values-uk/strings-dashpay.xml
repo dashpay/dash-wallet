@@ -130,12 +130,12 @@
     <string name="notifications_you_received">%s надіслав вам запит на додавання в контакти</string>
 
     <string name="identity_complete_message">Ваше ім’я користувача %s було успішно створено в Dash Network</string>
-    <string name="request_complete_message">Ви маєте успішний запит на ім\’я користувача %s в Dash Network</string>
+    <string name="request_complete_message">Ви маєте успішний запит на ім’я користувача %s в Dash Network</string>
 
     <string name="scan_to_pay_username_dialog_message">Недійсне ім’я користувача чи ідентифікатор Dash\n\n%s</string>
     <string name="send_coins_to_username">Відправка</string>
     <string name="contact_history_disclaimer">Додайте % до свого списку контактів, щоб <b>переказувати платежі за Ім\'ям користувача</b> та <b>зберігати історію взаємних транзакцій</b></string>
-    <string name="contact_history_disclaimer_pending">Щойно % прийме ваш запит, ви зможете здійснити <b>оплату безпосередньо на ім’я користувача</b></string>
+    <string name="contact_history_disclaimer_pending">Щойно % прийме ваш запит, ви зможете здійснити <b>оплату безпосередньо на ім\’я користувача</b></string>
     <string name="stranger_activity_disclaimer_text">Платежі, здійснені безпосередньо на адреси, не будуть збережені.</string>
     <string name="error_loading_identity">Помилка завантаження ідентифікатора</string>
 
@@ -259,7 +259,7 @@
     <string name="upload_your_picture">Завантажте своє зображення, персоналізуйте свою особистість</string>
     <string name="in_case_lose_your_passphrase">Якщо ви втратите свою парольну фразу, ви втратите право на запрошене ім’я користувача.</string>
     <string name="keep_your_passphrase_safe">Зберігайте свою парольну фразу в безпеці</string>
-    <string name="pay_now">Сплатіть зараз, і якщо не буде схвалено, ви можете створити інше ім’я, не сплачуючи повторно [перевірте, якщо правда]</string>
+    <string name="pay_now">Сплатіть зараз, і якщо не буде схвалено, ви зможете створити інше ім’я без повторної оплати</string>
     <string name="case_your_request_is_not_approved">У випадку, якщо ваш запит не буде схвалено</string>
     <string name="voting_requirement_subtitle">Будь-яке ім’я користувача з цифрами 2–9 або довжиною понад 20 символів буде автоматично підтверджено</string>
     <string name="voting_requirement_title">Голосування потрібне лише в деяких випадках</string>
@@ -269,8 +269,6 @@
     <string name="usernames_blocked_subtitle">Якщо значна частина мережі визначить, що ім’я користувача є невідповідним, вони можуть заблокувати його</string>
     <string name="username_voting">Голосування за імʼя користува</string>
     <string name="username_voting_subtitle">Як власник майстерноди, ви можете голосувати за схвалення запитуваних імен користувачів, перш ніж користувачі зможуть їх створити.</string>
-    <string name="voting_duplicates_only_title">Голосувати лише за дублікати</string>
-    <string name="voting_duplicates_only_message">Ви можете переглянути всі запити, але голосувати потрібно лише за дублікати</string>
     <string name="all">Все</string>
     <string name="n_usernames">%d імена користувачів</string>
     <string name="n_requests">%d запитів</string>
@@ -303,10 +301,7 @@
     <string name="request_username_unavailable">Ім\'я користувача недоступне або заблоковане</string>
     <string name="request_username_taken">Ім\'я користувача зайняте</string>
     <string name="requesting_your_username_title">Створити ім\'я користувача</string>
-    <string name="requesting_your_username_message">Ваше ім’я користувача johndoe запитується в мережі Dash. Це може зайняти деякий час.</string>
     <string name="requesting_your_username_error_title">Ваш запит імені користувача провалився</string>
-    <string name="requesting_your_username_error_message">З якоїсь причини запит не виконано. Спробуйте ще раз.</string>
-
     <string name="voting">Голосувати: </string>
     <string name="this_username_has_already_been_requested">Це ім’я користувача вже запитувалося, але ви також можете запросити його та дозволити мережі проголосувати, щоб вирішити, чи можете ви його мати</string>
     <string name="request_details">Запросити деталі</string>
@@ -401,5 +396,4 @@
     <string name="request_username_balance_requirement">Для створення цього імені користувача потрібно мати 0,25 DASH</string>
     <string name="request_username_length_requirement">Від 3 до 23 символів</string>
     <string name="request_username_confirm">Я приймаю</string>
-
-</resources>
+    </resources>

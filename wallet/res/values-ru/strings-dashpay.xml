@@ -260,7 +260,7 @@ Dash</b></string>
     <string name="upload_your_picture">Загрузите изображение и персонализируйте свой профиль</string>
     <string name="in_case_lose_your_passphrase">При потере кодовой фразы вы потеряете доступ к запрошенному имени пользователя</string>
     <string name="keep_your_passphrase_safe">Храните кодовую фразу в надёжном месте</string>
-    <string name="pay_now">Оплатите сейчас, а в случае, если имя пользователя не одобрят, вы сможете создать другое без дополнительной платы  [проверить, так ли это]</string>
+    <string name="pay_now">Оплатите сейчас, а в случае, если имя пользователя не одобрят, вы сможете создать другое без дополнительной платы</string>
     <string name="case_your_request_is_not_approved">Если ваш запрос не одобрили</string>
     <string name="voting_requirement_subtitle">Автоматически одобряются те Имена пользователей, где есть число от 2-9, а длина больше 20 символов</string>
     <string name="voting_requirement_title">Голосование понадобится не всегда</string>
@@ -270,8 +270,6 @@ Dash</b></string>
     <string name="usernames_blocked_subtitle">Если существенная часть сети сочтёт Имя пользователя неподходящим, его могут заблокировать</string>
     <string name="username_voting">Голосование за Имя пользователя</string>
     <string name="username_voting_subtitle">Будучи владельцем мастерноды, вы можете голосовать за одобрение запрошенных имён пользователей до того, как пользователи смогут их создать.</string>
-    <string name="voting_duplicates_only_title">Голосовать только за дубликаты</string>
-    <string name="voting_duplicates_only_message">Можно просмотреть все запросы, но голосовать нужно только за дубликаты</string>
     <string name="all">Все</string>
     <string name="n_usernames">%d Имён пользователей</string>
     <string name="n_requests">%d запросов</string>
@@ -304,10 +302,7 @@ Dash</b></string>
     <string name="request_username_unavailable">Имя пользователя недоступно или заблокировано</string>
     <string name="request_username_taken">Имя пользователя уже занято</string>
     <string name="requesting_your_username_title">Создание Имени пользователя</string>
-    <string name="requesting_your_username_message">Подаётся запрос на ваше Имя пользователя johndoe в сети Dash. Это может занять какое-то время.</string>
     <string name="requesting_your_username_error_title">Запрос на Имя пользователя не выполнен</string>
-    <string name="requesting_your_username_error_message">По какой-то причине запрос на Имя пользователя не прошёл. Пожалуйста, попробуйте снова.</string>
-
     <string name="voting">Голосуют:</string>
     <string name="this_username_has_already_been_requested">На это имя пользователя уже поступил запрос, но вы тоже можете его запросить и дать сети решить, кому его отдать</string>
     <string name="request_details">Узнать подробности</string>
@@ -377,7 +372,7 @@ Dash</b></string>
     <string name="coinjoin_start">Начать перемешивание</string>
     <string name="coinjoin_stop">Остановить перемешивание</string>
     <string name="coinjoin_mixing">Перемешивание</string>
-    <string name="coinjoin_paused">Перемешивание приостановлено</string>
+    <string name="coinjoin_paused">Перемешивание на паузе</string>
     <string name="coinjoin_not_started">Не начато</string>
     <string name="coinjoin_progress">%s (%d %%) %s из %s</string>
     <string name="coinjoin_progress_balance">%1$s из %2$s</string>

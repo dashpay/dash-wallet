@@ -261,7 +261,7 @@ gebruikersnaam</b></string>
     <string name="upload_your_picture">Upload je foto, personaliseer je identiteit</string>
     <string name="in_case_lose_your_passphrase">Als je de wachtwoordzin verliest, verlies je het recht op de door jou aangevraagde gebruikersnaam.</string>
     <string name="keep_your_passphrase_safe">Bewaar de wachtwoordzin veilig</string>
-    <string name="pay_now">Betaal nu en als het niet wordt goedgekeurd, kun je een andere naam aanmaken zonder opnieuw te betalen.</string>
+    <string name="pay_now">Betaal nu en indien niet goedgekeurd, kun je zonder opnieuw te betalen een andere gebruikersnaam aanmaken </string>
     <string name="case_your_request_is_not_approved">Indien je aanvraag niet wordt goedgekeurd</string>
     <string name="voting_requirement_subtitle">Een gebruikersnaam die een cijfer 2–9 bevat of langer is dan 20 tekens, wordt automatisch goedgekeurd.</string>
     <string name="voting_requirement_title">Stemmen is alleen in sommige gevallen vereist.</string>
@@ -271,8 +271,6 @@ gebruikersnaam</b></string>
     <string name="usernames_blocked_subtitle">Als genoeg mensen op het netwerk bepalen dat een gebruikersnaam ongepast is, kunnen ze deze blokkeren.</string>
     <string name="username_voting">Stemmen op gebruikersnamen</string>
     <string name="username_voting_subtitle">Als eigenaar van een masternode kan je stemmen om aangevraagde gebruikersnamen goed te keuren voordat gebruikers deze kunnen aanmaken.</string>
-    <string name="voting_duplicates_only_title">Stem alleen op duplicaten</string>
-    <string name="voting_duplicates_only_message">Je kunt alle verzoeken bekijken, maar je hoeft alleen op duplicaten te stemmen</string>
     <string name="all">Alles</string>
     <string name="n_usernames">%d gebruikersnamen</string>
     <string name="n_requests">%d verzoeken</string>
@@ -305,10 +303,7 @@ gebruikersnaam</b></string>
     <string name="request_username_unavailable">Gebruikersnaam is niet beschikbaar of geblokkeerd</string>
     <string name="request_username_taken">Gebruikersnaam is bezet</string>
     <string name="requesting_your_username_title">Je gebruikersnaam aan het maken</string>
-    <string name="requesting_your_username_message">Je gebruikersnaam johndoe wordt aangevraagd op het Dash Netwerk. Dit kan even duren.</string>
     <string name="requesting_your_username_error_title">Je verzoek  om gebruikersnaam is mislukt.</string>
-    <string name="requesting_your_username_error_message">Het verzoek mislukt door onbekende reden. Probeer het opnieuw.</string>
-
     <string name="voting">Stemming:</string>
     <string name="this_username_has_already_been_requested">Deze gebruikersnaam is al aangevraagd, maar je kan deze alsnog aanvragen en het netwerk laten beslissen of je deze kunt krijgen</string>
     <string name="request_details">Verkrijg details</string>
@@ -403,5 +398,4 @@ gebruikersnaam</b></string>
     <string name="request_username_balance_requirement">Je hebt 0,25 DASH nodig om deze gebruikersnaam aan te maken</string>
     <string name="request_username_length_requirement">Tussen 3 en 23 tekens</string>
     <string name="request_username_confirm">Ik accepteer</string>
-
-</resources>
+    </resources>

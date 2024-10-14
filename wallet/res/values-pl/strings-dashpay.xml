@@ -259,7 +259,7 @@
     <string name="upload_your_picture">Dodaj swoje zdjęcie i spersonalizuj swoją tożsamość.</string>
     <string name="in_case_lose_your_passphrase">W przypadku utraty hasła utracisz również całkowity dostęp do żądanej nazwy użytkownika.</string>
     <string name="keep_your_passphrase_safe">Zabezpiecz swoją listę słów do odzysku konta oraz hasło.</string>
-    <string name="pay_now">Zapłać teraz, ale jeśli nie zostanie zaakceptowane, możesz utworzyć inną nazwę bez konieczności ponownego płacenia [zaznacz, jeśli to prawda]</string>
+    <string name="pay_now">Zapłać teraz, a jeśli nazwa nie zostanie zatwierdzona, możesz utworzyć inną nazwę bez konieczności ponownego uiszczania opłaty</string>
     <string name="case_your_request_is_not_approved">W przypadku, gdy Twoja prośba nie zostanie zatwierdzona</string>
     <string name="voting_requirement_subtitle">Każda nazwa użytkownika zawierająca cyfrę od 2 do 9 lub dłuższa niż 20 znaków zostanie automatycznie zatwierdzona</string>
     <string name="voting_requirement_title">Głosowanie jest wymagane tylko w niektórych przypadkach</string>
@@ -269,8 +269,6 @@
     <string name="usernames_blocked_subtitle">Jeśli wystarczająca liczba użytkowników w sieci uzna, że ​​nazwa użytkownika jest nieodpowiednia, mogą oni ją zablokować</string>
     <string name="username_voting">Głosowanie nad nazwą użytkownika</string>
     <string name="username_voting_subtitle">Jako właściciel masternodu możesz głosować nad zatwierdzeniem żądanych nazw użytkowników, zanim zostaną one stworzone. </string>
-    <string name="voting_duplicates_only_title">Głosuj tylko nad duplikatami</string>
-    <string name="voting_duplicates_only_message">Możesz przejrzeć wszystkie wnioski, ale musisz głosować tylko nad duplikatami</string>
     <string name="all">Całość</string>
     <string name="n_usernames">%d nazwy użytkowników</string>
     <string name="n_requests">%d żądań</string>
@@ -303,10 +301,7 @@
     <string name="request_username_unavailable">Nazwa użytkownika jest niedostępna lub zablokowana</string>
     <string name="request_username_taken">Nazwa użytkownika jest już zajęta</string>
     <string name="requesting_your_username_title">Tworzenie twojej nazwy użytkownika</string>
-    <string name="requesting_your_username_message">Twoja nazwa użytkownika jankowalski jest żądana w sieci Dash. Może to potrwać chwilę.</string>
     <string name="requesting_your_username_error_title">Żądanie nazwy użytkownika nie powiodło się</string>
-    <string name="requesting_your_username_error_message">Z jakiegoś powodu żądanie nie powiodło się. Spróbuj ponownie.</string>
-
     <string name="voting">Głosowanie:</string>
     <string name="this_username_has_already_been_requested">Ktoś już poprosił o tę nazwę, ale możesz ty też o nią poprosić i pozwolić sieci głosować, nad tym kto ma ją otrzymać.</string>
     <string name="request_details">Zarządaj szczegółów</string>
@@ -360,20 +355,20 @@
     <string name="coinjoin">CoinJoin</string>
     <string name="turned_off">Wyłączony</string>
     <string name="coinjoin_info_subtitle">Mieszanie monet Dash sprawi, że Twoje transakcje będą bardziej prywatne</string>
-    <string name="coinjoin_description_1">Gdy ta opcja jest włączona, będziesz mógł wydać zmieszane monety Dash. Możesz to wyłączyć w dowolnym momencie.</string>
-    <string name="coinjoin_description_2">Nowo otrzymany Dash zostanie automatycznie zmieszany po otwarciu portfela</string>
-    <string name="coinjoin_description_3">Włączenie tej funkcji spowoduje większe zużycie baterii</string>
-    <string name="coinjoin_mixing_level_title">Wybierz poziom miksowania</string>
+    <string name="coinjoin_description_1">Gdy ta opcja jest włączona, będziesz mógł wydać wymieszane monety Dash. Możesz ją wyłączyć w dowolnym momencie.</string>
+    <string name="coinjoin_description_2">Nowo otrzymane monety Dash zostaną automatycznie wymieszane po otwarciu portfela.</string>
+    <string name="coinjoin_description_3">Włączenie tej funkcji spowoduje większe zużycie baterii.</string>
+    <string name="coinjoin_mixing_level_title">Wybierz poziom mieszania</string>
     <string name="coinjoin_mixing_level_subtitle">Możesz zmienić lub zatrzymać poziom miksowania w dowolnym momencie</string>
     <string name="coinjoin_mixing_transactions">Miksowanie transakcji</string>
     <string name="coinjoin_transaction_group">Te transakcje są stworzone przez miksowanie</string>
-    <string name="intermediate">Pośredni</string>
-    <string name="advanced">Zaawansowane</string>
+    <string name="intermediate">Średni</string>
+    <string name="advanced">Zaawansowany</string>
     <string name="intermediate_level_card_decs">Zaawansowani użytkownicy, którzy posiadają bardzo wysoki poziom wiedzy technicznej, mogą być w stanie odkryć historię twoich transakcji.</string>
-    <string name="advanced_level_card_decs">Nawet użytkownicy o bardzo zaawansowanej wiedzy technicznej nie będą mogli ustalić definitywnej historię transakcji.</string>
+    <string name="advanced_level_card_decs">Nawet użytkownicy o bardzo zaawansowanej wiedzy technicznej nie będą w stanie ustalić definitywnie historii transakcji.</string>
     <string name="coinjoin_intermediate_time">do 30 minut</string>
     <string name="coinjoin_advanced_time">Wiele godzin</string>
-    <string name="coinjoin_start">Zacznij Miksowanie</string>
+    <string name="coinjoin_start">Zacznij Mieszanie</string>
     <string name="coinjoin_stop">Zatrzymaj Miksowanie</string>
     <string name="coinjoin_mixing">Miksowanie</string>
     <string name="coinjoin_paused">Miksowanie zostało zatrzywame</string>
@@ -401,5 +396,4 @@
     <string name="request_username_balance_requirement">Aby stworzyć tę nazwę użytkownika, musisz mieć 0,25 DASH</string>
     <string name="request_username_length_requirement">Pomiędzy 3 a 23 znakami</string>
     <string name="request_username_confirm">Akceptuję</string>
-
-</resources>
+    </resources>

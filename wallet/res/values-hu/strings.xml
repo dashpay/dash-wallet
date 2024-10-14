@@ -8,7 +8,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d nap van még hátra</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d hét van még hátra</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d hónap van még hátra</string>
-    <string name="blockchain_state_progress_downloading">Szinkronizálás a hálózattal</string>
     <string name="blockchain_state_progress_stalled">A szinkronizálás szünetel</string>
     <string name="blockchain_state_progress_problem_storage">Szinkronizálás: tárolóhely probléma</string>
     <string name="blockchain_state_progress_problem_network">Szinkronizálás: Hálózati probléma</string>

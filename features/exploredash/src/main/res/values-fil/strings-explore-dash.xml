@@ -153,6 +153,11 @@
     <string name="buy_gift_card_with_dash_text">Bumili ng gift card gamit ang iyong Dash</string>
     <string name="redeem_gift_card_text">I-redeem ang iyong gift card online sa loob ng ilang segundo o sa cashier.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Ang Test Dash ay walang anumang halaga sa totoong mundo ngunit maaari mo itong ipadala at tanggapin kasama ng iba pang mga gumagamit ng DashPay Alpha.</string>
+    <string name="explore_test_dash_title">Paano ako makakakuha ng Test Dash?</string>
+    <string name="explore_get_test_dash">Kunin ang Test Dash</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">Kasalukuyang isinasagawa ang pag-sync... Maaaring hindi kumpleto ang resulta.</string>
     <string name="sync_in_progress_error">Kasalukuyang isinasagawa ang pag-sync... Nagkaroon ng error.</string>

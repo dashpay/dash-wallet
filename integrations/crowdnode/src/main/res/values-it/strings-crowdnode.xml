@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">CrowdNode utilizza questo indirizzo come ID account. Perderai l\'accesso ai tuoi fondi all\'interno di questo portafoglio e al tuo account CrowdNode se perdi la passphrase associata a questo indirizzo.</string>
     <string name="crowdnode_new_account_warning_2">Piccole quantità di Dash verranno inviate da e verso CrowdNode per verificare che tu sia il proprietario di questo indirizzo di portafoglio.</string>
     <string name="crowdnode_link_account_description">Tutti i trasferimenti da e verso CrowdNode da questo dispositivo verranno eseguiti con l\'indirizzo Dash sottostante da questo dispositivo.</string>
-    <string name="dash_address">Indirizzo Dash</string>
     <string name="primary_dash_address">Indirizzo Dash Primario</string>
     <string name="crowdnode_secure_wallet">Esegui il backup della tua passphrase per creare un account CrowdNode</string>
     <string name="crowdnode_secure_wallet_explainer">Se perdi la passphrase per questo portafoglio e perdi questo dispositivo o disinstalli Dash Wallet, perderai l\'accesso ai tuoi fondi su CrowdNode e ai fondi all\'interno di questo portafoglio.</string>

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Maak een nieuwe portemonnee aan</string>
     <string name="onboarding_recover_wallet">Herstellen met herstelzin</string>
@@ -25,13 +25,15 @@
     <string name="dialog_confirm_secured_by">Beveiligd door</string>
     <string name="dialog_confirm_fee">Netwerk transactiekosten</string>
     <string name="dialog_confirm_total">Totaal</string>
-
+    <string name="shortcut_action_join_dashpay">Word lid van DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Backup</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Zoeken</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Verzenden</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_contact">Stuur naar contact</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Koop &amp; verkoop</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -75,6 +77,9 @@
     <string name="payments_title">Betalingen</string>
     <string name="payments_tab_pay_label">Verzenden</string>
     <string name="payments_tab_receive_label">Ontvangen</string>
+    <string name="payments_pay_to_contact_title">Stuur naar een contact</string>
+    <string name="payments_pay_to_contact_sub_title">Een persoon in je contacten</string>
+    <string name="payments_pay_to_contact_button">Selecteer</string>
     <string name="payments_pay_by_qr_title">Verstuurd door</string>
     <string name="payments_pay_by_qr_sub_title">QR Code scannen</string>
     <string name="payments_pay_to_clipboard_title">Versturen naar gekopieerd adres</string>
@@ -183,7 +188,6 @@
     <string name="notification_settings_title">Notificaties</string>
     <string name="notification_explainer_title">Dash Wallet wil je graag meldingen sturen</string>
     <string name="notification_explainer_message">Meldingen kunnen waarschuwingen, geluiden en pictogrambadges bevatten. Deze kunnen worden geconfigureerd in de telefooninstellingen.</string>
-
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Gebruik je vingerafdruk om te ontgrendelen.</string>
@@ -239,6 +243,7 @@
     <string name="transaction_details_sent_from">Verzonden vanaf</string>
     <string name="transaction_details_sent_to">Verzonden naar</string>
     <string name="transaction_details_received_at">Ontvangen met</string>
+    <string name="transaction_details_received_from">Ontvangen van</string>
     <string name="transaction_details_moved_from">Verplaatst van</string>
     <string name="transaction_details_moved_internally_to">Intern verplaatst naar</string>
     <string name="transaction_failed_details">Transactie mislukt</string>
@@ -252,6 +257,7 @@
     <string name="authenticate_switch_to_fingerprint">Vingerafdruk gebruiken</string>
     <string name="authenticate_switch_to_pin">gebruik PIN</string>
 
+    <string name="menu_invite_title">Nodig uit</string>
     <string name="menu_buy_and_sell_title">Koop &amp; verkoop Dash</string>
     <string name="menu_buy_and_sell_subtitle">Verbind met beurzen van derden</string>
     <string name="liquid_unavailable">Liquid integratie met Dash portemonnee is niet langer beschikbaar</string>
@@ -331,6 +337,12 @@
     <string name="welcome_screen_title_3">Meer controle</string>
     <string name="welcome_screen_subtitle_3">Heb volledige controle en pas je portemonnee aan op basis van je behoeften</string>
 
+    <string-array name="history_filter">
+        <item>Alles</item>
+        <item>Ontvangen</item>
+        <item>Verzonden</item>
+    </string-array>
+
     <string name="sync_status_wait">Wacht a.u.b. tot de synchronisatie is voltooid</string>
     <string name="sync_status_syncing_sub_title">met Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Kan geen verbinding maken</string>
@@ -355,7 +367,18 @@
     <string name="import_image_no_private_key_copied">persoonlijke sleutel niet gekopieerd</string>
     <string name="import_image_import_valid_private_key">Kopieer een geldige persoonlijke sleutel om de Dash er van te importeren</string>
     <string name="import_image_invalid_private">Ongeldige persoonlijke sleutel</string>
+    <string name="okay">Oké</string>
 
+    <string name="onboard_from_invite_subtitle">Welkom bij DashPay</string>
+    <string name="onboard_from_invite_step1_title">Kies je gebruikersnaam</string>
+    <string name="onboard_from_invite_step2_title">Stel je pincode in</string>
+    <string name="onboard_from_invite_step3_title">Beveilig je portemonnee</string>
+
+    <string name="restore_wallet_please_wait">Even wachten a.u.b.</string>
+    <string name="network_unavailable">Netwerk niet beschikbaar</string>
+    <string name="network_error_contact_details">Kan contactgegevens niet ophalen</string>
+    <string name="network_error_user_search">Kan niet naar een gebruiker zoeken</string>
+    <string name="network_error_contact_suggestions">Kan geen suggesties geven</string>
     <string name="today">Vandaag</string>
     <string name="yesterday">Gisteren</string>
 
@@ -380,6 +403,10 @@
     <string name="launch_reset_wallet_extra_message">Back-up je herstelzin</string>
     <string name="start_reset_wallet_title">Je kan %s kwijtraken</string>
     <string name="reset_wallet_text">Portemonnee resetten</string>
+
+
+
+    <!-- Tax category -->
     <string name="reclassify_transactions_title">Herclassificeer je transacties</string>
     <string name="reclassify_transactions_title_message">Deze classificaties worden gexporteerd naar CSV bestand. Deze kan worden geïmporteerd in belastingservices of -software.</string>
     <string name="reclassify_transactions_question">Waar kan ik de belastingcategorie wijzigen?</string>
@@ -410,7 +437,6 @@
     <string name="masternode_key_not_used">Niet gebruikt</string>
     <string name="masternode_key_revoked">Ingetrokken</string>
     <string name="masternode_key_private_public_base64">persoonlijke / publieke sleutels (base64)</string>
-
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Prijzen zijn niet opgehaald. Fiat waarden kunnen onjuist zijn.</string>
     <string name="stale_exchange_rates_stale">Prijzen zijn minstens 30 minuten oud. Fiat waarden kunnen onjuist zijn.</string>

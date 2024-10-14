@@ -21,8 +21,9 @@
     <string name="transfer_dash">Transferir Dash</string>
     <string name="login_error_title">Não é possível fazer login na sua conta %s</string>
     <string name="login_error_message">Ocorreu um erro ao fazer login na sua conta %s.</string>
+    <string name="dash_address">Endereço Dash</string>
+    <string name="username">Nome de usuário</string>
     <string name="balance">Saldo:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Libra Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -55,11 +56,11 @@
     <string name="button_understand">Eu entendo</string>
     <string name="button_okay">Okay</string>
     <string name="button_share">Compartilhar</string>
+    <string name="button_skip">Pular</string>
     <string name="share_address">Compartilhar Endereço</string>
     <string name="verify">Verificar</string>
     <string name="receive_enter_amount_button">Especificar Valor</string>
     <string name="account_create">Criar Conta</string>
-
     <!-- Design system UI elements -->
     <string name="search_hint">Buscar</string>
     <string name="permission_allow">Permitir</string>
@@ -101,4 +102,4 @@
 
     <string name="chain_syncing">A cadeia está sendo sincronizada…</string>
 
-</resources>
+    </resources>

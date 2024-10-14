@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">CrowdNode menggunakan alamat ini sebagai ID akun Anda. Anda akan kehilangan akses ke dana Anda dalam dompet ini dan akun CrowdNode jika Anda kehilangan frasa sandi yang terkait dengan alamat ini.</string>
     <string name="crowdnode_new_account_warning_2">Jumlah Dash yang sangat kecil akan dikirim ke dan dari CrowdNode untuk memverifikasi bahwa Anda adalah pemilik alamat dompet ini.</string>
     <string name="crowdnode_link_account_description">Semua transfer ke dan dari CrowdNode dari perangkat ini akan dilakukan dengan alamat Dash di bawah dari perangkat ini.</string>
-    <string name="dash_address">Alamat Dash</string>
     <string name="primary_dash_address">Alamat Dash Utama</string>
     <string name="crowdnode_secure_wallet">Cadangkan frasa sandi Anda untuk membuat akun CrowdNode</string>
     <string name="crowdnode_secure_wallet_explainer">Jika Anda kehilangan frasa sandi untuk dompet ini dan kehilangan perangkat ini atau mencopot Dash Wallet, Anda akan kehilangan akses ke dana Anda di CrowdNode dan dana di dalam dompet ini.</string>

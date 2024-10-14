@@ -260,7 +260,7 @@ Benutzernamen</b></string>
     <string name="upload_your_picture">Lade ein Bild hoch und personalisiere deine Identität.</string>
     <string name="in_case_lose_your_passphrase">Solltest du keinen Zugriff mehr auf deine Passphrase besitzen, verlierst du auch das Recht auf deinen gewählten Nutzernamen.</string>
     <string name="keep_your_passphrase_safe">Bewahre deine Passphrase sicher auf.</string>
-    <string name="pay_now">Bezahle jetzt. Wenn der Benutzername nicht angenommen wird, kannst du einen anderen Namen erstellen ohne erneut dafür zu zahlen </string>
+    <string name="pay_now">Bezahle jetzt. Wenn dein Nutzername nicht genehmigt wird, kannst du kostenlos einen anderen Namen erstellen.</string>
     <string name="case_your_request_is_not_approved">Falls deine Anfrage nicht genehmigt wird.</string>
     <string name="voting_requirement_subtitle">Jeder Benutzername, der die Nummern 2-9 beinhaltet oder länger als 20 Zeichen ist, wird automatisch genehmigt</string>
     <string name="voting_requirement_title">Abstimmung ist nur in manchen Fällen notwendig</string>
@@ -270,8 +270,6 @@ Benutzernamen</b></string>
     <string name="usernames_blocked_subtitle">Wenn genügend Mitglieder des Netzwerkes feststellen, dass ein Benutzername unangemessen ist, könne diese ihn sperren</string>
     <string name="username_voting">Abstimmung über Benutzernamen</string>
     <string name="username_voting_subtitle">Als Masternode-Besitzer kannst du abstimmen, um beantragte Benutzernamen zu bewilligen, bevor andere Nutzer diese erstellen können.</string>
-    <string name="voting_duplicates_only_title">Abstimmung nur über Duplikate</string>
-    <string name="voting_duplicates_only_message">Du kannst alle Anfragen prüfen, aber du brauchst nur über Duplikate abzustimmen.</string>
     <string name="all">Alles</string>
     <string name="n_usernames">%d Benutzernamen</string>
     <string name="n_requests">%d Anfragen</string>
@@ -304,10 +302,7 @@ Benutzernamen</b></string>
     <string name="request_username_unavailable">Benutzername ist nicht verfügbar oder gesperrt</string>
     <string name="request_username_taken">Benutzername ist vergeben</string>
     <string name="requesting_your_username_title">Benutzernamen erstellen</string>
-    <string name="requesting_your_username_message">Dein Benutzername maxmuster wird im Dash-Netzwerk angefordert. Dies kann einige Zeit in Anspruch nehmen.</string>
     <string name="requesting_your_username_error_title">Deine Anfrage für einen Benutzernamen ist fehlgeschlagen</string>
-    <string name="requesting_your_username_error_message">Aus unerfindlichen Gründen ist die Anfrage fehlgeschlagen. Bitte versuche es erneut.</string>
-
     <string name="voting">Abstimmung:</string>
     <string name="this_username_has_already_been_requested">Dieser Nutzername wurde bereits angefragt, aber du kannst ihn auch beantragen. Das Netzwerk wird darüber abstimmen, wer ihn erhält.</string>
     <string name="request_details">Details anfordern</string>
@@ -371,8 +366,8 @@ Benutzernamen</b></string>
     <string name="intermediate">Standard</string>
     <string name="advanced">Erweitert</string>
     <string name="intermediate_level_card_decs">Erfahrene Nutzer, die einen hohen Grad an technischer Expertise haben, können deine Transaktionshistorie bestimmen.</string>
-    <string name="advanced_level_card_decs">Es wäre selbst für erfahrene Nutzer sehr schwer, deine Transaktionshistorie zu bestimmen.</string>
-    <string name="coinjoin_intermediate_time">bis zu 30 Minuten</string>
+    <string name="advanced_level_card_decs">Es wäre selbst für erfahrene Nutzer sehr schwer, deinen Transaktionsverlauf zu bestimmen.</string>
+    <string name="coinjoin_intermediate_time">Bis zu 30 Minuten</string>
     <string name="coinjoin_advanced_time">Mehrere Stunden</string>
     <string name="coinjoin_start">Mixen starten</string>
     <string name="coinjoin_stop">Mixen beenden</string>
@@ -402,5 +397,4 @@ Benutzernamen</b></string>
     <string name="request_username_balance_requirement">Du benötigst 0,25 DASH um einen Benutzernamen erstellen zu können</string>
     <string name="request_username_length_requirement">Zwischen 3 und 23 Zeichen</string>
     <string name="request_username_confirm">Ich akzeptiere</string>
-
-</resources>
+    </resources>

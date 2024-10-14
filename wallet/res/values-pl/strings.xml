@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, przestarzały o %2$d dni</string>
     <string name="blockchain_state_progress_weeks">%1$s, przestarzały o %2$d tygodni</string>
     <string name="blockchain_state_progress_months">%1$s, przestarzały o %2$d miesięcy</string>
-    <string name="blockchain_state_progress_downloading">Synchronizowanie z siecią</string>
     <string name="blockchain_state_progress_stalled">Synchronizacja wstrzymana</string>
     <string name="blockchain_state_progress_problem_storage">Synchronizowanie: Problem z pamięcią</string>
     <string name="blockchain_state_progress_problem_network">Synchronizowanie: Problem z siecią</string>
@@ -404,4 +403,5 @@
     <string name="battery_optimization_dialog_unrestricted_title">Chcesz otrzymywać płatności w tle?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Ta aplikacja jest skonfigurowana tak, aby nadal działać, gdy nie będzie widoczna przez pewien czas.\n\nSugerujemy zezwolenie tej aplikacji na ciągłe aktualizowanie łańcucha bloków, nawet w tle.\n\nNie martw się, zawsze będziemy uważali na poziom zużycia baterii.</string>
     <string name="battery_optimization_dialog_button_change">Otwórz Ustawienia</string>
+
 </resources>

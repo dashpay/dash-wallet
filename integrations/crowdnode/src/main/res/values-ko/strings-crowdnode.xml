@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">크라우드노가 이 주소를 당신의 계정 ID로 사용합니다. 이 주소에 연결된 암호 문구를 잃게되는 경우, 이 지갑 안의 자금 및 크라우드노드 계정에 대한 액세스를 잃게 됩니다. </string>
     <string name="crowdnode_new_account_warning_2">이 지갑의 소유 여부를 검증하기 위해 아주 적은 금액의 대시가 크라우드노드에/로부터 전송됩니다.</string>
     <string name="crowdnode_link_account_description">이 기기의 크라우드노드에서/로부터 발생하는 모든 거래는 이 기기의 아래 대시 주소로 이루어집니다.</string>
-    <string name="dash_address">대시 주소</string>
     <string name="primary_dash_address">주요 대시 주소</string>
     <string name="crowdnode_secure_wallet">크라우드노드 계정을 생성하려면 암호 문구를 백업하세요</string>
     <string name="crowdnode_secure_wallet_explainer">이 지갑의 암호 문구를 잃어버리고 기기를 잃는 경우 혹은 대시 지갑을 삭제하는 경우에는 크라우드노드의 자금 및 이 지갑 내 자금에 대한 액세스를 잃게 됩니다.</string>

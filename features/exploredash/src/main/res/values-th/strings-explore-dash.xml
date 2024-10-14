@@ -149,6 +149,11 @@
     <string name="buy_gift_card_with_dash_text">ซื้อบัตรของขวัญด้วย Dash</string>
     <string name="redeem_gift_card_text">แลกบัตรของขวัญของคุณทางออนไลน์ภายในไม่กี่วินาทีหรือที่แคชเชียร์</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Test Dash ไม่มีค่าใดๆ ในโลกแห่งความเป็นจริง แต่คุณสามารถส่งและรับกับผู้ใช้ DashPay Alpha คนอื่นๆ ได้</string>
+    <string name="explore_test_dash_title">ฉันจะรับ Test Dash ได้อย่างไร?</string>
+    <string name="explore_get_test_dash">รับการทดสอบ Dash</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">กำลังซิงค์... ผลลัพธ์อาจไม่สมบูรณ์</string>
     <string name="sync_in_progress_error">กำลังซิงค์... มีข้อผิดพลาด</string>
