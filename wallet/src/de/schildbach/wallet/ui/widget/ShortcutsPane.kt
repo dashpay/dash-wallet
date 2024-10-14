@@ -105,7 +105,8 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : FlexboxLayout(conte
         explore,
         receiveButton,
         payToAddressButton,
-        payToContactButton,
+        // TODO: for the time being, never display the "Send to Contact" button
+        // payToContactButton,
         buySellButton,
         scanToPayButton
     )
@@ -124,8 +125,9 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : FlexboxLayout(conte
         set(value) {
             scanToPayButton.shouldAppear = value
             buySellButton.shouldAppear = !value
-            payToAddressButton.shouldAppear = value && !userHasContacts
-            payToContactButton.shouldAppear = value && userHasContacts
+            payToAddressButton.shouldAppear = value
+            // TODO: will the send to contact button ever be displayed, if not remove
+            // payToContactButton.shouldAppear = value && userHasContacts
 
             if (field != value) {
                 field = value
@@ -135,8 +137,8 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : FlexboxLayout(conte
 
     var userHasContacts: Boolean = false
         set(value) {
-            payToAddressButton.shouldAppear = !value && userHasBalance
-            payToContactButton.shouldAppear = value && userHasBalance
+            // TODO: will the send to contact button ever be displayed, if not remove
+            // payToContactButton.shouldAppear = value && userHasBalance
 
             if (field != value) {
                 field = value
