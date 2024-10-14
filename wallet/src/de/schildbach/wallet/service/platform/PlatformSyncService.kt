@@ -239,6 +239,10 @@ class PlatformSynchronizationService @Inject constructor(
                     }
                 }
                 log.info("update contacts not completed username registration/recovery is not complete")
+                // if username creation or request is not complete, then allow the sync process to finish
+                if (preDownloadBlocks.get()) {
+                    finishPreBlockDownload()
+                }
                 return
             }
 
@@ -378,6 +382,7 @@ class PlatformSynchronizationService @Inject constructor(
             }
         }
         // This needs to be here to ensure that the pre-block download stage always completes
+        // This block used to be the above finally block, but was moved here to fix some issues
         if (preDownloadBlocks.get()) {
             finishPreBlockDownload()
         }
