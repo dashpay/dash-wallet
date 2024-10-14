@@ -140,11 +140,20 @@ class UsernameRequestsViewModel @Inject constructor(
         _filterState.flatMapLatest {
             observeUsernames()
                 .map { duplicates ->
-                    duplicates.groupBy { it.username }
-                        .map { (username, list) ->
+                    duplicates.groupBy { it.normalizedLabel }
+                        .map { (normalizedUsername, list) ->
                             val sortedList = list.sortAndFilter()
-                            val votes = usernameVoteDao.getVotes(username)
-                            UsernameRequestGroupView(username, sortedList, isExpanded = isExpanded(username), votes)
+                            val votes = usernameVoteDao.getVotes(normalizedUsername)
+                            // display usernames in lower case without 0 and 1 if possible
+                            val prettyUsername = when {
+                                list.size == 1 -> list[0].username.lowercase()
+                                else -> {
+                                    list.find {
+                                        !(it.username.contains('0') || it.username.contains('1'))
+                                    }?.username?.lowercase() ?: list[0].username
+                                }
+                            }
+                            UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(normalizedUsername), votes)
                         }.filterNot { it.requests.isEmpty() }
                 }
         }.onEach { requests -> _uiState.update { it.copy(filteredUsernameRequests = requests) } }
