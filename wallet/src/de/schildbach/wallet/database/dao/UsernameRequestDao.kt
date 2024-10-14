@@ -42,7 +42,7 @@ interface UsernameRequestDao {
         """
         SELECT * FROM username_requests 
             WHERE (:onlyWithLinks = 0) OR (:onlyWithLinks = 1 AND link IS NOT NULL)
-        ORDER BY username COLLATE NOCASE ASC
+        ORDER BY normalizedLabel COLLATE NOCASE ASC
          """
     )
     fun observeAll(onlyWithLinks: Boolean): Flow<List<UsernameRequest>>
@@ -50,9 +50,9 @@ interface UsernameRequestDao {
     @Query(
         """
         SELECT * FROM username_requests 
-            WHERE username IN (SELECT username FROM username_requests GROUP BY username HAVING COUNT(username) > 1)
+            WHERE normalizedLabel IN (SELECT normalizedLabel FROM username_requests GROUP BY normalizedLabel HAVING COUNT(normalizedLabel) > 1)
             AND (:onlyWithLinks = 0) OR (:onlyWithLinks = 1 AND link IS NOT NULL) 
-        ORDER BY username COLLATE NOCASE ASC
+        ORDER BY normalizedLabel COLLATE NOCASE ASC
         """
     )
     fun observeDuplicates(onlyWithLinks: Boolean): Flow<List<UsernameRequest>>
@@ -72,8 +72,8 @@ interface UsernameRequestDao {
         """
         UPDATE username_requests
             SET isApproved = false
-            WHERE username = :username;
+            WHERE normalizedLabel = :normalizedLabel;
         """
     )
-    suspend fun removeApproval(username: String)
+    suspend fun removeApproval(normalizedLabel: String)
 }
