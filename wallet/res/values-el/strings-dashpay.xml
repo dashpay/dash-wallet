@@ -49,6 +49,7 @@
     <string name="invitation_share_title">Πρόσκληση DashPay</string>
     <string name="invitation_already_claimed_title">Η πρόσκληση έχει ήδη διεκδικηθεί</string>
     <string name="invitation_already_claimed_message">Η πρόσκλησή σας από %s έχει ήδη κρατηθεί</string>
+    <string name="invitation_invalid_invite_title">Μη έγκυρη πρόσκληση</string>
     <string name="invitation_invalid_invite_message">Η πρόσκλησή σας από  %s  δεν είναι έγκυρη</string>
     <string name="invitation_username_already_found_title">Το όνομα χρήστη έχει ήδη βρεθεί</string>
     <string name="invitation_username_already_found_message">Δεν μπορείτε να διεκδικήσετε αυτή την πρόσκληση αφού έχετε ήδη ένα όνομα χρήστη Dash.</string>
@@ -198,22 +199,58 @@
     <string name="gravatar_fetching">Λήψη του Gravatar σας</string>
     <string name="gravatar_email_sample">sample\@email.com</string>
     <string name="gravatar_disclaimer">Το email σας δεν αποθηκεύεται στο πορτοφόλι DashPay ούτε σε κανέναν διακομιστή. Χρησιμοποιείται μία φορά για να λάβετε τα στοιχεία του λογαριασμού σας Gravatar και στη συνέχεια απορρίπτεται.</string>
+    <string name="gravatar_email_error">Δεν είναι δυνατή η λήψη του Gravatar σας. Παρακαλούμε εισάγετε ένα έγκυρο Gravatar email ID.</string>
+
+    <string name="where_to_store_your_picture">Πού θα θέλατε να αποθηκεύσετε την εικόνα σας;</string>
+    <string name="external_storage_disclaimer">Η εικόνα σας θα είναι πάντα υπό τον έλεγχό σας. Το Dash δεν αποθηκεύει κανένα από τα δεδομένα σας, συμπεριλαμβανομένης της εικόνας του προφίλ σας.</string>
+    <string name="select_source_sign_in_required">Απαιτείται είσοδος</string>
     <string name="select_source_google_drive">Google Drive</string>
+    <string name="select_source_no_sign_in_required">Δεν απαιτείται λογαριασμός</string>
+
+    <string name="join_dashpay_subtitle">Δημιουργήστε όνομα χρήστη, προσθέστε τους φίλους σας...</string>
+    <string name="join_dashpay_more_subtitle">Δημιουργήστε το Όνομα Χρήστη σας, βρείτε φίλους και προσθέστε τους στις επαφές σας.</string>
     <string name="join">Εγγραφείτε </string>
 
     <string name="more_suggestions">Περισσότερες προτάσεις</string>
+    <string name="users_that_matches">Χρήστες που ταιριάζουν</string>
+    <string name="not_in_your_contacts">οι οποίοι δεν είναι προς το παρόν στις επαφές σας</string>
+    <string name="no_matching_contacts">Δεν υπάρχουν χρήστες που ταιριάζουν στις επαφές σας</string>
+    <string name="suggestions_empty_result_part_1">Δεν υπάρχουν χρήστες που να ταιριάζουν με το όνομα</string>
+    <string name="suggestions_empty_result_part_2">στις επαφές σας</string>
     <string name="save_changes">Αποθήκευση αλλαγών</string>
     <string name="save_profile_reminder_text">Θέλετε να αποθηκεύσετε τις αλλαγές που κάνατε στο προφίλ σας;</string>
     <string name="invitation_notification_text">Προσκαλέστε τους φίλους και την οικογένειά σας να ενταχθούν στο δίκτυο Dash.</string>
+    <string name="dashpay_min_balance_disclaimer">Χρειάζεστε τουλάχιστον <b>%s</b> για να ξεκινήσετε</string>
+    <string name="dashpay_insuffient_credits">Ανεπαρκή credits για την εκτέλεση αυτής της ενέργειας.</string>
+
+    <string name="about_developer_mode">Λειτουργία προγραμματιστή ενεργοποιημένη: όλες οι λειτουργίες ενεργοποιημένες!</string>
+    <string name="about_developer_mode_disabled">Η λειτουργία προγραμματιστή απενεργοποιήθηκε.</string>
     <string name="invite_history_create_new_invite">Δημιουργία νέας πρόσκλησης</string>
     <string name="invitations_history_header">Ιστορικό προσκλήσεων</string>
+    <string name="invitations_filter_title">Φίλτρο προσκλήσεων</string>
+    <string name="invite_history_empty">Δεν έχουν δημιουργηθεί προσκλήσεις.</string>
+    <string name="invite_history_empty_claimed">Δεν υπάρχουν διεκδικούμενες προσκλήσεις.</string>
+    <string name="invite_history_empty_pending">Δεν υπάρχουν εκκρεμείς προσκλήσεις.</string>
     <string name="invitation_details_invite_used_by">Η πρόσκληση χρησιμοποιείται από</string>
+    <string name="invitation_details_invite_without_username">Η πρόσκληση ζητήθηκε. Εκκρεμεί η εγγραφή ονόματος χρήστη.</string>
     <string-array name="invite_filter">
         <item>Όλα</item>
         <item>Εκκρεμεί</item>
         <item>Διεκδικήθηκε</item>
     </string-array>
 
+    <!-- Private memo -->
+    <string name="private_memo">Ιδιωτική σημείωση</string>
+    <string name="add_note">Προσθήκη σημείωσης</string>
+    <string name="edit_note">Επεξεργασία σημείωσης</string>
+    <string name="note">Σημείωση</string>
+
+    <string name="select_privacy_preferences">Επιλέξτε τις προτιμήσεις απορρήτου του ονόματος χρήστη σας</string>
+    <string name="please_note_cant_change_this_later">Σημειώστε ότι δεν θα μπορείτε να το αλλάξετε αργότερα.</string>
+    <string name="Intermediate_level_WIFI_Warning">Το επίπεδο προστασίας προσωπικών δεδομένων ενδιάμεσου επιπέδου απαιτεί αξιόπιστη σύνδεση στο διαδίκτυο.</string>
+    <string name="Advanced_level_WIFI_Warning">Το προχωρημένο επίπεδο απορρήτου απαιτεί αξιόπιστη σύνδεση στο διαδίκτυο</string>
+    <string name="privcay_level_WIFI_warning_desc">Συνιστάται να βρίσκεστε σε δίκτυο Wi-Fi για να αποφύγετε την απώλεια κεφαλαίων.</string>
+    <string name="continue_anyway">Συνέχεια Ούτως ή άλλως</string>
     <string name="welcome_to_dash_pay">Καλώς ήρθατε στο Dash Pay</string>
     <string name="pay_to_usernames">Πληρώστε για ονόματα χρήστη. χωρίς αλφαριθμητικές διευθύνσεις.</string>
     <string name="create_a_username">Δημιουργία όνομα χρήστη</string>
@@ -223,17 +260,25 @@
     <string name="upload_your_picture">Ανεβάστε τη φωτογραφία σας, εξατομικεύστε την ταυτότητά σας</string>
     <string name="in_case_lose_your_passphrase">Σε περίπτωση που χάσετε τον φράση πρόσβασής σας, θα χάσετε το δικαίωμα στο όνομα χρήστη σας.</string>
     <string name="keep_your_passphrase_safe">Διατηρήστε την φράση πρόσβασής σας ασφαλή.</string>
+    <string name="pay_now">Πληρώστε τώρα και αν δεν εγκριθεί, μπορείτε να δημιουργήσετε ένα διαφορετικό όνομα χωρίς να πληρώσετε ξανά.</string>
     <string name="case_your_request_is_not_approved">Σε περίπτωση που ο αίτημά σας δεν εγκριθεί.</string>
+    <string name="voting_requirement_title">Η ψηφοφορία απαιτείται μόνο σε ορισμένες περιπτώσεις</string>
     <string name="dash_network_must_vote_to_approve">Το Dash δίκτυο θα πρέπει να ψηφίσει για να εγκρίνει το όνομα χρήστη σας πριν δημιουργηθεί.</string>
     <string name="what_is_username_voting">Τι είναι η ψηφοφορία ονόματος χρήστη;</string>
-    <string name="username_voting_subtitle">Ως ιδιοκτήτης ενός masternode μπορείτε να ψηφίσετε για να εγκρίνετε τα ζητούμενα ονόματα χρήστη πριν οι χρήστες μπορέσουν να τα δημιουργήσουν.</string>
-    <string name="voting_duplicates_only_title">Ψηφίστε μόνο για τα διπλότυπα</string>
-    <string name="voting_duplicates_only_message">Μπορείτε να ελέγξετε όλα τα αιτήματα, αλλά χρειάζεται να ψηφίσετε μόνο για τα διπλότυπα.</string>
+    <string name="usernames_blocked_title">Ορισμένα ονόματα χρηστών μπορούν να μπλοκαριστούν</string>
+    <string name="usernames_blocked_subtitle">Εάν αρκετά μέλη του δικτύου διαπιστώσουν ότι ένα όνομα χρήστη είναι ακατάλληλο, μπορούν να το μπλοκάρουν.</string>
+    <string name="username_voting">Ψηφοφορία ονόματος χρήστη</string>
     <string name="all">Όλα</string>
+    <string name="n_usernames">%d ονόματα χρήστη</string>
+    <string name="n_requests">%d αιτήματα</string>
     <string name="search_by_username">Αναζήτηση με βάση το όνομα χρήστη</string>
     <string name="type">Τύπος</string>
     <string name="only_duplicates">Μόνο διπλότυπα</string>
     <string name="only_links">Μόνο αιτήματα με συνδέσμους</string>
+    <string name="only_links_short">Με συνδέσμους</string>
+    <string name="date">Ημερομηνία:%s</string>
+    <string name="votes">Ψήφοι: %s</string>
+
     <string-array name="usernames_sort_by_options">
         <item>Νέα σε παλιά</item>
         <item>Παλαιά προς νέα</item>
@@ -247,41 +292,73 @@
         <item>Δεν έχω εγκρίνει</item>
     </string-array>
 
+    <string name="request_your_username">Δημιουργήστε το όνομα χρήστη σας</string>
     <string name="request_username">Αίτημα ονόματος χρήστη</string>
+    <string name="request_voting_range">Το δίκτυο Dash θα ψηφίσει για αυτό το όνομα χρήστη. Θα σας ειδοποιήσουμε για τα αποτελέσματα στο%s.</string>
+    <string name="request_username_available">Το όνομα χρήστη είναι διαθέσιμο</string>
+    <string name="request_username_unavailable">Το όνομα χρήστη δεν είναι διαθέσιμο ή είναι μπλοκαρισμένο</string>
+    <string name="request_username_taken">Το όνομα χρήστη είναι πιασμένο</string>
+    <string name="requesting_your_username_title">Δημιουργία του ονόματος χρήστη σας</string>
+    <string name="requesting_your_username_error_title">Το αίτημα για το όνομα χρήστη απέτυχε</string>
     <string name="voting">Ψηφοφορία:</string>
     <string name="this_username_has_already_been_requested">Αυτό το όνομα χρήστη έχει ήδη ζητηθεί, αλλά μπορείτε να το ζητήσετε κι εσείς και να αφήσετε το δίκτυο να ψηφίσει για να αποφασίσει αν μπορείτε να το έχετε.</string>
     <string name="request_details">Λεπτομέρειες αιτήματος</string>
+    <string name="request_details_subtitle">Ελέγξτε την παρακάτω ανάρτηση για να επαληθεύσετε την ιδιοκτησία αυτού του ονόματος χρήστη</string>
     <string name="vote_to_approve">Ψηφίστε για Έγκριση</string>
     <string name="identity">Ταυτότητα</string>
+    <string name="results">Αποτελέσματα</string>
     <string name="link">Σύνδεσμος</string>
+    <string name="link_not_provided">Δεν παρέχεται</string>
     <string name="cancel_approval">Ακύρωση Έγκρισης</string>
     <string name="verify_your_identity">Επαληθεύστε την ταυτότητά σας για να αυξήσετε τις πιθανότητες να λάβετε το όνομα χρήστη που ζητήσατε</string>
     <string name="if_somebody">Εάν κάποιος άλλος ζητήσει το ίδιο όνομα χρήστη με εσάς, θα αφήσουμε το δίκτυο να αποφασίσει σε ποιον να δώσει αυτό το όνομα χρήστη.</string>
+    <string name="the_link_will_be_visible">Ο σύνδεσμος που στέλνετε θα είναι ορατός μόνο στους ιδιοκτήτες του δικτύου.</string>
     <string name="verify_your_identity_voting">Επαληθεύστε την ταυτότητά σας</string>
+    <string name="copy_the_text">Αντιγράψτε το κείμενο</string>
+    <string name="please_vote_to_approve">Παρακαλώ ψηφίστε για να εγκρίνετε το όνομα χρήστη Dash που ζήτησα - %s</string>
     <string name="prove_your_identity">Αποδείξτε την ταυτότητα σας</string>
+    <string name="make_a_post_with_the_text">Κάντε μια ανάρτηση με το παραπάνω κείμενο σε ένα γνωστό μέσο κοινωνικής δικτύωσης ή σε μια πλατφόρμα ανταλλαγής μηνυμάτων για να επαληθεύσετε ότι είστε ο αρχικός κάτοχος του ζητούμενου ονόματος χρήστη και επικολλήστε τον παρακάτω σύνδεσμο</string>
     <string name="paste_the_link">Επικολλήστε τον σύνδεσμο</string>
     <string name="voting_key_title">Εισάγετε το κλειδί ψήφου σας</string>
-    <string name="voting_key_hint">Κλειδί ψήφου του Masternode</string>
     <string name="voting_key_input_error">Έχετε εισάγει ένα μη έγκυρο κλειδί</string>
+    <string name="voting_key_add">Προσθέστε τα κλειδιά ψηφοφορίας σας</string>
+    <string name="voting_key_add_subtitle">Οι παρακάτω διευθύνσεις IP συνδέονται με αυτό το πορτοφόλι</string>
     <string name="masternode_ip">Διεύθυνση IP του Masternode</string>
+    <string name="multiple_votes_cast">%d ψήφοι θα δοθούν καθώς έχετε αποθηκεύσει πολλαπλά κλειδιά ψηφοφορίας στο πορτοφόλι</string>
+    <string name="add_masternode_key">Προσθήκη κλειδιού ψηφοφορίας Masternode</string>
     <string name="vote_submitted">Η ψήφος σας υποβλήθηκε.</string>
     <string name="vote_cancelled">Η ψήφος σας ακυρώθηκε.</string>
     <string name="quick_vote">Γρήγορη Ψηφοφορία</string>
+    <string name="quick_vote_subtitle">Πατώντας το κουμπί \"Ψηφίστε για όλους\", θα ψηφίσετε αυτόματα για όλα τα φιλτραρισμένα ονόματα χρηστών (%d) που υποβλήθηκαν πρώτα.</string>
     <string name="vote_for_all">Ψηφίστε για Όλους</string>
+    <string name="voting_period_active"> Περίοδος ψηφοφορίας ονόματος χρήστη Ενεργή</string>
     <string name="there_was_a_network_error">Υπήρξε σφάλμα δικτύου, μπορείτε να προσπαθήσετε ξανά χωρίς επιπλέον κόστος</string>
+    <string name="requested_username_has_been">Το όνομα χρήστη έχει ζητηθεί.</string>
+    <string name="requested_voting_duration">Αποτελέσματα για %s.</string>
     <string name="cancel_request">Ακύρωση αιτήματος</string>
     <string name="after_the_voting">Μετά τη λήξη της ψηφοφορίας θα σας ενημερώσουμε για τα αποτελέσματά της.</string>
     <string name="none">κανενα</string>
+    <string name="verify_now">Επαληθεύστε τώρα</string>
     <string name="if_you_tap_cancel">Εάν πατήσετε \"Ακύρωση Αίτησης\", θα έχετε ακόμα την ευκαιρία να ζητήσετε άλλο όνομα χρήστη χωρίς να πληρώσετε ξανά.</string>
     <string name="do_you_really_want_to_cancel">Θέλετε πραγματικά να ακυρώσετε την αίτηση για το όνομα χρήστη;</string>
     <string name="if_you_tap_cancel_request">Εάν πατήσετε \"Ακύρωση Αίτησης\", θα έχετε ακόμα την ευκαιρία να ζητήσετε άλλο όνομα χρήστη χωρίς να πληρώσετε ξανά.</string>
+    <string name="cant_open">Δεν μπορεί να ανοίξει</string>
+    <string name="invalid_link">Ο σύνδεσμος είναι άκυρος</string>
+    <string name="welcome_request_username_min_balance_disclaimer_all">Έχετε%s Dash.  Ορισμένα ονόματα χρήστη κοστίζουν έως και %s Dash.</string>
+    <string name="welcome_request_username_min_balance_disclaimer_noncontested">Πρέπει να έχετε περισσότερα από %s Dash για να δημιουργήσετε ένα όνομα χρήστη.</string>
+    <string name="request_username_min_balance_disclaimer">Για να ζητήσετε ένα όνομα χρήστη στο δίκτυο Dash, θα πρέπει να έχετε περισσότερα από %s Dash</string>
+
     <!-- CoinJoin -->
     <string name="coinjoin">CoinJoin</string>
+    <string name="turned_off">Απενεργοποιημένο</string>
     <string name="coinjoin_info_subtitle">Η μίξη των Dash νομισμάτων σας θα καταστήσει τις συναλλαγές σας πιο ιδιωτικές.</string>
     <string name="coinjoin_description_1">Θα μπορείτε να ξοδέψετε μόνο τα Dash που έχει αναμιχθεί όταν αυτό είναι ενεργοποιημένο. Αυτό μπορεί να απενεργοποιηθεί οποιαδήποτε στιγμή.</string>
     <string name="coinjoin_description_2">Τα πρόσφατα ληφθέντα Dash θα αναμειγνύονται αυτόματα κατά το άνοιγμα του πορτοφολιού.</string>
     <string name="coinjoin_description_3">Ενεργοποιώντας αυτήν τη λειτουργία θα οδηγήσει σε αυξημένη χρήση της μπαταρίας.</string>
     <string name="coinjoin_mixing_level_title">Επιλέξτε επίπεδο ανάμειξης</string>
+    <string name="coinjoin_mixing_level_subtitle">Μπορείτε να αλλάξετε ή να σταματήσετε το επίπεδο ανάμειξης ανά πάσα στιγμή.</string>
+    <string name="coinjoin_mixing_transactions">Ανάμειξη συναλλαγών</string>
+    <string name="coinjoin_transaction_group">Πρόκειται για συναφείς αναμειγμένες συναλλαγές.</string>
     <string name="intermediate">Intermediate</string>
     <string name="advanced">Προηγμένα</string>
     <string name="intermediate_level_card_decs">Οι προχωρημένοι χρήστες που έχουν πολύ υψηλό επίπεδο τεχνικής εξειδίκευσης μπορούν να προσδιορίσουν το ιστορικό των συναλλαγών σας.</string>
@@ -290,9 +367,30 @@
     <string name="coinjoin_advanced_time">Αρκετές ώρες</string>
     <string name="coinjoin_start">Έναρξη μίξης.</string>
     <string name="coinjoin_stop">Διακοπή μίξης</string>
+    <string name="coinjoin_mixing">Ανάμιξη</string>
+    <string name="coinjoin_paused">Ανάμειξη σε παύση</string>
+    <string name="coinjoin_not_started">Δεν ξεκίνησε</string>
+    <string name="coinjoin_progress">%s (%d%%) %s από %s</string>
+    <string name="coinjoin_progress_balance">%1$s από%2$s</string>
+    <string name="coinjoin_progress_finished">Πλήρως αναμεμειγμένα</string>
     <string name="coinjoin_change_level_confirmation">Είστε σίγουροι ότι θέλετε να αλλάξετε το επίπεδο απορρήτου;</string>
     <string name="coinjoin_stop_mixing_title">Είστε σίγουροι ότι θέλετε να σταματήσετε την μίξη;</string>
+    <string name="coinjoin_stop_mixing_message">Τυχόν κεφάλαια που έχουν αναμιχθεί θα συνδυαστούν με τα μη αναμεμειγμένα κεφάλαια σας.</string>
+    <string name="coinjoin_mixed_balance">Υπόλοιπο αναμειγμένων: </string>
+
+    <!-- credit balance messages / buttons -->
+    <string name="credit_balance_empty_warning_title">Το υπόλοιπο των credits σας είναι χαμηλό</string>
+    <string name="credit_balance_low_warning_title">Το υπόλοιπο των credits σας έχει εξαντληθεί</string>
+    <string name="credit_balance_empty_warning_message">Μπορείτε να συνεχίσετε να χρησιμοποιείτε το DashPay για πληρωμές, αλλά δεν μπορείτε να ενημερώσετε το προφίλ σας ή να προσθέσετε περισσότερες επαφές μέχρι να γεμίσετε το credit υπόλοιπο σας.</string>
+    <string name="credit_balance_low_warning_message">Συμπληρώστε τα credits σας για να συνεχίσετε να κάνετε αλλαγές στο προφίλ σας και να προσθέτετε επαφές.</string>
     <string name="credit_balance_button_maybe_later">Ίσως αργότερα</string>
+    <string name="credit_balance_button_buy">Αγοράστε Credits</string>
+    <string name="credit_balance_insufficient_error_message">Δεν έχετε αρκετά κεφάλαια για να αγοράσετε credits</string>
+    <string name="buy_credits_estimated_items">%s - %d επαφές / %d ενημερώσεις προφίλ</string>
+
+    <string name="request_username_username_voting_message">+ τι είναι η ψηφοφορία ονόματος χρήστη;</string>
     <string name="request_username_character_requirement">Μόνο γράμματα, αριθμοί και παύλες</string>
+    <string name="request_username_balance_requirement">Πρέπει να έχετε 0,25 DASH για να δημιουργήσετε αυτό το όνομα χρήστη</string>
     <string name="request_username_length_requirement">Μεταξύ 3 και 23 χαρακτήρων</string>
+    <string name="request_username_confirm">Δέχομαι</string>
     </resources>

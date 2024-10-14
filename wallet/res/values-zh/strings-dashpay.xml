@@ -260,18 +260,14 @@
     <string name="upload_your_picture">上传您的照片, 个性化您的身份信息.</string>
     <string name="in_case_lose_your_passphrase">如果您丢失了您的密码, 您将会失去您申请用户名的权力.</string>
     <string name="keep_your_passphrase_safe">保证您的密码安全</string>
-    <string name="pay_now">现在支付, 若未通过, 您可以创建另一个用户名无需再次支付 [检查是否为真]</string>
+    <string name="pay_now">现在付款, 若未通过, 您可创建另一个用户名无需再次付款</string>
     <string name="case_your_request_is_not_approved">如果您的申请没有被通过</string>
-    <string name="voting_requirement_subtitle">任何包括数字 2-9 或超过20个字符的用户名将自动被通过</string>
     <string name="voting_requirement_title">仅在一些情况下需要投票</string>
     <string name="dash_network_must_vote_to_approve">在用户名被创建前, Dash网络必须投票来通过您的申请.</string>
     <string name="what_is_username_voting">什么是用户名投票\?</string>
     <string name="usernames_blocked_title">一些用户名会被禁止</string>
     <string name="usernames_blocked_subtitle">如果足够的网络节点认为此用户名不合适, 他们能够屏蔽它</string>
     <string name="username_voting">用户名投票</string>
-    <string name="username_voting_subtitle">作为主节点用户, 您可以在用户能够创建用户名之前投票通过申请的用户名.</string>
-    <string name="voting_duplicates_only_title">只对重复项投票</string>
-    <string name="voting_duplicates_only_message">您能够查看所有申请, 但您只需对重复项投票</string>
     <string name="all">所有</string>
     <string name="n_usernames">%d 用户名</string>
     <string name="n_requests">%d 请求</string>
@@ -297,17 +293,13 @@
     </string-array>
 
     <string name="request_your_username">创建您的用户名</string>
-    <string name="request_your_hint">请注意您在之后将无法进行更改</string>
     <string name="request_username">申请用户名</string>
     <string name="request_voting_range">Dash 网络将对此用户名进行投票. 我们将通知您之后的结果 %s.</string>
     <string name="request_username_available">用户名可用</string>
     <string name="request_username_unavailable">用户名不可用或被禁止</string>
     <string name="request_username_taken">用户名已被使用</string>
     <string name="requesting_your_username_title">正在创建您的用户名</string>
-    <string name="requesting_your_username_message">您的用户名 某某 正在 Dash 网络中被请求. 它将会花费几分钟.</string>
     <string name="requesting_your_username_error_title">您的用户名请求失败</string>
-    <string name="requesting_your_username_error_message">出于一些原因, 请求已失败. 请再试一次.</string>
-
     <string name="voting">投票:</string>
     <string name="this_username_has_already_been_requested">这个用户名已经被申请, 但您仍可以申请并让网络投票决定您是否可以获得它</string>
     <string name="request_details">申请的细节</string>
@@ -328,7 +320,6 @@
     <string name="make_a_post_with_the_text">在知名社交媒体或信息平台使用上述文本发布一个帖子以证明您是所申请用户名的原始持有者, 并将链接粘贴在下方</string>
     <string name="paste_the_link">粘贴链接</string>
     <string name="voting_key_title">输入您的投票私钥</string>
-    <string name="voting_key_hint">主节点投票密钥</string>
     <string name="voting_key_input_error">您已输入了无效的密钥</string>
     <string name="voting_key_add">添加您的投票私钥</string>
     <string name="voting_key_add_subtitle">下列的 (多个) IP 地址与这个钱包相关联</string>
@@ -402,5 +393,4 @@
     <string name="request_username_balance_requirement">您需要拥有 0.25 DASH 来创建此用户名</string>
     <string name="request_username_length_requirement">3-23个字符之间</string>
     <string name="request_username_confirm">我同意</string>
-
-</resources>
+    </resources>

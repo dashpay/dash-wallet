@@ -259,18 +259,14 @@
     <string name="upload_your_picture">写真をアップロードして、自分のIDをパーソナライズする</string>
     <string name="in_case_lose_your_passphrase">パスフレーズを紛失した場合、お客様が請求したユーザー名を使用する権利を失います。</string>
     <string name="keep_your_passphrase_safe">パスフレーズを安全に保つ</string>
-    <string name="pay_now">今すぐ支払いを選択しても承認されなかった場合、再度支払うことなく別の名前を作成することができます [ 該当する場合はチェック]</string>
+    <string name="pay_now">今すぐ支払いをして承認されなくても、再度支払うことなく別の名前を作成することができます</string>
     <string name="case_your_request_is_not_approved">お客様の請求が承認されない場合</string>
-    <string name="voting_requirement_subtitle">2〜9の数字を含む、または20文字以上のユーザー名は自動的に承認されます</string>
     <string name="voting_requirement_title">投票が必要な場合もあります</string>
     <string name="dash_network_must_vote_to_approve">Dashネットワークでお客様のユーザー名が投票で承認されると、そのユーザー名が作成されます。</string>
     <string name="what_is_username_voting">ユーザー名投票とは\?</string>
     <string name="usernames_blocked_title">一部のユーザー名をブロックできます</string>
     <string name="usernames_blocked_subtitle">ネットワーク上の多数のユーザーがそのユーザー名を不適切と判断した場合、それをブロックできます</string>
     <string name="username_voting">ユーザー名投票</string>
-    <string name="username_voting_subtitle">マスターノードの所有者として、お客様が投票で請求されたユーザー名を承認すると、ユーザーはそのユーザー名を作成できるようになります。</string>
-    <string name="voting_duplicates_only_title">重複分にのみ投票</string>
-    <string name="voting_duplicates_only_message">全ての請求を確認できますが、重複する請求にのみ投票する必要があります</string>
     <string name="all">全て</string>
     <string name="n_usernames">%dのユーザー名</string>
     <string name="n_requests">%dのリクエスト</string>
@@ -296,17 +292,13 @@
     </string-array>
 
     <string name="request_your_username">ユーザー名の作成</string>
-    <string name="request_your_hint">一度作成したユーザー名は後で変更することはできませんのでご注意ください</string>
     <string name="request_username">ユーザー名の申請</string>
     <string name="request_voting_range">Dashネットワークはこのユーザー名に投票することになります。投票結果は%sに通知されます。</string>
     <string name="request_username_available">ユーザー名は使用可能です</string>
     <string name="request_username_unavailable">ユーザー名は使用不可またはブロックされています</string>
     <string name="request_username_taken">ユーザー名はすでに使用されています</string>
     <string name="requesting_your_username_title">ユーザー名の作成中</string>
-    <string name="requesting_your_username_message">あなたのユーザー名のjohndoeは、Dashネットワークで申請中です。申請には時間がかかる場合があります。</string>
     <string name="requesting_your_username_error_title">ユーザー名の申請に失敗しました</string>
-    <string name="requesting_your_username_error_message">何らかの理由で申請に失敗しました。もう一度やり直してください。</string>
-
     <string name="voting">投票：</string>
     <string name="this_username_has_already_been_requested">このユーザー名はすでに申請されていますが、お客様も同じものを申請でき、ネットワークの投票によってユーザー名の使用可否が決定されます。</string>
     <string name="request_details">詳細の申請</string>
@@ -327,7 +319,6 @@
     <string name="make_a_post_with_the_text">よく知られたSNSやメッセージング・プラットフォームに上記の文章を投稿し、ご自身が申請されたユーザー名の本来の所有者であることを確認した上で、以下のリンクを貼り付けてください</string>
     <string name="paste_the_link">リンクを貼り付ける</string>
     <string name="voting_key_title">投票キーを入力する</string>
-    <string name="voting_key_hint">マスターノードの投票キー</string>
     <string name="voting_key_input_error">無効なキーが入力されています</string>
     <string name="voting_key_add">投票キーを追加する</string>
     <string name="voting_key_add_subtitle">以下のIPアドレスは、このウォレットに紐付けられています</string>
@@ -401,5 +392,4 @@
     <string name="request_username_balance_requirement">このユーザー名を作成するには、0.25DASHが必要です</string>
     <string name="request_username_length_requirement">3〜23文字以内</string>
     <string name="request_username_confirm">承認します</string>
-
-</resources>
+    </resources>

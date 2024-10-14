@@ -259,18 +259,17 @@
     <string name="upload_your_picture">Uploadez votre image, personnalisez votre identité.</string>
     <string name="in_case_lose_your_passphrase">En cas de perte de votre phrase de passe, vous perdrez votre droit pour votre nom d\'utilisateur demandé.</string>
     <string name="keep_your_passphrase_safe">Gardez secrète votre phrase de passe</string>
-    <string name="pay_now">Payez maintenant et, en cas de refus, vous pourrez créer un nom différent sans payer à nouveau [cochez si vrai]</string>
+    <string name="pay_now">Veuillez payer maintenant. En cas de non-approbation, vous pourrez créer un nom différent sans repayer</string>
     <string name="case_your_request_is_not_approved">Dans le cas où votre demande n\'est pas approuvée</string>
-    <string name="voting_requirement_subtitle">Un nom d\'utilisateur qui contient au moins un chiffre de 2 à 9, ou bien qui a une longueur de plus de 20 caractères, sera approuvé automatiquement</string>
+    <string name="voting_requirement_subtitle">Tout nom d\'utilisateur qui contient un chiffre entre 2 et 9, ou bien qui a 20 caractères ou plus, sera automatiquement approuvé</string>
     <string name="voting_requirement_title">Voter est requis seulement dans certains cas</string>
     <string name="dash_network_must_vote_to_approve">Le réseau Dash doit voter pour approuver votre nom d\'utilisateur avant sa création.</string>
     <string name="what_is_username_voting">Qu\'est-ce que le vote des noms d\'utilisateur \?</string>
     <string name="usernames_blocked_title">Certains noms d\'utilisateur peuvent être bloqués</string>
     <string name="usernames_blocked_subtitle">Si une proportion suffisante du réseau pense qu\'un nom d\'utilisateur est inapproprié, il peut le bloquer</string>
     <string name="username_voting">Vote des noms d\'utilisateur</string>
-    <string name="username_voting_subtitle">En tant que propriétaire de masternode, vous pouvez voter pour approuver les noms d\'utilisateur demandés, avant que les utilisateurs ne puissent les créer.</string>
-    <string name="voting_duplicates_only_title">Voter seulement sur les doublons</string>
-    <string name="voting_duplicates_only_message">Vous pouvez consulter toutes les requêtes, mais vous n\'avez besoin que de voter sur les doublons</string>
+    <string name="voting_duplicates_only_title">Réglage de filtre par défaut</string>
+    <string name="voting_duplicates_only_message">Le filtre par défaut affiche uniquement les noms d\'utilisateur en double pour lesquels vous n\'avez PAS voté, mais vous pouvez voir tous les noms d\'utilisateur contestés en modifiant le filtre</string>
     <string name="all">Tous</string>
     <string name="n_usernames">%d noms d\'utilisateur</string>
     <string name="n_requests">%d demandes</string>
@@ -293,20 +292,23 @@
         <item>Tous</item>
         <item>J\'ai approuvé</item>
         <item>Je n\'ai pas approuvé</item>
+        <item>A des votes de blocage</item>
     </string-array>
 
+    <string name="block_vote_count">%d bloc(s)</string>
     <string name="request_your_username">Créez votre nom d\'utilisateur</string>
-    <string name="request_your_hint">Veuillez noter qu\'il vous sera impossible de le modifier plus tard</string>
+    <string name="request_your_hint">Veuillez noter que vous ne pourrez pas le changer plus tard</string>
     <string name="request_username">Demander un nom d\'utilisateur</string>
     <string name="request_voting_range">Le réseau Dash votera sur ce nom d\'utilisateur. Vous serez informé du résultat le %s.</string>
     <string name="request_username_available">Le nom d\'utilisateur est disponible</string>
     <string name="request_username_unavailable">Le nom d\'utilisateur n\'est pas disponible, ou il est bloqué</string>
     <string name="request_username_taken">Le nom d\'utilisateur est déjà pris</string>
+    <string name="request_username_taken_results">Le nom d\'utilisateur a été pris par un autre utilisateur</string>
     <string name="requesting_your_username_title">Création de votre nom d\'utilisateur</string>
-    <string name="requesting_your_username_message">Votre nom d\'utilisateur johndoe est en cours de demande sur le réseau Dash. Cela peut prendre un peu de temps.</string>
+    <string name="requesting_your_username_message">Votre nom d\'utilisateur %s est en cours de demande sur le réseau Dash. Cela peut prendre un certain temps.</string>
+    <string name="creating_your_username_message">Votre nom d\'utilisateur %s est en train d\'être créé sur le réseau Dash. Cela peut prendre un certain temps.</string>
     <string name="requesting_your_username_error_title">Votre demande de nom d\'utilisateur a échoué</string>
-    <string name="requesting_your_username_error_message">Pour quelque raison, la demande a échoué. Veuillez réessayer.</string>
-
+    <string name="requesting_your_username_error_message">Pour une certaine raison, la demande du nom d\'utilisateur %s a échoué.</string>
     <string name="voting">Votation :</string>
     <string name="this_username_has_already_been_requested">Le nom d\'utilisateur a déjà été demandé, mais vous pouvez aussi le demander et laisser le réseau voter et décider si vous pouvez l\'obtenir</string>
     <string name="request_details">Détails de la demande</string>
@@ -327,7 +329,7 @@
     <string name="make_a_post_with_the_text">Publiez le texte ci-dessus sur un réseau social connu ou une plateforme de messagerie pour vérifier que vous êtes le propriétaire véritable du nom d\'utilisateur demandé, et collez le lien ci-dessous</string>
     <string name="paste_the_link">Copiez-collez le lien</string>
     <string name="voting_key_title">Saisissez votre clé de vote</string>
-    <string name="voting_key_hint">Clé de vote de masternode</string>
+    <string name="voting_key_hint">Clé privée de vote de masternode</string>
     <string name="voting_key_input_error">Vous avez saisi une clé invalide</string>
     <string name="voting_key_add">Ajoutez vos clés de vote</string>
     <string name="voting_key_add_subtitle">Les adresses IP ci-dessous sont associées à ce portefeuille</string>
@@ -401,5 +403,15 @@
     <string name="request_username_balance_requirement">Vous devez avoir 0,25 dashs pour créer ce nom d\'utilisateur</string>
     <string name="request_username_length_requirement">entre 3 et 23 caractères</string>
     <string name="request_username_confirm">J\'accepte</string>
-
+    <string name="username_vote_one_left_message">Vous avez déjà voté pour ce nom d\'utilisateur %d fois. Vous pouvez encore voter une seule fois pour ce nom d\'utilisateur.</string>
+    <string name="username_vote_one_left">Plus qu\'un vote</string>
+    <string name="username_vote_none_left_message">Vous avez déjà voté pour ce nom d\'utilisateur %d fois. Vous ne pouvez plus voter pour ce nom d\'utilisateur.</string>
+    <string name="username_vote_none_left">Plus de vote possible</string>
+    <string name="request_username_blocked">Le nom d\'utilisateur demandé a été bloqué</string>
+    <string name="request_username_lost_vote">Le nom d\'utilisateur demandé a été accordé à quelqu\'un d\'autre</string>
+    <string name="request_username_blocked_message">Le nom d\'utilisateur %s a été bloqué par le réseau Dash. Veuillez réessayer avec un autre nom d\'utilisateur.</string>
+    <string name="request_username_lost_vote_message">Dans son processus de vote, le réseau Dash a décidé d\'attribuer le nom d\'utilisateur %s à quelqu\'un d\'autre. Veuillez réessayer avec un autre nom d\'utilisateur.</string>
+    <string name="mix_dash_mix">Solde mélangé</string>
+    <string name="mix_dash_title">Mélangez vos dashs</string>
+    <string name="mix_dash_message">Pour empêcher d\'autres gens de voir à qui vous faites des paiements, il est recommandé de mélanger votre solde avant de créer votre nom d\'utilisateur.</string>
 </resources>

@@ -130,7 +130,7 @@
     <string name="notifications_you_received">%s надіслав вам запит на додавання в контакти</string>
 
     <string name="identity_complete_message">Ваше ім’я користувача %s було успішно створено в Dash Network</string>
-    <string name="request_complete_message">Ви маєте успішний запит на ім\’я користувача %s в Dash Network</string>
+    <string name="request_complete_message">Ви маєте успішний запит на ім’я користувача %s в Dash Network</string>
 
     <string name="scan_to_pay_username_dialog_message">Недійсне ім’я користувача чи ідентифікатор Dash\n\n%s</string>
     <string name="send_coins_to_username">Відправка</string>
@@ -259,18 +259,14 @@
     <string name="upload_your_picture">Завантажте своє зображення, персоналізуйте свою особистість</string>
     <string name="in_case_lose_your_passphrase">Якщо ви втратите свою парольну фразу, ви втратите право на запрошене ім’я користувача.</string>
     <string name="keep_your_passphrase_safe">Зберігайте свою парольну фразу в безпеці</string>
-    <string name="pay_now">Сплатіть зараз, і якщо не буде схвалено, ви можете створити інше ім’я, не сплачуючи повторно [перевірте, якщо правда]</string>
+    <string name="pay_now">Сплатіть зараз, і якщо не буде схвалено, ви зможете створити інше ім’я без повторної оплати</string>
     <string name="case_your_request_is_not_approved">У випадку, якщо ваш запит не буде схвалено</string>
-    <string name="voting_requirement_subtitle">Будь-яке ім’я користувача з цифрами 2–9 або довжиною понад 20 символів буде автоматично підтверджено</string>
     <string name="voting_requirement_title">Голосування потрібне лише в деяких випадках</string>
     <string name="dash_network_must_vote_to_approve">Мережа Dash має проголосувати за схвалення вашого імені користувача перед його створенням.</string>
     <string name="what_is_username_voting">Що таке голосування за імʼя користувача\?</string>
     <string name="usernames_blocked_title">Деякі імена користувачів можуть бути заблоковані</string>
     <string name="usernames_blocked_subtitle">Якщо значна частина мережі визначить, що ім’я користувача є невідповідним, вони можуть заблокувати його</string>
     <string name="username_voting">Голосування за імʼя користува</string>
-    <string name="username_voting_subtitle">Як власник майстерноди, ви можете голосувати за схвалення запитуваних імен користувачів, перш ніж користувачі зможуть їх створити.</string>
-    <string name="voting_duplicates_only_title">Голосувати лише за дублікати</string>
-    <string name="voting_duplicates_only_message">Ви можете переглянути всі запити, але голосувати потрібно лише за дублікати</string>
     <string name="all">Все</string>
     <string name="n_usernames">%d імена користувачів</string>
     <string name="n_requests">%d запитів</string>
@@ -296,17 +292,13 @@
     </string-array>
 
     <string name="request_your_username">Створити ім\'я користувача</string>
-    <string name="request_your_hint">Зверніть увагу, що ви не зможете змінити це в майбутньому</string>
     <string name="request_username">Запит імені користувача</string>
     <string name="request_voting_range">Мережа Dash голосуватиме за це ім’я користувача. Ми повідомимо вас про результати в %s.</string>
     <string name="request_username_available">Доступне ім\'я користувача</string>
     <string name="request_username_unavailable">Ім\'я користувача недоступне або заблоковане</string>
     <string name="request_username_taken">Ім\'я користувача зайняте</string>
     <string name="requesting_your_username_title">Створити ім\'я користувача</string>
-    <string name="requesting_your_username_message">Ваше ім’я користувача johndoe запитується в мережі Dash. Це може зайняти деякий час.</string>
     <string name="requesting_your_username_error_title">Ваш запит імені користувача провалився</string>
-    <string name="requesting_your_username_error_message">З якоїсь причини запит не виконано. Спробуйте ще раз.</string>
-
     <string name="voting">Голосувати: </string>
     <string name="this_username_has_already_been_requested">Це ім’я користувача вже запитувалося, але ви також можете запросити його та дозволити мережі проголосувати, щоб вирішити, чи можете ви його мати</string>
     <string name="request_details">Запросити деталі</string>
@@ -327,7 +319,6 @@
     <string name="make_a_post_with_the_text">Опублікуйте публікацію з наведеним вище текстом у відомих соціальних мережах або на платформі обміну повідомленнями, щоб підтвердити, що ви є оригінальним власником потрібного імені користувача, і вставте посилання нижче</string>
     <string name="paste_the_link">Вставте посилання</string>
     <string name="voting_key_title">Введіть свій ключ голосування</string>
-    <string name="voting_key_hint">Ключі голосування Мастернод</string>
     <string name="voting_key_input_error">Ви ввели недійсний ключ</string>
     <string name="voting_key_add">Додайте свої ключі для голосування</string>
     <string name="voting_key_add_subtitle">Наведені нижче IP-адреси пов’язані з цим гаманцем</string>
@@ -401,5 +392,4 @@
     <string name="request_username_balance_requirement">Для створення цього імені користувача потрібно мати 0,25 DASH</string>
     <string name="request_username_length_requirement">Від 3 до 23 символів</string>
     <string name="request_username_confirm">Я приймаю</string>
-
-</resources>
+    </resources>
