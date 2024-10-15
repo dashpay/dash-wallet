@@ -1,0 +1,59 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'org.dashj.platform.sdk.tests'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 24
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+    defaultConfig {
+        // Enable desugaring for older Android versions if you're using Java 8+ features
+        multiDexEnabled true
+    }
+
+    // Add this block to ensure dexing works properly
+    dexOptions {
+        javaMaxHeapSize "4g"  // Increase heap size for dexing if necessary
+    }
+    sourceSets {
+        androidTest {
+            java.srcDir 'src/androidTest/java'
+            java.srcDir 'src/test/java'  // Add this if tests are in the test source set
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    //implementation 'androidx.appcompat:appcompat:1.7.0'
+    //implementation 'com.google.android.material:material:1.12.0'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    androidTestImplementation "org.dashj.platform:dash-sdk-java:$dppVersion"
+    androidTestImplementation "org.dashj.platform:dash-sdk-java:$dppVersion:tests"
+    androidTestImplementation "org.dashj.platform:dash-sdk-kotlin:$dppVersion"
+    androidTestImplementation "org.dashj.platform:dash-sdk-android:$dppVersion"
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$desugaringLibraryVersion"
+}

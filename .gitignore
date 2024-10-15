@@ -34,5 +34,6 @@ service.properties
 wallet/assets/explore/*.db
 .deploy/*.json
 *.keystore
-.java-version # used by jenv for choosing java version at the command line
+# used by jenv for choosing java version at the command line
+.java-version
 .bundle/config
