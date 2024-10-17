@@ -27,6 +27,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupAdapter
@@ -36,6 +37,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameRequestsBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
@@ -65,6 +67,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         val adapter = UsernameRequestGroupAdapter { request ->
             lifecycleScope.launch {
                 if (request.requestId != "") {
+                    viewModel.logEvent(AnalyticsConstants.UsernameVoting.DETAILS)
                     safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(request.requestId))
                 } else {
                     val usernameVotes = viewModel.getVotes(request.username)
@@ -199,7 +202,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         binding.filterSubtitle.text = getString(R.string.n_usernames, requests.size)
         binding.filterSubtitle.isVisible = requests.isNotEmpty()
         binding.searchPanel.isVisible = requests.isNotEmpty()
-        binding.quickVoteButton.isVisible = requests.isNotEmpty() && viewModel.keysAmount > 0
+        binding.quickVoteButton.isVisible = requests.isNotEmpty() && viewModel.keysAmount > 0 && Constants.SUPPORTS_QUICKVOTING
         binding.noItemsTxt.isVisible = requests.isEmpty()
     }
 

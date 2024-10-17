@@ -261,7 +261,6 @@
     <string name="keep_your_passphrase_safe">Zabezpiecz swoją listę słów do odzysku konta oraz hasło.</string>
     <string name="pay_now">Zapłać teraz, a jeśli nazwa nie zostanie zatwierdzona, możesz utworzyć inną nazwę bez konieczności ponownego uiszczania opłaty</string>
     <string name="case_your_request_is_not_approved">W przypadku, gdy Twoja prośba nie zostanie zatwierdzona</string>
-    <string name="voting_requirement_subtitle">Każda nazwa użytkownika zawierająca cyfrę od 2 do 9 lub dłuższa niż 20 znaków zostanie automatycznie zatwierdzona</string>
     <string name="voting_requirement_title">Głosowanie jest wymagane tylko w niektórych przypadkach</string>
     <string name="dash_network_must_vote_to_approve">Sieć Dash musi głosować nad zatwierdzeniem Twojej nazwy użytkownika zanim zostanie ona stworzona.</string>
     <string name="what_is_username_voting">Na czym polega głosowanie nad nazwą użytkownika\?</string>
@@ -294,7 +293,6 @@
     </string-array>
 
     <string name="request_your_username">Stwórz swoją nazwę użytkownika</string>
-    <string name="request_your_hint">Pamiętaj, że nie będziesz mógł tego zmienić w przyszłości</string>
     <string name="request_username">Poproś o nazwę użytkownika</string>
     <string name="request_voting_range">Sieć Dash będzie głosować nad tą nazwą użytkownika. Powiadomimy Cię o wynikach %s.</string>
     <string name="request_username_available">Nazwa użytkownika jest dostępna</string>
@@ -322,7 +320,6 @@
     <string name="make_a_post_with_the_text">Stwórz post z powyższym tekstem na platformie społecznościowej lub komunikatorze, aby potwierdzić, że jesteś oryginalnym właścicielem żądanej nazwy użytkownika i wklej poniższy link</string>
     <string name="paste_the_link">Wklej link</string>
     <string name="voting_key_title">Wpisz swój klucz do głosowania</string>
-    <string name="voting_key_hint">Klucz Masternoda  do głosowania</string>
     <string name="voting_key_input_error">Wpisałeś nieprawidłowy klucz</string>
     <string name="voting_key_add">Dodaj swoje klucze do głosowania</string>
     <string name="voting_key_add_subtitle">Poniższy adres(y) IP są powiązane z tym portfelem</string>

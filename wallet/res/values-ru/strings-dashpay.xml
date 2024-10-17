@@ -269,6 +269,8 @@ Dash</b></string>
     <string name="usernames_blocked_title">Некоторые Имена пользователей могут быть заблокированы</string>
     <string name="usernames_blocked_subtitle">Если существенная часть сети сочтёт Имя пользователя неподходящим, его могут заблокировать</string>
     <string name="username_voting">Голосование за Имя пользователя</string>
+    <string name="voting_duplicates_only_title">Настройки фильтра по умолчанию</string>
+    <string name="voting_duplicates_only_message">По умолчанию фильтр показывает только повторяющиеся имена пользователей, за которые вы НЕ голосовали, но при смене настроек фильтра можно посмотреть все спорные имена пользователей</string>
     <string name="username_voting_subtitle">Будучи владельцем мастерноды, вы можете голосовать за одобрение запрошенных имён пользователей до того, как пользователи смогут их создать.</string>
     <string name="all">Все</string>
     <string name="n_usernames">%d Имён пользователей</string>
@@ -292,8 +294,10 @@ Dash</b></string>
         <item>Все</item>
         <item>Одобряю</item>
         <item>Не одобряю</item>
+        <item>Имеет блокирующих голосов</item>
     </string-array>
 
+    <string name="block_vote_count">%d Блок(ов)</string>
     <string name="request_your_username">Создать Имя пользователя</string>
     <string name="request_your_hint">Обратите внимание, что в будущем вы не сможете его изменить</string>
     <string name="request_username">Запросить Имя пользователя</string>
@@ -301,8 +305,12 @@ Dash</b></string>
     <string name="request_username_available">Имя пользователя недоступно</string>
     <string name="request_username_unavailable">Имя пользователя недоступно или заблокировано</string>
     <string name="request_username_taken">Имя пользователя уже занято</string>
+    <string name="request_username_taken_results">Имя пользователя уже занято</string>
     <string name="requesting_your_username_title">Создание Имени пользователя</string>
+    <string name="requesting_your_username_message">Подаётся запрос на ваше Имя пользователя %s в сети Dash. Это может занять какое-то время.</string>
+    <string name="creating_your_username_message">Ваше Имя пользователя %s создаётся в Dash Network. Это может занять какое-то время.</string>
     <string name="requesting_your_username_error_title">Запрос на Имя пользователя не выполнен</string>
+    <string name="requesting_your_username_error_message">По какой-то причине запрос на Имя пользователя %s не прошёл. Пожалуйста, попробуйте снова.</string>
     <string name="voting">Голосуют:</string>
     <string name="this_username_has_already_been_requested">На это имя пользователя уже поступил запрос, но вы тоже можете его запросить и дать сети решить, кому его отдать</string>
     <string name="request_details">Узнать подробности</string>
@@ -323,7 +331,7 @@ Dash</b></string>
     <string name="make_a_post_with_the_text">Опубликуйте сообщение с таким же текстом как в примере выше в известной соцсети или мессенджере, чтобы подтвердить, что вы действительно являетесь владельцем запрошенного имени пользователя, и вставьте ссылку на этот пост в поле ниже</string>
     <string name="paste_the_link">Вставьте ссылку</string>
     <string name="voting_key_title">Введите ключ для голосования</string>
-    <string name="voting_key_hint">Ключ для голосования мастерноды</string>
+    <string name="voting_key_hint">Приватный ключ для голосования мастерноды</string>
     <string name="voting_key_input_error">Вы ввели неверный ключ</string>
     <string name="voting_key_add">Введите ключ для голосования</string>
     <string name="voting_key_add_subtitle">С этим кошельком (кошельками) связаны следующие IP адреса</string>
@@ -397,5 +405,15 @@ Dash</b></string>
     <string name="request_username_balance_requirement">Чтобы создать это Имя пользователя, необходимо 0.25 DASH</string>
     <string name="request_username_length_requirement">От 3 до 23 символов</string>
     <string name="request_username_confirm">Принимаю</string>
-
+    <string name="username_vote_one_left_message">Вы уже проголосовали за это имя пользователя %d раз. За него можно проголосовать ещё один раз. </string>
+    <string name="username_vote_one_left">Остался один голос</string>
+    <string name="username_vote_none_left_message">Вы уже проголосовали за это имя пользователя %d раз. Вы больше не можете за него голосовать.</string>
+    <string name="username_vote_none_left">Голосов больше нет</string>
+    <string name="request_username_blocked">Запрошенное имя пользователя было заблокировано</string>
+    <string name="request_username_lost_vote">Запрошенное имя пользователя было отдано кому-то другому</string>
+    <string name="request_username_blocked_message">Имя пользователя %s было заблокировано Dash Network. Пожалуйста, попробуйте запросить другое имя пользователя.</string>
+    <string name="request_username_lost_vote_message">Во время процесса голосования Dash Network решила передать имя пользователя %s кому-то другому. Пожалуйста, попробуйте запросить другое имя пользователя.</string>
+    <string name="mix_dash_mix">Перемешать баланс</string>
+    <string name="mix_dash_title">Перемешайте свои Dash</string>
+    <string name="mix_dash_message">Чтобы никто другой не смог узнать, кому вы отправляете платежи, рекомендуется перемешивать баланс до создания имени пользователя.</string>
 </resources>

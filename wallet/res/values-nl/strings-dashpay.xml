@@ -270,6 +270,8 @@ gebruikersnaam</b></string>
     <string name="usernames_blocked_title">Sommige gebruikersnamen kunnen worden geblokkeerd.</string>
     <string name="usernames_blocked_subtitle">Als genoeg mensen op het netwerk bepalen dat een gebruikersnaam ongepast is, kunnen ze deze blokkeren.</string>
     <string name="username_voting">Stemmen op gebruikersnamen</string>
+    <string name="voting_duplicates_only_title">Standaard filterinstelling</string>
+    <string name="voting_duplicates_only_message">Het standaardfilter toont alleen dubbele gebruikersnamen waar je NIET op hebt gestemd, maar je kan alle betwiste gebruikersnamen zien door het filter te wijzigen</string>
     <string name="username_voting_subtitle">Als eigenaar van een masternode kan je stemmen om aangevraagde gebruikersnamen goed te keuren voordat gebruikers deze kunnen aanmaken.</string>
     <string name="all">Alles</string>
     <string name="n_usernames">%d gebruikersnamen</string>
@@ -293,8 +295,10 @@ gebruikersnaam</b></string>
         <item>Alles</item>
         <item>Ik heb het goedgekeurd</item>
         <item>Ik heb het niet goedgekeurd</item>
+        <item>Heeft geblokkeerde stemmen </item>
     </string-array>
 
+    <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Maak je gebruikersnaam aan</string>
     <string name="request_your_hint">Let op dat je deze in de toekomst niet meer kunt wijzigen</string>
     <string name="request_username">Vraag gebruikersnaam aan</string>
@@ -302,8 +306,12 @@ gebruikersnaam</b></string>
     <string name="request_username_available">Gebruikersnaam is beschikbaar</string>
     <string name="request_username_unavailable">Gebruikersnaam is niet beschikbaar of geblokkeerd</string>
     <string name="request_username_taken">Gebruikersnaam is bezet</string>
+    <string name="request_username_taken_results">Gebruikersnaam bezet door een andere gebruiker</string>
     <string name="requesting_your_username_title">Je gebruikersnaam aan het maken</string>
+    <string name="requesting_your_username_message">Je gebruikersnaam %s wordt aangevraagd op het Dash Netwerk. Dit kan even duren.</string>
+    <string name="creating_your_username_message">Je gebruikersnaam %s wordt gecreëerd op het Dash Netwerk. Dit kan even duren.</string>
     <string name="requesting_your_username_error_title">Je verzoek  om gebruikersnaam is mislukt.</string>
+    <string name="requesting_your_username_error_message">De aanvraag voor gebruikersnaam%s is mislukt door onbekende reden.</string>
     <string name="voting">Stemming:</string>
     <string name="this_username_has_already_been_requested">Deze gebruikersnaam is al aangevraagd, maar je kan deze alsnog aanvragen en het netwerk laten beslissen of je deze kunt krijgen</string>
     <string name="request_details">Verkrijg details</string>
@@ -324,7 +332,7 @@ gebruikersnaam</b></string>
     <string name="make_a_post_with_the_text">Maak een post met de bovenstaande tekst op een bekend sociaal netwerk of berichtenplatform om te verifiëren dat jij de oorspronkelijke eigenaar van de gevraagde gebruikersnaam bent en plak de link hieronder.</string>
     <string name="paste_the_link">Plak de link</string>
     <string name="voting_key_title">Voer je stem sleutel in</string>
-    <string name="voting_key_hint">Masternode stem-sleutel</string>
+    <string name="voting_key_hint">Masternode Voting Private Key</string>
     <string name="voting_key_input_error">Je hebt een verkeerde sleutel ingevoerd</string>
     <string name="voting_key_add">Voeg je stemssleutels toe.</string>
     <string name="voting_key_add_subtitle">De onderstaande IP-adres(sen) zijn geassocieerd met deze portemonnee.</string>
@@ -398,4 +406,15 @@ gebruikersnaam</b></string>
     <string name="request_username_balance_requirement">Je hebt 0,25 DASH nodig om deze gebruikersnaam aan te maken</string>
     <string name="request_username_length_requirement">Tussen 3 en 23 tekens</string>
     <string name="request_username_confirm">Ik accepteer</string>
+    <string name="username_vote_one_left_message">Je hebt al %d keer gestemd op deze gebruikersnaam. Je kan nog maar één stem uitbrengen op deze gebruikersnaam.</string>
+    <string name="username_vote_one_left">Eén stem over</string>
+    <string name="username_vote_none_left_message">Je hebt al %d keer gestemd op deze gebruikersnaam. Je kan geen stem meer uitbrengen op deze gebruikersnaam.</string>
+    <string name="username_vote_none_left">Geen stemmen over</string>
+    <string name="request_username_blocked">De aangevraagde gebruikersnaam is geblokkeerd</string>
+    <string name="request_username_lost_vote">De aangevraagde gebruikersnaam is aan iemand anders gegeven</string>
+    <string name="request_username_blocked_message">De gebruikersnaam %s is geblokkeerd door het Dash Netwerk. Probeer het opnieuw door een andere gebruikersnaam aan te vragen.</string>
+    <string name="request_username_lost_vote_message">Vanwege het stemproces heeft het Dash Netwerk besloten om de gebruikersnaam %s aan iemand anders toe te wijzen. Probeer het opnieuw door een andere gebruikersnaam aan te vragen.</string>
+    <string name="mix_dash_mix">Gemixt saldo</string>
+    <string name="mix_dash_title">Mix je Dash</string>
+    <string name="mix_dash_message">Om te voorkomen dat anderen kunnen zien aan wie je betalingen doet, raden wij u aan om je saldo te mixen voordat je je gebruikersnaam aanmaakt.</string>
     </resources>

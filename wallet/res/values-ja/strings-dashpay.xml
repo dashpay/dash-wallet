@@ -261,7 +261,6 @@
     <string name="keep_your_passphrase_safe">パスフレーズを安全に保つ</string>
     <string name="pay_now">今すぐ支払いをして承認されなくても、再度支払うことなく別の名前を作成することができます</string>
     <string name="case_your_request_is_not_approved">お客様の請求が承認されない場合</string>
-    <string name="voting_requirement_subtitle">2〜9の数字を含む、または20文字以上のユーザー名は自動的に承認されます</string>
     <string name="voting_requirement_title">投票が必要な場合もあります</string>
     <string name="dash_network_must_vote_to_approve">Dashネットワークでお客様のユーザー名が投票で承認されると、そのユーザー名が作成されます。</string>
     <string name="what_is_username_voting">ユーザー名投票とは\?</string>
@@ -294,7 +293,6 @@
     </string-array>
 
     <string name="request_your_username">ユーザー名の作成</string>
-    <string name="request_your_hint">一度作成したユーザー名は後で変更することはできませんのでご注意ください</string>
     <string name="request_username">ユーザー名の申請</string>
     <string name="request_voting_range">Dashネットワークはこのユーザー名に投票することになります。投票結果は%sに通知されます。</string>
     <string name="request_username_available">ユーザー名は使用可能です</string>
@@ -322,7 +320,6 @@
     <string name="make_a_post_with_the_text">よく知られたSNSやメッセージング・プラットフォームに上記の文章を投稿し、ご自身が申請されたユーザー名の本来の所有者であることを確認した上で、以下のリンクを貼り付けてください</string>
     <string name="paste_the_link">リンクを貼り付ける</string>
     <string name="voting_key_title">投票キーを入力する</string>
-    <string name="voting_key_hint">マスターノードの投票キー</string>
     <string name="voting_key_input_error">無効なキーが入力されています</string>
     <string name="voting_key_add">投票キーを追加する</string>
     <string name="voting_key_add_subtitle">以下のIPアドレスは、このウォレットに紐付けられています</string>

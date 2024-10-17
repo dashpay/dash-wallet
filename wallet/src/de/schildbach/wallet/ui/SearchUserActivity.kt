@@ -55,6 +55,7 @@ import de.schildbach.wallet_test.databinding.ActivitySearchDashpayProfileRootBin
 import kotlinx.coroutines.launch
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.observe
 
@@ -311,6 +312,7 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.ACCEPT_REQUEST)
         // need to check balance
         dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
 

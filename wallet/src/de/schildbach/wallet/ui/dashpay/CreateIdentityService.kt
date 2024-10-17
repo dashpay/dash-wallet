@@ -176,6 +176,7 @@ class CreateIdentityService : LifecycleService() {
     private val createIdentityExceptionHandler = CoroutineExceptionHandler { _, exception ->
         log.error(exception.message, exception)
         analytics.logError(exception, "Failed to create Identity")
+        analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_ERROR, mapOf())
 
         GlobalScope.launch {
             var isInvite = false
@@ -738,7 +739,13 @@ class CreateIdentityService : LifecycleService() {
         //         However, a default empty profile will be saved to the local database.
         val emptyProfile = DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
         platformRepo.updateDashPayProfile(emptyProfile)
-
+        analytics.logEvent(
+            if (blockchainIdentityData.usingInvite) {
+                AnalyticsConstants.UsersContacts.CREATE_USERNAME_INVITE_SUCCESS
+            } else {
+                AnalyticsConstants.UsersContacts.CREATE_USERNAME_SUCCESS
+            }, mapOf()
+        )
         platformRepo.init()
         platformSyncService.initSync()
 

@@ -261,8 +261,8 @@
     <string name="keep_your_passphrase_safe">Parolanızı güvende tutun</string>
     <string name="pay_now">Şimdi ödeyin ve onaylanmazsa tekrar ödeme yapmadan farklı bir isim oluşturabilirsiniz.</string>
     <string name="case_your_request_is_not_approved">Talebinizin onaylanmaması durumunda</string>
-    <string name="voting_requirement_subtitle">2-9 arasında bir sayıya sahip olan veya 20 karakterden uzun olan herhangi bir kullanıcı adı otomatik olarak onaylanacaktır</string>
     <string name="voting_requirement_title">Oylama sadece bazı durumlarda gereklidir</string>
+    <string name="voting_requirement_subtitle">2-9 arasında bir sayıya sahip olan veya 20 karakterden uzun olan herhangi bir kullanıcı adı otomatik olarak onaylanacaktır</string>
     <string name="dash_network_must_vote_to_approve">Dash ağı, kullanıcı adınızı oluşturmadan önce bu işlemi onaylamak için oy kullanmalıdır.</string>
     <string name="what_is_username_voting">Kullanıcı adı oylaması nedir\?</string>
     <string name="usernames_blocked_title">Bazı kullanıcı adları engellenebilir</string>
@@ -322,7 +322,6 @@
     <string name="make_a_post_with_the_text">İstenen kullanıcı adının orijinal sahibi olduğunuzu doğrulamak için yukarıdaki metni bilinen bir sosyal medya platformunda paylaşın ve aşağıdaki bağlantıyı yapıştırın</string>
     <string name="paste_the_link">Bağlantıyı yapıştırın</string>
     <string name="voting_key_title">Oylama anahtarınızı girin</string>
-    <string name="voting_key_hint">Ana düğüm Oylama Anahtarı</string>
     <string name="voting_key_input_error">Geçersiz bir anahtar girdiniz</string>
     <string name="voting_key_add">Oylama anahtarlarınızı ekleyin</string>
     <string name="voting_key_add_subtitle">Aşağıdaki IP adresi(leri) bu cüzdanla ilişkilidir</string>

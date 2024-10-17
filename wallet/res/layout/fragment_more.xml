@@ -120,6 +120,7 @@
                         app:layout_constraintVertical_bias="0"
                         tools:src="@drawable/user5" />
 
+                    <!-- QR code button currently hidden -->
                     <ImageButton
                         android:id="@+id/profile_qr_icon"
                         android:layout_width="wrap_content"
@@ -127,7 +128,8 @@
                         android:background="@drawable/transparent_button_background"
                         app:layout_constraintBottom_toBottomOf="@id/dashpayUserAvatar"
                         app:layout_constraintEnd_toEndOf="@id/dashpayUserAvatar"
-                        app:srcCompat="@drawable/ic_profile_qr" />
+                        app:srcCompat="@drawable/ic_profile_qr"
+                        android:visibility="gone"/>
 
                     <TextView
                         android:id="@+id/username1"

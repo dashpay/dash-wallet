@@ -116,6 +116,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
         binding.homeToolbar.setOnClickListener { scrollToTop() }
         binding.notificationBell.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Home.NOTIFICATIONS)
             findNavController().navigate(
                 R.id.showNotificationsFragment,
                 bundleOf("mode" to NotificationsFragment.MODE_NOTIFICATIONS),
@@ -125,7 +126,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
             )
         }
         binding.dashpayUserAvatar.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.UsersContacts.PROFILE_EDIT_HOME)
+            viewModel.logEvent(AnalyticsConstants.Home.AVATAR)
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
 
@@ -215,6 +216,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 viewModel.walletBalance
             )
         }
+
+        viewModel.hasContacts.observe(viewLifecycleOwner) {
+            refreshShortcutBar()
+        }
     }
 
     fun scrollToTop() {
@@ -289,6 +294,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun refreshShortcutBar() {
         showHideSecureAction()
         refreshIfUserHasBalance()
+        refreshIfUserHasIdentity()
     }
 
     private fun showHideSecureAction() {
@@ -298,6 +304,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun refreshIfUserHasBalance() {
         val balance: Coin = viewModel.balance.value ?: Coin.ZERO
         binding.shortcutsPane.userHasBalance = balance.isPositive
+    }
+
+    private fun refreshIfUserHasIdentity() {
+        binding.shortcutsPane.userHasContacts = viewModel.hasIdentity && viewModel.hasContacts.value
     }
 
     private fun updateSyncState() {

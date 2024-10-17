@@ -262,7 +262,6 @@ Dash</b></string>
     <string name="keep_your_passphrase_safe">Mantenha sua frase de recuperação segura</string>
     <string name="pay_now">Pague agora e, se não for aprovado, você pode criar um nome diferente sem pagar novamente</string>
     <string name="case_your_request_is_not_approved">Caso sua solicitação não seja aprovada</string>
-    <string name="voting_requirement_subtitle">Qualquer nome de usuário que tiver um número de 2 a 9 ou for mais longo que 20 caracteres será automaticamente aprovado</string>
     <string name="voting_requirement_title">Votar é obrigatório apenas em alguns casos</string>
     <string name="dash_network_must_vote_to_approve">A rede Dash deve votar para aprovar o seu nome de usuário antes que ele seja criado.</string>
     <string name="what_is_username_voting">O que é a votação de nomes de usuário\?</string>
@@ -295,7 +294,6 @@ Dash</b></string>
     </string-array>
 
     <string name="request_your_username">Criar seu nome de usuário</string>
-    <string name="request_your_hint">Por favor, note que você não poderá alterar isso no futuro</string>
     <string name="request_username">Solicitar Nome de Usuário</string>
     <string name="request_voting_range">A rede Dash fará uma votação para escolher este nome de usuário. Você será notificado sobre o resultado em %s.</string>
     <string name="request_username_available">Nome de usuário está disponível</string>
@@ -323,7 +321,6 @@ Dash</b></string>
     <string name="make_a_post_with_the_text">Faça uma publicação com o texto acima em uma rede social ou plataforma de mensagens conhecida para verificar que você é o proprietário original do nome de usuário solicitado e cole o link abaixo</string>
     <string name="paste_the_link">Cole o link</string>
     <string name="voting_key_title">Digite sua chave de votação</string>
-    <string name="voting_key_hint">Chave de Votação de Masternode</string>
     <string name="voting_key_input_error">Você inseriu uma chave inválida</string>
     <string name="voting_key_add">Adicione suas chaves de votação</string>
     <string name="voting_key_add_subtitle">Os endereços de IP abaixo estão associados a esta carteira</string>

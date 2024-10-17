@@ -256,16 +256,16 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
         super.onDestroy()
     }
 
-    fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
-        dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.NOTIFICATIONS_ACCEPT_REQUEST)
+    private fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.ACCEPT_REQUEST)
         sendContactRequest(usernameSearchResult)
     }
 
-    fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+    private fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         // this Ignmore Request function is not currently implemented
     }
 
-    fun sendContactRequest(usernameSearchResult: UsernameSearchResult) {
+    private fun sendContactRequest(usernameSearchResult: UsernameSearchResult) {
         lifecycleScope.launch {
             val enough = dashPayViewModel.hasEnoughCredits()
             val shouldWarn = enough.isBalanceWarning()
@@ -299,7 +299,7 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
         }
     }
 
-    fun onUserAlertDismiss(alertId: Int) {
+    private fun onUserAlertDismiss(alertId: Int) {
         userAlertItem = null
         viewModel.dismissUserAlert(alertId)
     }

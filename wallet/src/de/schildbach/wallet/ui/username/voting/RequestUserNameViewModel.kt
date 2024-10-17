@@ -49,6 +49,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.platform.DomainDocument
@@ -81,7 +82,8 @@ class RequestUserNameViewModel @Inject constructor(
     val walletData: WalletDataProvider,
     val platformRepo: PlatformRepo,
     val usernameRequestDao: UsernameRequestDao,
-    val coinJoinConfig: CoinJoinConfig
+    val coinJoinConfig: CoinJoinConfig,
+    val analytics: AnalyticsService
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
@@ -366,5 +368,9 @@ class RequestUserNameViewModel @Inject constructor(
                 url
             ).enqueue()
         }
+    }
+
+    fun logEvent(event: String) {
+        analytics.logEvent(event, mapOf())
     }
 }

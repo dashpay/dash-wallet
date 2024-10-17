@@ -80,15 +80,26 @@ object WalletActivityExt {
     const val NOTIFICATION_ACTION_KEY = "action"
     private const val BROWSER_ACTION_KEY = "browser"
     private const val ACTION_URL_KEY = "url"
+    private const val CONTACTS_BUTTON_INDEX = 1
+    private const val EXPLORE_BUTTON_INDEX = 3
+
 
     fun MainActivity.setupBottomNavigation(viewModel: MainViewModel) {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navView: BottomNavigationView = findViewById(R.id.bottom_navigation)
         setupWithNavController(navView, navController)
-        if (!Constants.SUPPORTS_PLATFORM) {
-            navView.menu.removeItem(R.id.contactsFragment)
-            navView.menu.removeItem(R.id.exploreFragment)
+
+
+        viewModel.blockchainIdentity.observe(this) { identityData ->
+
+            if (identityData?.creationComplete == true) {
+                navView.menu.getItem(CONTACTS_BUTTON_INDEX).isVisible = true
+                navView.menu.getItem(EXPLORE_BUTTON_INDEX).isVisible = true
+            } else {
+                navView.menu.getItem(CONTACTS_BUTTON_INDEX).isVisible = false
+                navView.menu.getItem(EXPLORE_BUTTON_INDEX).isVisible = false
+            }
         }
         navView.itemIconTintList = null
         navView.setOnItemSelectedListener { item: MenuItem ->
@@ -105,6 +116,8 @@ object WalletActivityExt {
                 }
                 R.id.paymentsFragment -> viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
                 R.id.moreFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_MORE)
+                R.id.contactsFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_CONTACTS)
+                R.id.exploreFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_EXPLORE)
                 else -> { }
             }
             onNavDestinationSelected(item, navController)

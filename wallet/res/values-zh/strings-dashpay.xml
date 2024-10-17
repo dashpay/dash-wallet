@@ -262,7 +262,6 @@
     <string name="keep_your_passphrase_safe">保证您的密码安全</string>
     <string name="pay_now">现在付款, 若未通过, 您可创建另一个用户名无需再次付款</string>
     <string name="case_your_request_is_not_approved">如果您的申请没有被通过</string>
-    <string name="voting_requirement_subtitle">任何包括数字 2-9 或超过20个字符的用户名将自动被通过</string>
     <string name="voting_requirement_title">仅在一些情况下需要投票</string>
     <string name="dash_network_must_vote_to_approve">在用户名被创建前, Dash网络必须投票来通过您的申请.</string>
     <string name="what_is_username_voting">什么是用户名投票\?</string>
@@ -295,7 +294,6 @@
     </string-array>
 
     <string name="request_your_username">创建您的用户名</string>
-    <string name="request_your_hint">请注意您在之后将无法进行更改</string>
     <string name="request_username">申请用户名</string>
     <string name="request_voting_range">Dash 网络将对此用户名进行投票. 我们将通知您之后的结果 %s.</string>
     <string name="request_username_available">用户名可用</string>
@@ -323,7 +321,6 @@
     <string name="make_a_post_with_the_text">在知名社交媒体或信息平台使用上述文本发布一个帖子以证明您是所申请用户名的原始持有者, 并将链接粘贴在下方</string>
     <string name="paste_the_link">粘贴链接</string>
     <string name="voting_key_title">输入您的投票私钥</string>
-    <string name="voting_key_hint">主节点投票密钥</string>
     <string name="voting_key_input_error">您已输入了无效的密钥</string>
     <string name="voting_key_add">添加您的投票私钥</string>
     <string name="voting_key_add_subtitle">下列的 (多个) IP 地址与这个钱包相关联</string>

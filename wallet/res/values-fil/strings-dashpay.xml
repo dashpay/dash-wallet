@@ -262,8 +262,8 @@ Username</b></string>
     <string name="keep_your_passphrase_safe">Panatilihing ligtas ang iyong passphrase</string>
     <string name="pay_now">Magbayad ngayon at kung hindi naaprubahan, maaari kang lumikha ng ibang pangalan nang hindi nagbabayad muli</string>
     <string name="case_your_request_is_not_approved">Kung sakaling hindi maaprubahan ang iyong kahilingan</string>
-    <string name="voting_requirement_subtitle">Awtomatikong maaaprubahan ang anumang username na mayroong numero 2–9 o mas mahaba sa 20 karakter</string>
     <string name="voting_requirement_title">Ang pagboto ay kinakailangan lamang sa ilang mga kaso</string>
+    <string name="voting_requirement_subtitle">Awtomatikong maaaprubahan ang anumang username na mayroong numero 2–9 o mas mahaba sa 20 karakter</string>
     <string name="dash_network_must_vote_to_approve">Dapat bumoto ang Dash network upang aprubahan ang iyong username bago ito malikha.</string>
     <string name="what_is_username_voting">Ano ang pagboto ng username\?</string>
     <string name="usernames_blocked_title">Maaaring i-block ang ilang mga username</string>
@@ -295,7 +295,6 @@ Username</b></string>
     </string-array>
 
     <string name="request_your_username">Gumawa ng iyong username</string>
-    <string name="request_your_hint">Pakitandaan na hindi mo na ito mababago sa hinaharap</string>
     <string name="request_username">Humiling ng Username</string>
     <string name="request_voting_range">Ang Dash network ay boboto sa username na ito. Aabisuhan ka namin ng mga resulta sa %s.</string>
     <string name="request_username_available">Available ang username</string>
@@ -323,7 +322,6 @@ Username</b></string>
     <string name="make_a_post_with_the_text">Gumawa ng post gamit ang text sa itaas sa isang kilalang social media o messaging platform para i-verify na ikaw ang orihinal na may-ari ng hiniling na username at i-paste ang link sa ibaba</string>
     <string name="paste_the_link">Idikit ang link</string>
     <string name="voting_key_title">Ilagay ang iyong voting key</string>
-    <string name="voting_key_hint">Masternode Voting Key</string>
     <string name="voting_key_input_error">Naglagay ka ng di-wastong key</string>
     <string name="voting_key_add">Idagdag ang iyong mga susi sa pagboto</string>
     <string name="voting_key_add_subtitle">Ang (mga) IP address sa ibaba ay nauugnay sa wallet na ito</string>

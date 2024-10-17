@@ -261,7 +261,6 @@
     <string name="keep_your_passphrase_safe">Зберігайте свою парольну фразу в безпеці</string>
     <string name="pay_now">Сплатіть зараз, і якщо не буде схвалено, ви зможете створити інше ім’я без повторної оплати</string>
     <string name="case_your_request_is_not_approved">У випадку, якщо ваш запит не буде схвалено</string>
-    <string name="voting_requirement_subtitle">Будь-яке ім’я користувача з цифрами 2–9 або довжиною понад 20 символів буде автоматично підтверджено</string>
     <string name="voting_requirement_title">Голосування потрібне лише в деяких випадках</string>
     <string name="dash_network_must_vote_to_approve">Мережа Dash має проголосувати за схвалення вашого імені користувача перед його створенням.</string>
     <string name="what_is_username_voting">Що таке голосування за імʼя користувача\?</string>
@@ -294,7 +293,6 @@
     </string-array>
 
     <string name="request_your_username">Створити ім\'я користувача</string>
-    <string name="request_your_hint">Зверніть увагу, що ви не зможете змінити це в майбутньому</string>
     <string name="request_username">Запит імені користувача</string>
     <string name="request_voting_range">Мережа Dash голосуватиме за це ім’я користувача. Ми повідомимо вас про результати в %s.</string>
     <string name="request_username_available">Доступне ім\'я користувача</string>
@@ -322,7 +320,6 @@
     <string name="make_a_post_with_the_text">Опублікуйте публікацію з наведеним вище текстом у відомих соціальних мережах або на платформі обміну повідомленнями, щоб підтвердити, що ви є оригінальним власником потрібного імені користувача, і вставте посилання нижче</string>
     <string name="paste_the_link">Вставте посилання</string>
     <string name="voting_key_title">Введіть свій ключ голосування</string>
-    <string name="voting_key_hint">Ключі голосування Мастернод</string>
     <string name="voting_key_input_error">Ви ввели недійсний ключ</string>
     <string name="voting_key_add">Додайте свої ключі для голосування</string>
     <string name="voting_key_add_subtitle">Наведені нижче IP-адреси пов’язані з цим гаманцем</string>

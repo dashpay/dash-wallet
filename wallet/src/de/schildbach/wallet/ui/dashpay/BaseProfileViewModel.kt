@@ -24,6 +24,7 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 
+// base view model that keeps track of the identity and profile information
 @OptIn(ExperimentalCoroutinesApi::class)
 open class BaseProfileViewModel(
     val blockchainIdentityDataDao: BlockchainIdentityConfig,

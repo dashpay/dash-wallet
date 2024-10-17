@@ -1,8 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources  xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="choose_your_username">Pilih  <b>Nama pengguna
-Dash</b> anda</string>
+    <string name="choose_your_username">Pilih  <b>Nama pengguna Dash</b> anda</string>
     <string name="identity_min_3_chars">Antara 3 dan 23 karakter</string>
     <string name="identity_alphanum_only">Hanya huruf, angka, dan tanda hubung</string>
     <string name="identity_hyphen_rule">Harus dimulai dan diakhiri dengan huruf atau angka</string>
@@ -262,8 +261,8 @@ Dash</b> anda</string>
     <string name="keep_your_passphrase_safe">Simpan frasa sandi Anda dengan aman</string>
     <string name="pay_now">Bayar sekarang dan jika tidak disetujui, Anda dapat membuat nama lain tanpa membayar lagi</string>
     <string name="case_your_request_is_not_approved">Jika permintaan Anda tidak disetujui</string>
-    <string name="voting_requirement_subtitle">Nama pengguna apa pun yang memiliki angka 2–9 atau lebih dari 20 karakter akan disetujui secara otomatis</string>
     <string name="voting_requirement_title">Pemungutan suara hanya diperlukan dalam beberapa kasus</string>
+    <string name="voting_requirement_subtitle">Nama pengguna apa pun yang memiliki angka 2–9 atau lebih dari 20 karakter akan disetujui secara otomatis</string>
     <string name="dash_network_must_vote_to_approve">Jaringan Dash harus memilih untuk menyetujui nama pengguna Anda sebelum dibuat.</string>
     <string name="what_is_username_voting">Apa itu voting nama pengguna\?</string>
     <string name="usernames_blocked_title">Beberapa nama pengguna dapat diblokir</string>
@@ -323,7 +322,6 @@ Dash</b> anda</string>
     <string name="make_a_post_with_the_text">Buat postingan dengan teks di atas di media sosial atau platform perpesanan terkenal untuk memverifikasi bahwa Anda adalah pemilik asli nama pengguna yang diminta dan tempel tautan di bawah</string>
     <string name="paste_the_link">Tempel tautannya</string>
     <string name="voting_key_title">Masukkan kunci pemungutan suara Anda</string>
-    <string name="voting_key_hint">Kunci Voting Masternode</string>
     <string name="voting_key_input_error">Anda telah memasukkan kunci yang tidak valid</string>
     <string name="voting_key_add">Tambahkan kunci pemungutan suara Anda</string>
     <string name="voting_key_add_subtitle">Alamat IP di bawah ini terkait dengan dompet ini</string>

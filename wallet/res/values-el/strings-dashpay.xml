@@ -295,7 +295,6 @@
     </string-array>
 
     <string name="request_your_username">Δημιουργήστε το όνομα χρήστη σας</string>
-    <string name="request_your_hint">Παρακαλώ σημειώστε ότι δεν θα μπορείτε να το αλλάξετε στο μέλλον.</string>
     <string name="request_username">Αίτημα ονόματος χρήστη</string>
     <string name="request_voting_range">Το δίκτυο Dash θα ψηφίσει για αυτό το όνομα χρήστη. Θα σας ειδοποιήσουμε για τα αποτελέσματα στο%s.</string>
     <string name="request_username_available">Το όνομα χρήστη είναι διαθέσιμο</string>
@@ -323,7 +322,6 @@
     <string name="make_a_post_with_the_text">Κάντε μια ανάρτηση με το παραπάνω κείμενο σε ένα γνωστό μέσο κοινωνικής δικτύωσης ή σε μια πλατφόρμα ανταλλαγής μηνυμάτων για να επαληθεύσετε ότι είστε ο αρχικός κάτοχος του ζητούμενου ονόματος χρήστη και επικολλήστε τον παρακάτω σύνδεσμο</string>
     <string name="paste_the_link">Επικολλήστε τον σύνδεσμο</string>
     <string name="voting_key_title">Εισάγετε το κλειδί ψήφου σας</string>
-    <string name="voting_key_hint">Κλειδί ψήφου του Masternode</string>
     <string name="voting_key_input_error">Έχετε εισάγει ένα μη έγκυρο κλειδί</string>
     <string name="voting_key_add">Προσθέστε τα κλειδιά ψηφοφορίας σας</string>
     <string name="voting_key_add_subtitle">Οι παρακάτω διευθύνσεις IP συνδέονται με αυτό το πορτοφόλι</string>

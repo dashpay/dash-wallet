@@ -33,6 +33,7 @@ import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.sdk.ContestedDocumentResourceVotePoll
@@ -87,6 +88,7 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
             )
             // this will update the DB and trigger observers
             platformSyncService.updateUsernameRequestsWithVotes()
+            analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_SUCCESS, mapOf())
             Result.success(
                 workDataOf(
                     KEY_USERNAMES to if(votes.isNotEmpty()) {
@@ -97,6 +99,7 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                 )
             )
         } catch (ex: Exception) {
+            analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_ERROR, mapOf())
             analytics.logError(ex, "Username Voting: failed to broadcast votes")
             Result.failure(workDataOf(
                     KEY_ERROR_MESSAGE to formatExceptionMessage("broadcast username vote", ex)))

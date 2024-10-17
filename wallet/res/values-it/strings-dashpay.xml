@@ -262,13 +262,15 @@ Username</b></string>
     <string name="keep_your_passphrase_safe">Mantieni la tua passphrase al sicuro</string>
     <string name="pay_now">Paga ora e se non approvato</string>
     <string name="case_your_request_is_not_approved">Nel caso in cui la tua richiesta non venga approvata</string>
-    <string name="voting_requirement_subtitle">Qualsiasi nome utente che abbia un numero compreso tra 2 e 9 o che contenga più di 20 caratteri verrà approvato automaticamente</string>
+    <string name="voting_requirement_subtitle">Qualsiasi nome utente contenente un numero compreso tra 2 e 9 o 20 o più caratteri verrà approvato automaticamente</string>
     <string name="voting_requirement_title">La votazione è necessaria solo in alcuni casi</string>
     <string name="dash_network_must_vote_to_approve">La rete Dash deve votare per approvare il tuo nome utente prima che venga creato.</string>
     <string name="what_is_username_voting">Cos\'è la votazione del nome utente\?</string>
     <string name="usernames_blocked_title">Alcuni nomi utente possono essere bloccati</string>
     <string name="usernames_blocked_subtitle">Se un numero sufficiente di membri della rete determina che un nome utente non è appropriato, possono bloccarlo</string>
-    <string name="username_voting">Votazione Nome utente Votazione </string>
+    <string name="username_voting">Votazione Username contestati</string>
+    <string name="voting_duplicates_only_title">Impostazione del filtro predefinita</string>
+    <string name="voting_duplicates_only_message">Il filtro predefinito mostra solo i nomi utente duplicati per i quali NON hai votato, ma puoi vedere tutti i nomi utente contestati modificando il filtro</string>
     <string name="username_voting_subtitle">Come proprietario di un masternode puoi votare per approvare i nomi utente richiesti prima che gli utenti possano crearli.</string>
     <string name="all">Tutte</string>
     <string name="n_usernames">%d nomi utente</string>
@@ -292,8 +294,10 @@ Username</b></string>
         <item>Tutte</item>
         <item>Ho approvato</item>
         <item>Non ho approvato</item>
+        <item>Ha bloccato i voti</item>
     </string-array>
 
+    <string name="block_vote_count">%d Blocco (i)</string>
     <string name="request_your_username">Crea il tuo nome utente</string>
     <string name="request_your_hint">Tieni presente che non potrai modificarlo in futuro</string>
     <string name="request_username">Richiedi nome utente</string>
@@ -301,8 +305,12 @@ Username</b></string>
     <string name="request_username_available">Nome utente disponibile</string>
     <string name="request_username_unavailable">Il nome utente non è disponibile o è bloccato</string>
     <string name="request_username_taken">Il nome utente è preso</string>
+    <string name="request_username_taken_results">Il nome utente è stato preso da un altro utente</string>
     <string name="requesting_your_username_title">Creazione del tuo nome utente</string>
+    <string name="requesting_your_username_message">Il tuo nome utente %s viene richiesto sulla rete Dash. Potrebbe volerci del tempo.</string>
+    <string name="creating_your_username_message">Il tuo nome utente %s viene creato sulla rete Dash. Potrebbe volerci del tempo.</string>
     <string name="requesting_your_username_error_title">La tua richiesta di nome utente non è riuscita</string>
+    <string name="requesting_your_username_error_message">Per qualche motivo, la richiesta del nome utente %s non è adata a buon fine.</string>
     <string name="voting">Voto:</string>
     <string name="this_username_has_already_been_requested">Questo nome utente è già stato richiesto, ma puoi richiederlo anche tu e lasciare che sia la rete a votare per decidere se puoi averlo</string>
     <string name="request_details">Richiedi dettagli</string>
@@ -323,7 +331,7 @@ Username</b></string>
     <string name="make_a_post_with_the_text">Pubblica un post con il testo sopra su un social media o una piattaforma di messaggistica ben nota per verificare di essere il proprietario originale del nome utente richiesto e incolla il collegamento qui sotto</string>
     <string name="paste_the_link">Incolla il collegamento</string>
     <string name="voting_key_title">Inserisci la tua chiave di voto</string>
-    <string name="voting_key_hint">Chiave di voto Masternode</string>
+    <string name="voting_key_hint">Chiave privata di voto Masternode</string>
     <string name="voting_key_input_error">Hai inserito una chiave non valida</string>
     <string name="voting_key_add">Aggiungi le tue chiavi di voto</string>
     <string name="voting_key_add_subtitle">L\' indirizzo(i) IP seguenti sono associati a questo portafoglio</string>
@@ -397,4 +405,15 @@ Username</b></string>
     <string name="request_username_balance_requirement">Devi avere 0,25 DASH per creare questo nome utente</string>
     <string name="request_username_length_requirement">Tra 3 e 23 caratteri</string>
     <string name="request_username_confirm">Accetto</string>
+    <string name="username_vote_one_left_message">Hai già votato per questo nome utente %d volte. Puoi esprimere solo un altro voto per questo nome utente.</string>
+    <string name="username_vote_one_left">Ti rimane un voto</string>
+    <string name="username_vote_none_left_message">Hai già votato per questo nome utente %d tempi. Non puoi esprimere altri voti per questo nome utente.</string>
+    <string name="username_vote_none_left">Nessun voto rimasto</string>
+    <string name="request_username_blocked">Il nome utente richiesto è stato bloccato</string>
+    <string name="request_username_lost_vote">Il nome utente richiesto è stato assegnato a qualcun altro</string>
+    <string name="request_username_blocked_message">Il nome utente %s è stato bloccato dalla rete Dash. Riprova richiedendo un altro nome utente.</string>
+    <string name="request_username_lost_vote_message">A causa del processo di votazione, Dash Network ha deciso di assegnare il nome utente %s a qualcun altro. Riprova richiedendo un altro nome utente.</string>
+    <string name="mix_dash_mix">Mescolare Bilancio</string>
+    <string name="mix_dash_title">Mescola i tuoi Dash</string>
+    <string name="mix_dash_message">Per evitare che altre persone vedano a chi effettui i pagamenti, ti consigliamo di mescolare il tuo saldo prima di creare il tuo nome utente.</string>
     </resources>

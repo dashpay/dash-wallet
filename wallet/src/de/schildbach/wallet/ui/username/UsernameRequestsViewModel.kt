@@ -59,6 +59,8 @@ import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.sdk.platform.Names
@@ -97,7 +99,8 @@ class UsernameRequestsViewModel @Inject constructor(
     private val importedMasternodeKeyDao: ImportedMasternodeKeyDao,
     private val platformSyncService: PlatformSyncService,
     private val walletDataProvider: WalletDataProvider,
-    private val walletApplication: WalletApplication
+    private val walletApplication: WalletApplication,
+    private val analytics: AnalyticsService
 ): ViewModel() {
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
@@ -140,11 +143,20 @@ class UsernameRequestsViewModel @Inject constructor(
         _filterState.flatMapLatest {
             observeUsernames()
                 .map { duplicates ->
-                    duplicates.groupBy { it.username }
-                        .map { (username, list) ->
+                    duplicates.groupBy { it.normalizedLabel }
+                        .map { (normalizedUsername, list) ->
                             val sortedList = list.sortAndFilter()
-                            val votes = usernameVoteDao.getVotes(username)
-                            UsernameRequestGroupView(username, sortedList, isExpanded = isExpanded(username), votes)
+                            val votes = usernameVoteDao.getVotes(normalizedUsername)
+                            // display usernames in lower case without 0 and 1 if possible
+                            val prettyUsername = when {
+                                list.size == 1 -> list[0].username.lowercase()
+                                else -> {
+                                    list.find {
+                                        !(it.username.contains('0') || it.username.contains('1'))
+                                    }?.username?.lowercase() ?: list[0].username
+                                }
+                            }
+                            UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(normalizedUsername), votes)
                         }.filterNot { it.requests.isEmpty() }
                 }
         }.onEach { requests -> _uiState.update { it.copy(filteredUsernameRequests = requests) } }
@@ -224,7 +236,7 @@ class UsernameRequestsViewModel @Inject constructor(
         if (keysAmount == 0) {
             return
         }
-
+        logEvent(AnalyticsConstants.UsernameVoting.VOTE)
         viewModelScope.launch {
             usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
@@ -251,7 +263,7 @@ class UsernameRequestsViewModel @Inject constructor(
         if (keysAmount == 0) {
             return
         }
-
+        logEvent(AnalyticsConstants.UsernameVoting.VOTE_CANCEL)
         viewModelScope.launch {
             usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
@@ -315,6 +327,13 @@ class UsernameRequestsViewModel @Inject constructor(
 
     fun verifyKey(key: String): Boolean {
         return getKeyFromWIF(key) != null
+    }
+
+    fun verifyMasterVotingKey(key: ECKey): Boolean {
+        return masternodeListManager
+            .listAtChainTip
+            .getMasternodesByVotingKey(KeyId.fromBytes(key.pubKeyHash))
+            .isNotEmpty()
     }
 
     fun getKeyFromWIF(key: String): ECKey? {
@@ -487,7 +506,7 @@ class UsernameRequestsViewModel @Inject constructor(
         if (keysAmount == 0) {
             return
         }
-
+        logEvent(AnalyticsConstants.UsernameVoting.BLOCK)
         viewModelScope.launch {
            // usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
@@ -506,5 +525,9 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             }
         //}
+    }
+
+    fun logEvent(event: String) {
+        analytics.logEvent(event, mapOf())
     }
 }

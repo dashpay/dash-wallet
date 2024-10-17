@@ -261,14 +261,14 @@
     <string name="keep_your_passphrase_safe">Keep your passphrase safe</string>
     <string name="pay_now">Pay now and if not approved, you can create a different name without paying again</string>
     <string name="case_your_request_is_not_approved">In case your request is not approved</string>
-    <string name="voting_requirement_subtitle">Any username that has a number 2–9 or is longer than 20 characters will be automatically approved</string>
+    <string name="voting_requirement_subtitle">Any username that has a number 2–9 or 20 or more characters will be automatically approved</string>
     <string name="voting_requirement_title">Voting is only required in some cases</string>
     <string name="dash_network_must_vote_to_approve">The Dash network must vote to approve your username before it is created.</string>
     <string name="what_is_username_voting">What is username voting?</string>
     <string name="usernames_blocked_title">Some usernames can be blocked</string>
     <string name="usernames_blocked_subtitle">If enough of the network determines that a username is inappropriate, they can block it</string>
     <string name="username_voting">Username Voting</string>
-    <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before users will be able to create it.</string>
+    <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before they are created on the network..</string>
     <string name="voting_duplicates_only_title">Default filter setting</string>
     <string name="voting_duplicates_only_message">The default filter shows only duplicate usernames that you have NOT voted on, but you can see all contested usernames by changing the filter</string>
     <string name="all">All</string>
@@ -298,7 +298,7 @@
 
     <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Create your username</string>
-    <string name="request_your_hint">Please not that you will not be able to change it in the future</string>
+    <string name="request_your_hint">Please note that you will not be able to change it in the future</string>
     <string name="request_username">Request Username</string>
     <string name="request_voting_range">The Dash network will vote on this username. We will notify you of the results on %s.</string>
     <string name="request_username_available">Username is available</string>
@@ -330,8 +330,9 @@
     <string name="make_a_post_with_the_text">Make a post with the text above on a well known social media or messaging platform to verify that you are the original owner of the requested username and paste the link bellow</string>
     <string name="paste_the_link">Paste the link</string>
     <string name="voting_key_title">Enter your voting key</string>
-    <string name="voting_key_hint">Masternode Voting Key</string>
+    <string name="voting_key_hint">Masternode Voting Private Key</string>
     <string name="voting_key_input_error">You have entered an invalid key</string>
+    <string name="voting_key_input_not_active_error">You have entered a key that is not associated to an active Masternode</string>
     <string name="voting_key_add">Add your voting keys</string>
     <string name="voting_key_add_subtitle">The IP address(es) below are associated with this wallet</string>
     <string name="masternode_ip">Masternode IP address</string>

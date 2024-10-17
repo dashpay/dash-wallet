@@ -262,7 +262,6 @@ de Dash</b></string>
     <string name="keep_your_passphrase_safe">Mantén tu contraseña segura</string>
     <string name="pay_now">Paga ahora y si no es aprobado, puedes crear un nombre diferente sin pagar nuevamente</string>
     <string name="case_your_request_is_not_approved">En caso de que tu solicitud no sea aprobada</string>
-    <string name="voting_requirement_subtitle">Cualquier nombre de usuario que tenga un número del 2 al 9 o que tenga más de 20 caracteres será aprobado automáticamente.</string>
     <string name="voting_requirement_title">El voto sólo es necesario en algunos casos</string>
     <string name="dash_network_must_vote_to_approve">La red Dash debe votar para aprobar tu nombre de usuario antes de que se cree.</string>
     <string name="what_is_username_voting">¿Qué es la votación por nombre de usuario\?</string>
@@ -295,7 +294,6 @@ de Dash</b></string>
     </string-array>
 
     <string name="request_your_username">Crea tu nombre de usuario</string>
-    <string name="request_your_hint">Por favor no olvides que no podrás cambiarlo en el futuro.</string>
     <string name="request_username">Solicitar nombre de usuario</string>
     <string name="request_voting_range">La red de Dash votará por este nombre de usuario. Te notificaremos los resultados el %s.</string>
     <string name="request_username_available">El nombre de usuario está disponible</string>
@@ -323,7 +321,6 @@ de Dash</b></string>
     <string name="make_a_post_with_the_text">Haz una publicación con el texto anterior en una red social o plataforma de mensajería conocida para verificar que eres el propietario original del nombre de usuario solicitado y pega el enlace a continuación.</string>
     <string name="paste_the_link">Pega el enlace</string>
     <string name="voting_key_title">Introduce tu clave de votación</string>
-    <string name="voting_key_hint">Llave de votación de Masternode</string>
     <string name="voting_key_input_error">Has introducido una clave inválida</string>
     <string name="voting_key_add">Añade tus llaves de votación</string>
     <string name="voting_key_add_subtitle">Las direcciones IP que aparecen a continuación están asociadas con esta billetera</string>

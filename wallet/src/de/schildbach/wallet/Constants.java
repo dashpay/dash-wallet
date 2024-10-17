@@ -63,6 +63,9 @@ public final class Constants {
     public static boolean SUPPORTS_PLATFORM;
     // TODO: remove all references to this when invites are enabled and functional
     public static boolean SUPPORTS_INVITES;
+    // TODO: remove all references to this when quick voting is enabled and functional
+    public static final boolean SUPPORTS_QUICKVOTING = false;
+
 
     public static final EnumSet<MasternodeSync.SYNC_FLAGS> SYNC_FLAGS = MasternodeSync.SYNC_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.VERIFY_FLAGS> VERIFY_FLAGS = MasternodeSync.VERIFY_DEFAULT_SPV;
@@ -147,6 +150,7 @@ public final class Constants {
 
     /** Bitcoinj global context. */
     public static final Context CONTEXT = new Context(NETWORK_PARAMETERS);
+
     public final static class Files {
 
         /** Filename of the wallet. */

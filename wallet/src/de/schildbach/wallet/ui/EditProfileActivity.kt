@@ -73,6 +73,7 @@ import org.bitcoinj.script.ScriptBuilder
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.AuthenticationKeyChainGroup
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import org.dash.wallet.common.ui.avatar.ProfilePictureTransformation
@@ -457,6 +458,7 @@ class EditProfileActivity : LockScreenActivity() {
             editProfileViewModel.dashPayProfile.value!!.avatarUrl
         }
 
+        editProfileViewModel.logEvent(AnalyticsConstants.MoreMenu.UPDATE_PROFILE)
         editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl ?: "")
         binding.save.isEnabled = false
         finish()
