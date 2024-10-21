@@ -17,17 +17,19 @@
 package de.schildbach.wallet.payments
 
 import androidx.annotation.VisibleForTesting
-import androidx.lifecycle.viewModelScope
+import com.google.firebase.installations.FirebaseInstallations
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_ID
 import de.schildbach.wallet.payments.parsers.PaymentIntentParser
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.PackageInfoProvider
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -52,6 +54,8 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.call
@@ -64,7 +68,10 @@ class SendCoinsTaskRunner @Inject constructor(
     private val walletApplication: WalletApplication,
     private val securityFunctions: SecurityFunctions,
     private val packageInfoProvider: PackageInfoProvider,
-    coinJoinConfig: CoinJoinConfig
+    private val analyticsService: AnalyticsService,
+    private val identityConfig: BlockchainIdentityConfig,
+    coinJoinConfig: CoinJoinConfig,
+    private val platformRepo: PlatformRepo
 ) : SendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
@@ -72,7 +79,7 @@ class SendCoinsTaskRunner @Inject constructor(
     }
     private var coinJoinSend = false
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
-
+    private var firebaseInstallationId: String = ""
     init {
         coinJoinConfig
             .observeMode()
@@ -81,6 +88,10 @@ class SendCoinsTaskRunner @Inject constructor(
                 coinJoinSend = mode != CoinJoinMode.NONE
             }
             .launchIn(coroutineScope)
+
+        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
+            firebaseInstallationId = if (task.isSuccessful) task.result else ""
+        }
     }
 
     @Throws(LeftoverBalanceException::class)
@@ -319,7 +330,6 @@ class SendCoinsTaskRunner @Inject constructor(
         if (checkBalanceConditions) {
             checkBalanceConditions(wallet, sendRequest.tx)
         }
-
         signSendRequest(sendRequest)
 
         try {
@@ -334,6 +344,7 @@ class SendCoinsTaskRunner @Inject constructor(
             val transaction = sendRequest.tx
             log.info("send successful, transaction committed: {}", transaction.txId.toString())
             walletApplication.broadcastTransaction(transaction)
+            logSendTxEvent(transaction, wallet)
             transaction
         } catch (ex: Exception) {
             when (ex) {
@@ -346,6 +357,38 @@ class SendCoinsTaskRunner @Inject constructor(
                 is Wallet.CompletionException -> log.info("send failed, cannot complete: {}", ex.message)
             }
             throw ex
+        }
+    }
+
+    private suspend fun logSendTxEvent(
+        transaction: Transaction,
+        wallet: Wallet
+    ) {
+        identityConfig.get(IDENTITY_ID)?.let {
+            val valueSent: Long = transaction.outputs.filter {
+                !it.isMine(wallet)
+            }.sumOf {
+                it.value.value
+            }
+            val isSentToContact = try {
+                platformRepo.blockchainIdentity.getContactForTransaction(transaction) != null
+            } catch (e: Exception) {
+                false
+            }
+            analyticsService.logEvent(
+                AnalyticsConstants.SendReceive.SEND_TX,
+                mapOf(
+                    AnalyticsConstants.Parameter.VALUE to valueSent
+                )
+            )
+            if (isSentToContact) {
+                analyticsService.logEvent(
+                    AnalyticsConstants.SendReceive.SEND_TX_CONTACT,
+                    mapOf(
+                        AnalyticsConstants.Parameter.VALUE to valueSent
+                    )
+                )
+            }
         }
     }
 

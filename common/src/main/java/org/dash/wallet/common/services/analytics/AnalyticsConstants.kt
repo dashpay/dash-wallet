@@ -87,6 +87,8 @@ object AnalyticsConstants {
     }
 
     object SendReceive {
+        const val SEND_TX = "send_tx" // also include amount sent
+        const val SEND_TX_CONTACT = "send_tx_to_contact"  // also include amount sent
         const val SCAN_TO_SEND = "send_scan_to_send"
         const val SEND_TO_ADDRESS = "send_to_address"
         const val SHOW_QR_CODE = "receive_show_qr_code"
@@ -175,6 +177,7 @@ object AnalyticsConstants {
         const val PROFILE_NAME_LENGTH = "profile_display_name_length"
         const val PROFILE_CHANGE_ABOUT_ME = "profile_change_about_me"
         const val PROFILE_ABOUT_ME_LENGTH = "profile_about_me_length"
+        const val PROFILE_CHANGE_PICTURE = "profile_change_picture"
         const val PROFILE_CHANGE_PICTURE_GRAVATAR = "profile_change_picture_gravatar"
         const val PROFILE_CHANGE_PICTURE_PUBLIC_URL = "profile_change_picture_public_url"
         const val PROFILE_CHANGE_PICTURE_CAMERA = "profile_change_picture_camera_photo"
