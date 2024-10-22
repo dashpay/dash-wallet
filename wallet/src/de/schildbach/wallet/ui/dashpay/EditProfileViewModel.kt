@@ -398,6 +398,7 @@ class EditProfileViewModel @Inject constructor(
         }
 
         if (avatarUrl != dashPayProfile.value!!.avatarUrl) {
+            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE, mapOf())
             when (pictureSource) {
                 "gravatar" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_GRAVATAR, mapOf())
                 "public_url" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_PUBLIC_URL, mapOf())

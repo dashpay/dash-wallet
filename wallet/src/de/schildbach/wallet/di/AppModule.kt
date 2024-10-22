@@ -30,6 +30,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.payments.ConfirmTransactionLauncher
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.SecurityFunctions
@@ -37,6 +38,7 @@ import de.schildbach.wallet.service.*
 import de.schildbach.wallet.service.AndroidActionsService
 import de.schildbach.wallet.service.AppRestartService
 import de.schildbach.wallet.service.RestartService
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.more.tools.ZenLedgerApi
 import de.schildbach.wallet.ui.more.tools.ZenLedgerClient
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
@@ -105,9 +107,12 @@ abstract class AppModule {
             walletApplication: WalletApplication,
             securityFunctions: SecurityFunctions,
             packageInfoProvider: PackageInfoProvider,
-            coinJoinConfig: CoinJoinConfig
+            analyticsService: AnalyticsService,
+            identityConfig: BlockchainIdentityConfig,
+            coinJoinConfig: CoinJoinConfig,
+            platformRepo: PlatformRepo
         ): SendPaymentService {
-            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, coinJoinConfig)
+            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, coinJoinConfig, platformRepo)
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
                 realService

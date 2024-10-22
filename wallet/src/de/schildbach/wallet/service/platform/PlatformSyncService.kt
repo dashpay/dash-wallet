@@ -300,7 +300,7 @@ class PlatformSynchronizationService @Inject constructor(
                     dashPayContactRequestDao.insert(dashPayContactRequest)
 
                     // add our receiving from this contact keychain if it doesn't exist
-                    addedContact = addedContact || checkAndAddSentRequest(userId, contactRequest)
+                    addedContact = checkAndAddSentRequest(userId, contactRequest) || addedContact
                     log.info("contactRequest: added sent request from ${contactRequest.toUserId}")
                 }
             }
@@ -328,7 +328,7 @@ class PlatformSynchronizationService @Inject constructor(
                     dashPayContactRequestDao.insert(dashPayContactRequest)
 
                     // add the sending to contact keychain if it doesn't exist
-                    addedContact = addedContact || checkAndAddReceivedRequest(userId, contactRequest)
+                    addedContact = checkAndAddReceivedRequest(userId, contactRequest) || addedContact
                     log.info("contactRequest: added received request from ${contactRequest.ownerId}")
                 }
             }
@@ -477,9 +477,9 @@ class PlatformSynchronizationService @Inject constructor(
                     myEncryptionKey =
                         platformRepo.walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
                 }
-                platformRepo.blockchainIdentity.addContactPaymentKeyChain(
+                platformRepo.blockchainIdentity.addPaymentKeyChainToContact(
                     contactIdentity!!,
-                    contactRequest.document,
+                    contactRequest,
                     myEncryptionKey!!
                 )
                 return true
