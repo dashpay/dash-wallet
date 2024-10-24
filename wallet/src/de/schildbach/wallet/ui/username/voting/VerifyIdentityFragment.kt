@@ -45,7 +45,7 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
 
         binding.linkInput.doOnTextChanged { text, _, _, _ ->
             val link = text.toString()
-            val isValidLink = link.startsWith("https://") || link.startsWith("http://")
+            val isValidLink = link.matches(Regex("^https?:\\/\\/.+\$"))
             binding.verifyBtn.isEnabled = isValidLink
             if (!text.isNullOrEmpty()) {
                 binding.linkInputLayout.hint = getString(R.string.link)

@@ -283,7 +283,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         binding.retryRequestButton.setOnClickListener {
-            // TODO: restart CreateIdentityService
+            mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
+            createIdentityViewModel.retryCreateIdentity()
         }
 
         initViewModel()

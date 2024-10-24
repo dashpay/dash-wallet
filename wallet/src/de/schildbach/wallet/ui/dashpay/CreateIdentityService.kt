@@ -707,7 +707,7 @@ class CreateIdentityService : LifecycleService() {
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                 blockchainIdentityData.verificationLink?.let { verificationLink ->
-                    if (verificationLink.startsWith("https://") || verificationLink.startsWith("http://")) {
+                    if (verificationLink.matches(Regex("^https?:\\/\\/.+\$"))) {
                         IdentityVerify(platformRepo.platform.platform).createForDashDomain(
                             blockchainIdentityData.username!!,
                             verificationLink,
