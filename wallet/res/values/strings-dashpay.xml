@@ -348,6 +348,7 @@
     <string name="masternode_ip">Masternode IP address</string>
     <string name="multiple_votes_cast">%d votes will be cast as you have multiple voting keys stored in the wallet</string>
     <string name="add_masternode_key">Add Masternode Voting Key</string>
+    <string name="dont_ask_again">Don\'t ask me again</string>
     <string name="vote_submitted">Your vote was submitted</string>
     <string name="vote_cancelled">Your vote was cancelled</string>
     <string name="quick_vote">Quick Voting</string>

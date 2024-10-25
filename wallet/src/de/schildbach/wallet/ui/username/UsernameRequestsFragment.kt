@@ -224,15 +224,54 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
     private suspend fun doBlockVote(request: UsernameRequest) {
         // perform block vote
-        if (viewModel.keysAmount > 0) {
-            safeNavigate(
-                UsernameRequestsFragmentDirections.requestsToAddVotingKeysFragment(
-                    it.normalizedLabel,
-                    false
+        val vote = when (viewModel.getVotes(request.normalizedLabel).lastOrNull()?.type) {
+            UsernameVote.LOCK -> UsernameVote.ABSTAIN
+            else -> UsernameVote.LOCK
+        }
+        if (viewModel.shouldMaybeAskForMoreKeys()) {
+            if (viewModel.keysAmount > 0) {
+                safeNavigate(
+                    UsernameRequestsFragmentDirections.requestsToAddVotingKeysFragment(
+                        request.normalizedLabel,
+                        vote
+                    )
                 )
-            )
+            } else {
+                safeNavigate(
+                    UsernameRequestsFragmentDirections.requestsToVotingKeyInputFragment(
+                        request.requestId,
+                        vote
+                    )
+                )
+            }
         } else {
-            safeNavigate(UsernameRequestsFragmentDirections.requestsToVotingKeyInputFragment(it.requestId, false))
+            viewModel.submitVote(request.requestId, vote)
+        }
+    }
+
+    private suspend fun doVote(request: UsernameRequest) {
+        val lastVote = viewModel.getVotes(request.normalizedLabel).lastOrNull()
+        val voteType = when {
+            lastVote == null -> UsernameVote.APPROVE
+            lastVote.type == UsernameVote.APPROVE && lastVote.identity == request.identity -> UsernameVote.ABSTAIN
+            else -> UsernameVote.APPROVE
+        }
+        if (viewModel.shouldMaybeAskForMoreKeys()) {
+            if (viewModel.keysAmount > 0) {
+                safeNavigate(
+                    UsernameRequestsFragmentDirections.requestsToAddVotingKeysFragment(
+                        request.requestId,
+                        voteType
+                    )
+                )
+            } else {
+                safeNavigate(
+                    UsernameRequestsFragmentDirections.requestsToVotingKeyInputFragment(
+                        request.requestId,
+                        voteType
+                    )
+                )
+            }
         }
     }
     private fun showFirstTimeInfo() {

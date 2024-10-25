@@ -58,16 +58,7 @@
                 tools:itemCount="5"
                 tools:listitem="@layout/view_masternode_ip" />
 
-            <TextView
-                android:id="@+id/votes_cast_text"
-                style="@style/Overline.Secondary"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:gravity="center"
-                android:textAlignment="gravity"
-                tools:text="@string/multiple_votes_cast" />
-        </LinearLayout>
+            </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
     <LinearLayout
@@ -81,7 +72,7 @@
         android:paddingEnd="20dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/submit_button">
+        app:layout_constraintBottom_toTopOf="@id/dont_ask_again_button">
 
         <ImageView
             android:layout_width="wrap_content"
@@ -98,6 +89,27 @@
             android:layout_height="wrap_content" />
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/dont_ask_again_button"
+        style="@style/Button.Tertiary.Large.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginBottom="10dp"
+        android:paddingEnd="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/submit_button">
+
+        <TextView
+            style="@style/Subtitle2.Blue"
+            android:textSize="15sp"
+            android:text="@string/dont_ask_again"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
     <Button
         android:id="@+id/submit_button"
         style="@style/Button.Primary.Large.Blue"
@@ -105,5 +117,18 @@
         android:layout_height="wrap_content"
         android:layout_margin="15dp"
         android:text="@string/submit"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintBottom_toTopOf="@id/votes_cast_text" />
+    <TextView
+        android:id="@+id/votes_cast_text"
+        style="@style/Overline.Secondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:gravity="center"
+        android:textAlignment="gravity"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:text="@string/multiple_votes_cast" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

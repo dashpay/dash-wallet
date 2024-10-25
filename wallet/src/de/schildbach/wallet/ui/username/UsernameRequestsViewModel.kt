@@ -186,7 +186,6 @@ class UsernameRequestsViewModel @Inject constructor(
             if ((it.type == AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING ||
                 it.type == AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER) &&
                 it.status == AuthenticationKeyStatus.CURRENT) {
-
                 val entries = masternodeListManager.listAtChainTip.getMasternodesByVotingKey(KeyId.fromBytes(it.key.pubKeyHash))
                 entries.forEach { masternode ->
                     importedMasternodeKeyDao.insert(
@@ -511,27 +510,90 @@ class UsernameRequestsViewModel @Inject constructor(
             return
         }
         logEvent(AnalyticsConstants.UsernameVoting.BLOCK)
-        viewModelScope.launch {
-           // usernameRequestDao.getRequest(requestId)?.let { request ->
-                BroadcastUsernameVotesOperation(walletApplication).create(
-                    listOf(username),
-                    listOf(ResourceVoteChoice.lock()),
-                    masternodes.value.map { it.votingPrivateKey }
-                ).enqueue()
-                //usernameRequestDao.update(request.copy(lockVotes = request.lockVotes + keysAmount, isApproved = true))
-                _uiState.update { it.copy(voteSubmitted = true) }
-                usernameVoteDao.insert(
-                    UsernameVote(
-                        username,
-                        "",
-                        UsernameVote.LOCK
-                    )
+        viewModelScope.launch(Dispatchers.IO) {
+            BroadcastUsernameVotesOperation(walletApplication).create(
+                listOf(username),
+                listOf(ResourceVoteChoice.lock()),
+                masternodes.value.map { it.votingPrivateKey }
+            ).enqueue()
+            //usernameRequestDao.update(request.copy(lockVotes = request.lockVotes + keysAmount, isApproved = true))
+
+            // TODO: put after actually submitting a vote
+            usernameVoteDao.insert(
+                UsernameVote(
+                    Names.normalizeString(username),
+                    "",
+                    UsernameVote.LOCK
                 )
-            }
-        //}
+            )
+            _uiState.update { it.copy(voteSubmitted = true) }
+        }
     }
 
     fun logEvent(event: String) {
         analytics.logEvent(event, mapOf())
+    }
+
+    fun submitVote(requestId: String, vote: String) {
+        when (vote) {
+            UsernameVote.APPROVE -> vote(requestId)
+            UsernameVote.LOCK -> block(requestId)
+            UsernameVote.ABSTAIN -> revokeVote(requestId)
+        }
+    }
+
+    fun setDontAskAgain() {
+        viewModelScope.launch(Dispatchers.IO) {
+            dashPayConfig.set(DashPayConfig.KEYS_DONT_ASK_AGAIN, true)
+        }
+    }
+
+    suspend fun shouldMaybeAskForMoreKeys() = dashPayConfig.get(DashPayConfig.KEYS_DONT_ASK_AGAIN) ?: true
+
+    suspend fun setSecondTimeVoting() {
+        dashPayConfig.set(DashPayConfig.FIRST_TIME_VOTING, false)
+    }
+
+    suspend fun isFirstTimeVoting() = dashPayConfig.get(DashPayConfig.FIRST_TIME_VOTING) ?: true
+
+    fun invalidKeyType(wifKey: String): InvalidKeyType {
+        return try {
+            DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, wifKey).key
+            InvalidKeyType.NOT_INVALID // shouldn't happen
+        } catch (e: AddressFormatException.WrongNetwork) {
+            try {
+                Address.fromBase58(Constants.NETWORK_PARAMETERS, wifKey)
+                InvalidKeyType.ADDRESS
+            } catch (e: AddressFormatException) {
+                InvalidKeyType.WRONG_NETWORK
+            }
+        } catch (e: AddressFormatException.InvalidChecksum) {
+            try {
+                if (Base58.decode(wifKey).size < 39)
+                    InvalidKeyType.SHORT
+                else InvalidKeyType.CHECKSUM
+            } catch (e: AddressFormatException.InvalidCharacter) {
+                InvalidKeyType.CHARACTER
+            }
+        } catch (e: AddressFormatException.InvalidCharacter) {
+            try {
+                if (Base58.decode(wifKey).size < 32)
+                    InvalidKeyType.SHORT
+                else InvalidKeyType.CHECKSUM
+            } catch (e: AddressFormatException.InvalidCharacter) {
+                InvalidKeyType.CHARACTER
+            }
+        } catch (e: Exception) {
+            // is it an address
+            try {
+                val decodedBytes = Utils.HEX.decode(wifKey)
+                if (decodedBytes.size == 33) {
+                    InvalidKeyType.PUBLIC_KEY_HEX
+                }
+                InvalidKeyType.PRIVATE_KEY_HEX
+            } catch (e: Exception) {
+                InvalidKeyType.UNKNOWN
+            }
+        }
     }
 }
