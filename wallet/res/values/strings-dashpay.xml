@@ -343,6 +343,15 @@
     <string name="voting_key_hint">Masternode Voting Private Key</string>
     <string name="voting_key_input_error">You have entered an invalid key</string>
     <string name="voting_key_input_not_active_error">You have entered a key that is not associated to an active Masternode</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">You have entered a key that is for testnet, but this is mainnet. It should look like this: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">You have entered a key that is for mainnet, but this is testnet. It should look like this: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">You have entered an address key instead of a masternode voting private key. It should be in WIF format (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">You have entered a key in hex format, but it should be in WIF format (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">You have entered a key in hex format, but it should be in WIF format (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">You have entered a private key that is too short.  Here is an example (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">You have entered a private key that with some incorrect characters.  Here is an example (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">You have entered a private key has an invalid character.  Here is an example (%s)</string>
+
     <string name="voting_key_add">Add your voting keys</string>
     <string name="voting_key_add_subtitle">The IP address(es) below are associated with this wallet</string>
     <string name="masternode_ip">Masternode IP address</string>
@@ -427,4 +436,6 @@
     <string name="mix_dash_mix">Mix Balance</string>
     <string name="mix_dash_title">Mix your Dash</string>
     <string name="mix_dash_message">To help prevent other people from seeing who you make payments to, it is recommended to mix your balance before you create your username.</string>
+    <string name="dash_private_key_mainnet" translatable="false">XKm5koXHMm7UrVV3ki2pbGA8yZztiSR2F9x6ucEyCSuqTHBMjJix</string>
+    <string name="dash_private_key_testnet" translatable="false">cUR2TrX4U6t6g9kRfDoBbwF2WRKBNjV3gK7HwTgQgmUUQCKXcT3N</string>
 </resources>

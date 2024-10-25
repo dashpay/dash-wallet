@@ -49,11 +49,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.Base58
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.KeyId
+import org.bitcoinj.core.Utils
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
@@ -68,6 +70,18 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.min
 import kotlin.random.Random
+
+enum class InvalidKeyType {
+    WRONG_NETWORK,
+    ADDRESS,
+    PUBLIC_KEY_HEX,
+    PRIVATE_KEY_HEX,
+    NOT_INVALID,
+    CHARACTER,
+    SHORT,
+    CHECKSUM,
+    UNKNOWN
+}
 
 data class UsernameRequestsUIState(
     val filteredUsernameRequests: List<UsernameRequestGroupView> = listOf(),

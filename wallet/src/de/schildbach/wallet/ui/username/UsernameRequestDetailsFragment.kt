@@ -71,7 +71,7 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
                                 getString(R.string.button_ok)
                             ).show(requireActivity()) {
                                 if (it == true) {
-                                    doVote(request)
+                                    lifecycleScope.launch { doVote(request) }
                                 }
                             }
                         }
@@ -87,7 +87,7 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
                         }
 
                         else -> {
-                            doVote(request)
+                            lifecycleScope.launch { doVote(request) }
                         }
                     }
                 }
@@ -97,26 +97,30 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
         viewModel.selectUsernameRequest(args.requestId)
     }
 
-    private fun doVote(request: UsernameRequest) {
-        if (request.isApproved) {
-            viewModel.revokeVote(args.requestId)
-            findNavController().popBackStack(R.id.usernameRequestsFragment, false)
-        } else {
+    private suspend fun doVote(request: UsernameRequest) {
+        val lastVote = viewModel.getVotes(request.normalizedLabel).lastOrNull()
+        val voteType = when {
+            lastVote == null -> UsernameVote.APPROVE
+            lastVote.type == UsernameVote.APPROVE && lastVote.identity == request.identity -> UsernameVote.ABSTAIN
+            else -> UsernameVote.APPROVE
+        }
+        if (viewModel.shouldMaybeAskForMoreKeys()) {
             if (viewModel.keysAmount > 0) {
                 safeNavigate(
                     UsernameRequestDetailsFragmentDirections.detailsToAddKeys(
                         args.requestId,
-                        true
+                        voteType
                     )
                 )
             } else {
                 safeNavigate(
                     UsernameRequestDetailsFragmentDirections.detailsToVotingKeyInput(
                         args.requestId,
-                        true
+                        voteType
                     )
                 )
             }
         }
+
     }
 }
