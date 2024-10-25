@@ -54,13 +54,13 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
                 if (request.isApproved) R.string.cancel_approval else R.string.vote_to_approve
             )
 
-            viewModel.observeVotesCount(request.username).observe(viewLifecycleOwner) { myVoteCount ->
+            viewModel.observeVotesCount(request.normalizedLabel).observe(viewLifecycleOwner) { myVoteCount ->
                 binding.voteButton.isEnabled = (myVoteCount < UsernameVote.MAX_VOTES)
             }
 
             binding.voteButton.setOnClickListener {
                 lifecycleScope.launch {
-                    val usernameVotes = viewModel.getVotes(request.username)
+                    val usernameVotes = viewModel.getVotes(request.normalizedLabel)
                     when {
                         (usernameVotes.size == UsernameVote.MAX_VOTES - 1) -> {
                             AdaptiveDialog.create(
@@ -81,7 +81,7 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
                             AdaptiveDialog.create(
                                 icon = null,
                                 getString(R.string.username_vote_none_left),
-                                getString(R.string.username_vote_none_left_message),
+                                getString(R.string.username_vote_none_left_message, UsernameVote.MAX_VOTES),
                                 getString(R.string.button_ok)
                             ).showAsync(requireActivity())
                         }

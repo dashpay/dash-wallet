@@ -19,6 +19,9 @@ package de.schildbach.wallet.database.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import org.bitcoinj.core.Base58
+import org.bitcoinj.core.Sha256Hash
+import org.dashj.platform.sdk.platform.Names
 
 @Entity(tableName = "username_requests")
 data class UsernameRequest(
@@ -35,7 +38,18 @@ data class UsernameRequest(
 ) {
     companion object {
         fun getRequestId(identity: String, username: String): String {
-            return String.format("%s-%s", identity, username)
+            return String.format("%s-%s", identity, Names.normalizeString(username))
         }
+        fun block(username: String, normalizedLabel: String) = UsernameRequest(
+            "",
+            username,
+            normalizedLabel,
+            0L,
+            Base58.encode(Sha256Hash.ZERO_HASH.bytes),
+            null,
+            0,
+            0,
+            false
+        )
     }
 }

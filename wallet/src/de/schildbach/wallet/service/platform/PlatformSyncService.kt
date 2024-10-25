@@ -34,6 +34,7 @@ import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.database.dao.UsernameRequestDao
+import de.schildbach.wallet.database.dao.UsernameVoteDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayContactRequest
@@ -127,6 +128,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val dashPayContactRequestDao: DashPayContactRequestDao,
     private val invitationsDao: InvitationsDao,
     private val usernameRequestDao: UsernameRequestDao,
+    private val usernameVoteDao: UsernameVoteDao,
     private val identityConfig: BlockchainIdentityConfig
 ) : PlatformSyncService {
 
@@ -1064,30 +1066,35 @@ class PlatformSynchronizationService @Inject constructor(
                                 platform.platform.names.deserialize(serialized)
                             )
                         }
+                        val hasWinner = voteContender.winner.isPresent
 
-                        if (contestedDocument != null) {
-                            val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
+                        if (!hasWinner) {
+                            if (contestedDocument != null) {
+                                val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
 
-                            val requestId = UsernameRequest.getRequestId(identifier.toString(), name)
-                            val previousUsernameRequest = usernameRequestDao.getRequest(requestId)
+                                val requestId = UsernameRequest.getRequestId(identifier.toString(), name)
+                                val previousUsernameRequest = usernameRequestDao.getRequest(requestId)
 
-                            val usernameRequest = UsernameRequest(
-                                requestId = requestId,
-                                username = contestedDocument.label,
-                                normalizedLabel = name,
-                                createdAt = contestedDocument.createdAt ?: -1L,
-                                identity = identifier.toString(),
-                                link = identityVerifyDocument?.url,
-                                votes = contender.votes,
-                                lockVotes = voteContender.lockVoteTally,
-                                isApproved = previousUsernameRequest?.isApproved ?: false
-                            )
-                            usernameRequestDao.insert(usernameRequest)
+                                val usernameRequest = UsernameRequest(
+                                    requestId = requestId,
+                                    username = contestedDocument.label,
+                                    normalizedLabel = name,
+                                    createdAt = contestedDocument.createdAt ?: -1L,
+                                    identity = identifier.toString(),
+                                    link = identityVerifyDocument?.url,
+                                    votes = contender.votes,
+                                    lockVotes = voteContender.lockVoteTally,
+                                    isApproved = previousUsernameRequest?.isApproved ?: false
+                                )
+                                usernameRequestDao.insert(usernameRequest)
+                            }
                         } else {
                             // voting is complete
                             usernameRequestDao.remove(
                                 UsernameRequest.getRequestId(identifier.toString(), name)
                             )
+                            // remove related votes
+                            usernameVoteDao.remove(name)
                         }
                     }
                 } catch(e: Exception) {

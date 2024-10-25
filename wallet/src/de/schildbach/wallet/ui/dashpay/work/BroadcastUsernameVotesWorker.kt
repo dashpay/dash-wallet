@@ -18,25 +18,22 @@ package de.schildbach.wallet.ui.dashpay.work
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker
-import androidx.work.Data
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.bumptech.glide.load.engine.Resource
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dashj.platform.dpp.voting.ContestedDocumentResourceVotePoll
 import org.dashj.platform.dpp.voting.ResourceVoteChoice
-import org.dashj.platform.sdk.ContestedDocumentResourceVotePoll
+import org.dashj.platform.sdk.PlatformValue
 import org.slf4j.LoggerFactory
 
 @HiltWorker
@@ -48,7 +45,6 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
     val platformSyncService: PlatformSyncService,
     val walletDataProvider: WalletDataProvider
 ) : BaseWorker(context, parameters) {
-
     companion object {
         private val log = LoggerFactory.getLogger(BroadcastUsernameVotesWorker::class.java)
 
@@ -89,10 +85,23 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
             // this will update the DB and trigger observers
             platformSyncService.updateUsernameRequestsWithVotes()
             analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_SUCCESS, mapOf())
+            val arrayOfnames = votes.map {
+                val item = ((it.resourceVote.votePoll as? ContestedDocumentResourceVotePoll)?.indexValues?.get(1) ?: "null")
+                when (item) {
+                    is PlatformValue -> {
+                        when (item.tag) {
+                            PlatformValue.Tag.Text -> item.text
+                            else -> item.toString()
+                        }
+                    }
+                    is String -> item
+                    else -> item.toString()
+                }
+            }.toTypedArray()
             Result.success(
                 workDataOf(
                     KEY_USERNAMES to if(votes.isNotEmpty()) {
-                        votes.map { (it.resourceVote.votePoll as? ContestedDocumentResourceVotePoll)?.index_values?.get(1) ?: "null" }.toTypedArray()
+                        arrayOfnames
                     } else {
                         listOf("").toTypedArray()
                     },
@@ -101,8 +110,11 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
         } catch (ex: Exception) {
             analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_ERROR, mapOf())
             analytics.logError(ex, "Username Voting: failed to broadcast votes")
-            Result.failure(workDataOf(
-                    KEY_ERROR_MESSAGE to formatExceptionMessage("broadcast username vote", ex)))
+            Result.failure(
+                workDataOf(
+                    KEY_ERROR_MESSAGE to formatExceptionMessage("broadcast username vote", ex)
+                )
+            )
         }
     }
 }

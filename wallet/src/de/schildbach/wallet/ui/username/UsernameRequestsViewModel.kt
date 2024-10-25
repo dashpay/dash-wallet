@@ -71,6 +71,7 @@ import kotlin.random.Random
 
 data class UsernameRequestsUIState(
     val filteredUsernameRequests: List<UsernameRequestGroupView> = listOf(),
+    val usernameVotes: Map<String, List<UsernameVote>> = mapOf(),
     val showFirstTimeInfo: Boolean = false,
     val voteSubmitted: Boolean = false,
     val voteCancelled: Boolean = false
@@ -135,10 +136,13 @@ class UsernameRequestsViewModel @Inject constructor(
     val keysAmount: Int
         get() = masternodes.value.size
 
+    val voteSubmissionLiveData = BroadcastUsernameVotesOperation.allOperationsStatus(walletApplication)
+
     init {
         dashPayConfig.observe(DashPayConfig.VOTING_INFO_SHOWN)
             .onEach { isShown -> _uiState.update { it.copy(showFirstTimeInfo = isShown != true) } }
             .launchIn(viewModelScope)
+
 
         _filterState.flatMapLatest {
             observeUsernames()
@@ -205,11 +209,11 @@ class UsernameRequestsViewModel @Inject constructor(
     }
 
     suspend fun getVotes(username: String): List<UsernameVote> {
-        return usernameVoteDao.getVotes(username)
+        return usernameVoteDao.getVotes(Names.normalizeString(username))
     }
 
     fun observeVotesCount(username: String): Flow<Int> {
-        return usernameVoteDao.observeVotes(username).flatMapLatest { flowOf(it.size) }
+        return usernameVoteDao.observeVotes(Names.normalizeString(username)).flatMapLatest { flowOf(it.size) }
     }
 
     fun applyFilters(
@@ -237,7 +241,7 @@ class UsernameRequestsViewModel @Inject constructor(
             return
         }
         logEvent(AnalyticsConstants.UsernameVoting.VOTE)
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
                     listOf(request.normalizedLabel),
@@ -247,14 +251,14 @@ class UsernameRequestsViewModel @Inject constructor(
 
                 usernameRequestDao.removeApproval(request.username)
                 usernameRequestDao.update(request.copy(votes = request.votes + keysAmount, isApproved = true))
-                _uiState.update { it.copy(voteSubmitted = true) }
                 usernameVoteDao.insert(
                     UsernameVote(
-                        request.username,
+                        request.normalizedLabel,
                         request.identity,
                         UsernameVote.APPROVE
                     )
                 )
+                _uiState.update { it.copy(voteSubmitted = true) }
             }
         }
     }
@@ -264,7 +268,7 @@ class UsernameRequestsViewModel @Inject constructor(
             return
         }
         logEvent(AnalyticsConstants.UsernameVoting.VOTE_CANCEL)
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
                     listOf(request.normalizedLabel),
@@ -272,14 +276,14 @@ class UsernameRequestsViewModel @Inject constructor(
                     masternodes.value.map { it.votingPrivateKey }
                 ).enqueue()
                 usernameRequestDao.update(request.copy(votes = request.votes - keysAmount, isApproved = false))
-                _uiState.update { it.copy(voteCancelled = true) }
                 usernameVoteDao.insert(
                     UsernameVote(
-                        request.username,
+                        request.normalizedLabel,
                         request.identity,
                         UsernameVote.ABSTAIN
                     )
                 )
+                _uiState.update { it.copy(voteCancelled = true) }
             }
         }
     }
@@ -289,7 +293,7 @@ class UsernameRequestsViewModel @Inject constructor(
             return
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val filteredRequests = _uiState.value.filteredUsernameRequests
             val requestIds = filteredRequests.flatMap {
                 it.requests

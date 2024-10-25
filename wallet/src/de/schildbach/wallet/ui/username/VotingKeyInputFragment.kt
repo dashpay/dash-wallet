@@ -74,7 +74,7 @@ class VotingKeyInputFragment : Fragment(R.layout.fragment_voting_key_input) {
                         safeNavigate(
                             VotingKeyInputFragmentDirections.votingKeyInputToAddKeys(
                                 args.requestId,
-                                args.approve
+                                args.vote
                             )
                         )
                     }

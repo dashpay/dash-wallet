@@ -35,6 +35,7 @@ import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -288,7 +289,7 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun verify() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
             identityConfig.get(IDENTITY_ID)?.let { identityId ->
                 val usernameRequest = usernameRequestDao.getRequest(

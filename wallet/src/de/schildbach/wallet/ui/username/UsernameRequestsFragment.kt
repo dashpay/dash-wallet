@@ -43,9 +43,13 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
+    companion object {
+        private val log = LoggerFactory.getLogger(UsernameRequestsFragment::class.java)
+    }
     private val viewModel by votingViewModels<UsernameRequestsViewModel>()
     private val binding by viewBinding(FragmentUsernameRequestsBinding::bind)
     private var itemList = listOf<UsernameRequestGroupView>()
@@ -64,46 +68,46 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         binding.filterBtn.setOnClickListener {
             safeNavigate(UsernameRequestsFragmentDirections.requestsToFilters())
         }
-        val adapter = UsernameRequestGroupAdapter { request ->
-            lifecycleScope.launch {
-                if (request.requestId != "") {
-                    viewModel.logEvent(AnalyticsConstants.UsernameVoting.DETAILS)
-                    safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(request.requestId))
-                } else {
-                    val usernameVotes = viewModel.getVotes(request.username)
-                    when {
-                        (usernameVotes.size == UsernameVote.MAX_VOTES - 1) -> {
-                            if (AdaptiveDialog.create(
-                                    icon = null,
-                                    getString(R.string.username_vote_one_left),
-                                    getString(R.string.username_vote_one_left_message, UsernameVote.MAX_VOTES - 1),
-                                    getString(R.string.cancel),
-                                    getString(R.string.button_ok)
-                                ).showAsync(requireActivity()) == true
-                            ) {
-                                doBlockVote(request)
-                            }
-                        }
-
-                        // NOT IN THE DESIGN
-                        usernameVotes.size == UsernameVote.MAX_VOTES -> {
-                            AdaptiveDialog.create(
-                                icon = null,
-                                "No votes left",
-                                "You cannot submit anymore votes on this username",
-                                getString(R.string.button_ok)
-                            ).show(requireActivity()) {
-                                // do nothing
-                            }
-                        }
-
-                        else -> {
-                            doBlockVote(request)
-                        }
+        val adapter = UsernameRequestGroupAdapter(
+            { request -> //performVote(request)
+                lifecycleScope.launch {
+                    if (request.requestId != "") {
+                        viewModel.logEvent(AnalyticsConstants.UsernameVoting.DETAILS)
+                        safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(request.requestId))
+                    } else {
+                        performVote(request)
+//                        when {
+//                            (usernameVotes.size == UsernameVote.MAX_VOTES - 1) -> {
+//                                if (AdaptiveDialog.create(
+//                                        icon = null,
+//                                        getString(R.string.username_vote_one_left),
+//                                        getString(R.string.username_vote_one_left_message, UsernameVote.MAX_VOTES - 1),
+//                                        getString(R.string.cancel),
+//                                        getString(R.string.button_ok)
+//                                    ).showAsync(requireActivity()) == true
+//                                ) {
+//                                    doBlockVote(request)
+//                                }
+//                            }
+//                            usernameVotes.size == UsernameVote.MAX_VOTES -> {
+//                                AdaptiveDialog.create(
+//                                    icon = null,
+//                                    "No votes left",
+//                                    "You cannot submit anymore votes on this username",
+//                                    getString(R.string.button_ok)
+//                                ).show(requireActivity()) {
+//                                    // do nothing
+//                                }
+//                            }
+//                            else -> {
+//                                doBlockVote(request)
+//                            }
+//                        }
                     }
                 }
-            }
-        }
+            },
+            { request -> performVote(request) }
+        )
         binding.requestGroups.adapter = adapter
 
         binding.search.setOnFocusChangeListener { _, isFocused ->
@@ -146,6 +150,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
             setState(state.filteredUsernameRequests)
             setList(adapter, state.filteredUsernameRequests)
+            //setVotes(state.votes)
 
             if (state.voteSubmitted) {
                 showVoteIndicator(binding, false)
@@ -166,9 +171,58 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
                 populateAppliedFilters(state)
             }
         }
+
+        viewModel.voteSubmissionLiveData.observe(viewLifecycleOwner) { voteData ->
+            log.info("vote data: {}", voteData)
+        }
     }
 
-    private fun doBlockVote(it: UsernameRequest) {
+    private fun performVote(request: UsernameRequest) {
+        lifecycleScope.launch {
+            // handle voting
+            val blockVote = request.requestId == ""
+            val usernameVotes = viewModel.getVotes(request.username)
+            when {
+                (usernameVotes.size == UsernameVote.MAX_VOTES - 1) -> {
+                    if (AdaptiveDialog.create(
+                            icon = null,
+                            getString(R.string.username_vote_one_left),
+                            getString(R.string.username_vote_one_left_message, UsernameVote.MAX_VOTES - 1),
+                            getString(R.string.cancel),
+                            getString(R.string.button_ok)
+                        ).showAsync(requireActivity()) == true
+                    ) {
+                        if (blockVote) {
+                            doBlockVote(request)
+                        } else {
+                            doVote(request)
+                        }
+                    }
+                }
+
+                usernameVotes.size == UsernameVote.MAX_VOTES -> {
+                    AdaptiveDialog.create(
+                        icon = null,
+                        getString(R.string.username_vote_none_left),
+                        getString(R.string.username_vote_none_left_message, UsernameVote.MAX_VOTES),
+                        getString(R.string.button_ok)
+                    ).show(requireActivity()) {
+                        // do nothing
+                    }
+                }
+
+                else -> {
+                    if (blockVote) {
+                        doBlockVote(request)
+                    } else {
+                        doVote(request)
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun doBlockVote(request: UsernameRequest) {
         // perform block vote
         if (viewModel.keysAmount > 0) {
             safeNavigate(
@@ -214,6 +268,10 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         adapter.submitList(list)
         binding.requestGroups.scrollToPosition(scrollPosition)
     }
+
+//    private fun setVotes(adapter: UsernameRequestGroupAdapter, votes: List<UsernameVote>) {
+//        adapter.updateVotes(votes)
+//    }
 
     private fun filterByQuery(items: List<UsernameRequestGroupView>, query: String?): List<UsernameRequestGroupView> {
         if (query.isNullOrEmpty()) {

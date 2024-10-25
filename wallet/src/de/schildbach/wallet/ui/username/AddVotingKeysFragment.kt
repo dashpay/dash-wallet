@@ -5,6 +5,7 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.ui.username.adapters.IPAddressAdapter
 import de.schildbach.wallet.ui.username.utils.votingViewModels
 import de.schildbach.wallet_test.R
@@ -27,19 +28,20 @@ class AddVotingKeysFragment : Fragment(R.layout.fragment_add_voting_keys) {
         }
 
         binding.submitButton.setRoundedRippleBackground(
-            if (!args.approve) R.style.PrimaryButtonTheme_Large_Red else R.style.PrimaryButtonTheme_Large_Blue
+            if (args.vote != UsernameVote.APPROVE) R.style.PrimaryButtonTheme_Large_Red else R.style.PrimaryButtonTheme_Large_Blue
         )
         binding.submitButton.setOnClickListener {
-            if (args.approve) {
-                viewModel.vote(args.requestId)
-            } else {
-                viewModel.block(args.requestId)
-            }
+//            when (args.vote) {
+//                UsernameVote.APPROVE -> viewModel.vote(args.requestId)
+//                UsernameVote.LOCK -> viewModel.block(args.requestId)
+//                UsernameVote.ABSTAIN -> viewModel.revokeVote(args.requestId)
+//            }
+            viewModel.submitVote(args.requestId, args.vote)
             findNavController().popBackStack(R.id.usernameRequestsFragment, false)
         }
 
         binding.addKeyButton.setOnClickListener {
-            safeNavigate(AddVotingKeysFragmentDirections.addKeysToVotingKeyInput(args.requestId, args.approve))
+            safeNavigate(AddVotingKeysFragmentDirections.addKeysToVotingKeyInput(args.requestId, args.vote))
         }
 
         val adapter = IPAddressAdapter()

@@ -268,7 +268,8 @@
     <string name="usernames_blocked_title">Some usernames can be blocked</string>
     <string name="usernames_blocked_subtitle">If enough of the network determines that a username is inappropriate, they can block it</string>
     <string name="username_voting">Username Voting</string>
-    <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before they are created on the network..</string>
+    <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before they are created on the network.</string>
+    <string name="username_voting_subtitle_two">You can block the creation of the usernames that you feel are inappropriate.</string>
     <string name="voting_duplicates_only_title">Default filter setting</string>
     <string name="voting_duplicates_only_message">The default filter shows only duplicate usernames that you have NOT voted on, but you can see all contested usernames by changing the filter</string>
     <string name="all">All</string>
@@ -295,7 +296,15 @@
         <item>I have not approved</item>
         <item>Has Blocked votes</item>
     </string-array>
-
+    <string name="unblock_button">Unblock</string>
+    <plurals name="block_vote_button">
+        <item quantity="one">Block</item>
+        <item quantity="other">Blocks</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="one">Approval</item>
+        <item quantity="other">Approvals</item>
+    </plurals>
     <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Create your username</string>
     <string name="request_your_hint">Please note that you will not be able to change it in the future</string>
@@ -315,6 +324,7 @@
     <string name="request_details">Request details</string>
     <string name="request_details_subtitle">Review the posting bellow to verify the ownership of this username</string>
     <string name="vote_to_approve">Vote to Approve</string>
+    <string name="vote_to_block">Vote to Block</string>
     <string name="identity">Identity</string>
     <string name="results">Results</string>
     <string name="link">Link</string>

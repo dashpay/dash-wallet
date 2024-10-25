@@ -34,6 +34,6 @@ data class UsernameVote(
         const val APPROVE = "approve"
         const val LOCK = "lock"
         const val ABSTAIN = "abstain"
-        const val MAX_VOTES = 6
+        const val MAX_VOTES = 5 // max allowed by Platform for a masternode
     }
 }
