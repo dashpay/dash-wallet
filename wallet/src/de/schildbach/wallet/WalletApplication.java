@@ -143,6 +143,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.security.PinRetryController;
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
+import de.schildbach.wallet.util.AnrSupervisor;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.LogMarkerFilter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
@@ -188,6 +189,7 @@ public class WalletApplication extends MultiDexApplication
     public Activity currentActivity;
 
     private AutoLogout autoLogout;
+    private AnrSupervisor anrSupervisor;
 
     @Inject
     RestartService restartService;
@@ -326,6 +328,8 @@ public class WalletApplication extends MultiDexApplication
         }
 
         resetBlockchainSyncProgress();
+        anrSupervisor = new AnrSupervisor();
+        anrSupervisor.start();
     }
 
     private void syncExploreData() {
