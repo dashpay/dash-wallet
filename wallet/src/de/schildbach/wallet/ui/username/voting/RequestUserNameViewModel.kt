@@ -127,7 +127,7 @@ class RequestUserNameViewModel @Inject constructor(
     private val _myUsernameRequest = MutableStateFlow<UsernameRequest?>(null)
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _requestedUserNameLink.value = identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
         }
         identityConfig.observe(IDENTITY_ID)
@@ -191,7 +191,7 @@ class RequestUserNameViewModel @Inject constructor(
     fun submit() {
         // Reset ui state for retry if needed
         resetUiForRetrySubmit()
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             updateConfig()
             // send the request / create username, assume not retry
             val reuseTransaction = identity?.let {
@@ -248,7 +248,7 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun checkUsername(requestedUserName: String?) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             requestedUserName?.let { username ->
                 val usernameSearchResult = platformRepo.getUsername(username)
                 val usernameExists = when (usernameSearchResult.status) {
@@ -311,7 +311,7 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun cancelRequest() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             identityConfig.set(BlockchainIdentityConfig.USERNAME, "")
             identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, "")
             identityConfig.set(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
