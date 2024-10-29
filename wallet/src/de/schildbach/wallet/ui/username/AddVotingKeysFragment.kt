@@ -33,15 +33,13 @@ class AddVotingKeysFragment : Fragment(R.layout.fragment_add_voting_keys) {
             findNavController().popBackStack()
         }
 
+        viewModel.masternodes.observe(viewLifecycleOwner) {
+            binding.submitButton.isEnabled = it.isNotEmpty()
+        }
         binding.submitButton.setRoundedRippleBackground(
             if (args.vote != UsernameVote.APPROVE) R.style.PrimaryButtonTheme_Large_Red else R.style.PrimaryButtonTheme_Large_Blue
         )
         binding.submitButton.setOnClickListener {
-//            when (args.vote) {
-//                UsernameVote.APPROVE -> viewModel.vote(args.requestId)
-//                UsernameVote.LOCK -> viewModel.block(args.requestId)
-//                UsernameVote.ABSTAIN -> viewModel.revokeVote(args.requestId)
-//            }
             viewModel.submitVote(args.requestId, args.vote)
             findNavController().popBackStack(R.id.usernameRequestsFragment, false)
         }
@@ -50,7 +48,9 @@ class AddVotingKeysFragment : Fragment(R.layout.fragment_add_voting_keys) {
             safeNavigate(AddVotingKeysFragmentDirections.addKeysToVotingKeyInput(args.requestId, args.vote))
         }
 
-        val adapter = IPAddressAdapter()
+        val adapter = IPAddressAdapter() {masternodeIp ->
+            viewModel.removeMasternode(masternodeIp)
+        }
         binding.ipAddresses.adapter = adapter
 
         viewModel.masternodes.observe(viewLifecycleOwner) {

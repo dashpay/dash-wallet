@@ -20,6 +20,7 @@ package de.schildbach.wallet.database.dao
 import androidx.room.*
 import de.schildbach.wallet.database.entity.ImportedMasternodeKey
 import kotlinx.coroutines.flow.Flow
+import org.bitcoinj.core.Sha256Hash
 
 // This table only stores imported masternode keys
 // Masternode keys that are managed by the "Masternode keys" screen are not
@@ -41,4 +42,7 @@ interface ImportedMasternodeKeyDao {
 
     @Query("DELETE FROM imported_masternode_keys")
     suspend fun clear()
+
+    @Query("DELETE FROM imported_masternode_keys WHERE proTxHash = :proTxHash")
+    suspend fun remove(proTxHash: Sha256Hash)
 }

@@ -66,6 +66,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.sdk.platform.Names
+import java.net.InetSocketAddress
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.min
@@ -640,6 +641,16 @@ class UsernameRequestsViewModel @Inject constructor(
     fun updateUsernameRequestsWithVotes() {
         viewModelScope.launch(Dispatchers.IO) {
             platformSyncService.updateUsernameRequestsWithVotes()
+        }
+    }
+
+    fun removeMasternode(masternodeIp: String) {
+        val masternodeList = masternodeListManager.masternodeList
+        val masternode = masternodeList.getMNByAddress(InetSocketAddress(masternodeIp, Constants.NETWORK_PARAMETERS.port))
+        if (masternode != null) {
+            viewModelWorkerScope.launch {
+                importedMasternodeKeyDao.remove(masternode.proTxHash)
+            }
         }
     }
 }
