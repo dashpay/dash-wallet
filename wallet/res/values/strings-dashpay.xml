@@ -358,8 +358,15 @@
     <string name="multiple_votes_cast">%d votes will be cast as you have multiple voting keys stored in the wallet</string>
     <string name="add_masternode_key">Add Masternode Voting Key</string>
     <string name="dont_ask_again">Don\'t ask me again</string>
-    <string name="vote_submitted">Your vote was submitted</string>
-    <string name="vote_cancelled">Your vote was cancelled</string>
+    <string name="vote_submitting">Submitting your vote for %s username</string>
+    <string name="vote_submitted">Voted for %s username</string>
+    <string name="cancel_submitting">Canceling your vote for %s username</string>
+    <string name="cancel_submitted">Canceled vote for %s username</string>
+    <string name="block_submitting">Blocking for %s username</string>
+    <string name="block_submitted">You blocked %s username</string>
+    <string name="vote_submitted_error">Error voting for %s username</string>
+    <string name="cancel_submitted_error">Error canceling vote for %s username</string>
+    <string name="block_submitted_error">Error blocking %s username</string>
     <string name="quick_vote">Quick Voting</string>
     <string name="quick_vote_subtitle">By tapping the \"Vote for All\" button, you will automatically vote for all of the filtered usernames (%d) that were submitted first</string>
     <string name="vote_for_all">Vote for All</string>

@@ -40,4 +40,7 @@ interface UsernameVoteDao {
 
     @Query("DELETE FROM username_votes WHERE username == :username")
     suspend fun remove(username: String)
+
+    @Query("SELECT * FROM username_votes")
+    suspend fun getAllVotes(): List<UsernameVote>
 }

@@ -120,7 +120,8 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
                     )
                 )
             }
+        } else {
+            viewModel.submitVote(request.requestId, voteType)
         }
-
     }
 }

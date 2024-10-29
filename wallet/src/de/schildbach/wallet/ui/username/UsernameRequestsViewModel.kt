@@ -117,6 +117,7 @@ class UsernameRequestsViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val analytics: AnalyticsService
 ): ViewModel() {
+    var currentVote: ArrayList<UsernameVote>? = null
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
@@ -264,7 +265,14 @@ class UsernameRequestsViewModel @Inject constructor(
 
                 usernameRequestDao.removeApproval(request.username)
                 usernameRequestDao.update(request.copy(votes = request.votes + keysAmount, isApproved = true))
-                usernameVoteDao.insert(
+//                usernameVoteDao.insert(
+//                    UsernameVote(
+//                        request.normalizedLabel,
+//                        request.identity,
+//                        UsernameVote.APPROVE
+//                    )
+//                )
+                currentVote = arrayListOf(
                     UsernameVote(
                         request.normalizedLabel,
                         request.identity,
@@ -289,10 +297,17 @@ class UsernameRequestsViewModel @Inject constructor(
                     masternodes.value.map { it.votingPrivateKey }
                 ).enqueue()
                 usernameRequestDao.update(request.copy(votes = request.votes - keysAmount, isApproved = false))
-                usernameVoteDao.insert(
+//                usernameVoteDao.insert(
+//                    UsernameVote(
+//                        request.normalizedLabel,
+//                        request.identity,
+//                        UsernameVote.ABSTAIN
+//                    )
+//                )
+                currentVote = arrayListOf(
                     UsernameVote(
                         request.normalizedLabel,
-                        request.identity,
+                        "",
                         UsernameVote.ABSTAIN
                     )
                 )
@@ -533,7 +548,14 @@ class UsernameRequestsViewModel @Inject constructor(
             //usernameRequestDao.update(request.copy(lockVotes = request.lockVotes + keysAmount, isApproved = true))
 
             // TODO: put after actually submitting a vote
-            usernameVoteDao.insert(
+//            usernameVoteDao.insert(
+//                UsernameVote(
+//                    Names.normalizeString(username),
+//                    "",
+//                    UsernameVote.LOCK
+//                )
+//            )
+            currentVote = arrayListOf(
                 UsernameVote(
                     Names.normalizeString(username),
                     "",
@@ -608,6 +630,16 @@ class UsernameRequestsViewModel @Inject constructor(
             } catch (e: Exception) {
                 InvalidKeyType.UNKNOWN
             }
+        }
+    }
+
+    fun updateBroadcastVotesTimestamp() {
+        BroadcastUsernameVotesOperation.lastTimestamp = System.currentTimeMillis()
+    }
+
+    fun updateUsernameRequestsWithVotes() {
+        viewModelScope.launch(Dispatchers.IO) {
+            platformSyncService.updateUsernameRequestsWithVotes()
         }
     }
 }

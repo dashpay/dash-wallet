@@ -30,6 +30,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.UsernameVote
+import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesWorker
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupAdapter
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
 import de.schildbach.wallet.ui.username.utils.votingViewModels
@@ -43,6 +45,10 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dashj.platform.dpp.voting.AbstainVoteChoice
+import org.dashj.platform.dpp.voting.LockVoteChoice
+import org.dashj.platform.dpp.voting.ResourceVoteChoice
+import org.dashj.platform.dpp.voting.TowardsIdentity
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
@@ -143,7 +149,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             binding.appliedFiltersPanel.isVisible = !viewModel.filterState.value.isDefault() && !isShown
         }
 
-        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+        viewModel.                                                                                                              uiState.observe(viewLifecycleOwner) { state ->
             if (state.showFirstTimeInfo) {
                 showFirstTimeInfo()
             }
@@ -152,13 +158,13 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             setList(adapter, state.filteredUsernameRequests)
             //setVotes(state.votes)
 
-            if (state.voteSubmitted) {
-                showVoteIndicator(binding, false)
-            }
-
-            if (state.voteCancelled) {
-                showVoteIndicator(binding, true)
-            }
+//            if (state.voteSubmitted) {
+//                showVoteIndicator(binding, false)
+//            }
+//
+//            if (state.voteCancelled) {
+//                showVoteIndicator(binding, true)
+//            }
         }
 
         viewModel.filterState.observe(viewLifecycleOwner) { state ->
@@ -174,6 +180,36 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
         viewModel.voteSubmissionLiveData.observe(viewLifecycleOwner) { voteData ->
             log.info("vote data: {}", voteData)
+            voteData.forEach { (t, u) ->
+                try {
+                    val usernames =
+                        u.data?.outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_USERNAMES)?.toList()
+                    val votes =
+                        u.data?.outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_VOTE_CHOICES)?.toList()
+                    when (u.status) {
+                        Status.LOADING -> {
+                            log.info("  loading: {} {}", t, u.data?.outputData)
+                            //showVoteIndicator(binding, votes, usernames, u.status)
+                        }
+
+                        Status.SUCCESS -> {
+                            log.info("  success: {} {}", t, u.data?.outputData)
+                            showVoteIndicator(binding, votes!!, usernames!!, u.status)
+                        }
+
+                        Status.ERROR -> {
+                            log.info("  error: {} {}", t, u.data?.outputData)
+                            showVoteIndicator(binding, votes!!, usernames!!, u.status)
+                        }
+
+                        Status.CANCELED -> {
+                            log.info("  error: {} {}", t, u.data?.outputData)
+                        }
+                    }
+                } catch (e: Exception) {
+                    log.error("error processing vote information", e)
+                }
+            }
         }
     }
 
@@ -272,6 +308,8 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
                     )
                 )
             }
+        } else {
+            viewModel.submitVote(request.requestId, voteType)
         }
     }
     private fun showFirstTimeInfo() {
@@ -339,8 +377,41 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
     }
 
-    private fun showVoteIndicator(binding: FragmentUsernameRequestsBinding, isCancelled: Boolean) {
-        binding.voteSubmittedTxt.text = getString(if (isCancelled) R.string.vote_cancelled else R.string.vote_submitted)
+    private fun showVoteIndicator(binding: FragmentUsernameRequestsBinding, votes: List<String>, usernames: List<String>, status: Status) {
+        if (votes.isEmpty()) {
+            return
+        }
+        val resourceVoteChoice = ResourceVoteChoice.from(votes.first())
+        val isCancelled = resourceVoteChoice == AbstainVoteChoice()
+        val username = if (usernames.size > 1) getString(R.string.quick_vote) else usernames.first()
+        viewModel.updateBroadcastVotesTimestamp()
+        viewModel.updateUsernameRequestsWithVotes()
+        if (viewModel.currentVote?.any { usernames.contains(it.username) } == true) {
+            log.info("there is a match?")
+            //return
+        }
+        val toastText = when (status) {
+            Status.SUCCESS -> when (resourceVoteChoice) {
+                is AbstainVoteChoice -> getString(R.string.cancel_submitted, username)
+                is LockVoteChoice -> getString(R.string.block_submitted, username)
+                is TowardsIdentity -> getString(R.string.vote_submitted, username)
+                else -> error("invalid vote choice: $resourceVoteChoice")
+            }
+            Status.LOADING -> when (resourceVoteChoice) {
+                is AbstainVoteChoice -> getString(R.string.cancel_submitting, username)
+                is LockVoteChoice -> getString(R.string.block_submitting, username)
+                is TowardsIdentity -> getString(R.string.vote_submitting, username)
+                else -> error("invalid vote choice: $resourceVoteChoice")
+            }
+            Status.ERROR -> when (resourceVoteChoice) {
+                is AbstainVoteChoice -> getString(R.string.cancel_submitted_error, username)
+                is LockVoteChoice -> getString(R.string.block_submitted_error, username)
+                is TowardsIdentity -> getString(R.string.vote_submitted_error, username)
+                else -> error("invalid vote choice: $resourceVoteChoice")
+            }
+            Status.CANCELED -> return
+        }
+        binding.voteSubmittedTxt.text = toastText
         binding.voteSubmittedIcon.isVisible = !isCancelled
         binding.voteSubmittedIndicator.alpha = 0f
         binding.voteSubmittedIndicator.isVisible = true

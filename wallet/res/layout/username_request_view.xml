@@ -22,6 +22,8 @@
     android:layout_height="wrap_content"
     android:clickable="true"
     android:focusable="true"
+    android:layout_marginHorizontal="4dp"
+    android:layout_marginVertical="4dp"
     android:background="?attr/selectableItemBackground"
     tools:context="de.schildbach.wallet.ui.username.adapters.UsernameRequestViewHolder">
 
@@ -29,9 +31,7 @@
         android:id="@+id/info"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/selectable_round_corners_border"
-        android:layout_marginHorizontal="4dp"
-        android:layout_marginVertical="10dp"
+        android:background="@drawable/selectable_round_corners_border_light"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 

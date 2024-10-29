@@ -34,29 +34,36 @@ class BroadcastUsernameVotesOperation(val application: Application) {
     class BroadcastUsernameVotesOperationException(message: String) : java.lang.Exception(message)
 
     companion object {
+        var lastTimestamp: Long = System.currentTimeMillis()
         private val log = LoggerFactory.getLogger(BroadcastUsernameVotesOperation::class.java)
 
         private const val WORK_NAME = "BroadcastUsernameVotes.WORK#"
 
-        fun uniqueWorkName(usernames: String) = WORK_NAME + usernames
+        fun uniqueWorkName(usernames: String) = "$WORK_NAME$usernames-${System.currentTimeMillis()}"
 
         fun allOperationsStatus(application: Application): LiveData<MutableMap<String, Resource<WorkInfo>>> {
             val workManager: WorkManager = WorkManager.getInstance(application)
-            return workManager.getWorkInfosByTagLiveData(SendContactRequestWorker::class.qualifiedName!!).switchMap {
+            return workManager.getWorkInfosByTagLiveData(BroadcastUsernameVotesWorker::class.qualifiedName!!).switchMap {
                 return@switchMap liveData {
                     if (it.isNullOrEmpty()) {
                         return@liveData
                     }
 
                     val result = mutableMapOf<String, Resource<WorkInfo>>()
-                    it.forEach {
+                    it.filter { workInfo ->
+                        val timestampTag = workInfo.tags.firstOrNull { it.startsWith("timestamp:") }
+                        timestampTag?.let {
+                            val timestamp = it.removePrefix("timestamp:").toLongOrNull()
+                            timestamp != null && timestamp > lastTimestamp
+                        } ?: false
+                    }.forEach { workInfo ->
                         var toUserId = ""
-                        it.tags.forEach { tag ->
+                        workInfo.tags.forEach { tag ->
                             if (tag.startsWith("usernames:")) {
                                 toUserId = tag.replace("usernames:", "")
                             }
                         }
-                        result[toUserId] = convertState(it)
+                        result[toUserId] = convertState(workInfo)
                     }
                     emit(result)
                 }
@@ -112,6 +119,7 @@ class BroadcastUsernameVotesOperation(val application: Application) {
                 )
             )
             .addTag("usernames:$usernames")
+            .addTag("timestamp:${System.currentTimeMillis()}") // Add timestamp as a tag
             .build()
         log.info("creating BroadcastUsernameVotesOperation({}, {})", usernames, voteChoices)
         return WorkManager.getInstance(application)

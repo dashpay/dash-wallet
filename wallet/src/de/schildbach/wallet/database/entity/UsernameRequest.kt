@@ -52,4 +52,12 @@ data class UsernameRequest(
             false
         )
     }
+
+    override fun equals(other: Any?): Boolean {
+        return other is UsernameRequest && requestId == other.requestId
+    }
+
+    override fun hashCode(): Int {
+        return requestId.hashCode()
+    }
 }
