@@ -35,6 +35,7 @@ import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,6 +55,7 @@ import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import kotlin.math.max
 
@@ -78,13 +80,16 @@ data class RequestUserNameUIState(
 @HiltViewModel
 class RequestUserNameViewModel @Inject constructor(
     val walletApplication: WalletApplication,
-    val identityConfig: BlockchainIdentityConfig,
+    private val identityConfig: BlockchainIdentityConfig,
     val walletData: WalletDataProvider,
     val platformRepo: PlatformRepo,
     val usernameRequestDao: UsernameRequestDao,
     val coinJoinConfig: CoinJoinConfig,
     val analytics: AnalyticsService
 ) : ViewModel() {
+    companion object {
+        private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
+    }
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
 
@@ -136,6 +141,7 @@ class RequestUserNameViewModel @Inject constructor(
                 identityBalance = identity?.let { identity ->
                     platformRepo.getIdentityBalance(Identifier.from(identity.userId)).balance
                 } ?: 0
+                log.info("identity balance: {}", identityBalance)
                 if (requestedUserName == null) {
                     requestedUserName = identityConfig.get(USERNAME)
                 }
@@ -247,7 +253,7 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun checkUsername(requestedUserName: String?) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             requestedUserName?.let { username ->
                 val usernameSearchResult = platformRepo.getUsername(username)
                 val usernameExists = when (usernameSearchResult.status) {

@@ -36,6 +36,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.CreateUsernameActivity
@@ -237,7 +238,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 binding.joinDashpayContainer.visibility = View.GONE
                 binding.requestedUsernameContainer.visibility = View.VISIBLE
                 val votingPeriod = it.votingPeriodStart?.let { startTime ->
-                    val endTime = startTime + if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET) TimeUnit.DAYS.toMillis(14) else TimeUnit.MINUTES.toMillis(90)
+                    val endTime = startTime + UsernameRequest.VOTING_PERIOD_MILLIS
                     val dateFormat = DateFormat.getMediumDateFormat(requireContext())
                     String.format("%s", dateFormat.format(endTime))
                 } ?: "Voting Period not found"
