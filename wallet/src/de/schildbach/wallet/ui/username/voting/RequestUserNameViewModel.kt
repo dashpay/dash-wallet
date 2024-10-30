@@ -252,7 +252,7 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun checkUsername(requestedUserName: String?) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             requestedUserName?.let { username ->
                 val usernameSearchResult = platformRepo.getUsername(username)
                 val usernameExists = when (usernameSearchResult.status) {
