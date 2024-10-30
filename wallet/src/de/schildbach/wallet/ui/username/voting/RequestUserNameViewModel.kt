@@ -49,6 +49,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
@@ -131,8 +132,10 @@ class RequestUserNameViewModel @Inject constructor(
     private val _myUsernameRequest = MutableStateFlow<UsernameRequest?>(null)
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
-            _requestedUserNameLink.value = identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
+        viewModelScope.launch {
+            _requestedUserNameLink.value = withContext(Dispatchers.IO) {
+                identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
+            }
         }
         identityConfig.observe(IDENTITY_ID)
             .filterNotNull()
@@ -199,8 +202,7 @@ class RequestUserNameViewModel @Inject constructor(
             updateConfig()
             // send the request / create username, assume not retry
             val reuseTransaction = identity?.let {
-                it.usernameRequested == UsernameRequestStatus.LOCKED ||
-                        it.usernameRequested == UsernameRequestStatus.LOST_VOTE
+                it.usernameRequested == UsernameRequestStatus.LOCKED || it.usernameRequested == UsernameRequestStatus.LOST_VOTE
             } ?: false
             triggerIdentityCreation(reuseTransaction)
         }
@@ -252,7 +254,7 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun checkUsername(requestedUserName: String?) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             requestedUserName?.let { username ->
                 val usernameSearchResult = platformRepo.getUsername(username)
                 val usernameExists = when (usernameSearchResult.status) {
@@ -261,24 +263,27 @@ class RequestUserNameViewModel @Inject constructor(
                     }
                     else -> false
                 }
-                val contenders = platformRepo.getVoteContenders(username)
-                val usernameContested = false // TODO: make the call
-                var maxApprovalVotes = 0
-                val firstCreatedAt = try {
-                    contenders.map.values.minOf { contender ->
-                        val document =  contender.seralizedDocument?.let {
-                            DomainDocument(platformRepo.platform.names.deserialize(it))
+                var usernameContested: Boolean
+                var firstCreatedAt = -1L
+                val usernameBlocked = withContext(Dispatchers.IO) {
+                    val contenders = platformRepo.getVoteContenders(username)
+                    usernameContested = contenders.map.isNotEmpty()
+                    var maxApprovalVotes = 0
+                    firstCreatedAt = try {
+                        contenders.map.values.minOf { contender ->
+                            val document = contender.seralizedDocument?.let {
+                                DomainDocument(platformRepo.platform.names.deserialize(it))
+                            }
+                            maxApprovalVotes = max(contender.votes, maxApprovalVotes)
+                            document?.createdAt ?: -1
                         }
-                        maxApprovalVotes = max(contender.votes, maxApprovalVotes)
-                        document?.createdAt ?: -1
+                    } catch (e: NoSuchElementException) {
+                        -1L
                     }
-                } catch (e: NoSuchElementException) {
-                    -1L
+
+                    // is the name blocked
+                    firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
                 }
-
-                // is the name blocked
-                val usernameBlocked = firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
-
                 _uiState.update {
                     it.copy(
                         usernameCheckSuccess = true,
@@ -293,32 +298,36 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun verify() {
-        viewModelScope.launch(Dispatchers.IO) {
-            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
-            identityConfig.get(IDENTITY_ID)?.let { identityId ->
-                val usernameRequest = usernameRequestDao.getRequest(
-                    UsernameRequest.getRequestId(
-                        identityId,
-                        requestedUserName!!
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
+                identityConfig.get(IDENTITY_ID)?.let { identityId ->
+                    val usernameRequest = usernameRequestDao.getRequest(
+                        UsernameRequest.getRequestId(
+                            identityId,
+                            requestedUserName!!
+                        )
                     )
-                )
-                usernameRequest!!.link = _requestedUserNameLink.value
-                usernameRequestDao.update(usernameRequest)
+                    usernameRequest!!.link = _requestedUserNameLink.value
+                    usernameRequestDao.update(usernameRequest)
+                }
             }
             _uiState.update {
                 it.copy(
                     usernameVerified = true
                 )
             }
-            //submit()
         }
     }
 
+    @Deprecated("requests cannot be canceled")
     fun cancelRequest() {
-        viewModelScope.launch(Dispatchers.IO) {
-            identityConfig.set(BlockchainIdentityConfig.USERNAME, "")
-            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, "")
-            identityConfig.set(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                identityConfig.set(BlockchainIdentityConfig.USERNAME, "")
+                identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, "")
+                identityConfig.set(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
+            }
         }
     }
 
