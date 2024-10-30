@@ -198,8 +198,8 @@ class RequestUserNameViewModel @Inject constructor(
     fun submit() {
         // Reset ui state for retry if needed
         resetUiForRetrySubmit()
-        viewModelScope.launch(Dispatchers.IO) {
-            updateConfig()
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { updateConfig() }
             // send the request / create username, assume not retry
             val reuseTransaction = identity?.let {
                 it.usernameRequested == UsernameRequestStatus.LOCKED || it.usernameRequested == UsernameRequestStatus.LOST_VOTE
