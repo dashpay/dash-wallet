@@ -35,8 +35,10 @@ import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -86,6 +88,8 @@ class RequestUserNameViewModel @Inject constructor(
     val coinJoinConfig: CoinJoinConfig,
     val analytics: AnalyticsService
 ) : ViewModel() {
+    private val workerJob = SupervisorJob()
+    private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
 
@@ -161,7 +165,7 @@ class RequestUserNameViewModel @Inject constructor(
                     }
                 }
             }
-            .launchIn(viewModelScope)
+            .launchIn(viewModelWorkerScope)
 
         coinJoinConfig.observeMode()
             .flatMapLatest { coinJoinMode ->
@@ -248,7 +252,7 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun checkUsername(requestedUserName: String?) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             requestedUserName?.let { username ->
                 val usernameSearchResult = platformRepo.getUsername(username)
                 val usernameExists = when (usernameSearchResult.status) {
