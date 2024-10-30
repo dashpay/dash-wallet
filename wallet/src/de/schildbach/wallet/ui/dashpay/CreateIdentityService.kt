@@ -337,6 +337,12 @@ class CreateIdentityService : LifecycleService() {
                 if (blockchainIdentityData.creationStateErrorMessage?.contains("preorderDocument was not found with a salted domain hash") == true) {
                     blockchainIdentityData.creationState = CreationState.PREORDER_REGISTERING
                     platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                } else if (retryWithNewUserName) {
+                    // lets rewind the state to allow for a new username registration or request
+                    // it may have failed later in the process
+                    if (blockchainIdentityData.creationState > CreationState.USERNAME_REGISTERING) {
+                        blockchainIdentityData.creationState = CreationState.USERNAME_REGISTERING
+                    }
                 }
             }
         }
@@ -919,7 +925,18 @@ class CreateIdentityService : LifecycleService() {
                                     false
                                 )
                             )
-                            val usernameInfo = blockchainIdentity.usernameStatuses[blockchainIdentity.currentUsername!!]!!
+                            // what if usernameInfo would have been null, we should create it.
+
+                            var usernameInfo = blockchainIdentity.usernameStatuses[blockchainIdentity.currentUsername!!]
+                            if (usernameInfo == null) {
+                                usernameInfo = UsernameInfo(
+                                    null,
+                                    UsernameStatus.CONFIRMED,
+                                    blockchainIdentity.currentUsername!!,
+                                    UsernameRequestStatus.VOTING
+                                )
+                                blockchainIdentity.usernameStatuses[blockchainIdentity.currentUsername!!] = usernameInfo
+                            }
 
                             // determine when voting started by finding the minimum timestamp
                             val earliestCreatedAt = voteContenders.map.values.minOf {

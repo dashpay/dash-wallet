@@ -74,6 +74,8 @@ import org.dashj.platform.contracts.wallet.TxMetadataItem
 import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.dpp.voting.ContestedDocumentResourceVotePoll
+import org.dashj.platform.sdk.PlatformValue
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.wallet.IdentityVerify
 import org.slf4j.Logger
@@ -225,7 +227,7 @@ class PlatformSynchronizationService @Inject constructor(
             if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
                 // Is the Voting Period complete?
                 if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
-                    val timeWindow = if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET) TimeUnit.DAYS.toMillis(14) else TimeUnit.MINUTES.toMillis(90)
+                    val timeWindow = UsernameRequest.VOTING_PERIOD_MILLIS
                     if (System.currentTimeMillis() - blockchainIdentityData.votingPeriodStart!! >= timeWindow) {
                         val resource = platformRepo.getUsername(blockchainIdentityData.username!!)
                         if (resource.status == Status.SUCCESS) {

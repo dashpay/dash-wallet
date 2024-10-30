@@ -13,6 +13,7 @@ import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
@@ -135,8 +136,10 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 binding.walletBalanceContainer.isVisible = !it.enoughBalance
                 if (it.usernameContestable || it.usernameContested) {
                     val startDate = Date(it.votingPeriodStart)
-                    val endDate = Date(startDate.time + if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET) TimeUnit.DAYS.toMillis(14) else TimeUnit.MINUTES.toMillis(90))
-                    if (it.votingPeriodStart == -1L && System.currentTimeMillis() - it.votingPeriodStart > TimeUnit.DAYS.toMillis(7)) {
+                    val endDate = Date(startDate.time + UsernameRequest.VOTING_PERIOD_MILLIS)
+                    if (it.votingPeriodStart == -1L && System.currentTimeMillis() - it.votingPeriodStart > UsernameRequest.VOTING_PERIOD_MILLIS) {
+                        binding.votingPeriodContainer.isVisible = false
+                    } else if (it.votingPeriodStart == -1L && System.currentTimeMillis() - it.votingPeriodStart > UsernameRequest.SUBMIT_PERIOD_MILLIS) {
                         binding.votingPeriodContainer.isVisible = false
                     } else {
                         val dateFormat = DateFormat.getMediumDateFormat(context)
@@ -158,6 +161,12 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                         binding.votingPeriodContainer.isVisible = false
                     }
                     it.usernameExists -> {
+                        binding.usernameAvailableMessage.text = getString(R.string.request_username_taken)
+                        binding.checkAvailable.setImageResource(getCheckMarkImage(false, false))
+                        binding.votingPeriodContainer.isVisible = false
+                    }
+                    it.usernameContestable && (it.votingPeriodStart == -1L && System.currentTimeMillis() - it.votingPeriodStart > UsernameRequest.VOTING_PERIOD_MILLIS) -> {
+                        // the submission period has ended, let us just say the username is taken
                         binding.usernameAvailableMessage.text = getString(R.string.request_username_taken)
                         binding.checkAvailable.setImageResource(getCheckMarkImage(false, false))
                         binding.votingPeriodContainer.isVisible = false
@@ -197,7 +206,8 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 return@observe
             }
             if (it?.creationStateErrorMessage != null) {
-                requireActivity().finish()
+                //why are we closing, we should allow the user to chose a new name
+                //requireActivity().finish()
             } else if ((it?.creationState?.ordinal ?: 0) > BlockchainIdentityData.CreationState.NONE.ordinal) {
                 // completeUsername = it.username ?: ""
                 // showCompleteState()

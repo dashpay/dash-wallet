@@ -21,6 +21,7 @@ import android.annotation.SuppressLint
 import android.app.Application
 import androidx.work.*
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.entity.UsernameRequest
 import org.bitcoinj.core.NetworkParameters
 import org.slf4j.LoggerFactory
 import java.text.DateFormat
@@ -49,11 +50,7 @@ class GetUsernameVotingResultOperation(val application: Application) {
     @SuppressLint("EnqueueWork")
     fun create(username: String, identityId: String, votingStartedAt: Long): WorkContinuation {
         log.info("scheduling work to check username voting status")
-        val delay = System.currentTimeMillis() - if (Constants.NETWORK_PARAMETERS.id != NetworkParameters.ID_MAINNET) {
-            TimeUnit.MINUTES.toMillis(90)
-        } else {
-            TimeUnit.DAYS.toMillis(14)
-        } + votingStartedAt + TimeUnit.MINUTES.toMillis(2)
+        val delay = System.currentTimeMillis() - UsernameRequest.VOTING_PERIOD_MILLIS + votingStartedAt + TimeUnit.MINUTES.toMillis(2)
         log.info("scheduling work to check username voting status on {}",
             DateFormat.getDateInstance(DateFormat.FULL).format(
                 Date(System.currentTimeMillis() + delay)

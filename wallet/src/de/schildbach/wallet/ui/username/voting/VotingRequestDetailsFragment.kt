@@ -25,6 +25,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentVotingRequestDetailsBinding
 import org.bitcoinj.core.NetworkParameters
@@ -58,7 +59,7 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
             binding.identity.text = myUsernameRequest?.identity
             var isVotingOver = false
             val votingResults = myUsernameRequest?.createdAt?.let { startTime ->
-                val endTime = startTime + if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET) TimeUnit.DAYS.toMillis(14) else TimeUnit.MINUTES.toMillis(90)
+                val endTime = startTime + UsernameRequest.VOTING_PERIOD_MILLIS
                 val dateFormat = DateFormat.getMediumDateFormat(requireContext())
                 isVotingOver = endTime < System.currentTimeMillis()
                 if (isVotingOver) {
