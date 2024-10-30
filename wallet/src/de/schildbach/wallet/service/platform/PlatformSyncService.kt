@@ -230,7 +230,7 @@ class PlatformSynchronizationService @Inject constructor(
             if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
                 // Is the Voting Period complete?
                 if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
-                    val timeWindow = if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET) TimeUnit.DAYS.toMillis(14) else TimeUnit.MINUTES.toMillis(90)
+                    val timeWindow = UsernameRequest.VOTING_PERIOD_MILLIS
                     if (System.currentTimeMillis() - blockchainIdentityData.votingPeriodStart!! >= timeWindow) {
                         val resource = platformRepo.getUsername(blockchainIdentityData.username!!)
                         if (resource.status == Status.SUCCESS && resource.data != null) {

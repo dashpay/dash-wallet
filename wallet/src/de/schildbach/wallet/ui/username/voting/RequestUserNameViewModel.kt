@@ -58,6 +58,7 @@ import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import kotlin.math.max
 
@@ -82,13 +83,16 @@ data class RequestUserNameUIState(
 @HiltViewModel
 class RequestUserNameViewModel @Inject constructor(
     val walletApplication: WalletApplication,
-    val identityConfig: BlockchainIdentityConfig,
+    private val identityConfig: BlockchainIdentityConfig,
     val walletData: WalletDataProvider,
     val platformRepo: PlatformRepo,
     val usernameRequestDao: UsernameRequestDao,
     val coinJoinConfig: CoinJoinConfig,
     val analytics: AnalyticsService
 ) : ViewModel() {
+    companion object {
+        private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
+    }
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
@@ -144,6 +148,7 @@ class RequestUserNameViewModel @Inject constructor(
                 identityBalance = identity?.let { identity ->
                     platformRepo.getIdentityBalance(Identifier.from(identity.userId)).balance
                 } ?: 0
+                log.info("identity balance: {}", identityBalance)
                 if (requestedUserName == null) {
                     requestedUserName = identityConfig.get(USERNAME)
                 }

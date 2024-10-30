@@ -17,7 +17,6 @@
 package de.schildbach.wallet.payments
 
 import androidx.annotation.VisibleForTesting
-import com.google.firebase.installations.FirebaseInstallations
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.PaymentIntent
@@ -79,7 +78,6 @@ class SendCoinsTaskRunner @Inject constructor(
     }
     private var coinJoinSend = false
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
-    private var firebaseInstallationId: String = ""
     init {
         coinJoinConfig
             .observeMode()
@@ -88,10 +86,6 @@ class SendCoinsTaskRunner @Inject constructor(
                 coinJoinSend = mode != CoinJoinMode.NONE
             }
             .launchIn(coroutineScope)
-
-        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            firebaseInstallationId = if (task.isSuccessful) task.result else ""
-        }
     }
 
     @Throws(LeftoverBalanceException::class)

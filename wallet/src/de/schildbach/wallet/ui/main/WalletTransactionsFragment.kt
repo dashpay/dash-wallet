@@ -261,7 +261,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun openIdentityCreation() {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             if (blockchainIdentityData.creationStateErrorMessage != null) {
-                if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING) {
+                if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING ||
+                    blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKING) {
                     startActivity(CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), blockchainIdentityData))
                 } else {
                     Toast.makeText(requireContext(), blockchainIdentityData.creationStateErrorMessage, Toast.LENGTH_LONG).show()
