@@ -403,7 +403,7 @@ class UsernameRequestsViewModel @Inject constructor(
         val count = entries.count {
             importedMasternodeKeyDao.contains(it.proTxHash)
         }
-        return entries.size == count
+        return entries.size != count
     }
 
     private fun observeUsernames(): Flow<List<UsernameRequest>> {
