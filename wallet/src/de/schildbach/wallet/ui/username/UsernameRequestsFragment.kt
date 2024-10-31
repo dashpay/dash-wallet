@@ -377,7 +377,12 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
     }
 
-    private fun showVoteIndicator(binding: FragmentUsernameRequestsBinding, votes: List<String>, usernames: List<String>, status: Status) {
+    private fun showVoteIndicator(
+        binding: FragmentUsernameRequestsBinding,
+        votes: List<String>,
+        usernames: List<String>,
+        status: Status
+    ) {
         if (votes.isEmpty()) {
             return
         }
@@ -387,7 +392,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         viewModel.updateBroadcastVotesTimestamp()
         viewModel.updateUsernameRequestsWithVotes()
         if (viewModel.currentVote?.any { usernames.contains(it.username) } == true) {
-            log.info("there is a match?")
+            log.info("vote, there is not match for {}", usernames)
             //return
         }
         val toastText = when (status) {
