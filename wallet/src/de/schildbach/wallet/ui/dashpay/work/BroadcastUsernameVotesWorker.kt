@@ -135,7 +135,8 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                     is String -> item
                     else -> item.toString()
                 }
-            }.toTypedArray()
+            }.toSet().toTypedArray()
+            val votes = hashMapOf<String, UsernameVote>()
             votingResults.forEach {
                 when (val votePoll = it.second?.resourceVote?.votePoll as? ContestedDocumentResourceVotePoll) {
                     is ContestedDocumentResourceVotePoll -> {
@@ -155,11 +156,12 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                             }
                             else -> null
                         }
-                        normalizedLabel?.let { label ->
-                            updateUsernameVotes(label, identity, masternodeKeys.size, it.first)
-                        }
+                        votes[normalizedLabel!!] = UsernameVote(normalizedLabel, identity.toString(), it.first)
                     }
                 }
+            }
+            votes.forEach { (_, usernameVote) ->
+                updateUsernameVotes(usernameVote)
             }
             val errorCount = votingResults.count { it.third != null }
             when (errorCount) {
@@ -247,5 +249,13 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                 voteType
             )
         )
+    }
+
+    private suspend fun updateUsernameVotes(
+        vote: UsernameVote
+    ) {
+        // usernameRequestDao.removeApproval(request.username)
+        // usernameRequestDao.update(request.copy(votes = request.votes + keyCount, isApproved = true))
+        usernameVoteDao.insert(vote)
     }
 }
