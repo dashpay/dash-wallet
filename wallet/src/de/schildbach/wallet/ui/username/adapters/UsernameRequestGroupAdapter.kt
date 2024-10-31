@@ -135,7 +135,7 @@ class UsernameRequestGroupViewHolder(
         binding.approvalsButton.text = context.getString(R.string.two_lines_number_text, option.requests.maxOf { it.votes }, context.resources.getQuantityString(R.plurals.approval_button, option.requests.maxOf { it.votes }))
         binding.approvalsButton.setOnClickListener {
             // vote for the first request, which is the only request
-            usernameClickListener.invoke(option.requests.first())
+            voteClickListener.invoke(option.requests.first())
         }
 
         // change the button colors based on our vote(s)
