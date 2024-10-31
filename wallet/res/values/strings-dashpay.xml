@@ -343,6 +343,7 @@
     <string name="voting_key_hint">Masternode Voting Private Key</string>
     <string name="voting_key_input_error">You have entered an invalid key</string>
     <string name="voting_key_input_not_active_error">You have entered a key that is not associated to an active Masternode</string>
+    <string name="voting_key_input_already_present">You have already entered this masternode key</string>
     <string name="voting_key_input_invalid_private_key_wrong_network_testnet">You have entered a key that is for testnet, but this is mainnet. It should look like this: %s</string>
     <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">You have entered a key that is for mainnet, but this is testnet. It should look like this: %s</string>
     <string name="voting_key_input_invalid_private_key_address">You have entered an address key instead of a masternode voting private key. It should be in WIF format (%s)</string>

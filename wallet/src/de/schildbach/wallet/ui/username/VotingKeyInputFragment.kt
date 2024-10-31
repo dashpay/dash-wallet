@@ -69,15 +69,21 @@ class VotingKeyInputFragment : Fragment(R.layout.fragment_voting_key_input) {
                 binding.inputError.isVisible = false
                 if (isValidMasternode) {
                     lifecycleScope.launch {
-                        viewModel.addKey(key)
-                        KeyboardUtil.hideKeyboard(requireContext(), binding.keyInput)
-                        delay(200)
-                        safeNavigate(
-                            VotingKeyInputFragmentDirections.votingKeyInputToAddKeys(
-                                args.requestId,
-                                args.vote
+                        if(viewModel.hasKey(key)) {
+                            viewModel.addKey(key)
+                            KeyboardUtil.hideKeyboard(requireContext(), binding.keyInput)
+                            delay(200)
+                            safeNavigate(
+                                VotingKeyInputFragmentDirections.votingKeyInputToAddKeys(
+                                    args.requestId,
+                                    args.vote
+                                )
                             )
-                        )
+                        } else {
+                            binding.inputError.text = getString(R.string.voting_key_input_already_present)
+                            binding.inputWrapper.isErrorEnabled = true
+                            binding.inputError.isVisible = true
+                        }
                     }
                 } else {
                     binding.inputError.text = getString(R.string.voting_key_input_not_active_error)
