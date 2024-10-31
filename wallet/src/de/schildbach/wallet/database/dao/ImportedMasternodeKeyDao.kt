@@ -45,4 +45,7 @@ interface ImportedMasternodeKeyDao {
 
     @Query("DELETE FROM imported_masternode_keys WHERE proTxHash = :proTxHash")
     suspend fun remove(proTxHash: Sha256Hash)
+
+    @Query("SELECT COUNT(*) > 0 FROM imported_masternode_keys WHERE proTxHash = :proTxHash")
+    suspend fun contains(proTxHash: Sha256Hash?): Boolean
 }

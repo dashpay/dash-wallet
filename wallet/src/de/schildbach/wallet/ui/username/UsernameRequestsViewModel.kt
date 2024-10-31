@@ -395,6 +395,17 @@ class UsernameRequestsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * returns true if we have all masternodes for this voting key
+     */
+    suspend fun hasKey(key: ECKey): Boolean {
+        val entries = masternodeListManager.listAtChainTip.getMasternodesByVotingKey(KeyId.fromBytes(key.pubKeyHash))
+        val count = entries.count {
+            importedMasternodeKeyDao.contains(it.proTxHash)
+        }
+        return entries.size == count
+    }
+
     private fun observeUsernames(): Flow<List<UsernameRequest>> {
         return if (_filterState.value.onlyDuplicates) {
             usernameRequestDao.observeDuplicates(_filterState.value.onlyLinks)
@@ -585,7 +596,7 @@ class UsernameRequestsViewModel @Inject constructor(
         }
     }
 
-    suspend fun shouldMaybeAskForMoreKeys() = dashPayConfig.get(DashPayConfig.KEYS_DONT_ASK_AGAIN) ?: true
+    suspend fun shouldMaybeAskForMoreKeys() = !(dashPayConfig.get(DashPayConfig.KEYS_DONT_ASK_AGAIN) ?: false)
 
     suspend fun setSecondTimeVoting() {
         dashPayConfig.set(DashPayConfig.FIRST_TIME_VOTING, false)
@@ -595,6 +606,22 @@ class UsernameRequestsViewModel @Inject constructor(
 
     fun invalidKeyType(wifKey: String): InvalidKeyType {
         return try {
+            // check if it is a private key hex 64 chars first
+            if (wifKey.length == 64) {
+                try {
+                    Utils.HEX.decode(wifKey)
+                    return InvalidKeyType.PRIVATE_KEY_HEX
+                } catch (_: Exception) {
+                    // swallow
+                }
+            } else if (wifKey.length == 66) {
+                try {
+                    Utils.HEX.decode(wifKey)
+                    return InvalidKeyType.PUBLIC_KEY_HEX
+                } catch (_: Exception) {
+                    // swallow
+                }
+            }
             DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, wifKey).key
             InvalidKeyType.NOT_INVALID // shouldn't happen
         } catch (e: AddressFormatException.WrongNetwork) {

@@ -20,8 +20,13 @@ import org.dash.wallet.common.ui.setRoundedRippleBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.slf4j.LoggerFactory
+import java.util.logging.Logger
 
 class AddVotingKeysFragment : Fragment(R.layout.fragment_add_voting_keys) {
+    companion object {
+        private val log = LoggerFactory.getLogger(AddVotingKeysFragment::class.java)
+    }
     private val binding by viewBinding(FragmentAddVotingKeysBinding::bind)
     private val viewModel by votingViewModels<UsernameRequestsViewModel>()
     private val args by navArgs<AddVotingKeysFragmentArgs>()
@@ -48,15 +53,19 @@ class AddVotingKeysFragment : Fragment(R.layout.fragment_add_voting_keys) {
             safeNavigate(AddVotingKeysFragmentDirections.addKeysToVotingKeyInput(args.requestId, args.vote))
         }
 
-        val adapter = IPAddressAdapter() {masternodeIp ->
-            viewModel.removeMasternode(masternodeIp)
+        val adapter = IPAddressAdapter() { masternodeIP ->
+            log.info("removing masternode: {}", masternodeIP)
+            viewModel.removeMasternode(masternodeIP)
         }
         binding.ipAddresses.adapter = adapter
 
         viewModel.masternodes.observe(viewLifecycleOwner) {
-            adapter.submitList(it.map { masternode->
-                masternode.address
-            })
+            log.info("updating masternode list: {}", it.map { mn -> mn.address })
+            adapter.submitList(
+                it.map { masternode ->
+                    masternode.address
+                }
+            )
             binding.votesCastText.text = getString(R.string.multiple_votes_cast, it.size)
         }
 
@@ -64,7 +73,7 @@ class AddVotingKeysFragment : Fragment(R.layout.fragment_add_voting_keys) {
             lifecycleScope.launch(Dispatchers.IO) {
                 viewModel.setDontAskAgain()
             }
-            binding.dontAskAgainButton.isVisible = true
+            binding.dontAskAgainButton.isVisible = false
         }
         lifecycleScope.launch {
             val isFirstTime = withContext(Dispatchers.IO) { viewModel.isFirstTimeVoting() }

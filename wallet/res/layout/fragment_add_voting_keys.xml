@@ -118,12 +118,15 @@
         android:layout_margin="15dp"
         android:text="@string/submit"
         app:layout_constraintBottom_toTopOf="@id/votes_cast_text" />
+
     <TextView
         android:id="@+id/votes_cast_text"
         style="@style/Overline.Secondary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginBottom="15dp"
         android:gravity="center"
         android:textAlignment="gravity"
         app:layout_constraintStart_toStartOf="parent"
