@@ -61,21 +61,22 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:srcCompat ="@drawable/ic_voting_icon"
-                app:layout_constraintEnd_toStartOf="@id/create_a_username_title"
+                android:layout_marginTop="10dp"
+                android:layout_marginStart="15dp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintBottom_toBottomOf="@id/create_a_username_title"
-                app:layout_constraintTop_toTopOf="@id/create_a_username_title" />
+                app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/create_a_username_title"
                 style="@style/Subtitle2"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="63dp"
-                android:layout_marginTop="14dp"
+                android:layout_marginStart="20dp"
                 android:text="@string/voting_requirement_title"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintBottom_toBottomOf="@id/create_a_username_icon"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/create_a_username_icon"
+                app:layout_constraintTop_toTopOf="@id/create_a_username_icon" />
 
             <TextView
                 android:id="@+id/create_a_username_subtitle"
@@ -104,21 +105,22 @@
                 android:layout_width="30dp"
                 android:layout_height="30dp"
                 android:layout_marginTop="10dp"
+                android:layout_marginStart="15dp"
                 app:srcCompat ="@drawable/ic_error"
-                app:layout_constraintEnd_toStartOf="@id/blocked_title"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/blocked_title"
                 style="@style/Subtitle2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="63dp"
-                android:layout_marginTop="14dp"
+                android:layout_width="0dp"
+                android:layout_height="43dp"
+                android:layout_marginStart="20dp"
                 android:text="@string/usernames_blocked_title"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintBottom_toBottomOf="@id/blocked_icon"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/blocked_icon"
+                app:layout_constraintTop_toTopOf="@id/blocked_icon" />
 
             <TextView
                 android:id="@+id/blocked_subtitle"
@@ -148,9 +150,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:srcCompat ="@drawable/ic_face_sad"
-                app:layout_constraintEnd_toStartOf="@id/request_not_approved_title"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/request_not_approved_title" />
+                app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/request_not_approved_title"
@@ -160,8 +161,11 @@
                 android:layout_marginStart="63dp"
                 android:layout_marginTop="14dp"
                 android:text="@string/case_your_request_is_not_approved"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintBottom_toBottomOf="@id/request_not_approved_icon"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/request_not_approved_icon"
+                app:layout_constraintTop_toTopOf="@id/request_not_approved_icon"
+                />
 
             <TextView
                 android:id="@+id/request_not_approved_subtitle"
@@ -197,7 +201,7 @@
             <TextView
                 android:id="@+id/passphrase_title"
                 style="@style/Subtitle2"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="63dp"
                 android:layout_marginTop="14dp"
