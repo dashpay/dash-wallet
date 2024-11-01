@@ -228,6 +228,16 @@ public class WalletApplication extends MultiDexApplication
         initLogging();
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
+//        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.TIRAMISU) {
+//            Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+//                if (throwable instanceof android.app.InvalidForegroundServiceTypeException) {
+//                    // Cancel all work on crash
+//                    WorkManager.getInstance(this).cancelAllWork();
+//                }
+//                // Pass the exception to the default handler after processing
+//                Thread.getDefaultUncaughtExceptionHandler().uncaughtException(thread, throwable);
+//            });
+//        }
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);

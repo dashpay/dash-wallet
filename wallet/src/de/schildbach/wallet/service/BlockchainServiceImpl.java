@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service;
 
 import android.annotation.SuppressLint;
+import android.app.ForegroundServiceStartNotAllowedException;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -41,6 +42,7 @@ import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.text.format.DateUtils;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleService;
@@ -963,7 +965,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForeground();
+            startForegroundAndCatch();
         }
 
         final Wallet wallet = application.getWallet();
@@ -1119,7 +1121,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             //Restart service as a Foreground Service if it's synchronizing the blockchain
             Bundle extras = intent.getExtras();
             if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
-                startForeground();
+                startForegroundAndCatch();
             }
 
             log.info("service start command: " + intent + (intent.hasExtra(Intent.EXTRA_ALARM_COUNT)
@@ -1181,11 +1183,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         //Shows ongoing notification promoting service to foreground service and
         //preventing it from being killed in Android 26 or later
         Notification notification = createNetworkSyncNotification(null);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification,
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-        else
+        } else {
             startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+        }
         foregroundService = ForegroundService.BLOCKCHAIN_SYNC;
     }
 
@@ -1195,6 +1198,26 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         Notification notification = createCoinJoinNotification();
         startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
         foregroundService = ForegroundService.COINJOIN_MIXING;
+    }
+
+    private void startForegroundAndCatch() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                startForeground();
+            } catch (ForegroundServiceStartNotAllowedException e) {
+                log.info("failed to start in foreground", e);
+            }
+        }
+    }
+
+    private void startForegroundCoinJoinAndCatch() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                startForegroundCoinJoin();
+            } catch (ForegroundServiceStartNotAllowedException e) {
+                log.info("failed to start in foreground", e);
+            }
+        }
     }
 
     @Override
@@ -1373,14 +1396,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 log.info("foreground service: {}", foregroundService);
                 if (foregroundService == ForegroundService.NONE) {
                     log.info("foreground service not active, create notification");
-                    startForegroundCoinJoin();
-                    //Notification notification = createCoinJoinNotification();
-                    //nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+                    startForegroundCoinJoinAndCatch();
                     foregroundService = ForegroundService.COINJOIN_MIXING;
                 } else {
                     log.info("foreground service active, update notification");
                     Notification notification = createCoinJoinNotification();
-                    //nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
                     nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
                 }
             }
@@ -1403,7 +1423,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             Intent intent = new Intent(this, BlockchainServiceImpl.class);
             ContextCompat.startForegroundService(this, intent);
             // call startForeground just after startForegroundService.
-            startForeground();
+            startForegroundAndCatch();
         }
     }
 
