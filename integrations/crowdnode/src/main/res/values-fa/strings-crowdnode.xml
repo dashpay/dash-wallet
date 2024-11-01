@@ -142,6 +142,8 @@
     <string name="crowdnode_withdrawal_limits_message">با توجه به شرایط استفاده از کراودنود کاربران نمی‌توانند بیشتر از این میزان برداشت کنند: </string>
     <string name="crowdnode_withdraw_without_limits_online">برداشت بدون سیف با حساب آنلاین در وب‌سایت کراودنود</string>
     <string name="crowdnode_withdrawal_limits_error">این خطا احتمالا به دلیل فراتر رفتن از سقف برداشت کراودنود بوده است. لطفا دوباره امتحان کنید. </string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">لطفاً پیش از آغاز برداشت بعدی منتظر بمانید</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">پیش از برداشت بعدی، باید ۵ دقیقه منتظر بمانید</string>
     <string name="per_transaction">به ازای هر تراکنش</string>
     <string name="per_hour">هر ساعت</string>
     <string name="per_day">هر ۲۴ ساعت</string>

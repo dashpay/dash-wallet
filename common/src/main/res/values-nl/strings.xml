@@ -24,6 +24,8 @@
     <string name="dash_address">Dashadres</string>
     <string name="username">Gebruikersnaam</string>
     <string name="balance">Saldo:</string>
+    <string name="nothing_here">Niets hier</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -61,6 +63,8 @@
     <string name="verify">Verifiëren</string>
     <string name="receive_enter_amount_button">Specificeer bedrag</string>
     <string name="account_create">Maak account aan</string>
+    <string name="submit">Indienen</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">Zoek</string>
     <string name="permission_allow">Sta toe</string>
@@ -77,6 +81,7 @@
     <string name="select_currency">Selecteer valuta</string>
     <string name="send_coins_error_dusty_send">bedrag is te klein om te versturen</string>
     <string name="send_coins_error_insufficient_money">Ontoereikende fondsen</string>
+    <string name="send_coins_error_insufficient_mixed_money">Onvoldoende gemengd saldo. Wacht tot de CoinJoin mix is voltooid of schakel deze functie uit in de instellingen om deze transactie te voltooien.</string>
     <string name="syncing">Aan het synchroniseren</string>
     <string name="no_connection">Geen internetverbinding</string>
     <string name="rate_not_available">Niet beschikbaar</string>

@@ -164,6 +164,8 @@
     <!-- Explore TestNet -->
     <string name="explore_test_subtitle">Testovací Dash nemá v skutočnom svete žiadnu hodnotu, ale môžete ho odosielať a prijímať s ostatnými používateľmi DashPay Alpha.</string>
     <string name="explore_test_dash_title">Ako získať testovací Dash?</string>
+    <string name="explore_test_dash_text_1">Testovací Dash je zadarmo a možno ho získať z toho, čo sa nazýva faucet.</string>
+    <string name="explore_test_dash_text_2">Kliknutím na tlačidlo nižšie skopírujete adresu Dash z tejto peňaženky, aby ste mohli získať svoj testovací Dash.</string>
     <string name="explore_get_test_dash">Získajte testovací Dash</string>
 
     <!-- Sync Status -->

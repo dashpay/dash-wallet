@@ -269,9 +269,9 @@ Dash</b></string>
     <string name="usernames_blocked_title">Некоторые Имена пользователей могут быть заблокированы</string>
     <string name="usernames_blocked_subtitle">Если существенная часть сети сочтёт Имя пользователя неподходящим, его могут заблокировать</string>
     <string name="username_voting">Голосование за Имя пользователя</string>
+    <string name="username_voting_subtitle">Будучи владельцем мастерноды, вы можете голосовать за одобрение запрошенных имён пользователей до того, как они созданы в сети.</string>
     <string name="voting_duplicates_only_title">Настройки фильтра по умолчанию</string>
     <string name="voting_duplicates_only_message">По умолчанию фильтр показывает только повторяющиеся имена пользователей, за которые вы НЕ голосовали, но при смене настроек фильтра можно посмотреть все спорные имена пользователей</string>
-    <string name="username_voting_subtitle">Будучи владельцем мастерноды, вы можете голосовать за одобрение запрошенных имён пользователей до того, как пользователи смогут их создать.</string>
     <string name="all">Все</string>
     <string name="n_usernames">%d Имён пользователей</string>
     <string name="n_requests">%d запросов</string>
@@ -333,6 +333,7 @@ Dash</b></string>
     <string name="voting_key_title">Введите ключ для голосования</string>
     <string name="voting_key_hint">Приватный ключ для голосования мастерноды</string>
     <string name="voting_key_input_error">Вы ввели неверный ключ</string>
+    <string name="voting_key_input_not_active_error">Вы ввели ключ, который не связан с активной мастернодой.</string>
     <string name="voting_key_add">Введите ключ для голосования</string>
     <string name="voting_key_add_subtitle">С этим кошельком (кошельками) связаны следующие IP адреса</string>
     <string name="masternode_ip">IP-адрес мастерноды</string>

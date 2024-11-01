@@ -261,13 +261,16 @@
     <string name="keep_your_passphrase_safe">Zabezpiecz swoją listę słów do odzysku konta oraz hasło.</string>
     <string name="pay_now">Zapłać teraz, a jeśli nazwa nie zostanie zatwierdzona, możesz utworzyć inną nazwę bez konieczności ponownego uiszczania opłaty</string>
     <string name="case_your_request_is_not_approved">W przypadku, gdy Twoja prośba nie zostanie zatwierdzona</string>
+    <string name="voting_requirement_subtitle">Każda nazwa użytkownika, która zawiera numer od 2 do 9 albo składa się z 20 lub więcej znaków, zostanie automatycznie zatwierdzona</string>
     <string name="voting_requirement_title">Głosowanie jest wymagane tylko w niektórych przypadkach</string>
     <string name="dash_network_must_vote_to_approve">Sieć Dash musi głosować nad zatwierdzeniem Twojej nazwy użytkownika zanim zostanie ona stworzona.</string>
     <string name="what_is_username_voting">Na czym polega głosowanie nad nazwą użytkownika\?</string>
     <string name="usernames_blocked_title">Niektóre nazwy użytkowników mogą zostać zablokowane</string>
     <string name="usernames_blocked_subtitle">Jeśli wystarczająca liczba użytkowników w sieci uzna, że ​​nazwa użytkownika jest nieodpowiednia, mogą oni ją zablokować</string>
     <string name="username_voting">Głosowanie nad nazwą użytkownika</string>
-    <string name="username_voting_subtitle">Jako właściciel masternodu możesz głosować nad zatwierdzeniem żądanych nazw użytkowników, zanim zostaną one stworzone. </string>
+    <string name="username_voting_subtitle">Jako właściciel Masternoda możesz głosować nad zatwierdzeniem żądanych nazw użytkowników, zanim zostaną one utworzone w sieci.</string>
+    <string name="voting_duplicates_only_title">Domyślne ustawienie filtra</string>
+    <string name="voting_duplicates_only_message">Domyślny filtr pokazuje tylko zduplikowane nazwy użytkowników, na które nie głosowałeś, ale jeśli zmienisz filtr to możesz zobaczyć wszystkie nazwy użytkowników które są kwestionowane</string>
     <string name="all">Całość</string>
     <string name="n_usernames">%d nazwy użytkowników</string>
     <string name="n_requests">%d żądań</string>
@@ -290,16 +293,23 @@
         <item>Całość</item>
         <item>Zatwierdziłem</item>
         <item>Nie zatwierdziłem</item>
+        <item>Ma głosy za zablokowaniem</item>
     </string-array>
 
+    <string name="block_vote_count">%d głos(ów) za zablokowaniem</string>
     <string name="request_your_username">Stwórz swoją nazwę użytkownika</string>
+    <string name="request_your_hint">Pamiętaj, że nie będziesz mógł tego zmienić w przyszłości</string>
     <string name="request_username">Poproś o nazwę użytkownika</string>
     <string name="request_voting_range">Sieć Dash będzie głosować nad tą nazwą użytkownika. Powiadomimy Cię o wynikach %s.</string>
     <string name="request_username_available">Nazwa użytkownika jest dostępna</string>
     <string name="request_username_unavailable">Nazwa użytkownika jest niedostępna lub zablokowana</string>
     <string name="request_username_taken">Nazwa użytkownika jest już zajęta</string>
+    <string name="request_username_taken_results">Nazwa ta jest zajęta przez innego użytkownika</string>
     <string name="requesting_your_username_title">Tworzenie twojej nazwy użytkownika</string>
+    <string name="requesting_your_username_message">Twoja nazwa użytkownika %s jest żądana w sieci Dash. Może to zająć trochę czasu.</string>
+    <string name="creating_your_username_message">Twoja nazwa użytkownika %s jest tworzona w sieci Dash. Może to zająć trochę czasu.</string>
     <string name="requesting_your_username_error_title">Żądanie nazwy użytkownika nie powiodło się</string>
+    <string name="requesting_your_username_error_message">Z jakiegoś powodu żądanie nazwy użytkownika %s nie powiodło się.</string>
     <string name="voting">Głosowanie:</string>
     <string name="this_username_has_already_been_requested">Ktoś już poprosił o tę nazwę, ale możesz ty też o nią poprosić i pozwolić sieci głosować, nad tym kto ma ją otrzymać.</string>
     <string name="request_details">Zarządaj szczegółów</string>
@@ -320,7 +330,9 @@
     <string name="make_a_post_with_the_text">Stwórz post z powyższym tekstem na platformie społecznościowej lub komunikatorze, aby potwierdzić, że jesteś oryginalnym właścicielem żądanej nazwy użytkownika i wklej poniższy link</string>
     <string name="paste_the_link">Wklej link</string>
     <string name="voting_key_title">Wpisz swój klucz do głosowania</string>
+    <string name="voting_key_hint">Prywatny Klucz Używany do głosowania przez Masternoda</string>
     <string name="voting_key_input_error">Wpisałeś nieprawidłowy klucz</string>
+    <string name="voting_key_input_not_active_error">Podałeś klucz, który nie jest powiązany z żadnym aktywnym Masternodem</string>
     <string name="voting_key_add">Dodaj swoje klucze do głosowania</string>
     <string name="voting_key_add_subtitle">Poniższy adres(y) IP są powiązane z tym portfelem</string>
     <string name="masternode_ip">Adres IP masternoda</string>
@@ -393,4 +405,15 @@
     <string name="request_username_balance_requirement">Aby stworzyć tę nazwę użytkownika, musisz mieć 0,25 DASH</string>
     <string name="request_username_length_requirement">Pomiędzy 3 a 23 znakami</string>
     <string name="request_username_confirm">Akceptuję</string>
-    </resources>
+    <string name="username_vote_one_left_message">Głosowałeś już na tę nazwę użytkownika %d razy. Został ci ostatni głos do oddania na tę nazwę użytkownika.</string>
+    <string name="username_vote_one_left">Został ci tylko jeden głos</string>
+    <string name="username_vote_none_left_message">Głosowałeś już %d razy. Nie możesz oddać więcej głosów na tę nazwę użytkownika.</string>
+    <string name="username_vote_none_left">Nie możesz oddać więcej głosów</string>
+    <string name="request_username_blocked">Żądana nazwa użytkownika została zablokowana</string>
+    <string name="request_username_lost_vote">Żądana nazwa użytkownika została przyznana komuś innemu</string>
+    <string name="request_username_blocked_message">Nazwa użytkownika %s została zablokowana przez sieć Dash. Spróbuj zażądać inną nazwę użytkownika.</string>
+    <string name="request_username_lost_vote_message">Po głosowaniu sieć Dash postanowiła przypisać nazwę użytkownika %s komuś innemu. Spróbuj ponownie, prosząc o inną nazwę użytkownika.</string>
+    <string name="mix_dash_mix">Saldo wymieszanych funduszy</string>
+    <string name="mix_dash_title">Miksuj swoje fundusze Dash</string>
+    <string name="mix_dash_message">Aby uniemożliwić innym osobom śledzenie komu wysyłasz płatności, zaleca się mieszanie salda przed utworzeniem nazwy użytkownika.</string>
+</resources>

@@ -262,13 +262,11 @@
     <string name="pay_now">Şimdi ödeyin ve onaylanmazsa tekrar ödeme yapmadan farklı bir isim oluşturabilirsiniz.</string>
     <string name="case_your_request_is_not_approved">Talebinizin onaylanmaması durumunda</string>
     <string name="voting_requirement_title">Oylama sadece bazı durumlarda gereklidir</string>
-    <string name="voting_requirement_subtitle">2-9 arasında bir sayıya sahip olan veya 20 karakterden uzun olan herhangi bir kullanıcı adı otomatik olarak onaylanacaktır</string>
     <string name="dash_network_must_vote_to_approve">Dash ağı, kullanıcı adınızı oluşturmadan önce bu işlemi onaylamak için oy kullanmalıdır.</string>
     <string name="what_is_username_voting">Kullanıcı adı oylaması nedir\?</string>
     <string name="usernames_blocked_title">Bazı kullanıcı adları engellenebilir</string>
     <string name="usernames_blocked_subtitle">Ağın yeterli bir kısmı bir kullanıcı adının uygunsuz olduğuna karar verirse, onu engelleyebilirler</string>
     <string name="username_voting">Kullanıcı adı Oylama</string>
-    <string name="username_voting_subtitle">Bir ana düğüm sahibi olarak, diğer kullanıcılar kullanıcı adı oluşturmadan önce istenen kullanıcı adlarını onaylamak için oy kullanabilirsiniz.</string>
     <string name="all">Hepsi</string>
     <string name="n_usernames">%d kullanıcı adları</string>
     <string name="n_requests">%d istekler</string>
@@ -294,7 +292,6 @@
     </string-array>
 
     <string name="request_your_username">Kullanıcı adınızı oluşturun</string>
-    <string name="request_your_hint">Lütfen gelecekte bunu değiştiremeyeceğinizi unutmayın</string>
     <string name="request_username">Kullanıcı Adı İste</string>
     <string name="request_voting_range">Dash ağı bu kullanıcı adına oy verecek. Sonuçları %s tarihinde size bildireceğiz.</string>
     <string name="request_username_available">Kullanıcı adı mevcut</string>

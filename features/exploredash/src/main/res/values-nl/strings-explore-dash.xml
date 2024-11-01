@@ -156,6 +156,8 @@
     <!-- Explore TestNet -->
     <string name="explore_test_subtitle">Test Dash heeft geen enkele waarde in de echte wereld, maar je kunt het verzenden en ontvangen met andere DashPay Alpha-gebruikers.</string>
     <string name="explore_test_dash_title">Hoe verkrijg ik test Dash?</string>
+    <string name="explore_test_dash_text_1">Test Dash is gratis en kan worden verkregen via een zogenaamde faucet.</string>
+    <string name="explore_test_dash_text_2">Klik op de onderstaande knop om een test ​​Dash adres van deze portemonnee te kopiëren, zodat je je test Dash kan ontvangen.</string>
     <string name="explore_get_test_dash">Verkrijg test Dash</string>
 
     <!-- Sync Status -->

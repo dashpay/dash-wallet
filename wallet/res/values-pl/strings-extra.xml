@@ -25,6 +25,8 @@
     <string name="dialog_confirm_secured_by">Zabezpieczony przez</string>
     <string name="dialog_confirm_fee">Opłata sieci</string>
     <string name="dialog_confirm_total">Całkowite</string>
+    <string name="dialog_confirm_accept_contact_request">Zaakceptuj prośbę o dodanie do kontaktów</string>
+
     <string name="shortcut_action_join_dashpay">Dołącz do DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Kopia zapasowa</string>
@@ -194,6 +196,9 @@
     <string name="notification_settings_title">Powiadomienia</string>
     <string name="notification_explainer_title">Portfel Dash chciałby wysłać Ci powiadomienia</string>
     <string name="notification_explainer_message">Powiadomienia mogą obejmować alerty, dźwięki i znaki na ikonach. Można je skonfigurować w ustawieniach telefonu.</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">Status operacji DashPay, które są w toku.</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Użyj odcisku palca by odblokować.</string>
@@ -246,6 +251,7 @@
     <string name="transaction_close">Zamknij</string>
     <string name="transaction_details_amount_received">Ilość otrzymana</string>
     <string name="transaction_details_amount_sent">Ilość wysłana</string>
+    <string name="transaction_details_amount_sent_successfully">Wysłano pomyślnie</string>
     <string name="transaction_details_sent_from">Wysłane z</string>
     <string name="transaction_details_sent_to">Wysłane do</string>
     <string name="transaction_details_received_at">Odebrane przez</string>
@@ -264,6 +270,7 @@
     <string name="authenticate_switch_to_pin">Użyj kod PIN</string>
 
     <string name="menu_invite_title">Zaproś</string>
+    <string name="menu_invite_subtitle">Pomóż twoim przyjaciołom i rodzinie na dołączanie do Dash</string>
     <string name="menu_buy_and_sell_title">Kupuj &amp; Sprzedawaj Dash</string>
     <string name="menu_buy_and_sell_subtitle">Połącz się z giełdą stron trzecich</string>
     <string name="liquid_unavailable">Integracja portfela Dash z serwisem Liquid jest nieaktualna</string>
@@ -375,16 +382,28 @@
     <string name="import_image_invalid_private">Niewłaściwy Klucz Prywatny</string>
     <string name="okay">OK</string>
 
+    <string name="onboard_from_invite_title">Zacznijmy</string>
     <string name="onboard_from_invite_subtitle">Witaj w DashPay</string>
+    <string name="onboard_from_invite_step1">Krok 1</string>
+    <string name="onboard_from_invite_step2">Krok 2</string>
+    <string name="onboard_from_invite_step3">Krok 3</string>
     <string name="onboard_from_invite_step1_title">Wybierz swoją nazwę użytkownika</string>
     <string name="onboard_from_invite_step2_title">Ustaw swój PIN</string>
     <string name="onboard_from_invite_step3_title">Zabezpiecz swój portfel </string>
 
     <string name="restore_wallet_please_wait">Jedna chwila</string>
+    <string name="restore_wallet_restoring">Twój portfel jest przywracany</string>
+
+
+
     <string name="network_unavailable">Sieć jest niedostępna</string>
     <string name="network_error_contact_details">Pobranie informacji kontaktu nie powiodło się</string>
     <string name="network_error_user_search">Wyszukanie użytkownika jest niemożliwe</string>
     <string name="network_error_contact_suggestions">Niemożliwe dostarczenie żadnych sugesti</string>
+    <string name="network_error_unable_to_update_profile">Aktualizacja twojego profilu nie powiodła się</string>
+
+
+
     <string name="today">Dzisiaj</string>
     <string name="yesterday">Wczoraj</string>
 
@@ -394,6 +413,8 @@
     <string name="all_transactions">Całość</string>
     <string name="received_transactions">Otrzymano</string>
     <string name="sent_transactions">Wysłano</string>
+    <string name="serious_error_title">Poważny błąd</string>
+    <string name="serious_error_unknown">Skontaktuj się z pomocą techniczną</string>
     <string name="set_pin_error_missing_wallet_title">Błąd Braku Portfela</string>
     <string name="set_pin_error_missing_wallet_message">Nie można znaleźć portfela. Skontaktuj się z pomocą techniczną Dash</string>
     <string name="wallet_encryption_error_title">Błąd Tworzenia Portfela</string>
@@ -443,6 +464,9 @@
     <string name="masternode_key_not_used">Nie użyte</string>
     <string name="masternode_key_revoked">Unieważniony</string>
     <string name="masternode_key_private_public_base64">Prywatne / Publiczne (base64)</string>
+    <string name="timeskew_ahead">przed</string>
+    <string name="timeskew_behind">za</string>
+
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Nie pobrano cen. Kursy papierowego pieniądza mogą być nieprawidłowe.</string>
     <string name="stale_exchange_rates_stale">Ceny są sprzed co najmniej 30 minut. Ceny papierowego pieniądza mogą być nieprawidłowe.</string>

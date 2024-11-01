@@ -25,6 +25,8 @@
     <string name="username">Carica la tua foto, personalizza la tua identità.
  </string>
     <string name="balance">Saldo:</string>
+    <string name="nothing_here">Niente qui</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -62,6 +64,8 @@
     <string name="verify">Verifica</string>
     <string name="receive_enter_amount_button">Specifica Importo</string>
     <string name="account_create">Crea un Account</string>
+    <string name="submit">Invia</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">Cerca</string>
     <string name="permission_allow">Permetti</string>
@@ -78,6 +82,7 @@
     <string name="select_currency">Seleziona Valuta</string>
     <string name="send_coins_error_dusty_send">L\'importo è troppo piccolo per l\'invio</string>
     <string name="send_coins_error_insufficient_money">Fondi insufficenti</string>
+    <string name="send_coins_error_insufficient_mixed_money">Fondi misti insufficienti. Attendi il completamento del mixaggio di CoinJoin o disabilita questa funzione nelle impostazioni per completare questa transazione.</string>
     <string name="syncing">Sincronizzazione</string>
     <string name="no_connection">Nessuna connessione internet</string>
     <string name="rate_not_available">Non disponibile</string>

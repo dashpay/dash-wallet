@@ -164,6 +164,8 @@
     <!-- Explore TestNet -->
     <string name="explore_test_subtitle">Тестовый Dash не обладает никакой ценностью в реальном мире, но вы можете обмениваться этими монетами с другими пользователями DashPay Alpha</string>
     <string name="explore_test_dash_title">Как получить тестовый Dash?</string>
+    <string name="explore_test_dash_text_1">Тестовый Dash распространяется бесплатно, его можно получить через так называемый кран.</string>
+    <string name="explore_test_dash_text_2">Нажмите на кнопку ниже, чтобы скопировать адрес Dash этого кошелька и получить тестовый Dash..</string>
     <string name="explore_get_test_dash">Получить тестовый Dash</string>
 
     <!-- Sync Status -->

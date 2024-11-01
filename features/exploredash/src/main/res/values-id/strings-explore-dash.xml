@@ -152,6 +152,8 @@
     <!-- Explore TestNet -->
     <string name="explore_test_subtitle">Test Dash tidak memiliki nilai apa pun di dunia nyata tetapi Anda dapat mengirim dan menerimanya dengan pengguna DashPay Alpha lainnya.</string>
     <string name="explore_test_dash_title">Bagaimana saya mendapatkan tes Dash?</string>
+    <string name="explore_test_dash_text_1">Test Dash gratis dan dapat diperoleh melalui apa yang disebut faucet.</string>
+    <string name="explore_test_dash_text_2">Klik tombol di bawah untuk menyalin alamat Dash dari dompet ini sehingga Anda bisa mendapatkan test Dash Anda.</string>
     <string name="explore_get_test_dash">Dapatkan Tes Dash</string>
 
     <!-- Sync Status -->

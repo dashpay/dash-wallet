@@ -9,9 +9,11 @@
     <string name="blockchain_state_progress_days">%1$s, hinkt %2$d Tage hinterher</string>
     <string name="blockchain_state_progress_weeks">%1$s, hinkt %2$d Wochen hinterher</string>
     <string name="blockchain_state_progress_months">%1$s, hinkt %2$d Monate hinterher</string>
+    <string name="blockchain_state_progress_downloading">Synchronisierung mit dem Netzwerk (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Synchronisation blockiert</string>
     <string name="blockchain_state_progress_problem_storage">Synchronisation: Speicherplatz-Problem</string>
     <string name="blockchain_state_progress_problem_network">Synchronisation: Netzwerk-Problem</string>
+    <string name="mixing_state_progress_mixing">Coins mixen (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Dash Adresse wurde in die Zwischenablage kopiert</string>
     <string name="wallet_address_dialog_fragment_hint">Um deine Privatsphäre zu schützen, ändert sich deine Adresse sobald sie eine Zahlung empfängt.</string>
     <string name="wallet_balance_fragment_too_much">Dieser Wert scheint recht hoch dafür zu sein, dass er in der Tasche herum getragen wird. Bitte verschiebe etwas an einen sichereren Ort.</string>
@@ -42,6 +44,8 @@
     <string name="wallet_timeskew_dialog_title">Datums- und Zeit-Einstellungen überprüfen</string>
     <string name="wallet_timeskew_dialog_msg">Die Gerätezeit geht %dMinuten falsch. Daher ist es möglicherweise nicht möglich Dash zu senden. 
 Überprüfe und korrigiere bitte Datum, Uhrzeit und Zeitzone, falls dies nötig ist.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg">Deine Gerätezeit ist %s zu %d Sekunden. Du kannst CoinJoin aufgrund dieses Unterschiedes nicht nutzen.\n\nDie Zeiteinstellungen auf deinem Gerät muss auf „Zeit automatisch einstellen“ geändert werden, um CoinJoin nutzen zu können.</string>
+    <string name="settings_coinjoin_timeskew_dialog_msg">Die Uhrzeit deines Geräts weicht um mehr als 5 Sekunden ab. Du kannst CoinJoin aufgrund dieses Unterschiedes nicht nutzen.\n\nDie Zeiteinstellungen auf deinem Gerät muss auf „Zeit automatisch einstellen“ geändert werden, bevor du den Dienst nutzen kannst.</string>
     <string name="send_coins_activity_title">Dash senden</string>
     <string name="send_coins_fragment_request_payment_request_progress">Rufe Signatur von %s ab…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Abrufen der Signatur fehlgeschlagen</string>
@@ -171,6 +175,10 @@
     <string name="transaction_row_status_masternode_revoke">Masternode-Rücknahme</string>
     <string name="transaction_row_status_masternode_reward">Masternode-Belohnung</string>
     <string name="transaction_row_status_mining_reward">Mining-Belohnung</string>
+    <string name="transaction_row_status_coinjoin_mixing_fee">Coinjoin-Mixinggebühr</string>
+    <string name="transaction_row_status_coinjoin_make_collateral">CoinJoin Collateral Inputs</string>
+    <string name="transaction_row_status_coinjoin_mixing">CoinJoin-Mixing</string>
+    <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin erstellt Stückelungen</string>
     <string name="network_monitor_activity_title">Netzwerk-Monitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blöcke</string>
@@ -329,6 +337,7 @@
     <string name="notification_inactivity_message">Auf dem Gerät befinden sich noch immer Dash! Versichere dich, dass du deine Wiederherstellungsphrase aufgeschrieben hast, bevor du die Dash Wallet deinstallierst, oder du wirst den Zugang zu deinem Guthaben in Höhe von %s verlieren.</string>
     <string name="notification_inactivity_action_dismiss">Später erinnern</string>
     <string name="notification_inactivity_action_dismiss_forever">Nicht weiter erinnern</string>
+    <string name="notification_bluetooth_service_listening">Bereit zum Empfang von Zahlungen über Bluetooth</string>
     <string name="appwidget_wallet_balance_title">Dash-Guthaben</string>
 
     <!-- generic buttons -->
