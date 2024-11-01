@@ -415,6 +415,12 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- WorkManager -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
         <!--service
             android:name="de.schildbach.wallet.offline.AcceptBluetoothService"
             android:exported="false"
