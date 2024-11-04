@@ -1207,6 +1207,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             } catch (ForegroundServiceStartNotAllowedException e) {
                 log.info("failed to start in foreground", e);
             }
+        } else {
+            startForeground();
         }
     }
 
@@ -1217,6 +1219,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             } catch (ForegroundServiceStartNotAllowedException e) {
                 log.info("failed to start in foreground", e);
             }
+        } else {
+            startForegroundCoinJoin();
         }
     }
 
