@@ -87,7 +87,7 @@
     <string name="dashpay_topup_fee">Topup Fee</string>
     <string name="search_user_find_a_user">Find a user on the Dash Network</string>
     <string name="search_for_a_user">Search for a User on the Dash Network</string>
-    <string name="search_user_input_placeholder">enter the username to search here</string>
+    <string name="search_user_input_placeholder">Search username</string>
     <string name="add_new_contact">Add a New Contact</string>
     <string name="send_contact_request">Send Contact Request</string>
     <string name="sending_contact_request">Sending Contact Request</string>
