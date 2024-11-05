@@ -63,11 +63,14 @@
             android:id="@+id/accept_contact_request"
             style="@style/Button.Primary.ExtraSmall.Blue"
             android:paddingHorizontal="0dp"
-            android:layout_width="67dp"
+            android:layout_width="wrap_content"
             android:layout_height="30dp"
             android:layout_gravity="center_vertical"
             android:layout_weight="1"
             android:text="@string/contact_request_accept"
+            android:maxWidth="80dp"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:textAllCaps="false" />
 
         <ImageButton
