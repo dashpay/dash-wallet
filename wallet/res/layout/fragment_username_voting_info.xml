@@ -129,6 +129,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="@string/usernames_blocked_subtitle"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="@+id/blocked_title"
                 app:layout_constraintTop_toBottomOf="@+id/blocked_title" />
@@ -204,8 +205,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="63dp"
-                android:layout_marginTop="14dp"
                 android:text="@string/keep_your_passphrase_safe"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 

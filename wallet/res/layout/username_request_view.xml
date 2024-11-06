@@ -19,16 +19,19 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="55dp"
+    android:layout_height="wrap_content"
     android:clickable="true"
     android:focusable="true"
+    android:layout_marginHorizontal="4dp"
+    android:layout_marginVertical="4dp"
     android:background="?attr/selectableItemBackground"
     tools:context="de.schildbach.wallet.ui.username.adapters.UsernameRequestViewHolder">
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/info"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginStart="15dp"
+        android:background="@drawable/selectable_round_corners_border_light"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
@@ -37,6 +40,7 @@
             style="@style/Overline"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toTopOf="@id/link_badge"
@@ -64,34 +68,48 @@
             app:layout_constraintTop_toTopOf="@id/link_badge"
             app:layout_constraintStart_toEndOf="@id/link_badge" />
 
+        <Button
+            android:id="@+id/approvals_button"
+            style="@style/Button.Vote.LightBlue"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginHorizontal="8dp"
+            android:layout_marginVertical="5dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/info"
+            app:layout_constraintBottom_toBottomOf="@id/info"
+            tools:text="2\nApprovals"
+            />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <TextView
-        android:id="@+id/cancel_approval_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="10dp"
-        style="@style/Button.Tertiary.ExtraSmall"
-        android:text="@string/cancel_approval"
-        app:layout_constraintEnd_toStartOf="@id/vote_amount"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        />
+<!--    <TextView-->
+<!--        android:id="@+id/cancel_approval_button"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_marginEnd="10dp"-->
+<!--        style="@style/Button.Tertiary.ExtraSmall"-->
+<!--        android:text="@string/cancel_approval"-->
+<!--        app:layout_constraintEnd_toStartOf="@id/vote_amount"-->
+<!--        app:layout_constraintTop_toTopOf="parent"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        />-->
 
-    <TextView
-        android:id="@+id/vote_amount"
-        style="@style/Overline.Tertiary"
-        android:layout_width="0dp"
-        android:layout_height="20dp"
-        android:layout_marginEnd="15dp"
-        android:minWidth="20dp"
-        android:paddingHorizontal="7dp"
-        android:gravity="center"
-        android:textAlignment="gravity"
-        android:background="@drawable/rounded_background"
-        android:theme="@style/InactiveBadgeTheme"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        tools:text="10" />
+
+
+<!--    <TextView-->
+<!--        android:id="@+id/vote_amount"-->
+<!--        style="@style/Overline.Tertiary"-->
+<!--        android:layout_width="0dp"-->
+<!--        android:layout_height="20dp"-->
+<!--        android:layout_marginEnd="15dp"-->
+<!--        android:minWidth="20dp"-->
+<!--        android:paddingHorizontal="7dp"-->
+<!--        android:gravity="center"-->
+<!--        android:textAlignment="gravity"-->
+<!--        android:background="@drawable/rounded_background"-->
+<!--        android:theme="@style/InactiveBadgeTheme"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintTop_toTopOf="parent"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        tools:text="10" />-->
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -122,4 +122,6 @@
     <color name="gray_300">#AAAEB3</color>
     <color name="gray_600">#5D5F61</color>
 
+    <color name="red">#EA3943</color>
+    <color name="red_0.05">#0DEA3943</color>
 </resources>
