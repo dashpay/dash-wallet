@@ -44,13 +44,17 @@ import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 
-
 interface PlatformBroadcastService {
     suspend fun broadcastUpdatedProfile(dashPayProfile: DashPayProfile, encryptionKey: KeyParameter): DashPayProfile
     suspend fun sendContactRequest(toUserId: String): DashPayContactRequest
     suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): DashPayContactRequest
     suspend fun broadcastIdentityVerify(username: String, url: String, encryptionKey: KeyParameter?): IdentityVerifyDocument
-    suspend fun broadcastUsernameVotes(usernames: List<String>, resourceVoteChoices: List<ResourceVoteChoice>, masternodeKeys: List<ByteArray>, encryptionKey: KeyParameter?): List<Vote>
+    suspend fun broadcastUsernameVotes(
+        usernames: List<String>,
+        resourceVoteChoices: List<ResourceVoteChoice>,
+        masternodeKeys: List<ByteArray>,
+        encryptionKey: KeyParameter?
+    ): List<Triple<ResourceVoteChoice, Vote?, Exception?>>
 }
 
 class PlatformDocumentBroadcastService @Inject constructor(
@@ -58,12 +62,12 @@ class PlatformDocumentBroadcastService @Inject constructor(
     val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
     val walletDataProvider: WalletDataProvider,
-    val platformSyncService: PlatformSyncService) : PlatformBroadcastService {
-
+    val platformSyncService: PlatformSyncService
+) : PlatformBroadcastService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformDocumentBroadcastService::class.java)
     }
-    
+
     @Throws(Exception::class)
     override suspend fun sendContactRequest(toUserId: String): DashPayContactRequest {
         if (walletDataProvider.wallet!!.isEncrypted) {
@@ -132,9 +136,9 @@ class PlatformDocumentBroadcastService @Inject constructor(
         resourceVoteChoices: List<ResourceVoteChoice>,
         masternodeKeys: List<ByteArray>,
         encryptionKey: KeyParameter?
-    ): List<Vote> {
+    ): List<Triple<ResourceVoteChoice, Vote?, Exception?>> {
         Preconditions.checkArgument(usernames.size == resourceVoteChoices.size)
-        val votes = arrayListOf<Vote>()
+        val votes = arrayListOf<Triple<ResourceVoteChoice, Vote?, Exception?>>()
         masternodeKeys.forEach { masternodeKeyBytes ->
             // determine identity
             val masternodeKey = ECKey.fromPrivate(masternodeKeyBytes)
@@ -151,17 +155,21 @@ class PlatformDocumentBroadcastService @Inject constructor(
 
                     usernames.forEachIndexed { index, username ->
                         val resourceVoteChoice = resourceVoteChoices[index]
-                        val vote = platform.names.broadcastVote(
-                            resourceVoteChoice,
-                            username,
-                            masternode.proTxHash,
-                            votingIdentityPublicKey,
-                            SimpleSignerCallback(
-                                mapOf(votingIdentityPublicKey to masternodeKey),
-                                encryptionKey
+                        try {
+                            val vote = platform.names.broadcastVote(
+                                resourceVoteChoice,
+                                username,
+                                masternode.proTxHash,
+                                votingIdentityPublicKey,
+                                SimpleSignerCallback(
+                                    mapOf(votingIdentityPublicKey to masternodeKey),
+                                    encryptionKey
+                                )
                             )
-                        )
-                        votes.add(vote)
+                            votes.add(Triple(resourceVoteChoice, vote, null))
+                        } catch (e: Exception) {
+                            votes.add(Triple(resourceVoteChoice, null, e))
+                        }
                     }
                 } catch (e: Exception) {
                     log.info("broadcast username vote failed:", e)

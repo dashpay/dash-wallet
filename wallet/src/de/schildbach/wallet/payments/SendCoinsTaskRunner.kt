@@ -78,7 +78,6 @@ class SendCoinsTaskRunner @Inject constructor(
     }
     private var coinJoinSend = false
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
-    private var firebaseInstallationId: String = ""
     init {
         coinJoinConfig
             .observeMode()

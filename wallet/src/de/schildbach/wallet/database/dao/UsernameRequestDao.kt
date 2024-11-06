@@ -76,4 +76,11 @@ interface UsernameRequestDao {
         """
     )
     suspend fun removeApproval(normalizedLabel: String)
+
+    @Query(
+        """
+        SELECT * FROM username_requests
+         """
+    )
+    suspend fun getAll(): List<UsernameRequest>
 }

@@ -19,6 +19,7 @@ package de.schildbach.wallet.database.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import org.dashj.platform.dpp.voting.ResourceVoteChoice
 
 @Entity(tableName = "username_votes")
 data class UsernameVote(
@@ -30,10 +31,23 @@ data class UsernameVote(
     val timestamp: Long = System.currentTimeMillis()
 ) {
     constructor(username: String, identity: String, type: String): this(0, username, identity, type)
+    constructor(username: String, identity: String, resourceVoteChoice: ResourceVoteChoice) : this(
+        0,
+        username,
+        identity,
+        getVoteString(resourceVoteChoice)
+    )
     companion object {
         const val APPROVE = "approve"
         const val LOCK = "lock"
         const val ABSTAIN = "abstain"
-        const val MAX_VOTES = 6
+        const val MAX_VOTES = 5 // max allowed by Platform for a masternode
+
+        fun getVoteString(resourceVoteChoice: ResourceVoteChoice) = when {
+            resourceVoteChoice.toString().startsWith("TowardsIdentity") -> UsernameVote.APPROVE
+            resourceVoteChoice.toString().lowercase() == "lock" -> UsernameVote.LOCK
+            resourceVoteChoice.toString().lowercase() == "abstain" -> UsernameVote.ABSTAIN
+            else -> error("unhandled vote type: $resourceVoteChoice")
+        }
     }
 }

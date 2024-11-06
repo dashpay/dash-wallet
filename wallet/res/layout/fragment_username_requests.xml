@@ -94,6 +94,16 @@
                 android:text="@string/username_voting_subtitle"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <TextView
+                android:id="@+id/subtitletwo"
+                style="@style/Body2.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginTop="2dp"
+                android:text="@string/username_voting_subtitle_two"
+                app:layout_constraintTop_toBottomOf="@id/subtitle" />
+
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/filter_panel"
                 android:layout_width="match_parent"
@@ -102,7 +112,7 @@
                 android:layout_marginBottom="8dp"
                 android:layout_marginStart="15dp"
                 android:orientation="horizontal"
-                app:layout_constraintTop_toBottomOf="@id/subtitle">
+                app:layout_constraintTop_toBottomOf="@id/subtitletwo">
 
                 <TextView
                     android:id="@+id/filter_title"

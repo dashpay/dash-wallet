@@ -268,7 +268,8 @@
     <string name="usernames_blocked_title">Some usernames can be blocked</string>
     <string name="usernames_blocked_subtitle">If enough of the network determines that a username is inappropriate, they can block it</string>
     <string name="username_voting">Username Voting</string>
-    <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before they are created on the network..</string>
+    <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before they are created on the network.</string>
+    <string name="username_voting_subtitle_two">You can block the creation of the usernames that you feel are inappropriate.</string>
     <string name="voting_duplicates_only_title">Default filter setting</string>
     <string name="voting_duplicates_only_message">The default filter shows only duplicate usernames that you have NOT voted on, but you can see all contested usernames by changing the filter</string>
     <string name="all">All</string>
@@ -295,7 +296,15 @@
         <item>I have not approved</item>
         <item>Has Blocked votes</item>
     </string-array>
-
+    <string name="unblock_button">Unblock</string>
+    <plurals name="block_vote_button">
+        <item quantity="one">Block</item>
+        <item quantity="other">Blocks</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="one">Approval</item>
+        <item quantity="other">Approvals</item>
+    </plurals>
     <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Create your username</string>
     <string name="request_your_hint">Please note that you will not be able to change it in the future</string>
@@ -315,6 +324,7 @@
     <string name="request_details">Request details</string>
     <string name="request_details_subtitle">Review the posting bellow to verify the ownership of this username</string>
     <string name="vote_to_approve">Vote to Approve</string>
+    <string name="vote_to_block">Vote to Block</string>
     <string name="identity">Identity</string>
     <string name="results">Results</string>
     <string name="link">Link</string>
@@ -333,13 +343,31 @@
     <string name="voting_key_hint">Masternode Voting Private Key</string>
     <string name="voting_key_input_error">You have entered an invalid key</string>
     <string name="voting_key_input_not_active_error">You have entered a key that is not associated to an active Masternode</string>
+    <string name="voting_key_input_already_present">You have already entered this masternode key</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">You have entered a key that is for testnet, but this is mainnet. It should look like this: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">You have entered a key that is for mainnet, but this is testnet. It should look like this: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">You have entered an address key instead of a masternode voting private key. It should be in WIF format (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">You have entered a key in hex format, but it should be in WIF format (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">You have entered a key in hex format, but it should be in WIF format (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">You have entered a private key that is too short.  Here is an example (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">You have entered a private key that with some incorrect characters.  Here is an example (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">You have entered a private key has an invalid character.  Here is an example (%s)</string>
+
     <string name="voting_key_add">Add your voting keys</string>
     <string name="voting_key_add_subtitle">The IP address(es) below are associated with this wallet</string>
     <string name="masternode_ip">Masternode IP address</string>
     <string name="multiple_votes_cast">%d votes will be cast as you have multiple voting keys stored in the wallet</string>
     <string name="add_masternode_key">Add Masternode Voting Key</string>
-    <string name="vote_submitted">Your vote was submitted</string>
-    <string name="vote_cancelled">Your vote was cancelled</string>
+    <string name="dont_ask_again">Don\'t ask me again</string>
+    <string name="vote_submitting">Submitting your vote for %s username</string>
+    <string name="vote_submitted">Voted for %s username</string>
+    <string name="cancel_submitting">Canceling your vote for %s username</string>
+    <string name="cancel_submitted">Canceled vote for %s username</string>
+    <string name="block_submitting">Blocking for %s username</string>
+    <string name="block_submitted">You blocked %s username</string>
+    <string name="vote_submitted_error">Error voting for %s username</string>
+    <string name="cancel_submitted_error">Error canceling vote for %s username</string>
+    <string name="block_submitted_error">Error blocking %s username</string>
     <string name="quick_vote">Quick Voting</string>
     <string name="quick_vote_subtitle">By tapping the \"Vote for All\" button, you will automatically vote for all of the filtered usernames (%d) that were submitted first</string>
     <string name="vote_for_all">Vote for All</string>
@@ -416,4 +444,6 @@
     <string name="mix_dash_mix">Mix Balance</string>
     <string name="mix_dash_title">Mix your Dash</string>
     <string name="mix_dash_message">To help prevent other people from seeing who you make payments to, it is recommended to mix your balance before you create your username.</string>
+    <string name="dash_private_key_mainnet" translatable="false">XKm5koXHMm7UrVV3ki2pbGA8yZztiSR2F9x6ucEyCSuqTHBMjJix</string>
+    <string name="dash_private_key_testnet" translatable="false">cUR2TrX4U6t6g9kRfDoBbwF2WRKBNjV3gK7HwTgQgmUUQCKXcT3N</string>
 </resources>

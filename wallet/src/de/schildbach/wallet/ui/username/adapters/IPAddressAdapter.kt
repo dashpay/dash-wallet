@@ -24,7 +24,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet_test.databinding.ViewMasternodeIpBinding
 
-class IPAddressAdapter : ListAdapter<String, IPAddressViewHolder>(DiffCallback()) {
+class IPAddressAdapter(private val deleteClickListener: (String) -> Unit) : ListAdapter<String, IPAddressViewHolder>(DiffCallback()) {
     class DiffCallback : DiffUtil.ItemCallback<String>() {
         override fun areItemsTheSame(oldItem: String, newItem: String): Boolean {
             return oldItem == newItem
@@ -42,7 +42,7 @@ class IPAddressAdapter : ListAdapter<String, IPAddressViewHolder>(DiffCallback()
             false
         )
 
-        return IPAddressViewHolder(binding)
+        return IPAddressViewHolder(binding, deleteClickListener)
     }
 
     override fun onBindViewHolder(holder: IPAddressViewHolder, position: Int) {
@@ -51,8 +51,11 @@ class IPAddressAdapter : ListAdapter<String, IPAddressViewHolder>(DiffCallback()
     }
 }
 
-class IPAddressViewHolder(val binding: ViewMasternodeIpBinding): RecyclerView.ViewHolder(binding.root) {
+class IPAddressViewHolder(val binding: ViewMasternodeIpBinding, private val deleteClickListener: (String) -> Unit): RecyclerView.ViewHolder(binding.root) {
     fun bind(ipAddress: String) {
         binding.ipAddress.text = ipAddress
+        binding.removeMasternode.setOnClickListener {
+            deleteClickListener.invoke(ipAddress)
+        }
     }
 }

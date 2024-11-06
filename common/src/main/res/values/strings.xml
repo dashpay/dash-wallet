@@ -112,4 +112,5 @@
 
     <!-- basic formats -->
     <string name="percent" translatable="false">%d%%</string>
+    <string name="two_lines_number_text" translatable="false">%d\n%s</string>
 </resources>
