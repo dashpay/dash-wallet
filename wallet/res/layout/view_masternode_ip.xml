@@ -55,6 +55,7 @@
         android:padding="12dp"
         android:layout_marginEnd="15dp"
         android:background="@drawable/ic_x"
+        android:visibility="invisible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />

@@ -24,6 +24,8 @@
     <string name="dash_address">Adresse Dash</string>
     <string name="username">Nom d\'utilisateur</string>
     <string name="balance">Solde :</string>
+    <string name="nothing_here">Rien ici</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">livre de Guernesey</string>
     <!-- Local Currency List: JEP -->
@@ -61,6 +63,8 @@
     <string name="verify">Vérifier</string>
     <string name="receive_enter_amount_button">Indiquez le montant</string>
     <string name="account_create">Créer un compte</string>
+    <string name="submit">Valider</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">Chercher</string>
     <string name="permission_allow">Autoriser</string>
@@ -77,6 +81,7 @@
     <string name="select_currency">Choisir la monnaie</string>
     <string name="send_coins_error_dusty_send">Le montant est trop faible pour être envoyé</string>
     <string name="send_coins_error_insufficient_money">Fonds insuffisants</string>
+    <string name="send_coins_error_insufficient_mixed_money">Fonds mélangés insuffisants. Veuillez attendre que le mélange CoinJoin se termine, ou bien désactivez cette fonction dans les réglages pour que la transaction soit exécutée.</string>
     <string name="syncing">En synchronisation</string>
     <string name="no_connection">Pas de connexion Internet</string>
     <string name="rate_not_available">Non disponible</string>

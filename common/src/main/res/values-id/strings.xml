@@ -24,6 +24,8 @@
     <string name="dash_address">Alamat Dash</string>
     <string name="username">Nama pengguna</string>
     <string name="balance">Saldo:</string>
+    <string name="nothing_here">Tidak ada apa pun di sini</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Pound Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -61,6 +63,8 @@
     <string name="verify">Memeriksa</string>
     <string name="receive_enter_amount_button">Tentukan Jumlah</string>
     <string name="account_create">Buat Akun</string>
+    <string name="submit">Kirim</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">Cari</string>
     <string name="permission_allow">Izinkan</string>
@@ -77,6 +81,7 @@
     <string name="select_currency">Pilih mata uang</string>
     <string name="send_coins_error_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
     <string name="send_coins_error_insufficient_money">Dana tidak mencukupi</string>
+    <string name="send_coins_error_insufficient_mixed_money">Dana campuran tidak mencukupi. Tunggu hingga pencampuran CoinJoin selesai atau nonaktifkan fitur ini di pengaturan untuk menyelesaikan transaksi ini.</string>
     <string name="syncing">Menyingkronkan:</string>
     <string name="no_connection">Tidak ada koneksi internet</string>
     <string name="rate_not_available">Tak tersedia</string>

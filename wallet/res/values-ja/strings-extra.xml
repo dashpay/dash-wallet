@@ -25,6 +25,8 @@
     <string name="dialog_confirm_secured_by">Secured by</string>
     <string name="dialog_confirm_fee">ネットワーク手数料</string>
     <string name="dialog_confirm_total">総計</string>
+    <string name="dialog_confirm_accept_contact_request">連絡先リクエストを承認する</string>
+
     <string name="shortcut_action_join_dashpay">DashPayに参加する</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">バックアップ</string>
@@ -185,6 +187,9 @@
     <string name="notification_settings_title">通知</string>
     <string name="notification_explainer_title">Dash Walletから通知をお送りします。</string>
     <string name="notification_explainer_message">通知には、アラート、サウンド、アイコンバッジが含まれる場合があります。これらは、端末の設定で設定することができます。</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">DashPayの手続きの進行状況</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">ロック解除に指紋認証を使う。</string>
@@ -239,6 +244,7 @@
     <string name="transaction_close">閉じる</string>
     <string name="transaction_details_amount_received">入金総額</string>
     <string name="transaction_details_amount_sent">総額送金</string>
+    <string name="transaction_details_amount_sent_successfully">正常に送金されました</string>
     <string name="transaction_details_sent_from">から送金済み</string>
     <string name="transaction_details_sent_to">へ送金済み</string>
     <string name="transaction_details_received_at">で入金済み</string>
@@ -257,6 +263,7 @@
     <string name="authenticate_switch_to_pin">PINを使う</string>
 
     <string name="menu_invite_title">招待する</string>
+    <string name="menu_invite_subtitle">お友達やご家族のDashの加入をサポートしましょう</string>
     <string name="menu_buy_and_sell_title">Dashを買う &amp; 売る</string>
     <string name="menu_buy_and_sell_subtitle">サードパーティーの取引所に接続する</string>
     <string name="liquid_unavailable">DashウォレットとのLiquid連携は終了いたしました。</string>
@@ -370,16 +377,28 @@
     <string name="import_image_invalid_private">無効な非公開キー</string>
     <string name="okay">OK</string>
 
+    <string name="onboard_from_invite_title">さあ、始めましょう</string>
     <string name="onboard_from_invite_subtitle">DashPayにようこそ</string>
+    <string name="onboard_from_invite_step1">ステップ1</string>
+    <string name="onboard_from_invite_step2">ステップ2</string>
+    <string name="onboard_from_invite_step3">ステップ3</string>
     <string name="onboard_from_invite_step1_title">ユーザー名を選択する</string>
     <string name="onboard_from_invite_step2_title">PINを設定します</string>
     <string name="onboard_from_invite_step3_title">ウォレットを保護する</string>
 
     <string name="restore_wallet_please_wait">お待ちください</string>
+    <string name="restore_wallet_restoring">お客様のウォレットを復元中です</string>
+
+
+
     <string name="network_unavailable">ネットワークが利用できません</string>
     <string name="network_error_contact_details">連絡先情報を取得できません</string>
     <string name="network_error_user_search">ユーザーの検索ができません</string>
     <string name="network_error_contact_suggestions">提案できません</string>
+    <string name="network_error_unable_to_update_profile">プロフィールを更新できません</string>
+
+
+
     <string name="today">今日</string>
     <string name="yesterday">昨日</string>
 
@@ -389,6 +408,8 @@
     <string name="all_transactions">全て</string>
     <string name="received_transactions">受取済み</string>
     <string name="sent_transactions">送信済み</string>
+    <string name="serious_error_title">重大なエラー</string>
+    <string name="serious_error_unknown">サポートまでご連絡ください。</string>
     <string name="set_pin_error_missing_wallet_title">ウォレット紛失のエラー</string>
     <string name="set_pin_error_missing_wallet_message">ウォレットが行方不明です。 サポートデスクにご報告ください。</string>
     <string name="wallet_encryption_error_title">ウォレット作成時のエラー</string>
@@ -438,6 +459,9 @@
     <string name="masternode_key_not_used">未使用です</string>
     <string name="masternode_key_revoked">無効になっています</string>
     <string name="masternode_key_private_public_base64">プライベート/パブリックキー(ベース64)</string>
+    <string name="timeskew_ahead">進む</string>
+    <string name="timeskew_behind">戻る</string>
+
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">価格を取得できませんでした。フィアットの値が正しくない可能性があります。</string>
     <string name="stale_exchange_rates_stale">価格は30分以上前のものです。フィアットの値が正しくない可能性があります。</string>

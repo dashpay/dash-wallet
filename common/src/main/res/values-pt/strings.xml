@@ -24,6 +24,8 @@
     <string name="dash_address">Endereço Dash</string>
     <string name="username">Nome de usuário</string>
     <string name="balance">Saldo:</string>
+    <string name="nothing_here">Nada aqui</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Libra Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -61,6 +63,8 @@
     <string name="verify">Verificar</string>
     <string name="receive_enter_amount_button">Especificar Valor</string>
     <string name="account_create">Criar Conta</string>
+    <string name="submit">Enviar</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">Buscar</string>
     <string name="permission_allow">Permitir</string>
@@ -77,6 +81,7 @@
     <string name="select_currency">Selecione a moeda</string>
     <string name="send_coins_error_dusty_send">O valor é muito baixo para ser enviado</string>
     <string name="send_coins_error_insufficient_money">Fundos insuficientes</string>
+    <string name="send_coins_error_insufficient_mixed_money">Fundos misturados insuficientes. Aguarde o término da mistura CoinJoin ou desative este recurso nas configurações para concluir esta transação.</string>
     <string name="syncing">Sincronizando</string>
     <string name="no_connection">Sem conexão com a internet</string>
     <string name="rate_not_available">Não disponível</string>

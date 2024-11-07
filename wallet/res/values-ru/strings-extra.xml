@@ -25,6 +25,8 @@
     <string name="dialog_confirm_secured_by">Защищено</string>
     <string name="dialog_confirm_fee">Комиссия сети</string>
     <string name="dialog_confirm_total">Итого</string>
+    <string name="dialog_confirm_accept_contact_request">Принять запрос на добавление в контакты</string>
+
     <string name="shortcut_action_join_dashpay">Войти в DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Сохранить</string>
@@ -194,6 +196,9 @@
     <string name="notification_settings_title">Уведомления</string>
     <string name="notification_explainer_title">Dash Wallet хочет отправлять вам уведомления</string>
     <string name="notification_explainer_message">В уведомлениях могут быть оповещения, звуки или иконки. Их можно настроить в Настройках телефона.</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">Статус текущих операций DashPay.</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Используйте свой отпечаток пальца, чтобы разблокировать.</string>
@@ -246,6 +251,7 @@
     <string name="transaction_close">Закрыть</string>
     <string name="transaction_details_amount_received">Полученная сумма</string>
     <string name="transaction_details_amount_sent">Отправленная сумма</string>
+    <string name="transaction_details_amount_sent_successfully">Успешно отправлено</string>
     <string name="transaction_details_sent_from">Отправлено с</string>
     <string name="transaction_details_sent_to">Отправлено</string>
     <string name="transaction_details_received_at">Получено на</string>
@@ -264,6 +270,7 @@
     <string name="authenticate_switch_to_pin">Используйте PIN-код</string>
 
     <string name="menu_invite_title">Пригласить</string>
+    <string name="menu_invite_subtitle">Помогите друзьям и семье присоединиться к Dash</string>
     <string name="menu_buy_and_sell_title">Купить &amp; Продать Dash</string>
     <string name="menu_buy_and_sell_subtitle">Подключиться к сторонним биржам</string>
     <string name="liquid_unavailable">Интеграция Liquid с Dash Wallet больше не доступна</string>
@@ -375,16 +382,28 @@
     <string name="import_image_invalid_private">Неверный приватный ключ</string>
     <string name="okay">Да</string>
 
+    <string name="onboard_from_invite_title">Давайте начнём</string>
     <string name="onboard_from_invite_subtitle">Добро пожаловать в DashPay</string>
+    <string name="onboard_from_invite_step1">Шаг 1</string>
+    <string name="onboard_from_invite_step2">Шаг 2</string>
+    <string name="onboard_from_invite_step3">Шаг 3</string>
     <string name="onboard_from_invite_step1_title">Выберите имя пользователя</string>
     <string name="onboard_from_invite_step2_title">Установите PIN</string>
     <string name="onboard_from_invite_step3_title">Сохранить кошелёк</string>
 
     <string name="restore_wallet_please_wait">Пожалуйста, подождите</string>
+    <string name="restore_wallet_restoring">Ваш кошелёк был восстановлен</string>
+
+
+
     <string name="network_unavailable">Сеть недоступна</string>
     <string name="network_error_contact_details">Не удалось получить контактные данные</string>
     <string name="network_error_user_search">Не удалось найти пользователя</string>
     <string name="network_error_contact_suggestions">Не удалось представить рекомендации</string>
+    <string name="network_error_unable_to_update_profile">Невозможно обновить профиль</string>
+
+
+
     <string name="today">Сегодня</string>
     <string name="yesterday">Вчера</string>
 
@@ -394,6 +413,8 @@
     <string name="all_transactions">Все</string>
     <string name="received_transactions">Получено</string>
     <string name="sent_transactions">Отправлено</string>
+    <string name="serious_error_title">Серьёзная ошибка</string>
+    <string name="serious_error_unknown">Пожалуйста, свяжитесь с поддержкой.</string>
     <string name="set_pin_error_missing_wallet_title">Ошибка: отсутствует кошелёк</string>
     <string name="set_pin_error_missing_wallet_message">Кошелёк отсутствует. Пожалуйста, обратитесь в Службу поддержки.</string>
     <string name="wallet_encryption_error_title">Ошибка при создании кошелька</string>
@@ -443,6 +464,9 @@
     <string name="masternode_key_not_used">не использован</string>
     <string name="masternode_key_revoked">Аннулирован</string>
     <string name="masternode_key_private_public_base64">Приватные / Публичные ключи (base64)</string>
+    <string name="timeskew_ahead">спешит</string>
+    <string name="timeskew_behind">отстаёт</string>
+
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Данные о курсе не были получены. Курс валют может быть неточным.</string>
     <string name="stale_exchange_rates_stale">Данные о курсе были получены не менее 30 минут назад. Курс валют может быть неточным.</string>

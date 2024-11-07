@@ -9,9 +9,11 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d일 이전으로부터 동기화 중</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d주 이전으로부터 동기화 중</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d개월 이전으로부터 동기화 중</string>
+    <string name="blockchain_state_progress_downloading">네트워크 동기화중 (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">동기화 멈춤</string>
     <string name="blockchain_state_progress_problem_storage">동기화 중 : 저장 공간 문제 발생</string>
     <string name="blockchain_state_progress_problem_network">동기화 중 : 네트워크에 문제 발생</string>
+    <string name="mixing_state_progress_mixing">코인 믹싱중 (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">대시 주소가 클립보드에 복사되었습니다</string>
     <string name="wallet_address_dialog_fragment_hint">프라이버시를 보호하기 위해 송금을 한 번 받으면 새로운 주소가 생성됩니다.</string>
     <string name="wallet_balance_fragment_too_much">이 금액은 보관하기에 너무 큰 금액입니다. 일부를 안전한 장소로 옮기십시오.</string>
@@ -41,6 +43,8 @@
     <string name="wallet_low_storage_dialog_button_apps">앱 정리하기</string>
     <string name="wallet_timeskew_dialog_title">날짜&amp;시간 설정 확인</string>
     <string name="wallet_timeskew_dialog_msg">기기에 설정된 시간에 %d분의 오차가 있습니다. 이 문제로 인하여 대시를 보내거나 받을 수 없을 지도 모릅니다.\n\n현재의 설정을 확인하신 후 필요한 경우 당신의 날짜, 시간 및 표준 시간대를 수정해주십시오.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg">당신의 기기에 설정된 시간이 %d초 차이로 %s 입니다. 이 차이로 인하여 코인조인을 사용할 수 없습니다. \n\n기기의 설정을 \"자동으로 시간 설정\"으로 변경하여 코인조인을 사용하세요.</string>
+    <string name="settings_coinjoin_timeskew_dialog_msg">당신의 기기에 설정된 시간이 5초 이상 잘못되었습니다. 이 차이로 인하여 코인조인을 사용할 수 없습니다. \n\n코인조인을 사용하기 전, 기기의 설정을 \"자동으로 시간 설정\"으로 변경하세요.</string>
     <string name="send_coins_activity_title">대시 보내기</string>
     <string name="send_coins_fragment_request_payment_request_progress"> %s에서 전자 서명을 불러오는 중...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">전자 서명 불러오기 실패</string>
@@ -170,6 +174,10 @@
     <string name="transaction_row_status_masternode_revoke">마스터노드 취소</string>
     <string name="transaction_row_status_masternode_reward">마스터노드 리워드</string>
     <string name="transaction_row_status_mining_reward">채굴 리워드</string>
+    <string name="transaction_row_status_coinjoin_mixing_fee">코인조인 믹싱 수수료</string>
+    <string name="transaction_row_status_coinjoin_make_collateral">코인조인 담보 입력</string>
+    <string name="transaction_row_status_coinjoin_mixing">코인조인 믹싱</string>
+    <string name="transaction_row_status_coinjoin_create_denominations">코인조인 디노미네이션 생성</string>
     <string name="network_monitor_activity_title">블럭체인 모니터링</string>
     <string name="network_monitor_peer_list_title">피어</string>
     <string name="network_monitor_block_list_title">블럭</string>
@@ -328,6 +336,7 @@
     <string name="notification_inactivity_message">이 기기에 아직 대시가 남아 있습니다! 이 대시 지갑을 삭제하기 전에 당신의 복원 문구를 적어두세요. 그렇지 않으면 당신의 잔고 %s를 잃게 됩니다.</string>
     <string name="notification_inactivity_action_dismiss">다시 알림</string>
     <string name="notification_inactivity_action_dismiss_forever">알림 없음</string>
+    <string name="notification_bluetooth_service_listening">블루투스를 통해 지불 받을 준비를 마쳤습니다</string>
     <string name="appwidget_wallet_balance_title">대시 잔고</string>
 
     <!-- generic buttons -->

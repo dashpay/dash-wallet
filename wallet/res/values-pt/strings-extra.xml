@@ -25,6 +25,8 @@
     <string name="dialog_confirm_secured_by">Protegido por</string>
     <string name="dialog_confirm_fee">Taxa de rede</string>
     <string name="dialog_confirm_total">Total</string>
+    <string name="dialog_confirm_accept_contact_request">Aceitar solicitação de contato</string>
+
     <string name="shortcut_action_join_dashpay">Junte-se ao DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Backup</string>
@@ -191,6 +193,9 @@
     <string name="notification_settings_title">Notificações</string>
     <string name="notification_explainer_title">A Carteira Dash gostaria de lhe enviar notificações</string>
     <string name="notification_explainer_message">As notificações podem incluir alertas, sons e ícones. Elas podem ser definidas nas configurações do telefone.</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">Status das operações em andamento do DashPay.</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Use sua digital para desbloquear.</string>
@@ -243,6 +248,7 @@
     <string name="transaction_close">Fechar</string>
     <string name="transaction_details_amount_received">Valor Recebido</string>
     <string name="transaction_details_amount_sent">Valor Enviado</string>
+    <string name="transaction_details_amount_sent_successfully">Enviado com sucesso</string>
     <string name="transaction_details_sent_from">Enviar para</string>
     <string name="transaction_details_sent_to">Enviado para</string>
     <string name="transaction_details_received_at">Recebido em</string>
@@ -261,6 +267,7 @@
     <string name="authenticate_switch_to_pin">Usar PIN</string>
 
     <string name="menu_invite_title">Convidar</string>
+    <string name="menu_invite_subtitle">Ajude seus amigos e familiares a entrarem no Dash</string>
     <string name="menu_buy_and_sell_title">Comprar &amp; Vender Dash</string>
     <string name="menu_buy_and_sell_subtitle">Conectar com exchange de terceiros</string>
     <string name="liquid_unavailable">A integração de Liquid com a Dash Wallet não está mais disponível</string>
@@ -372,16 +379,28 @@
     <string name="import_image_invalid_private">Chave Privada Inválida</string>
     <string name="okay">Okay</string>
 
+    <string name="onboard_from_invite_title">Vamos começar</string>
     <string name="onboard_from_invite_subtitle">Bem-vindo ao DashPay</string>
+    <string name="onboard_from_invite_step1">Passo 1</string>
+    <string name="onboard_from_invite_step2">Passo 2</string>
+    <string name="onboard_from_invite_step3">Passo 3</string>
     <string name="onboard_from_invite_step1_title">Escolha seu nome de usuário</string>
     <string name="onboard_from_invite_step2_title">Defina seu PIN</string>
     <string name="onboard_from_invite_step3_title">Proteja sua Carteira</string>
 
     <string name="restore_wallet_please_wait">Por favor, aguarde</string>
+    <string name="restore_wallet_restoring">Sua carteira está sendo restaurada</string>
+
+
+
     <string name="network_unavailable">A rede não está disponível</string>
     <string name="network_error_contact_details">Não foi possível buscar os detalhes do contato</string>
     <string name="network_error_user_search">Não foi possível pesquisar um usuário</string>
     <string name="network_error_contact_suggestions">Não foi possível fornecer sugestões</string>
+    <string name="network_error_unable_to_update_profile">Não é possível atualizar seu perfil</string>
+
+
+
     <string name="today">Hoje</string>
     <string name="yesterday">Ontem</string>
 
@@ -391,6 +410,8 @@
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recebido</string>
     <string name="sent_transactions">Enviado</string>
+    <string name="serious_error_title">Erro grave</string>
+    <string name="serious_error_unknown">Por favor, entre em contato com o suporte.</string>
     <string name="set_pin_error_missing_wallet_title">Erro de carteira ausente</string>
     <string name="set_pin_error_missing_wallet_message">A carteira está ausente. Por favor, informe isso ao Suporte Técnico.</string>
     <string name="wallet_encryption_error_title">Erro de criação de carteira</string>
@@ -440,6 +461,9 @@
     <string name="masternode_key_not_used">Não utilizado</string>
     <string name="masternode_key_revoked">Revogado</string>
     <string name="masternode_key_private_public_base64">Chaves Públicas / Privadas (base64)</string>
+    <string name="timeskew_ahead">adiante</string>
+    <string name="timeskew_behind">atrás</string>
+
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Os preços não foram recuperados. Os valores em fiat podem estar incorretos.</string>
     <string name="stale_exchange_rates_stale">Os preços têm pelo menos 30 minutos de atraso. Os valores em fiat podem estar incorretos.</string>

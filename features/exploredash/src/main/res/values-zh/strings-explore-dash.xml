@@ -152,6 +152,8 @@
     <!-- Explore TestNet -->
     <string name="explore_test_subtitle">Test Dash没有任何实际价值, 但您可以与其他 DashPay 测试用户进行收发.</string>
     <string name="explore_test_dash_title">我如何获得 Test Dash?</string>
+    <string name="explore_test_dash_text_1">测试用的 Dash 是免费的, 可以通过所谓的「水龙头」获得.</string>
+    <string name="explore_test_dash_text_2">点击下面的按钮从此钱包复制 Dash 地址, 以便您可以获得测试用 Dash..</string>
     <string name="explore_get_test_dash">获得 Test Dash</string>
 
     <!-- Sync Status -->

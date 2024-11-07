@@ -25,6 +25,8 @@
     <string name="dialog_confirm_secured_by">Diamankan oleh</string>
     <string name="dialog_confirm_fee">Biaya jaringan</string>
     <string name="dialog_confirm_total">Total</string>
+    <string name="dialog_confirm_accept_contact_request">Terima permintaan kontak</string>
+
     <string name="shortcut_action_join_dashpay">Gabung DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Cadangan</string>
@@ -185,6 +187,9 @@
     <string name="notification_settings_title">Pemberitahuan</string>
     <string name="notification_explainer_title">Dash Wallet ingin mengirimi Anda pemberitahuan</string>
     <string name="notification_explainer_message">Pemberitahuan dapat mencakup peringatan, suara, dan lencana ikon. Ini dapat dikonfigurasi di Pengaturan telepon.</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">Status operasi DashPay yang sedang berlangsung.</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Gunakan sidik jari Anda untuk membuka kunci.</string>
@@ -237,6 +242,7 @@
     <string name="transaction_close">Tutup</string>
     <string name="transaction_details_amount_received">Jumlah Diterima</string>
     <string name="transaction_details_amount_sent">Jumlah Dikirim</string>
+    <string name="transaction_details_amount_sent_successfully">Pengiriman berhasil</string>
     <string name="transaction_details_sent_from">Terkirim dari</string>
     <string name="transaction_details_sent_to">Terkirim ke</string>
     <string name="transaction_details_received_at">Diterima di</string>
@@ -255,6 +261,7 @@
     <string name="authenticate_switch_to_pin">Gunakan PIN</string>
 
     <string name="menu_invite_title">Undang</string>
+    <string name="menu_invite_subtitle">Bantu teman dan keluarga anda bergabung dengam Dash</string>
     <string name="menu_buy_and_sell_title">Beli &amp; Jual Dash</string>
     <string name="menu_buy_and_sell_subtitle">Terhubung dengan pertukaran pihak ketiga</string>
     <string name="liquid_unavailable">Integrasi Liquid dengan Dash Wallet tidak lagi tersedia</string>
@@ -366,16 +373,28 @@
     <string name="import_image_invalid_private">Kunci Pribadi Tidak Valid</string>
     <string name="okay">Oke</string>
 
+    <string name="onboard_from_invite_title">Ayo Mulai</string>
     <string name="onboard_from_invite_subtitle">Selamat datang di DashPay</string>
+    <string name="onboard_from_invite_step1">Langkah 1</string>
+    <string name="onboard_from_invite_step2">Langkah 2</string>
+    <string name="onboard_from_invite_step3">Langkah 3</string>
     <string name="onboard_from_invite_step1_title">Pilih Nama pengguna</string>
     <string name="onboard_from_invite_step2_title">Setel PIN Anda</string>
     <string name="onboard_from_invite_step3_title">Amankan Dompet Anda</string>
 
     <string name="restore_wallet_please_wait">Silahkan tunggu</string>
+    <string name="restore_wallet_restoring">Dompet Anda sedang dipulihkan</string>
+
+
+
     <string name="network_unavailable">Jaringan tak tersedia</string>
     <string name="network_error_contact_details">Tidak dapat mengambil detail kontak</string>
     <string name="network_error_user_search">Tidak dapat mencari pengguna</string>
     <string name="network_error_contact_suggestions">Tidak dapat memberikan saran</string>
+    <string name="network_error_unable_to_update_profile">Tidak dapat memperbarui profil Anda</string>
+
+
+
     <string name="today">Hari ini</string>
     <string name="yesterday">Kemarin</string>
 
@@ -385,6 +404,8 @@
     <string name="all_transactions">Semua</string>
     <string name="received_transactions">Diterima</string>
     <string name="sent_transactions">Terkirim</string>
+    <string name="serious_error_title">Kesalahan serius</string>
+    <string name="serious_error_unknown">Silahkan hubungi Dukungan</string>
     <string name="set_pin_error_missing_wallet_title">Kesalahan Dompet Hilang</string>
     <string name="set_pin_error_missing_wallet_message">Dompetnya hilang. Harap laporkan hal ini ke Bagian Dukungan.</string>
     <string name="wallet_encryption_error_title">Kesalahan Pembuatan Dompet</string>
@@ -434,6 +455,9 @@
     <string name="masternode_key_not_used">Tidak digunakan</string>
     <string name="masternode_key_revoked">Dicabut</string>
     <string name="masternode_key_private_public_base64">Kunci private / publik (base64)</string>
+    <string name="timeskew_ahead">lebih awal</string>
+    <string name="timeskew_behind">dibelakang</string>
+
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Harga tidak diambil. Nilai Fiat mungkin salah.</string>
     <string name="stale_exchange_rates_stale">Harga setidaknya berumur 30 menit. Nilai Fiat mungkin salah.</string>

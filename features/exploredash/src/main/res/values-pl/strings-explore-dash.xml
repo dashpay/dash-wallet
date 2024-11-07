@@ -164,6 +164,8 @@
     <!-- Explore TestNet -->
     <string name="explore_test_subtitle">Test Dash nie ma żadnej wartości w prawdziwym świecie, ale możesz go używać do robienia transakcji z innymi użytkownikami DashPay Alpha.</string>
     <string name="explore_test_dash_title">Jak mogę otrzymać Test Dash?</string>
+    <string name="explore_test_dash_text_1">Możesz otrzymać Testowe monety Dash za darmo z tak zwanego kranu</string>
+    <string name="explore_test_dash_text_2">Abyś mógł dostać testowe monety Dash, kliknij przycisk poniżej, aby skopiować adres Dash z tego portfela.</string>
     <string name="explore_get_test_dash">Otrzymaj Test Dash</string>
 
     <!-- Sync Status -->
