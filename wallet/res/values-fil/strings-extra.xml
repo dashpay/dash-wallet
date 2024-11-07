@@ -25,6 +25,8 @@
     <string name="dialog_confirm_secured_by">Siniguro ni</string>
     <string name="dialog_confirm_fee">Network fee</string>
     <string name="dialog_confirm_total">Kabuuan</string>
+    <string name="dialog_confirm_accept_contact_request">Tanggapin ang kahilingan sa pakikipag-ugnayan</string>
+
     <string name="shortcut_action_join_dashpay">Sumali sa DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">back-up</string>
@@ -188,6 +190,9 @@
     <string name="notification_settings_title">Mga Notipikasyon</string>
     <string name="notification_explainer_title">Gustong magpadala sa iyo ng mga notification ang Dash Wallet</string>
     <string name="notification_explainer_message">Maaaring kasama sa mga notification ang mga alerto, tunog, at icon na mga badge. Maaaring i-configure ang mga ito sa Mga Setting ng telepono.</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">Status ng patuloy na pagpapatakbo ng DashPay.</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Gamitin ang iyong fingerprint para mabuksan.</string>
@@ -240,6 +245,7 @@
     <string name="transaction_close">Sarado</string>
     <string name="transaction_details_amount_received">Halagang natanggap</string>
     <string name="transaction_details_amount_sent">Halagang ipinadala</string>
+    <string name="transaction_details_amount_sent_successfully">Matagumpay na Naipadala</string>
     <string name="transaction_details_sent_from">Pinadala mula</string>
     <string name="transaction_details_sent_to">Ipadala kay</string>
     <string name="transaction_details_received_at">Natanggap sa</string>
@@ -258,6 +264,7 @@
     <string name="authenticate_switch_to_pin">Gamitin ang PIN</string>
 
     <string name="menu_invite_title">Mag-imbita</string>
+    <string name="menu_invite_subtitle">Tulungan ang iyong mga kaibigan at pamilya na sumali sa Dash</string>
     <string name="menu_buy_and_sell_title">Bumili at magbenta ng Dash</string>
     <string name="menu_buy_and_sell_subtitle">Ikonekta sa mga third party na palitan</string>
     <string name="liquid_unavailable">Hindi na available ang liquid integration sa Dash Wallet</string>
@@ -369,16 +376,28 @@
     <string name="import_image_invalid_private">Di-wastong Private Key</string>
     <string name="okay">Okay</string>
 
+    <string name="onboard_from_invite_title">Magsimula na tayo</string>
     <string name="onboard_from_invite_subtitle">Maligayang pagdating sa DashPay</string>
+    <string name="onboard_from_invite_step1">Hakbang 1</string>
+    <string name="onboard_from_invite_step2">Hakbang 2</string>
+    <string name="onboard_from_invite_step3">Hakbang 3</string>
     <string name="onboard_from_invite_step1_title">Piliin ang Iyong Username</string>
     <string name="onboard_from_invite_step2_title">I-set ang Iyong PIN</string>
     <string name="onboard_from_invite_step3_title">I-secure ang Iyong Wallet</string>
 
     <string name="restore_wallet_please_wait">Mangyaring maghintay</string>
+    <string name="restore_wallet_restoring">Ibinabalik ang iyong wallet</string>
+
+
+
     <string name="network_unavailable">Hindi Magagamit ang Network</string>
     <string name="network_error_contact_details">Hindi makuha ang mga detalye ng contact</string>
     <string name="network_error_user_search">Hindi makapaghanap ng user</string>
     <string name="network_error_contact_suggestions">Hindi makapagbigay ng mga mungkahi</string>
+    <string name="network_error_unable_to_update_profile">Hindi ma-update ang iyong profile</string>
+
+
+
     <string name="today">Ngayon</string>
     <string name="yesterday">Kahapon</string>
 
@@ -388,6 +407,8 @@
     <string name="all_transactions">Lahat</string>
     <string name="received_transactions">Natanggap</string>
     <string name="sent_transactions">Ipinadala</string>
+    <string name="serious_error_title">Malubhang Pagkakamali</string>
+    <string name="serious_error_unknown">Mangyaring makipag-ugnayan sa suporta.</string>
     <string name="set_pin_error_missing_wallet_title">Nawawalang Wallet Error</string>
     <string name="set_pin_error_missing_wallet_message">Nawawala ang wallet. Mangyaring iulat ito sa Support Desk.</string>
     <string name="wallet_encryption_error_title">Error sa Paggawa ng Wallet</string>
@@ -437,6 +458,9 @@
     <string name="masternode_key_not_used">hindi ginagamit</string>
     <string name="masternode_key_revoked">Binawi</string>
     <string name="masternode_key_private_public_base64">Pribado / Pampublikong Susi (base64)</string>
+    <string name="timeskew_ahead">sa unahan</string>
+    <string name="timeskew_behind">sa huli</string>
+
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Hindi nakuha ang mga presyo. Maaaring mali ang mga halaga ng Fiat.</string>
     <string name="stale_exchange_rates_stale">Ang mga presyo ay hindi bababa sa 30 minutong gulang. Maaaring mali ang mga halaga ng Fiat.</string>

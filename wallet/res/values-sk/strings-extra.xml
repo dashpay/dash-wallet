@@ -25,6 +25,8 @@
     <string name="dialog_confirm_secured_by">Zabezpečené s</string>
     <string name="dialog_confirm_fee">Sieťový poplatok </string>
     <string name="dialog_confirm_total">Celkovo</string>
+    <string name="dialog_confirm_accept_contact_request">Prijať žiadosť o kontakt</string>
+
     <string name="shortcut_action_join_dashpay">Pridať sa k DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Záloha</string>
@@ -194,6 +196,9 @@
     <string name="notification_settings_title">Oznámenia</string>
     <string name="notification_explainer_title">Dash Wallet vám chce posielať upozornenia</string>
     <string name="notification_explainer_message">Upozornenia môžu zahŕňať upozornenia, zvuky a odznaky ikon. Môžete ich nakonfigurovať v nastaveniach telefónu.</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">Stav prebiehajúcich operácií DashPay.</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Pre odomknutie použite otlačok prsta.</string>
@@ -246,6 +251,7 @@
     <string name="transaction_close">Zatvoriť</string>
     <string name="transaction_details_amount_received">Prijatá suma</string>
     <string name="transaction_details_amount_sent">Odoslaná suma</string>
+    <string name="transaction_details_amount_sent_successfully">Úspešne poslané</string>
     <string name="transaction_details_sent_from">Poslané z</string>
     <string name="transaction_details_sent_to">Poslané na</string>
     <string name="transaction_details_received_at">Prijaté z</string>
@@ -264,6 +270,7 @@
     <string name="authenticate_switch_to_pin">Použiť PIN</string>
 
     <string name="menu_invite_title">Pozvať</string>
+    <string name="menu_invite_subtitle">Pomôžte svojim priateľom a rodine sa pripojiť k Dashu</string>
     <string name="menu_buy_and_sell_title">Kúpiť a predať Dash</string>
     <string name="menu_buy_and_sell_subtitle">Spojiť s burzami tretích strán</string>
     <string name="liquid_unavailable">Liquid integrácia s Dash peňaženkou už nie je k dispozícii</string>
@@ -375,16 +382,28 @@
     <string name="import_image_invalid_private">Neplatný privátny kľúč</string>
     <string name="okay">Dobre</string>
 
+    <string name="onboard_from_invite_title">Poďme začať</string>
     <string name="onboard_from_invite_subtitle">Vitajte v DashPay</string>
+    <string name="onboard_from_invite_step1">Krok 1</string>
+    <string name="onboard_from_invite_step2">Krok 2</string>
+    <string name="onboard_from_invite_step3">Krok 3</string>
     <string name="onboard_from_invite_step1_title">Zvoľte si používateľské meno</string>
     <string name="onboard_from_invite_step2_title">Nastavte si PIN</string>
     <string name="onboard_from_invite_step3_title">Zabezpečte svoju peňaženku</string>
 
     <string name="restore_wallet_please_wait">Prosím čakajte</string>
+    <string name="restore_wallet_restoring">Vaša peňaženka sa obnovuje</string>
+
+
+
     <string name="network_unavailable">Sieť nedostupná</string>
     <string name="network_error_contact_details">Nepodarilo sa načítať kontaktné údaje</string>
     <string name="network_error_user_search">Používateľa sa nepodarilo vyhľadať</string>
     <string name="network_error_contact_suggestions">Nie je možné poskytnúť návrhy</string>
+    <string name="network_error_unable_to_update_profile">Váš profil nie je možné aktualizovať</string>
+
+
+
     <string name="today">Dnes</string>
     <string name="yesterday">Včera</string>
 
@@ -394,6 +413,8 @@
     <string name="all_transactions">Všetko</string>
     <string name="received_transactions">Prijaté</string>
     <string name="sent_transactions">Poslané</string>
+    <string name="serious_error_title">Závažná chyba</string>
+    <string name="serious_error_unknown">Kontaktujte podporu.</string>
     <string name="set_pin_error_missing_wallet_title">Chýbajúca peňaženka</string>
     <string name="set_pin_error_missing_wallet_message">Chýbajúca peňaženka. Nahláste to prosím oddeleniu podpory.</string>
     <string name="wallet_encryption_error_title">Chyba pri vytváraní peňaženky</string>
@@ -443,6 +464,9 @@
     <string name="masternode_key_not_used">Nepoužité</string>
     <string name="masternode_key_revoked">Zrušený</string>
     <string name="masternode_key_private_public_base64">Súkromné / Verejné kľúče (base64)</string>
+    <string name="timeskew_ahead">popredu</string>
+    <string name="timeskew_behind">pozadu</string>
+
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Nepodarilo sa získať ceny. Hotovostné ceny môžu byť nesprávne.</string>
     <string name="stale_exchange_rates_stale">Ceny sú staré minimálne 30 minút. Hotovostné ceny môžu byť nesprávne.</string>

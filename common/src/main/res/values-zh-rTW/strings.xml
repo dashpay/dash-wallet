@@ -24,6 +24,8 @@
     <string name="dash_address">達世幣位址</string>
     <string name="username">用戶名稱</string>
     <string name="balance">結餘:</string>
+    <string name="nothing_here">這裡什麼都沒有</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -61,6 +63,8 @@
     <string name="verify">檢查</string>
     <string name="receive_enter_amount_button">指定金額</string>
     <string name="account_create">創建帳號</string>
+    <string name="submit">提交</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">搜索</string>
     <string name="permission_allow">允許</string>
@@ -77,6 +81,7 @@
     <string name="select_currency">選擇貨幣</string>
     <string name="send_coins_error_dusty_send">這個金額太小，無法發送。</string>
     <string name="send_coins_error_insufficient_money">餘額不足</string>
+    <string name="send_coins_error_insufficient_mixed_money">混合資金不足。等待CoinJoin混合完成或在設定中停用此功能來完成此交易。</string>
     <string name="syncing">同步中</string>
     <string name="no_connection">沒有網絡連接</string>
     <string name="rate_not_available">無法使用</string>

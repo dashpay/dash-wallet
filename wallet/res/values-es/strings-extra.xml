@@ -25,6 +25,8 @@
     <string name="dialog_confirm_secured_by">Protegido por</string>
     <string name="dialog_confirm_fee">Comisión de red</string>
     <string name="dialog_confirm_total">Total</string>
+    <string name="dialog_confirm_accept_contact_request">Aceptar solicitud de contacto</string>
+
     <string name="shortcut_action_join_dashpay">Unirse a DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Respaldo</string>
@@ -191,6 +193,9 @@
     <string name="notification_settings_title">Notificaciones</string>
     <string name="notification_explainer_title">La billetera de Dash desea enviarte notificaciones</string>
     <string name="notification_explainer_message">Las notificaciones pueden incluir alertas, sonidos e íconos distintivos. Estos se pueden configurar en la configuración del teléfono.</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">Estado de las operaciones en curso de DashPay.</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Usa tu huella para desbloquear.</string>
@@ -243,6 +248,7 @@
     <string name="transaction_close">Cerrar</string>
     <string name="transaction_details_amount_received">Monto Recibido</string>
     <string name="transaction_details_amount_sent">Monto Enviado</string>
+    <string name="transaction_details_amount_sent_successfully">Enviado exitosamente</string>
     <string name="transaction_details_sent_from">Enviado de</string>
     <string name="transaction_details_sent_to">Enviado a</string>
     <string name="transaction_details_received_at">Recibido en</string>
@@ -261,6 +267,7 @@
     <string name="authenticate_switch_to_pin">Usar PIN</string>
 
     <string name="menu_invite_title">Invitar</string>
+    <string name="menu_invite_subtitle">Ayuda a tus amigos y familiares a unirse a Dash</string>
     <string name="menu_buy_and_sell_title">Comprar &amp; Vender Dash</string>
     <string name="menu_buy_and_sell_subtitle">Conectar con exchanges de terceros</string>
     <string name="liquid_unavailable">La integración líquida con la billetera de Dash ya no está disponible</string>
@@ -372,16 +379,28 @@
     <string name="import_image_invalid_private">Clave Privada Inválida</string>
     <string name="okay">¡Listo!</string>
 
+    <string name="onboard_from_invite_title">Empecemos</string>
     <string name="onboard_from_invite_subtitle">Bienvenido a DashPay</string>
+    <string name="onboard_from_invite_step1">Paso 1</string>
+    <string name="onboard_from_invite_step2">Paso 2</string>
+    <string name="onboard_from_invite_step3">Paso 3</string>
     <string name="onboard_from_invite_step1_title">Elige tu nombre de usuario</string>
     <string name="onboard_from_invite_step2_title">Establece tu PIN</string>
     <string name="onboard_from_invite_step3_title">Asegura tu billetera</string>
 
     <string name="restore_wallet_please_wait">Por favor espera</string>
+    <string name="restore_wallet_restoring">Tu billetera está siendo restaurada</string>
+
+
+
     <string name="network_unavailable">Red no disponible</string>
     <string name="network_error_contact_details">No se pueden obtener los datos de contacto</string>
     <string name="network_error_user_search">No se puede buscar un usuario</string>
     <string name="network_error_contact_suggestions">No se pueden proporcionar sugerencias</string>
+    <string name="network_error_unable_to_update_profile">No se puede actualizar tu perfil</string>
+
+
+
     <string name="today">Hoy</string>
     <string name="yesterday">Ayer</string>
 
@@ -391,6 +410,8 @@
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recibido</string>
     <string name="sent_transactions">Enviado</string>
+    <string name="serious_error_title">Error grave</string>
+    <string name="serious_error_unknown">Por favor, ponte en contacto con el soporte.</string>
     <string name="set_pin_error_missing_wallet_title"> Error de billetera inexistente</string>
     <string name="set_pin_error_missing_wallet_message"> No existe la billetera. Por favor escribir al centro de soporte.</string>
     <string name="wallet_encryption_error_title"> Error de creación de billetera</string>
@@ -440,6 +461,9 @@
     <string name="masternode_key_not_used">No usada</string>
     <string name="masternode_key_revoked">Revocado</string>
     <string name="masternode_key_private_public_base64">Llaves privadas / públicas (base64)</string>
+    <string name="timeskew_ahead">adelante</string>
+    <string name="timeskew_behind">detrás</string>
+
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Los precios no fueron encontrados. Los valores mostrados en FIAT pueden estar equivocados.</string>
     <string name="stale_exchange_rates_stale">Los precios mostrados tienen al menos 30 minutos de antiguedad. Los valores en FIAT pueden ser incorrectos.</string>

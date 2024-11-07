@@ -160,6 +160,8 @@
     <!-- Explore TestNet -->
     <string name="explore_test_subtitle">i Dash di Test non hanno alcun valore nel mondo reale ma puoi inviarli e riceverli con altri utenti DashPay Alpha.</string>
     <string name="explore_test_dash_title">Come posso ottenere Dash di Test?</string>
+    <string name="explore_test_dash_text_1">Test Dash è gratuito e può essere ottenuto da quello che viene chiamato faucet.</string>
+    <string name="explore_test_dash_text_2">Fai clic sul pulsante in basso per copiare un indirizzo Dash da questo portafoglio in modo da poter ottenere il tuo Dash di prova..</string>
     <string name="explore_get_test_dash">Ottieni Dash di Test</string>
 
     <!-- Sync Status -->

@@ -24,6 +24,8 @@
     <string name="dash_address">Dash adresa</string>
     <string name="username">Používateľské meno</string>
     <string name="balance">Zostatok:</string>
+    <string name="nothing_here">Nič tu nie je</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernseyova libra</string>
     <!-- Local Currency List: JEP -->
@@ -61,6 +63,8 @@
     <string name="verify">Overiť</string>
     <string name="receive_enter_amount_button">Zadať množstvo</string>
     <string name="account_create">Vytvoriť účet</string>
+    <string name="submit">Odoslať</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">Hľadať</string>
     <string name="permission_allow">Povoliť</string>
@@ -77,6 +81,7 @@
     <string name="select_currency">Vyberte menu</string>
     <string name="send_coins_error_dusty_send">Čiastka je príliš nízka pre odoslanie</string>
     <string name="send_coins_error_insufficient_money">Nedostatok prostriedkov</string>
+    <string name="send_coins_error_insufficient_mixed_money">Nedostatočné zmiešané prostriedky. Počkajte, kým sa miešanie CoinJoin dokončí, alebo túto funkciu zakážte v nastaveniach pre dokončenie tejto transakcie.</string>
     <string name="syncing">Synchronizuje sa</string>
     <string name="no_connection">Žiadne pripojenie k internetu</string>
     <string name="rate_not_available">Nie je k dispozícií</string>

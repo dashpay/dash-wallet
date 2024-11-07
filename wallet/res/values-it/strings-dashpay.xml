@@ -269,9 +269,9 @@ Username</b></string>
     <string name="usernames_blocked_title">Alcuni nomi utente possono essere bloccati</string>
     <string name="usernames_blocked_subtitle">Se un numero sufficiente di membri della rete determina che un nome utente non è appropriato, possono bloccarlo</string>
     <string name="username_voting">Votazione Username contestati</string>
+    <string name="username_voting_subtitle">Come proprietario di un masternode puoi votare per approvare i nomi utente richiesti prima che vengano creati sulla rete.</string>
     <string name="voting_duplicates_only_title">Impostazione del filtro predefinita</string>
     <string name="voting_duplicates_only_message">Il filtro predefinito mostra solo i nomi utente duplicati per i quali NON hai votato, ma puoi vedere tutti i nomi utente contestati modificando il filtro</string>
-    <string name="username_voting_subtitle">Come proprietario di un masternode puoi votare per approvare i nomi utente richiesti prima che gli utenti possano crearli.</string>
     <string name="all">Tutte</string>
     <string name="n_usernames">%d nomi utente</string>
     <string name="n_requests">%d richieste</string>
@@ -333,6 +333,7 @@ Username</b></string>
     <string name="voting_key_title">Inserisci la tua chiave di voto</string>
     <string name="voting_key_hint">Chiave privata di voto Masternode</string>
     <string name="voting_key_input_error">Hai inserito una chiave non valida</string>
+    <string name="voting_key_input_not_active_error">Hai inserito una chiave che non è associata ad un Masternode attivo</string>
     <string name="voting_key_add">Aggiungi le tue chiavi di voto</string>
     <string name="voting_key_add_subtitle">L\' indirizzo(i) IP seguenti sono associati a questo portafoglio</string>
     <string name="masternode_ip">Indirizzo IP del Masternode</string>
@@ -416,4 +417,4 @@ Username</b></string>
     <string name="mix_dash_mix">Mescolare Bilancio</string>
     <string name="mix_dash_title">Mescola i tuoi Dash</string>
     <string name="mix_dash_message">Per evitare che altre persone vedano a chi effettui i pagamenti, ti consigliamo di mescolare il tuo saldo prima di creare il tuo nome utente.</string>
-    </resources>
+</resources>

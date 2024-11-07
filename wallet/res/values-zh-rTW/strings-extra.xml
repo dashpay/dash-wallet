@@ -25,6 +25,8 @@
     <string name="dialog_confirm_secured_by">由擔保</string>
     <string name="dialog_confirm_fee">網絡費用</string>
     <string name="dialog_confirm_total">總共</string>
+    <string name="dialog_confirm_accept_contact_request">接受聯繫請求</string>
+
     <string name="shortcut_action_join_dashpay">加入 DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">備份</string>
@@ -185,6 +187,9 @@
     <string name="notification_settings_title">通知</string>
     <string name="notification_explainer_title">達世幣錢包想向您發送通知</string>
     <string name="notification_explainer_message">通知可能包括警報、聲音和圖標標記。這些可以在電話設置中進行設置。</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">正在進行的 DashPay 的狀態。</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">使用指紋解鎖。</string>
@@ -237,6 +242,7 @@
     <string name="transaction_close">關閉</string>
     <string name="transaction_details_amount_received">收到的金額</string>
     <string name="transaction_details_amount_sent">發送金額</string>
+    <string name="transaction_details_amount_sent_successfully">發送成功</string>
     <string name="transaction_details_sent_from">來自</string>
     <string name="transaction_details_sent_to">發給</string>
     <string name="transaction_details_received_at">在......收到</string>
@@ -255,6 +261,7 @@
     <string name="authenticate_switch_to_pin">使用密碼</string>
 
     <string name="menu_invite_title">邀請</string>
+    <string name="menu_invite_subtitle">幫助您的朋友和家人加入達世幣</string>
     <string name="menu_buy_and_sell_title">購買 &amp; 出售達世幣</string>
     <string name="menu_buy_and_sell_subtitle">與第三方交易所連結</string>
     <string name="liquid_unavailable">Liquid 與達世幣錢包的整合功能已經不能再使用</string>
@@ -366,16 +373,28 @@
     <string name="import_image_invalid_private">無效的私鑰</string>
     <string name="okay">好的</string>
 
+    <string name="onboard_from_invite_title">讓我們開始吧</string>
     <string name="onboard_from_invite_subtitle">歡迎來到 DashPay</string>
+    <string name="onboard_from_invite_step1">步驟1</string>
+    <string name="onboard_from_invite_step2">步驟2</string>
+    <string name="onboard_from_invite_step3">步驟3</string>
     <string name="onboard_from_invite_step1_title">選擇你的用戶名</string>
     <string name="onboard_from_invite_step2_title">設置您的密碼</string>
     <string name="onboard_from_invite_step3_title">保護您的錢包</string>
 
     <string name="restore_wallet_please_wait">請稍等</string>
+    <string name="restore_wallet_restoring">您的錢包正在恢復</string>
+
+
+
     <string name="network_unavailable">網絡不可用</string>
     <string name="network_error_contact_details">無法獲取聯絡人詳細資料</string>
     <string name="network_error_user_search">無法搜索該用戶</string>
     <string name="network_error_contact_suggestions">無法提供建議</string>
+    <string name="network_error_unable_to_update_profile">無法更新您的個人資料</string>
+
+
+
     <string name="today">今天</string>
     <string name="yesterday">昨天</string>
 
@@ -385,6 +404,8 @@
     <string name="all_transactions">所有</string>
     <string name="received_transactions">己收到</string>
     <string name="sent_transactions">發送</string>
+    <string name="serious_error_title">嚴重錯誤</string>
+    <string name="serious_error_unknown">請聯絡支援人員。</string>
     <string name="set_pin_error_missing_wallet_title">缺少錢包錯誤</string>
     <string name="set_pin_error_missing_wallet_message">錢包不見了。請將此報告給支援平台。</string>
     <string name="wallet_encryption_error_title">錢包創建錯誤</string>
@@ -434,6 +455,10 @@
     <string name="masternode_key_not_used">尚未使用</string>
     <string name="masternode_key_revoked">已撤銷</string>
     <string name="masternode_key_private_public_base64">私鑰 / 公鑰 (base64)</string>
+    <string name="timeskew_ahead">前面</string>
+    <string name="timeskew_behind">在後面
+Zài hòumiàn</string>
+
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">價格未被檢索到，所以相關的法幣的價值可能不正確。</string>
     <string name="stale_exchange_rates_stale">價格至少有 30 分鐘延遲，所以相關的法幣的價值可能不正確。</string>

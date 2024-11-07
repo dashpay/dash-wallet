@@ -156,6 +156,8 @@
     <!-- Explore TestNet -->
     <string name="explore_test_subtitle">Ang Test Dash ay walang anumang halaga sa totoong mundo ngunit maaari mo itong ipadala at tanggapin kasama ng iba pang mga gumagamit ng DashPay Alpha.</string>
     <string name="explore_test_dash_title">Paano ako makakakuha ng Test Dash?</string>
+    <string name="explore_test_dash_text_1">Ang Test Dash ay libre at maaaring makuha mula sa tinatawag na gripo.</string>
+    <string name="explore_test_dash_text_2">Mag-click sa button sa ibaba para kumopya ng Dash address mula sa wallet na ito para makuha mo ang iyong pagsubok na Dash..</string>
     <string name="explore_get_test_dash">Kunin ang Test Dash</string>
 
     <!-- Sync Status -->

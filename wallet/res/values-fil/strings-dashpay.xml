@@ -262,14 +262,16 @@ Username</b></string>
     <string name="keep_your_passphrase_safe">Panatilihing ligtas ang iyong passphrase</string>
     <string name="pay_now">Magbayad ngayon at kung hindi naaprubahan, maaari kang lumikha ng ibang pangalan nang hindi nagbabayad muli</string>
     <string name="case_your_request_is_not_approved">Kung sakaling hindi maaprubahan ang iyong kahilingan</string>
+    <string name="voting_requirement_subtitle">Awtomatikong maaaprubahan ang anumang username na mayroong numero 2–9 o 20 o higit pang mga character</string>
     <string name="voting_requirement_title">Ang pagboto ay kinakailangan lamang sa ilang mga kaso</string>
-    <string name="voting_requirement_subtitle">Awtomatikong maaaprubahan ang anumang username na mayroong numero 2–9 o mas mahaba sa 20 karakter</string>
     <string name="dash_network_must_vote_to_approve">Dapat bumoto ang Dash network upang aprubahan ang iyong username bago ito malikha.</string>
     <string name="what_is_username_voting">Ano ang pagboto ng username\?</string>
     <string name="usernames_blocked_title">Maaaring i-block ang ilang mga username</string>
     <string name="usernames_blocked_subtitle">Kung matukoy ng sapat na network na hindi naaangkop ang isang username, maaari nilang i-block ito</string>
     <string name="username_voting">Pagboto ng username</string>
-    <string name="username_voting_subtitle">Bilang may-ari ng masternode maaari kang bumoto upang aprubahan ang mga hiniling na username bago ito magawa ng mga user.</string>
+    <string name="username_voting_subtitle">Bilang may-ari ng masternode, maaari kang bumoto upang aprubahan ang mga hiniling na username bago ito gawin sa network.</string>
+    <string name="voting_duplicates_only_title">Default na setting ng filter</string>
+    <string name="voting_duplicates_only_message">Ang default na filter ay nagpapakita lamang ng mga duplicate na username na HINDI mo binoto, ngunit makikita mo ang lahat ng pinagtatalunang username sa pamamagitan ng pagpapalit ng filter</string>
     <string name="all">Lahat</string>
     <string name="n_usernames">%d mga username</string>
     <string name="n_requests">%d mga kahilingan</string>
@@ -292,16 +294,23 @@ Username</b></string>
         <item>Lahat</item>
         <item>Naaprubahan ko na</item>
         <item>hindi ko na inaprubahan</item>
+        <item>May Naka-block na mga boto</item>
     </string-array>
 
+    <string name="block_vote_count">%d (mga) block</string>
     <string name="request_your_username">Gumawa ng iyong username</string>
+    <string name="request_your_hint">Pakitandaan na hindi mo na ito mababago sa hinaharap</string>
     <string name="request_username">Humiling ng Username</string>
     <string name="request_voting_range">Ang Dash network ay boboto sa username na ito. Aabisuhan ka namin ng mga resulta sa %s.</string>
     <string name="request_username_available">Available ang username</string>
     <string name="request_username_unavailable">Hindi available o naka-block ang username</string>
     <string name="request_username_taken">Kinuha ang username</string>
+    <string name="request_username_taken_results">Ang username ay kinuha ng ibang user</string>
     <string name="requesting_your_username_title">Paglikha ng iyong username</string>
+    <string name="requesting_your_username_message">Ang iyong username %say hinihiling sa network ng Dash. Maaaring tumagal ng ilang oras.</string>
+    <string name="creating_your_username_message">Ang iyong username %say ginagawa sa Dash network. Maaaring tumagal ng ilang oras.</string>
     <string name="requesting_your_username_error_title">Nabigo ang iyong kahilingan sa username</string>
+    <string name="requesting_your_username_error_message">Para sa ilang kadahilanan, ang kahilingan para sa username %say nabigo. </string>
     <string name="voting">Pagboto:</string>
     <string name="this_username_has_already_been_requested">Ang username na ito ay hiniling na, ngunit maaari mo rin itong hilingin at hayaan ang network na bumoto upang magpasya kung maaari mong makuha ito</string>
     <string name="request_details">Mga detalye ng kahilingan</string>
@@ -322,7 +331,9 @@ Username</b></string>
     <string name="make_a_post_with_the_text">Gumawa ng post gamit ang text sa itaas sa isang kilalang social media o messaging platform para i-verify na ikaw ang orihinal na may-ari ng hiniling na username at i-paste ang link sa ibaba</string>
     <string name="paste_the_link">Idikit ang link</string>
     <string name="voting_key_title">Ilagay ang iyong voting key</string>
+    <string name="voting_key_hint">Masternode Voting Private Key</string>
     <string name="voting_key_input_error">Naglagay ka ng di-wastong key</string>
+    <string name="voting_key_input_not_active_error">Naglagay ka ng key na hindi nauugnay sa isang aktibong Masternode</string>
     <string name="voting_key_add">Idagdag ang iyong mga susi sa pagboto</string>
     <string name="voting_key_add_subtitle">Ang (mga) IP address sa ibaba ay nauugnay sa wallet na ito</string>
     <string name="masternode_ip">Masternode IP address</string>
@@ -395,4 +406,15 @@ Username</b></string>
     <string name="request_username_balance_requirement">Kailangan mong magkaroon ng 0.25 DASH para magawa ang username na ito</string>
     <string name="request_username_length_requirement">Sa pagitan ng 3 at 23 na mga karakter</string>
     <string name="request_username_confirm">Tinatanggap Ko</string>
-    </resources>
+    <string name="username_vote_one_left_message">Nakaboto ka na para sa username na ito %d beses. Maaari ka lamang magsumite ng isa pang boto para sa username na ito.</string>
+    <string name="username_vote_one_left">Isang boto ang natitira</string>
+    <string name="username_vote_none_left_message">Nakaboto ka na para sa username na ito %d beses. Hindi ka na makakapagboto pa para sa username na ito.</string>
+    <string name="username_vote_none_left">Walang natitirang boto</string>
+    <string name="request_username_blocked">Na-block ang hiniling na username</string>
+    <string name="request_username_lost_vote">Ang hiniling na username ay ibinigay sa ibang tao</string>
+    <string name="request_username_blocked_message">Ang username %say hinarangan ng Dash Network. Pakisubukang muli sa pamamagitan ng paghiling ng isa pang username. </string>
+    <string name="request_username_lost_vote_message">Dahil sa proseso ng pagboto, nagpasya ang Dash Network na italaga ang username %s sa ibang tao. Pakisubukang muli sa pamamagitan ng paghiling ng isa pang username.</string>
+    <string name="mix_dash_mix">Paghaluin ang Balanse</string>
+    <string name="mix_dash_title">Paghaluin ang iyong Dash</string>
+    <string name="mix_dash_message">Upang makatulong na pigilan ang ibang tao na makita kung kanino ka magbabayad, inirerekomendang ihalo ang iyong balanse bago mo gawin ang iyong username.</string>
+</resources>

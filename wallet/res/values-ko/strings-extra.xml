@@ -25,6 +25,8 @@
     <string name="dialog_confirm_secured_by">다음이 보증합니다</string>
     <string name="dialog_confirm_fee">네트워크 비용</string>
     <string name="dialog_confirm_total">총계</string>
+    <string name="dialog_confirm_accept_contact_request">연락처 요청 수락</string>
+
     <string name="shortcut_action_join_dashpay">대시페이 가입하기</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">백업</string>
@@ -185,6 +187,9 @@
     <string name="notification_settings_title">알림</string>
     <string name="notification_explainer_title">대시 지갑이 알림을 보내고자 합니다</string>
     <string name="notification_explainer_message">알림에는 경고, 사운드 및 아이콘 배지가 포함될 수 있습니다. 본 내용은 휴대폰의 설정에서 변경할 수 있습니다.</string>
+    <string name="notification_dashpay_channel_name">대시페이</string>
+    <string name="notification_dashpay_channel_description">진행중인 대시페이 작업 상태</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">잠금 해제를 위해서 지문을 사용합니다</string>
@@ -237,6 +242,7 @@
     <string name="transaction_close">닫기</string>
     <string name="transaction_details_amount_received">받은 금액</string>
     <string name="transaction_details_amount_sent">보낸 금액</string>
+    <string name="transaction_details_amount_sent_successfully">성공적으로 전송되었습니다</string>
     <string name="transaction_details_sent_from">다음으로부터 전송되었습니다</string>
     <string name="transaction_details_sent_to">다음에 전송하였습니다</string>
     <string name="transaction_details_received_at">다음에서 수신하였습니다</string>
@@ -255,6 +261,7 @@
     <string name="authenticate_switch_to_pin">PIN 사용하기</string>
 
     <string name="menu_invite_title">초대하기</string>
+    <string name="menu_invite_subtitle">당신의 친구와 가족이 대시에 가입하도록 도와주세요</string>
     <string name="menu_buy_and_sell_title">대시 매수 &amp; 매도</string>
     <string name="menu_buy_and_sell_subtitle">제3자 거래소에 연결</string>
     <string name="liquid_unavailable">대시 지갑 내 리퀴드 통합은 더이상 지원되지 않습니다.</string>
@@ -366,16 +373,28 @@
     <string name="import_image_invalid_private">유효하지 않은 개인 키</string>
     <string name="okay">알겠습니다</string>
 
+    <string name="onboard_from_invite_title">지금 시작하세요</string>
     <string name="onboard_from_invite_subtitle">대시페이에 오신 것을 환영합니다</string>
+    <string name="onboard_from_invite_step1">1단계</string>
+    <string name="onboard_from_invite_step2">2단계</string>
+    <string name="onboard_from_invite_step3">3단계</string>
     <string name="onboard_from_invite_step1_title">사용자 이름을 선택하세요</string>
     <string name="onboard_from_invite_step2_title">당신의 PIN을 설정하세요</string>
     <string name="onboard_from_invite_step3_title">당신의 지갑을 안전하게 지키세요</string>
 
     <string name="restore_wallet_please_wait">기다려주십시오</string>
+    <string name="restore_wallet_restoring">당신의 지갑이 복원되었습니다</string>
+
+
+
     <string name="network_unavailable">네트워크를 이용할 수 없음</string>
     <string name="network_error_contact_details">연락처 세부 내용을 불러올 수 없습니다</string>
     <string name="network_error_user_search">사용자를 검색할 수 없습니다</string>
     <string name="network_error_contact_suggestions">제안을 제공할 수 없습니다</string>
+    <string name="network_error_unable_to_update_profile">당신의 프로필을 업데이트할 수 없습니다</string>
+
+
+
     <string name="today">오늘</string>
     <string name="yesterday">어제</string>
 
@@ -385,6 +404,8 @@
     <string name="all_transactions">모두</string>
     <string name="received_transactions">받음</string>
     <string name="sent_transactions">전송 완료</string>
+    <string name="serious_error_title">심각한 오류</string>
+    <string name="serious_error_unknown">고객 지원부에 문의하세요.</string>
     <string name="set_pin_error_missing_wallet_title">사라진 지갑 오류</string>
     <string name="set_pin_error_missing_wallet_message">지갑이 사라졌습니다. 지원 데스크에 보고해주십시오.</string>
     <string name="wallet_encryption_error_title">지갑 생성 에러</string>
@@ -434,6 +455,9 @@
     <string name="masternode_key_not_used">사용되지 않음</string>
     <string name="masternode_key_revoked">취소됨</string>
     <string name="masternode_key_private_public_base64">개인 / 공공 키 (base64)</string>
+    <string name="timeskew_ahead">앞</string>
+    <string name="timeskew_behind">뒤</string>
+
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">가격을 불러오지 않았습니다. 금액이 정확하지 않을 수 있습니다.</string>
     <string name="stale_exchange_rates_stale">마지막 가격 업데이트가 최소 30분을 경과했습니다. 금액이 정확하지 않을 수 있습니다.</string>

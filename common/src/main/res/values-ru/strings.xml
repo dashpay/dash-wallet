@@ -24,6 +24,8 @@
     <string name="dash_address">Адрес Dash</string>
     <string name="username">Имя пользователя</string>
     <string name="balance">Баланс:</string>
+    <string name="nothing_here">Тут ничего нет</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсийский фунт</string>
     <!-- Local Currency List: JEP -->
@@ -61,6 +63,8 @@
     <string name="verify">Подтвердить</string>
     <string name="receive_enter_amount_button">Введите сумму</string>
     <string name="account_create">Создать аккаунт</string>
+    <string name="submit">Отправить</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">Поиск</string>
     <string name="permission_allow">Разрешить</string>
@@ -77,6 +81,7 @@
     <string name="select_currency">Выберите валюту</string>
     <string name="send_coins_error_dusty_send">Сумма слишком мала для отправки</string>
     <string name="send_coins_error_insufficient_money">Недостаточно средств</string>
+    <string name="send_coins_error_insufficient_mixed_money">Средства недостаточно перемешаны. Для завершения этой транзакции дождитесь, пока CoinJoin завершит перемешивание, или отключите эту функцию в настройках. </string>
     <string name="syncing">Синхронизация</string>
     <string name="no_connection">Отсутствует подключение к Интернету</string>
     <string name="rate_not_available">Недоступно</string>

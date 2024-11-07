@@ -22,7 +22,10 @@
     <string name="login_error_title">ورود به حساب %s شما ناموفق بود</string>
     <string name="login_error_message">در هنگام تلاش برای ورود به حساب %s شما، خطایی روی داد. </string>
     <string name="dash_address">نشانی دش</string>
+    <string name="username">نام کاربری</string>
     <string name="balance">موجودی: </string>
+    <string name="nothing_here">چیزی اینجا نیست</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">گرنزی پاوند</string>
     <!-- Local Currency List: JEP -->
@@ -60,6 +63,8 @@
     <string name="verify">تائید</string>
     <string name="receive_enter_amount_button">مبلغ را مشخص کنید</string>
     <string name="account_create">ایجاد حساب</string>
+    <string name="submit">ثبت</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">جستجو</string>
     <string name="permission_allow">اجازه می‌دهم</string>
@@ -76,6 +81,7 @@
     <string name="select_currency">واحد پول‌تان را انتخاب کنید</string>
     <string name="send_coins_error_dusty_send">مبلغ مورد نظر، بیش از حد کم است</string>
     <string name="send_coins_error_insufficient_money">موجودی ناکافی</string>
+    <string name="send_coins_error_insufficient_mixed_money">موجودی ترکیبی کافی نیست. منتظر بمانید تا فرایند ترکیب کوین‌جوین تمام شود و یا این قابلیت را از طریق تنظیمات غیرفعال کنید تا این تراکنش صورت گیرد. </string>
     <string name="syncing">در حال همزمان‌سازی</string>
     <string name="no_connection">به اینترنت متصل نیستید</string>
     <string name="rate_not_available">در دسترس نیست</string>

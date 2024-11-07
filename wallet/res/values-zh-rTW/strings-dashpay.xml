@@ -269,9 +269,9 @@
     <string name="usernames_blocked_title">某些使用者名稱可能會被阻止</string>
     <string name="usernames_blocked_subtitle">如果有足夠的網路確定使用者認為名稱不合適，他們可以阻止它</string>
     <string name="username_voting">用戶名投票</string>
+    <string name="username_voting_subtitle">作為主節點所有者，您可以在網路上建立請求的使用者名稱之前投票批准它們。</string>
     <string name="voting_duplicates_only_title">預設過濾器設定</string>
     <string name="voting_duplicates_only_message">預設過濾器僅顯示您未投票的重複用戶名，但您可以透過更改過濾器來查看所有有爭議的用戶名</string>
-    <string name="username_voting_subtitle">作為主節點擁有者，您可以投票批准所要求的用戶名，然後用戶才能建立它。</string>
     <string name="all">所有</string>
     <string name="n_usernames">%d 使用者名稱</string>
     <string name="n_requests">%d 請求</string>
@@ -333,6 +333,7 @@
     <string name="voting_key_title">輸入您的投票密鑰</string>
     <string name="voting_key_hint">主節點投票私鑰</string>
     <string name="voting_key_input_error">您輸入了無效的密鑰</string>
+    <string name="voting_key_input_not_active_error">您輸入的金鑰未與活動主節點關聯</string>
     <string name="voting_key_add">新增您的投票鍵</string>
     <string name="voting_key_add_subtitle">以下 IP 位址(等)與此錢包關聯</string>
     <string name="masternode_ip">主節點IP位址</string>
