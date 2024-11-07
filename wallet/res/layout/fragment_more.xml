@@ -237,7 +237,7 @@
                             style="@style/MenuRowSubTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/requested_voting_duration" />
+                            tools:text="Results on 10/12/2024" />
                     </LinearLayout>
 
                     <LinearLayout
