@@ -269,7 +269,6 @@ Username</b></string>
     <string name="usernames_blocked_title">Maaaring i-block ang ilang mga username</string>
     <string name="usernames_blocked_subtitle">Kung matukoy ng sapat na network na hindi naaangkop ang isang username, maaari nilang i-block ito</string>
     <string name="username_voting">Pagboto ng username</string>
-    <string name="username_voting_subtitle">Bilang may-ari ng masternode, maaari kang bumoto upang aprubahan ang mga hiniling na username bago ito gawin sa network.</string>
     <string name="voting_duplicates_only_title">Default na setting ng filter</string>
     <string name="voting_duplicates_only_message">Ang default na filter ay nagpapakita lamang ng mga duplicate na username na HINDI mo binoto, ngunit makikita mo ang lahat ng pinagtatalunang username sa pamamagitan ng pagpapalit ng filter</string>
     <string name="all">Lahat</string>
@@ -339,8 +338,6 @@ Username</b></string>
     <string name="masternode_ip">Masternode IP address</string>
     <string name="multiple_votes_cast">ipapalabas ang mga %d boto dahil marami kang voting key na nakaimbak sa wallet</string>
     <string name="add_masternode_key">Magdagdag ng Masternode Voting Key</string>
-    <string name="vote_submitted">Naisumite ang iyong boto</string>
-    <string name="vote_cancelled">Kinansela ang iyong boto</string>
     <string name="quick_vote">Mabilis na Pagboto</string>
     <string name="quick_vote_subtitle">Sa pamamagitan ng pag-tap sa \"Vote for All\" na button, awtomatiko kang bumoto para sa lahat ng na-filter na username (%d) na unang isinumite</string>
     <string name="vote_for_all">Bumoto para sa Lahat</string>

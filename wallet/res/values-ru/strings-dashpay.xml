@@ -111,7 +111,7 @@ Dash</b></string>
     <string name="contact_requests_title">Запросы на добавление</string>
     <string name="contacts_add_new_contact">Добавить новый контакт</string>
     <string name="contacts_contact_requests_count">Запросы на добавление в контакты (%d)</string>
-    <string name="contacts_contact_requests">Запросы на добавление\n</string>
+    <string name="contacts_contact_requests">Запросы на добавление</string>
     <string name="contacts_contact_requests_view">Посмотреть всё</string>
     <string name="contacts_my_contacts">Мои контакты</string>
     <string name="contacts_sort_order">Упорядочить по:</string>
@@ -263,13 +263,14 @@ Dash</b></string>
     <string name="pay_now">Оплатите сейчас, а в случае, если имя пользователя не одобрят, вы сможете создать другое без дополнительной платы</string>
     <string name="case_your_request_is_not_approved">Если ваш запрос не одобрили</string>
     <string name="voting_requirement_subtitle">Автоматически одобряются те имена пользователей, где есть число от 2-9, а длина больше 20 символов</string>
-    <string name="voting_requirement_title">Голосование понадобится только в определенных случаях</string>
+    <string name="voting_requirement_title">Голосование понадобится только в определённых случаях</string>
     <string name="dash_network_must_vote_to_approve">Сеть Dash должна одобрить имя пользователя, и только после этого оно будет создано.</string>
     <string name="what_is_username_voting">Что такое голосование за имя пользователя\?</string>
     <string name="usernames_blocked_title">Некоторые Имена пользователей могут быть заблокированы</string>
     <string name="usernames_blocked_subtitle">Если значительная часть сети Dash сочтёт имя пользователя неподходящим, его могут заблокировать.</string>
     <string name="username_voting">Голосование за имя пользователя</string>
-    <string name="username_voting_subtitle">Будучи владельцем мастерноды, вы можете голосовать за одобрение имён пользователей перед их созданием в сети.</string>
+    <string name="username_voting_subtitle">Как владелец мастерноды, вы можете голосовать за одобрение запрашиваемых имён пользователей до их создания в сети.</string>
+    <string name="username_voting_subtitle_two">Вы можете заблокировать создание имён пользователей, которые, по вашему мнению, являются неподходящими.</string>
     <string name="voting_duplicates_only_title">Настройки фильтра по умолчанию</string>
     <string name="voting_duplicates_only_message">По умолчанию фильтр показывает только повторяющиеся имена пользователей, за которые вы НЕ голосовали, но при смене настроек фильтра можно посмотреть все спорные имена пользователей</string>
     <string name="all">Все</string>
@@ -296,7 +297,19 @@ Dash</b></string>
         <item>Не одобрено мной</item>
         <item>Есть заблокированные голоса</item>
     </string-array>
-
+    <string name="unblock_button">Разблокировать</string>
+    <plurals name="block_vote_button">
+        <item quantity="one">Блок</item>
+        <item quantity="few">Блока</item>
+        <item quantity="many">Блоков</item>
+        <item quantity="other">Против</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="one">Голос \"За\"</item>
+        <item quantity="few">Голоса \"За\"</item>
+        <item quantity="many">Голосов \"За\"</item>
+        <item quantity="other">За</item>
+    </plurals>
     <string name="block_vote_count">%d Блок(ов)</string>
     <string name="request_your_username">Создать имя пользователя</string>
     <string name="request_your_hint">Обратите внимание, что в будущем вы не сможете его изменить</string>
@@ -316,6 +329,7 @@ Dash</b></string>
     <string name="request_details">Узнать подробности</string>
     <string name="request_details_subtitle">Изучите сообщение ниже, чтобы подтвердить владение этим именем пользователя</string>
     <string name="vote_to_approve">Одобрить</string>
+    <string name="vote_to_block">Голосовать за Блок</string>
     <string name="identity">ID</string>
     <string name="results">Результаты</string>
     <string name="link">Ссылка</string>
@@ -334,13 +348,31 @@ Dash</b></string>
     <string name="voting_key_hint">Приватный ключ для голосования мастерноды</string>
     <string name="voting_key_input_error">Вы ввели неверный ключ</string>
     <string name="voting_key_input_not_active_error">Вы ввели ключ, который не связан с активной мастернодой.</string>
+    <string name="voting_key_input_already_present">Вы уже вводили этот ключ мастерноды</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">Вы ввели ключ для тестовой сети, а это - основная сеть. Ключ должен выглядеть так: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">Вы ввели ключ для основной сети, а это - тестовая сеть. Ключ должен выглядеть так: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">Вы ввели адресный ключ вместо приватного ключа мастерноды для голосования. Он должен быть в формате WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">Вы ввели ключ в шестнадцатеричном формате, а он должен быть в формате WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">Вы ввели ключ в шестнадцатеричном формате, а он должен быть в формате WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">Вы ввели слишком короткий приватный ключ. Вот как он должен выглядеть (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">Вы ввели приватный ключ, который содержит некорректные символы. Вот как он должен выглядеть: (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">Вы ввели приватный ключ, который содержит неверный символ. Вот как он должен выглядеть: (%s)</string>
+
     <string name="voting_key_add">Введите ключ для голосования</string>
-    <string name="voting_key_add_subtitle">С этим кошельком связаны следующие IP-адреса</string>
+    <string name="voting_key_add_subtitle">С этим кошельком(-ами) связаны следующие IP-адреса</string>
     <string name="masternode_ip">IP-адрес мастерноды</string>
     <string name="multiple_votes_cast">В вашем кошельке храниться несколько ключей для голосования, поэтому будет отдано %d голосов.</string>
     <string name="add_masternode_key">Введите ключ для голосования мастерноды</string>
-    <string name="vote_submitted">Ваш голос учтён</string>
-    <string name="vote_cancelled">Ваш голос отозван</string>
+    <string name="dont_ask_again">Не спрашивать снова</string>
+    <string name="vote_submitting">Голосовать \"за\" имя пользователя %s</string>
+    <string name="vote_submitted">Голос отдан за имя пользователя %s</string>
+    <string name="cancel_submitting">Отзывается голос за имя пользователя %s</string>
+    <string name="cancel_submitted">Отозвать голос за имя пользователя %s</string>
+    <string name="block_submitting">Блокирование имени пользователя %s</string>
+    <string name="block_submitted">Вы заблокировали имя пользователя %s</string>
+    <string name="vote_submitted_error">Ошибка при голосовании за имя пользователя %s</string>
+    <string name="cancel_submitted_error">Ошибка при отмене голосования за имя пользователя %s</string>
+    <string name="block_submitted_error">Ошибка при блокировании имени пользователя %s</string>
     <string name="quick_vote">Быстрое голосование</string>
     <string name="quick_vote_subtitle">Нажав кнопку \"Голосовать за все\" вы автоматически проголосуете за все отфильтрованные имена пользователей (%d), которые были поданы первыми</string>
     <string name="vote_for_all">Голосовать за все</string>
@@ -417,4 +449,4 @@ Dash</b></string>
     <string name="mix_dash_mix">Перемешать баланс</string>
     <string name="mix_dash_title">Перемешайте свои Dash</string>
     <string name="mix_dash_message">Чтобы никто не смог узнать, кому вы отправляете платежи, рекомендуется перемешать баланс до создания имени пользователя.</string>
-</resources>
+    </resources>

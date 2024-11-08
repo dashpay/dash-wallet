@@ -294,7 +294,6 @@
         <item>مواردی که تائيد نکردم</item>
         <item>دارای رای‌های مسدود است</item>
     </string-array>
-
     <string name="block_vote_count">%dبلوک</string>
     <string name="request_your_username">نام کاربری‌تان را ایجاد کنید</string>
     <string name="request_your_hint">لطفاً دقت داشته باشید که نمی‌توانید بعدا آن را تغییر دهید</string>
@@ -336,8 +335,6 @@
     <string name="masternode_ip">آی‌پی‌ آدرس مسترنود</string>
     <string name="multiple_votes_cast">%dرای در نظر گرفته می شود چون چند کلید رای‌دهی در کیف پول‌تان دارید</string>
     <string name="add_masternode_key">اضافه کردن کلید رای‌دهی مسترنود</string>
-    <string name="vote_submitted">رای‌تان ثبت شد</string>
-    <string name="vote_cancelled">رای‌تان لغو شد</string>
     <string name="quick_vote">رای‌دهی سریع</string>
     <string name="quick_vote_subtitle">با زدن دگمه «رای‌دهی برای همه»، به صورت خودکار به همه نام‌های کاربری فیلتر شده (%d) که ابتدا ثبت شدند رای می‌دهید</string>
     <string name="vote_for_all">رای‌دهی برای همه</string>
@@ -414,4 +411,4 @@
     <string name="mix_dash_mix">ترکیب موجودی</string>
     <string name="mix_dash_title">دش‌تان را ترکیب کنید</string>
     <string name="mix_dash_message">برای اینکه افراد دیگر نتوانند پرداخت‌هایتان را ببینند، توصیه می‌شود پیش از ایجاد نام کاربری، موجودی‌تان را ترکیب کنید. </string>
-</resources>
+    </resources>

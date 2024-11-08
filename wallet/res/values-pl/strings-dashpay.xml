@@ -87,7 +87,6 @@
     <string name="dashpay_topup_fee">Opłata za doładowanie</string>
     <string name="search_user_find_a_user">Znajdź użytkownika na Sieci Dash</string>
     <string name="search_for_a_user">Szukaj użytkownika na Sieci Dash</string>
-    <string name="search_user_input_placeholder">tutaj wpisz nazwę użytkownika, którą chcesz znaleźć</string>
     <string name="add_new_contact">Dodaj Nowy Kontakt</string>
     <string name="send_contact_request">Wyślij zaproszenie do kontaktów</string>
     <string name="sending_contact_request">Wysyłanie zaproszenia do kontaktów</string>
@@ -268,7 +267,6 @@
     <string name="usernames_blocked_title">Niektóre nazwy użytkowników mogą zostać zablokowane</string>
     <string name="usernames_blocked_subtitle">Jeśli wystarczająca liczba użytkowników w sieci uzna, że ​​nazwa użytkownika jest nieodpowiednia, mogą oni ją zablokować</string>
     <string name="username_voting">Głosowanie nad nazwą użytkownika</string>
-    <string name="username_voting_subtitle">Jako właściciel Masternoda możesz głosować nad zatwierdzeniem żądanych nazw użytkowników, zanim zostaną one utworzone w sieci.</string>
     <string name="voting_duplicates_only_title">Domyślne ustawienie filtra</string>
     <string name="voting_duplicates_only_message">Domyślny filtr pokazuje tylko zduplikowane nazwy użytkowników, na które nie głosowałeś, ale jeśli zmienisz filtr to możesz zobaczyć wszystkie nazwy użytkowników które są kwestionowane</string>
     <string name="all">Całość</string>
@@ -295,7 +293,6 @@
         <item>Nie zatwierdziłem</item>
         <item>Ma głosy za zablokowaniem</item>
     </string-array>
-
     <string name="block_vote_count">%d głos(ów) za zablokowaniem</string>
     <string name="request_your_username">Stwórz swoją nazwę użytkownika</string>
     <string name="request_your_hint">Pamiętaj, że nie będziesz mógł tego zmienić w przyszłości</string>
@@ -338,8 +335,6 @@
     <string name="masternode_ip">Adres IP masternoda</string>
     <string name="multiple_votes_cast">%d głosów będzie oddawanych, jeśli masz wiele kluczy do głosowania zapisanych w portfelu</string>
     <string name="add_masternode_key">Dodaj klucz głosowania Masternoda</string>
-    <string name="vote_submitted">Twój głos został przesłany</string>
-    <string name="vote_cancelled">Twój głos został anulowany</string>
     <string name="quick_vote">Szybkie Głosowanie</string>
     <string name="quick_vote_subtitle">Klikając przycisk „Głosuj na wszystkie”, automatycznie zagłosujesz na wszystkie filtrowane nazwy użytkowników (%d), które zostały przesłane jako pierwsze</string>
     <string name="vote_for_all">Głosuj nad wszyskimi</string>
@@ -416,4 +411,4 @@
     <string name="mix_dash_mix">Saldo wymieszanych funduszy</string>
     <string name="mix_dash_title">Miksuj swoje fundusze Dash</string>
     <string name="mix_dash_message">Aby uniemożliwić innym osobom śledzenie komu wysyłasz płatności, zaleca się mieszanie salda przed utworzeniem nazwy użytkownika.</string>
-</resources>
+    </resources>

@@ -88,7 +88,6 @@ Dash</b></string>
     <string name="dashpay_topup_fee">Taxa de Recarregamento</string>
     <string name="search_user_find_a_user">Encontre um usuário na rede Dash</string>
     <string name="search_for_a_user">Pesquisar um Usuário na Rede Dash</string>
-    <string name="search_user_input_placeholder">digite o nome de usuário para pesquisar aqui</string>
     <string name="add_new_contact">Adicione um Novo Contato</string>
     <string name="send_contact_request">Enviar Solicitação de Contato</string>
     <string name="sending_contact_request">Enviando Solicitação de Contato</string>
@@ -269,7 +268,6 @@ Dash</b></string>
     <string name="usernames_blocked_title">Algumas contas de usuário podem ser bloqueadas</string>
     <string name="usernames_blocked_subtitle">Se um número suficiente de pessoas na rede determinar que um nome de usuário é inapropriado, elas podem bloqueá-lo</string>
     <string name="username_voting">Votação de Nomes de Usuário</string>
-    <string name="username_voting_subtitle">Como proprietário de um masternode, você pode votar para aprovar nomes de usuário solicitados antes que eles sejam criado na rede..</string>
     <string name="voting_duplicates_only_title">Configuração de filtro padrão</string>
     <string name="voting_duplicates_only_message">O filtro padrão mostra apenas nomes de usuário duplicados nos quais você NÃO votou, mas você pode ver todos os nomes de usuário contestados alterando o filtro</string>
     <string name="all">Todos</string>
@@ -296,7 +294,6 @@ Dash</b></string>
         <item>Eu não aprovei</item>
         <item>Tem votos bloqueados</item>
     </string-array>
-
     <string name="block_vote_count">%d Bloco(s)</string>
     <string name="request_your_username">Criar seu nome de usuário</string>
     <string name="request_your_hint">Por favor, observe que você não poderá alterar isso no futuro</string>
@@ -339,8 +336,6 @@ Dash</b></string>
     <string name="masternode_ip">Endereço IP do Masternode</string>
     <string name="multiple_votes_cast">%d votos serão contabilizados, pois você possui várias chaves de votação armazenadas na carteira </string>
     <string name="add_masternode_key">Adicionar Chave de Votação de Masternode</string>
-    <string name="vote_submitted">Seu voto foi enviado</string>
-    <string name="vote_cancelled">Seu voto foi cancelado</string>
     <string name="quick_vote">Votação Rápida</string>
     <string name="quick_vote_subtitle">Ao clicar no botão \"Votar em todos\", você votará automaticamente em todos os nomes de usuário filtrados (%d) que foram enviados primeiro</string>
     <string name="vote_for_all">Votar em todos</string>
@@ -417,4 +412,4 @@ Dash</b></string>
     <string name="mix_dash_mix">Saldo da mistura</string>
     <string name="mix_dash_title">Mescle seu Dash</string>
     <string name="mix_dash_message">Para ajudar a evitar que outras pessoas vejam para quem você faz pagamentos, é recomendável misturar seu saldo antes de criar seu nome de usuário.</string>
-</resources>
+    </resources>

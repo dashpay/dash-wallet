@@ -269,7 +269,6 @@
     <string name="usernames_blocked_title">一些用户名会被禁止</string>
     <string name="usernames_blocked_subtitle">如果足够的网络节点认为此用户名不合适, 他们能够屏蔽它</string>
     <string name="username_voting">用户名投票</string>
-    <string name="username_voting_subtitle">作为主节点持有者, 您可以在用户名被在网络上创建之前投票通过这些在申请中的用户名..</string>
     <string name="voting_duplicates_only_title">默认过滤器设置</string>
     <string name="voting_duplicates_only_message">默认过滤器仅显示您未投票的重复用户名, 但您可以通过更改过滤器来查看所有有争议的用户名</string>
     <string name="all">所有</string>
@@ -339,8 +338,6 @@
     <string name="masternode_ip">主节点 IP 地址</string>
     <string name="multiple_votes_cast">由于您的钱包存储了多个投票私钥, 您可以进行多次 %d 投票</string>
     <string name="add_masternode_key">添加主节点投票私钥</string>
-    <string name="vote_submitted">您的投票已被提交</string>
-    <string name="vote_cancelled">您的投票已被取消</string>
     <string name="quick_vote">快速投票</string>
     <string name="quick_vote_subtitle">通过点击“投给所有”按钮, 您将自动为所有最先提交的过滤用户名 (%d) 投票</string>
     <string name="vote_for_all">投给所有</string>

@@ -88,7 +88,6 @@ používateľské meno</b></string>
     <string name="dashpay_topup_fee">Poplatok za doplnenie</string>
     <string name="search_user_find_a_user">Nájsť používateľa v sieti Dash</string>
     <string name="search_for_a_user">Vyhľadať používateľa v sieti Dash</string>
-    <string name="search_user_input_placeholder">tu vyhľadajte používateľské meno</string>
     <string name="add_new_contact">Pridať nový kontakt</string>
     <string name="send_contact_request">Poslať žiadosť o kontakt</string>
     <string name="sending_contact_request">Odosielanie žiadosti o kontakt</string>
@@ -269,7 +268,6 @@ používateľské meno</b></string>
     <string name="usernames_blocked_title">Niektoré používateľské mená môžu byť zablokované</string>
     <string name="usernames_blocked_subtitle">Ak dostatočná časť siete zistí, že používateľské meno je nevhodné, môže ho zablokovať</string>
     <string name="username_voting">Hlasovanie o používateľskom mene</string>
-    <string name="username_voting_subtitle">Ako vlastník Masternode môžete hlasovaním schváliť požadované používateľské mená pred ich vytvorením v sieti.</string>
     <string name="voting_duplicates_only_title">Predvolené nastavenie filtra</string>
     <string name="voting_duplicates_only_message">Predvolený filter zobrazuje iba duplicitné používateľské mená, za ktoré ste NEHLASOVALI, ale zmenou filtra môžete zobraziť všetky sporné používateľské mená</string>
     <string name="all">Všetko</string>
@@ -296,7 +294,6 @@ používateľské meno</b></string>
         <item>Neschválil som</item>
         <item>Má zablokované hlasy</item>
     </string-array>
-
     <string name="block_vote_count">%d Blok(y)</string>
     <string name="request_your_username">Vytvorte si používateľské meno</string>
     <string name="request_your_hint">Upozorňujeme, že v budúcnosti ho už nebudete môcť zmeniť</string>
@@ -339,8 +336,6 @@ používateľské meno</b></string>
     <string name="masternode_ip">IP adresa Masternode</string>
     <string name="multiple_votes_cast">Bude odovzdaných %d hlasov, pretože v peňaženke máte uložených viacero hlasovacích kľúčov</string>
     <string name="add_masternode_key">Pridať hlasovací kľúč Masternode</string>
-    <string name="vote_submitted">Váš hlas bol odoslaný</string>
-    <string name="vote_cancelled">Váš hlas bol zrušený</string>
     <string name="quick_vote">Rýchle hlasovanie</string>
     <string name="quick_vote_subtitle">Klepnutím na tlačidlo „Hlasovať za všetkých“ budete automaticky hlasovať za všetky filtrované používateľské mená (%d), ktoré boli odoslané ako prvé</string>
     <string name="vote_for_all">Hlasovať za všetkých</string>
@@ -417,4 +412,4 @@ používateľské meno</b></string>
     <string name="mix_dash_mix">Miešaný zostatok</string>
     <string name="mix_dash_title">Namiešajte váš Dash</string>
     <string name="mix_dash_message">Ak chcete zabrániť tomu, aby ostatní ľudia videli, komu uskutočňujete platby, odporúča sa pred vytvorením používateľského mena zmiešať zostatok.</string>
-</resources>
+    </resources>

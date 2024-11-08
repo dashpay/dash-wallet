@@ -268,7 +268,6 @@
     <string name="usernames_blocked_title">Certains noms d\'utilisateur peuvent être bloqués</string>
     <string name="usernames_blocked_subtitle">Si une proportion suffisante du réseau pense qu\'un nom d\'utilisateur est inapproprié, il peut le bloquer</string>
     <string name="username_voting">Vote des noms d\'utilisateur</string>
-    <string name="username_voting_subtitle">En tant que propriétaire de masternode, vous pouvez voter pour approuver les demandes de noms d\'utilisateur avant qu\'ils ne soient créés sur le réseau.</string>
     <string name="voting_duplicates_only_title">Réglage de filtre par défaut</string>
     <string name="voting_duplicates_only_message">Le filtre par défaut affiche uniquement les noms d\'utilisateur en double pour lesquels vous n\'avez PAS voté, mais vous pouvez voir tous les noms d\'utilisateur contestés en modifiant le filtre</string>
     <string name="all">Tous</string>
@@ -338,8 +337,6 @@
     <string name="masternode_ip">Adresse IP de masternode</string>
     <string name="multiple_votes_cast">%d votes seront enregistrés car votre portefeuille possède plusieurs clés de vote</string>
     <string name="add_masternode_key">Ajouter la clé de vote d\'un masternode</string>
-    <string name="vote_submitted">Votre vote a été soumis</string>
-    <string name="vote_cancelled">Votre vote a été annulé</string>
     <string name="quick_vote">Vote rapide</string>
     <string name="quick_vote_subtitle">En appuyant sur le bouton “Voter pour tous\", vous voterez automatiquement pour tous les noms d\'utilisateur filtrés (%d) qui ont été proposés en premier</string>
     <string name="vote_for_all">Voter pour tous</string>

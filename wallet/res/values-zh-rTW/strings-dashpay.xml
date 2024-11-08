@@ -269,7 +269,6 @@
     <string name="usernames_blocked_title">某些使用者名稱可能會被阻止</string>
     <string name="usernames_blocked_subtitle">如果有足夠的網路確定使用者認為名稱不合適，他們可以阻止它</string>
     <string name="username_voting">用戶名投票</string>
-    <string name="username_voting_subtitle">作為主節點所有者，您可以在網路上建立請求的使用者名稱之前投票批准它們。</string>
     <string name="voting_duplicates_only_title">預設過濾器設定</string>
     <string name="voting_duplicates_only_message">預設過濾器僅顯示您未投票的重複用戶名，但您可以透過更改過濾器來查看所有有爭議的用戶名</string>
     <string name="all">所有</string>
@@ -296,7 +295,6 @@
         <item>我己否決的</item>
         <item>已阻止投票</item>
     </string-array>
-
     <string name="block_vote_count">%d 區塊</string>
     <string name="request_your_username">建立您的用戶名</string>
     <string name="request_your_hint">請注意，您未來將無法更改它</string>
@@ -339,8 +337,6 @@
     <string name="masternode_ip">主節點IP位址</string>
     <string name="multiple_votes_cast">%d 由於您的錢包中儲存了多個投票密鑰，因此將進行投票</string>
     <string name="add_masternode_key">新增主節點投票金鑰</string>
-    <string name="vote_submitted">您的投票已提交</string>
-    <string name="vote_cancelled">您的投票已被取消</string>
     <string name="quick_vote">快速投票</string>
     <string name="quick_vote_subtitle">點擊 \"為所有人投票\" 按鈕，您將自動為首先提交的所有已過濾用戶名 (%d) 投票</string>
     <string name="vote_for_all">給所有人投票</string>

@@ -87,7 +87,6 @@
     <string name="dashpay_topup_fee">Yükleme Ücreti</string>
     <string name="search_user_find_a_user">Dash Ağında bir kullanıcı bulun</string>
     <string name="search_for_a_user">Dash Ağındaki bir Kullanıcıyı Ara</string>
-    <string name="search_user_input_placeholder">Arama yapmak için kullanıcı adını buraya girin</string>
     <string name="add_new_contact">Yeni Kişi Ekle</string>
     <string name="send_contact_request">İletişim İsteği Gönderin</string>
     <string name="sending_contact_request">İletişim Talebi Gönderme</string>
@@ -290,7 +289,6 @@
         <item>Onayladım</item>
         <item>Onaylamadım</item>
     </string-array>
-
     <string name="request_your_username">Kullanıcı adınızı oluşturun</string>
     <string name="request_username">Kullanıcı Adı İste</string>
     <string name="request_voting_range">Dash ağı bu kullanıcı adına oy verecek. Sonuçları %s tarihinde size bildireceğiz.</string>
@@ -325,8 +323,6 @@
     <string name="masternode_ip">Ana düğüm IP adresi</string>
     <string name="multiple_votes_cast">Cüzdanınızda birden fazla oylama anahtarı saklandığı için %d oy kullanılacak</string>
     <string name="add_masternode_key">Ana Düğüm Oylama Anahtarı</string>
-    <string name="vote_submitted">Oyunuz gönderildi</string>
-    <string name="vote_cancelled">Oyunuz iptal edildi</string>
     <string name="quick_vote">Hızlı Oylama</string>
     <string name="quick_vote_subtitle">\"Hepsine Oy Ver\" düğmesine tıklayarak, ilk gönderilen filtrelenmiş kullanıcı adlarının (%d) tümüne otomatik olarak oy vereceksiniz</string>
     <string name="vote_for_all">Herkese Oy Ver</string>

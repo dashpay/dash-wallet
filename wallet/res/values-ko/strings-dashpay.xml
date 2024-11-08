@@ -88,7 +88,6 @@
     <string name="dashpay_topup_fee">충전 수수료</string>
     <string name="search_user_find_a_user">대시 네트워크에서 사용자를 검색합니다</string>
     <string name="search_for_a_user">대시 네트워크에서 사용자 검색</string>
-    <string name="search_user_input_placeholder">이곳에 검색할 사용자 이름을 입력하세요</string>
     <string name="add_new_contact">새로운 연락처 추가하기</string>
     <string name="send_contact_request">연락처 요청 전송</string>
     <string name="sending_contact_request">연락처 요청 전송중</string>
@@ -269,7 +268,6 @@
     <string name="usernames_blocked_title">어떤 사용자 이름은 블록될 수 있습니다</string>
     <string name="usernames_blocked_subtitle">사용자 이름이 부적절하다는 점에 충분한 네트워크가 의견을 함께 한다면 블록할 수 있습니다</string>
     <string name="username_voting">사용자 이름 투표</string>
-    <string name="username_voting_subtitle">마스터노드 소유자인 당신은, 사용자 이름이 네트워크상에 생성되기 전에 이를 위한 요청에 대해 투표할 수 있습니다..</string>
     <string name="voting_duplicates_only_title">디폴트 필터 설정</string>
     <string name="voting_duplicates_only_message">이 디폴트 필터는 투표하지 않은 중복 사용자 아이디만 표시하지만, 필터를 변경하면 경합 중인 모든 사용자 아이디를 볼 수 있습니다.</string>
     <string name="all">모두</string>
@@ -296,7 +294,6 @@
         <item>승인하지 않았습니다</item>
         <item>투표를 차단했습니다</item>
     </string-array>
-
     <string name="block_vote_count">%d 블록</string>
     <string name="request_your_username">당신의 사용자 이름을 생성하세요</string>
     <string name="request_your_hint">이를 다시 변경할 수 없다는 점에 주의하세요</string>
@@ -339,8 +336,6 @@
     <string name="masternode_ip">마스터노드 IP 주소</string>
     <string name="multiple_votes_cast">이 지갑에 수 개의 투표 키가 저장되어 있으므로 %d 표가 던져지게 됩니다 </string>
     <string name="add_masternode_key">마스터노드 투표 키를 추가하세요</string>
-    <string name="vote_submitted">투표가 제출되었습니다</string>
-    <string name="vote_cancelled">투표가 취소되었습니다</string>
     <string name="quick_vote">빠른 투표</string>
     <string name="quick_vote_subtitle">\"모두 투표하기\" 버튼을 선택하면, 먼저 제출된 필터를 거친 모든 사용자 이름 (%d) 에 대해 자동으로 투표하게 됩니다</string>
     <string name="vote_for_all">모두 투표하기</string>
@@ -417,4 +412,4 @@
     <string name="mix_dash_mix">믹스 잔고</string>
     <string name="mix_dash_title">당신의 대시를 믹스하세요</string>
     <string name="mix_dash_message">당신이 누구에게 송금하는 지를 아무도 알 수 없게 하기 위해서는, 사용자 이름을 만들기 전에 잔고를 믹싱할 것을 권장합니다.</string>
-</resources>
+    </resources>
