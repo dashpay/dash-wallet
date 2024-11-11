@@ -88,7 +88,7 @@
     <string name="dashpay_topup_fee">充值费用</string>
     <string name="search_user_find_a_user">在Dash网络上查找用户</string>
     <string name="search_for_a_user">在Dash网络上搜索用户</string>
-    <string name="search_user_input_placeholder">这里输入用户名来搜索</string>
+    <string name="search_user_input_placeholder">搜索用户名</string>
     <string name="add_new_contact">添加新朋友</string>
     <string name="send_contact_request">发送朋友申请</string>
     <string name="sending_contact_request">发送好友申请</string>
@@ -269,6 +269,8 @@
     <string name="usernames_blocked_title">一些用户名会被禁止</string>
     <string name="usernames_blocked_subtitle">如果足够的网络节点认为此用户名不合适, 他们能够屏蔽它</string>
     <string name="username_voting">用户名投票</string>
+    <string name="username_voting_subtitle">作为主节点持有者, 您可以在用户名被在网络上创建之前投票通过这些在申请中的用户名.</string>
+    <string name="username_voting_subtitle_two">若您认为不合适您可以禁止用户名的创建.</string>
     <string name="voting_duplicates_only_title">默认过滤器设置</string>
     <string name="voting_duplicates_only_message">默认过滤器仅显示您未投票的重复用户名, 但您可以通过更改过滤器来查看所有有争议的用户名</string>
     <string name="all">所有</string>
@@ -295,7 +297,13 @@
         <item>我已否决的</item>
         <item>已阻止投票</item>
     </string-array>
-
+    <string name="unblock_button">解禁</string>
+    <plurals name="block_vote_button">
+        <item quantity="other">禁止的</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="other">通过的</item>
+    </plurals>
     <string name="block_vote_count">%d (多个)区块</string>
     <string name="request_your_username">创建您的用户名</string>
     <string name="request_your_hint">请注意您在之后将无法进行修改</string>
@@ -315,6 +323,7 @@
     <string name="request_details">申请的细节</string>
     <string name="request_details_subtitle">查看下方内容来验证此用户名的所有权</string>
     <string name="vote_to_approve">投票通过</string>
+    <string name="vote_to_block">投票禁止</string>
     <string name="identity">身份</string>
     <string name="results">结果</string>
     <string name="link">链接</string>
@@ -333,11 +342,31 @@
     <string name="voting_key_hint">主节点投票私钥</string>
     <string name="voting_key_input_error">您已输入了无效的密钥</string>
     <string name="voting_key_input_not_active_error">您输入的钥匙未与激活的主节点关联</string>
+    <string name="voting_key_input_already_present">您已经输入了此主节点密钥</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">您输入的私钥是用于测试网络的, 但此处是主网. 看起来应是这样的: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">您输入的私钥是用于主网的, 但此处是测试网络. 看起来应是这样的: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">您输入的是地址公钥而不是主节点投票私钥. 它应该是WIF格式 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">您输入的密钥是hex格式, 它应该是WIF格式 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">您输入的密钥是hex格式, 它应该是WIF格式 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">您输入的私钥太短了. 这里是示例 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">您输入的私钥包含了一些错误的字符. 这里是示例 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">您输入的私钥包含了一个无效的字符. 这里是示例 (%s)</string>
+
     <string name="voting_key_add">添加您的投票私钥</string>
     <string name="voting_key_add_subtitle">下列的 (多个) IP 地址与这个钱包相关联</string>
     <string name="masternode_ip">主节点 IP 地址</string>
     <string name="multiple_votes_cast">由于您的钱包存储了多个投票私钥, 您可以进行多次 %d 投票</string>
     <string name="add_masternode_key">添加主节点投票私钥</string>
+    <string name="dont_ask_again">不在询问</string>
+    <string name="vote_submitting">正在提交您对 %s 用户名的投票</string>
+    <string name="vote_submitted">已对 %s 用户名投票</string>
+    <string name="cancel_submitting">正在取消您对 %s 用户名的投票</string>
+    <string name="cancel_submitted">已取消对 %s 用户名的投票</string>
+    <string name="block_submitting">正禁止 %s 用户名</string>
+    <string name="block_submitted">您禁止了 %s 用户名</string>
+    <string name="vote_submitted_error">对 %s 用户名投票时出错</string>
+    <string name="cancel_submitted_error">对 %s 用户名取消投票时出错</string>
+    <string name="block_submitted_error">正禁止 %s 用户名时出错</string>
     <string name="quick_vote">快速投票</string>
     <string name="quick_vote_subtitle">通过点击“投给所有”按钮, 您将自动为所有最先提交的过滤用户名 (%d) 投票</string>
     <string name="vote_for_all">投给所有</string>
@@ -414,4 +443,4 @@
     <string name="mix_dash_mix">混币余额</string>
     <string name="mix_dash_title">混币您的 Dash</string>
     <string name="mix_dash_message">为了防止其他人看到您的付款对象, 建议您在创建用户名之前对您的 Dash 进行混币.</string>
-</resources>
+    </resources>

@@ -87,7 +87,7 @@
     <string name="dashpay_topup_fee">Frais de recharge</string>
     <string name="search_user_find_a_user">Cherchez un utilisateur sur le réseau Dash</string>
     <string name="search_for_a_user">Rechercher un utilisateur sur le réseau Dash</string>
-    <string name="search_user_input_placeholder">tapez ici le nom d\'utilisateur à chercher</string>
+    <string name="search_user_input_placeholder">Chercher un nom d\'utilisateur</string>
     <string name="add_new_contact">Ajouter un nouveau contact</string>
     <string name="send_contact_request">Envoyer une demande de contact</string>
     <string name="sending_contact_request">Envoi de la requête de contact</string>
@@ -268,6 +268,8 @@
     <string name="usernames_blocked_title">Certains noms d\'utilisateur peuvent être bloqués</string>
     <string name="usernames_blocked_subtitle">Si une proportion suffisante du réseau pense qu\'un nom d\'utilisateur est inapproprié, il peut le bloquer</string>
     <string name="username_voting">Vote des noms d\'utilisateur</string>
+    <string name="username_voting_subtitle">En tant que propriétaire de masternode, vous pouvez voter pour approuver les demandes de noms d\'utilisateur avant qu\'ils ne soient créés sur le réseau.</string>
+    <string name="username_voting_subtitle_two">Vous pouvez bloquer la création de noms d\'utilisateur si vous les jugez inappropriés.</string>
     <string name="voting_duplicates_only_title">Réglage de filtre par défaut</string>
     <string name="voting_duplicates_only_message">Le filtre par défaut affiche uniquement les noms d\'utilisateur en double pour lesquels vous n\'avez PAS voté, mais vous pouvez voir tous les noms d\'utilisateur contestés en modifiant le filtre</string>
     <string name="all">Tous</string>
@@ -294,7 +296,17 @@
         <item>Je n\'ai pas approuvé</item>
         <item>A des votes de blocage</item>
     </string-array>
-
+    <string name="unblock_button">Débloquer</string>
+    <plurals name="block_vote_button">
+        <item quantity="one">Blocage</item>
+        <item quantity="many">Blocages</item>
+        <item quantity="other">Blocages</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="one">Approbation</item>
+        <item quantity="many">Approbations</item>
+        <item quantity="other">Approbations</item>
+    </plurals>
     <string name="block_vote_count">%d bloc(s)</string>
     <string name="request_your_username">Créez votre nom d\'utilisateur</string>
     <string name="request_your_hint">Veuillez noter que vous ne pourrez pas le changer plus tard</string>
@@ -314,6 +326,7 @@
     <string name="request_details">Détails de la demande</string>
     <string name="request_details_subtitle">Veuillez relire les infos ci-dessous pour vérifier la propriété de ce nom d\'utilisateur</string>
     <string name="vote_to_approve">Voter pour approuver</string>
+    <string name="vote_to_block">Voter pour bloquer</string>
     <string name="identity">Identité</string>
     <string name="results">Résultats</string>
     <string name="link">Lien</string>
@@ -332,11 +345,31 @@
     <string name="voting_key_hint">Clé privée de vote de masternode</string>
     <string name="voting_key_input_error">Vous avez saisi une clé invalide</string>
     <string name="voting_key_input_not_active_error">Vous avez indiqué une clé qui n\'est pas associée à un masternode actif.</string>
+    <string name="voting_key_input_already_present">Vous avez déjà saisi cette clé de masternode</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">Vous avez saisi une clé pour le réseau de test, mais il s\'agit du réseau principal. Elle devrait ressembler à ceci : %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">Vous avez saisi une clé pour le réseau principal, mais il s\'agit du réseau de test. Elle devrait ressembler à ceci : %s</string>
+    <string name="voting_key_input_invalid_private_key_address">Vous avez saisi une clé d\'adresse au lieu d\'une clé privée de vote de masternode. Elle devrait être au format WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">Vous avez saisi une clé en format hexadécimal, mais elle devrait être au format WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">Vous avez saisi une clé en format hexadécimal, mais elle devrait être au format WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">Vous avez saisi une clé privée trop courte. Voici un exemple (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">Vous avez saisi une clé privée qui contient quelques caractères incorrects. Voici un exemple (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">Vous avez saisi une clé privée contenant un caractère invalide. Voici un exemple (%s)</string>
+
     <string name="voting_key_add">Ajoutez vos clés de vote</string>
     <string name="voting_key_add_subtitle">Les adresses IP ci-dessous sont associées à ce portefeuille</string>
     <string name="masternode_ip">Adresse IP de masternode</string>
     <string name="multiple_votes_cast">%d votes seront enregistrés car votre portefeuille possède plusieurs clés de vote</string>
     <string name="add_masternode_key">Ajouter la clé de vote d\'un masternode</string>
+    <string name="dont_ask_again">Ne plus me demander</string>
+    <string name="vote_submitting">Soumission de votre vote pour le nom d\'utilisateur %s</string>
+    <string name="vote_submitted">A voté pour le nom d\'utilisateur %s</string>
+    <string name="cancel_submitting">Annulation de votre vote pour le nom d\'utilisateur %s</string>
+    <string name="cancel_submitted">Vote annulé pour le nom d\'utilisateur %s </string>
+    <string name="block_submitting">Blocage du nom d\'utilisateur %s</string>
+    <string name="block_submitted">Vous avez bloqué le nom d\'utilisateur %s</string>
+    <string name="vote_submitted_error">Erreur lors du vote pour le nom d\'utilisateur %s</string>
+    <string name="cancel_submitted_error">Erreur lors de l\'annulation du vote pour le nom d\'utilisateur %s</string>
+    <string name="block_submitted_error">Erreur lors du blocage du nom d\'utilisateur %s</string>
     <string name="quick_vote">Vote rapide</string>
     <string name="quick_vote_subtitle">En appuyant sur le bouton “Voter pour tous\", vous voterez automatiquement pour tous les noms d\'utilisateur filtrés (%d) qui ont été proposés en premier</string>
     <string name="vote_for_all">Voter pour tous</string>
@@ -413,4 +446,4 @@
     <string name="mix_dash_mix">Solde mélangé</string>
     <string name="mix_dash_title">Mélangez vos dashs</string>
     <string name="mix_dash_message">Pour empêcher d\'autres gens de voir à qui vous faites des paiements, il est recommandé de mélanger votre solde avant de créer votre nom d\'utilisateur.</string>
-</resources>
+    </resources>
