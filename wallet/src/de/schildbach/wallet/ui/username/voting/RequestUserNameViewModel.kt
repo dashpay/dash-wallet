@@ -106,8 +106,9 @@ class RequestUserNameViewModel @Inject constructor(
     var identityBalance: Long = 0L
 
     private val _walletBalance = MutableStateFlow(Coin.ZERO)
-    val walletBalance: StateFlow<Coin>// = Coin.ZERO
+    val walletBalance: StateFlow<Coin>
         get() = _walletBalance
+
     suspend fun isUserNameRequested(): Boolean {
         val hasRequestedName = identityConfig.get(USERNAME).isNullOrEmpty().not()
         val creationState = BlockchainIdentityData.CreationState.valueOf(
@@ -115,6 +116,7 @@ class RequestUserNameViewModel @Inject constructor(
         )
         return hasRequestedName && creationState != BlockchainIdentityData.CreationState.NONE && creationState.ordinal <= BlockchainIdentityData.CreationState.VOTING.ordinal
     }
+
     suspend fun isUsernameLocked(): Boolean {
         return isUserNameRequested() &&
                 UsernameRequestStatus.valueOf(identityConfig.get(USERNAME_REQUESTED)!!) == UsernameRequestStatus.LOCKED
