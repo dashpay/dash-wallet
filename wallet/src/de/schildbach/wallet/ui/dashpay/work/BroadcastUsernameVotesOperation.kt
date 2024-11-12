@@ -104,7 +104,8 @@ class BroadcastUsernameVotesOperation(val application: Application) {
     fun create(
         usernames: List<String>,
         voteChoices: List<ResourceVoteChoice>,
-        masternodeKeys: List<ByteArray>
+        masternodeKeys: List<ByteArray>,
+        isQuickVoting: Boolean
     ): WorkContinuation {
         val password = SecurityGuard().retrievePassword()
         val verifyIdentityWorker = OneTimeWorkRequestBuilder<BroadcastUsernameVotesWorker>()
@@ -115,7 +116,8 @@ class BroadcastUsernameVotesOperation(val application: Application) {
                     BroadcastUsernameVotesWorker.KEY_VOTE_CHOICES to voteChoices.map { it.toString() }.toTypedArray(),
                     BroadcastUsernameVotesWorker.KEY_MASTERNODE_KEYS to masternodeKeys.map {
                         ECKey.fromPrivate(it).getPrivateKeyAsWiF(Constants.NETWORK_PARAMETERS)
-                    }.toTypedArray()
+                    }.toTypedArray(),
+                    BroadcastUsernameVotesWorker.KEY_QUICK_VOTING to isQuickVoting
                 )
             )
             .addTag("usernames:$usernames")
