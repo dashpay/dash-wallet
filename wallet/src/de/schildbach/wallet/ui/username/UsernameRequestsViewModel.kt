@@ -49,6 +49,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.Base58
@@ -261,7 +262,8 @@ class UsernameRequestsViewModel @Inject constructor(
                 BroadcastUsernameVotesOperation(walletApplication).create(
                     listOf(request.normalizedLabel),
                     listOf(ResourceVoteChoice.towardsIdentity(Identifier.from(request.identity))),
-                    masternodes.value.map { it.votingPrivateKey }
+                    masternodes.value.map { it.votingPrivateKey },
+                    isQuickVoting = false
                 ).enqueue()
 
                 usernameRequestDao.removeApproval(request.username)
@@ -295,7 +297,8 @@ class UsernameRequestsViewModel @Inject constructor(
                 BroadcastUsernameVotesOperation(walletApplication).create(
                     listOf(request.normalizedLabel),
                     listOf(ResourceVoteChoice.abstain()),
-                    masternodes.value.map { it.votingPrivateKey }
+                    masternodes.value.map { it.votingPrivateKey },
+                    isQuickVoting = false
                 ).enqueue()
                 usernameRequestDao.update(request.copy(votes = request.votes - keysAmount, isApproved = false))
 //                usernameVoteDao.insert(
@@ -322,35 +325,47 @@ class UsernameRequestsViewModel @Inject constructor(
             return
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            val filteredRequests = _uiState.value.filteredUsernameRequests
-            val requestIds = filteredRequests.flatMap {
-                it.requests
-            }.filterNot {
-                it.isApproved
-            }.map {
-                it.requestId
-            }
-            usernameRequestDao.voteForRequests(
-                requestIds,
-                keysAmount
-            )
-            _uiState.update { it.copy(voteSubmitted = true) }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val filteredRequests = _uiState.value.filteredUsernameRequests
+                // group the filtered requests according to the normalizedLabel
+                val requestsByUsername = hashMapOf<String, ArrayList<UsernameRequest>>()
+                filteredRequests.flatMap {
+                    it.requests
+                }.forEach {
+                    val requestList = if (!requestsByUsername.contains(it.normalizedLabel)) {
+                        val list = arrayListOf<UsernameRequest>()
+                        requestsByUsername[it.normalizedLabel] = list
+                        list
+                    } else {
+                        requestsByUsername[it.normalizedLabel]
+                    }
+                    requestList!!.add(it)
+                }
 
-            val usernames = arrayListOf<String>()
-            val voteChoices = arrayListOf<ResourceVoteChoice>()
-            requestIds.forEach {
-                usernameRequestDao.getRequest(it)?.let { request ->
+                // choose the first request submitted for each group based on the createdAt timestamp
+                val firstRequests = requestsByUsername.map {
+                    it.value.minByOrNull { request -> request.createdAt }!!
+                }
+
+                val usernames = arrayListOf<String>()
+                val voteChoices = arrayListOf<ResourceVoteChoice>()
+                // ignore the requests that already have been approved or have no votes remaining
+                firstRequests.filterNot {
+                    it.isApproved && usernameVoteDao.countVotes(it.normalizedLabel) < UsernameVote.MAX_VOTES
+                }.forEach { request ->
                     usernames.add(request.normalizedLabel)
                     voteChoices.add(ResourceVoteChoice.towardsIdentity(Identifier.from(request.identity)))
                 }
-            }
 
-            BroadcastUsernameVotesOperation(walletApplication).create(
-                usernames,
-                voteChoices,
-                masternodes.value.map { it.votingPrivateKey }
-            ).enqueue()
+                BroadcastUsernameVotesOperation(walletApplication).create(
+                    usernames,
+                    voteChoices,
+                    masternodes.value.map { it.votingPrivateKey },
+                    isQuickVoting = true
+                ).enqueue()
+            }
+            _uiState.update { it.copy(voteSubmitted = true) }
         }
     }
 
