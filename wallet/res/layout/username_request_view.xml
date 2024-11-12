@@ -82,34 +82,4 @@
             />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-<!--    <TextView-->
-<!--        android:id="@+id/cancel_approval_button"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_marginEnd="10dp"-->
-<!--        style="@style/Button.Tertiary.ExtraSmall"-->
-<!--        android:text="@string/cancel_approval"-->
-<!--        app:layout_constraintEnd_toStartOf="@id/vote_amount"-->
-<!--        app:layout_constraintTop_toTopOf="parent"-->
-<!--        app:layout_constraintBottom_toBottomOf="parent"-->
-<!--        />-->
-
-
-
-<!--    <TextView-->
-<!--        android:id="@+id/vote_amount"-->
-<!--        style="@style/Overline.Tertiary"-->
-<!--        android:layout_width="0dp"-->
-<!--        android:layout_height="20dp"-->
-<!--        android:layout_marginEnd="15dp"-->
-<!--        android:minWidth="20dp"-->
-<!--        android:paddingHorizontal="7dp"-->
-<!--        android:gravity="center"-->
-<!--        android:textAlignment="gravity"-->
-<!--        android:background="@drawable/rounded_background"-->
-<!--        android:theme="@style/InactiveBadgeTheme"-->
-<!--        app:layout_constraintEnd_toEndOf="parent"-->
-<!--        app:layout_constraintTop_toTopOf="parent"-->
-<!--        app:layout_constraintBottom_toBottomOf="parent"-->
-<!--        tools:text="10" />-->
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -124,8 +124,6 @@ class UsernameRequestGroupViewHolder(
         binding.linkBadge.isVisible = !hasMoreThanOneRequest
         binding.linkIncluded.isVisible = !hasMoreThanOneRequest
 
-        //binding.blockVotes.text = binding.root.context.getString(R.string.block_vote_count, option.lockVotes())
-        //binding.blockVotes.isVisible = option.lockVotes() != 0
         val context = binding.root.context
         binding.blocksButton.text = context.getString(R.string.two_lines_number_text, option.lockVotes(), context.resources.getQuantityString(R.plurals.block_vote_button, option.lockVotes()))
         binding.blocksButton.setOnClickListener {
@@ -180,14 +178,6 @@ class UsernameRequestGroupViewHolder(
                 { request -> voteClickListener.invoke(request) }
             )
             binding.requestsList.adapter = adapter
-//            val divider = ContextCompat.getDrawable(binding.root.context, R.drawable.list_divider)!!
-//            val decorator = ListDividerDecorator(
-//                divider,
-//                showAfterLast = false,
-//                marginStart = binding.root.resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal),
-//                marginEnd = 0
-//            )
-//            binding.requestsList.addItemDecoration(decorator)
             adapter.submitList(option.requests)
         }
     }
@@ -301,31 +291,8 @@ class UsernameRequestViewHolder(
             }
         }
 
-//        binding.voteAmount.setRoundedBackground(
-//            if (request.isApproved) {
-//                R.style.BlueBadgeTheme
-//            } else {
-//                R.style.InactiveBadgeTheme
-//            }
-//        )
-//
-//        binding.voteAmount.setTextColor(
-//            binding.voteAmount.resources.getColor(
-//                if (request.isApproved) {
-//                    R.color.white
-//                } else {
-//                    R.color.content_tertiary
-//                },
-//                null
-//            )
-//        )
-
-        //binding.voteAmount.text = request.votes.toString()
         binding.linkBadge.isGone = request.link.isNullOrEmpty()
         binding.linkIncluded.isGone = request.link.isNullOrEmpty()
-
-        //val lastVote = votes.lastOrNull()
-        //binding.cancelApprovalButton.isVisible = lastVote != null && lastVote.identity == request.identity && lastVote.type == UsernameVote.APPROVE
     }
 
     override fun setOnClickListener(usernameRequest: UsernameRequest, listener: (UsernameRequest) -> Unit, voteClickListener: (UsernameRequest) -> Unit) {
@@ -338,17 +305,3 @@ class UsernameRequestViewHolder(
     }
 }
 
-//class BlockViewHolder(val binding: BlockUsernameRequestViewBinding)
-//    : AbstractUsernameRequestViewHolder(binding.root) {
-//
-//    override fun bind(request: UsernameRequest, votes: List<UsernameVote>) {
-//        val lastVote = votes.lastOrNull()
-//        //binding.cancelBlockButton.isVisible = lastVote != null && lastVote.identity == request.identity && lastVote.type == UsernameVote.APPROVE
-//    }
-//
-//    override fun setOnClickListener(usernameRequest: UsernameRequest, listener: (UsernameRequest) -> Unit) {
-//        binding.root.setOnClickListener {
-//            listener.invoke(usernameRequest)
-//        }
-//    }
-//}

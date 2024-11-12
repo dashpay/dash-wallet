@@ -75,40 +75,13 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             safeNavigate(UsernameRequestsFragmentDirections.requestsToFilters())
         }
         val adapter = UsernameRequestGroupAdapter(
-            { request -> //performVote(request)
+            { request ->
                 lifecycleScope.launch {
                     if (request.requestId != "") {
                         viewModel.logEvent(AnalyticsConstants.UsernameVoting.DETAILS)
                         safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(request.requestId))
                     } else {
                         performVote(request)
-//                        when {
-//                            (usernameVotes.size == UsernameVote.MAX_VOTES - 1) -> {
-//                                if (AdaptiveDialog.create(
-//                                        icon = null,
-//                                        getString(R.string.username_vote_one_left),
-//                                        getString(R.string.username_vote_one_left_message, UsernameVote.MAX_VOTES - 1),
-//                                        getString(R.string.cancel),
-//                                        getString(R.string.button_ok)
-//                                    ).showAsync(requireActivity()) == true
-//                                ) {
-//                                    doBlockVote(request)
-//                                }
-//                            }
-//                            usernameVotes.size == UsernameVote.MAX_VOTES -> {
-//                                AdaptiveDialog.create(
-//                                    icon = null,
-//                                    "No votes left",
-//                                    "You cannot submit anymore votes on this username",
-//                                    getString(R.string.button_ok)
-//                                ).show(requireActivity()) {
-//                                    // do nothing
-//                                }
-//                            }
-//                            else -> {
-//                                doBlockVote(request)
-//                            }
-//                        }
                     }
                 }
             },
