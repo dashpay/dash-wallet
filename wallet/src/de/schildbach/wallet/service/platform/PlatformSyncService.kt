@@ -1085,6 +1085,7 @@ class PlatformSynchronizationService @Inject constructor(
 
                     name?.let { normalizedLabel ->
                         val voteContender = platformRepo.getVoteContenders(normalizedLabel)
+                        val votes = usernameVoteDao.getVotes(name)
 
                         voteContender.map.forEach { (identifier, contender) ->
 
@@ -1099,8 +1100,7 @@ class PlatformSynchronizationService @Inject constructor(
                                     val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
 
                                     val requestId = UsernameRequest.getRequestId(identifier.toString(), normalizedLabel)
-                                    val previousUsernameRequest = usernameRequestDao.getRequest(requestId)
-
+                                    val lastVote = votes.lastOrNull()
                                     val usernameRequest = UsernameRequest(
                                         requestId = requestId,
                                         username = contestedDocument.label,
@@ -1110,7 +1110,7 @@ class PlatformSynchronizationService @Inject constructor(
                                         link = identityVerifyDocument?.url,
                                         votes = contender.votes,
                                         lockVotes = voteContender.lockVoteTally,
-                                        isApproved = previousUsernameRequest?.isApproved ?: false
+                                        isApproved = lastVote?.let { it.identity == identifier.toString() } ?: false
                                     )
                                     usernameRequestDao.insert(usernameRequest)
                                     currentRequestList.remove(usernameRequest)
@@ -1161,63 +1161,6 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-    /*override*/ suspend fun updateUsernameRequestsWithVotes_old() {
-        checkUsernameVotingStatus()
-        try {
-            val contestedNames = platform.platform.names.getContestedNames()
-            // usernameRequestDao.clear()
-            // val myIdentifier = platformRepo.blockchainIdentity.uniqueIdentifier
-            for (name in contestedNames) {
-                try {
-                    val voteContender = platformRepo.getVoteContenders(name)
-
-                    voteContender.map.forEach { (identifier, contender) ->
-
-                        val contestedDocument = contender.seralizedDocument?.let { serialized ->
-                            DomainDocument(
-                                platform.platform.names.deserialize(serialized)
-                            )
-                        }
-                        val hasWinner = voteContender.winner.isPresent
-
-                        if (!hasWinner) {
-                            if (contestedDocument != null) {
-                                val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
-
-                                val requestId = UsernameRequest.getRequestId(identifier.toString(), name)
-                                val previousUsernameRequest = usernameRequestDao.getRequest(requestId)
-
-                                val usernameRequest = UsernameRequest(
-                                    requestId = requestId,
-                                    username = contestedDocument.label,
-                                    normalizedLabel = name,
-                                    createdAt = contestedDocument.createdAt ?: -1L,
-                                    identity = identifier.toString(),
-                                    link = identityVerifyDocument?.url,
-                                    votes = contender.votes,
-                                    lockVotes = voteContender.lockVoteTally,
-                                    isApproved = previousUsernameRequest?.isApproved ?: false
-                                )
-                                usernameRequestDao.insert(usernameRequest)
-                            }
-                        } else {
-                            // voting is complete
-                            usernameRequestDao.remove(
-                                UsernameRequest.getRequestId(identifier.toString(), name)
-                            )
-                            // remove related votes
-                            usernameVoteDao.remove(name)
-                        }
-                    }
-                } catch(e: Exception) {
-                    log.warn("problem getting vote contenders for $name", e)
-                }
-            }
-        } catch (e: Exception) {
-            log.info("problem obtaining votes:", e)
-        }
-    }
-
     /**
      * update databases for a single username (normalized)
      */
@@ -1238,7 +1181,8 @@ class PlatformSynchronizationService @Inject constructor(
                         val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
 
                         val requestId = UsernameRequest.getRequestId(identifier.toString(), name)
-                        val previousUsernameRequest = usernameRequestDao.getRequest(requestId)
+                        val votes = usernameVoteDao.getVotes(name)
+                        val lastVote = votes.lastOrNull()
 
                         val usernameRequest = UsernameRequest(
                             requestId = requestId,
@@ -1249,7 +1193,7 @@ class PlatformSynchronizationService @Inject constructor(
                             link = identityVerifyDocument?.url,
                             votes = contender.votes,
                             lockVotes = voteContender.lockVoteTally,
-                            isApproved = previousUsernameRequest?.isApproved ?: false
+                            isApproved = lastVote?.let { it.identity == identifier.toString() } ?: false
                         )
                         usernameRequestDao.insert(usernameRequest)
                     }
