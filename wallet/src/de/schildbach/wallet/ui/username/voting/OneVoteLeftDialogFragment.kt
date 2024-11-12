@@ -58,7 +58,7 @@ class OneVoteLeftDialogFragment: OffsetDialogFragment(R.layout.dialog_one_vote_l
                 binding.usernameList.isVisible = true
                 binding.usernameList.text = usernameList.first()
             }
-            binding.subtitle.text = getString(R.string.one_vote_left_subtitle, UsernameVote.MAX_VOTES)
+            binding.subtitle.text = getString(R.string.one_vote_left_subtitle, UsernameVote.MAX_VOTES - 1)
         }
 
         binding.showUsernames.setOnClickListener {
