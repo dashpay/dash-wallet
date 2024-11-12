@@ -570,18 +570,10 @@ class UsernameRequestsViewModel @Inject constructor(
             BroadcastUsernameVotesOperation(walletApplication).create(
                 listOf(username),
                 listOf(ResourceVoteChoice.lock()),
-                masternodes.value.map { it.votingPrivateKey }
+                masternodes.value.map { it.votingPrivateKey },
+                isQuickVoting = false
             ).enqueue()
-            //usernameRequestDao.update(request.copy(lockVotes = request.lockVotes + keysAmount, isApproved = true))
 
-            // TODO: put after actually submitting a vote
-//            usernameVoteDao.insert(
-//                UsernameVote(
-//                    Names.normalizeString(username),
-//                    "",
-//                    UsernameVote.LOCK
-//                )
-//            )
             currentVote = arrayListOf(
                 UsernameVote(
                     Names.normalizeString(username),
@@ -693,6 +685,15 @@ class UsernameRequestsViewModel @Inject constructor(
             viewModelWorkerScope.launch {
                 importedMasternodeKeyDao.remove(masternode.proTxHash)
             }
+        }
+    }
+
+    /**
+     * returns names in [usernames] that have only [votesLeft] remaining votes that can be cast
+     */
+    suspend fun getUsernamesByVotesLeft(usernames: List<String>, votesLeft: Int): List<String> {
+        return usernames.filter { username ->
+            usernameVoteDao.countVotes(username) == UsernameVote.MAX_VOTES - votesLeft
         }
     }
 }
