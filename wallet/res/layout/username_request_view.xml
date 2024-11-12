@@ -70,7 +70,7 @@
 
         <Button
             android:id="@+id/approvals_button"
-            style="@style/Button.Vote.LightBlue"
+            style="@style/Button.Primary.Large.LightBlue"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_marginHorizontal="8dp"
