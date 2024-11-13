@@ -44,12 +44,6 @@ class InputWrapper(context: Context, attrs: AttributeSet): TextInputLayout(conte
         setCounterOverflowTextAppearance(R.style.Overline_Red)
         initStyle(attrs, R.styleable.TextInputLayout)
         setPadding()
-
-        endIconMode = END_ICON_CUSTOM
-        endIconDrawable = ResourcesCompat.getDrawable(resources, R.drawable.ic_clear_input, null)
-        setEndIconOnClickListener {
-            editText?.setText("")  // Clear text in EditText
-        }
     }
 
     @SuppressLint("PrivateResource")
