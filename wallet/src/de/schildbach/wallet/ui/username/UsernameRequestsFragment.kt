@@ -313,16 +313,20 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         binding.requestGroups.scrollToPosition(scrollPosition)
     }
 
-//    private fun setVotes(adapter: UsernameRequestGroupAdapter, votes: List<UsernameVote>) {
-//        adapter.updateVotes(votes)
-//    }
-
+    /**
+     * Returns a list of [UsernameRequestGroupView] where the username of the group or the label or normalizedLabel
+     * of any related request contains [query] text.
+     */
     private fun filterByQuery(items: List<UsernameRequestGroupView>, query: String?): List<UsernameRequestGroupView> {
         if (query.isNullOrEmpty()) {
             return items
         }
 
-        return items.filter { it.username.startsWith(query, true) }
+        return items.filter {
+            it.username.contains(query, true) || it.requests.any {
+                request -> request.normalizedLabel.contains(query)
+            }
+        }
     }
 
     private fun populateAppliedFilters(state: FiltersUIState) {
