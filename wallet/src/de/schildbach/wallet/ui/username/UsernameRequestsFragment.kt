@@ -348,11 +348,15 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
     }
 
+    /**
+     * Display the toast regarding the last vote
+     */
     private fun showVoteIndicator(
         binding: FragmentUsernameRequestsBinding,
         votes: List<String>,
         usernames: List<String>,
-        status: Status
+        status: Status,
+        isQuickVoting: Boolean
     ) {
         if (votes.isEmpty()) {
             return
