@@ -35,6 +35,7 @@ import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesWorker
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupAdapter
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
 import de.schildbach.wallet.ui.username.utils.votingViewModels
+import de.schildbach.wallet.ui.username.voting.OneVoteLeftDialogFragment
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameRequestsBinding
 import kotlinx.coroutines.delay
@@ -129,15 +130,6 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
             setState(state.filteredUsernameRequests)
             setList(adapter, state.filteredUsernameRequests)
-            //setVotes(state.votes)
-
-//            if (state.voteSubmitted) {
-//                showVoteIndicator(binding, false)
-//            }
-//
-//            if (state.voteCancelled) {
-//                showVoteIndicator(binding, true)
-//            }
         }
 
         viewModel.filterState.observe(viewLifecycleOwner) { state ->
@@ -159,6 +151,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
                         u.data?.outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_USERNAMES)?.toList()
                     val votes =
                         u.data?.outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_VOTE_CHOICES)?.toList()
+                    val isQuickVoting = u.data?.outputData?.getBoolean(BroadcastUsernameVotesWorker.KEY_QUICK_VOTING, false) ?: false
                     when (u.status) {
                         Status.LOADING -> {
                             log.info("  loading: {} {}", t, u.data?.outputData)
@@ -167,12 +160,13 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
                         Status.SUCCESS -> {
                             log.info("  success: {} {}", t, u.data?.outputData)
-                            showVoteIndicator(binding, votes!!, usernames!!, u.status)
+                            showVoteIndicator(binding, votes!!, usernames!!, u.status, isQuickVoting)
+                            viewModel.updateUsernameRequestsWithVotes()
                         }
 
                         Status.ERROR -> {
                             log.info("  error: {} {}", t, u.data?.outputData)
-                            showVoteIndicator(binding, votes!!, usernames!!, u.status)
+                            showVoteIndicator(binding, votes!!, usernames!!, u.status, isQuickVoting)
                         }
 
                         Status.CANCELED -> {
@@ -363,7 +357,10 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         val isCancelled = resourceVoteChoice == AbstainVoteChoice()
         val username = if (usernames.size > 1) getString(R.string.quick_vote) else usernames.first()
         viewModel.updateBroadcastVotesTimestamp()
-        viewModel.updateUsernameRequestsWithVotes()
+        if (isQuickVoting) {
+            // show dialog about 1 vote left if necessary
+            showQuickVotingResults(usernames)
+        }
         if (viewModel.currentVote?.any { usernames.contains(it.username) } == true) {
             log.info("vote, there is not match for {}", usernames)
             //return
@@ -372,13 +369,25 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             Status.SUCCESS -> when (resourceVoteChoice) {
                 is AbstainVoteChoice -> getString(R.string.cancel_submitted, username)
                 is LockVoteChoice -> getString(R.string.block_submitted, username)
-                is TowardsIdentity -> getString(R.string.vote_submitted, username)
+                is TowardsIdentity -> {
+                    if (isQuickVoting) {
+                        getString(R.string.quick_vote_submitted)
+                    } else {
+                        getString(R.string.vote_submitted, username)
+                    }
+                }
                 else -> error("invalid vote choice: $resourceVoteChoice")
             }
             Status.LOADING -> when (resourceVoteChoice) {
                 is AbstainVoteChoice -> getString(R.string.cancel_submitting, username)
                 is LockVoteChoice -> getString(R.string.block_submitting, username)
-                is TowardsIdentity -> getString(R.string.vote_submitting, username)
+                is TowardsIdentity -> {
+                    if (isQuickVoting) {
+                        getString(R.string.vote_submitting, username)
+                    } else {
+                        getString(R.string.vote_submitting, username)
+                    }
+                }
                 else -> error("invalid vote choice: $resourceVoteChoice")
             }
             Status.ERROR -> when (resourceVoteChoice) {
@@ -411,5 +420,17 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
                 }
                 .start()
         }, 3000L)
+    }
+
+    /**
+     * Display a dialog for any usernames that have only one vote remaining after quick voting
+     */
+    private fun showQuickVotingResults(usernames: List<String>) {
+        lifecycleScope.launch {
+            val usernamesWithOneVoteLeft = viewModel.getUsernamesByVotesLeft(usernames, 1)
+            if (usernamesWithOneVoteLeft.isNotEmpty()) {
+                OneVoteLeftDialogFragment.newInstance(usernamesWithOneVoteLeft).show(requireActivity())
+            }
+        }
     }
 }
