@@ -232,38 +232,45 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="30dp"
-        android:layout_marginBottom="15dp">
+        android:orientation="vertical" >
 
-        <Button
-            android:id="@+id/dismiss_btn"
-            style="@style/Button.Primary.Large.Grey"
-            android:layout_width="0dp"
+        <de.schildbach.wallet.ui.widget.StyledCheckBox
+            android:id="@+id/confirm_auto_accept"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="15dp"
-            android:layout_weight="1"
-            android:text="@string/cancel" />
+            android:layout_gravity="center_horizontal"
+            android:layout_margin="10dp"
+            android:button="@drawable/round_checkbox"
+            android:padding="6dp"
+            android:text="@string/dialog_confirm_accept_contact_request"
+            android:textSize="16sp" />
 
-    <de.schildbach.wallet.ui.widget.StyledCheckBox
-        android:id="@+id/confirm_auto_accept"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_margin="10dp"
-        android:button="@drawable/round_checkbox"
-        android:padding="6dp"
-        android:text="@string/dialog_confirm_accept_contact_request"
-        android:textSize="16sp" />
-
-        <Button
-            android:id="@+id/confirm_payment"
-            style="@style/Button.Primary.Large.Blue"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:layout_marginEnd="15dp"
-            android:layout_weight="1"
-            android:text="@string/confirm" />
+            android:orientation="horizontal"
+            android:layout_marginTop="30dp"
+            android:layout_marginBottom="15dp">
+
+            <Button
+                android:id="@+id/dismiss_btn"
+                style="@style/Button.Primary.Large.Grey"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                android:layout_weight="1"
+                android:text="@string/cancel" />
+
+            <Button
+                android:id="@+id/confirm_payment"
+                style="@style/Button.Primary.Large.Blue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="15dp"
+                android:layout_weight="1"
+                android:text="@string/confirm" />
+        </LinearLayout>
     </LinearLayout>
+
 </LinearLayout>

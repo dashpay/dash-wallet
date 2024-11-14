@@ -120,6 +120,7 @@
                         app:layout_constraintVertical_bias="0"
                         tools:src="@drawable/user5" />
 
+                    <!-- QR code button currently hidden -->
                     <ImageButton
                         android:id="@+id/profile_qr_icon"
                         android:layout_width="wrap_content"
@@ -127,7 +128,8 @@
                         android:background="@drawable/transparent_button_background"
                         app:layout_constraintBottom_toBottomOf="@id/dashpayUserAvatar"
                         app:layout_constraintEnd_toEndOf="@id/dashpayUserAvatar"
-                        app:srcCompat="@drawable/ic_profile_qr" />
+                        app:srcCompat="@drawable/ic_profile_qr"
+                        android:visibility="gone"/>
 
                     <TextView
                         android:id="@+id/username1"
@@ -179,59 +181,90 @@
 
             </ViewFlipper>
 
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/requested_username_container"
-                android:visibility="gone"
-                tools:visibility="visible"
-                android:layout_height="110dp"
-                style="@style/MenuRow">
-
-                <ImageView
-                    android:id="@+id/requested_username_icon"
-                    style="@style/MenuRowIcon"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_avatar_blue" />
-
-                <TextView
-                    android:id="@+id/requested_username_title"
-                    style="@style/MenuRowTitle"
-                    app:layout_constraintStart_toEndOf="@+id/requested_username_icon"
-                    app:layout_constraintTop_toTopOf="@+id/requested_username_icon"
-                    tools:text="@string/shortcut_action_join_dashpay" />
-
-                <TextView
-                    android:id="@+id/requested_username_subtitle"
-                    style="@style/MenuRowSubTitle"
-                    android:text="@string/requested_username_has_been"
-                    app:layout_constraintStart_toStartOf="@+id/requested_username_title"
-                    app:layout_constraintTop_toBottomOf="@+id/requested_username_title" />
-
-
-                <TextView
-                    android:id="@+id/requested_username_subtitle_two"
-                    style="@style/MenuRowSubTitle"
-                    android:text="@string/requested_voting_duration"
-                    app:layout_constraintStart_toStartOf="@+id/requested_username_subtitle"
-                    app:layout_constraintTop_toBottomOf="@+id/requested_username_subtitle" />
-
-                <ImageView
-                    android:id="@+id/requested_username_arrow"
-                    style="@style/MenuRowArrow"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_menu_row_arrow" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:animateLayoutChanges="true"
                 android:orientation="vertical"
-                android:paddingTop="20dp">
+                android:paddingTop="0dp">
+
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/requested_username_container"
+                    style="@style/MenuRow"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <ImageView
+                        android:id="@+id/requested_username_icon"
+                        style="@style/MenuRowIcon"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_join_dashpay" />
+
+                    <LinearLayout
+                        android:id="@+id/join_dashpay_text_section"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:orientation="vertical"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@+id/request_button_container"
+                        app:layout_constraintStart_toEndOf="@+id/requested_username_icon"
+                        app:layout_constraintTop_toTopOf="parent">
+
+                        <TextView
+                            android:id="@+id/requested_username_title"
+                            style="@style/MenuRowTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="0dp"
+                            tools:text="requested-username" />
+
+                        <TextView
+                            android:id="@+id/requested_username_subtitle"
+                            style="@style/MenuRowSubTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:maxLines="3"
+                            android:text="@string/requested_username_has_been" />
+
+                        <TextView
+                            android:id="@+id/requested_username_subtitle_two"
+                            style="@style/MenuRowSubTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/requested_voting_duration" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/request_button_container"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent">
+
+                        <TextView
+                            android:id="@+id/retry_request_button"
+                            style="@style/Overline.SemiBold.Blue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_marginEnd="20dp"
+                            android:text="@string/retry" />
+
+                        <ImageView
+                            android:id="@+id/requested_username_arrow"
+                            style="@style/MenuRowArrow"
+                            app:srcCompat="@drawable/ic_menu_row_arrow" />
+                    </LinearLayout>
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/invite"

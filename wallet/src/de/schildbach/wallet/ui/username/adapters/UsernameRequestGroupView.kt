@@ -18,9 +18,22 @@
 package de.schildbach.wallet.ui.username.adapters
 
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.database.entity.UsernameVote
 
 data class UsernameRequestGroupView(
     val username: String,
     val requests: List<UsernameRequest>,
-    var isExpanded: Boolean = false
-)
+    var isExpanded: Boolean = false,
+    var votes: List<UsernameVote>
+) {
+    val lastVote: UsernameVote?
+        get() = votes.lastOrNull()
+
+    val totalVotes: Int
+        get() = votes.size
+
+    // all username votes should have the same number of lock votes
+    fun lockVotes(): Int {
+        return requests.first().lockVotes
+    }
+}

@@ -262,14 +262,15 @@
     <string name="keep_your_passphrase_safe">確保您的密語安全</string>
     <string name="pay_now">立即付款，如果未獲批准，您可以建立不同的名稱，而無需再次付款</string>
     <string name="case_your_request_is_not_approved">如果您的申請未獲批准</string>
-    <string name="voting_requirement_subtitle">任何包含數字 2-9 或長度超過 20 個字元的使用者名稱將自動獲得批准</string>
+    <string name="voting_requirement_subtitle">任何包含數字 2-9 或 20 個或更多字元的使用者名稱將自動獲得批准</string>
     <string name="voting_requirement_title">僅在某些情況下才需要投票</string>
     <string name="dash_network_must_vote_to_approve">在創建用戶名之前，達世幣網路必須投票批准您的用戶名。</string>
     <string name="what_is_username_voting">什麼是用戶名投票？</string>
     <string name="usernames_blocked_title">某些使用者名稱可能會被阻止</string>
     <string name="usernames_blocked_subtitle">如果有足夠的網路確定使用者認為名稱不合適，他們可以阻止它</string>
     <string name="username_voting">用戶名投票</string>
-    <string name="username_voting_subtitle">作為主節點擁有者，您可以投票批准所要求的用戶名，然後用戶才能建立它。</string>
+    <string name="voting_duplicates_only_title">預設過濾器設定</string>
+    <string name="voting_duplicates_only_message">預設過濾器僅顯示您未投票的重複用戶名，但您可以透過更改過濾器來查看所有有爭議的用戶名</string>
     <string name="all">所有</string>
     <string name="n_usernames">%d 使用者名稱</string>
     <string name="n_requests">%d 請求</string>
@@ -292,17 +293,22 @@
         <item>所有</item>
         <item>我已批准的</item>
         <item>我己否決的</item>
+        <item>已阻止投票</item>
     </string-array>
-
+    <string name="block_vote_count">%d 區塊</string>
     <string name="request_your_username">建立您的用戶名</string>
-    <string name="request_your_hint">請注意，您將來將無法更改它</string>
+    <string name="request_your_hint">請注意，您未來將無法更改它</string>
     <string name="request_username">申请用戶名</string>
     <string name="request_voting_range">達世幣網路將對該用戶名進行投票。我們將在 %s通知您結果。</string>
     <string name="request_username_available">使用者名稱可用</string>
     <string name="request_username_unavailable">使用者名稱不可用或被阻止</string>
     <string name="request_username_taken">使用者名稱已被佔用</string>
+    <string name="request_username_taken_results">使用者名稱已被其他使用者佔用</string>
     <string name="requesting_your_username_title">建立您的用戶名</string>
+    <string name="requesting_your_username_message">達世幣網路正在請求您的用戶名 %s 。這可能需要花一些時間。</string>
+    <string name="creating_your_username_message">您的用戶名 %s 正在達世幣網路上創建。這可能需要花一些時間。</string>
     <string name="requesting_your_username_error_title">您的使用者名稱請求失敗</string>
+    <string name="requesting_your_username_error_message">由於某種原因，對用戶名 %s 的請求失敗。</string>
     <string name="voting">表決中：</string>
     <string name="this_username_has_already_been_requested">該用戶名已被要求，但您也可以要求它，並讓網路投票決定您是否可以擁有它</string>
     <string name="request_details">索取詳情</string>
@@ -323,15 +329,14 @@
     <string name="make_a_post_with_the_text">在知名社交媒體或訊息平台上發布包含上述文字的帖子，以驗證您是所請求用戶名的原始所有者，並貼上下面的鏈接</string>
     <string name="paste_the_link">貼上連結</string>
     <string name="voting_key_title">輸入您的投票密鑰</string>
-    <string name="voting_key_hint">主節點投票金鑰</string>
+    <string name="voting_key_hint">主節點投票私鑰</string>
     <string name="voting_key_input_error">您輸入了無效的密鑰</string>
+    <string name="voting_key_input_not_active_error">您輸入的金鑰未與活動主節點關聯</string>
     <string name="voting_key_add">新增您的投票鍵</string>
     <string name="voting_key_add_subtitle">以下 IP 位址(等)與此錢包關聯</string>
     <string name="masternode_ip">主節點IP位址</string>
     <string name="multiple_votes_cast">%d 由於您的錢包中儲存了多個投票密鑰，因此將進行投票</string>
     <string name="add_masternode_key">新增主節點投票金鑰</string>
-    <string name="vote_submitted">您的投票已提交</string>
-    <string name="vote_cancelled">您的投票已被取消</string>
     <string name="quick_vote">快速投票</string>
     <string name="quick_vote_subtitle">點擊 \"為所有人投票\" 按鈕，您將自動為首先提交的所有已過濾用戶名 (%d) 投票</string>
     <string name="vote_for_all">給所有人投票</string>
@@ -397,4 +402,15 @@
     <string name="request_username_balance_requirement">您需要 0.25 DASH 才能建立此使用這個用戶名</string>
     <string name="request_username_length_requirement">名稱介乎3 到 23 個字元之間</string>
     <string name="request_username_confirm">我接受</string>
-    </resources>
+    <string name="username_vote_one_left_message">您已為此用戶名投票 %d 次。您只能對該用戶名再投一票。</string>
+    <string name="username_vote_one_left">還剩一票</string>
+    <string name="username_vote_none_left_message">您已為此用戶名投票 %d 次。您不能再為此用戶名投票。</string>
+    <string name="username_vote_none_left">沒有剩餘選票</string>
+    <string name="request_username_blocked">請求的使用者名稱已被阻止</string>
+    <string name="request_username_lost_vote">請求的用戶名已提供給其他人</string>
+    <string name="request_username_blocked_message">用戶名 %s 被達世幣網路阻止。請請求另一個用戶名重試。</string>
+    <string name="request_username_lost_vote_message">根據投票過程，達世幣網路決定將用戶名 %s 分配給其他人。請請求另一個用戶名重試。</string>
+    <string name="mix_dash_mix">混合資金結餘</string>
+    <string name="mix_dash_title">混合你的達世幣</string>
+    <string name="mix_dash_message">為了防止其他人看到您的付款對象，建議您在建立使用者名稱之前混合您的餘額。</string>
+</resources>

@@ -21,17 +21,24 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CREATION_STATE
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_ID
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME_REQUESTED
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,10 +49,18 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dashj.platform.dashpay.UsernameRequestStatus
+import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import kotlin.math.max
 
 data class RequestUserNameUIState(
     val usernameVerified: Boolean = false,
@@ -64,37 +79,59 @@ data class RequestUserNameUIState(
     val votingPeriodStart: Long = System.currentTimeMillis()
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class RequestUserNameViewModel @Inject constructor(
     val walletApplication: WalletApplication,
-    val identityConfig: BlockchainIdentityConfig,
+    private val identityConfig: BlockchainIdentityConfig,
     val walletData: WalletDataProvider,
     val platformRepo: PlatformRepo,
-    val usernameRequestDao: UsernameRequestDao
+    val usernameRequestDao: UsernameRequestDao,
+    val coinJoinConfig: CoinJoinConfig,
+    val analytics: AnalyticsService
 ) : ViewModel() {
+    companion object {
+        private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
+    }
+    private val workerJob = SupervisorJob()
+    private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
 
     private val _requestedUserNameLink = MutableStateFlow<String?>(null)
     val requestedUserNameLink: StateFlow<String?> = _requestedUserNameLink.asStateFlow()
 
+    var identity: BlockchainIdentityData? = null
     var requestedUserName: String? = null
+    var identityBalance: Long = 0L
 
-    val walletBalance: Coin
-        get() = walletData.getWalletBalance()
+    private val _walletBalance = MutableStateFlow(Coin.ZERO)
+    val walletBalance: StateFlow<Coin>
+        get() = _walletBalance
+
     suspend fun isUserNameRequested(): Boolean {
         val hasRequestedName = identityConfig.get(USERNAME).isNullOrEmpty().not()
         val creationState = BlockchainIdentityData.CreationState.valueOf(
             identityConfig.get(CREATION_STATE) ?: BlockchainIdentityData.CreationState.NONE.name
         )
-        return hasRequestedName && creationState != BlockchainIdentityData.CreationState.NONE &&
-                creationState.ordinal <= BlockchainIdentityData.CreationState.VOTING.ordinal
+        return hasRequestedName && creationState != BlockchainIdentityData.CreationState.NONE && creationState.ordinal <= BlockchainIdentityData.CreationState.VOTING.ordinal
     }
+
+    suspend fun isUsernameLocked(): Boolean {
+        return isUserNameRequested() &&
+                UsernameRequestStatus.valueOf(identityConfig.get(USERNAME_REQUESTED)!!) == UsernameRequestStatus.LOCKED
+    }
+
+    suspend fun isUsernameLostAfterVoting(): Boolean {
+        return isUserNameRequested() &&
+                UsernameRequestStatus.valueOf(identityConfig.get(USERNAME_REQUESTED)!!) == UsernameRequestStatus.LOST_VOTE
+    }
+
     suspend fun hasUserCancelledVerification(): Boolean =
         identityConfig.get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK) ?: false
 
-    fun canAffordNonContestedUsername(): Boolean = walletBalance >= Constants.DASH_PAY_FEE
-    fun canAffordContestedUsername(): Boolean = walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
+    fun canAffordNonContestedUsername(): Boolean = _walletBalance.value >= Constants.DASH_PAY_FEE
+    fun canAffordContestedUsername(): Boolean = _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
 
     val myUsernameRequest: Flow<UsernameRequest?>
         get() = _myUsernameRequest
@@ -102,19 +139,58 @@ class RequestUserNameViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            _requestedUserNameLink.value = identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
+            _requestedUserNameLink.value = withContext(Dispatchers.IO) {
+                identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
+            }
         }
         identityConfig.observe(IDENTITY_ID)
             .filterNotNull()
             .onEach {
+                identity = identityConfig.load()
+                identityBalance = identity?.let { identity ->
+                    platformRepo.getIdentityBalance(Identifier.from(identity.userId)).balance
+                } ?: 0
+                log.info("identity balance: {}", identityBalance)
                 if (requestedUserName == null) {
                     requestedUserName = identityConfig.get(USERNAME)
                 }
             }
             .flatMapLatest { usernameRequestDao.observeRequest(UsernameRequest.getRequestId(it, requestedUserName!!)) }
-            .onEach { _myUsernameRequest.value = it }
-            .launchIn(viewModelScope)
+            .onEach {
+                if (it != null) {
+                    _myUsernameRequest.value = it
+                } else {
+                    identity?.let { identityData ->
+                        _myUsernameRequest.value = UsernameRequest(
+                            UsernameRequest.getRequestId(identityData.userId!!, requestedUserName!!),
+                            requestedUserName!!,
+                            Names.normalizeString(requestedUserName!!),
+                            identityData.votingPeriodStart ?: -1L,
+                            identityData.userId!!,
+                            identityData.verificationLink ?: "",
+                            0,
+                            0,
+                            false
+                        )
+                    }
+                }
+            }
+            .launchIn(viewModelWorkerScope)
 
+        coinJoinConfig.observeMode()
+            .flatMapLatest { coinJoinMode ->
+                walletData.observeBalance(
+                    if (coinJoinMode == CoinJoinMode.NONE) {
+                        Wallet.BalanceType.ESTIMATED_SPENDABLE
+                    } else {
+                        Wallet.BalanceType.COINJOIN_SPENDABLE
+                    }
+                )
+            }
+            .onEach {
+                _walletBalance.value = it
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
@@ -130,9 +206,12 @@ class RequestUserNameViewModel @Inject constructor(
         // Reset ui state for retry if needed
         resetUiForRetrySubmit()
         viewModelScope.launch {
-            updateConfig()
+            withContext(Dispatchers.IO) { updateConfig() }
             // send the request / create username, assume not retry
-            triggerIdentityCreation(false)
+            val reuseTransaction = identity?.let {
+                it.usernameRequested == UsernameRequestStatus.LOCKED || it.usernameRequested == UsernameRequestStatus.LOST_VOTE
+            } ?: false
+            triggerIdentityCreation(reuseTransaction)
         }
         // if call success
         // updateUiForApiSuccess()
@@ -155,7 +234,7 @@ class RequestUserNameViewModel @Inject constructor(
 
     private suspend fun updateConfig() {
         requestedUserName?.let { name ->
-            identityConfig.set(BlockchainIdentityConfig.USERNAME, name)
+            identityConfig.set(USERNAME, name)
         }
         _requestedUserNameLink.value.let { link ->
             identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, link ?: "")
@@ -184,22 +263,41 @@ class RequestUserNameViewModel @Inject constructor(
     fun checkUsername(requestedUserName: String?) {
         viewModelScope.launch {
             requestedUserName?.let { username ->
-                val usernameSearchResult = platformRepo.getUsername(username)
+                val usernameSearchResult = withContext(Dispatchers.IO) { platformRepo.getUsername(username) }
                 val usernameExists = when (usernameSearchResult.status) {
                     Status.SUCCESS -> {
                         usernameSearchResult.data != null
                     }
                     else -> false
                 }
-                val usernameContested = false // TODO: make the call
-                val usernameBlocked = false // TODO: make the call
+                var usernameContested: Boolean
+                var firstCreatedAt = -1L
+                val usernameBlocked = withContext(Dispatchers.IO) {
+                    val contenders = platformRepo.getVoteContenders(username)
+                    usernameContested = contenders.map.isNotEmpty()
+                    var maxApprovalVotes = 0
+                    firstCreatedAt = try {
+                        contenders.map.values.minOf { contender ->
+                            val document = contender.seralizedDocument?.let {
+                                DomainDocument(platformRepo.platform.names.deserialize(it))
+                            }
+                            maxApprovalVotes = max(contender.votes, maxApprovalVotes)
+                            document?.createdAt ?: -1
+                        }
+                    } catch (e: NoSuchElementException) {
+                        -1L
+                    }
+
+                    // is the name blocked
+                    firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
+                }
                 _uiState.update {
                     it.copy(
                         usernameCheckSuccess = true,
                         usernameSubmittedError = false,
-                        usernameContested = usernameContested,
-                        usernameExists = usernameExists,
-                        usernameBlocked = usernameBlocked
+                        usernameContested = usernameContested, usernameExists = usernameExists,
+                        usernameBlocked = usernameBlocked,
+                        votingPeriodStart = if (firstCreatedAt == -1L) System.currentTimeMillis() else firstCreatedAt
                     )
                 }
             }
@@ -208,31 +306,35 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun verify() {
         viewModelScope.launch {
-            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
-            identityConfig.get(IDENTITY_ID)?.let { identityId ->
-                val usernameRequest = usernameRequestDao.getRequest(
-                    UsernameRequest.getRequestId(
-                        identityId,
-                        requestedUserName!!
+            withContext(Dispatchers.IO) {
+                identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
+                identityConfig.get(IDENTITY_ID)?.let { identityId ->
+                    val usernameRequest = usernameRequestDao.getRequest(
+                        UsernameRequest.getRequestId(
+                            identityId,
+                            requestedUserName!!
+                        )
                     )
-                )
-                usernameRequest!!.link = _requestedUserNameLink.value
-                usernameRequestDao.update(usernameRequest)
+                    usernameRequest!!.link = _requestedUserNameLink.value
+                    usernameRequestDao.update(usernameRequest)
+                }
             }
             _uiState.update {
                 it.copy(
                     usernameVerified = true
                 )
             }
-            //submit()
         }
     }
 
+    @Deprecated("requests cannot be canceled")
     fun cancelRequest() {
         viewModelScope.launch {
-            identityConfig.set(BlockchainIdentityConfig.USERNAME, "")
-            identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, "")
-            identityConfig.set(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
+            withContext(Dispatchers.IO) {
+                identityConfig.set(BlockchainIdentityConfig.USERNAME, "")
+                identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, "")
+                identityConfig.set(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK, true)
+            }
         }
     }
 
@@ -243,8 +345,6 @@ class RequestUserNameViewModel @Inject constructor(
     private fun validateUsernameCharacters(uname: String): Pair<Boolean, Boolean> {
         val alphaNumHyphenValid = !Regex("[^a-zA-Z0-9\\-]").containsMatchIn(uname)
         val startOrEndWithHyphen = uname.startsWith("-") || uname.endsWith("-")
-        //val containsHyphen = uname.contains("-")
-
         return Pair(alphaNumHyphenValid, startOrEndWithHyphen)
     }
 
@@ -252,17 +352,24 @@ class RequestUserNameViewModel @Inject constructor(
         val validLength = validateUsernameSize(username)
         val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
         val contestable = Names.isUsernameContestable(username)
-        val enoughBalance = if (contestable) {
-            walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
+
+        // if we have an identity, then we must use our identity balance
+        val enoughIdentityBalance = if (contestable) {
+            identityBalance >= Constants.DASH_PAY_FEE_CONTESTED.value * 1000
         } else {
-            walletBalance >= Constants.DASH_PAY_FEE
+            identityBalance >= Constants.DASH_PAY_FEE.value / 3 * 1000
+        }
+        val enoughBalance = if (contestable) {
+            _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
+        } else {
+            _walletBalance.value >= Constants.DASH_PAY_FEE
         }
         _uiState.update {
             it.copy(
                 usernameLengthValid = validLength,
                 usernameCharactersValid = validCharacters && !startOrEndWithHyphen,
                 usernameContestable = contestable,
-                enoughBalance = enoughBalance,
+                enoughBalance = if (identityBalance > 0) enoughIdentityBalance else enoughBalance,
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameCheckSuccess = false,
@@ -280,7 +387,11 @@ class RequestUserNameViewModel @Inject constructor(
             BroadcastIdentityVerifyOperation(walletApplication).create(
                 requestedUserName!!,
                 url
-            )
+            ).enqueue()
         }
+    }
+
+    fun logEvent(event: String) {
+        analytics.logEvent(event, mapOf())
     }
 }

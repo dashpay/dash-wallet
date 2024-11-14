@@ -87,7 +87,6 @@
     <string name="dashpay_topup_fee">Yükleme Ücreti</string>
     <string name="search_user_find_a_user">Dash Ağında bir kullanıcı bulun</string>
     <string name="search_for_a_user">Dash Ağındaki bir Kullanıcıyı Ara</string>
-    <string name="search_user_input_placeholder">Arama yapmak için kullanıcı adını buraya girin</string>
     <string name="add_new_contact">Yeni Kişi Ekle</string>
     <string name="send_contact_request">İletişim İsteği Gönderin</string>
     <string name="sending_contact_request">İletişim Talebi Gönderme</string>
@@ -261,14 +260,12 @@
     <string name="keep_your_passphrase_safe">Parolanızı güvende tutun</string>
     <string name="pay_now">Şimdi ödeyin ve onaylanmazsa tekrar ödeme yapmadan farklı bir isim oluşturabilirsiniz.</string>
     <string name="case_your_request_is_not_approved">Talebinizin onaylanmaması durumunda</string>
-    <string name="voting_requirement_subtitle">2-9 arasında bir sayıya sahip olan veya 20 karakterden uzun olan herhangi bir kullanıcı adı otomatik olarak onaylanacaktır</string>
     <string name="voting_requirement_title">Oylama sadece bazı durumlarda gereklidir</string>
     <string name="dash_network_must_vote_to_approve">Dash ağı, kullanıcı adınızı oluşturmadan önce bu işlemi onaylamak için oy kullanmalıdır.</string>
     <string name="what_is_username_voting">Kullanıcı adı oylaması nedir\?</string>
     <string name="usernames_blocked_title">Bazı kullanıcı adları engellenebilir</string>
     <string name="usernames_blocked_subtitle">Ağın yeterli bir kısmı bir kullanıcı adının uygunsuz olduğuna karar verirse, onu engelleyebilirler</string>
     <string name="username_voting">Kullanıcı adı Oylama</string>
-    <string name="username_voting_subtitle">Bir ana düğüm sahibi olarak, diğer kullanıcılar kullanıcı adı oluşturmadan önce istenen kullanıcı adlarını onaylamak için oy kullanabilirsiniz.</string>
     <string name="all">Hepsi</string>
     <string name="n_usernames">%d kullanıcı adları</string>
     <string name="n_requests">%d istekler</string>
@@ -292,9 +289,7 @@
         <item>Onayladım</item>
         <item>Onaylamadım</item>
     </string-array>
-
     <string name="request_your_username">Kullanıcı adınızı oluşturun</string>
-    <string name="request_your_hint">Lütfen gelecekte bunu değiştiremeyeceğinizi unutmayın</string>
     <string name="request_username">Kullanıcı Adı İste</string>
     <string name="request_voting_range">Dash ağı bu kullanıcı adına oy verecek. Sonuçları %s tarihinde size bildireceğiz.</string>
     <string name="request_username_available">Kullanıcı adı mevcut</string>
@@ -322,15 +317,12 @@
     <string name="make_a_post_with_the_text">İstenen kullanıcı adının orijinal sahibi olduğunuzu doğrulamak için yukarıdaki metni bilinen bir sosyal medya platformunda paylaşın ve aşağıdaki bağlantıyı yapıştırın</string>
     <string name="paste_the_link">Bağlantıyı yapıştırın</string>
     <string name="voting_key_title">Oylama anahtarınızı girin</string>
-    <string name="voting_key_hint">Ana düğüm Oylama Anahtarı</string>
     <string name="voting_key_input_error">Geçersiz bir anahtar girdiniz</string>
     <string name="voting_key_add">Oylama anahtarlarınızı ekleyin</string>
     <string name="voting_key_add_subtitle">Aşağıdaki IP adresi(leri) bu cüzdanla ilişkilidir</string>
     <string name="masternode_ip">Ana düğüm IP adresi</string>
     <string name="multiple_votes_cast">Cüzdanınızda birden fazla oylama anahtarı saklandığı için %d oy kullanılacak</string>
     <string name="add_masternode_key">Ana Düğüm Oylama Anahtarı</string>
-    <string name="vote_submitted">Oyunuz gönderildi</string>
-    <string name="vote_cancelled">Oyunuz iptal edildi</string>
     <string name="quick_vote">Hızlı Oylama</string>
     <string name="quick_vote_subtitle">\"Hepsine Oy Ver\" düğmesine tıklayarak, ilk gönderilen filtrelenmiş kullanıcı adlarının (%d) tümüne otomatik olarak oy vereceksiniz</string>
     <string name="vote_for_all">Herkese Oy Ver</string>

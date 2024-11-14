@@ -1,4 +1,22 @@
 Dash Wallet
+v11.0.3
+* Improve Username Voting screen
+* UI fixes
+* Update translations
+* Fix Username request and recover bugs
+* Fix CrowdNode signup on Android 14
+
+v11.0.2
+* Fix username requests
+* Add DashPay Event tracking
+
+v11.0.1
+* Fix UI items
+
+v11.0.0
+* DashPay
+* use dashj 21.1.1
+
 v10.3.2
 * Fix ANR when using CoinJoin
 * Fix missing Send button on Home Screen

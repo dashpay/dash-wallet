@@ -57,9 +57,11 @@ class CoinJoinLevelFragment : Fragment(R.layout.fragment_coinjoin_level) {
                 if (viewModel.isMixing) {
                     if (confirmStopMixing()) {
                         viewModel.setMode(CoinJoinMode.NONE)
+                        viewModel.logEvent(AnalyticsConstants.CoinJoinPrivacy.COINJOIN_STOP_MIXING)
                         requireActivity().finish()
                     }
                 } else {
+                    viewModel.logEvent(AnalyticsConstants.CoinJoinPrivacy.COINJOIN_START_MIXING)
                     viewModel.setMode(selectedCoinJoinMode)
                     requireActivity().finish()
                 }

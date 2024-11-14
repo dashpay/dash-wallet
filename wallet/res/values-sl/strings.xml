@@ -8,7 +8,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d dni zadaj</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d tednov zadaj</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d mesecev zadaj</string>
-    <string name="blockchain_state_progress_downloading">Usklajevanje z omrežjem</string>
     <string name="blockchain_state_progress_stalled">Usklajevanje zaustavljeno</string>
     <string name="blockchain_state_progress_problem_storage">Usklajevanje: težava s hrambo podatkov</string>
     <string name="blockchain_state_progress_problem_network">Usklajevanje: težava z omrežjem</string>

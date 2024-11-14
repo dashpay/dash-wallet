@@ -61,12 +61,28 @@ public final class Constants {
     public static final boolean IS_PROD_BUILD;
 
     public static boolean SUPPORTS_PLATFORM;
+    // TODO: remove all references to this when invites are enabled and functional
+    public static boolean SUPPORTS_INVITES;
+    // TODO: remove all references to this when quick voting is enabled and functional
+    public static final boolean SUPPORTS_QUICKVOTING = false;
+
 
     public static final EnumSet<MasternodeSync.SYNC_FLAGS> SYNC_FLAGS = MasternodeSync.SYNC_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.VERIFY_FLAGS> VERIFY_FLAGS = MasternodeSync.VERIFY_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.FEATURE_FLAGS> FEATURE_FLAGS = MasternodeSync.FEATURES_SPV;
 
     static {
+        // TODO: remove when 32-bit bugs are fixed
+        String[] supportedAbis = Build.SUPPORTED_ABIS;
+        boolean is32Bit = true;
+
+        for (String abi : supportedAbis) {
+            if (abi.equals("arm64-v8a") || abi.equals("x86_64")) {
+                is32Bit = false;
+                break;
+            }
+        }
+
         switch (BuildConfig.FLAVOR) {
             case "prod": {
                 DNS_SEED = new String[]{"dnsseed.dash.org", "dnsseed.dashdot.io"};
@@ -77,7 +93,8 @@ public final class Constants {
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "dash";
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore.db");
-                SUPPORTS_PLATFORM = false;
+                SUPPORTS_PLATFORM = !is32Bit;
+                SUPPORTS_INVITES = false;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 if (SUPPORTS_PLATFORM) {
                     SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
@@ -94,7 +111,8 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "tdash";
-                SUPPORTS_PLATFORM = false;
+                SUPPORTS_PLATFORM = !is32Bit;
+                SUPPORTS_INVITES = false;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 if (SUPPORTS_PLATFORM) {
                     SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
@@ -132,6 +150,7 @@ public final class Constants {
 
     /** Bitcoinj global context. */
     public static final Context CONTEXT = new Context(NETWORK_PARAMETERS);
+
     public final static class Files {
 
         /** Filename of the wallet. */

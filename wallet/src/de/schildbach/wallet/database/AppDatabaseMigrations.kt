@@ -79,5 +79,34 @@ class AppDatabaseMigrations {
                 )
             }
         }
+
+        val migration13to14 = object : Migration(13, 14) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `imported_masternode_keys` (
+                        `proTxHash` BLOB NOT NULL, 
+                        `address` TEXT NOT NULL, 
+                        `votingPrivateKey` BLOB NOT NULL, 
+                        `votingPublicKey` BLOB NOT NULL, 
+                        `votingPubKeyHash` BLOB NOT NULL, 
+                        PRIMARY KEY(`proTxHash`)
+                    );
+                    """
+                )
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `username_votes` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        `username` TEXT NOT NULL, 
+                        `identity` TEXT NOT NULL, 
+                        `type` TEXT NOT NULL, 
+                        `timestamp` INTEGER NOT NULL
+                    )
+                    """
+                )
+            }
+
+        }
     }
 }

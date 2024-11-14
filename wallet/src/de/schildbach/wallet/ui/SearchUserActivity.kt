@@ -33,6 +33,7 @@ import androidx.activity.viewModels
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.text.HtmlCompat
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -40,6 +41,7 @@ import androidx.transition.ChangeBounds
 import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import org.dash.wallet.common.data.entity.BlockchainState
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -53,6 +55,7 @@ import de.schildbach.wallet_test.databinding.ActivitySearchDashpayProfileRootBin
 import kotlinx.coroutines.launch
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.observe
 
@@ -162,9 +165,13 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
             inviteFriendHintViewDashpayProfile1.root.setOnClickListener {
                 startInviteFlow()
             }
+            //TODO: remove this line when INVITES are supported
+            inviteFriendHintViewDashpayProfile1.root.isVisible = Constants.SUPPORTS_INVITES
             userSearchEmptyResult.inviteFriendHintViewEmptyResult.root.setOnClickListener {
                 startInviteFlow()
             }
+            //TODO: remove this line when INVITES are supported
+            userSearchEmptyResult.inviteFriendHintViewEmptyResult.root.isVisible = Constants.SUPPORTS_INVITES
         }
 
         binding.networkUnavailable.networkErrorSubtitle.setText(R.string.network_error_user_search)
@@ -305,6 +312,7 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.ACCEPT_REQUEST)
         // need to check balance
         dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
 

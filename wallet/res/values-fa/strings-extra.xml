@@ -25,6 +25,8 @@
     <string name="dialog_confirm_secured_by">تامین امنیت توسط</string>
     <string name="dialog_confirm_fee">کارمزد شبکه</string>
     <string name="dialog_confirm_total">مجموع</string>
+    <string name="dialog_confirm_accept_contact_request">پذیرش درخواست ارتباط</string>
+
     <string name="shortcut_action_join_dashpay">به دش‌پی بپیوندید</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">نسخه پشتیبان‌گیری</string>
@@ -32,6 +34,8 @@
     <string name="shortcut_scan_to_pay">اسکن</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">ارسال</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_contact">ارسال برای مخاطب</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">خرید &amp;؛ فروش</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -78,6 +82,7 @@
     <string name="payments_tab_pay_label">ارسال</string>
     <string name="payments_tab_receive_label">دریافت</string>
     <string name="payments_pay_to_contact_title">ارسال برای یک مخاطب</string>
+    <string name="payments_pay_to_contact_sub_title">یک نفر در فهرست مخاطبان شما</string>
     <string name="payments_pay_to_contact_button">انتخاب</string>
     <string name="payments_pay_by_qr_title">ارسال توسط</string>
     <string name="payments_pay_by_qr_sub_title">اسکن کیوآر کد</string>
@@ -187,6 +192,9 @@
     <string name="notification_settings_title">نوتیفیکیشن‌ها</string>
     <string name="notification_explainer_title">دش والت می‌خواهد برایتان نوتیفیکیشن بفرستد</string>
     <string name="notification_explainer_message">نوتیفیکیشن شامل هشدار، صدا و آیکون هستند. همه اینها را می‌توان در بخش تنظیمات گوشی مشخص کرد. </string>
+    <string name="notification_dashpay_channel_name">دش پی</string>
+    <string name="notification_dashpay_channel_description">وضعیت عملیات در حال اجرای دش‌پی</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">از اثرانگشت برای باز کردن قفل استفاده کنید.</string>
@@ -239,9 +247,11 @@
     <string name="transaction_close">بستن</string>
     <string name="transaction_details_amount_received">مبلغ دریافتی</string>
     <string name="transaction_details_amount_sent">مبلغ ارسالی</string>
+    <string name="transaction_details_amount_sent_successfully">ارسال موفق</string>
     <string name="transaction_details_sent_from">ارسال شد از</string>
     <string name="transaction_details_sent_to">ارسال شد به</string>
     <string name="transaction_details_received_at">دریافت شد در</string>
+    <string name="transaction_details_received_from">دریافت از</string>
     <string name="transaction_details_moved_from">منتقل شد از</string>
     <string name="transaction_details_moved_internally_to">به صورت داخلی منتقل شد به</string>
     <string name="transaction_failed_details">تراکنش ناموفق</string>
@@ -256,6 +266,7 @@
     <string name="authenticate_switch_to_pin">استفاده از پین کد</string>
 
     <string name="menu_invite_title">دعوت</string>
+    <string name="menu_invite_subtitle">به دوستان و خانواده‌تان کمک کنید به دش بپیوندند</string>
     <string name="menu_buy_and_sell_title">خرید &amp;؛ فروش دش </string>
     <string name="menu_buy_and_sell_subtitle">ارتباط با صرافی‌های طرف سوم</string>
     <string name="liquid_unavailable">امکان ادغام لیکوئید با دش والت دیگر امکان‌پذیر نیست</string>
@@ -367,8 +378,28 @@
     <string name="import_image_invalid_private">کلید خصوصی نامعتبر است</string>
     <string name="okay">باشه</string>
 
+    <string name="onboard_from_invite_title">بیایید شروع کنیم</string>
+    <string name="onboard_from_invite_subtitle">به دش‌پی خوش آمدید</string>
+    <string name="onboard_from_invite_step1">گام یک</string>
+    <string name="onboard_from_invite_step2">گام دو</string>
+    <string name="onboard_from_invite_step3">گام سه</string>
+    <string name="onboard_from_invite_step1_title">نام کاربری‌تان را انتخاب کنید</string>
+    <string name="onboard_from_invite_step2_title">رمز چهاررقمی‌تان را انتخاب کنید</string>
+    <string name="onboard_from_invite_step3_title">کیف پول‌تان را امن کنید</string>
+
     <string name="restore_wallet_please_wait">لطفا منتظر بمانید</string>
+    <string name="restore_wallet_restoring">کیف پول‌تان در حال بازیابی است</string>
+
+
+
     <string name="network_unavailable">شبکه در دسترس نیست</string>
+    <string name="network_error_contact_details">جزئیات مخاطبان منتقل نشد</string>
+    <string name="network_error_user_search">جستجو برای یک کاربر ناموفق بود</string>
+    <string name="network_error_contact_suggestions">ارائه پیشنهاد ناموفق بود</string>
+    <string name="network_error_unable_to_update_profile">به‌روزرسانی پروفایل ناموفق بود</string>
+
+
+
     <string name="today">امروز</string>
     <string name="yesterday">دیروز</string>
 
@@ -378,6 +409,8 @@
     <string name="all_transactions">همه</string>
     <string name="received_transactions">دریافتی</string>
     <string name="sent_transactions">ارسالی</string>
+    <string name="serious_error_title">خطای جدی</string>
+    <string name="serious_error_unknown">لطفا با پشتیبانی تماس بگیرید</string>
     <string name="set_pin_error_missing_wallet_title">خطای عدم دسترسی به کیف پول</string>
     <string name="set_pin_error_missing_wallet_message">کیف پول در دسترس نیست. این موضوع را به بخش پشتیبانی اطلاع دهید. </string>
     <string name="wallet_encryption_error_title">خطای ایجاد کیف پول</string>
@@ -427,4 +460,11 @@
     <string name="masternode_key_not_used">استفاده‌نشده</string>
     <string name="masternode_key_revoked">لغوشده</string>
     <string name="masternode_key_private_public_base64">کلیدهای خصوصی/عمومی (بیش۶۴)</string>
-    </resources>
+    <string name="timeskew_ahead">جلو</string>
+    <string name="timeskew_behind">عقب</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">قیمت‌ها به دست نیامد. قیمت‌های پول رسمی شاید نادرست باشد</string>
+    <string name="stale_exchange_rates_stale">قیمت‌ها متعلق به حداقل ۳۰ دقیقه پیش است. قیمت‌های پول رسمی شاید درست نباشد. </string>
+    <string name="stale_exchange_rates_volatile">قیمت‌ها از به‌روزرسانی قبلی بیش از ۵۰ درصد نوسان کرده است. </string>
+</resources>

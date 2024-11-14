@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui.dashpay
 
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.database.dao.UserAlertDao
@@ -43,9 +44,12 @@ open class NotificationsLiveData(
         scope.launch(Dispatchers.IO) {
             val results = arrayListOf<NotificationItem>()
 
-            val userAlert = userAlertDao.load(0L)
-            if (userAlert != null && platformRepo.shouldShowAlert()) {
-                results.add(NotificationItemUserAlert(userAlert.stringResourceId, userAlert.iconResourceId))
+            //TODO: remove the if when INVITES are supported
+            if (Constants.SUPPORTS_INVITES) {
+                val userAlert = userAlertDao.load(0L)
+                if (userAlert != null && platformRepo.shouldShowAlert()) {
+                    results.add(NotificationItemUserAlert(userAlert.stringResourceId, userAlert.iconResourceId))
+                }
             }
 
             val contactRequests = platformRepo.searchContacts(query, UsernameSortOrderBy.DATE_ADDED)

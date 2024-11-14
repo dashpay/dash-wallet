@@ -61,7 +61,9 @@
                 android:layout_height="wrap_content"
                 android:text="@string/send_contact_request"
                 android:textColor="@color/dash_white"
-                android:textSize="14sp" />
+                android:textSize="14sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
         </LinearLayout>
     </FrameLayout>
@@ -101,6 +103,8 @@
             android:layout_marginEnd="30dp"
             android:paddingStart="26dp"
             android:paddingEnd="26dp"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:text="@string/pay" />
 
     </FrameLayout>
@@ -135,22 +139,26 @@
         <Button
             android:id="@+id/accept"
             style="@style/Button.Primary.Green"
-            android:layout_width="100dp"
+            android:layout_width="120dp"
             android:layout_height="39dp"
             android:layout_marginTop="14dp"
             android:layout_marginEnd="5dp"
             android:text="@string/contact_request_accept"
+            android:maxLines="1"
+            android:ellipsize="end"
             app:layout_constraintEnd_toStartOf="@id/request_buttons_guide"
             app:layout_constraintTop_toBottomOf="@id/request_received_pane_title" />
 
         <Button
             android:id="@+id/ignore"
             style="@style/Button.Tertiary"
-            android:layout_width="100dp"
+            android:layout_width="120dp"
             android:layout_height="39dp"
             android:layout_marginStart="5dp"
             android:layout_marginTop="14dp"
             android:text="@string/contact_request_ignore"
+            android:maxLines="1"
+            android:ellipsize="end"
             app:layout_constraintStart_toEndOf="@id/request_buttons_guide"
             app:layout_constraintTop_toBottomOf="@id/request_received_pane_title" />
 
@@ -214,6 +222,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/send_contact_request"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:textColor="@color/inverted_button"
                 android:textSize="14sp" />
 

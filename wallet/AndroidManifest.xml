@@ -415,10 +415,32 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- WorkManager -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
         <!--service
             android:name="de.schildbach.wallet.offline.AcceptBluetoothService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" /-->
+
+        <!-- WorkManager -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <!-- Prompt Google Play services to install the backported photo picker module -->
+        <!-- required to support Android 7 to 12 -->
+        <service android:name="com.google.android.gms.metadata.ModuleDependencies" android:enabled="false" android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.android.gms.metadata.MODULE_DEPENDENCIES" />
+            </intent-filter>
+
+            <meta-data android:name="photopicker_activity:0:required" android:value="" />
+        </service>
 
         <receiver
             android:name="de.schildbach.wallet.service.BootstrapReceiver"

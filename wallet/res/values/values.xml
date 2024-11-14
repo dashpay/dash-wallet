@@ -4,8 +4,8 @@
 	<string name="symbol_to">→</string>
 	<string name="symbol_from">←</string>
 	<string name="symbol_internal">⇄</string>
-	<string name="app_name">Dash Wallet</string>
-	<string name="app_name_short">Dash</string>
+	<string name="app_name">DashPay Wallet</string>
+	<string name="app_name_short">DashPay</string>
 	<string name="app_name_dashpay_short">DashPay</string>
 	<string name="app_name_dashpay">DashPay</string>
 

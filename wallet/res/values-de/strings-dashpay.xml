@@ -269,7 +269,8 @@ Benutzernamen</b></string>
     <string name="usernames_blocked_title">Manche Benutzernamen können blockiert werden</string>
     <string name="usernames_blocked_subtitle">Wenn genügend Mitglieder des Netzwerkes feststellen, dass ein Benutzername unangemessen ist, könne diese ihn sperren</string>
     <string name="username_voting">Abstimmung über Benutzernamen</string>
-    <string name="username_voting_subtitle">Als Masternode-Besitzer kannst du abstimmen, um beantragte Benutzernamen zu bewilligen, bevor andere Nutzer diese erstellen können.</string>
+    <string name="voting_duplicates_only_title">Standardmäßige Filtereinstellung</string>
+    <string name="voting_duplicates_only_message">Die standardmäßige Filtereinstellung zeigt nur doppelte Benutzernamen über die noch NICHT abgestimmt wurde. Um alle strittigen Benutzernamen sehen zu können, ändere den Filter.</string>
     <string name="all">Alles</string>
     <string name="n_usernames">%d Benutzernamen</string>
     <string name="n_requests">%d Anfragen</string>
@@ -292,8 +293,9 @@ Benutzernamen</b></string>
         <item>Alles</item>
         <item>Ich habe zugestimmt.</item>
         <item>Ich habe nicht zugestimmt.</item>
+        <item>Beinhalted blockierte Votes</item>
     </string-array>
-
+    <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Benutzernamen erstellen</string>
     <string name="request_your_hint">Bitte beachte, dass du dies in der Zukunft nicht mehr ändern kannst</string>
     <string name="request_username">Nutzernamen beantragen</string>
@@ -301,8 +303,12 @@ Benutzernamen</b></string>
     <string name="request_username_available">Benutzername ist verfügbar</string>
     <string name="request_username_unavailable">Benutzername ist nicht verfügbar oder gesperrt</string>
     <string name="request_username_taken">Benutzername ist vergeben</string>
+    <string name="request_username_taken_results">Benutzername wurde von einem anderen Nutzer beansprucht</string>
     <string name="requesting_your_username_title">Benutzernamen erstellen</string>
+    <string name="requesting_your_username_message">Dein Benutzername %s wird im Dash-Netzwerk angefordert. Dies kann einige Zeit in Anspruch nehmen.</string>
+    <string name="creating_your_username_message">Dein Benutzername %s wird im Dash-Netzwerk erstellt. Dies kann einige Zeit in Anspruch nehmen.</string>
     <string name="requesting_your_username_error_title">Deine Anfrage für einen Benutzernamen ist fehlgeschlagen</string>
+    <string name="requesting_your_username_error_message">Aus unerfindlichen Gründen ist die Anfrage für den Benutzernamen %s fehlgeschlagen. </string>
     <string name="voting">Abstimmung:</string>
     <string name="this_username_has_already_been_requested">Dieser Nutzername wurde bereits angefragt, aber du kannst ihn auch beantragen. Das Netzwerk wird darüber abstimmen, wer ihn erhält.</string>
     <string name="request_details">Details anfordern</string>
@@ -323,15 +329,14 @@ Benutzernamen</b></string>
     <string name="make_a_post_with_the_text">Verfasse einen Beitrag mit dem obigen Text auf einer bekannten Social Media- oder Messaging-Plattform und füge den unten stehenden Link ein, um zu überprüfen, ob du der ursprüngliche Besitzer des gewünschten Benutzernamens bist</string>
     <string name="paste_the_link">Link einfügen</string>
     <string name="voting_key_title">Gebe deinen Voting-Schlüssel ein.</string>
-    <string name="voting_key_hint">Masternode Voting-Schlüssel</string>
+    <string name="voting_key_hint">Privater Masternode Voting-Schlüssel</string>
     <string name="voting_key_input_error">Du hast einen ungültigen Schlüssel eingegeben.</string>
+    <string name="voting_key_input_not_active_error">Du hast einen Schlüssel eingegeben, der keinem aktiven Masternode zugeordnet werden kann</string>
     <string name="voting_key_add">Füge deine Abstimmungs-Schlüssel hinzu</string>
     <string name="voting_key_add_subtitle">Die folgende(n) IP-Adresse(n) sind mit dieser Wallet verbunden</string>
     <string name="masternode_ip">Masternode IP-Adresse</string>
     <string name="multiple_votes_cast">%d die Stimmen werden abgegeben, da du mehrere Abstimmungs-Schlüssel in deiner Wallet gespeichert hast</string>
     <string name="add_masternode_key">Masternode Voting-Schlüssel hinzufügen</string>
-    <string name="vote_submitted">Deine Stimme wurde abgegeben.</string>
-    <string name="vote_cancelled">Deine Stimmabgabe wurde abgebrochen.</string>
     <string name="quick_vote">Schnelles Abstimmen</string>
     <string name="quick_vote_subtitle">Wenn du die Schaltfläche \"Für alle abstimmen\" tippst, stimmst du automatisch für alle gefilterten Benutzernamen (%d), die zuerst eingereicht wurden</string>
     <string name="vote_for_all">Stimme für alle</string>
@@ -397,4 +402,15 @@ Benutzernamen</b></string>
     <string name="request_username_balance_requirement">Du benötigst 0,25 DASH um einen Benutzernamen erstellen zu können</string>
     <string name="request_username_length_requirement">Zwischen 3 und 23 Zeichen</string>
     <string name="request_username_confirm">Ich akzeptiere</string>
+    <string name="username_vote_one_left_message">Du hast bereits %d Mal für diesen Benutzernamen abgestimmt. Du kannst nur noch einmal für diesen Benutzernamen abstimmen.</string>
+    <string name="username_vote_one_left">Ein Vote übrig</string>
+    <string name="username_vote_none_left_message">Du hast bereits %d Mal für diesen Benutzernamen abgestimmt. Du kannst nur noch einmal für diesen Benutzernamen abstimmen.</string>
+    <string name="username_vote_none_left">Kein Vote übrig</string>
+    <string name="request_username_blocked">Angefragter Benutzername wurde blockiert</string>
+    <string name="request_username_lost_vote">Angefragter Benutzername wurde an eine andere Person vergeben</string>
+    <string name="request_username_blocked_message">Der Benutzername %s wurde vom Dash Netzwerk blockiert. Bitte versuche es erneut, aber mit einem anderen Benutzernamen.</string>
+    <string name="request_username_lost_vote_message">Aufgrund des Voting-Prozesses hat das Dash Netzwerk entschieden, den Benutzernamen %s an jemand anderen zu vergeben. Bitte versuche es erneut mit einem anderen Benutzernamen.</string>
+    <string name="mix_dash_mix">Gemixtes Guthaben</string>
+    <string name="mix_dash_title">Mixe deine Dash</string>
+    <string name="mix_dash_message">Um zu verhindern, dass andere Personen sehen können, an wen du Zahlungen vornimmst, wird empfohlen, dein Guthaben zu mixen, bevor du deinen Benutzernamen erstellst.</string>
     </resources>

@@ -156,6 +156,8 @@
     <!-- Explore TestNet -->
     <string name="explore_test_subtitle">Test Dash besitzen keinen echten Wert, aber du kannst sie an DashPay Alpha-Nutzern senden oder erhalten.</string>
     <string name="explore_test_dash_title">Wie bekomme ich Test Dash?</string>
+    <string name="explore_test_dash_text_1">Test Dash ist kostenlos und kann an einem so genannten Faucet erworben werden.</string>
+    <string name="explore_test_dash_text_2">Klicke auf die Schaltfläche unten, um eine Dash-Adresse aus dieser Wallet zu kopieren, damit Sie Ihre Test-Dash erhalten können...</string>
     <string name="explore_get_test_dash">Erhalte Test Dash</string>
 
     <!-- Sync Status -->

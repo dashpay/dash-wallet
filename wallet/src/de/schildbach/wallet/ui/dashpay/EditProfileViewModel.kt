@@ -74,7 +74,6 @@ class EditProfileViewModel @Inject constructor(
     dashPayProfileDao: DashPayProfileDao,
     val platformRepo: PlatformRepo
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
-
     enum class ProfilePictureStorageService {
         GOOGLE_DRIVE, IMGUR
     }
@@ -126,28 +125,39 @@ class EditProfileViewModel @Inject constructor(
 
     private var lastAttemptedProfile: DashPayProfile? = null
 
-    fun broadcastUpdateProfile(displayName: String, publicMessage: String, avatarUrl: String,
-                               uploadService: String = "", localAvatarUrl: String = "") {
-
+    fun broadcastUpdateProfile(
+        displayName: String,
+        publicMessage: String,
+        avatarUrl: String,
+        uploadService: String = "",
+        localAvatarUrl: String = ""
+    ) {
         logProfileInfoEvents(displayName, publicMessage, avatarUrl)
 
         val dashPayProfile = dashPayProfile.value!!
         val avatarFingerprintBytes = avatarFingerprint?.run { ProfilePictureHelper.toByteArray(this) }
-        val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
-                displayName, publicMessage, avatarUrl, avatarHash?.bytes, avatarFingerprintBytes,
-                dashPayProfile.createdAt, dashPayProfile.updatedAt)
+        val updatedProfile = DashPayProfile(
+            dashPayProfile.userId,
+            dashPayProfile.username,
+            displayName,
+            publicMessage,
+            avatarUrl,
+            avatarHash?.bytes,
+            avatarFingerprintBytes,
+            dashPayProfile.createdAt,
+            dashPayProfile.updatedAt
+        )
 
         lastAttemptedProfile = updatedProfile
 
-        UpdateProfileOperation(walletApplication).create(updatedProfile, uploadService,
-                localAvatarUrl).enqueue()
+        UpdateProfileOperation(walletApplication).create(updatedProfile, uploadService, localAvatarUrl).enqueue()
     }
 
     fun retryBroadcastProfile() {
         if (lastAttemptedProfile != null) {
             UpdateProfileOperation(walletApplication)
-                    .create(lastAttemptedProfile!!, "", "")
-                    .enqueue()
+                .create(lastAttemptedProfile!!, "", "")
+                .enqueue()
         }
     }
 
@@ -182,8 +192,8 @@ class EditProfileViewModel @Inject constructor(
         val result = MutableLiveData<Resource<Response>>()
         val client = OkHttpClient()
         val request = Request.Builder()
-                .url(pictureUrl)
-                .build()
+            .url(pictureUrl)
+            .build()
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 result.value = Resource.error(e, null)
@@ -220,8 +230,8 @@ class EditProfileViewModel @Inject constructor(
         return suspendCoroutine { continuation ->
             val client = OkHttpClient()
             val request = Request.Builder()
-                    .url(pictureUrl)
-                    .build()
+                .url(pictureUrl)
+                .build()
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
                     continuation.resumeWithException(e)
@@ -259,14 +269,14 @@ class EditProfileViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val imgurUploadUrl = "https://api.imgur.com/3/upload"
             val client = OkHttpClient.Builder()
-                    .connectTimeout(60, TimeUnit.SECONDS)
-                    .writeTimeout(60, TimeUnit.SECONDS)
-                    .readTimeout(30, TimeUnit.SECONDS).build()
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS).build()
 
             val requestBuilder = Request.Builder().header("Authorization",
-                    "Client-ID ${BuildConfig.IMGUR_CLIENT_ID}")
+                "Client-ID ${BuildConfig.IMGUR_CLIENT_ID}")
 
-            //Delete previous profile Picture
+            // Delete previous profile Picture
             val imgurDeleteHash = config.imgurDeleteHash
             if (imgurDeleteHash.isNotEmpty()) {
                 val imgurDeleteUrl = "https://api.imgur.com/3/image/$imgurDeleteHash"
@@ -309,7 +319,7 @@ class EditProfileViewModel @Inject constructor(
 
             val imageBodyPart = RequestBody.create("image/*jpg".toMediaTypeOrNull(), avatarBytes)
             val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
-                    .addFormDataPart("image", "profile.jpg", imageBodyPart).build()
+                .addFormDataPart("image", "profile.jpg", imageBodyPart).build()
 
             val uploadRequest = requestBuilder.url(imgurUploadUrl).post(requestBody).build()
 
@@ -335,6 +345,7 @@ class EditProfileViewModel @Inject constructor(
                     }
                 } else {
                     log.error("imgur: upload failed (${response.code}): ${response.message}")
+                    // should we tri again after 1-5 seconds
                     analytics.logError(Exception(response.message), "Failed to upload profile picture: ImgUr")
                     profilePictureUploadLiveData.postValue(Resource.error(response.message))
                 }
@@ -355,14 +366,16 @@ class EditProfileViewModel @Inject constructor(
 
     @SuppressLint("HardwareIds")
     fun uploadToGoogleDrive(drive: Drive) {
-
         viewModelScope.launch(Dispatchers.IO) {
             profilePictureUploadLiveData.postValue(Resource.loading(""))
             try {
                 val secureId = Settings.Secure.getString(walletApplication.contentResolver, Settings.Secure.ANDROID_ID)
-                val fileId = GoogleDriveService.uploadImage(drive,
-                        UUID.randomUUID().toString() + ".jpg",
-                        profilePictureFile!!.readBytes(), secureId)
+                val fileId = GoogleDriveService.uploadImage(
+                    drive,
+                    UUID.randomUUID().toString() + ".jpg",
+                    profilePictureFile!!.readBytes(),
+                    secureId
+                )
 
                 log.info("gdrive upload image: complete")
                 profilePictureUploadLiveData.postValue(Resource.success("https://drive.google.com/uc?export=view&id=${fileId}"))
@@ -398,6 +411,7 @@ class EditProfileViewModel @Inject constructor(
         }
 
         if (avatarUrl != dashPayProfile.value!!.avatarUrl) {
+            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE, mapOf())
             when (pictureSource) {
                 "gravatar" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_GRAVATAR, mapOf())
                 "public_url" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_PUBLIC_URL, mapOf())

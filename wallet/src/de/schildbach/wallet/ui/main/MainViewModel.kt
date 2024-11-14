@@ -31,6 +31,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.UserAlertDao
@@ -49,7 +50,7 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinTxWrapperFactory
-import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
+import de.schildbach.wallet.ui.dashpay.BaseContactsViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationCountLiveData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -130,10 +131,11 @@ class MainViewModel @Inject constructor(
     private val invitationsDao: InvitationsDao,
     userAlertDao: UserAlertDao,
     dashPayProfileDao: DashPayProfileDao,
-    private val dashPayConfig: DashPayConfig,
+    dashPayConfig: DashPayConfig,
+    dashPayContactRequestDao: DashPayContactRequestDao,
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService
-) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
+) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     companion object {
         private const val THROTTLE_DURATION = 500L
         private const val DIRECTION_KEY = "tx_direction"
@@ -141,7 +143,6 @@ class MainViewModel @Inject constructor(
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
-
     private val workerJob = SupervisorJob()
 
     @VisibleForTesting
@@ -703,12 +704,19 @@ class MainViewModel @Inject constructor(
 
     private fun combineLatestData(): Boolean {
         return if (!Constants.SUPPORTS_PLATFORM) {
+            log.info("platform is not supported")
             false
         } else {
             val isPlatformAvailable = isPlatformAvailable.value
             val isSynced = _isBlockchainSynced.value ?: false
             val noIdentityCreatedOrInProgress =
                 (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
+            log.info(
+                "platform available: {}; isSynced: {}: no identity creation is progress: {}",
+                isPlatformAvailable,
+                isSynced,
+                noIdentityCreatedOrInProgress
+            )
             return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress
         }
     }

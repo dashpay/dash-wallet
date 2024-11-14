@@ -49,6 +49,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -78,7 +79,12 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.contactsBtn.isVisible = Constants.SUPPORTS_PLATFORM
+        binding.contactsBtn.isVisible = false
+
+        dashPayViewModel.hasContacts.observe(viewLifecycleOwner) {
+            binding.contactsBtn.isVisible = it
+        }
+
         binding.contactsBtn.setOnClickListener {
             handleSelectContact()
         }
@@ -123,7 +129,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
                     // TODO: how do we show an arrow
                     // binding.payByContactSelect.showForwardArrow(true)
                 }
-                binding.frequentContactsRvTopLine.visibility = binding.frequentContactsRv.visibility
+                binding.frequentContactsRv.visibility = binding.frequentContactsRv.visibility
 
                 if (it.data != null) {
                     val results = arrayListOf<UsernameSearchResult>()

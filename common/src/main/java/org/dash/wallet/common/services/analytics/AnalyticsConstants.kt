@@ -51,6 +51,9 @@ object AnalyticsConstants {
         const val SETTINGS = "more_settings"
         const val TOOLS = "more_tools"
         const val CONTACT_SUPPORT = "more_contact_support"
+        const val INVITE = "more_invite"
+        const val USERNAME_VOTING = "more_username_voting"
+        const val UPDATE_PROFILE = "more_user_updated_profile"
     }
 
     object Security {
@@ -80,9 +83,12 @@ object AnalyticsConstants {
         const val RESCAN_BLOCKCHAIN_DISMISS = "settings_rescan_blockchain_dismiss"
         const val ABOUT = "settings_about"
         const val ABOUT_SUPPORT = "settings_about_contact_support"
+        const val COINJOIN = "settings_coinjoin"
     }
 
     object SendReceive {
+        const val SEND_TX = "send_tx" // also include amount sent
+        const val SEND_TX_CONTACT = "send_tx_to_contact"  // also include amount sent
         const val SCAN_TO_SEND = "send_scan_to_send"
         const val SEND_TO_ADDRESS = "send_to_address"
         const val SHOW_QR_CODE = "receive_show_qr_code"
@@ -108,6 +114,8 @@ object AnalyticsConstants {
     object Home {
         const val NAV_HOME = "bottom_nav_home"
         const val NAV_MORE = "bottom_nav_more"
+        const val NAV_CONTACTS = "bottom_nav_contacts"
+        const val NAV_EXPLORE = "bottom_nav_explore"
         const val SHORTCUT_SECURE_WALLET = "shortcut_secure_wallet"
         const val SHORTCUT_SCAN_TO_PAY = "shortcut_scan_to_pay"
         const val SHORTCUT_SEND_TO_ADDRESS = "shortcut_send_to_address"
@@ -120,6 +128,8 @@ object AnalyticsConstants {
         const val TRANSACTION_FILTER = "home_transaction_filter"
         const val SEND_RECEIVE_BUTTON = "bottom_nav_payments"
         const val NO_ADDRESS_COPIED = "shortcut_send_no_address_copied"
+        const val AVATAR = "home_avatar"
+        const val NOTIFICATIONS = "home_notifications"
     }
 
     object Invites {
@@ -148,13 +158,18 @@ object AnalyticsConstants {
 
     object UsersContacts {
         const val CREATE_USERNAME = "create_username"
+        const val JOIN_DASHPAY = "start_btn_join_dashpay"
+        const val CREATE_USERNAME_CONFIRM = "start_username_btn_confirm"
+        const val CREATE_USERNAME_SUCCESS = "start_username_created_success"
+        const val CREATE_USERNAME_INVITE_SUCCESS = "start_username_created_success_from_invitation"
+        const val CREATE_USERNAME_ERROR = "start_username_created_fail"
+        const val CREATE_USERNAME_TRYAGAIN = "start_username_btn_try_again"
         const val SEARCH_CONTACTS = "contacts_search"
         const val SEARCH_DASH_NETWORK = "contacts_search_dash_network"
-        const val SEARCH_USER_ICON = "contacts_search_user_icon"
-        const val SEND_REQUEST = "contacts_send_request"
-        const val ACCEPT_REQUEST = "contacts_accept_request"
+        const val SEARCH_USER_ICON = "contacts_btn_add_contact"
+        const val SEND_REQUEST = "contacts_request_sent"
+        const val ACCEPT_REQUEST = "contacts_request_accepted"
         const val NOTIFICATIONS_HOME_SCREEN = "notifications_home_screen"
-        const val NOTIFICATIONS_ACCEPT_REQUEST = "notifications_accept_contact_request"
         const val NOTIFICATIONS_CONTACT_DETAILS = "notifications_contact_details"
         const val PROFILE_EDIT_MORE = "profile_edit_from_more"
         const val PROFILE_EDIT_HOME = "profile_edit_from_home"
@@ -162,6 +177,7 @@ object AnalyticsConstants {
         const val PROFILE_NAME_LENGTH = "profile_display_name_length"
         const val PROFILE_CHANGE_ABOUT_ME = "profile_change_about_me"
         const val PROFILE_ABOUT_ME_LENGTH = "profile_about_me_length"
+        const val PROFILE_CHANGE_PICTURE = "profile_change_picture"
         const val PROFILE_CHANGE_PICTURE_GRAVATAR = "profile_change_picture_gravatar"
         const val PROFILE_CHANGE_PICTURE_PUBLIC_URL = "profile_change_picture_public_url"
         const val PROFILE_CHANGE_PICTURE_CAMERA = "profile_change_picture_camera_photo"
@@ -389,10 +405,21 @@ object AnalyticsConstants {
     }
 
     object CoinJoinPrivacy {
+        const val COINJOIN_START_MIXING = "settings_coinjoin_btn_start_mixing"
+        const val COINJOIN_STOP_MIXING = "settings_coinjoin_btn_stop_mixing"
         const val USERNAME_PRIVACY_BTN_CONTINUE = "username_privacy_btn_continue"
         const val USERNAME_PRIVACY_WIFI_BTN_CONTINUE = "username_privacy_wifi_btn_continue"
         const val USERNAME_PRIVACY_WIFI_BTN_CANCEL = "username_privacy_wifi_btn_cancel"
         const val USERNAME_PRIVACY_CONFIRMATION_BTN_CONFIRM = "username_privacy_confirmation_btn_confirm"
         const val USERNAME_PRIVACY_CONFIRMATION_BTN_CANCEL = "username_privacy_confirmation_btn_cancel"
+    }
+
+    object UsernameVoting {
+        const val BLOCK = "username_voting_btn_block"
+        const val DETAILS = "username_voting_details_open"
+        const val VOTE = "username_voting_details_btn_vote"
+        const val VOTE_SUCCESS = "username_voting_details_btn_vote_success"
+        const val VOTE_ERROR = "username_voting_details_btn_vote_fail"
+        const val VOTE_CANCEL = "username_voting_details_btn_vote_fail"
     }
 }

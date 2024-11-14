@@ -87,7 +87,7 @@
     <string name="dashpay_topup_fee">Topup Fee</string>
     <string name="search_user_find_a_user">Find a user on the Dash Network</string>
     <string name="search_for_a_user">Search for a User on the Dash Network</string>
-    <string name="search_user_input_placeholder">enter the username to search here</string>
+    <string name="search_user_input_placeholder">Search username</string>
     <string name="add_new_contact">Add a New Contact</string>
     <string name="send_contact_request">Send Contact Request</string>
     <string name="sending_contact_request">Sending Contact Request</string>
@@ -95,7 +95,7 @@
     <string name="accepting_contact_request">Accepting Contact Request</string>
     <string name="accepting_contact_request_short">Accepting</string>
     <string name="search_user_no_results">There are no users that match</string>
-    <string name="search_user_loading">Searching for username <b>"%"</b> on the Dash Network</string>
+    <string name="search_user_loading">Searching for username <b>\"%\"</b> on the Dash Network</string>
     <string name="contact_request_pending">Contact Request Pending</string>
     <string name="pay">Pay</string>
     <string name="contact_request_received_title">%s has requested to be a friend</string>
@@ -130,6 +130,7 @@
     <string name="notifications_you_received">%s has sent you a contact request</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
+    <string name="request_complete_message">Your username %s has been successfully requested on the Dash Network</string>
 
     <string name="scan_to_pay_username_dialog_message">Not a valid Dash Username or Identity\n\n%s</string>
     <string name="send_coins_to_username">Sending to</string>
@@ -252,24 +253,25 @@
     <string name="welcome_to_dash_pay">Welcome to Dash Pay</string>
     <string name="pay_to_usernames">Pay to usernames. No more alphanumeric addresses.</string>
     <string name="create_a_username">Create a username</string>
-    <string name="add_your_friends_family">"Add your friends &amp; family"</string>
+    <string name="add_your_friends_family">Add your friends &amp; family</string>
     <string name="invite_your_family">Invite your family, find your friends by searching their usernames.</string>
     <string name="personalise_profile">Personalise profile</string>
     <string name="upload_your_picture">Upload your picture, personalize your identity.</string>
     <string name="in_case_lose_your_passphrase">In case you lose your passphrase you will lose your right to your requested username.</string>
     <string name="keep_your_passphrase_safe">Keep your passphrase safe</string>
-    <string name="pay_now">Pay now and if not approved, you can create a different name without paying again [check if true]</string>
+    <string name="pay_now">Pay now and if not approved, you can create a different name without paying again</string>
     <string name="case_your_request_is_not_approved">In case your request is not approved</string>
-    <string name="voting_requirement_subtitle">Any username that has a number 2–9 or is longer than 20 characters will be automatically approved</string>
+    <string name="voting_requirement_subtitle">Any username that has a number 2–9 or 20 or more characters will be automatically approved</string>
     <string name="voting_requirement_title">Voting is only required in some cases</string>
     <string name="dash_network_must_vote_to_approve">The Dash network must vote to approve your username before it is created.</string>
     <string name="what_is_username_voting">What is username voting?</string>
     <string name="usernames_blocked_title">Some usernames can be blocked</string>
     <string name="usernames_blocked_subtitle">If enough of the network determines that a username is inappropriate, they can block it</string>
     <string name="username_voting">Username Voting</string>
-    <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before users will be able to create it.</string>
-    <string name="voting_duplicates_only_title">Vote only on duplicates</string>
-    <string name="voting_duplicates_only_message">You can review all requests but you only need to vote on duplicates</string>
+    <string name="username_voting_subtitle">As a masternode owner you can vote to approve requested usernames before they are created on the network.</string>
+    <string name="username_voting_subtitle_two">You can block the creation of the usernames that you feel are inappropriate.</string>
+    <string name="voting_duplicates_only_title">Default filter setting</string>
+    <string name="voting_duplicates_only_message">The default filter shows only duplicate usernames that you have NOT voted on, but you can see all contested usernames by changing the filter</string>
     <string name="all">All</string>
     <string name="n_usernames">%d usernames</string>
     <string name="n_requests">%d requests</string>
@@ -292,21 +294,37 @@
         <item>All</item>
         <item>I have approved</item>
         <item>I have not approved</item>
+        <item>Has Blocked votes</item>
     </string-array>
-
+    <string name="unblock_button">Unblock</string>
+    <plurals name="block_vote_button">
+        <item quantity="one">Block</item>
+        <item quantity="other">Blocks</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="one">Approval</item>
+        <item quantity="other">Approvals</item>
+    </plurals>
+    <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Create your username</string>
-    <string name="request_your_hint">Please not that you will not be able to change it in the future</string>
+    <string name="request_your_hint">Please note that you will not be able to change it in the future</string>
     <string name="request_username">Request Username</string>
     <string name="request_voting_range">The Dash network will vote on this username. We will notify you of the results on %s.</string>
     <string name="request_username_available">Username is available</string>
     <string name="request_username_unavailable">Username is unavailable or blocked</string>
     <string name="request_username_taken">Username is taken</string>
-
+    <string name="request_username_taken_results">Username was taken by another user</string>
+    <string name="requesting_your_username_title">Creating your username</string>
+    <string name="requesting_your_username_message">Your username %s is being requested on the Dash network. It may take some time.</string>
+    <string name="creating_your_username_message">Your username %s is being created on the Dash network. It may take some time.</string>
+    <string name="requesting_your_username_error_title">Your username request failed</string>
+    <string name="requesting_your_username_error_message">For some reason, the request for the username %s has failed.</string>
     <string name="voting">Voting:</string>
     <string name="this_username_has_already_been_requested">This username has already been requested, but you can request it too and let the network vote to decide if you can have it</string>
     <string name="request_details">Request details</string>
     <string name="request_details_subtitle">Review the posting bellow to verify the ownership of this username</string>
     <string name="vote_to_approve">Vote to Approve</string>
+    <string name="vote_to_block">Vote to Block</string>
     <string name="identity">Identity</string>
     <string name="results">Results</string>
     <string name="link">Link</string>
@@ -322,17 +340,36 @@
     <string name="make_a_post_with_the_text">Make a post with the text above on a well known social media or messaging platform to verify that you are the original owner of the requested username and paste the link bellow</string>
     <string name="paste_the_link">Paste the link</string>
     <string name="voting_key_title">Enter your voting key</string>
-    <string name="voting_key_hint">Masternode Voting Key</string>
+    <string name="voting_key_hint">Masternode Voting Private Key</string>
     <string name="voting_key_input_error">You have entered an invalid key</string>
+    <string name="voting_key_input_not_active_error">You have entered a key that is not associated to an active Masternode</string>
+    <string name="voting_key_input_already_present">You have already entered this masternode key</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">You have entered a key that is for testnet, but this is mainnet. It should look like this: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">You have entered a key that is for mainnet, but this is testnet. It should look like this: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">You have entered an address key instead of a masternode voting private key. It should be in WIF format (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">You have entered a key in hex format, but it should be in WIF format (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">You have entered a key in hex format, but it should be in WIF format (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">You have entered a private key that is too short.  Here is an example (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">You have entered a private key that with some incorrect characters.  Here is an example (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">You have entered a private key has an invalid character.  Here is an example (%s)</string>
+
     <string name="voting_key_add">Add your voting keys</string>
     <string name="voting_key_add_subtitle">The IP address(es) below are associated with this wallet</string>
     <string name="masternode_ip">Masternode IP address</string>
     <string name="multiple_votes_cast">%d votes will be cast as you have multiple voting keys stored in the wallet</string>
     <string name="add_masternode_key">Add Masternode Voting Key</string>
-    <string name="vote_submitted">Your vote was submitted</string>
-    <string name="vote_cancelled">Your vote was cancelled</string>
+    <string name="dont_ask_again">Don\'t ask me again</string>
+    <string name="vote_submitting">Submitting your vote for %s username</string>
+    <string name="vote_submitted">Voted for %s username</string>
+    <string name="cancel_submitting">Canceling your vote for %s username</string>
+    <string name="cancel_submitted">Canceled vote for %s username</string>
+    <string name="block_submitting">Blocking for %s username</string>
+    <string name="block_submitted">You blocked %s username</string>
+    <string name="vote_submitted_error">Error voting for %s username</string>
+    <string name="cancel_submitted_error">Error canceling vote for %s username</string>
+    <string name="block_submitted_error">Error blocking %s username</string>
     <string name="quick_vote">Quick Voting</string>
-    <string name="quick_vote_subtitle">By tapping the "Vote for All" button, you will automatically vote for all of the filtered usernames (%d) that were submitted first</string>
+    <string name="quick_vote_subtitle">By tapping the \"Vote for All\" button, you will automatically vote for all of the filtered usernames (%d) that were submitted first</string>
     <string name="vote_for_all">Vote for All</string>
     <string name="voting_period_active">Username Voting Period Active</string>
     <string name="there_was_a_network_error">There was a network error, you can try again at no extra cost</string>
@@ -384,7 +421,7 @@
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">Your credit balance is low</string>
     <string name="credit_balance_low_warning_title">Your credit balance is fully depleted</string>
-    <string name="credit_balance_empty_warning_message">"You can continue to use DashPay for payments but you cannot update your profile or add more contacts until you top up your credit balance</string>
+    <string name="credit_balance_empty_warning_message">You can continue to use DashPay for payments but you cannot update your profile or add more contacts until you top up your credit balance</string>
     <string name="credit_balance_low_warning_message">Top-up your credits to continue making changes to your profile and adding contacts</string>
     <string name="credit_balance_button_maybe_later">Maybe later</string>
     <string name="credit_balance_button_buy">Buy Credits</string>
@@ -396,5 +433,17 @@
     <string name="request_username_balance_requirement">You need to have 0.25 DASH to create this username</string>
     <string name="request_username_length_requirement">Between 3 and 23 characters</string>
     <string name="request_username_confirm">I accept</string>
-
+    <string name="username_vote_one_left_message">You have already voted for this username %d times. You can only cast one more vote for this username.</string>
+    <string name="username_vote_one_left">One vote left</string>
+    <string name="username_vote_none_left_message">You have already voted for this username %d times. You cannot cast any more votes for this username.</string>
+    <string name="username_vote_none_left">No votes left</string>
+    <string name="request_username_blocked">Requested username has been blocked</string>
+    <string name="request_username_lost_vote">Requested username has been given to someone else</string>
+    <string name="request_username_blocked_message">The username %s was blocked by the Dash Network. Please try again by requesting another username.</string>
+    <string name="request_username_lost_vote_message">Due to the voting process, the Dash Network has decided to assign the username %s to someone else. Please try again by requesting another username.</string>
+    <string name="mix_dash_mix">Mix Balance</string>
+    <string name="mix_dash_title">Mix your Dash</string>
+    <string name="mix_dash_message">To help prevent other people from seeing who you make payments to, it is recommended to mix your balance before you create your username.</string>
+    <string name="dash_private_key_mainnet" translatable="false">XKm5koXHMm7UrVV3ki2pbGA8yZztiSR2F9x6ucEyCSuqTHBMjJix</string>
+    <string name="dash_private_key_testnet" translatable="false">cUR2TrX4U6t6g9kRfDoBbwF2WRKBNjV3gK7HwTgQgmUUQCKXcT3N</string>
 </resources>

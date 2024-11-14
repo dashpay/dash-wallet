@@ -87,7 +87,6 @@
     <string name="dashpay_topup_fee">チャージ料金</string>
     <string name="search_user_find_a_user">Dashネットワークでユーザーを探す</string>
     <string name="search_for_a_user">Dashネットワークのユーザーを検索</string>
-    <string name="search_user_input_placeholder">ユーザー名を入力してここから検索</string>
     <string name="add_new_contact">新しい連絡先を追加</string>
     <string name="send_contact_request">連絡先リクエストを送信する</string>
     <string name="sending_contact_request">連絡先リクエストを送信中</string>
@@ -261,14 +260,15 @@
     <string name="keep_your_passphrase_safe">パスフレーズを安全に保つ</string>
     <string name="pay_now">今すぐ支払いをして承認されなくても、再度支払うことなく別の名前を作成することができます</string>
     <string name="case_your_request_is_not_approved">お客様の請求が承認されない場合</string>
-    <string name="voting_requirement_subtitle">2〜9の数字を含む、または20文字以上のユーザー名は自動的に承認されます</string>
+    <string name="voting_requirement_subtitle">ユーザー名に2～9の数字、または20文字以上が含まれていれば、自動的に承認されます。</string>
     <string name="voting_requirement_title">投票が必要な場合もあります</string>
     <string name="dash_network_must_vote_to_approve">Dashネットワークでお客様のユーザー名が投票で承認されると、そのユーザー名が作成されます。</string>
     <string name="what_is_username_voting">ユーザー名投票とは\?</string>
     <string name="usernames_blocked_title">一部のユーザー名をブロックできます</string>
     <string name="usernames_blocked_subtitle">ネットワーク上の多数のユーザーがそのユーザー名を不適切と判断した場合、それをブロックできます</string>
     <string name="username_voting">ユーザー名投票</string>
-    <string name="username_voting_subtitle">マスターノードの所有者として、お客様が投票で請求されたユーザー名を承認すると、ユーザーはそのユーザー名を作成できるようになります。</string>
+    <string name="voting_duplicates_only_title">デフォルトのフィルター設定</string>
+    <string name="voting_duplicates_only_message">デフォルトのフィルターでは、お客様が投票していない重複したユーザー名のみが示されますが、フィルターを変更することですべての競合するユーザー名を確認できます</string>
     <string name="all">全て</string>
     <string name="n_usernames">%dのユーザー名</string>
     <string name="n_requests">%dのリクエスト</string>
@@ -291,17 +291,22 @@
         <item>全て</item>
         <item>承認しました</item>
         <item>承認しませんでした</item>
+        <item>投票をブロックしました</item>
     </string-array>
-
+    <string name="block_vote_count">%dブロック</string>
     <string name="request_your_username">ユーザー名の作成</string>
-    <string name="request_your_hint">一度作成したユーザー名は後で変更することはできませんのでご注意ください</string>
+    <string name="request_your_hint">一度決めたユーザー名は、今後変更することはできませんのでご注意ください</string>
     <string name="request_username">ユーザー名の申請</string>
     <string name="request_voting_range">Dashネットワークはこのユーザー名に投票することになります。投票結果は%sに通知されます。</string>
     <string name="request_username_available">ユーザー名は使用可能です</string>
     <string name="request_username_unavailable">ユーザー名は使用不可またはブロックされています</string>
     <string name="request_username_taken">ユーザー名はすでに使用されています</string>
+    <string name="request_username_taken_results">ユーザー名は他のユーザーによって使用されていました</string>
     <string name="requesting_your_username_title">ユーザー名の作成中</string>
+    <string name="requesting_your_username_message">お客様のユーザー名%sが、Dashネットワークでリクエストされています。しばらくお時間がかかる場合があります。</string>
+    <string name="creating_your_username_message">お客様のユーザー名%sが、Dashネットワークで作成されています。しばらくお時間がかかる場合があります。</string>
     <string name="requesting_your_username_error_title">ユーザー名の申請に失敗しました</string>
+    <string name="requesting_your_username_error_message">何らかの理由で、%sというユーザー名のリクエストに失敗しました。</string>
     <string name="voting">投票：</string>
     <string name="this_username_has_already_been_requested">このユーザー名はすでに申請されていますが、お客様も同じものを申請でき、ネットワークの投票によってユーザー名の使用可否が決定されます。</string>
     <string name="request_details">詳細の申請</string>
@@ -322,15 +327,14 @@
     <string name="make_a_post_with_the_text">よく知られたSNSやメッセージング・プラットフォームに上記の文章を投稿し、ご自身が申請されたユーザー名の本来の所有者であることを確認した上で、以下のリンクを貼り付けてください</string>
     <string name="paste_the_link">リンクを貼り付ける</string>
     <string name="voting_key_title">投票キーを入力する</string>
-    <string name="voting_key_hint">マスターノードの投票キー</string>
+    <string name="voting_key_hint">マスターノードのプライベート投票キー</string>
     <string name="voting_key_input_error">無効なキーが入力されています</string>
+    <string name="voting_key_input_not_active_error">アクティブなマスターノードに紐づいていないキーが入力されました</string>
     <string name="voting_key_add">投票キーを追加する</string>
     <string name="voting_key_add_subtitle">以下のIPアドレスは、このウォレットに紐付けられています</string>
     <string name="masternode_ip">マスターノードのIPアドレス</string>
     <string name="multiple_votes_cast">ウォレットに複数の投票キーが保管されているため、%d票の投票が行われます</string>
     <string name="add_masternode_key">マスターノードの投票キーを追加する</string>
-    <string name="vote_submitted">投票が提出されました</string>
-    <string name="vote_cancelled">投票がキャンセルされました</string>
     <string name="quick_vote">クイック投票</string>
     <string name="quick_vote_subtitle">「全てに投票」ボタンをタップすると、絞り込んだユーザー名のうち、最初に投稿されたもの(%d)全てに自動的に投票されます</string>
     <string name="vote_for_all">全てに投票</string>
@@ -396,4 +400,15 @@
     <string name="request_username_balance_requirement">このユーザー名を作成するには、0.25DASHが必要です</string>
     <string name="request_username_length_requirement">3〜23文字以内</string>
     <string name="request_username_confirm">承認します</string>
+    <string name="username_vote_one_left_message">このユーザー名にはすでに%d回投票しています。このユーザー名にはあと1回しか投票できません。</string>
+    <string name="username_vote_one_left">あと1票</string>
+    <string name="username_vote_none_left_message">このユーザー名にはすでに%d回投票しています。このユーザー名にはもう投票できません。</string>
+    <string name="username_vote_none_left">あと0票</string>
+    <string name="request_username_blocked">リクエストされたユーザー名はブロックされています</string>
+    <string name="request_username_lost_vote">リクエストしたユーザー名は、すでに他の人が使用しています</string>
+    <string name="request_username_blocked_message">%sというユーザー名は、Dashネットワークでブロックされました。別のユーザー名をリクエストして再度お試しください。</string>
+    <string name="request_username_lost_vote_message">投票の結果、Dashネットワークはユーザー名%sを他のユーザーに割り当てることに決定しました。別のユーザー名をリクエストして再度お試しください。</string>
+    <string name="mix_dash_mix">ミキシング残高</string>
+    <string name="mix_dash_title">Dashをミキシングする</string>
+    <string name="mix_dash_message">他者に送金先を閲覧されないようにするため、残高をミキシングしてからユーザー名を作成することを推奨します。</string>
     </resources>

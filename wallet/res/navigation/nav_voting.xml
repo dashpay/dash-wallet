@@ -40,6 +40,22 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/requests_to_addVotingKeysFragment"
+            app:destination="@+id/addVotingKeysFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            />
+
+        <action
+            android:id="@+id/requests_to_votingKeyInputFragment"
+            app:destination="@+id/votingKeyInputFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            />
     </fragment>
 
     <dialog
@@ -83,6 +99,10 @@
             android:name="requestId"
             app:argType="string" />
 
+        <argument
+            android:name="vote"
+            app:argType="string" />
+
         <action
             android:id="@+id/votingKeyInput_to_addKeys"
             app:popUpTo="@id/usernameRequestDetailsFragment"
@@ -101,6 +121,9 @@
 
         <argument
             android:name="requestId"
+            app:argType="string" />
+
+        <argument android:name="vote"
             app:argType="string" />
 
         <action

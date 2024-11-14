@@ -26,6 +26,7 @@ import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
 import de.schildbach.wallet.ui.username.CreateUsernameActions
@@ -126,7 +127,12 @@ class CreateUsernameActivity : LockScreenActivity() {
                 fromOnboardng = fromOnboardng
             )
 
-            if (requestUserNameViewModel.isUserNameRequested()) {
+            if (requestUserNameViewModel.isUserNameRequested() &&
+                !requestUserNameViewModel.isUsernameLocked() &&
+                !requestUserNameViewModel.isUsernameLostAfterVoting() &&
+                (requestUserNameViewModel.identity?.creationState
+                    ?: BlockchainIdentityData.CreationState.NONE) >= BlockchainIdentityData.CreationState.VOTING
+            ) {
                 navGraph.setStartDestination(R.id.votingRequestDetailsFragment)
             } else {
                 if (!dashPayViewModel.isDashPayInfoShown()) {
@@ -135,7 +141,6 @@ class CreateUsernameActivity : LockScreenActivity() {
                     navGraph.setStartDestination(R.id.requestUsernameFragment)
                 }
             }
-
 
             navController.graph = navGraph
             navController.setGraph(navController.graph, bundle)

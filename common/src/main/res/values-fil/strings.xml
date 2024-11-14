@@ -24,6 +24,8 @@
     <string name="dash_address">Address ng Dash</string>
     <string name="username">Username</string>
     <string name="balance">Balanse:</string>
+    <string name="nothing_here">Wala dito</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -61,6 +63,8 @@
     <string name="verify">Kumpirmahin</string>
     <string name="receive_enter_amount_button">Tukuyin ang halaga</string>
     <string name="account_create">Lumikha ng Account</string>
+    <string name="submit">Isumite</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">Maghanap</string>
     <string name="permission_allow">Payagan</string>
@@ -77,6 +81,7 @@
     <string name="select_currency">Piliin ang Pera</string>
     <string name="send_coins_error_dusty_send">Ang halaga ay sobrang liit para maipadala</string>
     <string name="send_coins_error_insufficient_money">Hindi sapat na pondo</string>
+    <string name="send_coins_error_insufficient_mixed_money">Hindi sapat na pinaghalong pondo. Hintayin ang paghahalo ng CoinJoin upang matapos o huwag paganahin ang tampok na ito sa mga setting upang makumpleto ang transaksyong ito.</string>
     <string name="syncing">Nagsi-sync</string>
     <string name="no_connection">Walang koneksyon sa internet</string>
     <string name="rate_not_available">Hindi available</string>

@@ -116,6 +116,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
         binding.homeToolbar.setOnClickListener { scrollToTop() }
         binding.notificationBell.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Home.NOTIFICATIONS)
             findNavController().navigate(
                 R.id.showNotificationsFragment,
                 bundleOf("mode" to NotificationsFragment.MODE_NOTIFICATIONS),
@@ -125,7 +126,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
             )
         }
         binding.dashpayUserAvatar.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.UsersContacts.PROFILE_EDIT_HOME)
+            viewModel.logEvent(AnalyticsConstants.Home.AVATAR)
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
 
@@ -151,8 +152,17 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
 
         viewModel.dashPayProfile.observe(viewLifecycleOwner) { profile ->
-            ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile, true)
-            setNotificationIndicator()
+            if (viewModel.hasIdentity) {
+                ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile, true)
+                setNotificationIndicator()
+            }
+        }
+
+        viewModel.blockchainIdentity.observe(viewLifecycleOwner) { identity ->
+            if (identity?.creationComplete == true) {
+                ProfilePictureDisplay.display(binding.dashpayUserAvatar, viewModel.dashPayProfile.value, true)
+                setNotificationIndicator()
+            }
         }
 
         viewModel.notificationCountData.observe(viewLifecycleOwner) { setNotificationIndicator() }
@@ -205,6 +215,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 viewModel.mixedBalance,
                 viewModel.walletBalance
             )
+        }
+
+        viewModel.hasContacts.observe(viewLifecycleOwner) {
+            refreshShortcutBar()
         }
     }
 
@@ -280,6 +294,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun refreshShortcutBar() {
         showHideSecureAction()
         refreshIfUserHasBalance()
+        refreshIfUserHasIdentity()
     }
 
     private fun showHideSecureAction() {
@@ -289,6 +304,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun refreshIfUserHasBalance() {
         val balance: Coin = viewModel.balance.value ?: Coin.ZERO
         binding.shortcutsPane.userHasBalance = balance.isPositive
+    }
+
+    private fun refreshIfUserHasIdentity() {
+        binding.shortcutsPane.userHasContacts = viewModel.hasIdentity && viewModel.hasContacts.value
     }
 
     private fun updateSyncState() {

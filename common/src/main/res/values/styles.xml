@@ -961,6 +961,87 @@
         <item name="android:theme">@style/PrimaryButtonTheme.Large.LightBlue</item>
     </style>
 
+    <style name="VoteButtonTheme">
+        <item name="cornerRadius">7dp</item>
+        <item name="titleTextColor">@color/white</item>
+        <item name="backgroundColor">@color/content_primary</item>
+        <item name="strokeColor">@color/content_primary</item>
+        <item name="rippleColor">@color/ripple_light</item>
+        <item name="disabledBackgroundColor">@color/disabled_button_bg</item>
+    </style>
+
+    <style name="VoteButton" parent="Widget.AppCompat.Button.Borderless">
+        <item name="fontFamily">@font/inter_semibold</item>
+        <item name="android:textColor">@color/button_text</item>
+        <item name="android:background">@drawable/rounded_ripple_background</item>
+        <item name="android:theme">@style/VoteButtonTheme</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:minHeight">40dp</item>
+    </style>
+
+    <style name="Button.Vote" parent="Widget.AppCompat.Button.Borderless">
+        <item name="fontFamily">@font/inter_semibold</item>
+        <item name="android:textColor">@color/button_text</item>
+        <item name="android:background">@drawable/rounded_ripple_background</item>
+        <item name="android:theme">@style/VoteButtonTheme</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:minHeight">40dp</item>
+    </style>
+
+    <style name="VoteButton.LightBlue">
+        <item name="backgroundColor">@color/dash_blue_0.05</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="titleTextColor">@color/dash_blue</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
+    <style name="Button.Vote.LightBlue">
+        <item name="android:theme">@style/VoteButton.LightBlue</item>
+    </style>
+
+    <style name="VoteButton.LightRed">
+        <item name="backgroundColor">@color/red_0.05</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="titleTextColor">@color/red</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
+    <style name="Button.Vote.LightRed">
+        <item name="android:theme">@style/VoteButton.LightRed</item>
+    </style>
+
+    <style name="VoteButton.Blue">
+        <item name="backgroundColor">@color/dash_blue</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="titleTextColor">@color/dash_white</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
+    <style name="Button.Vote.Blue">
+        <item name="android:theme">@style/VoteButton.Blue</item>
+    </style>
+
+    <style name="VoteButton.Red">
+        <item name="backgroundColor">@color/red</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="titleTextColor">@color/dash_white</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
+    <style name="Button.Vote.Red">
+        <item name="android:theme">@style/VoteButton.Red</item>
+    </style>
+
     <style name="Button.Primary.Small">
         <item name="android:textSize">13sp</item>
         <item name="android:minHeight">30dp</item>

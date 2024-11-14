@@ -51,9 +51,9 @@ dependencies {
 
     implementation 'org.bouncycastle:bcprov-jdk15to18:1.74'
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation 'org.dashj.platform:dash-sdk-java:1.0-SNAPSHOT'
-    implementation 'org.dashj.platform:dash-sdk-kotlin:1.0-SNAPSHOT'
-    implementation 'org.dashj.platform:dash-sdk-android:1.0-SNAPSHOT'
+    implementation "org.dashj.platform:dash-sdk-java:$dppVersion"
+    implementation "org.dashj.platform:dash-sdk-kotlin:$dppVersion"
+    implementation "org.dashj.platform:dash-sdk-android:$dppVersion"
     implementation 'io.grpc:grpc-stub:1.54.0' // CURRENT_GRPC_VERSION
     implementation "org.dashj.android:dashj-bls-android:1.0.0"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
@@ -70,7 +70,9 @@ dependencies {
     implementation 'com.tbuonomo:dotsindicator:4.2'
     implementation 'com.github.amulyakhare:textdrawable:558677ea31'
 
+    // google play services
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
+    implementation 'com.google.android.gms:play-services-base:18.5.0'
 
     // Network
     implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
@@ -205,8 +207,9 @@ android {
         compileSdk 34
         minSdkVersion 24
         targetSdkVersion 34
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 103020
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "10.3.2"
+        // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11000312
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.0.3"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -343,16 +346,16 @@ android {
         }
         staging {
             applicationId = "org.dash.dashpay.testnet"
-            def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
-            def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
-            if (imgurClientId == null) {
-                imgurClientId = "\"UPHOLD_CLIENT_ID\""
+            def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
+            def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
+            if (upholdClientId == null) {
+                upholdClientId = "\"UPHOLD_CLIENT_ID\""
             }
-            if (imgurClientSecret == null) {
-                imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
+            if (upholdClientSecret == null) {
+                upholdClientSecret = "\"UPHOLD_CLIENT_SECRET\""
             }
-            buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
-            buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
+            buildConfigField("String", "UPHOLD_CLIENT_ID", upholdClientId)
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", upholdClientSecret)
             def topperKeyId = props.getProperty("TOPPER_KEY_ID_SANDBOX", "\"TOPPER_KEY_ID\"")
             def topperWidgetId = props.getProperty("TOPPER_WIDGET_ID_SANDBOX", "\"TOPPER_WIDGET_ID\"")
             def topperPrivateKey = props.getProperty("TOPPER_PRIVATE_KEY_SANDBOX", "\"TOPPER_PRIVATE_KEY\"")

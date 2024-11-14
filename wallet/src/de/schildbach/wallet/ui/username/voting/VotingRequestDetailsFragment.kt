@@ -24,10 +24,11 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.lifecycleScope
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentVotingRequestDetailsBinding
+import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
@@ -45,8 +46,6 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
         binding.titleBar.setNavigationOnClickListener {
             requireActivity().finish()
         }
-        // TODO Mock identity
-
 
         binding.verify.setOnClickListener {
             safeNavigate(
@@ -58,19 +57,37 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
         requestUserNameViewModel.myUsernameRequest.observe(viewLifecycleOwner) { myUsernameRequest ->
             binding.username.text = myUsernameRequest?.username
             binding.identity.text = myUsernameRequest?.identity
-            val votingPeriod = myUsernameRequest?.createdAt?.let { startTime ->
-                val endTime = startTime + TimeUnit.MILLISECONDS.toDays(14)
+            var isVotingOver = false
+            val votingResults = myUsernameRequest?.createdAt?.let { startTime ->
+                val endTime = startTime + UsernameRequest.VOTING_PERIOD_MILLIS
                 val dateFormat = DateFormat.getMediumDateFormat(requireContext())
-                dateFormat.format(endTime)
+                isVotingOver = endTime < System.currentTimeMillis()
+                if (isVotingOver) {
+                    getString(R.string.request_username_taken_results)
+                } else {
+                    dateFormat.format(endTime)
+                }
             } ?: "Voting Period not found"
-            binding.votingRange.text = votingPeriod
-            if (myUsernameRequest?.link != null) {
-                binding.link.text = myUsernameRequest.link
-                binding.linkLayout.isVisible = true
-                binding.verfiyNowLayout.isVisible = false
-            } else {
-                binding.linkLayout.isVisible = false
-                binding.verfiyNowLayout.isVisible = true
+            binding.votingRange.text = votingResults
+            when {
+                isVotingOver -> {
+                    binding.link.text = if (myUsernameRequest?.link != null && myUsernameRequest.link != "") {
+                        myUsernameRequest.link
+                    } else {
+                        getString(R.string.none)
+                    }
+                    binding.linkLayout.isVisible = true
+                    binding.verifyNowLayout.isVisible = false
+                }
+                myUsernameRequest?.link != null && myUsernameRequest.link != "" -> {
+                    binding.link.text = myUsernameRequest.link
+                    binding.linkLayout.isVisible = true
+                    binding.verifyNowLayout.isVisible = false
+                }
+                else -> {
+                    binding.linkLayout.isVisible = false
+                    binding.verifyNowLayout.isVisible = true
+                }
             }
         }
 
@@ -93,13 +110,12 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
                         ""
                     ).show(requireActivity())
                 }
-
             }
         }
 
         binding.ivInfo.setOnClickListener {
             safeNavigate(
-                VotingRequestDetailsFragmentDirections.votingRequestDetailsFragmentToUsernameVotingInfoFragment()
+                VotingRequestDetailsFragmentDirections.votingRequestDetailsFragmentToUsernameVotingInfoFragment(true)
             )
         }
     }

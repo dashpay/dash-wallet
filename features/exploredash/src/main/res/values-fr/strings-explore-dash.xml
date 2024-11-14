@@ -160,6 +160,8 @@
     <!-- Explore TestNet -->
     <string name="explore_test_subtitle">Les dashs de test n\'ont pas de valeur réelle, mais vous pouvez les envoyer et recevoir avec d\'autres utilisateurs DashPay Alpha.</string>
     <string name="explore_test_dash_title">Comment puis-je obtenir des dashs de test ?</string>
+    <string name="explore_test_dash_text_1">Les dashs de test sont gratuits et peuvent être obtenus par ce qu\'on appelle un robinet.</string>
+    <string name="explore_test_dash_text_2">Cliquez sur le bouton ci-dessous pour copier une adresse Dash de ce portefeuille, de façon à ce que vous puissiez obtenir vos dashs de test.</string>
     <string name="explore_get_test_dash">Obtenir des dashs de test</string>
 
     <!-- Sync Status -->

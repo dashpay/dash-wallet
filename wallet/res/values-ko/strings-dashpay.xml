@@ -88,7 +88,6 @@
     <string name="dashpay_topup_fee">충전 수수료</string>
     <string name="search_user_find_a_user">대시 네트워크에서 사용자를 검색합니다</string>
     <string name="search_for_a_user">대시 네트워크에서 사용자 검색</string>
-    <string name="search_user_input_placeholder">이곳에 검색할 사용자 이름을 입력하세요</string>
     <string name="add_new_contact">새로운 연락처 추가하기</string>
     <string name="send_contact_request">연락처 요청 전송</string>
     <string name="sending_contact_request">연락처 요청 전송중</string>
@@ -262,14 +261,15 @@
     <string name="keep_your_passphrase_safe">당신의 복구 문구를 안전하게 보호하세요</string>
     <string name="pay_now">지금 지불하고, 승인되지 않는 경우에는 다시 낼 필요 없이 다른 이름을 생성할 수 있습니다.</string>
     <string name="case_your_request_is_not_approved">귀하의 요청이 승인되지 않은 경우</string>
-    <string name="voting_requirement_subtitle">2-9 사이의 숫자가 포함되었거나 20글자 이상인 사용자 이름은 자동으로 승인됩니다</string>
+    <string name="voting_requirement_subtitle">2-9 사이의 숫자가 포함되었거나 20글자 이상인 사용자 이름은 자동으로 승인됩니다.</string>
     <string name="voting_requirement_title">투표는 일부 경우에만 필요합니다</string>
     <string name="dash_network_must_vote_to_approve">사용자 이름이 생성되기 전 대시 네트워크가 투표를 통해 승인해야 합니다.</string>
     <string name="what_is_username_voting">사용자이름 투표란 무엇인가요\?</string>
     <string name="usernames_blocked_title">어떤 사용자 이름은 블록될 수 있습니다</string>
     <string name="usernames_blocked_subtitle">사용자 이름이 부적절하다는 점에 충분한 네트워크가 의견을 함께 한다면 블록할 수 있습니다</string>
     <string name="username_voting">사용자 이름 투표</string>
-    <string name="username_voting_subtitle">마스터노드 소유자는 사용자가 사용자 이름을 생성하기 전 이를 위한 요청에 대해 투표 할 수 있습니다.</string>
+    <string name="voting_duplicates_only_title">디폴트 필터 설정</string>
+    <string name="voting_duplicates_only_message">이 디폴트 필터는 투표하지 않은 중복 사용자 아이디만 표시하지만, 필터를 변경하면 경합 중인 모든 사용자 아이디를 볼 수 있습니다.</string>
     <string name="all">모두</string>
     <string name="n_usernames">%d 사용자 이름</string>
     <string name="n_requests">%d 요청</string>
@@ -292,8 +292,9 @@
         <item>모두</item>
         <item>승인하였습니다</item>
         <item>승인하지 않았습니다</item>
+        <item>투표를 차단했습니다</item>
     </string-array>
-
+    <string name="block_vote_count">%d 블록</string>
     <string name="request_your_username">당신의 사용자 이름을 생성하세요</string>
     <string name="request_your_hint">이를 다시 변경할 수 없다는 점에 주의하세요</string>
     <string name="request_username">사용자 이름 요청하기</string>
@@ -301,8 +302,12 @@
     <string name="request_username_available">사용자이름을 사용할 수 있습니다</string>
     <string name="request_username_unavailable">사용자 이름을 사용할 수 없거나 블록되었습니다</string>
     <string name="request_username_taken">사용자 이름을 이미 사용중입니다</string>
+    <string name="request_username_taken_results">이미 다른 사용자가 사용하고 있는 이름입니다</string>
     <string name="requesting_your_username_title">당신의 사용자 이름을 생성중입니다</string>
+    <string name="requesting_your_username_message">당신의 사용자 이름인 %s 이 대시 네트워크에 요청되었습니다. 이 과정에는 시간이 걸릴 수 있습니다.</string>
+    <string name="creating_your_username_message">당신의 사용자 이름인 %s 이 대시 네트워크에 생성되는 중입니다. 이 과정에는 시간이 걸릴 수 있습니다.</string>
     <string name="requesting_your_username_error_title">당신의 사용자 이름 요청이 실패하였습니다</string>
+    <string name="requesting_your_username_error_message">알 수 없는 이유로 사용자 이름 %s에 대한 요청이 실패하였습니다.</string>
     <string name="voting">투표중:</string>
     <string name="this_username_has_already_been_requested">이 사용자 이름은 이미 요청이 진행중이나, 당신도 요청할 수 있으며 누가 가지게 될 지는 네트워크가 투표로 결정합니다</string>
     <string name="request_details">요청 세부 내용</string>
@@ -323,15 +328,14 @@
     <string name="make_a_post_with_the_text">위의 텍스트를 잘 알려진 소셜 미디어나 메시지 플랫폼상에 포스팅하고, 아래의 링크를 붙여 넣음으로써 당신이 요청된 사용자 이름의 진정한 소유주임을 증명하세요</string>
     <string name="paste_the_link">링크 붙여넣기</string>
     <string name="voting_key_title">투표 키를 입력하세요</string>
-    <string name="voting_key_hint">마스터노드 투표 키</string>
+    <string name="voting_key_hint">마스터노드 투표 개인 키</string>
     <string name="voting_key_input_error">유효하지 않은 키를 입력하셨습니다</string>
+    <string name="voting_key_input_not_active_error">입력하신 키는 마스터노드 활성화와 연관되지 않은 키입니다.</string>
     <string name="voting_key_add">당신의 투표 키를 추가하세요</string>
     <string name="voting_key_add_subtitle">아래의 IP 주소(들)는 이 지갑에 연관되어 있습니다</string>
     <string name="masternode_ip">마스터노드 IP 주소</string>
     <string name="multiple_votes_cast">이 지갑에 수 개의 투표 키가 저장되어 있으므로 %d 표가 던져지게 됩니다 </string>
     <string name="add_masternode_key">마스터노드 투표 키를 추가하세요</string>
-    <string name="vote_submitted">투표가 제출되었습니다</string>
-    <string name="vote_cancelled">투표가 취소되었습니다</string>
     <string name="quick_vote">빠른 투표</string>
     <string name="quick_vote_subtitle">\"모두 투표하기\" 버튼을 선택하면, 먼저 제출된 필터를 거친 모든 사용자 이름 (%d) 에 대해 자동으로 투표하게 됩니다</string>
     <string name="vote_for_all">모두 투표하기</string>
@@ -397,4 +401,15 @@
     <string name="request_username_balance_requirement">이 사용자 이름을 생성하기 위해서는 0.25 DASH가 필요합니다</string>
     <string name="request_username_length_requirement">3에서 23글자 사이</string>
     <string name="request_username_confirm">수락합니다</string>
+    <string name="username_vote_one_left_message">이미 이 사용자이름에 대해 %d회 투표하였습니다. 이 사용자 이름에 대하여 한 번의 투표만 남았습니다.</string>
+    <string name="username_vote_one_left">한 번의 투표만 남음</string>
+    <string name="username_vote_none_left_message">이 사용자 이름에 대해 이미 %d회 투표하였습니다. 이 사용자 이름에 대해 더이상 투표할 수 없습니다.</string>
+    <string name="username_vote_none_left">남은 투표 없음</string>
+    <string name="request_username_blocked">요청된 사용자 이름이 블록되었습니다</string>
+    <string name="request_username_lost_vote">요청된 사용자 이름이 다른 사람에게 주어졌습니다</string>
+    <string name="request_username_blocked_message">사용자 이름 %s은 대시 네트워크에 의해 블록되었습니다. 다른 사용자 이름으로 다시 시도해주십시오.</string>
+    <string name="request_username_lost_vote_message">투표 과정에 의하여, 대시 네트워크가 사용자 이름 %s 을 다른 사용자에게 배치하기로 결정하였습니다. 다른 사용자이름으로 다시 시도해주십시오.</string>
+    <string name="mix_dash_mix">믹스 잔고</string>
+    <string name="mix_dash_title">당신의 대시를 믹스하세요</string>
+    <string name="mix_dash_message">당신이 누구에게 송금하는 지를 아무도 알 수 없게 하기 위해서는, 사용자 이름을 만들기 전에 잔고를 믹싱할 것을 권장합니다.</string>
     </resources>

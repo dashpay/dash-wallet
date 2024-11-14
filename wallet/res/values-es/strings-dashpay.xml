@@ -88,7 +88,7 @@ de Dash</b></string>
     <string name="dashpay_topup_fee">Tarifa de recarga</string>
     <string name="search_user_find_a_user">Encontrar un usuario en la red Dash</string>
     <string name="search_for_a_user">Buscar un usuario en la red Dash</string>
-    <string name="search_user_input_placeholder">ingresa el nombre de usuario para buscar aquí</string>
+    <string name="search_user_input_placeholder">Buscar nombre de usuario</string>
     <string name="add_new_contact">Agregar un nuevo contacto</string>
     <string name="send_contact_request">Enviar solicitud de contacto</string>
     <string name="sending_contact_request">Enviando solicitud de contacto</string>
@@ -262,14 +262,17 @@ de Dash</b></string>
     <string name="keep_your_passphrase_safe">Mantén tu contraseña segura</string>
     <string name="pay_now">Paga ahora y si no es aprobado, puedes crear un nombre diferente sin pagar nuevamente</string>
     <string name="case_your_request_is_not_approved">En caso de que tu solicitud no sea aprobada</string>
-    <string name="voting_requirement_subtitle">Cualquier nombre de usuario que tenga un número del 2 al 9 o que tenga más de 20 caracteres será aprobado automáticamente.</string>
+    <string name="voting_requirement_subtitle">Cualquier nombre de usuario que tenga un número de 2 a 9 o 20 o más caracteres será aprobado automáticamente.</string>
     <string name="voting_requirement_title">El voto sólo es necesario en algunos casos</string>
     <string name="dash_network_must_vote_to_approve">La red Dash debe votar para aprobar tu nombre de usuario antes de que se cree.</string>
     <string name="what_is_username_voting">¿Qué es la votación por nombre de usuario\?</string>
     <string name="usernames_blocked_title">Algunos nombres de usuario pueden ser bloqueados</string>
     <string name="usernames_blocked_subtitle">Si una cantidad suficiente de usuarios de la red determina que un nombre de usuario es inapropiado, pueden bloquearlo.</string>
     <string name="username_voting">Votación por nombre de usuario</string>
-    <string name="username_voting_subtitle">Como propietario de un masternode, puedes votar para aprobar los nombres de usuario solicitados antes de que los usuarios puedan crearlos.</string>
+    <string name="username_voting_subtitle">Como propietario de un masternode puedes votar para aprobar los nombres de usuario solicitados antes de que se creen en la red.</string>
+    <string name="username_voting_subtitle_two">Puedes bloquear la creación de nombres de usuario que consideres inapropiados.</string>
+    <string name="voting_duplicates_only_title">Configuración de filtro predeterminada</string>
+    <string name="voting_duplicates_only_message">El filtro predeterminado muestra solo nombres de usuario duplicados por los que NO has votado, pero puedes ver todos los nombres de usuario en disputa cambiando el filtro.</string>
     <string name="all">Todos</string>
     <string name="n_usernames">%d nombres de usuario</string>
     <string name="n_requests">%d solicitudes</string>
@@ -292,22 +295,39 @@ de Dash</b></string>
         <item>Todos</item>
         <item>Yo he aprobado</item>
         <item>Yo no he aprobado</item>
+        <item>Ha bloqueado votos</item>
     </string-array>
-
+    <string name="unblock_button">Desbloquear</string>
+    <plurals name="block_vote_button">
+        <item quantity="one">Bloque</item>
+        <item quantity="many">Bloques</item>
+        <item quantity="other">Bloques</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="one">Aprobación</item>
+        <item quantity="many">Aprobaciones</item>
+        <item quantity="other">Aprobaciones</item>
+    </plurals>
+    <string name="block_vote_count">%d Bloque(s)</string>
     <string name="request_your_username">Crea tu nombre de usuario</string>
-    <string name="request_your_hint">Por favor no olvides que no podrás cambiarlo en el futuro.</string>
+    <string name="request_your_hint">Ten en cuenta que no podrás cambiarlo en el futuro.</string>
     <string name="request_username">Solicitar nombre de usuario</string>
     <string name="request_voting_range">La red de Dash votará por este nombre de usuario. Te notificaremos los resultados el %s.</string>
     <string name="request_username_available">El nombre de usuario está disponible</string>
     <string name="request_username_unavailable">El nombre de usuario no está disponible o está bloqueado</string>
     <string name="request_username_taken">El nombre de usuario ya está en uso</string>
+    <string name="request_username_taken_results">El nombre de usuario fue tomado por otro usuario</string>
     <string name="requesting_your_username_title">Creando tu nombre de usuario</string>
+    <string name="requesting_your_username_message">Tu nombre de usuario %s se está solicitando en la red Dash. Puede que tarde un poco.</string>
+    <string name="creating_your_username_message">Tu nombre de usuario %s se está creando en la red Dash. Puede que tarde un poco.</string>
     <string name="requesting_your_username_error_title">Tu solicitud de nombre de usuario falló</string>
+    <string name="requesting_your_username_error_message">Por alguna razón, la solicitud del nombre de usuario %s ha fallado.</string>
     <string name="voting">Votación:</string>
     <string name="this_username_has_already_been_requested">Este nombre de usuario ya ha sido solicitado, pero tú también puedes solicitarlo y dejar que la red vote para decidir si puedes tenerlo.</string>
     <string name="request_details">Pedir detalles</string>
     <string name="request_details_subtitle">Revisa la publicación a continuación para verificar la propiedad de este nombre de usuario</string>
     <string name="vote_to_approve">Vota para aprobar</string>
+    <string name="vote_to_block">Votar para bloquear</string>
     <string name="identity">Identidad</string>
     <string name="results">Resultados</string>
     <string name="link">Link</string>
@@ -323,15 +343,34 @@ de Dash</b></string>
     <string name="make_a_post_with_the_text">Haz una publicación con el texto anterior en una red social o plataforma de mensajería conocida para verificar que eres el propietario original del nombre de usuario solicitado y pega el enlace a continuación.</string>
     <string name="paste_the_link">Pega el enlace</string>
     <string name="voting_key_title">Introduce tu clave de votación</string>
-    <string name="voting_key_hint">Llave de votación de Masternode</string>
+    <string name="voting_key_hint">Llave privada de votación de masternode</string>
     <string name="voting_key_input_error">Has introducido una clave inválida</string>
+    <string name="voting_key_input_not_active_error">Has ingresado una llave que no está asociada a un Masternode activo</string>
+    <string name="voting_key_input_already_present">Ya has ingresado esta clave de masternode</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">Has introducido una clave que corresponde a la red de prueba, pero esta es la red principal. Debería verse así: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">Has introducido una clave que corresponde a la red principal, pero esta es la red de prueba. Debería verse así: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">Has introducido una clave de dirección en lugar de una clave privada de votación de masternode. Debe estar en formato WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">Has introducido una clave en formato hexadecimal, pero debería estar en formato WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">Has introducido una clave en formato hexadecimal, pero debería estar en formato WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">Has introducido una clave privada demasiado corta. A continuación se muestra un ejemplo (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">Has introducido una clave privada con algunos caracteres incorrectos. A continuación se muestra un ejemplo (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">Has introducido una clave privada que contiene un carácter no válido. A continuación se muestra un ejemplo (%s)</string>
+
     <string name="voting_key_add">Añade tus llaves de votación</string>
     <string name="voting_key_add_subtitle">Las direcciones IP que aparecen a continuación están asociadas con esta billetera</string>
     <string name="masternode_ip">Dirección IP de Masternode </string>
     <string name="multiple_votes_cast">%d Los votos se emitirán ya que tienes múltiples llaves de votación almacenadas en la billetera.</string>
     <string name="add_masternode_key">Añadir llave de votación de Masternode</string>
-    <string name="vote_submitted">Tu voto fue enviado</string>
-    <string name="vote_cancelled">Tu voto fue cancelado</string>
+    <string name="dont_ask_again">No me preguntes de nuevo</string>
+    <string name="vote_submitting">Enviando tu voto para %s nombre de usuario</string>
+    <string name="vote_submitted">Votado por %s nombre de usuario</string>
+    <string name="cancel_submitting">Cancelar tu voto para %s nombre de usuario</string>
+    <string name="cancel_submitted">Votación cancelada para %s nombre de usuario</string>
+    <string name="block_submitting">Bloqueo para %s nombre de usuario</string>
+    <string name="block_submitted">Tú bloqueaste %s nombre de usuario</string>
+    <string name="vote_submitted_error">Error votando por %s nombre de usuario</string>
+    <string name="cancel_submitted_error">Error al cancelar la votación para %s nombre de usuario</string>
+    <string name="block_submitted_error">Error bloqueando %s nombre de usuario</string>
     <string name="quick_vote">Votación rápida</string>
     <string name="quick_vote_subtitle">Al pulsar el botón \"Votar por todos\", votarás automáticamente por todos los nombres de usuario filtrados (%d) que fueron presentados primero</string>
     <string name="vote_for_all">Vota por todas</string>
@@ -397,4 +436,15 @@ de Dash</b></string>
     <string name="request_username_balance_requirement">Necesitas tener 0,25 DASH para crear este nombre de usuario</string>
     <string name="request_username_length_requirement">Entre 3 y 23 caracteres</string>
     <string name="request_username_confirm">Yo acepto</string>
+    <string name="username_vote_one_left_message">Ya has votado por este nombre de usuario %d veces. Sólo puedes emitir un voto más para este nombre de usuario.</string>
+    <string name="username_vote_one_left">Queda un voto</string>
+    <string name="username_vote_none_left_message">Ya has votado por este nombre de usuario %d veces. No puedes emitir más votos para este nombre de usuario.</string>
+    <string name="username_vote_none_left">No quedan votos</string>
+    <string name="request_username_blocked">El nombre de usuario solicitado ha sido bloqueado</string>
+    <string name="request_username_lost_vote">El nombre de usuario solicitado ha sido proporcionado a otra persona</string>
+    <string name="request_username_blocked_message">El nombre de usuario %s fué bloqueado por la red Dash. Inténtalo nuevamente solicitando otro nombre de usuario.</string>
+    <string name="request_username_lost_vote_message">Debido al proceso de votación, Dash Network ha decidido asignar el nombre de usuario %s a otra persona. Inténtalo de nuevo solicitando otro nombre de usuario.</string>
+    <string name="mix_dash_mix">Mezclar balance</string>
+    <string name="mix_dash_title">Mezcla tus Dash</string>
+    <string name="mix_dash_message">Para evitar que otras personas vean a quién realiza pagos, se recomienda mezclar tu saldo antes de crear tu nombre de usuario.</string>
     </resources>

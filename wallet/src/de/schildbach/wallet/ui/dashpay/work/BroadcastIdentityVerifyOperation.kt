@@ -19,18 +19,13 @@ package de.schildbach.wallet.ui.dashpay.work
 
 import android.annotation.SuppressLint
 import android.app.Application
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.liveData
-import androidx.lifecycle.switchMap
 import androidx.work.*
-import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.security.SecurityGuard
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 
 class BroadcastIdentityVerifyOperation(val application: Application) {
 
-    class SendContactRequestOperationException(message: String) : java.lang.Exception(message)
+    class BroadcastIdentityVerifyOperationException(message: String) : java.lang.Exception(message)
 
     companion object {
         private val log = LoggerFactory.getLogger(BroadcastIdentityVerifyOperation::class.java)
@@ -45,13 +40,13 @@ class BroadcastIdentityVerifyOperation(val application: Application) {
     /**
      * Gets the list of all SendContactRequestWorker WorkInfo's
      */
-    val allOperationsData = workManager.getWorkInfosByTagLiveData(SendContactRequestWorker::class.qualifiedName!!)
+    val allOperationsData = workManager.getWorkInfosByTagLiveData(BroadcastIdentityVerifyWorker::class.qualifiedName!!)
 
     @SuppressLint("EnqueueWork")
     fun create(username: String, url: String): WorkContinuation {
 
         val password = SecurityGuard().retrievePassword()
-        val sendContactRequestWorker = OneTimeWorkRequestBuilder<SendContactRequestWorker>()
+        val verifyIdentityWorker = OneTimeWorkRequestBuilder<BroadcastIdentityVerifyWorker>()
                 .setInputData(workDataOf(
                         BroadcastIdentityVerifyWorker.KEY_PASSWORD to password,
                         BroadcastIdentityVerifyWorker.KEY_USERNAME to username,
@@ -63,7 +58,7 @@ class BroadcastIdentityVerifyOperation(val application: Application) {
 
         return WorkManager.getInstance(application)
                 .beginUniqueWork(uniqueWorkName(username),
-                        ExistingWorkPolicy.KEEP,
-                        sendContactRequestWorker)
+                    ExistingWorkPolicy.KEEP,
+                    verifyIdentityWorker)
     }
 }

@@ -135,7 +135,7 @@
     <string name="scan_to_pay_username_dialog_message">Недійсне ім’я користувача чи ідентифікатор Dash\n\n%s</string>
     <string name="send_coins_to_username">Відправка</string>
     <string name="contact_history_disclaimer">Додайте % до свого списку контактів, щоб <b>переказувати платежі за Ім\'ям користувача</b> та <b>зберігати історію взаємних транзакцій</b></string>
-    <string name="contact_history_disclaimer_pending">Щойно % прийме ваш запит, ви зможете здійснити <b>оплату безпосередньо на ім\’я користувача</b></string>
+    <string name="contact_history_disclaimer_pending">Щойно % прийме ваш запит, ви зможете здійснити <b>оплату безпосередньо на ім’я користувача</b></string>
     <string name="stranger_activity_disclaimer_text">Платежі, здійснені безпосередньо на адреси, не будуть збережені.</string>
     <string name="error_loading_identity">Помилка завантаження ідентифікатора</string>
 
@@ -261,14 +261,12 @@
     <string name="keep_your_passphrase_safe">Зберігайте свою парольну фразу в безпеці</string>
     <string name="pay_now">Сплатіть зараз, і якщо не буде схвалено, ви зможете створити інше ім’я без повторної оплати</string>
     <string name="case_your_request_is_not_approved">У випадку, якщо ваш запит не буде схвалено</string>
-    <string name="voting_requirement_subtitle">Будь-яке ім’я користувача з цифрами 2–9 або довжиною понад 20 символів буде автоматично підтверджено</string>
     <string name="voting_requirement_title">Голосування потрібне лише в деяких випадках</string>
     <string name="dash_network_must_vote_to_approve">Мережа Dash має проголосувати за схвалення вашого імені користувача перед його створенням.</string>
     <string name="what_is_username_voting">Що таке голосування за імʼя користувача\?</string>
     <string name="usernames_blocked_title">Деякі імена користувачів можуть бути заблоковані</string>
     <string name="usernames_blocked_subtitle">Якщо значна частина мережі визначить, що ім’я користувача є невідповідним, вони можуть заблокувати його</string>
     <string name="username_voting">Голосування за імʼя користува</string>
-    <string name="username_voting_subtitle">Як власник майстерноди, ви можете голосувати за схвалення запитуваних імен користувачів, перш ніж користувачі зможуть їх створити.</string>
     <string name="all">Все</string>
     <string name="n_usernames">%d імена користувачів</string>
     <string name="n_requests">%d запитів</string>
@@ -294,7 +292,6 @@
     </string-array>
 
     <string name="request_your_username">Створити ім\'я користувача</string>
-    <string name="request_your_hint">Зверніть увагу, що ви не зможете змінити це в майбутньому</string>
     <string name="request_username">Запит імені користувача</string>
     <string name="request_voting_range">Мережа Dash голосуватиме за це ім’я користувача. Ми повідомимо вас про результати в %s.</string>
     <string name="request_username_available">Доступне ім\'я користувача</string>
@@ -322,15 +319,12 @@
     <string name="make_a_post_with_the_text">Опублікуйте публікацію з наведеним вище текстом у відомих соціальних мережах або на платформі обміну повідомленнями, щоб підтвердити, що ви є оригінальним власником потрібного імені користувача, і вставте посилання нижче</string>
     <string name="paste_the_link">Вставте посилання</string>
     <string name="voting_key_title">Введіть свій ключ голосування</string>
-    <string name="voting_key_hint">Ключі голосування Мастернод</string>
     <string name="voting_key_input_error">Ви ввели недійсний ключ</string>
     <string name="voting_key_add">Додайте свої ключі для голосування</string>
     <string name="voting_key_add_subtitle">Наведені нижче IP-адреси пов’язані з цим гаманцем</string>
     <string name="masternode_ip">IP-адреса Мастернод</string>
     <string name="multiple_votes_cast">%d голоси будуть віддані, оскільки у вас є кілька ключів для голосування, які зберігаються в гаманці</string>
     <string name="add_masternode_key">Додати ключі голосування Мастернод</string>
-    <string name="vote_submitted">Ваш голос подано</string>
-    <string name="vote_cancelled">Ваш голос скасовано</string>
     <string name="quick_vote">Швидке голосування</string>
     <string name="quick_vote_subtitle">Натиснувши кнопку «Голосувати за всіх», ви автоматично проголосуєте за всі відфільтровані імена користувачів (%d), які були подані першими</string>
     <string name="vote_for_all">Голосувати за всіх</string>

@@ -37,6 +37,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
@@ -72,6 +73,7 @@ import org.bitcoinj.script.ScriptBuilder
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.AuthenticationKeyChainGroup
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import org.dash.wallet.common.ui.avatar.ProfilePictureTransformation
@@ -103,8 +105,7 @@ class EditProfileActivity : LockScreenActivity() {
     private var uploadProfilePictureStateDialog: UploadProfilePictureStateDialog? = null
     private lateinit var takePicturePermissionLauncher: ActivityResultLauncher<String>
     private lateinit var takePictureLauncher: ActivityResultLauncher<Uri>
-    private lateinit var choosePicturePermissionLauncher: ActivityResultLauncher<String>
-    private lateinit var chooseImageLauncher: ActivityResultLauncher<String>
+    private lateinit var chooseImageLauncher: ActivityResultLauncher<PickVisualMediaRequest>
     private lateinit var cropImageLauncher: ActivityResultLauncher<Intent>
     private lateinit var googleDriveSignInLauncher: ActivityResultLauncher<Intent>
 
@@ -211,7 +212,7 @@ class EditProfileActivity : LockScreenActivity() {
         selectProfilePictureSharedViewModel.onChoosePictureCallback.observe(this) {
             imitateUserInteraction()
             editProfileViewModel.pictureSource = "gallery"
-            choosePictureWithPermission()
+            choosePicture()
         }
 
         editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this) {
@@ -234,15 +235,8 @@ class EditProfileActivity : LockScreenActivity() {
             turnOnAutoLogout()
         }
 
-        choosePicturePermissionLauncher =  registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-            if (isGranted) {
-                choosePicture()
-            } else {
-                // Handle the case where permission is denied
-            }
-        }
         // Initialize the launchers
-        chooseImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { selectedImage: Uri? ->
+        chooseImageLauncher = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { selectedImage: Uri? ->
             // Handle the picked image
             if (selectedImage != null) {
                 // your code to handle the image
@@ -464,6 +458,7 @@ class EditProfileActivity : LockScreenActivity() {
             editProfileViewModel.dashPayProfile.value!!.avatarUrl
         }
 
+        editProfileViewModel.logEvent(AnalyticsConstants.MoreMenu.UPDATE_PROFILE)
         editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl ?: "")
         binding.save.isEnabled = false
         finish()
@@ -493,24 +488,6 @@ class EditProfileActivity : LockScreenActivity() {
         }
     }
 
-    private fun choosePictureWithPermission() {
-        // TODO: see https://android-developers.googleblog.com/2023/08/choosing-right-storage-experience.html
-        // for android 14 changes
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            (ContextCompat.checkSelfPermission(this, READ_MEDIA_IMAGES) == PERMISSION_GRANTED)
-        ) {
-            // Full access on Android 13+
-            choosePicture()
-        } else if (ContextCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE) == PERMISSION_GRANTED) {
-            // Full access up to Android 12
-            choosePicture()
-        } else {
-            // Access denied, so ask for permission
-            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) READ_MEDIA_IMAGES else READ_EXTERNAL_STORAGE
-            choosePicturePermissionLauncher.launch(permission)
-        }
-    }
-
     private fun selectImage() {
         SelectProfilePictureDialog.createDialog()
             .show(supportFragmentManager, "selectPictureDialog")
@@ -519,7 +496,7 @@ class EditProfileActivity : LockScreenActivity() {
     private fun choosePicture() {
         if (editProfileViewModel.createTmpPictureFile()) {
             turnOffAutoLogout()
-            chooseImageLauncher.launch("image/*")
+            chooseImageLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         } else {
             Toast.makeText(this, "Unable to create temporary file", Toast.LENGTH_LONG).show()
         }

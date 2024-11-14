@@ -28,7 +28,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
@@ -45,7 +44,6 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.util.observe
@@ -57,8 +55,6 @@ class SettingsActivity : LockScreenActivity() {
     private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
     private lateinit var binding: ActivitySettingsBinding
     private val viewModel: SettingsViewModel by viewModels()
-    @Inject
-    lateinit var analytics: AnalyticsService
     @Inject
     lateinit var systemActions: SystemActionsService
     @Inject
@@ -73,12 +69,12 @@ class SettingsActivity : LockScreenActivity() {
         binding.appBar.toolbar.setNavigationOnClickListener { finish() }
 
         binding.about.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.ABOUT, mapOf())
+            viewModel.logEvent(AnalyticsConstants.Settings.ABOUT)
             startActivity(Intent(this, AboutActivity::class.java))
         }
         binding.localCurrency.setOnClickListener {
             lifecycleScope.launch {
-                analytics.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY, mapOf())
+                viewModel.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY)
                 val currentOption = walletUIConfig.getExchangeCurrencyCode()
                 ExchangeRatesDialog(currentOption) { rate, _, dialog ->
                     setSelectedCurrency(rate.currencyCode)
@@ -141,6 +137,7 @@ class SettingsActivity : LockScreenActivity() {
 
                 val intent = Intent(this@SettingsActivity, CoinJoinActivity::class.java)
                 intent.putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, shouldShowFirstTimeInfo)
+                viewModel.logEvent(AnalyticsConstants.Settings.COINJOIN)
                 startActivity(intent)
             }
         }
@@ -209,13 +206,13 @@ class SettingsActivity : LockScreenActivity() {
         ).show(this) {
             if (it == true) {
                 log.info("manually initiated blockchain reset")
-                analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, mapOf())
+                viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET)
 
                 walletApplication.resetBlockchain()
                 configuration.updateLastBlockchainResetTime()
                 startActivity(MainActivity.createIntent(this@SettingsActivity))
             } else {
-                analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, mapOf())
+                viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS)
             }
         }
     }

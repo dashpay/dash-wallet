@@ -39,7 +39,6 @@ import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
 import de.schildbach.wallet.ui.invite.InviteHandler
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
@@ -232,6 +231,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
     private fun retryIdentityCreation(header: HistoryHeaderAdapter) {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
+            viewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
             // check to see if an invite was used
             if (!blockchainIdentityData.usingInvite) {
                 requireActivity().startService(
@@ -261,7 +261,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun openIdentityCreation() {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             if (blockchainIdentityData.creationStateErrorMessage != null) {
-                if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING) {
+                if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING ||
+                    blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKING) {
                     startActivity(CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), blockchainIdentityData))
                 } else {
                     Toast.makeText(requireContext(), blockchainIdentityData.creationStateErrorMessage, Toast.LENGTH_LONG).show()
@@ -275,6 +276,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun onJoinDashPayClicked() {
+        viewModel.logEvent(AnalyticsConstants.UsersContacts.JOIN_DASHPAY)
         viewModel.joinDashPay()
     }
 }

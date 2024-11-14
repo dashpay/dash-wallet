@@ -21,7 +21,6 @@ import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import javax.inject.Inject
@@ -53,6 +52,9 @@ open class DashPayConfig @Inject constructor(
         val LAST_METADATA_PUSH = longPreferencesKey("last_metadata_push")
         val HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN = booleanPreferencesKey("has_dash_pay_info_screen_been_shown")
         val VOTING_INFO_SHOWN = booleanPreferencesKey("voting_info_shown")
+        val MIX_DASH_SHOWN = booleanPreferencesKey("mix_dash_shown")
+        val KEYS_DONT_ASK_AGAIN = booleanPreferencesKey("dont_ask_again_for_keys")
+        val FIRST_TIME_VOTING = booleanPreferencesKey("first_time_voting")
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {

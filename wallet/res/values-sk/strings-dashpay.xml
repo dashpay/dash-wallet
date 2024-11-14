@@ -88,7 +88,6 @@ používateľské meno</b></string>
     <string name="dashpay_topup_fee">Poplatok za doplnenie</string>
     <string name="search_user_find_a_user">Nájsť používateľa v sieti Dash</string>
     <string name="search_for_a_user">Vyhľadať používateľa v sieti Dash</string>
-    <string name="search_user_input_placeholder">tu vyhľadajte používateľské meno</string>
     <string name="add_new_contact">Pridať nový kontakt</string>
     <string name="send_contact_request">Poslať žiadosť o kontakt</string>
     <string name="sending_contact_request">Odosielanie žiadosti o kontakt</string>
@@ -262,14 +261,15 @@ používateľské meno</b></string>
     <string name="keep_your_passphrase_safe">Udržujte svoju prístupovú frázu v bezpečí</string>
     <string name="pay_now">Zaplaťte teraz a v prípade neschválenia si môžete vytvoriť iné meno bez toho, aby ste museli platiť znova</string>
     <string name="case_your_request_is_not_approved">V prípade, že vaša žiadosť nebude schválená</string>
-    <string name="voting_requirement_subtitle">Každé používateľské meno, ktoré má číslo 2 až 9 alebo je dlhšie ako 20 znakov, bude automaticky schválené</string>
+    <string name="voting_requirement_subtitle">Každé používateľské meno, ktoré má číslo 2–9, prípadne 20 alebo viac znakov, bude automaticky schválené</string>
     <string name="voting_requirement_title">Hlasovanie je potrebné len v niektorých prípadoch</string>
     <string name="dash_network_must_vote_to_approve">Sieť Dash musí hlasovať, aby schválila vaše používateľské meno pred jeho vytvorením.</string>
     <string name="what_is_username_voting">Čo je to hlasovanie o používateľské mená\?</string>
     <string name="usernames_blocked_title">Niektoré používateľské mená môžu byť zablokované</string>
     <string name="usernames_blocked_subtitle">Ak dostatočná časť siete zistí, že používateľské meno je nevhodné, môže ho zablokovať</string>
     <string name="username_voting">Hlasovanie o používateľskom mene</string>
-    <string name="username_voting_subtitle">Ako vlastník Masternode môžete hlasovať za schválenie požadovaných používateľských mien predtým, ako ich používatelia budú môcť vytvoriť.</string>
+    <string name="voting_duplicates_only_title">Predvolené nastavenie filtra</string>
+    <string name="voting_duplicates_only_message">Predvolený filter zobrazuje iba duplicitné používateľské mená, za ktoré ste NEHLASOVALI, ale zmenou filtra môžete zobraziť všetky sporné používateľské mená</string>
     <string name="all">Všetko</string>
     <string name="n_usernames">%d používateľských mien</string>
     <string name="n_requests">%d žiadostí</string>
@@ -292,8 +292,9 @@ používateľské meno</b></string>
         <item>Všetko</item>
         <item>Schválil som</item>
         <item>Neschválil som</item>
+        <item>Má zablokované hlasy</item>
     </string-array>
-
+    <string name="block_vote_count">%d Blok(y)</string>
     <string name="request_your_username">Vytvorte si používateľské meno</string>
     <string name="request_your_hint">Upozorňujeme, že v budúcnosti ho už nebudete môcť zmeniť</string>
     <string name="request_username">Požiadať o používateľské meno</string>
@@ -301,8 +302,12 @@ používateľské meno</b></string>
     <string name="request_username_available">Používateľské meno je k dispozícii</string>
     <string name="request_username_unavailable">Používateľské meno je nedostupné alebo zablokované</string>
     <string name="request_username_taken">Používateľské meno sa už používa</string>
+    <string name="request_username_taken_results">Používateľské meno prevzal iný používateľ</string>
     <string name="requesting_your_username_title">Vytvorenie vášho používateľského mena</string>
+    <string name="requesting_your_username_message">O vaše používateľské meno %s je požiadané v sieti Dash. Môže to chvíľu trvať.</string>
+    <string name="creating_your_username_message">Vaše používateľské meno %s sa vytvára v sieti Dash. Môže to chvíľu trvať.</string>
     <string name="requesting_your_username_error_title">Žiadosť o používateľské meno zlyhala</string>
+    <string name="requesting_your_username_error_message">Z nejakého dôvodu zlyhala žiadosť o používateľské meno %s.</string>
     <string name="voting">Hlasovanie:</string>
     <string name="this_username_has_already_been_requested">Toto používateľské meno už bolo vyžiadané, ale môžete si ho vyžiadať aj vy a nechať hlasovanie siete, aby rozhodla, či ho môžete mať</string>
     <string name="request_details">Vyžiadať podrobnosti</string>
@@ -323,15 +328,14 @@ používateľské meno</b></string>
     <string name="make_a_post_with_the_text">Uverejnite príspevok s vyššie uvedeným textom na dobre známej sociálnej sieti alebo platforme na odosielanie správ,  pre overenie, že ste pôvodným vlastníkom požadovaného používateľského mena, a pridajte odkaz nižšie</string>
     <string name="paste_the_link">Vložte odkaz</string>
     <string name="voting_key_title">Zadajte svoj hlasovací kľúč</string>
-    <string name="voting_key_hint">Hlasovacie kľúče Masternode</string>
+    <string name="voting_key_hint">Súkromný kľúč hlasovania Masternode</string>
     <string name="voting_key_input_error">Zadali ste neplatný kľúč</string>
+    <string name="voting_key_input_not_active_error">Zadali ste kľúč, ktorý nie je priradený k aktívnemu Masternode</string>
     <string name="voting_key_add">Pridajte svoje hlasovacie kľúče</string>
     <string name="voting_key_add_subtitle">IP adresa(y) nižšie sú spojené s touto peňaženkou</string>
     <string name="masternode_ip">IP adresa Masternode</string>
     <string name="multiple_votes_cast">Bude odovzdaných %d hlasov, pretože v peňaženke máte uložených viacero hlasovacích kľúčov</string>
     <string name="add_masternode_key">Pridať hlasovací kľúč Masternode</string>
-    <string name="vote_submitted">Váš hlas bol odoslaný</string>
-    <string name="vote_cancelled">Váš hlas bol zrušený</string>
     <string name="quick_vote">Rýchle hlasovanie</string>
     <string name="quick_vote_subtitle">Klepnutím na tlačidlo „Hlasovať za všetkých“ budete automaticky hlasovať za všetky filtrované používateľské mená (%d), ktoré boli odoslané ako prvé</string>
     <string name="vote_for_all">Hlasovať za všetkých</string>
@@ -397,4 +401,15 @@ používateľské meno</b></string>
     <string name="request_username_balance_requirement">Na vytvorenie tohto používateľského mena potrebujete mať 0,25 DASH</string>
     <string name="request_username_length_requirement">Medzi 3 a 23 znakmi</string>
     <string name="request_username_confirm">Prijímam</string>
+    <string name="username_vote_one_left_message">Za toto používateľské meno ste už hlasovali %d krát. Pre toto používateľské meno môžete odovzdať už len jeden hlas.</string>
+    <string name="username_vote_one_left">Zostáva jeden hlas</string>
+    <string name="username_vote_none_left_message">Za toto používateľské meno ste už hlasovali %d krát. Pre toto používateľské meno už nemôžete hlasovať.</string>
+    <string name="username_vote_none_left">Nezostávajú žiadne hlasy</string>
+    <string name="request_username_blocked">Požadované používateľské meno bolo zablokované</string>
+    <string name="request_username_lost_vote">Požadované používateľské meno bolo pridelené niekomu inému</string>
+    <string name="request_username_blocked_message">Používateľské meno %s bolo zablokované sieťou Dash Network. Skúste to znova a požiadajte o iné používateľské meno.</string>
+    <string name="request_username_lost_vote_message">Kvôli procesu hlasovania sa Dash Network rozhodla prideliť používateľské meno %s niekomu inému. Skúste to znova a požiadajte o iné používateľské meno.</string>
+    <string name="mix_dash_mix">Miešaný zostatok</string>
+    <string name="mix_dash_title">Namiešajte váš Dash</string>
+    <string name="mix_dash_message">Ak chcete zabrániť tomu, aby ostatní ľudia videli, komu uskutočňujete platby, odporúča sa pred vytvorením používateľského mena zmiešať zostatok.</string>
     </resources>

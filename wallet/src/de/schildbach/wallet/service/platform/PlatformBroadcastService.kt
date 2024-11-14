@@ -17,21 +17,31 @@
 
 package de.schildbach.wallet.service.platform
 
+import com.google.common.base.Preconditions
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Context
+import org.bitcoinj.core.ECKey
+import org.bitcoinj.core.KeyId
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.evolution.EvolutionContact
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
+import org.dashj.platform.dashpay.callback.SimpleSignerCallback
 import org.dashj.platform.dashpay.callback.WalletSignerCallback
+import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.dpp.voting.ResourceVoteChoice
+import org.dashj.platform.dpp.voting.Vote
+import org.dashj.platform.sdk.Purpose
 import org.dashj.platform.wallet.IdentityVerifyDocument
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 
 interface PlatformBroadcastService {
@@ -39,6 +49,12 @@ interface PlatformBroadcastService {
     suspend fun sendContactRequest(toUserId: String): DashPayContactRequest
     suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): DashPayContactRequest
     suspend fun broadcastIdentityVerify(username: String, url: String, encryptionKey: KeyParameter?): IdentityVerifyDocument
+    suspend fun broadcastUsernameVotes(
+        usernames: List<String>,
+        resourceVoteChoices: List<ResourceVoteChoice>,
+        masternodeKeys: List<ByteArray>,
+        encryptionKey: KeyParameter?
+    ): List<Triple<ResourceVoteChoice, Vote?, Exception?>>
 }
 
 class PlatformDocumentBroadcastService @Inject constructor(
@@ -46,12 +62,12 @@ class PlatformDocumentBroadcastService @Inject constructor(
     val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
     val walletDataProvider: WalletDataProvider,
-    val platformSyncService: PlatformSyncService) : PlatformBroadcastService {
-
+    val platformSyncService: PlatformSyncService
+) : PlatformBroadcastService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformDocumentBroadcastService::class.java)
     }
-    
+
     @Throws(Exception::class)
     override suspend fun sendContactRequest(toUserId: String): DashPayContactRequest {
         if (walletDataProvider.wallet!!.isEncrypted) {
@@ -113,6 +129,54 @@ class PlatformDocumentBroadcastService @Inject constructor(
         log.info("contact request: $identityVerifyDocument")
 
         return identityVerifyDocument
+    }
+
+    override suspend fun broadcastUsernameVotes(
+        usernames: List<String>,
+        resourceVoteChoices: List<ResourceVoteChoice>,
+        masternodeKeys: List<ByteArray>,
+        encryptionKey: KeyParameter?
+    ): List<Triple<ResourceVoteChoice, Vote?, Exception?>> {
+        Preconditions.checkArgument(usernames.size == resourceVoteChoices.size)
+        val votes = arrayListOf<Triple<ResourceVoteChoice, Vote?, Exception?>>()
+        masternodeKeys.forEach { masternodeKeyBytes ->
+            // determine identity
+            val masternodeKey = ECKey.fromPrivate(masternodeKeyBytes)
+            val votingKeyId = KeyId.fromBytes(masternodeKey.pubKeyHash)
+            val boas = ByteArrayOutputStream(32 + 20)
+            val masternodes = walletDataProvider.wallet!!.context.masternodeListManager.masternodeList.getMasternodesByVotingKey(votingKeyId)
+            masternodes.forEach { masternode ->
+                try {
+                    boas.write(masternode.proTxHash.bytes)
+                    boas.write(masternodeKey.pubKeyHash)
+                    val idBytes = Sha256Hash.of(boas.toByteArray())
+                    val identity = platform.identities.get(Identifier.from(idBytes.bytes))
+                    val votingIdentityPublicKey = identity!!.publicKeys.first { it.purpose == Purpose.VOTING }
+
+                    usernames.forEachIndexed { index, username ->
+                        val resourceVoteChoice = resourceVoteChoices[index]
+                        try {
+                            val vote = platform.names.broadcastVote(
+                                resourceVoteChoice,
+                                username,
+                                masternode.proTxHash,
+                                votingIdentityPublicKey,
+                                SimpleSignerCallback(
+                                    mapOf(votingIdentityPublicKey to masternodeKey),
+                                    encryptionKey
+                                )
+                            )
+                            votes.add(Triple(resourceVoteChoice, vote, null))
+                        } catch (e: Exception) {
+                            votes.add(Triple(resourceVoteChoice, null, e))
+                        }
+                    }
+                } catch (e: Exception) {
+                    log.info("broadcast username vote failed:", e)
+                }
+            }
+        }
+        return votes
     }
 
     @Throws(Exception::class)

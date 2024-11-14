@@ -162,7 +162,6 @@ open class BlockchainIdentityConfig @Inject constructor(
         val PRIVACY_MODE = stringPreferencesKey("privacy_mode")
         val BALANCE = longPreferencesKey("identity_balance")
 
-        // val REQUESTED_USERNAME = stringPreferencesKey("requested_username")
         val REQUESTED_USERNAME_LINK = stringPreferencesKey("requested_username_link")
         val CANCELED_REQUESTED_USERNAME_LINK = booleanPreferencesKey("cancelled_requested_username_link")
         val USERNAME_REQUESTED = stringPreferencesKey("username_requested")
@@ -244,6 +243,10 @@ open class BlockchainIdentityConfig @Inject constructor(
             blockchainIdentityData.usernameStatus?.let { prefs[USERNAME_REGISTRATION_STATUS] = it.name }
             blockchainIdentityData.privacyMode?.let { prefs[PRIVACY_MODE] = it.name }
             blockchainIdentityData.creditBalance?.let { prefs[BALANCE] = it.value }
+            blockchainIdentityData.usernameRequested?.let { prefs[USERNAME_REQUESTED] = it.name}
+            blockchainIdentityData.verificationLink?.let { prefs[REQUESTED_USERNAME_LINK] = it }
+            blockchainIdentityData.votingPeriodStart?.let { prefs[VOTING_PERIOD_START] = it }
+            blockchainIdentityData.cancelledVerificationLink?.let { prefs[CANCELED_REQUESTED_USERNAME_LINK] = it }
         }
     }
 
@@ -256,6 +259,10 @@ open class BlockchainIdentityConfig @Inject constructor(
             blockchainIdentityBaseData.creditFundingTxId?.let { prefs[ASSET_LOCK_TXID] = it.toString() }
             prefs[USING_INVITE] = blockchainIdentityBaseData.usingInvite
             blockchainIdentityBaseData.invite?.let { prefs[INVITE_LINK] = it.link.toString() }
+            blockchainIdentityBaseData.usernameRequested?.let { prefs[USERNAME_REQUESTED] = it.name}
+            blockchainIdentityBaseData.verificationLink?.let { prefs[REQUESTED_USERNAME_LINK] = it }
+            blockchainIdentityBaseData.votingPeriodStart?.let { prefs[VOTING_PERIOD_START] = it }
+            blockchainIdentityBaseData.cancelledVerificationLink?.let { prefs[CANCELED_REQUESTED_USERNAME_LINK] = it }
         }
     }
 

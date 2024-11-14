@@ -31,6 +31,7 @@ import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_ID
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
@@ -39,8 +40,15 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.data.WalletUIConfig
@@ -50,21 +58,21 @@ import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 open class DashPayViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
-    private val walletUIConfig: WalletUIConfig,
     private val analytics: AnalyticsService,
     private val platformRepo: PlatformRepo,
-    private val blockchainState: BlockchainStateDao,
+    blockchainState: BlockchainStateDao,
     dashPayProfileDao: DashPayProfileDao,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val invitations: InvitationsDao,
     val platformSyncService: PlatformSyncService,
     private val platformBroadcastService: PlatformBroadcastService,
-    private val dashPayContactRequestDao: DashPayContactRequestDao,
+    contactRequestDao: DashPayContactRequestDao,
     private val dashPayConfig: DashPayConfig
-) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
+) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, contactRequestDao) {
 
     companion object {
         private val log = LoggerFactory.getLogger(DashPayViewModel::class.java)
@@ -302,7 +310,7 @@ open class DashPayViewModel @Inject constructor(
     suspend fun getInviteHistory() = invitations.loadAll()
 
     fun contactRequestsTo(userId: String): LiveData<List<DashPayContactRequest>> =
-        dashPayContactRequestDao.observeToOthers(userId).distinctUntilChanged().asLiveData()
+        contactRequestDao.observeToOthers(userId).distinctUntilChanged().asLiveData()
 
     private inner class UserSearch(
         val text: String,
