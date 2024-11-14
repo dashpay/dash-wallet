@@ -209,7 +209,8 @@ class MainViewModelTest {
                 analyticsService, configMock, uiConfigMock,
                 exchangeRatesMock, walletDataMock, walletApp, platformRepo,
                 mockk(), mockk(), blockchainIdentityConfigMock, savedStateMock, transactionMetadataMock,
-                blockchainStateMock, mockk(), mockk(), mockk(), userAgentDaoMock, mockk(), mockDashPayConfig, mockk(), mockk()
+                blockchainStateMock, mockk(), mockk(), mockk(), userAgentDaoMock, mockk(), mockDashPayConfig, mockk(),
+                mockk(), mockk()
             )
         )
 
@@ -229,7 +230,8 @@ class MainViewModelTest {
                 analyticsService, configMock, uiConfigMock,
                 exchangeRatesMock, walletDataMock, walletApp, platformRepo,
                 mockk(), mockk(), blockchainIdentityConfigMock, savedStateMock, transactionMetadataMock,
-                blockchainStateMock, mockk(), mockk(), mockk(), mockk(), mockk(), mockDashPayConfig, mockk(), mockk()
+                blockchainStateMock, mockk(), mockk(), mockk(), mockk(), mockk(), mockDashPayConfig, mockk(), mockk(),
+                mockk()
             )
         )
 
