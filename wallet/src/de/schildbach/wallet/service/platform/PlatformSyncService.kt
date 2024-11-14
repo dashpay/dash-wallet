@@ -1142,10 +1142,11 @@ class PlatformSynchronizationService @Inject constructor(
             currentRequestList.forEach { request ->
                 val voteContender = platformRepo.getVoteContenders(request.normalizedLabel)
                 if (voteContender.winner.isPresent) {
+                    // remove request
                     usernameRequestDao.remove(request.requestId)
+                    // remove related votes
+                    usernameVoteDao.remove(request.normalizedLabel)
                 }
-                // remove related votes
-                usernameVoteDao.remove(request.normalizedLabel)
             }
             // check votes and remove those from previous vote polls
             usernameVoteDao.getAllVotes().forEach { vote ->

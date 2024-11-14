@@ -297,7 +297,8 @@
     <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_github_link" translatable="false">https://github.com/dashevo/dash-wallet</string>
-    <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_version_name">DashPay Wallet %s</string>
+    <string name="about_build_number" translatable="false">(%d)</string>
     <string name="about_last_explore_device_sync">Last Explore device sync</string>
     <string name="about_last_explore_server_update">Last Explore server update</string>
     <string name="about_firebase_installation_id">Firebase installation ID</string>

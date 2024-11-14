@@ -49,9 +49,6 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
 
         binding.usernameInput.doOnTextChanged { text, _, _, _ ->
             val username = text.toString()
-            binding.requestUsernameButton.isEnabled = username.isNotEmpty() &&
-                requestUserNameViewModel.canAffordNonContestedUsername()
-
             binding.inputWrapper.isEndIconVisible = username.isNotEmpty()
 
             if (username.isNotEmpty()) {

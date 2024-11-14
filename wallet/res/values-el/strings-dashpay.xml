@@ -88,7 +88,6 @@
     <string name="dashpay_topup_fee">Τέλος Topup</string>
     <string name="search_user_find_a_user">Βρείτε έναν χρήστη στο Δίκτυο του Dash</string>
     <string name="search_for_a_user">Αναζήτηση για χρήστη στο Dash Δίκτυο</string>
-    <string name="search_user_input_placeholder">πληκτρολογήστε το όνομα χρήστη για αναζήτηση εδώ</string>
     <string name="add_new_contact">Προσθήκη Νέας Επαφής</string>
     <string name="send_contact_request">Αποστολή Αιτήματος Επαφής</string>
     <string name="sending_contact_request">Αποστολή αιτήματος επαφής</string>
@@ -269,7 +268,6 @@
     <string name="usernames_blocked_title">Ορισμένα ονόματα χρηστών μπορούν να μπλοκαριστούν</string>
     <string name="usernames_blocked_subtitle">Εάν αρκετά μέλη του δικτύου διαπιστώσουν ότι ένα όνομα χρήστη είναι ακατάλληλο, μπορούν να το μπλοκάρουν.</string>
     <string name="username_voting">Ψηφοφορία ονόματος χρήστη</string>
-    <string name="username_voting_subtitle">Ως ιδιοκτήτης ενός masternode μπορείτε να ψηφίσετε για να εγκρίνετε τα ζητούμενα ονόματα χρήστη πριν οι χρήστες μπορέσουν να τα δημιουργήσουν.</string>
     <string name="voting_duplicates_only_title">Προεπιλεγμένη ρύθμιση φίλτρου</string>
     <string name="voting_duplicates_only_message">Το προεπιλεγμένο φίλτρο εμφανίζει μόνο τα διπλά ονόματα χρηστών για τα οποία ΔΕΝ έχετε ψηφίσει, αλλά μπορείτε να δείτε όλα τα διαφιλονικούμενα ονόματα χρηστών αλλάζοντας το φίλτρο</string>
     <string name="all">Όλα</string>
@@ -296,7 +294,6 @@
         <item>Δεν έχω εγκρίνει</item>
         <item>Έχει μπλοκάρει ψήφους</item>
     </string-array>
-
     <string name="block_vote_count">%d Μπλοκ(ς)</string>
     <string name="request_your_username">Δημιουργήστε το όνομα χρήστη σας</string>
     <string name="request_your_hint">Παρακαλώ σημειώστε ότι δεν θα μπορείτε να το αλλάξετε στο μέλλον.</string>
@@ -339,8 +336,6 @@
     <string name="masternode_ip">Διεύθυνση IP του Masternode</string>
     <string name="multiple_votes_cast">%d ψήφοι θα δοθούν καθώς έχετε αποθηκεύσει πολλαπλά κλειδιά ψηφοφορίας στο πορτοφόλι</string>
     <string name="add_masternode_key">Προσθήκη κλειδιού ψηφοφορίας Masternode</string>
-    <string name="vote_submitted">Η ψήφος σας υποβλήθηκε.</string>
-    <string name="vote_cancelled">Η ψήφος σας ακυρώθηκε.</string>
     <string name="quick_vote">Γρήγορη Ψηφοφορία</string>
     <string name="quick_vote_subtitle">Πατώντας το κουμπί \"Ψηφίστε για όλους\", θα ψηφίσετε αυτόματα για όλα τα φιλτραρισμένα ονόματα χρηστών (%d) που υποβλήθηκαν πρώτα.</string>
     <string name="vote_for_all">Ψηφίστε για Όλους</string>
@@ -417,4 +412,4 @@
     <string name="mix_dash_mix">Υπόλοιπο Ανάμειξης</string>
     <string name="mix_dash_title">Αναμείξτε τα Dash σας</string>
     <string name="mix_dash_message">Για να αποτρέψετε άλλα άτομα από το να βλέπουν σε ποιον κάνετε πληρωμές, συνιστάται να αναμίξετε το υπόλοιπό σας πριν δημιουργήσετε το όνομα χρήστη σας.</string>
-</resources>
+    </resources>

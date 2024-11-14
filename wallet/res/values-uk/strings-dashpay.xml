@@ -325,8 +325,6 @@
     <string name="masternode_ip">IP-адреса Мастернод</string>
     <string name="multiple_votes_cast">%d голоси будуть віддані, оскільки у вас є кілька ключів для голосування, які зберігаються в гаманці</string>
     <string name="add_masternode_key">Додати ключі голосування Мастернод</string>
-    <string name="vote_submitted">Ваш голос подано</string>
-    <string name="vote_cancelled">Ваш голос скасовано</string>
     <string name="quick_vote">Швидке голосування</string>
     <string name="quick_vote_subtitle">Натиснувши кнопку «Голосувати за всіх», ви автоматично проголосуєте за всі відфільтровані імена користувачів (%d), які були подані першими</string>
     <string name="vote_for_all">Голосувати за всіх</string>

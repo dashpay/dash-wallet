@@ -167,14 +167,18 @@ object WalletActivityExt {
 
     fun MainActivity.checkLowStorageAlert() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val storageManager = applicationContext.getSystemService<StorageManager>()!!
-            val storageUUID = storageManager.getUuidForPath(filesDir)
-            val availableBytes = storageManager.getAllocatableBytes(storageUUID)
-            val toleranceInBytes = 1024L * 1024 * STORAGE_TOLERANCE
+            lifecycleScope.launch {
+                val storageManager = applicationContext.getSystemService<StorageManager>()!!
+                val availableBytes = withContext(Dispatchers.IO) {
+                    val storageUUID = storageManager.getUuidForPath(filesDir)
+                    storageManager.getAllocatableBytes(storageUUID)
+                }
+                val toleranceInBytes = 1024L * 1024 * STORAGE_TOLERANCE
 
-            if (availableBytes <= toleranceInBytes && !lowStorageDialogShown) {
-                lowStorageDialogShown = true
-                showLowStorageAlertDialog()
+                if (availableBytes <= toleranceInBytes && !lowStorageDialogShown) {
+                    lowStorageDialogShown = true
+                    showLowStorageAlertDialog()
+                }
             }
         } else {
             val stickyIntent = registerReceiver(null, IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW))
