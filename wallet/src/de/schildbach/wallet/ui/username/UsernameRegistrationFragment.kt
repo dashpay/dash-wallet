@@ -74,30 +74,6 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
 
         initViewModel()
         walletApplication = requireActivity().application as WalletApplication
-
-        // TODO: we probably don't need this
-        createUsernameArgs = arguments?.getParcelable(CREATE_USER_NAME_ARGS)
-        // why are the args not passed via the nav graph?
-        // TODO: fix the passing of arguments or just use the dashPayViewModel
-        if (createUsernameArgs == null)
-            createUsernameArgs = dashPayViewModel.createUsernameArgs
-        when (createUsernameArgs?.actions) {
-            CreateUsernameActions.DISPLAY_COMPLETE -> {
-                this.completeUsername = createUsernameArgs?.userName!!
-                showCompleteState()
-                doneAndDismiss()
-            }
-            CreateUsernameActions.REUSE_TRANSACTION -> {
-                reuseTransaction = true
-            }
-            CreateUsernameActions.FROM_INVITE -> {
-                // don't show the keyboard if launched from invite
-                useInvite = true
-            }
-            else -> {
-                // not sure what we need to do here
-            }
-        }
     }
 
     @SuppressLint("ResourceType")
