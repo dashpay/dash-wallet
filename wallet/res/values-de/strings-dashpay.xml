@@ -269,7 +269,6 @@ Benutzernamen</b></string>
     <string name="usernames_blocked_title">Manche Benutzernamen können blockiert werden</string>
     <string name="usernames_blocked_subtitle">Wenn genügend Mitglieder des Netzwerkes feststellen, dass ein Benutzername unangemessen ist, könne diese ihn sperren</string>
     <string name="username_voting">Abstimmung über Benutzernamen</string>
-    <string name="username_voting_subtitle">Als Masternode-Besitzer kannst du abstimmen, um beantragte Benutzernamen zu bewilligen, bevor diese im Netzwerk erstellt werden..</string>
     <string name="voting_duplicates_only_title">Standardmäßige Filtereinstellung</string>
     <string name="voting_duplicates_only_message">Die standardmäßige Filtereinstellung zeigt nur doppelte Benutzernamen über die noch NICHT abgestimmt wurde. Um alle strittigen Benutzernamen sehen zu können, ändere den Filter.</string>
     <string name="all">Alles</string>
@@ -296,7 +295,6 @@ Benutzernamen</b></string>
         <item>Ich habe nicht zugestimmt.</item>
         <item>Beinhalted blockierte Votes</item>
     </string-array>
-
     <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Benutzernamen erstellen</string>
     <string name="request_your_hint">Bitte beachte, dass du dies in der Zukunft nicht mehr ändern kannst</string>
@@ -339,8 +337,6 @@ Benutzernamen</b></string>
     <string name="masternode_ip">Masternode IP-Adresse</string>
     <string name="multiple_votes_cast">%d die Stimmen werden abgegeben, da du mehrere Abstimmungs-Schlüssel in deiner Wallet gespeichert hast</string>
     <string name="add_masternode_key">Masternode Voting-Schlüssel hinzufügen</string>
-    <string name="vote_submitted">Deine Stimme wurde abgegeben.</string>
-    <string name="vote_cancelled">Deine Stimmabgabe wurde abgebrochen.</string>
     <string name="quick_vote">Schnelles Abstimmen</string>
     <string name="quick_vote_subtitle">Wenn du die Schaltfläche \"Für alle abstimmen\" tippst, stimmst du automatisch für alle gefilterten Benutzernamen (%d), die zuerst eingereicht wurden</string>
     <string name="vote_for_all">Stimme für alle</string>
@@ -417,4 +413,4 @@ Benutzernamen</b></string>
     <string name="mix_dash_mix">Gemixtes Guthaben</string>
     <string name="mix_dash_title">Mixe deine Dash</string>
     <string name="mix_dash_message">Um zu verhindern, dass andere Personen sehen können, an wen du Zahlungen vornimmst, wird empfohlen, dein Guthaben zu mixen, bevor du deinen Benutzernamen erstellst.</string>
-</resources>
+    </resources>

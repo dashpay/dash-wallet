@@ -88,7 +88,6 @@ gebruikersnaam</b></string>
     <string name="dashpay_topup_fee">Opwaardeerkosten</string>
     <string name="search_user_find_a_user">Zoek een gebruiker op het Dash netwerk</string>
     <string name="search_for_a_user">Zoek naar een gebruiker op het Dash netwerk</string>
-    <string name="search_user_input_placeholder">Voer hier de gebruikersnaam in om te zoeken</string>
     <string name="add_new_contact">Voeg een nieuw contact toe</string>
     <string name="send_contact_request">Contactverzoek verzenden</string>
     <string name="sending_contact_request">Contactverzoek verzenden</string>
@@ -270,7 +269,6 @@ gebruikersnaam</b></string>
     <string name="usernames_blocked_title">Sommige gebruikersnamen kunnen worden geblokkeerd.</string>
     <string name="usernames_blocked_subtitle">Als genoeg mensen op het netwerk bepalen dat een gebruikersnaam ongepast is, kunnen ze deze blokkeren.</string>
     <string name="username_voting">Stemmen op gebruikersnamen</string>
-    <string name="username_voting_subtitle">Als eigenaar van een Masternode kan je stemmen om aangevraagde gebruikersnamen goed te keuren voordat ze op het network worden aangemaakt.</string>
     <string name="voting_duplicates_only_title">Standaard filterinstelling</string>
     <string name="voting_duplicates_only_message">Het standaardfilter toont alleen dubbele gebruikersnamen waar je NIET op hebt gestemd, maar je kan alle betwiste gebruikersnamen zien door het filter te wijzigen</string>
     <string name="all">Alles</string>
@@ -297,7 +295,6 @@ gebruikersnaam</b></string>
         <item>Ik heb het niet goedgekeurd</item>
         <item>Heeft geblokkeerde stemmen </item>
     </string-array>
-
     <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Maak je gebruikersnaam aan</string>
     <string name="request_your_hint">Let op dat je deze in de toekomst niet meer kunt wijzigen</string>
@@ -340,8 +337,6 @@ gebruikersnaam</b></string>
     <string name="masternode_ip">Masternode IP adres</string>
     <string name="multiple_votes_cast">Er zullen %d stemmen worden uitgebracht omdat je meerdere stemsleutels in de portemonnee hebt opgeslagen.</string>
     <string name="add_masternode_key">Voeg Masternode stemsleutel toe</string>
-    <string name="vote_submitted">je stem is verzonden</string>
-    <string name="vote_cancelled">Je stem is geannuleerd</string>
     <string name="quick_vote">Snel stemmen</string>
     <string name="quick_vote_subtitle">Door op de knop \"Stem op Alles\" te drukken, stem je automatisch voor alle gefilterde gebruikersnamen (%d) die als eerste zijn ingediend.</string>
     <string name="vote_for_all">Stem voor alle</string>
@@ -418,4 +413,4 @@ gebruikersnaam</b></string>
     <string name="mix_dash_mix">Gemixt saldo</string>
     <string name="mix_dash_title">Mix je Dash</string>
     <string name="mix_dash_message">Om te voorkomen dat anderen kunnen zien aan wie je betalingen doet, raden wij u aan om je saldo te mixen voordat je je gebruikersnaam aanmaakt.</string>
-</resources>
+    </resources>

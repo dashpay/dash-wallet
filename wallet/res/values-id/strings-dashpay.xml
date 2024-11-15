@@ -269,7 +269,6 @@ Dash</b> anda</string>
     <string name="usernames_blocked_title">Beberapa nama pengguna dapat diblokir</string>
     <string name="usernames_blocked_subtitle">Jika cukup banyak jaringan yang menentukan bahwa nama pengguna tidak pantas, mereka dapat memblokirnya</string>
     <string name="username_voting">Voting nama pengguna</string>
-    <string name="username_voting_subtitle">Sebagai pemilik masternode, Anda dapat memberikan suara untuk menyetujui nama pengguna yang diminta sebelum dibuat di jaringan..</string>
     <string name="voting_duplicates_only_title">Pengaturan filter default</string>
     <string name="voting_duplicates_only_message">Filter default hanya menampilkan nama pengguna duplikat yang BELUM Anda pilih, tetapi Anda dapat melihat semua nama pengguna yang diperebutkan dengan mengubah filter</string>
     <string name="all">Semua</string>
@@ -339,8 +338,6 @@ Dash</b> anda</string>
     <string name="masternode_ip">Alamat IP masternode</string>
     <string name="multiple_votes_cast">%d suara akan diberikan karena Anda memiliki beberapa kunci pemungutan suara yang disimpan di dompet</string>
     <string name="add_masternode_key">Tambahkan Kunci Pemungutan Suara Masternode</string>
-    <string name="vote_submitted">Pilihan anda telah diserahkan</string>
-    <string name="vote_cancelled">Pilihan anda telah dibatalkan</string>
     <string name="quick_vote">Voting Cepat</string>
     <string name="quick_vote_subtitle">Dengan mengetuk tombol \"Pilih Semua\", Anda akan secara otomatis memilih semua nama pengguna yang difilter (%d) yang dikirimkan terlebih dahulu</string>
     <string name="vote_for_all">Pilih untuk semua</string>
