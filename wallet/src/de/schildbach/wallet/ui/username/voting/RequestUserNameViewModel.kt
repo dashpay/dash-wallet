@@ -148,18 +148,23 @@ class RequestUserNameViewModel @Inject constructor(
             .onEach {
                 identity = identityConfig.load()
                 identityBalance = identity?.let { identity ->
-                    platformRepo.getIdentityBalance(Identifier.from(identity.userId)).balance
+                    try {
+                        platformRepo.getIdentityBalance(Identifier.from(identity.userId)).balance
+                    } catch (e: Exception) {
+                        // need to try again later
+                        -1
+                    }
                 } ?: 0
                 log.info("identity balance: {}", identityBalance)
                 if (requestedUserName == null) {
                     requestedUserName = identityConfig.get(USERNAME)
                 }
             }
-            .flatMapLatest { usernameRequestDao.observeRequest(UsernameRequest.getRequestId(it, requestedUserName!!)) }
+            .flatMapLatest { usernameRequestDao.observeRequest(UsernameRequest.getRequestId(it, requestedUserName ?: "")) }
             .onEach {
                 if (it != null) {
                     _myUsernameRequest.value = it
-                } else {
+                } else if (requestedUserName != null) {
                     identity?.let { identityData ->
                         _myUsernameRequest.value = UsernameRequest(
                             UsernameRequest.getRequestId(identityData.userId!!, requestedUserName!!),
@@ -173,6 +178,8 @@ class RequestUserNameViewModel @Inject constructor(
                             false
                         )
                     }
+                } else {
+                    _myUsernameRequest.value = null
                 }
             }
             .launchIn(viewModelWorkerScope)
@@ -378,6 +385,7 @@ class RequestUserNameViewModel @Inject constructor(
         return validCharacters && validLength
     }
 
+    @Throws(NullPointerException::class)
     fun isUsernameContestable(): Boolean {
         return Names.isUsernameContestable(requestedUserName!!)
     }
