@@ -779,6 +779,9 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 
+    /**
+     * restores an identity using information from the wallet and platform
+     */
     private suspend fun restoreIdentity(identity: ByteArray) {
         log.info("Restoring identity and username")
         try {
@@ -866,7 +869,7 @@ class CreateIdentityService : LifecycleService() {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKING)
 
                 // check if the network has this name in the queue for voting
-                val contestedNames = platformRepo.platform.names.getContestedNames()
+                val contestedNames = platformRepo.platform.names.getAllContestedNames()
 
                 contestedNames.forEach { name ->
                     val voteContenders = platformRepo.getVoteContenders(name)
