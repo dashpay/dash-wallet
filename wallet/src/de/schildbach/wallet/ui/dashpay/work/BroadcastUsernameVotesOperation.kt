@@ -103,6 +103,7 @@ class BroadcastUsernameVotesOperation(val application: Application) {
     @SuppressLint("EnqueueWork")
     fun create(
         usernames: List<String>,
+        normalizedLabels: List<String>,
         voteChoices: List<ResourceVoteChoice>,
         masternodeKeys: List<ByteArray>,
         isQuickVoting: Boolean
@@ -112,7 +113,8 @@ class BroadcastUsernameVotesOperation(val application: Application) {
             .setInputData(
                 workDataOf(
                     BroadcastUsernameVotesWorker.KEY_PASSWORD to password,
-                    BroadcastUsernameVotesWorker.KEY_USERNAMES to usernames.toTypedArray(),
+                    BroadcastUsernameVotesWorker.KEY_NORMALIZED_LABELS to normalizedLabels.toTypedArray(),
+                    BroadcastUsernameVotesWorker.KEY_LABELS to usernames.toTypedArray(),
                     BroadcastUsernameVotesWorker.KEY_VOTE_CHOICES to voteChoices.map { it.toString() }.toTypedArray(),
                     BroadcastUsernameVotesWorker.KEY_MASTERNODE_KEYS to masternodeKeys.map {
                         ECKey.fromPrivate(it).getPrivateKeyAsWiF(Constants.NETWORK_PARAMETERS)

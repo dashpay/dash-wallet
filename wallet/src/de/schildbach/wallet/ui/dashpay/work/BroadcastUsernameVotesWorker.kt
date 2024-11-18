@@ -48,18 +48,19 @@ import org.slf4j.LoggerFactory
 class BroadcastUsernameVotesWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
-    val analytics: AnalyticsService,
-    val platformBroadcastService: PlatformBroadcastService,
-    val platformSyncService: PlatformSyncService,
-    val walletDataProvider: WalletDataProvider,
-    val usernameRequestDao: UsernameRequestDao,
-    val usernameVoteDao: UsernameVoteDao
+    private val analytics: AnalyticsService,
+    private val platformBroadcastService: PlatformBroadcastService,
+    private val platformSyncService: PlatformSyncService,
+    private val walletDataProvider: WalletDataProvider,
+    private val usernameRequestDao: UsernameRequestDao,
+    private val usernameVoteDao: UsernameVoteDao
 ) : BaseWorker(context, parameters) {
     companion object {
         private val log = LoggerFactory.getLogger(BroadcastUsernameVotesWorker::class.java)
 
         const val KEY_PASSWORD = "BroadcastUsernameVotesWorker.PASSWORD"
-        const val KEY_USERNAMES = "BroadcastUsernameVotesWorker.USERNAMES"
+        const val KEY_NORMALIZED_LABELS = "BroadcastUsernameVotesWorker.NORMALIZED_LABELS"
+        const val KEY_LABELS = "BroadcastUsernameVotesWorker.LABELS"
         const val KEY_VOTE_CHOICES = "BroadcastUsernameVotesWorker.VOTE_CHOICES"
         const val KEY_MASTERNODE_KEYS = "BroadcastUsernameVotesWorker.MASTERNODE_KEYS"
         const val KEY_QUICK_VOTING = "BroadcastUsernameVotesWorker.QUICK_VOTING"
@@ -68,8 +69,10 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
     override suspend fun doWorkWithBaseProgress(): Result {
         val password = inputData.getString(KEY_PASSWORD)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
-        val usernames = inputData.getStringArray(KEY_USERNAMES)
+        val normalizedLabels = inputData.getStringArray(KEY_NORMALIZED_LABELS)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_USERNAMES parameter"))
+        val labels = inputData.getStringArray(KEY_LABELS)
+            ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_USERNAMES parameter"))
         val voteChoices = inputData.getStringArray(KEY_VOTE_CHOICES)
             ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_VOTE_CHOICES parameter"))
         val masternodeKeys = inputData.getStringArray(KEY_MASTERNODE_KEYS)
@@ -172,11 +175,12 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                     log.info("all votes succeeded: total submitted {}", errorCount, votingResults.size)
                     Result.success(
                         workDataOf(
-                            KEY_USERNAMES to if (votingResults.isNotEmpty()) {
+                            KEY_NORMALIZED_LABELS to if (votingResults.isNotEmpty()) {
                                 arrayOfnames
                             } else {
                                 listOf("").toTypedArray()
                             },
+                            KEY_LABELS to labels,
                             KEY_VOTE_CHOICES to votingResults.map {
                                 it.first.toString()
                             }.toTypedArray(),
@@ -197,11 +201,8 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                     }
                     Result.failure(
                         workDataOf(
-                            KEY_USERNAMES to if (votingResults.isNotEmpty()) {
-                                arrayOfnames
-                            } else {
-                                listOf("").toTypedArray()
-                            },
+                            KEY_NORMALIZED_LABELS to arrayOfnames,
+                            KEY_LABELS to arrayOfnames.map { labelMap[it] },
                             KEY_VOTE_CHOICES to votingResults.map {
                                 it.first.toString()
                             }.toTypedArray(),
@@ -219,7 +220,8 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                     }
                     Result.success(
                         workDataOf(
-                            KEY_USERNAMES to usernames,
+                            KEY_NORMALIZED_LABELS to arrayOfnames,
+                            KEY_LABELS to arrayOfnames.map { labelMap[it] },
                             KEY_VOTE_CHOICES to voteChoices,
                             KEY_QUICK_VOTING to isQuickVoting
                         )
@@ -232,13 +234,13 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
             Result.failure(
                 workDataOf(
                     KEY_ERROR_MESSAGE to formatExceptionMessage("broadcast username vote", ex),
-                    KEY_USERNAMES to usernames,
+                    KEY_NORMALIZED_LABELS to normalizedLabels,
                     KEY_VOTE_CHOICES to voteChoices,
                     KEY_QUICK_VOTING to isQuickVoting
                 )
             )
         } finally {
-            log.info("finished BroadcastUsernameVotesWorker({}, {})", usernames, voteChoices)
+            log.info("finished BroadcastUsernameVotesWorker({}, {})", normalizedLabels, voteChoices)
         }
     }
 

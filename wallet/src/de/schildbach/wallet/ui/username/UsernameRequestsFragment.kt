@@ -27,7 +27,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.livedata.Status
@@ -147,8 +146,10 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             log.info("vote data: {}", voteData)
             voteData.forEach { (t, u) ->
                 try {
+                    val normalizedLabels =
+                        u.data?.outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_NORMALIZED_LABELS)?.toList()
                     val usernames =
-                        u.data?.outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_USERNAMES)?.toList()
+                        u.data?.outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_NORMALIZED_LABELS)?.toList()
                     val votes =
                         u.data?.outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_VOTE_CHOICES)?.toList()
                     val isQuickVoting = u.data?.outputData?.getBoolean(BroadcastUsernameVotesWorker.KEY_QUICK_VOTING, false) ?: false
@@ -300,7 +301,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         binding.filterSubtitle.text = getString(R.string.n_usernames, requests.size)
         binding.filterSubtitle.isVisible = requests.isNotEmpty()
         binding.searchPanel.isVisible = requests.isNotEmpty()
-        binding.quickVoteButton.isVisible = requests.isNotEmpty() && viewModel.keysAmount > 0 && Constants.SUPPORTS_QUICKVOTING
+        binding.quickVoteButton.isVisible = requests.isNotEmpty() && viewModel.keysAmount > 0
         binding.noItemsTxt.isVisible = requests.isEmpty()
     }
 
@@ -369,9 +370,11 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             // show dialog about 1 vote left if necessary
             showQuickVotingResults(usernames)
         }
-        if (viewModel.currentVote?.any { usernames.contains(it.username) } == true) {
-            log.info("vote, there is not match for {}", usernames)
-            //return
+        viewModel.currentVote?.let {
+            if (!it.any { usernames.contains(it.username) }) {
+                log.info("vote, there is no match for {}", usernames)
+                //return
+            }
         }
         val toastText = when (status) {
             Status.SUCCESS -> when (resourceVoteChoice) {

@@ -56,7 +56,13 @@ import org.bitcoinj.core.Base58
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.KeyId
+import org.bitcoinj.core.MasternodeAddress
+import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
+import org.bitcoinj.crypto.BLSLazyPublicKey
+import org.bitcoinj.crypto.BLSPublicKey
+import org.bitcoinj.evolution.SimplifiedMasternodeListEntry
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
@@ -260,21 +266,15 @@ class UsernameRequestsViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
+                    listOf(request.username),
                     listOf(request.normalizedLabel),
                     listOf(ResourceVoteChoice.towardsIdentity(Identifier.from(request.identity))),
                     masternodes.value.map { it.votingPrivateKey },
                     isQuickVoting = false
                 ).enqueue()
 
-                usernameRequestDao.removeApproval(request.username)
-                usernameRequestDao.update(request.copy(votes = request.votes + keysAmount, isApproved = true))
-//                usernameVoteDao.insert(
-//                    UsernameVote(
-//                        request.normalizedLabel,
-//                        request.identity,
-//                        UsernameVote.APPROVE
-//                    )
-//                )
+                //usernameRequestDao.removeApproval(request.username)
+                //usernameRequestDao.update(request.copy(votes = request.votes + keysAmount, isApproved = true))
                 currentVote = arrayListOf(
                     UsernameVote(
                         request.normalizedLabel,
@@ -287,7 +287,7 @@ class UsernameRequestsViewModel @Inject constructor(
         }
     }
 
-    fun revokeVote(requestId: String) {
+    private fun revokeVote(requestId: String) {
         if (keysAmount == 0) {
             return
         }
@@ -295,19 +295,12 @@ class UsernameRequestsViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
+                    listOf(request.username),
                     listOf(request.normalizedLabel),
                     listOf(ResourceVoteChoice.abstain()),
                     masternodes.value.map { it.votingPrivateKey },
                     isQuickVoting = false
                 ).enqueue()
-                usernameRequestDao.update(request.copy(votes = request.votes - keysAmount, isApproved = false))
-//                usernameVoteDao.insert(
-//                    UsernameVote(
-//                        request.normalizedLabel,
-//                        request.identity,
-//                        UsernameVote.ABSTAIN
-//                    )
-//                )
                 currentVote = arrayListOf(
                     UsernameVote(
                         request.normalizedLabel,
@@ -349,17 +342,20 @@ class UsernameRequestsViewModel @Inject constructor(
                 }
 
                 val usernames = arrayListOf<String>()
+                val normalizedLabels = arrayListOf<String>()
                 val voteChoices = arrayListOf<ResourceVoteChoice>()
                 // ignore the requests that already have been approved or have no votes remaining
                 firstRequests.filterNot {
                     it.isApproved && usernameVoteDao.countVotes(it.normalizedLabel) < UsernameVote.MAX_VOTES
                 }.forEach { request ->
-                    usernames.add(request.normalizedLabel)
+                    usernames.add(request.username)
+                    normalizedLabels.add(request.normalizedLabel)
                     voteChoices.add(ResourceVoteChoice.towardsIdentity(Identifier.from(request.identity)))
                 }
 
                 BroadcastUsernameVotesOperation(walletApplication).create(
                     usernames,
+                    normalizedLabels,
                     voteChoices,
                     masternodes.value.map { it.votingPrivateKey },
                     isQuickVoting = true
@@ -568,6 +564,7 @@ class UsernameRequestsViewModel @Inject constructor(
         logEvent(AnalyticsConstants.UsernameVoting.BLOCK)
         viewModelScope.launch(Dispatchers.IO) {
             BroadcastUsernameVotesOperation(walletApplication).create(
+                listOf(username),
                 listOf(username),
                 listOf(ResourceVoteChoice.lock()),
                 masternodes.value.map { it.votingPrivateKey },
