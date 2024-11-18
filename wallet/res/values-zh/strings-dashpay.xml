@@ -409,7 +409,6 @@
     <string name="coinjoin_mixing">混币</string>
     <string name="coinjoin_paused">混币暂停</string>
     <string name="coinjoin_not_started">尚未开始</string>
-    <string name="coinjoin_progress">%s中的 %s (%d%%) %s</string>
     <string name="coinjoin_progress_balance">%2$s中的%1$s</string>
     <string name="coinjoin_progress_finished">完全混币</string>
     <string name="coinjoin_change_level_confirmation">您确定要改变隐私级别吗\?</string>

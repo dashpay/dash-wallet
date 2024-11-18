@@ -380,7 +380,6 @@ Username</b></string>
     <string name="coinjoin_mixing">Paghahalo</string>
     <string name="coinjoin_paused">Nakahinto ang Paghahalo</string>
     <string name="coinjoin_not_started">Hindi Nagsimula</string>
-    <string name="coinjoin_progress">%s (%d%%) %s ng %s</string>
     <string name="coinjoin_progress_balance">%1$s ng %2$s</string>
     <string name="coinjoin_progress_finished">Ganap na Nahalo</string>
     <string name="coinjoin_change_level_confirmation">Sigurado ka bang gusto mong baguhin ang antas ng privacy\?</string>

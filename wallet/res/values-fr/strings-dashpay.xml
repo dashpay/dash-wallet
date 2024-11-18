@@ -412,7 +412,6 @@
     <string name="coinjoin_mixing">Mélange</string>
     <string name="coinjoin_paused">Mélange mis en pause</string>
     <string name="coinjoin_not_started">Non démarré</string>
-    <string name="coinjoin_progress">%s (%d%%) %s de %s</string>
     <string name="coinjoin_progress_balance">%1$s de %2$s</string>
     <string name="coinjoin_progress_finished">Entièrement mélangé</string>
     <string name="coinjoin_change_level_confirmation">Souhaitez-vous vraiment modifier le niveau de confidentialité \?</string>

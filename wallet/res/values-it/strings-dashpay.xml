@@ -413,7 +413,6 @@ Username</b></string>
     <string name="coinjoin_mixing">Miscelazione</string>
     <string name="coinjoin_paused">Miscelazione in pausa</string>
     <string name="coinjoin_not_started">Non iniziato</string>
-    <string name="coinjoin_progress">%s (%d %% ) %s di %s</string>
     <string name="coinjoin_progress_balance">%1$s di %2$s</string>
     <string name="coinjoin_progress_finished">Completamente Miscelato</string>
     <string name="coinjoin_change_level_confirmation">Sei sicuro di voler modificare il livello di privacy\?</string>

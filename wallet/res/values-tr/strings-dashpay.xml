@@ -365,7 +365,6 @@
     <string name="coinjoin_mixing">Karıştırma</string>
     <string name="coinjoin_paused">Karıştırma Duraklatıldı</string>
     <string name="coinjoin_not_started">Başlamadı</string>
-    <string name="coinjoin_progress">%s (%d%%) %s / %s</string>
     <string name="coinjoin_progress_balance">%1$s / %2$s</string>
     <string name="coinjoin_progress_finished">Tamamen Karıştırılmış</string>
     <string name="coinjoin_change_level_confirmation">Gizlilik düzeyini değiştirmek istediğinizden emin misiniz\?</string>
