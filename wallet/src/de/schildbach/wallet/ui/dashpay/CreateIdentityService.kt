@@ -337,6 +337,9 @@ class CreateIdentityService : LifecycleService() {
                 if (blockchainIdentityData.creationStateErrorMessage?.contains("preorderDocument was not found with a salted domain hash") == true) {
                     blockchainIdentityData.creationState = CreationState.PREORDER_REGISTERING
                     platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                } else if (blockchainIdentityData.creationStateErrorMessage?.contains("missing domain document for") == true) {
+                    blockchainIdentityData.creationState = CreationState.PREORDER_REGISTERING
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (retryWithNewUserName) {
                     // lets rewind the state to allow for a new username registration or request
                     // it may have failed later in the process

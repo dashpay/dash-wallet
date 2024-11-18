@@ -261,9 +261,15 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun openIdentityCreation() {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             if (blockchainIdentityData.creationStateErrorMessage != null) {
-                if ((blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING && blockchainIdentityData.creationStateErrorMessage.contains("Document transitions with duplicate unique properties")) &&
+                // Do we need to have the user request a new username
+                val errorMessage = blockchainIdentityData.creationStateErrorMessage
+                val needsNewUsername = blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING &&
+                        (errorMessage.contains("Document transitions with duplicate unique properties") ||
+                                errorMessage.contains("missing domain document for"))
+                if (needsNewUsername ||
                     // do we need this, cause the error could be due to a stale node
-                    blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKING && !blockchainIdentityData.creationStateErrorMessage.contains("invalid quorum: quorum not found")) {
+                    blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKING &&
+                        !errorMessage.contains("invalid quorum: quorum not found")) {
                     startActivity(CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), blockchainIdentityData))
                 } else {
                     Toast.makeText(requireContext(), blockchainIdentityData.creationStateErrorMessage, Toast.LENGTH_LONG).show()
