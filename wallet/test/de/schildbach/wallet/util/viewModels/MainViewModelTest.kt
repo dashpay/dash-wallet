@@ -18,6 +18,7 @@
 package de.schildbach.wallet.util.viewModels
 
 import android.os.Looper
+import android.telephony.TelephonyManager
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.MutableLiveData
 import androidx.work.WorkManager
@@ -32,10 +33,16 @@ import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.transactions.TxFilterType
 import androidx.datastore.preferences.core.Preferences
+import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
@@ -60,6 +67,7 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.RateRetrievalState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -88,6 +96,8 @@ class MainViewModelTest {
         every { applicationContext } returns mockk()
         every { mainLooper } returns Looper.getMainLooper()
     }
+    private val platformService = mockk<PlatformService>()
+    private val platformSyncService = mockk<PlatformSyncService>()
     private val mockIdentityData = BlockchainIdentityBaseData(-1, BlockchainIdentityData.CreationState.NONE, null, null, null, false,null, false)
     private val blockchainIdentityConfigMock = mockk<BlockchainIdentityConfig> {
         coEvery { loadBase() } returns mockIdentityData
@@ -103,7 +113,7 @@ class MainViewModelTest {
         every { dashPayProfileDao() } returns dashPayProfileDaoMock
         every { dashPayContactRequestDao() } returns mockk()
         every { invitationsDao() } returns invitationsDaoMock
-        every { userAlertDao() } returns mockk()
+        every { userAlertDao() } returns userAgentDaoMock
         every { transactionMetadataDocumentDao() } returns mockk()
         every { transactionMetadataCacheDao() } returns mockk()
     }
@@ -127,7 +137,7 @@ class MainViewModelTest {
     private val transactionMetadataMock = mockk<TransactionMetadataProvider> {
         every { observePresentableMetadata() } returns MutableStateFlow(mapOf())
     }
-
+    private val dashPayContactRequestDao = mockk<DashPayContactRequestDao>()
     private val mockDashPayConfig = mockk<DashPayConfig> {
         every { observe<Long>(any()) } returns MutableStateFlow(0L)
         coEvery { areNotificationsDisabled() } returns false
@@ -143,6 +153,12 @@ class MainViewModelTest {
     }
 
     private val platformRepo = mockk<PlatformRepo>()
+
+    private val biometricHelper = mockk<BiometricHelper>()
+    private val telephonyManager = mockk<TelephonyManager>()
+    private val coinJoinConfig = mockk<CoinJoinConfig>()
+    private val coinJoinService = mockk<CoinJoinService>()
+    private val crowdNodeApi = mockk<CrowdNodeApi>()
 
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
@@ -200,17 +216,35 @@ class MainViewModelTest {
         every { savedStateMock.set<TxFilterType>(any(), any()) } just runs
     }
 
-    @Test
+    @Test(timeout = 1000)
     fun observeBlockchainState_replaying_notSynced() {
         every { blockchainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
 
         val viewModel = spyk(
             MainViewModel(
-                analyticsService, configMock, uiConfigMock,
-                exchangeRatesMock, walletDataMock, walletApp, platformRepo,
-                mockk(), mockk(), blockchainIdentityConfigMock, savedStateMock, transactionMetadataMock,
-                blockchainStateMock, mockk(), mockk(), mockk(), userAgentDaoMock, mockk(), mockDashPayConfig, mockk(),
-                mockk(), mockk()
+                analyticsService,
+                configMock,
+                uiConfigMock,
+                exchangeRatesMock,
+                walletDataMock,
+                walletApp,
+                platformRepo,
+                platformService,
+                platformSyncService,
+                blockchainIdentityConfigMock,
+                savedStateMock,
+                transactionMetadataMock,
+                blockchainStateMock,
+                biometricHelper,
+                telephonyManager,
+                invitationsDaoMock,
+                userAgentDaoMock,
+                dashPayProfileDaoMock,
+                mockDashPayConfig,
+                dashPayContactRequestDao,
+                coinJoinConfig,
+                coinJoinService,
+                crowdNodeApi
             )
         )
 
@@ -227,11 +261,29 @@ class MainViewModelTest {
         every { blockchainStateMock.observeState() } returns MutableStateFlow(state)
         val viewModel = spyk(
             MainViewModel(
-                analyticsService, configMock, uiConfigMock,
-                exchangeRatesMock, walletDataMock, walletApp, platformRepo,
-                mockk(), mockk(), blockchainIdentityConfigMock, savedStateMock, transactionMetadataMock,
-                blockchainStateMock, mockk(), mockk(), mockk(), mockk(), mockk(), mockDashPayConfig, mockk(), mockk(),
-                mockk()
+                analyticsService,
+                configMock,
+                uiConfigMock,
+                exchangeRatesMock,
+                walletDataMock,
+                walletApp,
+                platformRepo,
+                platformService,
+                platformSyncService,
+                blockchainIdentityConfigMock,
+                savedStateMock,
+                transactionMetadataMock,
+                blockchainStateMock,
+                biometricHelper,
+                telephonyManager,
+                invitationsDaoMock,
+                userAgentDaoMock,
+                dashPayProfileDaoMock,
+                mockDashPayConfig,
+                dashPayContactRequestDao,
+                coinJoinConfig,
+                coinJoinService,
+                crowdNodeApi
             )
         )
 

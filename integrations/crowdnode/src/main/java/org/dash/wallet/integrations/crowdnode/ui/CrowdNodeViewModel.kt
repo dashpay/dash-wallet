@@ -171,6 +171,7 @@ class CrowdNodeViewModel @Inject constructor(
             .onEach {
                 crowdNodeFee = it ?: FeeInfo.DEFAULT_FEE
             }
+            .launchIn(viewModelScope)
     }
 
     fun backupPassphrase() {
