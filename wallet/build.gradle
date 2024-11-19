@@ -208,8 +208,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 34
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11000201
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.0.2"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11000312
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.0.3"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -346,16 +346,16 @@ android {
         }
         staging {
             applicationId = "org.dash.dashpay.testnet"
-            def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
-            def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
-            if (imgurClientId == null) {
-                imgurClientId = "\"UPHOLD_CLIENT_ID\""
+            def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
+            def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
+            if (upholdClientId == null) {
+                upholdClientId = "\"UPHOLD_CLIENT_ID\""
             }
-            if (imgurClientSecret == null) {
-                imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
+            if (upholdClientSecret == null) {
+                upholdClientSecret = "\"UPHOLD_CLIENT_SECRET\""
             }
-            buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
-            buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
+            buildConfigField("String", "UPHOLD_CLIENT_ID", upholdClientId)
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", upholdClientSecret)
             def topperKeyId = props.getProperty("TOPPER_KEY_ID_SANDBOX", "\"TOPPER_KEY_ID\"")
             def topperWidgetId = props.getProperty("TOPPER_WIDGET_ID_SANDBOX", "\"TOPPER_WIDGET_ID\"")
             def topperPrivateKey = props.getProperty("TOPPER_PRIVATE_KEY_SANDBOX", "\"TOPPER_PRIVATE_KEY\"")
