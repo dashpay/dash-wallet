@@ -90,17 +90,19 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
         }
 
         return try {
-            log.info("executing BroadcastUsernameVotesWorker({}, {})", usernames, voteChoices)
-            log.info("voting BroadcastUsernameVotesWorker({}, {})", usernames, voteChoices)
+            val labelMap = hashMapOf<String, String>()
+            normalizedLabels.forEachIndexed { i, normalizedLabel ->  labelMap[normalizedLabel] = labels[i] }
+            log.info("executing BroadcastUsernameVotesWorker({}, {})", normalizedLabels, voteChoices)
+            log.info("voting BroadcastUsernameVotesWorker({}, {})", normalizedLabels, voteChoices)
 
             // comment this out for now
             val votingResults = platformBroadcastService.broadcastUsernameVotes(
-                usernames.toList(),
+                normalizedLabels.toList(),
                 voteChoices.map { ResourceVoteChoice.from(it) },
                 masternodeKeys.map { DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, it).key.privKeyBytes },
                 encryptionKey
             )
-            log.info("voted BroadcastUsernameVotesWorker({}, {})", usernames, voteChoices)
+            log.info("voted BroadcastUsernameVotesWorker({}, {})", normalizedLabels, voteChoices)
             // mock the voting results
 //            val votingResults = arrayListOf<Triple<ResourceVoteChoice, Vote?, Exception?>>()
 //            usernames.forEachIndexed { i, username ->
