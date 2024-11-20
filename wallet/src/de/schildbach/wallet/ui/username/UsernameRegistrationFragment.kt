@@ -21,22 +21,14 @@ import android.annotation.SuppressLint
 import android.graphics.Typeface
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
-import android.os.Handler
-import android.os.Parcelable
-import android.text.Editable
 import android.text.SpannableString
-import android.text.TextWatcher
 import android.text.style.StyleSpan
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.TextView
-import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -46,6 +38,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameRegistrationBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.ui.viewBinding
+import org.dashj.platform.sdk.platform.Names
 
 
 @AndroidEntryPoint
@@ -81,30 +74,6 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
 
         initViewModel()
         walletApplication = requireActivity().application as WalletApplication
-
-        // TODO: we probably don't need this
-        createUsernameArgs = arguments?.getParcelable(CREATE_USER_NAME_ARGS)
-        // why are the args not passed via the nav graph?
-        // TODO: fix the passing of arguments or just use the dashPayViewModel
-        if (createUsernameArgs == null)
-            createUsernameArgs = dashPayViewModel.createUsernameArgs
-        when (createUsernameArgs?.actions) {
-            CreateUsernameActions.DISPLAY_COMPLETE -> {
-                this.completeUsername = createUsernameArgs?.userName!!
-                showCompleteState()
-                doneAndDismiss()
-            }
-            CreateUsernameActions.REUSE_TRANSACTION -> {
-                reuseTransaction = true
-            }
-            CreateUsernameActions.FROM_INVITE -> {
-                // don't show the keyboard if launched from invite
-                useInvite = true
-            }
-            else -> {
-                // not sure what we need to do here
-            }
-        }
     }
 
     @SuppressLint("ResourceType")
@@ -120,6 +89,7 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
 
     private fun initViewModel() {
         dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+            completeUsername = it?.username ?: ""
             when {
                 it?.creationStateErrorMessage != null -> {
                     requireActivity().finish()
@@ -127,7 +97,6 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
 
                 it?.creationState == BlockchainIdentityData.CreationState.DONE ||
                         it?.creationState == BlockchainIdentityData.CreationState.VOTING -> {
-                    completeUsername = it.username ?: ""
                     showCompleteState()
                 }
 
@@ -151,7 +120,7 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
         binding.orbitView.findViewById<TextView>(R.id.username_1st_letter).text = completeUsername[0].toString()
 
         val text = getString(
-            if (requestUsernameViewModel.isUsernameContestable()) {
+            if (Names.isUsernameContestable(completeUsername)) {
                 R.string.request_complete_message
             } else {
                 R.string.identity_complete_message
@@ -170,7 +139,7 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
     private fun showProcessingState() {
         if (!isProcessing) {
             val username = requestUsernameViewModel.requestedUserName!!
-                val text = getString(if (requestUsernameViewModel.isUsernameContestable()) {
+                val text = getString(if (Names.isUsernameContestable(completeUsername)) {
                     R.string.username_being_requested
                 } else {
                     R.string.username_being_created

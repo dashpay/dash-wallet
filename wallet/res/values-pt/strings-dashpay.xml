@@ -413,7 +413,6 @@ Dash</b></string>
     <string name="coinjoin_mixing">Misturando</string>
     <string name="coinjoin_paused">Mistura Pausada</string>
     <string name="coinjoin_not_started">Não iniciado</string>
-    <string name="coinjoin_progress">%s (%d%%) %s de %s</string>
     <string name="coinjoin_progress_balance">%1$s de %2$s</string>
     <string name="coinjoin_progress_finished">Totalmente Misturado</string>
     <string name="coinjoin_change_level_confirmation">Tem certeza de que deseja mudar o nível de privacidade\?</string>

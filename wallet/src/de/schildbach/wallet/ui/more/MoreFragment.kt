@@ -244,7 +244,13 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 } ?: "Voting Period not found"
                 when (it.usernameRequested) {
                     UsernameRequestStatus.SUBMITTING,
-                    UsernameRequestStatus.SUBMITTED,
+                    UsernameRequestStatus.SUBMITTED -> {
+                        binding.requestedUsernameTitle.text = mainActivityViewModel.getRequestedUsername()
+                        binding.requestedUsernameSubtitleTwo.isVisible = false
+                        binding.retryRequestButton.isVisible = false
+                        binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay)
+                        binding.requestedUsernameArrow.isVisible = true
+                    }
                     UsernameRequestStatus.VOTING -> {
                         binding.requestedUsernameTitle.text = mainActivityViewModel.getRequestedUsername()
                         binding.requestedUsernameSubtitleTwo.text =
@@ -414,7 +420,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             }
         } else {
             binding.editUpdateSwitcher.isVisible = false
-            binding.invite.isVisible = true
+            binding.invite.isVisible = Constants.SUPPORTS_INVITES
         }
     }
 

@@ -415,7 +415,6 @@ Dash</b></string>
     <string name="coinjoin_mixing">Перемешивание</string>
     <string name="coinjoin_paused">Перемешивание на паузе</string>
     <string name="coinjoin_not_started">Не начато</string>
-    <string name="coinjoin_progress">%s (%d %%) %s из %s</string>
     <string name="coinjoin_progress_balance">%1$s из %2$s</string>
     <string name="coinjoin_progress_finished">Полностью перемешано</string>
     <string name="coinjoin_change_level_confirmation">Уверены, что хотите изменить уровень приватности\?</string>

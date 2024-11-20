@@ -378,7 +378,6 @@
     <string name="coinjoin_mixing">Ανάμιξη</string>
     <string name="coinjoin_paused">Ανάμειξη σε παύση</string>
     <string name="coinjoin_not_started">Δεν ξεκίνησε</string>
-    <string name="coinjoin_progress">%s (%d%%) %s από %s</string>
     <string name="coinjoin_progress_balance">%1$s από%2$s</string>
     <string name="coinjoin_progress_finished">Πλήρως αναμεμειγμένα</string>
     <string name="coinjoin_change_level_confirmation">Είστε σίγουροι ότι θέλετε να αλλάξετε το επίπεδο απορρήτου;</string>

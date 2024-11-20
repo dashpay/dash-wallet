@@ -379,7 +379,6 @@
     <string name="coinjoin_mixing">混合</string>
     <string name="coinjoin_paused">混合暫停</string>
     <string name="coinjoin_not_started">尚未開始</string>
-    <string name="coinjoin_progress">%s (%d%%) %s of %s</string>
     <string name="coinjoin_progress_balance">%1$s of %2$s</string>
     <string name="coinjoin_progress_finished">充分混合</string>
     <string name="coinjoin_change_level_confirmation">您確定要變更隱私等級嗎？</string>

@@ -141,7 +141,7 @@
                         android:ellipsize="middle"
                         android:gravity="center_vertical"
                         android:imeOptions="actionNext"
-                        android:maxLength="75"
+                        android:maxLength="128"
                         tools:visibility="visible" />
                 </com.google.android.material.textfield.TextInputLayout>
             </androidx.constraintlayout.widget.ConstraintLayout>

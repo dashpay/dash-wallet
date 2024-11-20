@@ -378,7 +378,6 @@
     <string name="coinjoin_mixing">믹싱</string>
     <string name="coinjoin_paused">믹싱이 멈춰짐</string>
     <string name="coinjoin_not_started">시작되지 않음</string>
-    <string name="coinjoin_progress">%s 중 %s (%d%%) %s</string>
     <string name="coinjoin_progress_balance">%2$s 중 %1$s</string>
     <string name="coinjoin_progress_finished">완전히 믹싱됨</string>
     <string name="coinjoin_change_level_confirmation">정말 프라이버시 수준을 변경하시겠습니까\?</string>

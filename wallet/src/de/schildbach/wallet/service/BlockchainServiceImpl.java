@@ -224,7 +224,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private final Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
     private MixingStatus mixingStatus = MixingStatus.NOT_STARTED;
-    private Double mixingProgress = 0.0;
+    private double mixingProgress = 0.0;
     private ForegroundService foregroundService = ForegroundService.NONE;
 
     // Risk Analyser for Transactions that is PeerGroup Aware
@@ -1088,7 +1088,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         final String message = getString(
                 R.string.coinjoin_progress,
                 getString(statusStringId),
-                mixingProgress.intValue(),
+                mixingProgress,
                 decimalFormat.format(MonetaryExtKt.toBigDecimal(mixedBalance)),
                 decimalFormat.format(MonetaryExtKt.toBigDecimal(totalBalance))
         );

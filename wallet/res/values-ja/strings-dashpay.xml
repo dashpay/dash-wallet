@@ -377,7 +377,6 @@
     <string name="coinjoin_mixing">ミキシング中</string>
     <string name="coinjoin_paused">ミキシングを一時停止しました</string>
     <string name="coinjoin_not_started">開始していません</string>
-    <string name="coinjoin_progress">%sの%s (%d%%) と%s</string>
     <string name="coinjoin_progress_balance">%2$sの%1$s</string>
     <string name="coinjoin_progress_finished">ミキシング完了しました</string>
     <string name="coinjoin_change_level_confirmation">プライバシーレベルを変更してよろしいですか。</string>

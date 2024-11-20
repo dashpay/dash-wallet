@@ -367,7 +367,6 @@
     <string name="coinjoin_mixing">Змішування</string>
     <string name="coinjoin_paused">Змішування на паузі</string>
     <string name="coinjoin_not_started">Не розпачато</string>
-    <string name="coinjoin_progress">%s(%d%%)%s з %s</string>
     <string name="coinjoin_progress_balance">%1$s з %2$s</string>
     <string name="coinjoin_progress_finished">Повністю змішано</string>
     <string name="coinjoin_change_level_confirmation">Ви впевнені, що бажаєте змінити рівень конфіденційності\?</string>
