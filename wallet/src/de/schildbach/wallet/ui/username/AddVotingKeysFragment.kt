@@ -63,7 +63,8 @@ class AddVotingKeysFragment : Fragment(R.layout.fragment_add_voting_keys) {
             log.info("updating masternode list: {}", it.map { mn -> mn.address })
             adapter.submitList(
                 it.map { masternode ->
-                    masternode.address
+                    val canDelete = viewModel.isImported(masternode)
+                    MasternodeEntry(masternode.address, canDelete)
                 }
             )
             binding.votesCastText.text = getString(R.string.multiple_votes_cast, it.size)
@@ -78,7 +79,7 @@ class AddVotingKeysFragment : Fragment(R.layout.fragment_add_voting_keys) {
         lifecycleScope.launch {
             val isFirstTime = withContext(Dispatchers.IO) { viewModel.isFirstTimeVoting() }
             binding.dontAskAgainButton.isVisible = !isFirstTime
-            viewModel.setSecondTimeVoting()
+            withContext(Dispatchers.IO) { viewModel.setSecondTimeVoting() }
         }
     }
 }

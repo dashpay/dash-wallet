@@ -693,4 +693,8 @@ class UsernameRequestsViewModel @Inject constructor(
             usernameVoteDao.countVotes(username) == UsernameVote.MAX_VOTES - votesLeft
         }
     }
+
+    suspend fun isImported(masternode: ImportedMasternodeKey): Boolean {
+        return importedMasternodeKeyDao.contains(masternode.proTxHash)
+    }
 }
