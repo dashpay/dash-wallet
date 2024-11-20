@@ -33,7 +33,7 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
             findNavController().popBackStack()
         }
 
-        viewModel.selectedUsernameRequest.observe(viewLifecycleOwner) { request ->
+        viewModel.selectedUsernameRequestId.observe(viewLifecycleOwner) { request ->
             binding.username.text = request.username
             binding.identity.text = request.identity
 

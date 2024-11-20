@@ -56,13 +56,7 @@ import org.bitcoinj.core.Base58
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.KeyId
-import org.bitcoinj.core.MasternodeAddress
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
-import org.bitcoinj.crypto.BLSLazyPublicKey
-import org.bitcoinj.crypto.BLSPublicKey
-import org.bitcoinj.evolution.SimplifiedMasternodeListEntry
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
@@ -136,7 +130,7 @@ class UsernameRequestsViewModel @Inject constructor(
     val filterState: StateFlow<FiltersUIState> = _filterState.asStateFlow()
 
     private val _selectedUsernameRequestId = MutableStateFlow<String?>(null)
-    val selectedUsernameRequest: Flow<UsernameRequest> = _selectedUsernameRequestId
+    val selectedUsernameRequestId: Flow<UsernameRequest> = _selectedUsernameRequestId
         .filterNotNull()
         .distinctUntilChanged()
         .flatMapLatest { id ->
@@ -273,8 +267,6 @@ class UsernameRequestsViewModel @Inject constructor(
                     isQuickVoting = false
                 ).enqueue()
 
-                //usernameRequestDao.removeApproval(request.username)
-                //usernameRequestDao.update(request.copy(votes = request.votes + keysAmount, isApproved = true))
                 currentVote = arrayListOf(
                     UsernameVote(
                         request.normalizedLabel,
