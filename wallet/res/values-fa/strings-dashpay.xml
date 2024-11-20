@@ -377,7 +377,6 @@
     <string name="coinjoin_mixing">در حال ترکیب</string>
     <string name="coinjoin_paused">توقف موقت ترکیب</string>
     <string name="coinjoin_not_started">شروع نشده</string>
-    <string name="coinjoin_progress">%s(%d%%) %s از %s</string>
     <string name="coinjoin_progress_balance">%1$s از %2$s</string>
     <string name="coinjoin_progress_finished">کاملا ترکیب شده</string>
     <string name="coinjoin_change_level_confirmation">آیا مطمئن هستید که می‌خواهید سطح محرمانگی را تغییر دهید؟</string>

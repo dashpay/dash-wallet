@@ -20,7 +20,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.widget.Toolbar
+import androidx.appcompat.widget.Toolbar
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.BlockInfo
 import de.schildbach.wallet_test.R

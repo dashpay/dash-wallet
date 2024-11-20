@@ -19,6 +19,7 @@
 
 package de.schildbach.wallet
 
+import androidx.work.WorkManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -33,13 +34,14 @@ object WalletApplicationExt {
      */
     fun WalletApplication.clearDatabases(isWalletWipe: Boolean) {
         val scope = CoroutineScope(Dispatchers.IO)
-
+        val context = this
         scope.launch {
             platformSyncService.clearDatabases()
             if (isWalletWipe) {
                 transactionMetadataProvider.clear()
             }
             platformRepo.clearDatabase(isWalletWipe)
+            WorkManager.getInstance(context).cancelAllWork()
         }
     }
 }

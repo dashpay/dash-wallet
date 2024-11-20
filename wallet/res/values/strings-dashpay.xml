@@ -416,7 +416,7 @@
     <string name="coinjoin_mixing">Mixing</string>
     <string name="coinjoin_paused">Mixing Paused</string>
     <string name="coinjoin_not_started">Not Started</string>
-    <string name="coinjoin_progress">%s (%d%%) %s of %s</string>
+    <string name="coinjoin_progress" translatable="false">%s (%.1f%%) %s / %s</string>
     <string name="coinjoin_progress_balance">%1$s of %2$s</string>
     <string name="coinjoin_progress_finished">Fully Mixed</string>
     <string name="coinjoin_change_level_confirmation">Are you sure you want to change the privacy level?</string>

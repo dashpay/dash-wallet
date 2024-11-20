@@ -379,7 +379,6 @@ Benutzernamen</b></string>
     <string name="coinjoin_mixing">Mixing</string>
     <string name="coinjoin_paused">Mixing pausiert</string>
     <string name="coinjoin_not_started">Nicht gestartet</string>
-    <string name="coinjoin_progress">%s (%d%%) %s von %s</string>
     <string name="coinjoin_progress_balance">%1$s von %2$s</string>
     <string name="coinjoin_progress_finished">Vollständig gemixt</string>
     <string name="coinjoin_change_level_confirmation">Möchtest du die Einstellung der Privatsphäre wirklich ändern\?</string>

@@ -2,38 +2,8 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    app:startDestination="@id/createUsernameFragment"
+    app:startDestination="@id/requestUsernameFragment"
     android:id="@+id/nav_username">
-
-    <fragment
-        android:id="@+id/createUsernameFragment"
-        android:name="de.schildbach.wallet.ui.username.CreateUsernameFragment"
-        tools:layout="@layout/fragment_create_username">
-
-        <argument
-            android:name="createUsernameFragmentArgs"
-            app:argType="de.schildbach.wallet.ui.username.CreateUsernameArgs" />
-
-        <action
-            android:id="@+id/create_username_to_username_privacy"
-            app:destination="@id/createUsernamePrivacyFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left" />
-
-    </fragment>
-
-    <fragment
-        android:id="@+id/createUsernamePrivacyFragment"
-        android:name="de.schildbach.wallet.ui.coinjoin.CoinJoinLevelFragment"
-        tools:layout="@layout/fragment_coinjoin_level">
-        <action
-            android:id="@+id/username_privacy_to_createUsernameFragment"
-            app:popUpTo="@+id/createUsernameFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left" />
-    </fragment>
 
     <fragment
         android:id="@+id/welcomeToDashPayFragment"
@@ -143,7 +113,7 @@
     <fragment
         android:id="@+id/usernameRegistrationFragment"
         android:name="de.schildbach.wallet.ui.username.UsernameRegistrationFragment"
-        tools:layout="@layout/fragment_verfiy_identity">
+        tools:layout="@layout/fragment_username_registration">
     </fragment>
 
 

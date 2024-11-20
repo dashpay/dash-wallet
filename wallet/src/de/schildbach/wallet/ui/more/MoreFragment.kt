@@ -421,7 +421,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             }
         } else {
             binding.editUpdateSwitcher.isVisible = false
-            binding.invite.isVisible = true
+            binding.invite.isVisible = Constants.SUPPORTS_INVITES
         }
     }
 

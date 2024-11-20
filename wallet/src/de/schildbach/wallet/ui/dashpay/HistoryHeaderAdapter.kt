@@ -103,7 +103,8 @@ class HistoryHeaderAdapter(
             if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING &&
                 (blockchainIdentityData.creationStateErrorMessage.contains("Document transitions with duplicate unique properties") ||
                     blockchainIdentityData.creationStateErrorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll")) ||
-                    blockchainIdentityData.creationStateErrorMessage.contains(Regex("does not have .* as a contender"))
+                    blockchainIdentityData.creationStateErrorMessage.contains(Regex("does not have .* as a contender")) ||
+                    blockchainIdentityData.creationStateErrorMessage.contains("missing domain document for ")
                 ) {
                 binding.identityCreation.title.text = binding.root.context.getString(R.string.processing_username_unavailable_title)
                 binding.identityCreation.subtitle.visibility = View.VISIBLE

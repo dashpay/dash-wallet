@@ -101,6 +101,7 @@ import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
 import kotlin.math.abs
@@ -134,7 +135,8 @@ class MainViewModel @Inject constructor(
     dashPayConfig: DashPayConfig,
     dashPayContactRequestDao: DashPayContactRequestDao,
     private val coinJoinConfig: CoinJoinConfig,
-    private val coinJoinService: CoinJoinService
+    private val coinJoinService: CoinJoinService,
+    private val crowdNodeApi: CrowdNodeApi
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     companion object {
         private const val THROTTLE_DURATION = 500L
@@ -406,7 +408,9 @@ class MainViewModel @Inject constructor(
 
     fun getLastStakingAPY() {
         viewModelScope.launch(Dispatchers.IO) {
-            _stakingAPY.postValue(0.85 * blockchainStateProvider.getLastMasternodeAPY())
+            val withoutFees = (100.0 - crowdNodeApi.getFee()) / 100
+            log.info("fees: without $withoutFees")
+            _stakingAPY.postValue(withoutFees * blockchainStateProvider.getLastMasternodeAPY())
         }
     }
 
@@ -538,7 +542,8 @@ class MainViewModel @Inject constructor(
 
             if (state.isSynced()) {
                 viewModelScope.launch(Dispatchers.IO) {
-                    _stakingAPY.postValue(0.85 * blockchainStateProvider.getMasternodeAPY())
+                    val withoutFees = (100.0 - crowdNodeApi.getFee()) / 100
+                    _stakingAPY.postValue(withoutFees * blockchainStateProvider.getMasternodeAPY())
                 }
             }
 

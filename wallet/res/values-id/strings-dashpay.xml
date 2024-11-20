@@ -380,7 +380,6 @@ Dash</b> anda</string>
     <string name="coinjoin_mixing">Pencampuran</string>
     <string name="coinjoin_paused">Pencampuran Dijeda</string>
     <string name="coinjoin_not_started">Tidak Dimulai</string>
-    <string name="coinjoin_progress">%s (%d%%) %s dari %s</string>
     <string name="coinjoin_progress_balance">%1$s dari %2$s</string>
     <string name="coinjoin_progress_finished">Tercampur Sepenuhnya</string>
     <string name="coinjoin_change_level_confirmation">Apakah Anda yakin ingin mengubah tingkat privasi\?</string>

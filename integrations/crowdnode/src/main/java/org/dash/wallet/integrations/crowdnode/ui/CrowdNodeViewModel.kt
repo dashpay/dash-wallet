@@ -43,6 +43,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BalanceUIState
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.model.FeeInfo
 import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
@@ -118,6 +119,7 @@ class CrowdNodeViewModel @Inject constructor(
     val crowdNodeBalance: LiveData<BalanceUIState>
         get() = _crowdNodeBalance
 
+    private var crowdNodeFee: Double = FeeInfo.DEFAULT_FEE
     val dashFormat: MonetaryFormat
         get() = globalConfig.format.noCode()
 
@@ -162,6 +164,12 @@ class CrowdNodeViewModel @Inject constructor(
                     }
                     else -> _crowdNodeBalance.postValue(_crowdNodeBalance.value?.copy(isUpdating = false))
                 }
+            }
+            .launchIn(viewModelScope)
+
+        config.observe(CrowdNodeConfig.FEE_PERCENTAGE)
+            .onEach {
+                crowdNodeFee = it ?: FeeInfo.DEFAULT_FEE
             }
             .launchIn(viewModelScope)
     }
@@ -413,6 +421,7 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     fun getCrowdNodeAPY(): Double {
-        return 0.85 * getMasternodeAPY()
+        val withoutFees = (100.0 - crowdNodeFee) / 100
+        return withoutFees * getMasternodeAPY()
     }
 }
