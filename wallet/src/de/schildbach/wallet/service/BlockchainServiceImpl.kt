@@ -60,7 +60,10 @@ import de.schildbach.wallet.util.BlockchainStateUtils
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Block
 import org.bitcoinj.core.BlockChain
@@ -158,6 +161,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private val log = LoggerFactory.getLogger(BlockchainServiceImpl::class.java)
         const val START_AS_FOREGROUND_EXTRA = "start_as_foreground"
     }
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     @JvmField
     @Inject
     var application: WalletApplication? = null
@@ -647,41 +652,43 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     private val connectivityReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            val action = intent.action
-            if (ConnectivityManager.CONNECTIVITY_ACTION == action) {
-                val networkInfo = connectivityManager!!.activeNetworkInfo
-                val hasConnectivity = networkInfo != null && networkInfo.isConnected
-                if (log.isInfoEnabled) {
-                    val s = StringBuilder("active network is ")
-                        .append(if (hasConnectivity) "up" else "down")
-                    if (networkInfo != null) {
-                        s.append(", type: ").append(networkInfo.typeName)
-                        s.append(", state: ").append(networkInfo.state).append('/')
-                            .append(networkInfo.detailedState)
-                        val extraInfo = networkInfo.extraInfo
-                        if (extraInfo != null) s.append(", extraInfo: ").append(extraInfo)
-                        val reason = networkInfo.reason
-                        if (reason != null) s.append(", reason: ").append(reason)
+            serviceScope.launch {
+                val action = intent.action
+                if (ConnectivityManager.CONNECTIVITY_ACTION == action) {
+                    val networkInfo = connectivityManager!!.activeNetworkInfo
+                    val hasConnectivity = networkInfo != null && networkInfo.isConnected
+                    if (log.isInfoEnabled) {
+                        val s = StringBuilder("active network is ")
+                            .append(if (hasConnectivity) "up" else "down")
+                        if (networkInfo != null) {
+                            s.append(", type: ").append(networkInfo.typeName)
+                            s.append(", state: ").append(networkInfo.state).append('/')
+                                .append(networkInfo.detailedState)
+                            val extraInfo = networkInfo.extraInfo
+                            if (extraInfo != null) s.append(", extraInfo: ").append(extraInfo)
+                            val reason = networkInfo.reason
+                            if (reason != null) s.append(", reason: ").append(reason)
+                        }
+                        log.info(s.toString())
                     }
-                    log.info(s.toString())
+                    if (hasConnectivity) {
+                        impediments.remove(Impediment.NETWORK)
+                    } else {
+                        impediments.add(Impediment.NETWORK)
+                    }
+                    updateBlockchainStateImpediments()
+                    check()
+                } else if (Intent.ACTION_DEVICE_STORAGE_LOW == action) {
+                    log.info("device storage low")
+                    impediments.add(Impediment.STORAGE)
+                    updateBlockchainStateImpediments()
+                    check()
+                } else if (Intent.ACTION_DEVICE_STORAGE_OK == action) {
+                    log.info("device storage ok")
+                    impediments.remove(Impediment.STORAGE)
+                    updateBlockchainStateImpediments()
+                    check()
                 }
-                if (hasConnectivity) {
-                    impediments.remove(Impediment.NETWORK)
-                } else {
-                    impediments.add(Impediment.NETWORK)
-                }
-                updateBlockchainStateImpediments()
-                check()
-            } else if (Intent.ACTION_DEVICE_STORAGE_LOW == action) {
-                log.info("device storage low")
-                impediments.add(Impediment.STORAGE)
-                updateBlockchainStateImpediments()
-                check()
-            } else if (Intent.ACTION_DEVICE_STORAGE_OK == action) {
-                log.info("device storage ok")
-                impediments.remove(Impediment.STORAGE)
-                updateBlockchainStateImpediments()
-                check()
             }
         }
 
@@ -707,6 +714,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 wallet.context.initDashSync(getDir("masternode", MODE_PRIVATE).absolutePath)
                 log.info("starting peergroup")
+                org.bitcoinj.core.Context.propagate(wallet.context)
                 peerGroup = PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain)
                 if (Constants.SUPPORTS_PLATFORM) {
                     platformRepo!!.platform.setMasternodeListManager(application!!.wallet!!.context.masternodeListManager)
@@ -1149,57 +1157,59 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        if (intent != null) {
-            //Restart service as a Foreground Service if it's synchronizing the blockchain
-            val extras = intent.extras
-            if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
-                startForegroundAndCatch()
-            }
-            log.info(
-                "service start command: " + intent + if (intent.hasExtra(Intent.EXTRA_ALARM_COUNT)) " (alarm count: " + intent.getIntExtra(
-                    Intent.EXTRA_ALARM_COUNT, 0
-                ) + ")" else ""
-            )
-            val action = intent.action
-            if (BlockchainService.ACTION_CANCEL_COINS_RECEIVED == action) {
-                notificationCount = 0
-                notificationAccumulatedAmount = Coin.ZERO
-                notificationAddresses.clear()
-                nm!!.cancel(Constants.NOTIFICATION_ID_COINS_RECEIVED)
-            } else if (BlockchainService.ACTION_RESET_BLOCKCHAIN == action) {
-                log.info("will remove blockchain on service shutdown")
-                resetBlockchainOnShutdown = true
-                stopSelf()
-            } else if (BlockchainService.ACTION_WIPE_WALLET == action) {
-                log.info("will remove blockchain and delete walletFile on service shutdown")
-                deleteWalletFileOnShutdown = true
-                stopSelf()
-            } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
-                val hash = Sha256Hash
-                    .wrap(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH))
-                val tx = application!!.wallet!!.getTransaction(hash)
-                if (peerGroup != null) {
-                    log.info("broadcasting transaction " + tx!!.hashAsString)
-                    val count = peerGroup!!.numConnectedPeers()
-                    var minimum = peerGroup!!.minBroadcastConnections
-                    //if the number of peers is <= 3, then only require that number of peers to send
-                    //if the number of peers is 0, then require 3 peers (default min connections)
-                    if (count > 0 && count <= 3) minimum = count
-                    peerGroup!!.broadcastTransaction(tx, minimum, true)
-                } else {
-                    log.info("peergroup not available, not broadcasting transaction {}", tx!!.txId)
-                    tx.confidence.setPeerInfo(0, 1)
+        serviceScope.launch {
+            if (intent != null) {
+                //Restart service as a Foreground Service if it's synchronizing the blockchain
+                val extras = intent.extras
+                if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
+                    startForegroundAndCatch()
                 }
-            } else if (BlockchainService.ACTION_RESET_BLOOMFILTERS == action) {
-                if (peerGroup != null) {
-                    log.info("recalculating bloom filters")
-                    peerGroup!!.recalculateFastCatchupAndFilter(PeerGroup.FilterRecalculateMode.FORCE_SEND_FOR_REFRESH)
-                } else {
-                    log.info("peergroup not available, not recalculating bloom filers")
+                log.info(
+                    "service start command: $intent" + if (intent.hasExtra(Intent.EXTRA_ALARM_COUNT)) " (alarm count: " + intent.getIntExtra(
+                        Intent.EXTRA_ALARM_COUNT, 0
+                    ) + ")" else ""
+                )
+                val action = intent.action
+                if (BlockchainService.ACTION_CANCEL_COINS_RECEIVED == action) {
+                    notificationCount = 0
+                    notificationAccumulatedAmount = Coin.ZERO
+                    notificationAddresses.clear()
+                    nm!!.cancel(Constants.NOTIFICATION_ID_COINS_RECEIVED)
+                } else if (BlockchainService.ACTION_RESET_BLOCKCHAIN == action) {
+                    log.info("will remove blockchain on service shutdown")
+                    resetBlockchainOnShutdown = true
+                    stopSelf()
+                } else if (BlockchainService.ACTION_WIPE_WALLET == action) {
+                    log.info("will remove blockchain and delete walletFile on service shutdown")
+                    deleteWalletFileOnShutdown = true
+                    stopSelf()
+                } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
+                    val hash = Sha256Hash
+                        .wrap(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH))
+                    val tx = application!!.wallet!!.getTransaction(hash)
+                    if (peerGroup != null) {
+                        log.info("broadcasting transaction " + tx!!.hashAsString)
+                        val count = peerGroup!!.numConnectedPeers()
+                        var minimum = peerGroup!!.minBroadcastConnections
+                        // if the number of peers is <= 3, then only require that number of peers to send
+                        // if the number of peers is 0, then require 3 peers (default min connections)
+                        if (count in 1..3) minimum = count
+                        peerGroup!!.broadcastTransaction(tx, minimum, true)
+                    } else {
+                        log.info("peergroup not available, not broadcasting transaction {}", tx!!.txId)
+                        tx.confidence.setPeerInfo(0, 1)
+                    }
+                } else if (BlockchainService.ACTION_RESET_BLOOMFILTERS == action) {
+                    if (peerGroup != null) {
+                        log.info("recalculating bloom filters")
+                        peerGroup!!.recalculateFastCatchupAndFilter(PeerGroup.FilterRecalculateMode.FORCE_SEND_FOR_REFRESH)
+                    } else {
+                        log.info("peergroup not available, not recalculating bloom filers")
+                    }
                 }
+            } else {
+                log.warn("service restart, although it was started as non-sticky")
             }
-        } else {
-            log.warn("service restart, although it was started as non-sticky")
         }
         return START_NOT_STICKY
     }
@@ -1253,58 +1263,66 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onDestroy() {
         log.info(".onDestroy()")
-        WalletApplication.scheduleStartBlockchainService(this) //disconnect feature
-        unregisterReceiver(tickReceiver)
-        application!!.wallet!!.removeChangeEventListener(walletEventListener)
-        application!!.wallet!!.removeCoinsSentEventListener(walletEventListener)
-        application!!.wallet!!.removeCoinsReceivedEventListener(walletEventListener)
-        config!!.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
-        unregisterReceiver(connectivityReceiver)
-        platformSyncService!!.shutdown()
-        if (peerGroup != null) {
-            application!!.wallet!!.context.close()
-            peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
-            peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
-            peerGroup!!.removeWallet(application!!.wallet)
-            platformSyncService!!.removePreBlockProgressListener(blockchainDownloadListener)
-            blockchainStateDataProvider!!.setNetworkStatus(NetworkStatus.DISCONNECTING)
-            peerGroup!!.stop()
-            blockchainStateDataProvider!!.setNetworkStatus(NetworkStatus.STOPPED)
-            application!!.wallet!!.riskAnalyzer = defaultRiskAnalyzer
-            riskAnalyzer!!.shutdown()
-            log.info("peergroup stopped")
-        }
-        peerConnectivityListener!!.stop()
-        delayHandler.removeCallbacksAndMessages(null)
-        try {
-            blockStore!!.close()
-            headerStore!!.close()
-            blockchainStateDataProvider!!.setBlockChain(null)
-        } catch (x: BlockStoreException) {
-            throw RuntimeException(x)
-        }
-        if (!deleteWalletFileOnShutdown) {
-            application!!.saveWallet()
-        }
-        if (wakeLock!!.isHeld) {
-            log.debug("wakelock still held, releasing")
-            wakeLock!!.release()
-        }
-        if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
-            log.info("removing blockchain")
-            blockChainFile!!.delete()
-            headerChainFile!!.delete()
-            resetMNLists(false)
-            if (deleteWalletFileOnShutdown) {
-                log.info("removing wallet file and app data")
-                application!!.finalizeWipe()
-            }
-            //Clear the blockchain identity
-            application!!.clearDatabases(false)
-        }
-        closeStream(mnlistinfoBootStrapStream)
-        closeStream(qrinfoBootStrapStream)
         super.onDestroy()
+        serviceScope.launch {
+            try {
+                WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
+                unregisterReceiver(tickReceiver)
+                application!!.wallet!!.removeChangeEventListener(walletEventListener)
+                application!!.wallet!!.removeCoinsSentEventListener(walletEventListener)
+                application!!.wallet!!.removeCoinsReceivedEventListener(walletEventListener)
+                config!!.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
+                unregisterReceiver(connectivityReceiver)
+                platformSyncService!!.shutdown()
+                if (peerGroup != null) {
+                    org.bitcoinj.core.Context.propagate(application!!.wallet!!.context)
+                    application!!.wallet!!.context.close()
+                    peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
+                    peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
+                    peerGroup!!.removeWallet(application!!.wallet)
+                    platformSyncService!!.removePreBlockProgressListener(blockchainDownloadListener)
+                    blockchainStateDataProvider!!.setNetworkStatus(NetworkStatus.DISCONNECTING)
+                    peerGroup!!.stop()
+                    blockchainStateDataProvider!!.setNetworkStatus(NetworkStatus.STOPPED)
+                    application!!.wallet!!.riskAnalyzer = defaultRiskAnalyzer
+                    riskAnalyzer!!.shutdown()
+                    log.info("peergroup stopped")
+                }
+                peerConnectivityListener!!.stop()
+                delayHandler.removeCallbacksAndMessages(null)
+                try {
+                    blockStore!!.close()
+                    headerStore!!.close()
+                    blockchainStateDataProvider!!.setBlockChain(null)
+                } catch (x: BlockStoreException) {
+                    throw RuntimeException(x)
+                }
+                if (!deleteWalletFileOnShutdown) {
+                    application!!.saveWallet()
+                }
+                if (wakeLock!!.isHeld) {
+                    log.debug("wakelock still held, releasing")
+                    wakeLock!!.release()
+                }
+                if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
+                    log.info("removing blockchain")
+                    blockChainFile!!.delete()
+                    headerChainFile!!.delete()
+                    resetMNLists(false)
+                    if (deleteWalletFileOnShutdown) {
+                        log.info("removing wallet file and app data")
+                        application!!.finalizeWipe()
+                    }
+                    //Clear the blockchain identity
+                    application!!.clearDatabases(false)
+                }
+                closeStream(mnlistinfoBootStrapStream)
+                closeStream(qrinfoBootStrapStream)
+            } finally {
+                log.info("serviceJob cancelled after " + (System.currentTimeMillis() - serviceCreatedAt) / 1000 / 60 + " minutes")
+                serviceJob.cancel()
+            }
+        }
         log.info("service was up for " + (System.currentTimeMillis() - serviceCreatedAt) / 1000 / 60 + " minutes")
     }
 
