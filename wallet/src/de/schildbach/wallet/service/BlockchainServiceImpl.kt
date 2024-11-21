@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 the original author or authors.
+ * Copyright 2011-2024 the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -124,7 +124,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.InetSocketAddress
 import java.text.DecimalFormat
-import java.util.Arrays
 import java.util.Date
 import java.util.EnumSet
 import java.util.LinkedList
@@ -135,11 +134,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
-import kotlin.coroutines.Continuation
 import kotlin.math.max
 
 /**
  * @author Andreas Schildbach
+ * @author Eric Britten
  */
 @AndroidEntryPoint
 class BlockchainServiceImpl : LifecycleService(), BlockchainService {
@@ -262,16 +261,16 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var foregroundService = ForegroundService.NONE
 
     // Risk Analyser for Transactions that is PeerGroup Aware
-    var riskAnalyzer: AllowLockTimeRiskAnalysis.Analyzer? = null
-    var defaultRiskAnalyzer = DefaultRiskAnalysis.FACTORY
-    private val crowdnodeFilters = Arrays.asList(
+    private var riskAnalyzer: AllowLockTimeRiskAnalysis.Analyzer? = null
+    private var defaultRiskAnalyzer = DefaultRiskAnalysis.FACTORY
+    private val crowdnodeFilters = listOf(
         NotFromAddressTxFilter(getCrowdNodeAddress(Constants.NETWORK_PARAMETERS)),
         CrowdNodeWithdrawalReceivedTx(Constants.NETWORK_PARAMETERS)
     )
     private val depositReceivedResponse =
         CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS)
     private var apiConfirmationHandler: CrowdNodeAPIConfirmationHandler? = null
-    fun handleMetadata(tx: Transaction?) {
+    private fun handleMetadata(tx: Transaction?) {
         metadataHandler.post {
             transactionMetadataProvider!!.syncTransactionBlocking(
                 tx!!
@@ -299,7 +298,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 val insideTxExchangeRateTimeThreshold =
                     now - blockChainHeadTime < TX_EXCHANGE_RATE_TIME_THRESHOLD_MS
                 log.info(
-                    "onCoinsReceived: {}; rate: {}; replaying: {}; inside: {}, confid: {}; will update {}",
+                    "onCoinsReceived: {}; rate: {}; replaying: {}; inside: {}, config: {}; will update {}",
                     tx.txId,
                     tx.exchangeRate,
                     replaying,
@@ -444,7 +443,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         notification.setSmallIcon(R.drawable.ic_dash_d_white)
         notification.setTicker(tickerMsg)
         notification.setContentTitle(msg)
-        if (text.length > 0) notification.setContentText(text)
+        if (text.isNotEmpty()) {
+            notification.setContentText(text)
+        }
         notification.setContentIntent(
             PendingIntent.getActivity(
                 this,
@@ -563,7 +564,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         System.currentTimeMillis() - blockChain!!.chainHead.header.timeSeconds * 1000
                     //if the app was restoring a backup from a file or seed and block chain is nearly synced
                     //then turn off the restoring indicator
-                    if (timeAgo < DateUtils.DAY_IN_MILLIS) config!!.isRestoringBackup = false
+                    if (timeAgo < DateUtils.DAY_IN_MILLIS) {
+                        config!!.isRestoringBackup = false
+                    }
                 }
                 // this method is always called after progress or doneDownload
                 updateBlockchainState()
@@ -775,7 +778,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                     org.bitcoinj.core.Context.get().masternodeListManager.listAtChainTip
                                 val discovery = MasternodePeerDiscovery(mnlist)
                                 peers.addAll(
-                                    Arrays.asList(
+                                    listOf(
                                         *discovery.getPeers(
                                             services,
                                             timeoutValue,
@@ -799,7 +802,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                         Constants.NETWORK_PARAMETERS.port
                                     )
                                     peers.addAll(
-                                        Arrays.asList(
+                                        listOf(
                                             *discovery.getPeers(
                                                 services,
                                                 timeoutValue,
@@ -817,7 +820,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                             Constants.NETWORK_PARAMETERS.port
                                         )
                                         peers.addAll(
-                                            Arrays.asList(
+                                            listOf(
                                                 *discoveryEvo.getPeers(
                                                     services,
                                                     timeoutValue,
@@ -836,7 +839,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                 if (Constants.NETWORK_PARAMETERS.addrSeeds != null) {
                                     log.info("Static DMN peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections")
                                     peers.addAll(
-                                        Arrays.asList(
+                                        listOf(
                                             *seedPeerDiscovery.getPeers(
                                                 services,
                                                 timeoutValue,
@@ -852,7 +855,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                 log.info("Masternode peer discovery returned less than 16 nodes.  Adding DMN peers to the list to increase connections")
                                 try {
                                     peers.addAll(
-                                        Arrays.asList(
+                                        listOf(
                                             *normalPeerDiscovery.getPeers(
                                                 services,
                                                 timeoutValue,
@@ -891,7 +894,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 peerGroup!!.startAsync()
                 peerGroup!!.startBlockChainDownload(blockchainDownloadListener)
                 platformSyncService!!.addPreBlockProgressListener(blockchainDownloadListener)
-            } else if (!impediments.isEmpty() && peerGroup != null) {
+            } else if (impediments.isNotEmpty() && peerGroup != null) {
                 blockchainStateDataProvider!!.setNetworkStatus(NetworkStatus.NOT_AVAILABLE)
                 application!!.wallet!!.context.close()
                 log.info("stopping peergroup")
@@ -956,7 +959,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // print
                 val builder = StringBuilder()
                 for (entry in activityHistory) {
-                    if (builder.length > 0) builder.append(", ")
+                    if (builder.isNotEmpty()) {
+                        builder.append(", ")
+                    }
                     builder.append(entry)
                 }
                 log.info(
@@ -1002,7 +1007,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     private val mBinder: IBinder = LocalBinder()
-    override fun onBind(intent: Intent): IBinder? {
+    override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)
         log.debug(".onBind()")
         return mBinder
@@ -1120,12 +1125,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val decimalFormat = DecimalFormat("0.000")
-        var statusStringId = R.string.error
-        when (mixingStatus) {
-            MixingStatus.MIXING -> statusStringId = R.string.coinjoin_mixing
-            MixingStatus.PAUSED -> statusStringId = R.string.coinjoin_paused
-            MixingStatus.FINISHED -> statusStringId = R.string.coinjoin_progress_finished
-            else -> {}
+        val statusStringId = when (mixingStatus) {
+            MixingStatus.MIXING -> R.string.coinjoin_mixing
+            MixingStatus.PAUSED -> R.string.coinjoin_paused
+            MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
+            else -> R.string.error
         }
         val message = getString(
             R.string.coinjoin_progress,
@@ -1460,7 +1464,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private fun registerCrowdNodeConfirmedAddressFilter() {
         val apiAddressStr = config!!.crowdNodeAccountAddress
         val primaryAddressStr = config!!.crowdNodePrimaryAddress
-        apiConfirmationHandler = if (!apiAddressStr.isEmpty() && !primaryAddressStr.isEmpty()) {
+        apiConfirmationHandler = if (apiAddressStr.isNotEmpty() && primaryAddressStr.isNotEmpty()) {
             val apiAddress = Address.fromBase58(
                 Constants.NETWORK_PARAMETERS,
                 apiAddressStr
@@ -1483,7 +1487,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     }
 
-    fun loadStream(filename: String?): InputStream? {
+    private fun loadStream(filename: String?): InputStream? {
         var stream: InputStream? = null
         try {
             stream = assets.open(filename!!)
