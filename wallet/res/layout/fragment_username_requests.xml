@@ -36,6 +36,7 @@
             app:contentScrim="@color/background_secondary"
             app:layout_scrollFlags="scroll|snap|exitUntilCollapsed"
             app:title="@string/username_voting"
+            app:maxLines="2"
             app:collapsedTitleTextColor="@color/content_primary"
             app:expandedTitleTextColor="@color/content_primary"
             app:expandedTitleTextAppearance="@style/Headline3"
@@ -46,7 +47,7 @@
 
             <View
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
+                android:layout_height="130dp"
                 app:layout_collapseMode="parallax" />
 
             <androidx.appcompat.widget.Toolbar
