@@ -39,8 +39,36 @@ class BroadcastUsernameVotesOperation(val application: Application) {
 
         private const val WORK_NAME = "BroadcastUsernameVotes.WORK#"
 
-        fun uniqueWorkName(usernames: String) = "$WORK_NAME$usernames-${System.currentTimeMillis()}"
+        fun uniqueWorkName(workId: String) = "$WORK_NAME$workId}"
 
+        // create a Flow that can be observed that does not use the Work Live data
+        fun operationStatus(
+            application: Application,
+            toUserId: String,
+            analytics: AnalyticsService
+        ): LiveData<Resource<WorkInfo>> {
+            val workManager: WorkManager = WorkManager.getInstance(application)
+            return workManager.getWorkInfosForUniqueWorkLiveData(uniqueWorkName(toUserId)).switchMap {
+                return@switchMap liveData {
+
+                    if (it.isNullOrEmpty()) {
+                        return@liveData
+                    }
+
+                    if (it.size > 1) {
+                        val e = RuntimeException("there should never be more than one unique work ${
+                            uniqueWorkName(
+                                toUserId
+                            )
+                        }")
+                        analytics.logError(e)
+                        throw e
+                    }
+                    emit(convertState(it.first()))
+                }
+            }
+        }
+        
         fun allOperationsStatus(application: Application): LiveData<MutableMap<String, Resource<WorkInfo>>> {
             val workManager: WorkManager = WorkManager.getInstance(application)
             return workManager.getWorkInfosByTagLiveData(BroadcastUsernameVotesWorker::class.qualifiedName!!).switchMap {
@@ -93,15 +121,9 @@ class BroadcastUsernameVotesOperation(val application: Application) {
         }
     }
 
-    private val workManager: WorkManager = WorkManager.getInstance(application)
-
-//    /**
-//     * Gets the list of all BroadcastUsernameVotesOperation WorkInfo's
-//     */
-//    val allOperationsLiveData = workManager.getWorkInfosByTagLiveData(BroadcastUsernameVotesWorker::class.qualifiedName!!)
-
     @SuppressLint("EnqueueWork")
     fun create(
+        workId: String,
         usernames: List<String>,
         normalizedLabels: List<String>,
         voteChoices: List<ResourceVoteChoice>,
@@ -128,7 +150,7 @@ class BroadcastUsernameVotesOperation(val application: Application) {
         log.info("creating BroadcastUsernameVotesOperation({}, {})", usernames, voteChoices)
         return WorkManager.getInstance(application)
             .beginUniqueWork(
-                uniqueWorkName(usernames.joinToString(",")),
+                uniqueWorkName(workId),
                 ExistingWorkPolicy.KEEP,
                 verifyIdentityWorker
             )
