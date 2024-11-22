@@ -42,7 +42,6 @@ class BroadcastUsernameVotesOperation(val application: Application) {
 
         fun uniqueWorkName(workId: String) = "$WORK_NAME$workId}"
 
-        // create a Flow that can be observed that does not use the Work Live data
         fun operationStatus(
             application: Application,
             toUserId: String,
