@@ -27,6 +27,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.security.SecurityGuard
 import org.bitcoinj.core.ECKey
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.slf4j.LoggerFactory
 

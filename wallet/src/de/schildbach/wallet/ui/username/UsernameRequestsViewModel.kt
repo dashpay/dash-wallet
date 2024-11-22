@@ -73,6 +73,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.sdk.platform.Names
+import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
 import java.util.UUID
 import javax.inject.Inject
@@ -658,10 +659,6 @@ class UsernameRequestsViewModel @Inject constructor(
                 InvalidKeyType.UNKNOWN
             }
         }
-    }
-
-    fun updateBroadcastVotesTimestamp() {
-        BroadcastUsernameVotesOperation.lastTimestamp = System.currentTimeMillis()
     }
 
     fun updateUsernameRequestsWithVotes() {
