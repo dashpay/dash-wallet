@@ -715,9 +715,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         packageInfoProvider!!.packageInfo
                     )
                 }
+                org.bitcoinj.core.Context.propagate(wallet.context)
                 wallet.context.initDashSync(getDir("masternode", MODE_PRIVATE).absolutePath)
                 log.info("starting peergroup")
-                org.bitcoinj.core.Context.propagate(wallet.context)
                 peerGroup = PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain)
                 if (Constants.SUPPORTS_PLATFORM) {
                     platformRepo!!.platform.setMasternodeListManager(application!!.wallet!!.context.masternodeListManager)
@@ -1094,6 +1094,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_LOW)
         intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK)
         registerReceiver(connectivityReceiver, intentFilter) // implicitly start PeerGroup
+        org.bitcoinj.core.Context.propagate(application!!.wallet!!.context)
         application!!.wallet!!.addCoinsReceivedEventListener(
             Threading.SAME_THREAD,
             walletEventListener
@@ -1163,6 +1164,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         super.onStartCommand(intent, flags, startId)
         serviceScope.launch {
             if (intent != null) {
+                org.bitcoinj.core.Context.propagate(application!!.wallet!!.context)
                 //Restart service as a Foreground Service if it's synchronizing the blockchain
                 val extras = intent.extras
                 if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
