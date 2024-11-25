@@ -124,39 +124,20 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
             // update local database
             analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_SUCCESS, mapOf())
             val arrayOfnames: Array<String> = votingResults.map {
-                val item = ((it.second?.resourceVote?.votePoll as? ContestedDocumentResourceVotePoll)?.indexValues?.get(1) ?: "null")
-                when (item) {
-                    is PlatformValue -> {
-                        when (item.tag) {
-                            PlatformValue.Tag.Text -> item.text
-                            else -> item.toString()
-                        }
-                    }
-                    is String -> item
-                    else -> item.toString()
-                }
+                ((it.second?.resourceVote?.votePoll as? ContestedDocumentResourceVotePoll)?.indexValues?.get(1) ?: "null")
             }.toSet().toTypedArray()
             val votes = hashMapOf<String, UsernameVote>()
             votingResults.forEach {
                 when (val votePoll = it.second?.resourceVote?.votePoll as? ContestedDocumentResourceVotePoll) {
                     is ContestedDocumentResourceVotePoll -> {
-                        val normalizedLabel = when (val item = votePoll?.indexValues?.get(1)) {
-                            is PlatformValue -> {
-                                when (item.tag) {
-                                    PlatformValue.Tag.Text -> item.text
-                                    else -> null
-                                }
-                            }
-                            is String -> item
-                            else -> null
-                        }
+                        val normalizedLabel = votePoll.indexValues[1]
                         val identity = when (it.first) {
                             is TowardsIdentity -> {
                                 (it.first as TowardsIdentity).identifier
                             }
                             else -> null
                         }
-                        votes[normalizedLabel!!] = UsernameVote(normalizedLabel, identity.toString(), it.first)
+                        votes[normalizedLabel] = UsernameVote(normalizedLabel, identity.toString(), it.first)
                     }
                 }
             }
