@@ -75,6 +75,7 @@ import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
+import java.nio.ByteBuffer
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.min
@@ -450,6 +451,15 @@ class UsernameRequestsViewModel @Inject constructor(
 
     private var nameCount = 1
     // TODO: remove this when development is completed.
+
+    private fun randomBytes(): ByteArray {
+        val uuid = UUID.randomUUID()
+        val byteBuffer = ByteBuffer.allocate(16)
+        byteBuffer.putLong(uuid.mostSignificantBits)
+        byteBuffer.putLong(uuid.leastSignificantBits)
+        return Sha256Hash.hash(byteBuffer.array())
+    }
+
     fun prepopulateList() {
         nameCount++
         val now = System.currentTimeMillis()// / 1000
@@ -458,13 +468,14 @@ class UsernameRequestsViewModel @Inject constructor(
 
         viewModelScope.launch {
             var name = names[Random.nextInt(0, min(names.size, nameCount))]
+            var identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     "https://www.figma.com/file/hh5juOSdGnNNPijJG1NGTi/DashPay%E3%83%BBIn-" +
                         "process%E3%83%BBAndroid?type=design&node-id=752-11735&mode=design&t=zasn6AKlSwb5NuYS-0",
                     Random.nextInt(0, 15),
@@ -473,13 +484,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -487,13 +499,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -501,12 +514,13 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),                    Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     "https://twitter.com/ProductHunt/",
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -514,12 +528,13 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),                    Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -527,13 +542,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -541,13 +557,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 2),
