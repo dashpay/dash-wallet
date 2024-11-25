@@ -157,4 +157,8 @@ abstract class AppModule {
     @Binds
     @Singleton
     abstract fun bindZenLedgerClient(zenLedgerClient: ZenLedgerClient): ZenLedgerApi
+
+    @Singleton
+    @Binds
+    abstract fun provideDashSystemService(dashSystemService: DashSystemServiceImpl): DashSystemService
 }

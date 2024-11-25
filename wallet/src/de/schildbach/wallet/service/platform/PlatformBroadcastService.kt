@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.ECKey
@@ -58,6 +59,7 @@ interface PlatformBroadcastService {
 }
 
 class PlatformDocumentBroadcastService @Inject constructor(
+    val dashSystemService: DashSystemService,
     val platform: PlatformService,
     val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
@@ -144,7 +146,7 @@ class PlatformDocumentBroadcastService @Inject constructor(
             val masternodeKey = ECKey.fromPrivate(masternodeKeyBytes)
             val votingKeyId = KeyId.fromBytes(masternodeKey.pubKeyHash)
             val boas = ByteArrayOutputStream(32 + 20)
-            val masternodes = walletDataProvider.wallet!!.context.masternodeListManager.masternodeList.getMasternodesByVotingKey(votingKeyId)
+            val masternodes = dashSystemService.system.masternodeListManager.masternodeList.getMasternodesByVotingKey(votingKeyId)
             masternodes.forEach { masternode ->
                 try {
                     boas.write(masternode.proTxHash.bytes)

@@ -528,7 +528,8 @@ class MainViewModel @Inject constructor(
                         walletData.transactionBag,
                         Constants.CONTEXT,
                         contact,
-                        metadata[it.transactions.first().txId]
+                        metadata[it.transactions.first().txId],
+                        chainLockBlockHeight = blockchainStateProvider.getState()?.chainlockHeight ?: 0
                     )
                 }
 

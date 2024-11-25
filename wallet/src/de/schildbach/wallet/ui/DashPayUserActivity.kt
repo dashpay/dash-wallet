@@ -71,6 +71,7 @@ class DashPayUserActivity : LockScreenActivity() {
             { searchResult, position -> onIgnoreRequest(searchResult, position) },
             { onUserAlertDismiss(it) },
             { onItemClicked(it) },
+            viewModel.getChainLockBlockHeight(),
             true,
             showContactHistoryDisclaimer
         )

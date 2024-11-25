@@ -28,6 +28,7 @@ import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.NotificationsForUserLiveData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -45,7 +46,8 @@ class DashPayUserActivityViewModel @Inject constructor(
     application: Application,
     val platformSyncService: PlatformSyncService,
     private val analytics: AnalyticsService,
-    val platformRepo: PlatformRepo
+    val platformRepo: PlatformRepo,
+    private val dashSystemService: DashSystemService
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -104,5 +106,9 @@ class DashPayUserActivityViewModel @Inject constructor(
 
     suspend fun hasEnoughCredits(): CreditBalanceInfo {
         return platformRepo.getIdentityBalance()
+    }
+
+    fun getChainLockBlockHeight(): Int {
+        return dashSystemService.system.chainLockHandler.bestChainLockBlockHeight
     }
 }

@@ -64,12 +64,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Block
 import org.bitcoinj.core.BlockChain
 import org.bitcoinj.core.CheckpointManager
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.FilteredBlock
+import org.bitcoinj.core.MasternodeSync
 import org.bitcoinj.core.Peer
 import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
@@ -217,6 +219,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @JvmField
     @Inject
     var blockchainStateDataProvider: BlockchainStateDataProvider? = null
+
+    @Inject
+    lateinit var dashSystemService: DashSystemService
 
     @JvmField
     @Inject
@@ -531,8 +536,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     }
 
-    private abstract inner class MyDownloadProgressTracker : DownloadProgressTracker(),
-        OnPreBlockProgressListener
+    private abstract inner class MyDownloadProgressTracker
+        : DownloadProgressTracker(Constants.SYNC_FLAGS.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING)), OnPreBlockProgressListener
 
     private val blockchainDownloadListener: MyDownloadProgressTracker =
         object : MyDownloadProgressTracker() {
@@ -697,6 +702,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         @SuppressLint("Wakelock")
         private fun check() {
+            log.info("check()")
             val wallet = application!!.wallet
             if (impediments.isEmpty() && peerGroup == null) {
                 log.debug("acquiring wakelock")
@@ -716,16 +722,16 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     )
                 }
                 org.bitcoinj.core.Context.propagate(wallet.context)
-                wallet.context.initDashSync(getDir("masternode", MODE_PRIVATE).absolutePath)
+                dashSystemService.system.initDashSync(getDir("masternode", MODE_PRIVATE).absolutePath)
                 log.info("starting peergroup")
                 peerGroup = PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain)
                 if (Constants.SUPPORTS_PLATFORM) {
-                    platformRepo!!.platform.setMasternodeListManager(application!!.wallet!!.context.masternodeListManager)
+                    platformRepo!!.platform.setMasternodeListManager(dashSystemService.system.masternodeListManager)
                     platformSyncService!!.resume()
                 }
                 if (resetMNListsOnPeerGroupStart) {
                     resetMNListsOnPeerGroupStart = false
-                    application!!.wallet!!.context.masternodeListManager.setBootstrap(
+                    dashSystemService.system.masternodeListManager.setBootstrap(
                         mnlistinfoBootStrapStream,
                         qrinfoBootStrapStream,
                         SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION
@@ -774,8 +780,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         if (!connectTrustedPeerOnly) {
                             // First use the masternode list that is included
                             try {
-                                val mnlist =
-                                    org.bitcoinj.core.Context.get().masternodeListManager.listAtChainTip
+                                val mnlist = dashSystemService.system.masternodeListManager.listAtChainTip
                                 val discovery = MasternodePeerDiscovery(mnlist)
                                 peers.addAll(
                                     listOf(
@@ -896,7 +901,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 platformSyncService!!.addPreBlockProgressListener(blockchainDownloadListener)
             } else if (impediments.isNotEmpty() && peerGroup != null) {
                 blockchainStateDataProvider!!.setNetworkStatus(NetworkStatus.NOT_AVAILABLE)
-                application!!.wallet!!.context.close()
+                dashSystemService.system.close()
                 log.info("stopping peergroup")
                 peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
                 peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
@@ -1020,7 +1025,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onCreate() {
         serviceCreatedAt = System.currentTimeMillis()
-        log.debug(".onCreate()")
+        log.info(".onCreate()")
         super.onCreate()
         nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val lockName = "$packageName blockchain sync"
@@ -1151,7 +1156,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     private fun resetMNLists(requestFreshList: Boolean) {
         try {
-            val manager = application!!.wallet!!.context.masternodeListManager
+            val manager = dashSystemService.system.masternodeListManager
             manager?.resetMNList(true, requestFreshList)
         } catch (x: RuntimeException) {
             // swallow this exception.  It is thrown when there is not a bootstrap file
@@ -1161,6 +1166,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        log.info(".onStartCommand($intent)")
         super.onStartCommand(intent, flags, startId)
         serviceScope.launch {
             if (intent != null) {
@@ -1282,7 +1288,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 platformSyncService!!.shutdown()
                 if (peerGroup != null) {
                     org.bitcoinj.core.Context.propagate(application!!.wallet!!.context)
-                    application!!.wallet!!.context.close()
+                    dashSystemService.system.close()
                     peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
                     peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
                     peerGroup!!.removeWallet(application!!.wallet)
