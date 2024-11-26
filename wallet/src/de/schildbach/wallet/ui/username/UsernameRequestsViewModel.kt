@@ -189,7 +189,7 @@ class UsernameRequestsViewModel @Inject constructor(
                                     }?.username?.lowercase() ?: list[0].username
                                 }
                             }
-                            UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(normalizedUsername), votes)
+                            UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(prettyUsername), votes)
                         }.filterNot { it.requests.isEmpty() }
                 }
         }.onEach { requests -> _uiState.update { it.copy(filteredUsernameRequests = requests) } }
