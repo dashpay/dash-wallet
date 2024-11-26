@@ -323,6 +323,7 @@
     <string name="about_source_title">Source code</string>
     <string name="about_category_credits">This app is using…</string>
     <string name="about_credits_bitcoinj_title">dashj %s, a Dash protocol implementation</string>
+    <string name="about_credits_platform_title" translatable="false">Platform %s</string>
     <string name="about_credits_zxing_title">ZXing, a QR-code processing library</string>
     <string name="about_credits_icon_title">This app is using an icon by \'bitboy\'</string>
     <string name="about_credits_scrypt_title">Scrypt, implemented by Will Glozer and Colin Percival</string>

@@ -232,6 +232,7 @@ android {
         } else if(System.getenv("SUPPORT_EMAIL") != null) {
             buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv("SUPPORT_EMAIL")}\"")
         }
+        buildConfigField("String", "DPP_VERSION", "\"$dppVersion\"")
     }
 
     buildTypes {
