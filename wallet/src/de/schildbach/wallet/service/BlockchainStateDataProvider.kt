@@ -198,13 +198,13 @@ class BlockchainStateDataProvider @Inject constructor(
             val mnlist = masternodeListManager.listAtChainTip
             if (mnlist.height != 0L) {
                 var prevBlock = try {
-                    mnlist.storedBlock.getPrev(blockChain.blockStore)
+                    blockChain.blockStore.get(mnlist.height.toInt() - 1)
                 } catch (e: BlockStoreException) {
                     null
                 }
-                // if we cannot retrieve the previous block, use the mnlist tip
+                // if we cannot retrieve the previous block, use the chain tip
                 if (prevBlock == null) {
-                    prevBlock = mnlist.storedBlock
+                    prevBlock = blockChain.chainHead
                 }
 
                 val validMNsCount = if (mnlist.size() != 0) {
@@ -220,7 +220,7 @@ class BlockchainStateDataProvider @Inject constructor(
                 if (prevBlock != null) {
                     val apy = getMasternodeAPY(
                         walletDataProvider.wallet!!.params,
-                        mnlist.storedBlock.height,
+                        mnlist.height.toInt(),
                         prevBlock.header.difficultyTarget,
                         validMNsCount
                     )
