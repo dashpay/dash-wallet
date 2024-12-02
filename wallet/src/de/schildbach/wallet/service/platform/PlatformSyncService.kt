@@ -1068,17 +1068,7 @@ class PlatformSynchronizationService @Inject constructor(
                 try {
                     val name :String? = when (votePoll) {
                         is ContestedDocumentResourceVotePoll -> {
-                            when (votePoll.indexValues[1]) {
-                                is String -> votePoll.indexValues[1] as String
-                                is PlatformValue -> {
-                                    val value = votePoll.indexValues[1] as PlatformValue
-                                    when (value.tag) {
-                                        PlatformValue.Tag.Text -> value.text
-                                        else -> null
-                                    }
-                                }
-                                else -> null
-                            }
+                            votePoll.indexValues[1]
                         }
                         else -> null
                     }
@@ -1090,7 +1080,7 @@ class PlatformSynchronizationService @Inject constructor(
                         voteContender.map.forEach { (identifier, contender) ->
 
                             if (voteContender.winner.isEmpty) {
-                                val contestedDocument = contender.seralizedDocument?.let { serialized ->
+                                val contestedDocument = contender.serializedDocument?.let { serialized ->
                                     DomainDocument(
                                         platform.platform.names.deserialize(serialized)
                                     )
@@ -1169,7 +1159,7 @@ class PlatformSynchronizationService @Inject constructor(
             val voteContender = platformRepo.getVoteContenders(name)
 
             voteContender.map.forEach { (identifier, contender) ->
-                val contestedDocument = contender.seralizedDocument?.let { serialized ->
+                val contestedDocument = contender.serializedDocument?.let { serialized ->
                     DomainDocument(
                         platform.platform.names.deserialize(serialized)
                     )

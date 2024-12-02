@@ -294,7 +294,7 @@
     <string name="about_review_and_rate">Review and rate the app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">This is an open source app forked from Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
+    <string name="about_copyright">Copyright © 2024 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_github_link" translatable="false">https://github.com/dashevo/dash-wallet</string>
     <string name="about_version_name">DashPay Wallet %s</string>

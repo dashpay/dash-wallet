@@ -88,7 +88,7 @@ Username</b></string>
     <string name="dashpay_topup_fee">Commissione di ricarica</string>
     <string name="search_user_find_a_user">Trova un utente su Dash Network</string>
     <string name="search_for_a_user">Cerca un utente nel network di Dash</string>
-    <string name="search_user_input_placeholder">inserisci il nome utente per effettuare la ricerca qui</string>
+    <string name="search_user_input_placeholder">Cerca nome utente</string>
     <string name="add_new_contact">Aggiungi un nuovo contatto</string>
     <string name="send_contact_request">Invia richiesta di contatto</string>
     <string name="sending_contact_request">Invio della richiesta di Contatto</string>
@@ -446,4 +446,4 @@ Username</b></string>
     <string name="mix_dash_mix">Mescolare Bilancio</string>
     <string name="mix_dash_title">Mescola i tuoi Dash</string>
     <string name="mix_dash_message">Per evitare che altre persone vedano a chi effettui i pagamenti, ti consigliamo di mescolare il tuo saldo prima di creare il tuo nome utente.</string>
-</resources>
+    </resources>

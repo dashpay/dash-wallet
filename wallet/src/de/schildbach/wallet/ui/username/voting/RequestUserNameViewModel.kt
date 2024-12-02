@@ -303,7 +303,7 @@ class RequestUserNameViewModel @Inject constructor(
                     var maxApprovalVotes = 0
                     firstCreatedAt = try {
                         contenders.map.values.minOf { contender ->
-                            val document = contender.seralizedDocument?.let {
+                            val document = contender.serializedDocument?.let {
                                 DomainDocument(platformRepo.platform.names.deserialize(it))
                             }
                             maxApprovalVotes = max(contender.votes, maxApprovalVotes)

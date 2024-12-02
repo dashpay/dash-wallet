@@ -87,7 +87,7 @@
     <string name="dashpay_topup_fee">کارمزد اضافه</string>
     <string name="search_user_find_a_user">یک کاربر را در شبکه دش بیابید</string>
     <string name="search_for_a_user">جستجو برای یک کاربر در شبکه دش</string>
-    <string name="search_user_input_placeholder">نام کاربری را برای جستجو اینجا وارد کنید</string>
+    <string name="search_user_input_placeholder">جستجوی نام کاربری</string>
     <string name="add_new_contact">یک مخاطب جدید اضافه کنید</string>
     <string name="send_contact_request">درخواست تماس به مخاطب بفرستید</string>
     <string name="sending_contact_request">در حال ارسال درخواست تماس به مخاطب</string>
@@ -268,6 +268,8 @@
     <string name="usernames_blocked_title">برخی از نام‌های کاربری ممکن است بلاک شوند</string>
     <string name="usernames_blocked_subtitle">در صورتی که درصدی شمخص از شبکه به این نتیجه برسند که نام کاربری‌تان نامناسب است، می‌توانند آن را بلاک کنند.</string>
     <string name="username_voting">رای‌گیری نام کاربری</string>
+    <string name="username_voting_subtitle">به عنوان صاحب مسترنود، می‌توانید در رأی‌گیری برای تائید نام‌های کاربری، پیش از اینکه روی شبکه ایجاد شوند، شرکت کنید. </string>
+    <string name="username_voting_subtitle_two">می‌توانید مانع از ایجاد نام‌های کاربری که از نظرتان نامناسب هستند شوید. </string>
     <string name="voting_duplicates_only_title">تنظیمات پیش‌فرض فیلتر</string>
     <string name="voting_duplicates_only_message">فیلتر پیشفرض فقط نام‌های کاربری تکراری که رای ندارند را نشان می‌دهد، ولی می‌توانید همه با تغییر فیلتر، همه نام‌های کاربری مورد مناقشه را ببینید. </string>
     <string name="all">همه</string>
@@ -294,6 +296,15 @@
         <item>مواردی که تائيد نکردم</item>
         <item>دارای رای‌های مسدود است</item>
     </string-array>
+    <string name="unblock_button">آنبلاک</string>
+    <plurals name="block_vote_button">
+        <item quantity="one">بلاک‌شده‌</item>
+        <item quantity="other">بلاک‌شده‌</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="one">تأئید‌شده‌</item>
+        <item quantity="other">تأئید‌شده‌</item>
+    </plurals>
     <string name="block_vote_count">%dبلوک</string>
     <string name="request_your_username">نام کاربری‌تان را ایجاد کنید</string>
     <string name="request_your_hint">لطفاً دقت داشته باشید که نمی‌توانید بعدا آن را تغییر دهید</string>
@@ -313,6 +324,7 @@
     <string name="request_details">جزئیات درخواست</string>
     <string name="request_details_subtitle">متن زیر را بخوانید تا مالکیت این نام کاربری را تائید کنید.</string>
     <string name="vote_to_approve">رای‌گیری برای تائید</string>
+    <string name="vote_to_block">رأی‌دهی برای بلوکه کردن</string>
     <string name="identity">هویت</string>
     <string name="results">نتایج</string>
     <string name="link">لینک</string>
@@ -330,11 +342,32 @@
     <string name="voting_key_title">کلید رای‌گیری‌تان را وارد کنید</string>
     <string name="voting_key_hint">کلید خصوصی رای‌دهی مسترنود</string>
     <string name="voting_key_input_error">کلید اشتباه وارد کردید</string>
+    <string name="voting_key_input_not_active_error">یک کلید را وارد کردید که به هیچ مسترنود فعالی مربوط نیست.</string>
+    <string name="voting_key_input_already_present">قبلاً کلید این مسترنود را وارد کردید</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">کلیدی که مربوط به تست‌نت است را وارد کردید، اما اینجا مین‌نت است. کلیدتان باید به این شکل باشد: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">کلیدی که مربوط به مین‌نت است را وارد کردید، اما اینجا تست نت است. کلیدتان باید به این شکل باشد: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">به جای وارد کردن کلید خصوصی رأی‌گیری مسترنود، کلید آدرس را وارد کردید. چیزی که وارد می‌کنید باید در فرمت WIF باشد (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">کلید را در فرمت hex وارد کردید، اما باید در فرمت WIF (%s) باشد.</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">کلید را در فرمت hex وارد کردید، اما باید در فرمت WIF (%s) باشد.</string>
+    <string name="voting_key_input_invalid_private_key_too_short">کلید خصوصی که وارد کردید بیش از حد کوتاه است. یک مثال (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">کلید خصوصی که وارد کردید دارای چند کاراکتر اشتباه است. یک مثال (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">کلیدی که وارد کردید دارای یک کاراکتر اشتباه است. یک مثال (%s)</string>
+
     <string name="voting_key_add">کلیدهای رای‌دهی‌تان را اضافه کنید</string>
     <string name="voting_key_add_subtitle">آی‌پی‌ آدرس‌(های) زیر مربوط به این کیف پول هستند</string>
     <string name="masternode_ip">آی‌پی‌ آدرس مسترنود</string>
     <string name="multiple_votes_cast">%dرای در نظر گرفته می شود چون چند کلید رای‌دهی در کیف پول‌تان دارید</string>
     <string name="add_masternode_key">اضافه کردن کلید رای‌دهی مسترنود</string>
+    <string name="dont_ask_again">دوباره از من نپرس</string>
+    <string name="vote_submitting">ثبت رأی شما برای نام کاربری %s</string>
+    <string name="vote_submitted">برای نام کاربری %s رأی دادید</string>
+    <string name="cancel_submitting">لغو رأی شما برای نام کاربری %s</string>
+    <string name="cancel_submitted">لغو رأی برای نام کاربری %s</string>
+    <string name="block_submitting">بلوکه کردن نام کاربری %s</string>
+    <string name="block_submitted">نام کاربری %s را بلوکه کردید</string>
+    <string name="vote_submitted_error">خطا در رأی‌دهی به نام کاربری%s</string>
+    <string name="cancel_submitted_error">خطا در لغو رأی‌دهی به نام کاربری %s</string>
+    <string name="block_submitted_error">خطا در بلوکه کردن نام کاربری %s</string>
     <string name="quick_vote">رای‌دهی سریع</string>
     <string name="quick_vote_subtitle">با زدن دگمه «رای‌دهی برای همه»، به صورت خودکار به همه نام‌های کاربری فیلتر شده (%d) که ابتدا ثبت شدند رای می‌دهید</string>
     <string name="vote_for_all">رای‌دهی برای همه</string>

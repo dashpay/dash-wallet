@@ -670,7 +670,7 @@ class CreateIdentityService : LifecycleService() {
                     ?: error("${blockchainIdentityData.username} does not have ${blockchainIdentity.uniqueIdentifier} as a contender")
 
                 val document = DomainDocument(
-                    platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument!!)
+                    platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
                 )
 
                 usernameRequestDao.insert(
@@ -691,7 +691,7 @@ class CreateIdentityService : LifecycleService() {
 
                 // determine when voting started by finding the minimum timestamp
                 val earliestCreatedAt = contenders.map.values.minOf {
-                    val document = platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument!!)
+                    val document = platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
                     document.createdAt ?: 0
                 }
 
@@ -904,7 +904,7 @@ class CreateIdentityService : LifecycleService() {
                             var label = name
                             if (winner.isEmpty) {
                                 val contestedDocument = DomainDocument(
-                                    platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument!!)
+                                    platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
                                 )
                                 blockchainIdentity.currentUsername = contestedDocument.label
                                 votingStartedAt = contestedDocument.createdAt!!
@@ -946,7 +946,7 @@ class CreateIdentityService : LifecycleService() {
 
                             // determine when voting started by finding the minimum timestamp
                             val earliestCreatedAt = voteContenders.map.values.minOf {
-                                val document = platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument!!)
+                                val document = platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
                                 document.createdAt ?: 0
                             }
 
@@ -977,6 +977,14 @@ class CreateIdentityService : LifecycleService() {
 
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.VOTING)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            }
+
+            // At this point, let's see what has been recovered.  It is possible that only the identity was recovered.
+            // In this case, we should require that the user enters in a new username.
+            if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
+                blockchainIdentityData.creationState = CreationState.USERNAME_REGISTERING
+                blockchainIdentityData.restoring = false
+                error("missing domain document for ${blockchainIdentity.uniqueId}")
             }
 
             //
