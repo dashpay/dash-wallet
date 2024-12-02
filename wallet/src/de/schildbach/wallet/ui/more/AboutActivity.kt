@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.more
 import android.annotation.SuppressLint
 import android.content.*
 import android.content.Intent.ACTION_VIEW
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -48,6 +49,7 @@ import org.dash.wallet.features.exploredash.ExploreSyncWorker
 import org.slf4j.LoggerFactory
 import kotlin.math.pow
 import kotlin.math.sqrt
+
 
 @AndroidEntryPoint
 class AboutActivity : LockScreenActivity(), SensorEventListener {
@@ -79,7 +81,10 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
             R.string.about_credits_bitcoinj_title,
             VersionMessage.BITCOINJ_VERSION
         )
-
+        binding.platformVersionName.text = getString(
+            R.string.about_credits_platform_title,
+            BuildConfig.DPP_VERSION
+        )
         binding.githubLink.setOnClickListener {
             val i = Intent(ACTION_VIEW)
             i.data = Uri.parse(binding.githubLink.text.toString())

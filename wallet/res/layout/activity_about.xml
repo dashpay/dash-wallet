@@ -62,6 +62,14 @@
                 android:layout_marginHorizontal="20dp"
                 tools:text="DashJ 21.1.0" />
 
+            <TextView
+                android:id="@+id/platform_version_name"
+                style="@style/Body2.Tertiary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                tools:text="Platform 1.5.1" />
+
             <LinearLayout
                 android:id="@+id/about_content"
                 style="@style/ViewRaised"

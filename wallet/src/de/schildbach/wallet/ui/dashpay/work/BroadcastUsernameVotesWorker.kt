@@ -146,9 +146,6 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                         }
                         votes[normalizedLabel] = UsernameVote(normalizedLabel, identity.toString(), it.first)
                     }
-                    else -> {
-                        // skip any other type of VotePoll
-                    }
                 }
             }
             votes.forEach { (_, usernameVote) ->

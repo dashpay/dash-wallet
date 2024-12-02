@@ -979,6 +979,14 @@ class CreateIdentityService : LifecycleService() {
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             }
 
+            // At this point, let's see what has been recovered.  It is possible that only the identity was recovered.
+            // In this case, we should require that the user enters in a new username.
+            if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
+                blockchainIdentityData.creationState = CreationState.USERNAME_REGISTERING
+                blockchainIdentityData.restoring = false
+                error("missing domain document for ${blockchainIdentity.uniqueId}")
+            }
+
             //
             // Step 6: Find the profile
             //
