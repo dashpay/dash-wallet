@@ -4,7 +4,7 @@
     <string name="choose_your_username">Выберите <b>Имя пользователя
 Dash</b></string>
     <string name="identity_min_3_chars">От 3 до 23 символов</string>
-    <string name="identity_alphanum_only">Только буквы, цифры и дефисы</string>
+    <string name="identity_alphanum_only">Только латинские буквы, цифры и дефисы</string>
     <string name="identity_hyphen_rule">Должно начинаться и заканчиваться на цифру или букву</string>
     <string name="identity_username_validating">Подтверждение имени пользователя...</string>
     <string name="identity_username_available">Имя пользователя доступно</string>
@@ -176,7 +176,7 @@ Dash</b></string>
     <string name="upload_image_message">Изображение загружается в сеть</string>
     <string name="upload_image_please_wait">Пожалуйста, подождите</string>
     <string name="upload_image_error_message">Не удалось загрузить изображение. Пожалуйста, попробуйте ещё раз.</string>
-    <string name="upload_image_upload_error">Ошибка при обновлении</string>
+    <string name="upload_image_upload_error">Ошибка при загрузке</string>
 
     <string name="edit_profile_google_drive">Google Drive</string>
     <string name="edit_profile_imgur">Imgur</string>
@@ -209,10 +209,10 @@ Dash</b></string>
 
     <string name="join_dashpay_subtitle">Создайте имя пользователя, добавьте друзей…</string>
     <string name="join_dashpay_more_subtitle">Создайте имя пользователя, найдите друзей и добавьте их в список контактов</string>
-    <string name="join">Войти</string>
+    <string name="join">Присоединиться</string>
 
     <string name="more_suggestions">Больше предложений</string>
-    <string name="users_that_matches">Пользователи, похожие на</string>
+    <string name="users_that_matches">Пользователи, по вашему запросу</string>
     <string name="not_in_your_contacts">которых ещё нет в вашем списке контактов</string>
     <string name="no_matching_contacts">В вашем списке контактов нет похожих пользователей</string>
     <string name="suggestions_empty_result_part_1">Пользователя с именем</string>
