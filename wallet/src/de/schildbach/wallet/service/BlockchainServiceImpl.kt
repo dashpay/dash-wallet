@@ -60,11 +60,11 @@ import de.schildbach.wallet.util.BlockchainStateUtils
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Block
 import org.bitcoinj.core.BlockChain
@@ -161,6 +161,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private val TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(180)
         private val log = LoggerFactory.getLogger(BlockchainServiceImpl::class.java)
         const val START_AS_FOREGROUND_EXTRA = "start_as_foreground"
+        var cleanupDeferred: CompletableDeferred<Unit>? = null
     }
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
@@ -1276,6 +1277,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     override fun onDestroy() {
         log.info(".onDestroy()")
         super.onDestroy()
+        cleanupDeferred = CompletableDeferred()
         serviceScope.launch {
             try {
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
@@ -1333,6 +1335,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             } finally {
                 log.info("serviceJob cancelled after " + (System.currentTimeMillis() - serviceCreatedAt) / 1000 / 60 + " minutes")
                 serviceJob.cancel()
+                cleanupDeferred?.complete(Unit)
             }
         }
         log.info("service was up for " + (System.currentTimeMillis() - serviceCreatedAt) / 1000 / 60 + " minutes")
