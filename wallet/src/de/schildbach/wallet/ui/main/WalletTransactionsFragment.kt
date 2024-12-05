@@ -41,6 +41,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
@@ -52,13 +53,16 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.GiftCardDetailsDialog
+import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
     companion object {
         private const val HEADER_ITEM_TAG = "header"
+        private val log = LoggerFactory.getLogger(WalletTransactionsFragment::class.java)
     }
 
     private val viewModel by activityViewModels<MainViewModel>()
@@ -154,7 +158,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
             binding.loading.isVisible = false
-
+            val watch = Stopwatch.createStarted()
+            log.info("observing transaction list updated: {} items", transactionViews.size)
             if (transactionViews.isEmpty()) {
                 showEmptyView()
             } else {
@@ -169,6 +174,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 adapter.submitList(groupedByDate)
                 showTransactionList()
             }
+            log.info("refreshTransaction list: {} ms, {}", watch.elapsed(TimeUnit.MILLISECONDS), watch)
         }
 
         viewModel.blockchainIdentity.observe(viewLifecycleOwner) { identity ->

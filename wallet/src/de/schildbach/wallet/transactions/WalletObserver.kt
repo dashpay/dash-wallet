@@ -19,8 +19,10 @@ package de.schildbach.wallet.transactions
 
 import android.os.Looper
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.listeners.TransactionConfidenceEventListener
@@ -30,8 +32,12 @@ import org.bitcoinj.wallet.listeners.WalletChangeEventListener
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener
 import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener
 import org.dash.wallet.common.transactions.filters.TransactionFilter
+import org.slf4j.LoggerFactory
 
 class WalletObserver(private val wallet: Wallet) {
+    companion object {
+        val log = LoggerFactory.getLogger(WalletObserver::class.java)
+    }
     fun observeWalletChanged(): Flow<Unit> = callbackFlow {
         val walletChangeListener = WalletChangeEventListener {
             trySend(Unit)
@@ -48,46 +54,85 @@ class WalletObserver(private val wallet: Wallet) {
         observeTxConfidence: Boolean,
         vararg filters: TransactionFilter
     ): Flow<Transaction> = callbackFlow {
-        Threading.USER_THREAD.execute {
-            Context.propagate(wallet.context)
-
-            if (Looper.myLooper() == null) {
-                Looper.prepare()
-            }
-        }
-
-        val coinsSentListener = WalletCoinsSentEventListener { _, tx: Transaction?, _, _ ->
-            if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
-                trySend(tx)
-            }
-        }
-        wallet.addCoinsSentEventListener(Threading.USER_THREAD, coinsSentListener)
-
-        val coinsReceivedListener = WalletCoinsReceivedEventListener { _, tx: Transaction?, _, _ ->
-            if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
-                trySend(tx)
-            }
-        }
-        wallet.addCoinsReceivedEventListener(Threading.USER_THREAD, coinsReceivedListener)
-
-        var transactionConfidenceChangedListener: TransactionConfidenceEventListener? = null
-
-        if (observeTxConfidence) {
-            transactionConfidenceChangedListener = TransactionConfidenceEventListener { _, tx: Transaction? ->
-                if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
-                    trySend(tx)
+        log.info("observing transactions start {}", this@WalletObserver)
+        try {
+            Threading.USER_THREAD.execute {
+                try {
+                    Context.propagate(wallet.context)
+                    if (Looper.myLooper() == null) {
+                        Looper.prepare()
+                    }
+                } catch (e: Exception) {
+                    log.error("Error during threading setup", e)
+                    close(e) // Propagate error to Flow
                 }
             }
-            wallet.addTransactionConfidenceEventListener(Threading.USER_THREAD, transactionConfidenceChangedListener)
-        }
 
-        awaitClose {
-            wallet.removeCoinsSentEventListener(coinsSentListener)
-            wallet.removeCoinsReceivedEventListener(coinsReceivedListener)
+            val coinsSentListener = WalletCoinsSentEventListener { _, tx: Transaction?, _, _ ->
+                try {
+                    if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
+                        log.info("observing transaction sent: {} [=====] {}", tx.txId, this@WalletObserver)
+                        trySend(tx).onFailure {
+                            log.error("Failed to send transaction sent event", it)
+                        }
+                    }
+                } catch (e: Exception) {
+                    log.error("Error in coinsSentListener", e)
+                    close(e)
+                }
+            }
+
+            val coinsReceivedListener = WalletCoinsReceivedEventListener { _, tx: Transaction?, _, _ ->
+                try {
+                    if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
+                        log.info("observing transaction received: {} [=====] {}", tx.txId, this@WalletObserver)
+                        trySend(tx).onFailure {
+                            log.error("Failed to send transaction received event", it)
+                        }
+                    }
+                } catch (e: Exception) {
+                    log.error("Error in coinsReceivedListener", e)
+                    close(e)
+                }
+            }
+
+            var transactionConfidenceChangedListener: TransactionConfidenceEventListener? = null
 
             if (observeTxConfidence) {
-                wallet.removeTransactionConfidenceEventListener(transactionConfidenceChangedListener)
+                transactionConfidenceChangedListener = TransactionConfidenceEventListener { _, tx: Transaction? ->
+                    try {
+                        if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
+                            log.info("observing transaction conf {} [=====] {}", tx.txId, this@WalletObserver)
+                            if (tx.getConfidence(wallet.context).depthInBlocks < 7) {
+                                trySend(tx).onFailure {
+                                    log.error("Failed to send transaction confidence event", it)
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        log.error("Error in transactionConfidenceChangedListener", e)
+                        close(e)
+                    }
+                }
+                wallet.addTransactionConfidenceEventListener(Threading.USER_THREAD, transactionConfidenceChangedListener)
             }
+
+            wallet.addCoinsSentEventListener(Threading.USER_THREAD, coinsSentListener)
+            wallet.addCoinsReceivedEventListener(Threading.USER_THREAD, coinsReceivedListener)
+
+            awaitClose {
+                log.info("observing transactions stop: {}", this@WalletObserver)
+                wallet.removeCoinsSentEventListener(coinsSentListener)
+                wallet.removeCoinsReceivedEventListener(coinsReceivedListener)
+                if (observeTxConfidence) {
+                    wallet.removeTransactionConfidenceEventListener(transactionConfidenceChangedListener)
+                }
+            }
+        } catch (e: Exception) {
+            log.error("Error setting up transaction observation", e)
+            close(e)
         }
+    }.catch { e ->
+        log.error("observing transactions error", e)
     }
 }

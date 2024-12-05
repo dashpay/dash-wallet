@@ -27,15 +27,32 @@ import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.transactions.TransactionComparator
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
+import org.slf4j.LoggerFactory
+
+class TransactionRowViewComparator(private val wallet: Wallet): Comparator<TransactionRowView> {
+    private val txComparator = TransactionComparator()
+
+    override fun compare(row1: TransactionRowView, row2: TransactionRowView): Int {
+        val tx1 = row1.txWrapper?.transactions?.last() ?: wallet.getTransaction(row1.txId)!!
+        val tx2 = row2.txWrapper?.transactions?.last() ?: wallet.getTransaction(row2.txId)!!
+        return txComparator.compare(
+            tx1,
+            tx2
+        )
+    }
+}
 
 data class TransactionRowView(
-    override val title: ResourceString?,
+    override var title: ResourceString?,
     val txId: Sha256Hash,
     val value: Coin,
     val exchangeRate: ExchangeRate?,
@@ -43,16 +60,17 @@ data class TransactionRowView(
     @DrawableRes val icon: Int,
     val iconBitmap: Bitmap?,
     @StyleRes val iconBackground: Int?,
-    @StringRes val statusRes: Int,
+    @StringRes var statusRes: Int,
     val comment: String,
     val transactionAmount: Int,
-    val time: Long,
+    var time: Long,
     val timeFormat: Int,
     val hasErrors: Boolean,
     val service: String?,
     val txWrapper: TransactionWrapper?
 ): HistoryRowView() {
     companion object {
+        private val log = LoggerFactory.getLogger(TransactionRowView::class.java)
         fun fromTransactionWrapper(
             txWrapper: TransactionWrapper,
             bag: TransactionBag,
@@ -120,7 +138,7 @@ data class TransactionRowView(
             @DrawableRes val icon: Int
             @StyleRes val iconBackground: Int
             var title = ResourceString(resourceMapper.getTransactionTypeName(tx, bag))
-            val hasErrors = tx.confidence.hasErrors()
+            val hasErrors = tx.getConfidence(context).hasErrors()
 
             if (hasErrors) {
                 icon = R.drawable.ic_transaction_failed
@@ -172,6 +190,30 @@ data class TransactionRowView(
                 metadata?.service,
                 null
             )
+        }
+    }
+    fun update(
+        tx: Transaction,
+        bag: TransactionBag,
+        context: Context,
+        resourceMapper: TxResourceMapper = TxResourceMapper()) {
+        if (txId == tx.txId) {
+            log.info("matches txId: {}", txId)
+            log.info("previous title, {}, {}, {}", title?.resourceId, title?.args, txId)
+            title = ResourceString(resourceMapper.getTransactionTypeName(tx, bag))
+            log.info("setting title, {}, {}, {}", title?.resourceId, title?.args, txId)
+            val isSent = value.signum() < 0
+            log.info("previous status, {}, {}", statusRes, txId)
+            statusRes = if (!hasErrors && !isSent) {
+                resourceMapper.getReceivedStatusString(tx, context)
+            } else {
+                -1
+            }
+            log.info("setting status, {}, {}", statusRes, txId)
+            // should we update this?
+            // time = tx.updateTime.time
+        } else if (txWrapper?.transactions?.find { it.txId == tx.txId } !== null) {
+            // not sure what to do, maybe nothing
         }
     }
 }
