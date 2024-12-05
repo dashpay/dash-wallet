@@ -102,8 +102,8 @@ class UsernameRequestGroupViewHolder(
         binding.requestsList.isVisible = option.isExpanded
         binding.chevron.isVisible = hasMoreThanOneRequest
         binding.chevron.rotation = if (option.isExpanded) 90f else 270f
-        binding.linkBadge.isVisible = !hasMoreThanOneRequest
-        binding.linkIncluded.isVisible = !hasMoreThanOneRequest
+        binding.linkBadge.isVisible = !hasMoreThanOneRequest && option.requests.first().link != null
+        binding.linkIncluded.isVisible = !hasMoreThanOneRequest && option.requests.first().link != null
 
         val context = binding.root.context
         binding.blocksButton.text = context.getString(R.string.two_lines_number_text, option.lockVotes(), context.resources.getQuantityString(R.plurals.block_vote_button, option.lockVotes()))

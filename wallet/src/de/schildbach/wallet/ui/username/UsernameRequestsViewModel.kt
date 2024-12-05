@@ -73,7 +73,9 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.sdk.platform.Names
+import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
+import java.nio.ByteBuffer
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.min
@@ -125,7 +127,13 @@ class UsernameRequestsViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val analytics: AnalyticsService
 ): ViewModel() {
-    var currentVote: ArrayList<UsernameVote>? = null
+    companion object {
+        private val log = LoggerFactory.getLogger(UsernameRequestsViewModel::class.java)
+    }
+
+    private val _currentWorkId = MutableStateFlow("")
+    val currentWorkId: StateFlow<String>
+        get() = _currentWorkId
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
@@ -159,8 +167,6 @@ class UsernameRequestsViewModel @Inject constructor(
     val keysAmount: Int
         get() = masternodes.value.size
 
-    val voteSubmissionLiveData = BroadcastUsernameVotesOperation.allOperationsStatus(walletApplication)
-
     init {
         dashPayConfig.observe(DashPayConfig.VOTING_INFO_SHOWN)
             .onEach { isShown -> _uiState.update { it.copy(showFirstTimeInfo = isShown != true) } }
@@ -183,7 +189,7 @@ class UsernameRequestsViewModel @Inject constructor(
                                     }?.username?.lowercase() ?: list[0].username
                                 }
                             }
-                            UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(normalizedUsername), votes)
+                            UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(prettyUsername), votes)
                         }.filterNot { it.requests.isEmpty() }
                 }
         }.onEach { requests -> _uiState.update { it.copy(filteredUsernameRequests = requests) } }
@@ -264,8 +270,11 @@ class UsernameRequestsViewModel @Inject constructor(
         }
         logEvent(AnalyticsConstants.UsernameVoting.VOTE)
         viewModelScope.launch(Dispatchers.IO) {
+            val workId = getNextWorkId()
+            _currentWorkId.value = workId
             usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
+                    workId,
                     listOf(request.username),
                     listOf(request.normalizedLabel),
                     listOf(ResourceVoteChoice.towardsIdentity(Identifier.from(request.identity))),
@@ -273,15 +282,6 @@ class UsernameRequestsViewModel @Inject constructor(
                     isQuickVoting = false
                 ).enqueue()
 
-                //usernameRequestDao.removeApproval(request.username)
-                //usernameRequestDao.update(request.copy(votes = request.votes + keysAmount, isApproved = true))
-                currentVote = arrayListOf(
-                    UsernameVote(
-                        request.normalizedLabel,
-                        request.identity,
-                        UsernameVote.APPROVE
-                    )
-                )
                 _uiState.update { it.copy(voteSubmitted = true) }
             }
         }
@@ -293,25 +293,23 @@ class UsernameRequestsViewModel @Inject constructor(
         }
         logEvent(AnalyticsConstants.UsernameVoting.VOTE_CANCEL)
         viewModelScope.launch(Dispatchers.IO) {
+            val workId = getNextWorkId()
+            _currentWorkId.value = workId
             usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
+                    workId,
                     listOf(request.username),
                     listOf(request.normalizedLabel),
                     listOf(ResourceVoteChoice.abstain()),
                     masternodes.value.map { it.votingPrivateKey },
                     isQuickVoting = false
                 ).enqueue()
-                currentVote = arrayListOf(
-                    UsernameVote(
-                        request.normalizedLabel,
-                        "",
-                        UsernameVote.ABSTAIN
-                    )
-                )
                 _uiState.update { it.copy(voteCancelled = true) }
             }
         }
     }
+
+    private suspend fun getNextWorkId() = dashPayConfig.getUsernameVoteCounter().toString(16)
 
     fun voteForAll() {
         if (keysAmount == 0) {
@@ -320,6 +318,8 @@ class UsernameRequestsViewModel @Inject constructor(
 
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
+                val workId = getNextWorkId()
+                _currentWorkId.value = workId
                 val filteredRequests = _uiState.value.filteredUsernameRequests
                 // group the filtered requests according to the normalizedLabel
                 val requestsByUsername = hashMapOf<String, ArrayList<UsernameRequest>>()
@@ -354,6 +354,7 @@ class UsernameRequestsViewModel @Inject constructor(
                 }
 
                 BroadcastUsernameVotesOperation(walletApplication).create(
+                    workId,
                     usernames,
                     normalizedLabels,
                     voteChoices,
@@ -450,6 +451,15 @@ class UsernameRequestsViewModel @Inject constructor(
 
     private var nameCount = 1
     // TODO: remove this when development is completed.
+
+    private fun randomBytes(): ByteArray {
+        val uuid = UUID.randomUUID()
+        val byteBuffer = ByteBuffer.allocate(16)
+        byteBuffer.putLong(uuid.mostSignificantBits)
+        byteBuffer.putLong(uuid.leastSignificantBits)
+        return Sha256Hash.hash(byteBuffer.array())
+    }
+
     fun prepopulateList() {
         nameCount++
         val now = System.currentTimeMillis()// / 1000
@@ -458,13 +468,14 @@ class UsernameRequestsViewModel @Inject constructor(
 
         viewModelScope.launch {
             var name = names[Random.nextInt(0, min(names.size, nameCount))]
+            var identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     "https://www.figma.com/file/hh5juOSdGnNNPijJG1NGTi/DashPay%E3%83%BBIn-" +
                         "process%E3%83%BBAndroid?type=design&node-id=752-11735&mode=design&t=zasn6AKlSwb5NuYS-0",
                     Random.nextInt(0, 15),
@@ -473,13 +484,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -487,13 +499,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -501,12 +514,13 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),                    Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     "https://twitter.com/ProductHunt/",
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -514,12 +528,13 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),                    Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -527,13 +542,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -541,13 +557,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 2),
@@ -563,7 +580,10 @@ class UsernameRequestsViewModel @Inject constructor(
         }
         logEvent(AnalyticsConstants.UsernameVoting.BLOCK)
         viewModelScope.launch(Dispatchers.IO) {
+            val workId = getNextWorkId()
+            _currentWorkId.value = workId
             BroadcastUsernameVotesOperation(walletApplication).create(
+                workId,
                 listOf(username),
                 listOf(username),
                 listOf(ResourceVoteChoice.lock()),
@@ -571,13 +591,6 @@ class UsernameRequestsViewModel @Inject constructor(
                 isQuickVoting = false
             ).enqueue()
 
-            currentVote = arrayListOf(
-                UsernameVote(
-                    Names.normalizeString(username),
-                    "",
-                    UsernameVote.LOCK
-                )
-            )
             _uiState.update { it.copy(voteSubmitted = true) }
         }
     }
@@ -665,13 +678,15 @@ class UsernameRequestsViewModel @Inject constructor(
         }
     }
 
-    fun updateBroadcastVotesTimestamp() {
-        BroadcastUsernameVotesOperation.lastTimestamp = System.currentTimeMillis()
-    }
-
     fun updateUsernameRequestsWithVotes() {
         viewModelScope.launch(Dispatchers.IO) {
             platformSyncService.updateUsernameRequestsWithVotes()
+        }
+    }
+
+    fun updateUsernameRequestWithVotes(username: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            platformSyncService.updateUsernameRequestWithVotes(username)
         }
     }
 
@@ -693,4 +708,6 @@ class UsernameRequestsViewModel @Inject constructor(
             usernameVoteDao.countVotes(username) == UsernameVote.MAX_VOTES - votesLeft
         }
     }
+
+    fun voteObserver(workId: String) = BroadcastUsernameVotesOperation.operationStatus(walletApplication, workId, analytics)
 }

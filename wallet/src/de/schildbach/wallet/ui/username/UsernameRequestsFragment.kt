@@ -122,7 +122,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             binding.appliedFiltersPanel.isVisible = !viewModel.filterState.value.isDefault() && !isShown
         }
 
-        viewModel.                                                                                                              uiState.observe(viewLifecycleOwner) { state ->
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
             if (state.showFirstTimeInfo) {
                 showFirstTimeInfo()
             }
@@ -142,40 +142,56 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             }
         }
 
-        viewModel.voteSubmissionLiveData.observe(viewLifecycleOwner) { voteData ->
-            log.info("vote data: {}", voteData)
-            voteData.forEach { (t, u) ->
-                try {
-                    val normalizedLabels =
-                        u.data?.outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_NORMALIZED_LABELS)?.toList()
-                    val usernames =
-                        u.data?.outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_NORMALIZED_LABELS)?.toList()
-                    val votes =
-                        u.data?.outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_VOTE_CHOICES)?.toList()
-                    val isQuickVoting = u.data?.outputData?.getBoolean(BroadcastUsernameVotesWorker.KEY_QUICK_VOTING, false) ?: false
-                    when (u.status) {
-                        Status.LOADING -> {
-                            log.info("  loading: {} {}", t, u.data?.outputData)
-                            //showVoteIndicator(binding, votes, usernames, u.status)
-                        }
+        // currentWorkId is updated before a vote is broadcasts
+        // this block will then create an observer for that vote
+        viewModel.currentWorkId.observe(viewLifecycleOwner) {
+            if (it.isNotEmpty()) {
+                val liveData = viewModel.voteObserver(it)
+                liveData.observe(viewLifecycleOwner) { resource ->
+                    // show vote info dialogs and toasts
+                    log.info("current work id: {}: {}", it, resource)
+                    try {
+                        val outputData = resource.data?.outputData
+                        val normalizedLabels =
+                            outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_NORMALIZED_LABELS)?.toList()
+                        val usernames =
+                            outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_LABELS)?.toList()
+                        val votes =
+                            outputData?.getStringArray(BroadcastUsernameVotesWorker.KEY_VOTE_CHOICES)?.toList()
+                        val isQuickVoting = outputData?.getBoolean(BroadcastUsernameVotesWorker.KEY_QUICK_VOTING, false) ?: false
+                        when (resource.status) {
+                            Status.LOADING -> {
+                                log.info("  loading: {}", outputData)
+                            }
 
-                        Status.SUCCESS -> {
-                            log.info("  success: {} {}", t, u.data?.outputData)
-                            showVoteIndicator(binding, votes!!, usernames!!, u.status, isQuickVoting)
-                            viewModel.updateUsernameRequestsWithVotes()
-                        }
+                            Status.SUCCESS -> {
+                                log.info("  success: {}", outputData)
+                                showVoteIndicator(votes!!, usernames!!, resource.status, isQuickVoting)
+                                if (!isQuickVoting) {
+                                    normalizedLabels?.firstOrNull()?.let {
+                                        viewModel.updateUsernameRequestWithVotes(it)
+                                    }
+                                } else {
+                                    viewModel.updateUsernameRequestsWithVotes()
+                                }
+                            }
 
-                        Status.ERROR -> {
-                            log.info("  error: {} {}", t, u.data?.outputData)
-                            showVoteIndicator(binding, votes!!, usernames!!, u.status, isQuickVoting)
-                        }
+                            Status.ERROR -> {
+                                log.info("  error: {}", outputData)
+                                showVoteIndicator(votes!!, usernames!!, resource.status, isQuickVoting)
+                            }
 
-                        Status.CANCELED -> {
-                            log.info("  error: {} {}", t, u.data?.outputData)
+                            Status.CANCELED -> {
+                                log.info("  error: {}", outputData)
+                            }
                         }
+                    } catch (e: Exception) {
+                        log.error("error processing vote information", e)
                     }
-                } catch (e: Exception) {
-                    log.error("error processing vote information", e)
+                    if (resource.status == Status.SUCCESS) {
+                        // remove all observer
+                        liveData.removeObservers(viewLifecycleOwner)
+                    }
                 }
             }
         }
@@ -353,7 +369,6 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
      * Display the toast regarding the last vote
      */
     private fun showVoteIndicator(
-        binding: FragmentUsernameRequestsBinding,
         votes: List<String>,
         usernames: List<String>,
         status: Status,
@@ -365,16 +380,9 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         val resourceVoteChoice = ResourceVoteChoice.from(votes.first())
         val isCancelled = resourceVoteChoice == AbstainVoteChoice()
         val username = if (usernames.size > 1) getString(R.string.quick_vote) else usernames.first()
-        viewModel.updateBroadcastVotesTimestamp()
         if (isQuickVoting) {
             // show dialog about 1 vote left if necessary
             showQuickVotingResults(usernames)
-        }
-        viewModel.currentVote?.let {
-            if (!it.any { usernames.contains(it.username) }) {
-                log.info("vote, there is no match for {}", usernames)
-                //return
-            }
         }
         val toastText = when (status) {
             Status.SUCCESS -> when (resourceVoteChoice) {
