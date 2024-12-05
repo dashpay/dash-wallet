@@ -16,16 +16,12 @@
  */
 package de.schildbach.wallet.ui.username.adapters
 
-import android.content.res.ColorStateList
-import android.graphics.PorterDuff
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.RippleDrawable
-import android.graphics.drawable.StateListDrawable
+import android.util.TypedValue
+import android.util.TypedValue.COMPLEX_UNIT_SP
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import androidx.core.content.ContextCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
@@ -36,10 +32,7 @@ import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.UsernameRequestGroupViewBinding
 import de.schildbach.wallet_test.databinding.UsernameRequestViewBinding
-import org.dash.wallet.common.ui.decorators.ListDividerDecorator
-import org.dash.wallet.common.ui.applyStyle
 import org.dash.wallet.common.ui.setRoundedRippleBackground
-import org.dash.wallet.common.ui.setRoundedRippleBackgroundButtonStyle
 import org.dashj.platform.sdk.platform.Names
 import java.text.SimpleDateFormat
 
@@ -47,24 +40,12 @@ import java.util.Date
 import java.util.Locale
 
 fun Button.setVoteThemeColors(
-    backgroundColor: Int,
+    backgroundStyle: Int,
     textColor: Int
 ) {
-    try {
-        val backgroundColor = context.getColor(backgroundColor)
-        val rippleDrawable = background as RippleDrawable
-        val backgroundDrawable = rippleDrawable.getDrawable(1).current as? GradientDrawable
-
-        // Set background color directly on the background drawable
-        backgroundDrawable?.setColor(backgroundColor)
-
-        // Set text color
-        setTextColor(context.getColor(textColor))
-    } catch (e: Exception) {
-        // Fallback
-        background.setColorFilter(backgroundColor, PorterDuff.Mode.SRC_IN)
-        setTextColor(textColor)
-    }
+    setRoundedRippleBackground(backgroundStyle)
+    setTextColor(context.getColor(textColor))
+    setTextSize(COMPLEX_UNIT_SP, 12.0f)
 }
 
 class UsernameRequestGroupAdapter(
@@ -98,7 +79,7 @@ class UsernameRequestGroupAdapter(
         val hasMoreThanOneRequest = item.requests.size > 1
         holder.bind(item, usernameDetailsClickListener, voteClickListener)
         holder.binding.root.setOnClickListener {
-            // expand if there is more than 1 request, otherwise show details
+            // expand if there is more than 1 request, otherwise show details on click
             if (hasMoreThanOneRequest) {
                 val index = currentList.indexOfFirst { it.username == item.username }
                 currentList[index].isExpanded = !currentList[index].isExpanded
@@ -124,8 +105,6 @@ class UsernameRequestGroupViewHolder(
         binding.linkBadge.isVisible = !hasMoreThanOneRequest
         binding.linkIncluded.isVisible = !hasMoreThanOneRequest
 
-        //binding.blockVotes.text = binding.root.context.getString(R.string.block_vote_count, option.lockVotes())
-        //binding.blockVotes.isVisible = option.lockVotes() != 0
         val context = binding.root.context
         binding.blocksButton.text = context.getString(R.string.two_lines_number_text, option.lockVotes(), context.resources.getQuantityString(R.plurals.block_vote_button, option.lockVotes()))
         binding.blocksButton.setOnClickListener {
@@ -139,37 +118,21 @@ class UsernameRequestGroupViewHolder(
         }
 
         // change the button colors based on our vote(s)
-        val lastVote = option.votes.lastOrNull()
-        when (lastVote?.type?.lowercase()) {
+        when (option.lastVote?.type?.lowercase()) {
             UsernameVote.APPROVE -> {
                 binding.blocksButton.text = context.getString(R.string.two_lines_number_text, option.lockVotes(), context.resources.getQuantityString(R.plurals.block_vote_button, option.lockVotes()))
-
-                //binding.approvalsButton.applyStyle(R.style.VoteButton_Blue)
-                //binding.blocksButton.applyStyle(R.style.VoteButton_LightRed)
-
-                binding.blocksButton.setVoteThemeColors(R.color.red_0_05, R.color.red)
-                binding.approvalsButton.setVoteThemeColors(R.color.dash_blue, R.color.dash_white)
-                //binding.blocksButton.setRoundedRippleBackground(R.style.VoteButton_LightRed)
-                //binding.blocksButton.setRoundedRippleBackground(R.style.VoteButton_Blue)
+                binding.blocksButton.setVoteThemeColors(R.style.PrimaryButtonTheme_Large_LightRed, R.color.red)
+                binding.approvalsButton.setVoteThemeColors(R.style.PrimaryButtonTheme_Large_Blue, R.color.dash_white)
             }
             UsernameVote.LOCK -> {
                 binding.blocksButton.text = context.getString(R.string.two_lines_number_text, option.lockVotes(), context.getString(R.string.unblock_button))
-                //binding.blocksButton.setRoundedRippleBackgroundButtonStyle(R.style.VoteButton_Red)
-                //binding.blocksButton.applyStyle(R.style.VoteButton_Red)
-                //binding.approvalsButton.applyStyle(R.style.VoteButton_LightBlue)
-                binding.blocksButton.setVoteThemeColors(R.color.red, R.color.dash_white)
-                binding.approvalsButton.setVoteThemeColors(R.color.dash_blue_0_05, R.color.dash_blue)
-                //binding.blocksButton.setRoundedRippleBackground(R.style.VoteButton_Red)
-                //binding.blocksButton.setRoundedRippleBackground(R.style.VoteButton_LightBlue)
+                binding.blocksButton.setVoteThemeColors(R.style.PrimaryButtonTheme_Large_Red, R.color.dash_white)
+                binding.approvalsButton.setVoteThemeColors(R.style.PrimaryButtonTheme_Large_LightBlue, R.color.dash_blue)
             }
             else -> {
                 binding.blocksButton.text = context.getString(R.string.two_lines_number_text, option.lockVotes(), context.resources.getQuantityString(R.plurals.block_vote_button, option.lockVotes()))
-                //binding.blocksButton.applyStyle(R.style.VoteButton_LightRed)
-                //binding.approvalsButton.applyStyle(R.style.VoteButton_LightBlue)
-                binding.blocksButton.setVoteThemeColors(R.color.red_0_05, R.color.red)
-                binding.approvalsButton.setVoteThemeColors(R.color.dash_blue_0_05, R.color.dash_blue)
-                //binding.blocksButton.setRoundedRippleBackground(R.style.VoteButton_LightRed)
-                //binding.blocksButton.setRoundedRippleBackground(R.style.VoteButton_LightBlue)
+                binding.blocksButton.setVoteThemeColors(R.style.PrimaryButtonTheme_Large_LightRed, R.color.red)
+                binding.approvalsButton.setVoteThemeColors(R.style.PrimaryButtonTheme_Large_LightBlue, R.color.dash_blue)
             }
         }
 
@@ -180,14 +143,6 @@ class UsernameRequestGroupViewHolder(
                 { request -> voteClickListener.invoke(request) }
             )
             binding.requestsList.adapter = adapter
-//            val divider = ContextCompat.getDrawable(binding.root.context, R.drawable.list_divider)!!
-//            val decorator = ListDividerDecorator(
-//                divider,
-//                showAfterLast = false,
-//                marginStart = binding.root.resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal),
-//                marginEnd = 0
-//            )
-//            binding.requestsList.addItemDecoration(decorator)
             adapter.submitList(option.requests)
         }
     }
@@ -263,69 +218,27 @@ class UsernameRequestViewHolder(
         val context = binding.root.context
         val dateFormat = SimpleDateFormat("dd MMM yyyy · hh:mm a", Locale.getDefault())
         binding.dateRegistered.text = dateFormat.format(Date(request.createdAt))
-//            DateTimeFormatter.ofPattern("dd MMM yyyy · hh:mm a").format(
-//            LocalDateTime.ofEpochSecond(request.createdAt / 1000, 0, ZoneOffset.UTC)
-//        )
 
         binding.approvalsButton.text = context.getString(R.string.two_lines_number_text, request.votes, context.resources.getQuantityString(R.plurals.approval_button, request.votes))
-//        binding.approvalsButton.setOnClickListener {
-//            // vote for the first request, which is the only request
-//            usernameClickListener.invoke(option.requests.first())
-//        }
-//        votes.lastOrNull()?.let { vote ->
-//            when (vote.type) {
-//                UsernameVote.LOCK, UsernameVote.ABSTAIN -> {
-//                    binding.approvalsButton.applyStyle(R.style.VoteButton_LightBlue)
-//                }
-//                UsernameVote.APPROVE -> {
-//                    binding.approvalsButton.applyStyle(R.style.VoteButton_Blue)
-//                }
-//            }
-//        } ?: {
-//            binding.approvalsButton.applyStyle(R.style.VoteButton_LightBlue)
-//        }
         val lastVote = votes.lastOrNull()
         when (lastVote?.type) {
             UsernameVote.APPROVE -> {
                 if (lastVote.identity == request.identity) {
-                    binding.approvalsButton.setVoteThemeColors(R.color.dash_blue, R.color.dash_white)
+                    binding.approvalsButton.setVoteThemeColors(R.style.PrimaryButtonTheme_Large_Blue, R.color.dash_white)
                 } else {
-                    binding.approvalsButton.setVoteThemeColors(R.color.dash_blue_0_05, R.color.dash_blue)
+                    binding.approvalsButton.setVoteThemeColors(R.style.PrimaryButtonTheme_Large_LightBlue, R.color.dash_blue)
                 }
             }
             UsernameVote.LOCK, UsernameVote.ABSTAIN -> {
-                binding.approvalsButton.setVoteThemeColors(R.color.dash_blue_0_05, R.color.dash_blue)
+                binding.approvalsButton.setVoteThemeColors(R.style.PrimaryButtonTheme_Large_LightBlue, R.color.dash_blue)
             }
             else -> {
-                binding.approvalsButton.setVoteThemeColors(R.color.dash_blue_0_05, R.color.dash_blue)
+                binding.approvalsButton.setVoteThemeColors(R.style.PrimaryButtonTheme_Large_LightBlue, R.color.dash_blue)
             }
         }
 
-//        binding.voteAmount.setRoundedBackground(
-//            if (request.isApproved) {
-//                R.style.BlueBadgeTheme
-//            } else {
-//                R.style.InactiveBadgeTheme
-//            }
-//        )
-//
-//        binding.voteAmount.setTextColor(
-//            binding.voteAmount.resources.getColor(
-//                if (request.isApproved) {
-//                    R.color.white
-//                } else {
-//                    R.color.content_tertiary
-//                },
-//                null
-//            )
-//        )
-
-        //binding.voteAmount.text = request.votes.toString()
         binding.linkBadge.isGone = request.link.isNullOrEmpty()
         binding.linkIncluded.isGone = request.link.isNullOrEmpty()
-
-        //val lastVote = votes.lastOrNull()
-        //binding.cancelApprovalButton.isVisible = lastVote != null && lastVote.identity == request.identity && lastVote.type == UsernameVote.APPROVE
     }
 
     override fun setOnClickListener(usernameRequest: UsernameRequest, listener: (UsernameRequest) -> Unit, voteClickListener: (UsernameRequest) -> Unit) {
@@ -338,17 +251,3 @@ class UsernameRequestViewHolder(
     }
 }
 
-//class BlockViewHolder(val binding: BlockUsernameRequestViewBinding)
-//    : AbstractUsernameRequestViewHolder(binding.root) {
-//
-//    override fun bind(request: UsernameRequest, votes: List<UsernameVote>) {
-//        val lastVote = votes.lastOrNull()
-//        //binding.cancelBlockButton.isVisible = lastVote != null && lastVote.identity == request.identity && lastVote.type == UsernameVote.APPROVE
-//    }
-//
-//    override fun setOnClickListener(usernameRequest: UsernameRequest, listener: (UsernameRequest) -> Unit) {
-//        binding.root.setOnClickListener {
-//            listener.invoke(usernameRequest)
-//        }
-//    }
-//}

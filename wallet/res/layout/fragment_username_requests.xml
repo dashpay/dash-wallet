@@ -58,16 +58,29 @@
                 app:navigationIcon="@drawable/ic_arrow_back"
                 app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
-                <TextView
+                <LinearLayout
                     android:id="@+id/quick_vote_button"
-                    style="@style/Subtitle2.Blue"
-                    android:paddingVertical="4dp"
-                    android:paddingHorizontal="12dp"
-                    android:textSize="13sp"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
                     android:layout_gravity="end"
-                    android:text="@string/quick_vote" />
+                    android:paddingVertical="4dp"
+                    android:paddingHorizontal="12dp" >
+                    <ImageView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:src="@drawable/ic_blue_bolt"
+                        android:layout_gravity="center_vertical"
+                        />
+                    <TextView
+                        style="@style/Subtitle2.Blue"
+                        android:textSize="13sp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:text="@string/quick_vote" />
+                </LinearLayout>
             </androidx.appcompat.widget.Toolbar>
         </com.google.android.material.appbar.CollapsingToolbarLayout>
     </com.google.android.material.appbar.AppBarLayout>
@@ -198,11 +211,11 @@
                 android:id="@+id/request_groups"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_marginTop="15dp"
-                android:paddingBottom="15dp"
                 android:layout_marginHorizontal="15dp"
+                android:layout_marginTop="15dp"
                 android:clipToPadding="false"
                 android:overScrollMode="never"
+                android:paddingBottom="15dp"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/search_panel"

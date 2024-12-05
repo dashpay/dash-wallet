@@ -67,17 +67,6 @@
         app:layout_constraintTop_toTopOf="@id/link_badge"
         app:layout_constraintStart_toEndOf="@id/link_badge" />
 
-<!--    <TextView-->
-<!--        android:id="@+id/block_votes"-->
-<!--        style="@style/Body2.Medium.Red"-->
-<!--        android:layout_width="0dp"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:paddingVertical="17dp"-->
-<!--        android:layout_marginStart="15dp"-->
-<!--        app:layout_constraintStart_toEndOf="@id/username"-->
-<!--        app:layout_constraintTop_toTopOf="parent"-->
-<!--        tools:text="(1s Blocks)" />-->
-
     <TextView
         android:id="@+id/requests_amount"
         style="@style/Overline.Tertiary"
@@ -92,7 +81,7 @@
 
     <Button
         android:id="@+id/blocks_button"
-        style="@style/Button.Vote.LightRed"
+        style="@style/Button.Primary.Large.LightRed"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_marginVertical="5dp"
@@ -105,7 +94,7 @@
 
     <Button
         android:id="@+id/approvals_button"
-        style="@style/Button.Vote.LightBlue"
+        style="@style/Button.Primary.Large.LightBlue"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_marginVertical="5dp"
