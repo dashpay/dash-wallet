@@ -144,7 +144,7 @@ class UsernameRequestsViewModel @Inject constructor(
     val filterState: StateFlow<FiltersUIState> = _filterState.asStateFlow()
 
     private val _selectedUsernameRequestId = MutableStateFlow<String?>(null)
-    val selectedUsernameRequest: Flow<UsernameRequest> = _selectedUsernameRequestId
+    val selectedUsernameRequestId: Flow<UsernameRequest> = _selectedUsernameRequestId
         .filterNotNull()
         .distinctUntilChanged()
         .flatMapLatest { id ->
@@ -710,4 +710,8 @@ class UsernameRequestsViewModel @Inject constructor(
     }
 
     fun voteObserver(workId: String) = BroadcastUsernameVotesOperation.operationStatus(walletApplication, workId, analytics)
+
+    suspend fun isImported(masternode: ImportedMasternodeKey): Boolean {
+        return importedMasternodeKeyDao.contains(masternode.proTxHash)
+    }
 }
