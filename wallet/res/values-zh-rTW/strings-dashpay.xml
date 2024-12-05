@@ -88,7 +88,7 @@
     <string name="dashpay_topup_fee">儲值費</string>
     <string name="search_user_find_a_user">在達世幣網絡上查找用戶</string>
     <string name="search_for_a_user">在達世幣網絡上搜尋用戶</string>
-    <string name="search_user_input_placeholder">在此輸入使用者名稱並進行搜尋</string>
+    <string name="search_user_input_placeholder">搜尋用戶名</string>
     <string name="add_new_contact">新增聯絡人</string>
     <string name="send_contact_request">發送聯繫請求</string>
     <string name="sending_contact_request">發送聯繫請求</string>
@@ -269,6 +269,8 @@
     <string name="usernames_blocked_title">某些使用者名稱可能會被阻止</string>
     <string name="usernames_blocked_subtitle">如果有足夠的網路確定使用者認為名稱不合適，他們可以阻止它</string>
     <string name="username_voting">用戶名投票</string>
+    <string name="username_voting_subtitle">作為主節點所有者，您可以在網路上建立請求的使用者名稱之前投票批准它們。</string>
+    <string name="username_voting_subtitle_two">您可以阻止建立您認為不合適的使用者名稱。</string>
     <string name="voting_duplicates_only_title">預設過濾器設定</string>
     <string name="voting_duplicates_only_message">預設過濾器僅顯示您未投票的重複用戶名，但您可以透過更改過濾器來查看所有有爭議的用戶名</string>
     <string name="all">所有</string>
@@ -295,6 +297,13 @@
         <item>我己否決的</item>
         <item>已阻止投票</item>
     </string-array>
+    <string name="unblock_button">解禁</string>
+    <plurals name="block_vote_button">
+        <item quantity="other">禁止</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="other">核准</item>
+    </plurals>
     <string name="block_vote_count">%d 區塊</string>
     <string name="request_your_username">建立您的用戶名</string>
     <string name="request_your_hint">請注意，您未來將無法更改它</string>
@@ -314,6 +323,7 @@
     <string name="request_details">索取詳情</string>
     <string name="request_details_subtitle">請參閱下面的帖子以驗證該用戶名的所有權</string>
     <string name="vote_to_approve">投票通過</string>
+    <string name="vote_to_block">投票阻止</string>
     <string name="identity">身分</string>
     <string name="results">結果</string>
     <string name="link">連結</string>
@@ -332,11 +342,31 @@
     <string name="voting_key_hint">主節點投票私鑰</string>
     <string name="voting_key_input_error">您輸入了無效的密鑰</string>
     <string name="voting_key_input_not_active_error">您輸入的金鑰未與活動主節點關聯</string>
+    <string name="voting_key_input_already_present">您已經輸入了該主節點金鑰</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">您輸入了用於測試網的密鑰，但這是主網。它應該看起來像這樣: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">您輸入了主網的密鑰，但這是測試網。它應該看起來像這樣: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">您輸入的是地址金鑰，而不是主節點投票私鑰。應該是WIF格式 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">您輸入了十六進位格式的金鑰，但它應該是 WIF 格式 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">您輸入了十六進位格式的金鑰，但它應該是 WIF 格式 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">您輸入的私鑰太短。以下是一個私鑰的示例 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">您輸入的私鑰包含一些不正確的字元。以下是一個私鑰的示例 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">您輸入的私鑰包含無效字元。以下是一個私鑰的示例 (%s)</string>
+
     <string name="voting_key_add">新增您的投票鍵</string>
     <string name="voting_key_add_subtitle">以下 IP 位址(等)與此錢包關聯</string>
     <string name="masternode_ip">主節點IP位址</string>
     <string name="multiple_votes_cast">%d 由於您的錢包中儲存了多個投票密鑰，因此將進行投票</string>
     <string name="add_masternode_key">新增主節點投票金鑰</string>
+    <string name="dont_ask_again">不要再詢問我</string>
+    <string name="vote_submitting">正在提交您對 %s 用戶名的投票</string>
+    <string name="vote_submitted">已投票給 %s 用戶名</string>
+    <string name="cancel_submitting">取消您對 %s 用戶名的投票</string>
+    <string name="cancel_submitted">已取消對 %s 用戶名的投票</string>
+    <string name="block_submitting">阻止 %s 用戶名</string>
+    <string name="block_submitted">你阻止了 %s 用戶名</string>
+    <string name="vote_submitted_error">為 %s 用戶名投票時出錯</string>
+    <string name="cancel_submitted_error">取消對 %s 用戶名的投票時出錯</string>
+    <string name="block_submitted_error">阻止 %s 用戶名稱時出錯</string>
     <string name="quick_vote">快速投票</string>
     <string name="quick_vote_subtitle">點擊 \"為所有人投票\" 按鈕，您將自動為首先提交的所有已過濾用戶名 (%d) 投票</string>
     <string name="vote_for_all">給所有人投票</string>
@@ -379,7 +409,6 @@
     <string name="coinjoin_mixing">混合</string>
     <string name="coinjoin_paused">混合暫停</string>
     <string name="coinjoin_not_started">尚未開始</string>
-    <string name="coinjoin_progress">%s (%d%%) %s of %s</string>
     <string name="coinjoin_progress_balance">%1$s of %2$s</string>
     <string name="coinjoin_progress_finished">充分混合</string>
     <string name="coinjoin_change_level_confirmation">您確定要變更隱私等級嗎？</string>
@@ -413,4 +442,4 @@
     <string name="mix_dash_mix">混合資金結餘</string>
     <string name="mix_dash_title">混合你的達世幣</string>
     <string name="mix_dash_message">為了防止其他人看到您的付款對象，建議您在建立使用者名稱之前混合您的餘額。</string>
-</resources>
+    </resources>

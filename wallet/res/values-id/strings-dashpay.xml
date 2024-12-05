@@ -88,7 +88,7 @@ Dash</b> anda</string>
     <string name="dashpay_topup_fee">Biaya Isi ulang</string>
     <string name="search_user_find_a_user">Temukan pengguna di Jaringan Dash</string>
     <string name="search_for_a_user">Cari Pengguna di Jaringan Dash</string>
-    <string name="search_user_input_placeholder">Masukkan nama pengguna disini untuk mencari</string>
+    <string name="search_user_input_placeholder">Cari nama pengguna</string>
     <string name="add_new_contact">Tambahkan Kontak Baru</string>
     <string name="send_contact_request">Kirim Permintaan Kontak</string>
     <string name="sending_contact_request">Mengirim Permintaan Kontak</string>
@@ -269,6 +269,8 @@ Dash</b> anda</string>
     <string name="usernames_blocked_title">Beberapa nama pengguna dapat diblokir</string>
     <string name="usernames_blocked_subtitle">Jika cukup banyak jaringan yang menentukan bahwa nama pengguna tidak pantas, mereka dapat memblokirnya</string>
     <string name="username_voting">Voting nama pengguna</string>
+    <string name="username_voting_subtitle">Sebagai pemilik masternode, Anda dapat memberikan suara untuk menyetujui nama pengguna yang diminta sebelum dibuat di jaringan.</string>
+    <string name="username_voting_subtitle_two">Anda dapat memblokir pembuatan nama pengguna yang menurut Anda tidak pantas.</string>
     <string name="voting_duplicates_only_title">Pengaturan filter default</string>
     <string name="voting_duplicates_only_message">Filter default hanya menampilkan nama pengguna duplikat yang BELUM Anda pilih, tetapi Anda dapat melihat semua nama pengguna yang diperebutkan dengan mengubah filter</string>
     <string name="all">Semua</string>
@@ -295,7 +297,13 @@ Dash</b> anda</string>
         <item>Saya tidak menyetujui</item>
         <item>Telah memblokir suara</item>
     </string-array>
-
+    <string name="unblock_button">buka blokir</string>
+    <plurals name="block_vote_button">
+        <item quantity="other">Blocks</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="other">Persetujuan</item>
+    </plurals>
     <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Buat Nama Pengguna anda</string>
     <string name="request_your_hint">Harap dicatat bahwa Anda tidak akan dapat mengubahnya di masa mendatang</string>
@@ -315,6 +323,7 @@ Dash</b> anda</string>
     <string name="request_details">Detail Permintaan</string>
     <string name="request_details_subtitle">Tinjau postingan di bawah untuk memverifikasi kepemilikan nama pengguna ini</string>
     <string name="vote_to_approve">Pilih untuk Setujui</string>
+    <string name="vote_to_block">Memilih untuk memblokir</string>
     <string name="identity">Identitas</string>
     <string name="results">Hasil</string>
     <string name="link">Tautan</string>
@@ -333,11 +342,31 @@ Dash</b> anda</string>
     <string name="voting_key_hint">Kunci Pribadi Pemungutan Suara Masternode</string>
     <string name="voting_key_input_error">Anda telah memasukkan kunci yang tidak valid</string>
     <string name="voting_key_input_not_active_error">Anda telah memasukkan kunci yang tidak terkait dengan Masternode aktif</string>
+    <string name="voting_key_input_already_present">Anda sudah memasukkan kunci masternode ini</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">Anda telah memasukkan kunci untuk testnet, tetapi ini mainnet. itu seharusnya terlihat seperti ini: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">Anda telah memasukkan kunci untuk mainnet, tetapi ini testnet. itu seharusnya terlihat seperti ini: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">Anda telah memasukkan sebuah kunci alamat alih-alih kunci pribadi voting masternode. itu seharusnya dalam format WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">Anda telah memasukkan kunci dalam format hex, tapi itu seharusnya dalam format WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">Anda telah memasukkan kunci dalam format hex, tapi itu seharusnya dalam format WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">Anda telah memasukkan kunci privat yang terlalu singkat. Berikut adalah contohnya (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">Anda telah memasukkan kunci privat dengan beberapa kesalahan karakter. Berikut adalah contohnya (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">Anda telah memasukkan kunci privat dengan beberapa karakter yang tidak valid. Berikut adalah contohnya (%s)</string>
+
     <string name="voting_key_add">Tambahkan kunci pemungutan suara Anda</string>
     <string name="voting_key_add_subtitle">Alamat IP di bawah ini terkait dengan dompet ini</string>
     <string name="masternode_ip">Alamat IP masternode</string>
     <string name="multiple_votes_cast">%d suara akan diberikan karena Anda memiliki beberapa kunci pemungutan suara yang disimpan di dompet</string>
     <string name="add_masternode_key">Tambahkan Kunci Pemungutan Suara Masternode</string>
+    <string name="dont_ask_again">Jangan tanya saya lagi</string>
+    <string name="vote_submitting">Mengirimkan suara untuk %s nama pengguna</string>
+    <string name="vote_submitted">Memilih untuk %s nama pengguna</string>
+    <string name="cancel_submitting">Membatalkan suara anda untuk %s nama pengguna</string>
+    <string name="cancel_submitted">Suara dibatalkan untuk %s nama pengguna</string>
+    <string name="block_submitting">Memblokir untuk %s nama pengguna</string>
+    <string name="block_submitted">Anda memblokir %s nama pengguna</string>
+    <string name="vote_submitted_error">Kesalahan dalam memilih %s nama pengguna</string>
+    <string name="cancel_submitted_error">Kesalahan dalam membatalkan Suara untuk %s nama pengguna</string>
+    <string name="block_submitted_error">Kesalahan memblokir %s nama pengguna</string>
     <string name="quick_vote">Voting Cepat</string>
     <string name="quick_vote_subtitle">Dengan mengetuk tombol \"Pilih Semua\", Anda akan secara otomatis memilih semua nama pengguna yang difilter (%d) yang dikirimkan terlebih dahulu</string>
     <string name="vote_for_all">Pilih untuk semua</string>
@@ -380,7 +409,6 @@ Dash</b> anda</string>
     <string name="coinjoin_mixing">Pencampuran</string>
     <string name="coinjoin_paused">Pencampuran Dijeda</string>
     <string name="coinjoin_not_started">Tidak Dimulai</string>
-    <string name="coinjoin_progress">%s (%d%%) %s dari %s</string>
     <string name="coinjoin_progress_balance">%1$s dari %2$s</string>
     <string name="coinjoin_progress_finished">Tercampur Sepenuhnya</string>
     <string name="coinjoin_change_level_confirmation">Apakah Anda yakin ingin mengubah tingkat privasi\?</string>
@@ -414,4 +442,4 @@ Dash</b> anda</string>
     <string name="mix_dash_mix">Campur Saldo</string>
     <string name="mix_dash_title">Campur Dash anda</string>
     <string name="mix_dash_message">Untuk membantu mencegah orang lain melihat kepada siapa Anda melakukan pembayaran, disarankan untuk mencampur saldo Anda sebelum Anda membuat nama pengguna.</string>
-</resources>
+    </resources>

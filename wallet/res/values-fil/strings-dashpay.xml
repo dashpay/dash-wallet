@@ -88,7 +88,7 @@ Username</b></string>
     <string name="dashpay_topup_fee">Bayad sa Topup</string>
     <string name="search_user_find_a_user">Maghanap ng gumagamit sa Network ng Dash</string>
     <string name="search_for_a_user">Maghanap para sa isang Gumagamit sa Network ng Dash</string>
-    <string name="search_user_input_placeholder">ilagay ang username upang maghanap dito</string>
+    <string name="search_user_input_placeholder">Maghanap ng username</string>
     <string name="add_new_contact">Magdagdag ng Bagong Contact</string>
     <string name="send_contact_request">Magpadala ng Kahilingan sa Pakikipag-ugnay</string>
     <string name="sending_contact_request">Nagpapadala ng Kahilingan sa Pakikipag-ugnayan</string>
@@ -269,6 +269,8 @@ Username</b></string>
     <string name="usernames_blocked_title">Maaaring i-block ang ilang mga username</string>
     <string name="usernames_blocked_subtitle">Kung matukoy ng sapat na network na hindi naaangkop ang isang username, maaari nilang i-block ito</string>
     <string name="username_voting">Pagboto ng username</string>
+    <string name="username_voting_subtitle">Bilang may-ari ng masternode, maaari kang bumoto upang aprubahan ang mga hiniling na username bago ito gawin sa network.</string>
+    <string name="username_voting_subtitle_two">Maaari mong harangan ang paglikha ng mga username na sa tingin mo ay hindi naaangkop.</string>
     <string name="voting_duplicates_only_title">Default na setting ng filter</string>
     <string name="voting_duplicates_only_message">Ang default na filter ay nagpapakita lamang ng mga duplicate na username na HINDI mo binoto, ngunit makikita mo ang lahat ng pinagtatalunang username sa pamamagitan ng pagpapalit ng filter</string>
     <string name="all">Lahat</string>
@@ -295,7 +297,15 @@ Username</b></string>
         <item>hindi ko na inaprubahan</item>
         <item>May Naka-block na mga boto</item>
     </string-array>
-
+    <string name="unblock_button">i-unblock</string>
+    <plurals name="block_vote_button">
+        <item quantity="one">Mga bloke</item>
+        <item quantity="other">Mga bloke</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="one">Mga pag-apruba</item>
+        <item quantity="other">Mga pag-apruba</item>
+    </plurals>
     <string name="block_vote_count">%d (mga) block</string>
     <string name="request_your_username">Gumawa ng iyong username</string>
     <string name="request_your_hint">Pakitandaan na hindi mo na ito mababago sa hinaharap</string>
@@ -315,6 +325,7 @@ Username</b></string>
     <string name="request_details">Mga detalye ng kahilingan</string>
     <string name="request_details_subtitle">Suriin ang pag-post sa ibaba upang i-verify ang pagmamay-ari ng username na ito</string>
     <string name="vote_to_approve">Bumoto para Aprubahan</string>
+    <string name="vote_to_block">Bumoto para I-block</string>
     <string name="identity">Pagkakakilanlan</string>
     <string name="results">Mga resulta</string>
     <string name="link">Link</string>
@@ -333,11 +344,31 @@ Username</b></string>
     <string name="voting_key_hint">Masternode Voting Private Key</string>
     <string name="voting_key_input_error">Naglagay ka ng di-wastong key</string>
     <string name="voting_key_input_not_active_error">Naglagay ka ng key na hindi nauugnay sa isang aktibong Masternode</string>
+    <string name="voting_key_input_already_present">Nailagay mo na ang masternode key na ito</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">Naglagay ka ng key na para sa testnet, ngunit ito ay mainnet. Dapat itong magmukhang ganito: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">Naglagay ka ng key na para sa mainnet, ngunit ito ay testnet. Dapat itong magmukhang ganito: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">Naglagay ka ng address key sa halip na isang masternode voting private key. Dapat itong nasa WIF format (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">Naglagay ka ng key sa hex na format, ngunit dapat itong nasa WIF na format(%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">Naglagay ka ng key sa hex na format, ngunit dapat itong nasa WIF na format(%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">Naglagay ka ng pribadong key na masyadong maikli. Narito ang isang halimbawa (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">Naglagay ka ng pribadong key na may ilang maling character. Narito ang isang halimbawa (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">Naglagay ka ng pribadong key na may di-wastong character. Narito ang isang halimbawa (%s)</string>
+
     <string name="voting_key_add">Idagdag ang iyong mga susi sa pagboto</string>
     <string name="voting_key_add_subtitle">Ang (mga) IP address sa ibaba ay nauugnay sa wallet na ito</string>
     <string name="masternode_ip">Masternode IP address</string>
     <string name="multiple_votes_cast">ipapalabas ang mga %d boto dahil marami kang voting key na nakaimbak sa wallet</string>
     <string name="add_masternode_key">Magdagdag ng Masternode Voting Key</string>
+    <string name="dont_ask_again">Wag mo na akong tanungin ulit</string>
+    <string name="vote_submitting">Pagsusumite ng iyong boto para sa%s username</string>
+    <string name="vote_submitted">Bumoto para sa %s username</string>
+    <string name="cancel_submitting">Kinakansela ang iyong boto para sa %s username</string>
+    <string name="cancel_submitted">Kinansela ang pagboto para sa %s username</string>
+    <string name="block_submitting">Pag-block para sa %s username</string>
+    <string name="block_submitted">Hinarangan mo  %s username</string>
+    <string name="vote_submitted_error">Pagkakamali sa pagboto %s username</string>
+    <string name="cancel_submitted_error">Pagkakamali sa pagkansela ng pagboto para sa %s username</string>
+    <string name="block_submitted_error">Pagkakamali sa pagharang %s username</string>
     <string name="quick_vote">Mabilis na Pagboto</string>
     <string name="quick_vote_subtitle">Sa pamamagitan ng pag-tap sa \"Vote for All\" na button, awtomatiko kang bumoto para sa lahat ng na-filter na username (%d) na unang isinumite</string>
     <string name="vote_for_all">Bumoto para sa Lahat</string>
@@ -380,7 +411,6 @@ Username</b></string>
     <string name="coinjoin_mixing">Paghahalo</string>
     <string name="coinjoin_paused">Nakahinto ang Paghahalo</string>
     <string name="coinjoin_not_started">Hindi Nagsimula</string>
-    <string name="coinjoin_progress">%s (%d%%) %s ng %s</string>
     <string name="coinjoin_progress_balance">%1$s ng %2$s</string>
     <string name="coinjoin_progress_finished">Ganap na Nahalo</string>
     <string name="coinjoin_change_level_confirmation">Sigurado ka bang gusto mong baguhin ang antas ng privacy\?</string>
@@ -414,4 +444,4 @@ Username</b></string>
     <string name="mix_dash_mix">Paghaluin ang Balanse</string>
     <string name="mix_dash_title">Paghaluin ang iyong Dash</string>
     <string name="mix_dash_message">Upang makatulong na pigilan ang ibang tao na makita kung kanino ka magbabayad, inirerekomendang ihalo ang iyong balanse bago mo gawin ang iyong username.</string>
-</resources>
+    </resources>

@@ -337,6 +337,9 @@ class CreateIdentityService : LifecycleService() {
                 if (blockchainIdentityData.creationStateErrorMessage?.contains("preorderDocument was not found with a salted domain hash") == true) {
                     blockchainIdentityData.creationState = CreationState.PREORDER_REGISTERING
                     platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                } else if (blockchainIdentityData.creationStateErrorMessage?.contains("missing domain document for") == true) {
+                    blockchainIdentityData.creationState = CreationState.PREORDER_REGISTERING
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (retryWithNewUserName) {
                     // lets rewind the state to allow for a new username registration or request
                     // it may have failed later in the process
@@ -667,7 +670,7 @@ class CreateIdentityService : LifecycleService() {
                     ?: error("${blockchainIdentityData.username} does not have ${blockchainIdentity.uniqueIdentifier} as a contender")
 
                 val document = DomainDocument(
-                    platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument!!)
+                    platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
                 )
 
                 usernameRequestDao.insert(
@@ -688,7 +691,7 @@ class CreateIdentityService : LifecycleService() {
 
                 // determine when voting started by finding the minimum timestamp
                 val earliestCreatedAt = contenders.map.values.minOf {
-                    val document = platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument!!)
+                    val document = platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
                     document.createdAt ?: 0
                 }
 
@@ -776,6 +779,9 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 
+    /**
+     * restores an identity using information from the wallet and platform
+     */
     private suspend fun restoreIdentity(identity: ByteArray) {
         log.info("Restoring identity and username")
         try {
@@ -863,7 +869,7 @@ class CreateIdentityService : LifecycleService() {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKING)
 
                 // check if the network has this name in the queue for voting
-                val contestedNames = platformRepo.platform.names.getContestedNames()
+                val contestedNames = platformRepo.platform.names.getAllContestedNames()
 
                 contestedNames.forEach { name ->
                     val voteContenders = platformRepo.getVoteContenders(name)
@@ -898,7 +904,7 @@ class CreateIdentityService : LifecycleService() {
                             var label = name
                             if (winner.isEmpty) {
                                 val contestedDocument = DomainDocument(
-                                    platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument!!)
+                                    platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
                                 )
                                 blockchainIdentity.currentUsername = contestedDocument.label
                                 votingStartedAt = contestedDocument.createdAt!!
@@ -940,7 +946,7 @@ class CreateIdentityService : LifecycleService() {
 
                             // determine when voting started by finding the minimum timestamp
                             val earliestCreatedAt = voteContenders.map.values.minOf {
-                                val document = platformRepo.platform.names.deserialize(documentWithVotes.seralizedDocument!!)
+                                val document = platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
                                 document.createdAt ?: 0
                             }
 
@@ -971,6 +977,14 @@ class CreateIdentityService : LifecycleService() {
 
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.VOTING)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            }
+
+            // At this point, let's see what has been recovered.  It is possible that only the identity was recovered.
+            // In this case, we should require that the user enters in a new username.
+            if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
+                blockchainIdentityData.creationState = CreationState.USERNAME_REGISTERING
+                blockchainIdentityData.restoring = false
+                error("missing domain document for ${blockchainIdentity.uniqueId}")
             }
 
             //

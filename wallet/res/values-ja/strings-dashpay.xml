@@ -87,6 +87,7 @@
     <string name="dashpay_topup_fee">チャージ料金</string>
     <string name="search_user_find_a_user">Dashネットワークでユーザーを探す</string>
     <string name="search_for_a_user">Dashネットワークのユーザーを検索</string>
+    <string name="search_user_input_placeholder">ユーザー名を検索</string>
     <string name="add_new_contact">新しい連絡先を追加</string>
     <string name="send_contact_request">連絡先リクエストを送信する</string>
     <string name="sending_contact_request">連絡先リクエストを送信中</string>
@@ -267,6 +268,8 @@
     <string name="usernames_blocked_title">一部のユーザー名をブロックできます</string>
     <string name="usernames_blocked_subtitle">ネットワーク上の多数のユーザーがそのユーザー名を不適切と判断した場合、それをブロックできます</string>
     <string name="username_voting">ユーザー名投票</string>
+    <string name="username_voting_subtitle">マスターノードの所有者は、ネットワーク上に作成される前に、リクエストされたユーザー名を承認する投票を行えます。</string>
+    <string name="username_voting_subtitle_two">お客様が不適切と判断した場合は、そのユーザー名の作成をブロックできます。</string>
     <string name="voting_duplicates_only_title">デフォルトのフィルター設定</string>
     <string name="voting_duplicates_only_message">デフォルトのフィルターでは、お客様が投票していない重複したユーザー名のみが示されますが、フィルターを変更することですべての競合するユーザー名を確認できます</string>
     <string name="all">全て</string>
@@ -293,6 +296,13 @@
         <item>承認しませんでした</item>
         <item>投票をブロックしました</item>
     </string-array>
+    <string name="unblock_button">ブロックを解除</string>
+    <plurals name="block_vote_button">
+        <item quantity="other">ブロックした投票</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="other">承認した投票</item>
+    </plurals>
     <string name="block_vote_count">%dブロック</string>
     <string name="request_your_username">ユーザー名の作成</string>
     <string name="request_your_hint">一度決めたユーザー名は、今後変更することはできませんのでご注意ください</string>
@@ -312,6 +322,7 @@
     <string name="request_details">詳細の申請</string>
     <string name="request_details_subtitle">以下の投稿を閲覧し、このユーザー名の所有権を確認してください</string>
     <string name="vote_to_approve">承認に投票</string>
+    <string name="vote_to_block">ブロックに投票</string>
     <string name="identity">アイデンティティ</string>
     <string name="results">結果</string>
     <string name="link">リンク</string>
@@ -330,11 +341,31 @@
     <string name="voting_key_hint">マスターノードのプライベート投票キー</string>
     <string name="voting_key_input_error">無効なキーが入力されています</string>
     <string name="voting_key_input_not_active_error">アクティブなマスターノードに紐づいていないキーが入力されました</string>
+    <string name="voting_key_input_already_present">このマスターノードキーはすでに入力されています</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">テストネット用のキーを入力していますが、これはメインネットです。キーは以下のように表示されるものになります：%s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">メインネット用のキーを入力していますが、これはテストネットです。キーは以下のように表示されるものになります：%s</string>
+    <string name="voting_key_input_invalid_private_key_address">マスターノードのプライベート投票キーではなく、アドレスキーが入力されました。そのキーはWIF形式（%s）でなければなりません。</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">16進数形式でキーが入力されましたが、WIF形式（%s）で入力してください。</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">16進数形式でキーが入力されましたが、WIF形式（%s）で入力してください。</string>
+    <string name="voting_key_input_invalid_private_key_too_short">入力したプライベートキーが短すぎます。こちらの例（%s）を参考にしてください。</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">入力したプライベートキーに不適切な文字が含まれています。こちらの例（%s）を参考にしてください。</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">入力したプライベートキーに無効な文字が含まれています。こちらの例（%s）を参考にしてください。</string>
+
     <string name="voting_key_add">投票キーを追加する</string>
     <string name="voting_key_add_subtitle">以下のIPアドレスは、このウォレットに紐付けられています</string>
     <string name="masternode_ip">マスターノードのIPアドレス</string>
     <string name="multiple_votes_cast">ウォレットに複数の投票キーが保管されているため、%d票の投票が行われます</string>
     <string name="add_masternode_key">マスターノードの投票キーを追加する</string>
+    <string name="dont_ask_again">次から同じ質問を表示しない</string>
+    <string name="vote_submitting">%sのユーザー名への投票を送信</string>
+    <string name="vote_submitted">%sのユーザー名に投票しました</string>
+    <string name="cancel_submitting">%sのユーザー名への投票をキャンセル中</string>
+    <string name="cancel_submitted">%sのユーザー名への投票をキャンセルしました</string>
+    <string name="block_submitting">%sのユーザー名をブロック中</string>
+    <string name="block_submitted">%sのユーザー名をブロックしました</string>
+    <string name="vote_submitted_error">%sのユーザー名への投票にエラーが発生しました</string>
+    <string name="cancel_submitted_error">%sのユーザー名への投票のキャンセルにエラーが発生しました</string>
+    <string name="block_submitted_error">%sのユーザー名のブロックにエラーが発生しました</string>
     <string name="quick_vote">クイック投票</string>
     <string name="quick_vote_subtitle">「全てに投票」ボタンをタップすると、絞り込んだユーザー名のうち、最初に投稿されたもの(%d)全てに自動的に投票されます</string>
     <string name="vote_for_all">全てに投票</string>
@@ -377,7 +408,6 @@
     <string name="coinjoin_mixing">ミキシング中</string>
     <string name="coinjoin_paused">ミキシングを一時停止しました</string>
     <string name="coinjoin_not_started">開始していません</string>
-    <string name="coinjoin_progress">%sの%s (%d%%) と%s</string>
     <string name="coinjoin_progress_balance">%2$sの%1$s</string>
     <string name="coinjoin_progress_finished">ミキシング完了しました</string>
     <string name="coinjoin_change_level_confirmation">プライバシーレベルを変更してよろしいですか。</string>

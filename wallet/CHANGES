@@ -1,4 +1,11 @@
 Dash Wallet
+v11.0.4
+* Fix username voting screen (support more than 100 contests)
+* Fix username requests during voting period
+* Fix Crowdnode Signup on Android 14
+* Fix Crowdnode API
+* Fix sync stuck at 31% issue
+
 v11.0.3
 * Improve Username Voting screen
 * UI fixes

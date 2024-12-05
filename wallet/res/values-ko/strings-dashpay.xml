@@ -88,6 +88,7 @@
     <string name="dashpay_topup_fee">충전 수수료</string>
     <string name="search_user_find_a_user">대시 네트워크에서 사용자를 검색합니다</string>
     <string name="search_for_a_user">대시 네트워크에서 사용자 검색</string>
+    <string name="search_user_input_placeholder">사용자 이름 검색</string>
     <string name="add_new_contact">새로운 연락처 추가하기</string>
     <string name="send_contact_request">연락처 요청 전송</string>
     <string name="sending_contact_request">연락처 요청 전송중</string>
@@ -268,6 +269,8 @@
     <string name="usernames_blocked_title">어떤 사용자 이름은 블록될 수 있습니다</string>
     <string name="usernames_blocked_subtitle">사용자 이름이 부적절하다는 점에 충분한 네트워크가 의견을 함께 한다면 블록할 수 있습니다</string>
     <string name="username_voting">사용자 이름 투표</string>
+    <string name="username_voting_subtitle">마스터노드 소유자는 사용자 이름이 네트워크상에 생성되기 전에 해당 요청에 대한 투표를 할 수 있습니다.</string>
+    <string name="username_voting_subtitle_two">적절하지 않다고 느껴지는 사용자 이름의 생성을 차단할 수 있습니다.</string>
     <string name="voting_duplicates_only_title">디폴트 필터 설정</string>
     <string name="voting_duplicates_only_message">이 디폴트 필터는 투표하지 않은 중복 사용자 아이디만 표시하지만, 필터를 변경하면 경합 중인 모든 사용자 아이디를 볼 수 있습니다.</string>
     <string name="all">모두</string>
@@ -294,6 +297,13 @@
         <item>승인하지 않았습니다</item>
         <item>투표를 차단했습니다</item>
     </string-array>
+    <string name="unblock_button">차단 해제</string>
+    <plurals name="block_vote_button">
+        <item quantity="other">차단</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="other">승인</item>
+    </plurals>
     <string name="block_vote_count">%d 블록</string>
     <string name="request_your_username">당신의 사용자 이름을 생성하세요</string>
     <string name="request_your_hint">이를 다시 변경할 수 없다는 점에 주의하세요</string>
@@ -313,6 +323,7 @@
     <string name="request_details">요청 세부 내용</string>
     <string name="request_details_subtitle">아래 포스팅을 확인하시고 이 사용자 이름의 소유 정보를 인증하세요</string>
     <string name="vote_to_approve">투표하여 승인하기</string>
+    <string name="vote_to_block">투표하여 차단하기</string>
     <string name="identity">아이덴티티</string>
     <string name="results">결과</string>
     <string name="link">링크</string>
@@ -331,11 +342,31 @@
     <string name="voting_key_hint">마스터노드 투표 개인 키</string>
     <string name="voting_key_input_error">유효하지 않은 키를 입력하셨습니다</string>
     <string name="voting_key_input_not_active_error">입력하신 키는 마스터노드 활성화와 연관되지 않은 키입니다.</string>
+    <string name="voting_key_input_already_present">이 마스터노드 키를 이미 입력하였습니다</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">테스트넷을 위한 키를 입력하셨습니다. 이곳은 메인넷입니다. 올바른 키는 다음과 같은 형식입니다: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">메인넷을 위한 키를 입력하셨습니다. 이곳은 테스트넷입니다. 올바른 키는 다음과 같은 형식입니다: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">마스터노드 투표 프라이빗 키가 아닌 주소 키를 입력하셨습니다. 올바른 키는 WIF 포맷이어야 합니다 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">hex 포맷의 키를 입력하셨습니다. 올바른 키는 WIF 포맷이어야 합니다 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">hex 포맷의 키를 입력하셨습니다. 올바른 키는 WIF 포맷이어야 합니다 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">너무 짧은 프라이빗 키를 입력하셨습니다. 올바른 키의 예는 다음과 같습니다 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">올바르지 않은 문자열이 포함된 프라이빗 키를 입력하셨습니다. 올바른 키의 예는 다음과 같습니다 (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">올바르지 않은 문자열이 포함된 프라이빗 키를 입력하셨습니다. 올바른 키의 예는 다음과 같습니다 (%s)</string>
+
     <string name="voting_key_add">당신의 투표 키를 추가하세요</string>
     <string name="voting_key_add_subtitle">아래의 IP 주소(들)는 이 지갑에 연관되어 있습니다</string>
     <string name="masternode_ip">마스터노드 IP 주소</string>
     <string name="multiple_votes_cast">이 지갑에 수 개의 투표 키가 저장되어 있으므로 %d 표가 던져지게 됩니다 </string>
     <string name="add_masternode_key">마스터노드 투표 키를 추가하세요</string>
+    <string name="dont_ask_again">다시 묻지 않기</string>
+    <string name="vote_submitting">사용자이름 %s 를 위한 투표 제출하기</string>
+    <string name="vote_submitted">사용자 이름 %s에 대한 투표 완료</string>
+    <string name="cancel_submitting">사용자 이름 %s에 대한 투표 취소중 </string>
+    <string name="cancel_submitted">사용자 이름 %s에 대한 투표 취소 완료</string>
+    <string name="block_submitting">사용자 이름 %s 차단중</string>
+    <string name="block_submitted">사용자 이름 %s 차단 완료</string>
+    <string name="vote_submitted_error">사용자 이름 %s에 대한 투표 오류</string>
+    <string name="cancel_submitted_error">사용자 이름 %s에 대한 투표 취소 오류</string>
+    <string name="block_submitted_error">사용자 이름 %s에 대한 차단 오류 </string>
     <string name="quick_vote">빠른 투표</string>
     <string name="quick_vote_subtitle">\"모두 투표하기\" 버튼을 선택하면, 먼저 제출된 필터를 거친 모든 사용자 이름 (%d) 에 대해 자동으로 투표하게 됩니다</string>
     <string name="vote_for_all">모두 투표하기</string>
@@ -378,7 +409,6 @@
     <string name="coinjoin_mixing">믹싱</string>
     <string name="coinjoin_paused">믹싱이 멈춰짐</string>
     <string name="coinjoin_not_started">시작되지 않음</string>
-    <string name="coinjoin_progress">%s 중 %s (%d%%) %s</string>
     <string name="coinjoin_progress_balance">%2$s 중 %1$s</string>
     <string name="coinjoin_progress_finished">완전히 믹싱됨</string>
     <string name="coinjoin_change_level_confirmation">정말 프라이버시 수준을 변경하시겠습니까\?</string>

@@ -87,7 +87,6 @@
     <string name="dashpay_topup_fee">Комісія за поповнення</string>
     <string name="search_user_find_a_user">Знайдіть користувача в Dash Network</string>
     <string name="search_for_a_user">Пошук користувача в Dash Network</string>
-    <string name="search_user_input_placeholder">введіть тут ім\'я користувача для пошуку</string>
     <string name="add_new_contact">Додати новий контакт</string>
     <string name="send_contact_request">Надіслати запит на додавання до контактів</string>
     <string name="sending_contact_request">Надсилання запиту на додавання до контактів</string>
@@ -290,7 +289,6 @@
         <item>Я схвалив</item>
         <item>Я не схвалив</item>
     </string-array>
-
     <string name="request_your_username">Створити ім\'я користувача</string>
     <string name="request_username">Запит імені користувача</string>
     <string name="request_voting_range">Мережа Dash голосуватиме за це ім’я користувача. Ми повідомимо вас про результати в %s.</string>
@@ -367,7 +365,6 @@
     <string name="coinjoin_mixing">Змішування</string>
     <string name="coinjoin_paused">Змішування на паузі</string>
     <string name="coinjoin_not_started">Не розпачато</string>
-    <string name="coinjoin_progress">%s(%d%%)%s з %s</string>
     <string name="coinjoin_progress_balance">%1$s з %2$s</string>
     <string name="coinjoin_progress_finished">Повністю змішано</string>
     <string name="coinjoin_change_level_confirmation">Ви впевнені, що бажаєте змінити рівень конфіденційності\?</string>

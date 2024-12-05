@@ -54,6 +54,7 @@ import retrofit2.HttpException
 import java.io.IOException
 import java.net.UnknownHostException
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.pow
 import kotlin.time.Duration
@@ -77,6 +78,7 @@ interface CrowdNodeApi {
     suspend fun deposit(amount: Coin, emptyWallet: Boolean, checkBalanceConditions: Boolean): Boolean
     suspend fun withdraw(amount: Coin): Boolean
     suspend fun getWithdrawalLimit(period: WithdrawalLimitPeriod): Coin
+    suspend fun getFee(): Double
     fun hasAnyDeposits(): Boolean
     fun refreshBalance(retries: Int = 0, afterWithdrawal: Boolean = false)
     fun trackLinkingAccount(address: Address)
@@ -340,6 +342,11 @@ class CrowdNodeApiAggregator @Inject constructor(
                 }
             }
         )
+    }
+
+    override suspend fun getFee(): Double {
+        refreshFees()
+        return config.get(CrowdNodeConfig.FEE_PERCENTAGE) ?: FeeInfo.DEFAULT_FEE
     }
 
     override fun hasAnyDeposits(): Boolean {
@@ -850,6 +857,22 @@ class CrowdNodeApiAggregator @Inject constructor(
             }
             limits[WithdrawalLimitPeriod.PerDay]?.let {
                 config.set(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_DAY, it.value)
+            }
+        }
+    }
+
+    /**
+     * obtains the current CrowdNode fee on masternode rewards once per 24 hours
+     */
+    private suspend fun refreshFees() {
+        val lastFeeRequest = config.get(CrowdNodeConfig.LAST_FEE_REQUEST)
+        if (lastFeeRequest == null || (lastFeeRequest + TimeUnit.DAYS.toMillis(1)) < System.currentTimeMillis()) {
+            val feeInfo = webApi.getFees(accountAddress)
+            log.info("crowdnode feeInfo: {}", feeInfo)
+            val fee = feeInfo.getNormal()?.fee
+            fee?.let {
+                config.set(CrowdNodeConfig.FEE_PERCENTAGE, fee)
+                config.set(CrowdNodeConfig.LAST_FEE_REQUEST, System.currentTimeMillis())
             }
         }
     }

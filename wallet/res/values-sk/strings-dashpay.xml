@@ -88,6 +88,7 @@ používateľské meno</b></string>
     <string name="dashpay_topup_fee">Poplatok za doplnenie</string>
     <string name="search_user_find_a_user">Nájsť používateľa v sieti Dash</string>
     <string name="search_for_a_user">Vyhľadať používateľa v sieti Dash</string>
+    <string name="search_user_input_placeholder">Vyhľadať používateľské meno</string>
     <string name="add_new_contact">Pridať nový kontakt</string>
     <string name="send_contact_request">Poslať žiadosť o kontakt</string>
     <string name="sending_contact_request">Odosielanie žiadosti o kontakt</string>
@@ -268,6 +269,8 @@ používateľské meno</b></string>
     <string name="usernames_blocked_title">Niektoré používateľské mená môžu byť zablokované</string>
     <string name="usernames_blocked_subtitle">Ak dostatočná časť siete zistí, že používateľské meno je nevhodné, môže ho zablokovať</string>
     <string name="username_voting">Hlasovanie o používateľskom mene</string>
+    <string name="username_voting_subtitle">Ako vlastník Masternode môžete hlasovaním schváliť požadované používateľské mená pred ich vytvorením v sieti.</string>
+    <string name="username_voting_subtitle_two">Môžete zablokovať vytváranie používateľských mien, ktoré považujete za nevhodné.</string>
     <string name="voting_duplicates_only_title">Predvolené nastavenie filtra</string>
     <string name="voting_duplicates_only_message">Predvolený filter zobrazuje iba duplicitné používateľské mená, za ktoré ste NEHLASOVALI, ale zmenou filtra môžete zobraziť všetky sporné používateľské mená</string>
     <string name="all">Všetko</string>
@@ -294,11 +297,24 @@ používateľské meno</b></string>
         <item>Neschválil som</item>
         <item>Má zablokované hlasy</item>
     </string-array>
+    <string name="unblock_button">Odblokovať</string>
+    <plurals name="block_vote_button">
+        <item quantity="one">Blok</item>
+        <item quantity="few">Bloky</item>
+        <item quantity="many">Blokov</item>
+        <item quantity="other">Blokov</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="one">Schválenie</item>
+        <item quantity="few">Schválenia</item>
+        <item quantity="many">Schválení</item>
+        <item quantity="other">Schválení</item>
+    </plurals>
     <string name="block_vote_count">%d Blok(y)</string>
     <string name="request_your_username">Vytvorte si používateľské meno</string>
     <string name="request_your_hint">Upozorňujeme, že v budúcnosti ho už nebudete môcť zmeniť</string>
     <string name="request_username">Požiadať o používateľské meno</string>
-    <string name="request_voting_range">Sieť Dash bude hlasovať o tomto používateľskom mene. O výsledkoch vás budeme informovať dňa %s.</string>
+    <string name="request_voting_range">Sieť Dash bude hlasovať o tomto mene. O výsledkoch vás budeme informovať dňa %s.</string>
     <string name="request_username_available">Používateľské meno je k dispozícii</string>
     <string name="request_username_unavailable">Používateľské meno je nedostupné alebo zablokované</string>
     <string name="request_username_taken">Používateľské meno sa už používa</string>
@@ -313,6 +329,7 @@ používateľské meno</b></string>
     <string name="request_details">Vyžiadať podrobnosti</string>
     <string name="request_details_subtitle">Ak chcete overiť vlastníctvo tohto používateľského mena, skontrolujte príspevok uvedený nižšie</string>
     <string name="vote_to_approve">Hlasovanie za schválenie</string>
+    <string name="vote_to_block">Hlasujte za blokovanie</string>
     <string name="identity">Identita</string>
     <string name="results">Výsledky</string>
     <string name="link">Odkaz</string>
@@ -331,18 +348,38 @@ používateľské meno</b></string>
     <string name="voting_key_hint">Súkromný kľúč hlasovania Masternode</string>
     <string name="voting_key_input_error">Zadali ste neplatný kľúč</string>
     <string name="voting_key_input_not_active_error">Zadali ste kľúč, ktorý nie je priradený k aktívnemu Masternode</string>
+    <string name="voting_key_input_already_present">Tento masternode kľúč ste už zadali</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">Zadali ste kľúč, ktorý je určený pre testovaciu sieť, ale toto je hlavná sieť. Mal by to vyzerať takto: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">Zadali ste kľúč, ktorý je určený pre hlavnú sieť, ale toto je testovacia sieť. Mal by to vyzerať takto: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">Namiesto hlasovacieho súkromného kľúča hlavného uzla ste zadali kľúč adresy. Mal by byť vo formáte WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">Zadali ste kľúč v hexadecimálnom formáte, ale mal by byť vo formáte WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">Zadali ste kľúč v hexadecimálnom formáte, ale mal by byť vo formáte WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">Zadali ste súkromný kľúč, ktorý je príliš krátky. Tu je príklad (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">Zadali ste súkromný kľúč, ktorý obsahuje nesprávne znaky. Tu je príklad (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">Zadaný súkromný kľúč má neplatný znak. Tu je príklad (%s)</string>
+
     <string name="voting_key_add">Pridajte svoje hlasovacie kľúče</string>
     <string name="voting_key_add_subtitle">IP adresa(y) nižšie sú spojené s touto peňaženkou</string>
     <string name="masternode_ip">IP adresa Masternode</string>
     <string name="multiple_votes_cast">Bude odovzdaných %d hlasov, pretože v peňaženke máte uložených viacero hlasovacích kľúčov</string>
     <string name="add_masternode_key">Pridať hlasovací kľúč Masternode</string>
+    <string name="dont_ask_again">Znova sa nepýtať</string>
+    <string name="vote_submitting">Odosielanie hlasu pre používateľské meno %s</string>
+    <string name="vote_submitted">Hlasovali ste za používateľské meno %s</string>
+    <string name="cancel_submitting">Ruší sa váš hlas pre používateľské meno %s</string>
+    <string name="cancel_submitted">Zrušený hlas za používateľské meno %s</string>
+    <string name="block_submitting">Blokuje sa používateľské meno %s</string>
+    <string name="block_submitted">Zablokovali ste používateľské meno %s</string>
+    <string name="vote_submitted_error">Chyba pri hlasovaní o používateľskom mene %s</string>
+    <string name="cancel_submitted_error">Pri zrušení hlasovania pre používateľské meno %s sa vyskytla chyba</string>
+    <string name="block_submitted_error">Chyba pri blokovaní používateľského mena %s</string>
     <string name="quick_vote">Rýchle hlasovanie</string>
     <string name="quick_vote_subtitle">Klepnutím na tlačidlo „Hlasovať za všetkých“ budete automaticky hlasovať za všetky filtrované používateľské mená (%d), ktoré boli odoslané ako prvé</string>
     <string name="vote_for_all">Hlasovať za všetkých</string>
     <string name="voting_period_active">Obdobie hlasovania o menách je aktívne</string>
     <string name="there_was_a_network_error">Vyskytla sa chyba siete. Môžete skúsiť znova bez ďalších poplatkov</string>
     <string name="requested_username_has_been">Používateľské meno bolo vyžiadané.</string>
-    <string name="requested_voting_duration">Výsledky o %s.</string>
+    <string name="requested_voting_duration">Výsledky dňa %s.</string>
     <string name="cancel_request">Zrušiť požiadavku</string>
     <string name="after_the_voting">Po ukončení hlasovania vás budeme informovať o výsledkoch</string>
     <string name="none">Žiadne</string>
@@ -378,7 +415,6 @@ používateľské meno</b></string>
     <string name="coinjoin_mixing">Miešanie</string>
     <string name="coinjoin_paused">Miešanie pozastavené</string>
     <string name="coinjoin_not_started">Nespustené</string>
-    <string name="coinjoin_progress">%s (%d%%) %s z %s</string>
     <string name="coinjoin_progress_balance">%1$s z %2$s</string>
     <string name="coinjoin_progress_finished">Plne zmiešané</string>
     <string name="coinjoin_change_level_confirmation">Naozaj chcete zmeniť úroveň ochrany osobných údajov\?</string>

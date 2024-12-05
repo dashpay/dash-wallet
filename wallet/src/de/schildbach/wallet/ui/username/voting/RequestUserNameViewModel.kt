@@ -92,6 +92,7 @@ class RequestUserNameViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
+        private val CONTEST_DOCUMENT_FEE = Coin.valueOf(0, 20).value * 1000
     }
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
@@ -103,7 +104,10 @@ class RequestUserNameViewModel @Inject constructor(
 
     var identity: BlockchainIdentityData? = null
     var requestedUserName: String? = null
-    var identityBalance: Long = 0L
+
+    private val _identityBalance = MutableStateFlow(0L)
+    val identityBalance: StateFlow<Long>
+        get() = _identityBalance
 
     private val _walletBalance = MutableStateFlow(Coin.ZERO)
     val walletBalance: StateFlow<Coin>
@@ -130,8 +134,22 @@ class RequestUserNameViewModel @Inject constructor(
     suspend fun hasUserCancelledVerification(): Boolean =
         identityConfig.get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK) ?: false
 
-    fun canAffordNonContestedUsername(): Boolean = _walletBalance.value >= Constants.DASH_PAY_FEE
-    fun canAffordContestedUsername(): Boolean = _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
+    fun canAffordNonContestedUsername(): Boolean {
+        return if (identity?.userId != null) {
+            val credits = _identityBalance.value
+            credits > Constants.DASH_PAY_FEE.value/10 * 1000
+        } else {
+            _walletBalance.value >= Constants.DASH_PAY_FEE
+        }
+    }
+    fun canAffordContestedUsername(): Boolean {
+        return if (identity?.userId != null) {
+            val credits = _identityBalance.value
+            credits > CONTEST_DOCUMENT_FEE
+        } else {
+            _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
+        }
+    }
 
     val myUsernameRequest: Flow<UsernameRequest?>
         get() = _myUsernameRequest
@@ -147,19 +165,24 @@ class RequestUserNameViewModel @Inject constructor(
             .filterNotNull()
             .onEach {
                 identity = identityConfig.load()
-                identityBalance = identity?.let { identity ->
-                    platformRepo.getIdentityBalance(Identifier.from(identity.userId)).balance
+                _identityBalance.value = identity?.let { identity ->
+                    try {
+                        platformRepo.getIdentityBalance(Identifier.from(identity.userId)).balance
+                    } catch (e: Exception) {
+                        // need to try again later
+                        -1
+                    }
                 } ?: 0
                 log.info("identity balance: {}", identityBalance)
                 if (requestedUserName == null) {
                     requestedUserName = identityConfig.get(USERNAME)
                 }
             }
-            .flatMapLatest { usernameRequestDao.observeRequest(UsernameRequest.getRequestId(it, requestedUserName!!)) }
+            .flatMapLatest { usernameRequestDao.observeRequest(UsernameRequest.getRequestId(it, requestedUserName ?: "")) }
             .onEach {
                 if (it != null) {
                     _myUsernameRequest.value = it
-                } else {
+                } else if (requestedUserName != null) {
                     identity?.let { identityData ->
                         _myUsernameRequest.value = UsernameRequest(
                             UsernameRequest.getRequestId(identityData.userId!!, requestedUserName!!),
@@ -173,6 +196,8 @@ class RequestUserNameViewModel @Inject constructor(
                             false
                         )
                     }
+                } else {
+                    _myUsernameRequest.value = null
                 }
             }
             .launchIn(viewModelWorkerScope)
@@ -278,7 +303,7 @@ class RequestUserNameViewModel @Inject constructor(
                     var maxApprovalVotes = 0
                     firstCreatedAt = try {
                         contenders.map.values.minOf { contender ->
-                            val document = contender.seralizedDocument?.let {
+                            val document = contender.serializedDocument?.let {
                                 DomainDocument(platformRepo.platform.names.deserialize(it))
                             }
                             maxApprovalVotes = max(contender.votes, maxApprovalVotes)
@@ -355,9 +380,9 @@ class RequestUserNameViewModel @Inject constructor(
 
         // if we have an identity, then we must use our identity balance
         val enoughIdentityBalance = if (contestable) {
-            identityBalance >= Constants.DASH_PAY_FEE_CONTESTED.value * 1000
+            _identityBalance.value >= CONTEST_DOCUMENT_FEE
         } else {
-            identityBalance >= Constants.DASH_PAY_FEE.value / 3 * 1000
+            _identityBalance.value >= Constants.DASH_PAY_FEE.value / 3 * 1000
         }
         val enoughBalance = if (contestable) {
             _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
@@ -369,7 +394,7 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameLengthValid = validLength,
                 usernameCharactersValid = validCharacters && !startOrEndWithHyphen,
                 usernameContestable = contestable,
-                enoughBalance = if (identityBalance > 0) enoughIdentityBalance else enoughBalance,
+                enoughBalance = if (identityBalance.value > 0) enoughIdentityBalance else enoughBalance,
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameCheckSuccess = false,
@@ -378,6 +403,7 @@ class RequestUserNameViewModel @Inject constructor(
         return validCharacters && validLength
     }
 
+    @Throws(NullPointerException::class)
     fun isUsernameContestable(): Boolean {
         return Names.isUsernameContestable(requestedUserName!!)
     }

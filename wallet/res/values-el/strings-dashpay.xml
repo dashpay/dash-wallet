@@ -88,6 +88,7 @@
     <string name="dashpay_topup_fee">Τέλος Topup</string>
     <string name="search_user_find_a_user">Βρείτε έναν χρήστη στο Δίκτυο του Dash</string>
     <string name="search_for_a_user">Αναζήτηση για χρήστη στο Dash Δίκτυο</string>
+    <string name="search_user_input_placeholder">Αναζήτηση  Ονόματος Χρήστη</string>
     <string name="add_new_contact">Προσθήκη Νέας Επαφής</string>
     <string name="send_contact_request">Αποστολή Αιτήματος Επαφής</string>
     <string name="sending_contact_request">Αποστολή αιτήματος επαφής</string>
@@ -268,6 +269,8 @@
     <string name="usernames_blocked_title">Ορισμένα ονόματα χρηστών μπορούν να μπλοκαριστούν</string>
     <string name="usernames_blocked_subtitle">Εάν αρκετά μέλη του δικτύου διαπιστώσουν ότι ένα όνομα χρήστη είναι ακατάλληλο, μπορούν να το μπλοκάρουν.</string>
     <string name="username_voting">Ψηφοφορία ονόματος χρήστη</string>
+    <string name="username_voting_subtitle">Ως ιδιοκτήτης ενός masternode μπορείτε να ψηφίσετε για να εγκρίνετε τα ζητούμενα ονόματα χρήστη πριν οι χρήστες μπορέσουν να τα δημιουργήσουν.</string>
+    <string name="username_voting_subtitle_two">Μπορείτε να μπλοκάρετε τη δημιουργία των ονομάτων χρήστη που θεωρείτε ακατάλληλα.</string>
     <string name="voting_duplicates_only_title">Προεπιλεγμένη ρύθμιση φίλτρου</string>
     <string name="voting_duplicates_only_message">Το προεπιλεγμένο φίλτρο εμφανίζει μόνο τα διπλά ονόματα χρηστών για τα οποία ΔΕΝ έχετε ψηφίσει, αλλά μπορείτε να δείτε όλα τα διαφιλονικούμενα ονόματα χρηστών αλλάζοντας το φίλτρο</string>
     <string name="all">Όλα</string>
@@ -294,6 +297,15 @@
         <item>Δεν έχω εγκρίνει</item>
         <item>Έχει μπλοκάρει ψήφους</item>
     </string-array>
+    <string name="unblock_button">Ξεμπλοκάρισμα</string>
+    <plurals name="block_vote_button">
+        <item quantity="one">Μπλόκ</item>
+        <item quantity="other">Μπλόκ</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="one">Έγκριση</item>
+        <item quantity="other">Εγκρίσεις</item>
+    </plurals>
     <string name="block_vote_count">%d Μπλοκ(ς)</string>
     <string name="request_your_username">Δημιουργήστε το όνομα χρήστη σας</string>
     <string name="request_your_hint">Παρακαλώ σημειώστε ότι δεν θα μπορείτε να το αλλάξετε στο μέλλον.</string>
@@ -313,6 +325,7 @@
     <string name="request_details">Λεπτομέρειες αιτήματος</string>
     <string name="request_details_subtitle">Ελέγξτε την παρακάτω ανάρτηση για να επαληθεύσετε την ιδιοκτησία αυτού του ονόματος χρήστη</string>
     <string name="vote_to_approve">Ψηφίστε για Έγκριση</string>
+    <string name="vote_to_block">Ψηφίστε για μπλοκάρισμα</string>
     <string name="identity">Ταυτότητα</string>
     <string name="results">Αποτελέσματα</string>
     <string name="link">Σύνδεσμος</string>
@@ -331,11 +344,31 @@
     <string name="voting_key_hint">Ιδιωτικό κλειδί ψηφοφορίας Masternode</string>
     <string name="voting_key_input_error">Έχετε εισάγει ένα μη έγκυρο κλειδί</string>
     <string name="voting_key_input_not_active_error">Έχετε εισάγει ένα κλειδί που δεν είναι συνδεδεμένο με ενεργό Masternode</string>
+    <string name="voting_key_input_already_present">Έχετε ήδη εισάγει αυτό το masternode κλειδί </string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">Έχετε εισάγει ένα κλειδί που είναι για το testnet, αλλά αυτό είναι το mainnet. Θα πρέπει να μοιάζει με αυτό: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">Έχετε εισάγει ένα κλειδί που είναι για το mainnet, αλλά αυτό είναι το testnet. Θα πρέπει να μοιάζει με αυτό:%s</string>
+    <string name="voting_key_input_invalid_private_key_address">Έχετε εισάγει ένα κλειδί διεύθυνσης αντί για ένα ιδιωτικό κλειδί ψηφοφορίας masternode. Θα πρέπει να είναι σε μορφή WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">Έχετε εισάγει ένα κλειδί σε hex μορφή, αλλά θα έπρεπε να είναι σε μορφή WIF(%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">Έχετε εισάγει ένα κλειδί σε hex μορφή, αλλά θα έπρεπε να είναι σε μορφή WIF(%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">Έχετε εισαγάγει ένα ιδιωτικό κλειδί που είναι πολύ μικρό. Ακολουθεί ένα παράδειγμα (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">Έχετε εισάγει ένα ιδιωτικό κλειδί με λανθασμένους χαρακτήρες. Ακολουθεί ένα παράδειγμα (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">Έχετε εισάγει ένα ιδιωτικό κλειδί που έχει έναν άκυρο χαρακτήρα. Ακολουθεί ένα παράδειγμα (%s)</string>
+
     <string name="voting_key_add">Προσθέστε τα κλειδιά ψηφοφορίας σας</string>
     <string name="voting_key_add_subtitle">Οι παρακάτω διευθύνσεις IP συνδέονται με αυτό το πορτοφόλι</string>
     <string name="masternode_ip">Διεύθυνση IP του Masternode</string>
     <string name="multiple_votes_cast">%d ψήφοι θα δοθούν καθώς έχετε αποθηκεύσει πολλαπλά κλειδιά ψηφοφορίας στο πορτοφόλι</string>
     <string name="add_masternode_key">Προσθήκη κλειδιού ψηφοφορίας Masternode</string>
+    <string name="dont_ask_again">Μη με ξαναρωτήσεις</string>
+    <string name="vote_submitting">Υποβολή της ψήφου σας για το όνομα χρήστη %s</string>
+    <string name="vote_submitted">Ψηφίσατε για το όνομα χρήστη %s</string>
+    <string name="cancel_submitting">Ακύρωση της ψήφου σας για το όνομα χρήστη %s</string>
+    <string name="cancel_submitted">Ακυρώθηκε η ψήφος για το όνομα χρήστη %s</string>
+    <string name="block_submitting">Αποκλεισμός για το όνομα χρήστη %s</string>
+    <string name="block_submitted">Αποκλείσατε το όνομα χρήστη %s</string>
+    <string name="vote_submitted_error">Σφάλμα ψηφοφορίας για το όνομα χρήστη %s</string>
+    <string name="cancel_submitted_error">Σφάλμα ακύρωσης της ψηφοφορίας για το όνομα χρήστη %s</string>
+    <string name="block_submitted_error">Σφάλμα αποκλεισμού του ονόματος χρήστη %s</string>
     <string name="quick_vote">Γρήγορη Ψηφοφορία</string>
     <string name="quick_vote_subtitle">Πατώντας το κουμπί \"Ψηφίστε για όλους\", θα ψηφίσετε αυτόματα για όλα τα φιλτραρισμένα ονόματα χρηστών (%d) που υποβλήθηκαν πρώτα.</string>
     <string name="vote_for_all">Ψηφίστε για Όλους</string>
@@ -378,7 +411,6 @@
     <string name="coinjoin_mixing">Ανάμιξη</string>
     <string name="coinjoin_paused">Ανάμειξη σε παύση</string>
     <string name="coinjoin_not_started">Δεν ξεκίνησε</string>
-    <string name="coinjoin_progress">%s (%d%%) %s από %s</string>
     <string name="coinjoin_progress_balance">%1$s από%2$s</string>
     <string name="coinjoin_progress_finished">Πλήρως αναμεμειγμένα</string>
     <string name="coinjoin_change_level_confirmation">Είστε σίγουροι ότι θέλετε να αλλάξετε το επίπεδο απορρήτου;</string>

@@ -88,6 +88,7 @@ gebruikersnaam</b></string>
     <string name="dashpay_topup_fee">Opwaardeerkosten</string>
     <string name="search_user_find_a_user">Zoek een gebruiker op het Dash netwerk</string>
     <string name="search_for_a_user">Zoek naar een gebruiker op het Dash netwerk</string>
+    <string name="search_user_input_placeholder">Zoek gebruikersnaam</string>
     <string name="add_new_contact">Voeg een nieuw contact toe</string>
     <string name="send_contact_request">Contactverzoek verzenden</string>
     <string name="sending_contact_request">Contactverzoek verzenden</string>
@@ -269,6 +270,8 @@ gebruikersnaam</b></string>
     <string name="usernames_blocked_title">Sommige gebruikersnamen kunnen worden geblokkeerd.</string>
     <string name="usernames_blocked_subtitle">Als genoeg mensen op het netwerk bepalen dat een gebruikersnaam ongepast is, kunnen ze deze blokkeren.</string>
     <string name="username_voting">Stemmen op gebruikersnamen</string>
+    <string name="username_voting_subtitle">Als eigenaar van een masternode kan je stemmen om aangevraagde gebruikersnamen goed te keuren voordat ze op het netwerk worden aangemaakt.</string>
+    <string name="username_voting_subtitle_two">Je kan een gebruikersnaam blokkeren als je die ongepast vindt.</string>
     <string name="voting_duplicates_only_title">Standaard filterinstelling</string>
     <string name="voting_duplicates_only_message">Het standaardfilter toont alleen dubbele gebruikersnamen waar je NIET op hebt gestemd, maar je kan alle betwiste gebruikersnamen zien door het filter te wijzigen</string>
     <string name="all">Alles</string>
@@ -295,6 +298,15 @@ gebruikersnaam</b></string>
         <item>Ik heb het niet goedgekeurd</item>
         <item>Heeft geblokkeerde stemmen </item>
     </string-array>
+    <string name="unblock_button">Deblokkeren</string>
+    <plurals name="block_vote_button">
+        <item quantity="one">Block</item>
+        <item quantity="other">Blocks</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="one">Goedkeuring</item>
+        <item quantity="other">Goedkeuringen</item>
+    </plurals>
     <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Maak je gebruikersnaam aan</string>
     <string name="request_your_hint">Let op dat je deze in de toekomst niet meer kunt wijzigen</string>
@@ -314,6 +326,7 @@ gebruikersnaam</b></string>
     <string name="request_details">Verkrijg details</string>
     <string name="request_details_subtitle">Controleer de onderstaande post om het eigendom van deze gebruikersnaam te verifiëren.</string>
     <string name="vote_to_approve">Stem om goed te keuren</string>
+    <string name="vote_to_block">Stem om goed te keuren</string>
     <string name="identity">Identiteit</string>
     <string name="results">Resultaten</string>
     <string name="link">Link</string>
@@ -332,11 +345,31 @@ gebruikersnaam</b></string>
     <string name="voting_key_hint">Masternode Voting Private Key</string>
     <string name="voting_key_input_error">Je hebt een verkeerde sleutel ingevoerd</string>
     <string name="voting_key_input_not_active_error">je hebt een sleutel ingevoerd die niet is gekoppeld aan een actieve Masternode</string>
+    <string name="voting_key_input_already_present">Je hebt masternode sleutel al ingevoerd</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">Je hebt een sleutel ingevoerd voor testnet, maar dit is mainnet. Het zou er zo uit moeten zien: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">Je hebt een sleutel ingevoerd voor mainnet, maar dit is testnet. Het zou er zo uit moeten zien: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">Je hebt een adressleutel ingevoerd in plaats van de stemsleutel van een masternode . Het moet in WIF formaat zijn (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">Je hebt een sleutel in hex formaat ingevoerd, maar het moet in WIF formaat zijn (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">Je hebt een sleutel in hex formaat ingevoerd, maar het moet in WIF formaat zijn (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">Je hebt een te korte privésleutel ingevoerd. Hier is een voorbeeld (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">Je hebt een privésleutel ingevoerd die enkele onjuiste tekens bevat. Hier is een voorbeeld (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">Je hebt een privésleutel ingevoerd met een ongeldig karakter. Hier is een voorbeeld (%s)</string>
+
     <string name="voting_key_add">Voeg je stemssleutels toe.</string>
     <string name="voting_key_add_subtitle">De onderstaande IP-adres(sen) zijn geassocieerd met deze portemonnee.</string>
     <string name="masternode_ip">Masternode IP adres</string>
     <string name="multiple_votes_cast">Er zullen %d stemmen worden uitgebracht omdat je meerdere stemsleutels in de portemonnee hebt opgeslagen.</string>
     <string name="add_masternode_key">Voeg Masternode stemsleutel toe</string>
+    <string name="dont_ask_again">Vraag me niet nog een keer</string>
+    <string name="vote_submitting">Je stem indienen voor gebruikersnaam %s</string>
+    <string name="vote_submitted">Gestemd voor gebruikersnaam %s</string>
+    <string name="cancel_submitting">Je stem voor gebruikersnaam %s annuleren</string>
+    <string name="cancel_submitted">Stemming voor gebruikersnaam %s geannuleerd</string>
+    <string name="block_submitting">Blokkeren van gebruikersnaam %s</string>
+    <string name="block_submitted">Je hebt gebruikersnaam %s geblokkeerd</string>
+    <string name="vote_submitted_error">Fout bij stemmen voor gebruikersnaam %s</string>
+    <string name="cancel_submitted_error">Fout bij annuleren van stemmen voor gebruikersnaam %s</string>
+    <string name="block_submitted_error">Fout bij blokkeren gebruikersnaam %s</string>
     <string name="quick_vote">Snel stemmen</string>
     <string name="quick_vote_subtitle">Door op de knop \"Stem op Alles\" te drukken, stem je automatisch voor alle gefilterde gebruikersnamen (%d) die als eerste zijn ingediend.</string>
     <string name="vote_for_all">Stem voor alle</string>
@@ -379,7 +412,6 @@ gebruikersnaam</b></string>
     <string name="coinjoin_mixing">Aan het mixen</string>
     <string name="coinjoin_paused">mixen gepauzeerd </string>
     <string name="coinjoin_not_started">Niet gestart</string>
-    <string name="coinjoin_progress">%s (%d%%) %s van %s</string>
     <string name="coinjoin_progress_balance">%1$s van %2$s</string>
     <string name="coinjoin_progress_finished">Volledig gemixt</string>
     <string name="coinjoin_change_level_confirmation">Weet je zeker dat je het privacy niveau wilt wijzigen\?</string>

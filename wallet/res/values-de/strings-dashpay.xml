@@ -88,7 +88,7 @@ Benutzernamen</b></string>
     <string name="dashpay_topup_fee">Aufladegebühr</string>
     <string name="search_user_find_a_user">Finde einen Benutzer des Dash-Netzwerks</string>
     <string name="search_for_a_user">Benutzer des Dash-Netzwerks suchen</string>
-    <string name="search_user_input_placeholder">Den zu suchenden Benutzernamen hier eintragen</string>
+    <string name="search_user_input_placeholder">Suche Nutzername</string>
     <string name="add_new_contact">Neuen Kontakt hinzufügen</string>
     <string name="send_contact_request">Kontaktanfrage senden</string>
     <string name="sending_contact_request">Kontaktanfrage senden</string>
@@ -269,6 +269,8 @@ Benutzernamen</b></string>
     <string name="usernames_blocked_title">Manche Benutzernamen können blockiert werden</string>
     <string name="usernames_blocked_subtitle">Wenn genügend Mitglieder des Netzwerkes feststellen, dass ein Benutzername unangemessen ist, könne diese ihn sperren</string>
     <string name="username_voting">Abstimmung über Benutzernamen</string>
+    <string name="username_voting_subtitle">Als Masternode-Besitzer kannst du abstimmen, um beantragte Nutzernamen zu bewilligen, bevor diese im Netzwerk erstellt werden.</string>
+    <string name="username_voting_subtitle_two">Du kannst das Erstellen von Nutzernamen blockieren, wenn du sie für unangemessen hälst</string>
     <string name="voting_duplicates_only_title">Standardmäßige Filtereinstellung</string>
     <string name="voting_duplicates_only_message">Die standardmäßige Filtereinstellung zeigt nur doppelte Benutzernamen über die noch NICHT abgestimmt wurde. Um alle strittigen Benutzernamen sehen zu können, ändere den Filter.</string>
     <string name="all">Alles</string>
@@ -295,6 +297,15 @@ Benutzernamen</b></string>
         <item>Ich habe nicht zugestimmt.</item>
         <item>Beinhalted blockierte Votes</item>
     </string-array>
+    <string name="unblock_button">Freigeben</string>
+    <plurals name="block_vote_button">
+        <item quantity="one">Einwand</item>
+        <item quantity="other">Einwände</item>
+    </plurals>
+    <plurals name="approval_button">
+        <item quantity="one">Bewilligung</item>
+        <item quantity="other">Bewilligungen</item>
+    </plurals>
     <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Benutzernamen erstellen</string>
     <string name="request_your_hint">Bitte beachte, dass du dies in der Zukunft nicht mehr ändern kannst</string>
@@ -314,6 +325,7 @@ Benutzernamen</b></string>
     <string name="request_details">Details anfordern</string>
     <string name="request_details_subtitle">Überprüfe den unten stehenden Beitrag, um den Besitz dieses Benutzernamens zu verifizieren</string>
     <string name="vote_to_approve">Abstimmung über die Genehmigung</string>
+    <string name="vote_to_block">Stimme für die Blockierung</string>
     <string name="identity">Identität</string>
     <string name="results">Ergebnisse</string>
     <string name="link">Link</string>
@@ -332,11 +344,31 @@ Benutzernamen</b></string>
     <string name="voting_key_hint">Privater Masternode Voting-Schlüssel</string>
     <string name="voting_key_input_error">Du hast einen ungültigen Schlüssel eingegeben.</string>
     <string name="voting_key_input_not_active_error">Du hast einen Schlüssel eingegeben, der keinem aktiven Masternode zugeordnet werden kann</string>
+    <string name="voting_key_input_already_present">Du hast diesen Masternode-Schlüssel bereits eingegeben.</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">Du hast einen Testnet-Schlüssel eingegeben, aber wir befinden uns im Mainnet. Der Schlüssel muss wie folgt aussehen: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">Du hast einen Testnet-Schlüssel eingegeben, aber wir befinden uns im Mainnet. Der Schlüssel muss wie folgt aussehen: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">Du hast einen privaten Schlüssel für eine einzelne Dash Adresse anstatt des Masternode Voting Private Key benutzt. Es sollte im WIF-Format (%s) eingetragen werden</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">Du hast den Schlüssel im HEX-Format eingegeben. Es wird aber WIF-Format (%s) benötigt.</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">Du hast den Schlüssel im HEX-Format eingegeben. Es wird aber WIF-Format (%s) benötigt.</string>
+    <string name="voting_key_input_invalid_private_key_too_short">Dein eingegebener privater Schlüssel ist zu kurz. Hier ist ein Beispiel (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">Dein eingegebener privater Schlüssel beinhaltet falsche Zeichen. Hier ist ein Beispiel für die korrekte Eingabe (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">Dein privater Schlüssel beinhaltet nicht zugelassene Zeichen. Hier ist ein Beispiel für die korrekte Eingabe (%s)</string>
+
     <string name="voting_key_add">Füge deine Abstimmungs-Schlüssel hinzu</string>
     <string name="voting_key_add_subtitle">Die folgende(n) IP-Adresse(n) sind mit dieser Wallet verbunden</string>
     <string name="masternode_ip">Masternode IP-Adresse</string>
     <string name="multiple_votes_cast">%d die Stimmen werden abgegeben, da du mehrere Abstimmungs-Schlüssel in deiner Wallet gespeichert hast</string>
     <string name="add_masternode_key">Masternode Voting-Schlüssel hinzufügen</string>
+    <string name="dont_ask_again">Bitte nicht noch einmal nachfragen</string>
+    <string name="vote_submitting">Deine Stimme für Nutzername %s abgeben</string>
+    <string name="vote_submitted">Gestimmt für Nutzername %s </string>
+    <string name="cancel_submitting">Deine Stimme für Nutzername %s zurückziehen</string>
+    <string name="cancel_submitted">Stimme für Nutzername %s zurückgezogen</string>
+    <string name="block_submitting">Nutzname %s blockieren</string>
+    <string name="block_submitted">Du hast Nutzernamen %s blockiert</string>
+    <string name="vote_submitted_error">Fehler beim Abstimmen für Nutzername %s</string>
+    <string name="cancel_submitted_error">Fehler beim Zurückziehen der Stimme für Nutzername %s</string>
+    <string name="block_submitted_error">Fehler beim Blockieren von Nutzername %s</string>
     <string name="quick_vote">Schnelles Abstimmen</string>
     <string name="quick_vote_subtitle">Wenn du die Schaltfläche \"Für alle abstimmen\" tippst, stimmst du automatisch für alle gefilterten Benutzernamen (%d), die zuerst eingereicht wurden</string>
     <string name="vote_for_all">Stimme für alle</string>
@@ -379,7 +411,6 @@ Benutzernamen</b></string>
     <string name="coinjoin_mixing">Mixing</string>
     <string name="coinjoin_paused">Mixing pausiert</string>
     <string name="coinjoin_not_started">Nicht gestartet</string>
-    <string name="coinjoin_progress">%s (%d%%) %s von %s</string>
     <string name="coinjoin_progress_balance">%1$s von %2$s</string>
     <string name="coinjoin_progress_finished">Vollständig gemixt</string>
     <string name="coinjoin_change_level_confirmation">Möchtest du die Einstellung der Privatsphäre wirklich ändern\?</string>
