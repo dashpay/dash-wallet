@@ -213,8 +213,8 @@ class TransactionAdapter(
                 binding.primaryStatus.text = name
             } else if (txView.title != null) {
                 binding.primaryStatus.text = resources.getString(
-                    txView.title.resourceId,
-                    *txView.title.args.toTypedArray()
+                    txView.title!!.resourceId,
+                    *txView.title!!.args.toTypedArray()
                 )
             }
 
