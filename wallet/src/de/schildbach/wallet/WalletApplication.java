@@ -563,6 +563,18 @@ public class WalletApplication extends MultiDexApplication
             } else throw x;
         }
 
+        // did blockchain rescan fail
+        if (config.isResetBlockchainPending()) {
+            log.info("failed to finish reset earlier, performing now...");
+            File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
+            blockChainFile.delete();
+            File headerChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.HEADERS_FILENAME);
+            headerChainFile.delete();
+            Toast.makeText(this, "finishing blockchain rescan", Toast.LENGTH_LONG).show();
+            WalletApplicationExt.INSTANCE.clearDatabases(this, false);
+            config.clearResetBlockchainPending();
+        }
+
         // make sure there is at least one recent backup
         if (!getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists())
             backupWallet();

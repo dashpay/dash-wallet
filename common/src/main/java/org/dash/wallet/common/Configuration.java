@@ -95,6 +95,7 @@ public class Configuration {
     public static final String PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER = "show_notifications_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER = "show_tax_catagory_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME = "show_tax_catagory_install_time";
+    public static final String PREFS_KEY_RESET_BLOCKCHAIN_PENDING = "reset_blockchain_pending";
 
     private static final long DISABLE_NOTIFICATIONS = -1;
     
@@ -524,6 +525,17 @@ public class Configuration {
 
     public void setTaxCategoryInstallTime(long time) {
         prefs.edit().putLong(PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME, time).apply();
+    }
+
+    // reset blockchain pending
+    public boolean isResetBlockchainPending() {
+        return prefs.getBoolean(PREFS_KEY_RESET_BLOCKCHAIN_PENDING, false);
+    }
+    public void setResetBlockchainPending() {
+        prefs.edit().putBoolean(PREFS_KEY_RESET_BLOCKCHAIN_PENDING, true).apply();
+    }
+    public void clearResetBlockchainPending() {
+        prefs.edit().putBoolean(PREFS_KEY_RESET_BLOCKCHAIN_PENDING, false).apply();
     }
 
     // CrowdNode

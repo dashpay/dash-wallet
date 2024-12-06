@@ -1139,6 +1139,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 log.info("will remove blockchain on service shutdown");
 
                 resetBlockchainOnShutdown = true;
+                config.setResetBlockchainPending();
                 stopSelf();
             } else if (BlockchainService.ACTION_WIPE_WALLET.equals(action)) {
                 log.info("will remove blockchain and delete walletFile on service shutdown");
@@ -1290,6 +1291,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             }
             //Clear the blockchain identity
             WalletApplicationExt.INSTANCE.clearDatabases(application, false);
+            if (resetBlockchainOnShutdown) {
+                config.clearResetBlockchainPending();
+            }
         }
 
         closeStream(mnlistinfoBootStrapStream);
