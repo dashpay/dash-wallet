@@ -80,6 +80,7 @@ import org.bitcoinj.net.discovery.SeedPeers;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
+import org.bitcoinj.store.SPVDirectIOBlockStore;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
@@ -990,12 +991,21 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         }
 
         try {
-            blockStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile);
-            blockStore.getChainHead(); // detect corruptions as early as possible
+            if (config.getUseAlternateSync()) {
+                log.info("using SPVDirectIOBlockStore blockstore");
+                blockStore = new SPVDirectIOBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile);
+                blockStore.getChainHead(); // detect corruptions as early as possible
 
-            headerStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile);
-            headerStore.getChainHead(); // detect corruptions as early as possible
+                headerStore = new SPVDirectIOBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile);
+                headerStore.getChainHead(); // detect corruptions as early as possible
+            } else {
+                log.info("using SPVBlockStore blockstore");
+                blockStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile);
+                blockStore.getChainHead(); // detect corruptions as early as possible
 
+                headerStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile);
+                headerStore.getChainHead(); // detect corruptions as early as possible
+            }
             final long earliestKeyCreationTime = wallet.getEarliestKeyCreationTime();
 
             if (!blockChainFileExists && earliestKeyCreationTime > 0) {
