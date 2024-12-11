@@ -80,7 +80,6 @@ import org.bitcoinj.net.discovery.SeedPeers;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
-import org.bitcoinj.store.SPVDirectIOBlockStore;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
@@ -121,6 +120,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1494,5 +1496,104 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 //do nothing
             }
         }
+    }
+
+    // TODO: should we have a backup blockchain file?
+//    private NewBestBlockListener newBestBlockListener = block -> {
+//        try {
+//            backupBlockStore.put(block);
+//        } catch (BlockStoreException x) {
+//            throw new RuntimeException(x);
+//        }
+//    };
+
+    private boolean verifyBlockStore(BlockStore store) throws BlockStoreException {
+            StoredBlock cursor = store.getChainHead();
+            for (int i = 0; i < 10; ++i) {
+                cursor = cursor.getPrev(store);
+                if (cursor == null || cursor.getHeader().equals(Constants.NETWORK_PARAMETERS.getGenesisBlock())) {
+                    break;
+                }
+            }
+            return true;
+    }
+
+    private boolean verifyBlockStore(BlockStore store, ScheduledExecutorService scheduledExecutorService) {
+        try {
+            ScheduledFuture<Boolean> future = scheduledExecutorService.schedule(() -> verifyBlockStore(store), 100, TimeUnit.MILLISECONDS);
+            return future.get(1, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("verification of blockstore failed:", e);
+            return false;
+        }
+    }
+
+    // TODO: should we have a backup blockchain file?
+//    public static void copyFile(File source, File destination) throws IOException {
+//        try (FileChannel sourceChannel = new FileInputStream(source).getChannel();
+//             FileChannel destChannel = new FileOutputStream(destination).getChannel()) {
+//            sourceChannel.transferTo(0, sourceChannel.size(), destChannel);
+//        }
+//    }
+//
+//
+//    private void replaceBlockStore(BlockStore a, File aFile, BlockStore b, File bFile) throws BlockStoreException {
+//        try {
+//            a.close();
+//            b.close();
+//            copyFile(bFile, aFile);
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
+
+    private void verifyBlockStores() throws BlockStoreException {
+        ScheduledExecutorService scheduledExecutorService = new ScheduledThreadPoolExecutor(1);
+        log.info("verifying backupBlockStore");
+//        boolean verifiedBackupBlockStore = false;
+        boolean verifiedHeaderStore = false;
+        boolean verifiedBlockStore = false;
+//        if (!(verifiedBackupBlockStore = verifyBlockStore(backupBlockStore, scheduledExecutorService))) {
+//            log.info("backupBlockStore verification failed");
+//        }
+
+        log.info("verifying headerStore");
+        if (!(verifiedHeaderStore = verifyBlockStore(headerStore, scheduledExecutorService))) {
+            log.info("headerStore verification failed");
+        }
+
+        log.info("verifying blockStore");
+        if (!(verifiedBlockStore = verifyBlockStore(blockStore, scheduledExecutorService))) {
+            log.info("blockStore verification failed");
+        }
+        // TODO: should we have a backup blockchain file?
+//        if (!verifiedBlockStore) {
+//            if (verifiedBackupBlockStore &&
+//                    !backupBlockStore.getChainHead().getHeader().getHash().equals(Constants.NETWORK_PARAMETERS.getGenesisBlock().getHash())) {
+//                log.info("replacing blockStore with backup");
+//                replaceBlockStore(blockStore, blockChainFile, backupBlockStore, backupBlockChainFile);
+//                log.info("reloading blockStore");
+//                blockStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile);
+//                blockStore.getChainHead(); // detect corruptions as early as possible
+//                log.info("reloading backup blockchain file");
+//                backupBlockStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile);
+//                backupBlockStore.getChainHead(); // detect corruptions as early as possible
+//                verifyBlockStores();
+//            } /*else if (verifiedHeaderStore) {
+//                log.info("replacing blockStore with header");
+//                replaceBlockStore(blockStore, blockChainFile, headerStore, headerChainFile);
+//                log.info("reloading blockStore");
+//                blockStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile);
+//                blockStore.getChainHead(); // detect corruptions as early as possible
+//                log.info("reloading header file");
+//                headerStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile);
+//                headerStore.getChainHead(); // detect corruptions as early as possible
+//                verifyBlockStores();
+//            } else*/ {
+//                // get blocks from platform here...
+//                throw new BlockStoreException("can't verify and recover");
+//            }
+//        }
+        log.info("blockstore files verified: {}, {}", verifiedBlockStore, verifiedHeaderStore);
     }
 }

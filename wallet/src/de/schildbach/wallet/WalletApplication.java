@@ -558,18 +558,14 @@ public class WalletApplication extends MultiDexApplication
             //txes with fees that were too low or dust that were stuck and could not be sent.  In a later version
             //the fees were fixed, then those stuck transactions became inconsistant and the exception is thrown.
             if (x.getMessage().contains("Inconsistent spent tx:")) {
-                File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
-                blockChainFile.delete();
+                deleteBlockchainFiles();
             } else throw x;
         }
 
         // did blockchain rescan fail
         if (config.isResetBlockchainPending()) {
             log.info("failed to finish reset earlier, performing now...");
-            File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
-            blockChainFile.delete();
-            File headerChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.HEADERS_FILENAME);
-            headerChainFile.delete();
+            deleteBlockchainFiles();
             Toast.makeText(this, "finishing blockchain rescan", Toast.LENGTH_LONG).show();
             WalletApplicationExt.INSTANCE.clearDatabases(this, false);
             config.clearResetBlockchainPending();
@@ -578,6 +574,16 @@ public class WalletApplication extends MultiDexApplication
         // make sure there is at least one recent backup
         if (!getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists())
             backupWallet();
+    }
+
+    private void deleteBlockchainFiles() {
+        File blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
+        blockChainFile.delete();
+        File headerChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.HEADERS_FILENAME);
+        headerChainFile.delete();
+        // TODO: should we have a backup blockchain file?
+        // File backupBlockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BACKUP_BLOCKCHAIN_FILENAME);
+        // backupBlockChainFile.delete();
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
