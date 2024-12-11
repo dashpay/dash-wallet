@@ -29,7 +29,6 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletBalanceWidgetProvider
-import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
@@ -127,7 +126,6 @@ class SettingsActivity : LockScreenActivity() {
                 }
             }
         }
-
         setBatteryOptimizationText()
         binding.coinjoin.setOnClickListener {
             lifecycleScope.launch {
