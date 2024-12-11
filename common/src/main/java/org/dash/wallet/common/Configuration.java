@@ -96,8 +96,6 @@ public class Configuration {
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER = "show_tax_catagory_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME = "show_tax_catagory_install_time";
     public static final String PREFS_KEY_RESET_BLOCKCHAIN_PENDING = "reset_blockchain_pending";
-    public static final String PREFS_KEY_ALTERNATE_SYNC_SYSTEM = "alternate_sync_system";
-
     private static final long DISABLE_NOTIFICATIONS = -1;
     
     // CrowdNode
@@ -537,13 +535,6 @@ public class Configuration {
     }
     public void clearResetBlockchainPending() {
         prefs.edit().putBoolean(PREFS_KEY_RESET_BLOCKCHAIN_PENDING, false).apply();
-    }
-
-    public boolean getUseAlternateSync() {
-        return prefs.getBoolean(PREFS_KEY_ALTERNATE_SYNC_SYSTEM, false);
-    }
-    public void setUseAlternateSync(Boolean useAlternateSync) {
-        prefs.edit().putBoolean(PREFS_KEY_ALTERNATE_SYNC_SYSTEM, useAlternateSync).apply();
     }
 
     // CrowdNode
