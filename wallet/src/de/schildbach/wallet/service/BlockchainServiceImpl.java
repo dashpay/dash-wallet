@@ -993,21 +993,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         }
 
         try {
-            if (config.getUseAlternateSync()) {
-                log.info("using SPVDirectIOBlockStore blockstore");
-                blockStore = new SPVDirectIOBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile);
-                blockStore.getChainHead(); // detect corruptions as early as possible
+            log.info("loading blockchain file");
+            blockStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile);
+            blockStore.getChainHead(); // detect corruptions as early as possible
+            log.info("loading header file");
+            headerStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile);
+            headerStore.getChainHead(); // detect corruptions as early as possible
+            verifyBlockStores();
 
-                headerStore = new SPVDirectIOBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile);
-                headerStore.getChainHead(); // detect corruptions as early as possible
-            } else {
-                log.info("using SPVBlockStore blockstore");
-                blockStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile);
-                blockStore.getChainHead(); // detect corruptions as early as possible
-
-                headerStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile);
-                headerStore.getChainHead(); // detect corruptions as early as possible
-            }
             final long earliestKeyCreationTime = wallet.getEarliestKeyCreationTime();
 
             if (!blockChainFileExists && earliestKeyCreationTime > 0) {
