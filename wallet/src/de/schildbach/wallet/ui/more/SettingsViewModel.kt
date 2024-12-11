@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -41,7 +40,6 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
-    private val configuration: Configuration,
     private val walletUIConfig: WalletUIConfig,
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService,
