@@ -278,7 +278,6 @@
     <string name="preferences_initiate_reset_summary">Rescan blockchain, transactions and wallet balance. Replay will take a while, so only do this if you know why.</string>
     <string name="preferences_initiate_reset_dialog_message">Would you like to rescan the blockchain?\n\nThis will temporarily hide your wallet balance and remove transactions. Both will recover as the blockchain sync progresses. Make sure you\'ve got a reliable connection to the internet.</string>
     <string name="preferences_initiate_reset_dialog_positive">Rescan</string>
-    <string name="settings_use_alternate_sync">Use Alternate Sync System (slower)</string>
     <string name="preferences_extended_public_key_title">Show xpub</string>
     <string name="preferences_extended_public_key_summary">View the extended public key of your wallet, so it can be imported into other apps and services. Be careful: doing so will disclose your monetary privacy to that app.</string>
     <string name="bitmap_fragment_share">Share…</string>

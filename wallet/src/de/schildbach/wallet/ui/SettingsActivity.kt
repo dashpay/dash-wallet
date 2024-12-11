@@ -127,15 +127,7 @@ class SettingsActivity : LockScreenActivity() {
                 }
             }
         }
-        binding.useAlternateSyncSwitch.isChecked = viewModel.getUseAlternateSync()
-        binding.useAlternateSyncSwitch.setOnCheckedChangeListener { _, isChecked ->
-            lifecycleScope.launch {
-                viewModel.setUseAlternateSync(isChecked)
-                val serviceIntent: Intent = Intent(this@SettingsActivity, BlockchainServiceImpl::class.java)
-                stopService(serviceIntent)
-                //viewModel.restartService.performRestart(this@SettingsActivity, true, false)
-            }
-        }
+
         setBatteryOptimizationText()
         binding.coinjoin.setOnClickListener {
             lifecycleScope.launch {

@@ -84,12 +84,4 @@ class SettingsViewModel @Inject constructor(
     fun logEvent(event: String) {
         analytics.logEvent(event, mapOf())
     }
-
-    fun getUseAlternateSync(): Boolean {
-        return configuration.useAlternateSync
-    }
-
-    fun setUseAlternateSync(use: Boolean) {
-        configuration.useAlternateSync = use
-    }
 }
