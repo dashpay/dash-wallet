@@ -865,11 +865,11 @@ class CrowdNodeApiAggregator @Inject constructor(
      * obtains the current CrowdNode fee on masternode rewards once per 24 hours
      */
     private suspend fun refreshFees() {
-        val lastFeeRequest = config.get(CrowdNodeConfig.LAST_FEE_REQUEST)
+        val lastFeeRequest = 0;//config.get(CrowdNodeConfig.LAST_FEE_REQUEST)
         if (lastFeeRequest == null || (lastFeeRequest + TimeUnit.DAYS.toMillis(1)) < System.currentTimeMillis()) {
             val feeInfo = webApi.getFees(accountAddress)
             log.info("crowdnode feeInfo: {}", feeInfo)
-            val fee = feeInfo.getNormal()?.fee
+            val fee = feeInfo.first().getNormal()?.fee
             fee?.let {
                 config.set(CrowdNodeConfig.FEE_PERCENTAGE, fee)
                 config.set(CrowdNodeConfig.LAST_FEE_REQUEST, System.currentTimeMillis())
