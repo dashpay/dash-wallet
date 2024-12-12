@@ -216,4 +216,24 @@ data class TransactionRowView(
             // not sure what to do, maybe nothing
         }
     }
+
+    fun update(
+        txWrapper: TransactionWrapper,
+        bag: TransactionBag,
+        context: Context,
+        resourceMapper: TxResourceMapper = TxResourceMapper()) {
+        val lastTx = txWrapper.transactions.last()
+        log.info("matches txId: {}", txId)
+        log.info("previous title, {}, {}, {}", title?.resourceId, title?.args, txId)
+        title = ResourceString(resourceMapper.getTransactionTypeName(lastTx, bag))
+        log.info("setting title, {}, {}, {}", title?.resourceId, title?.args, txId)
+        val isSent = value.signum() < 0
+        log.info("previous status, {}, {}", statusRes, txId)
+        statusRes = if (!hasErrors && !isSent) {
+            resourceMapper.getReceivedStatusString(lastTx, context)
+        } else {
+            -1
+        }
+        log.info("setting status, {}, {}", statusRes, txId)
+    }
 }
