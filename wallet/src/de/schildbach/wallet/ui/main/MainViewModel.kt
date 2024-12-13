@@ -563,61 +563,64 @@ class MainViewModel @Inject constructor(
     private suspend fun refreshTransaction(tx: Transaction, filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
         Context.propagate(Constants.CONTEXT)
         val watch = Stopwatch.createStarted()
-        val txRowView = transactionViews?.find {
-            if (it.txId == tx.txId) {
-                true
-            } else {
-                it.txWrapper?.transactions?.find { txInGroup ->
-                    tx.txId == txInGroup.txId
-                } != null
-            }
+        // is the item currently in our list
+        val txRowViewIndex = transactionViews.indexOfFirst {
+            it.txId == tx.txId
         }
-        if (txRowView != null) {
+
+        if (txRowViewIndex != -1) {
+            val currentTxRowView = transactionViews[txRowViewIndex]
             log.info("observing transaction refresh: update {}", tx.txId)
-            // update the current item
-            // can we replace the item in the list?
-            txRowView.update(tx, walletData.transactionBag, Constants.CONTEXT)
+            // update the current item by replacing the current item
+            val newTransactionRow = TransactionRowView.fromTransaction(
+                tx,
+                walletData.transactionBag,
+                Constants.CONTEXT,
+                metadata[tx.txId],
+                currentTxRowView.contact
+            )
             log.info("observing transaction refreshTransaction: updated {}, {} ms", tx.txId, watch.elapsed(TimeUnit.MILLISECONDS))
             // some how tell the UI to update this item
-            transactionViews = transactionViews?.toMutableList()
-            _transactions.postValue(transactionViews!!)
+            val updatedList = transactionViews.toMutableList()
+            updatedList[txRowViewIndex] = newTransactionRow
+            transactionViews = updatedList
+            _transactions.postValue(transactionViews)
         } else {
             var replaceRowIndex = -1
             log.info("observing transaction refresh: add {}", tx.txId)
             // add the item to the correct group
             // if coinjoin, add to correct group based on date
             var newTransactionRow: TransactionRowView? = null
+            // these next to sections could be combined into a loop.
             val (includedCoinJoin, txWrapperCoinJoin) = coinJoinWrapperFactory!!.tryInclude(tx)
             if (includedCoinJoin) {
-                replaceRowIndex = transactionViews?.indexOfFirst {
+                replaceRowIndex = transactionViews.indexOfFirst {
                     it.txWrapper == txWrapperCoinJoin
-                } ?: -1
-                //if (existingTxRowView == null) {
-                    newTransactionRow = TransactionRowView.fromTransactionWrapper(
-                        txWrapperCoinJoin!!,
-                        walletData.transactionBag,
-                        Constants.CONTEXT,
-                        null,
-                        metadata[tx.txId]
-                    )
+                }
 
+                newTransactionRow = TransactionRowView.fromTransactionWrapper(
+                    txWrapperCoinJoin!!,
+                    walletData.transactionBag,
+                    Constants.CONTEXT,
+                    null,
+                    metadata[tx.txId]
+                )
             }
             val (includedCrowdNode, txWrapperCrowdNode) = crowdNodeWrapperFactory!!.tryInclude(tx)
             if (includedCrowdNode) {
                 // is it a new group?
-                replaceRowIndex = transactionViews?.indexOfFirst {
+                replaceRowIndex = transactionViews.indexOfFirst {
                     it.txWrapper == txWrapperCoinJoin
-                } ?: -1
-                    newTransactionRow = TransactionRowView.fromTransactionWrapper(
-                        txWrapperCrowdNode!!,
-                        walletData.transactionBag,
-                        Constants.CONTEXT,
-                        null,
-                        metadata[tx.txId]
-                    )
-
+                }
+                newTransactionRow = TransactionRowView.fromTransactionWrapper(
+                    txWrapperCrowdNode!!,
+                    walletData.transactionBag,
+                    Constants.CONTEXT,
+                    null,
+                    metadata[tx.txId]
+                )
             }
-            if (!includedCrowdNode && !includedCoinJoin) {
+            if (!(includedCrowdNode || includedCoinJoin)) {
                 // standalone TX
                 val isInternal = tx.isEntirelySelf(walletData.wallet!!)
                 var contact: DashPayProfile? = null
@@ -645,8 +648,7 @@ class MainViewModel @Inject constructor(
                     contact
                 )
             }
-            val currentList = _transactions.value ?: listOf()
-            var updatedList = currentList.toMutableList() // create a new reference to trigger a refresh
+            var updatedList = transactionViews // no changes
             // is there a new row to add?
             if (newTransactionRow != null) {
                 if (replaceRowIndex != -1) {
@@ -655,13 +657,13 @@ class MainViewModel @Inject constructor(
                         replaceRowIndex,
                         watch.elapsed(TimeUnit.MILLISECONDS)
                     )
-                    updatedList = currentList.toMutableList().apply { add(replaceRowIndex, newTransactionRow) }
+                    updatedList = updatedList.toMutableList().apply { set(replaceRowIndex, newTransactionRow) }
                 } else {
                     // add the item in the correct place in the sorted list of transaction views
                     val index =
-                        currentList.binarySearch(newTransactionRow, TransactionRowViewComparator(walletData.wallet!!))
+                        updatedList.binarySearch(newTransactionRow, TransactionRowViewComparator(walletData.wallet!!))
                             .let { if (it < 0) -it - 1 else it }
-                    updatedList = currentList.toMutableList().apply { add(index, newTransactionRow) }
+                    updatedList = updatedList.toMutableList().apply { add(index, newTransactionRow) }
                     log.info(
                         "observing transaction: refreshTransaction adding to current list at index: {}; {} ms",
                         index,
