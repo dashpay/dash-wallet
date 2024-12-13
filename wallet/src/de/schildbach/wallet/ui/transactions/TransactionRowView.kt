@@ -62,7 +62,7 @@ data class TransactionRowView(
     @StyleRes val iconBackground: Int?,
     @StringRes var statusRes: Int,
     val comment: String,
-    val transactionAmount: Int,
+    var transactionAmount: Int,
     var time: Long,
     val timeFormat: Int,
     val hasErrors: Boolean,
@@ -234,6 +234,7 @@ data class TransactionRowView(
         } else {
             -1
         }
+        transactionAmount = txWrapper.transactions.size
         log.info("setting status, {}, {}", statusRes, txId)
     }
 }

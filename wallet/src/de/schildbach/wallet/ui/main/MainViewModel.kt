@@ -579,6 +579,7 @@ class MainViewModel @Inject constructor(
             txRowView.update(tx, walletData.transactionBag, Constants.CONTEXT)
             log.info("observing transaction refreshTransaction: updated {}, {} ms", tx.txId, watch.elapsed(TimeUnit.MILLISECONDS))
             // some how tell the UI to update this item
+            transactionViews = transactionViews?.toMutableList()
             _transactions.postValue(transactionViews!!)
         } else {
             log.info("observing transaction refresh: add {}", tx.txId)
