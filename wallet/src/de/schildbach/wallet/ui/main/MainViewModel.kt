@@ -207,7 +207,7 @@ class MainViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
-    private var transactionViews: List<TransactionRowView>? = null
+    private var transactionViews: List<TransactionRowView> = listOf()
     private var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory? = null
     private var coinJoinWrapperFactory: CoinJoinTxWrapperFactory? = null
     private val _mostRecentTransaction = MutableLiveData<Transaction>()
