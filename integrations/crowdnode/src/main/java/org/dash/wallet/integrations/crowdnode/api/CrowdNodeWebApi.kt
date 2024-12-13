@@ -69,7 +69,7 @@ interface CrowdNodeEndpoint {
     @GET("odata/apifundings/GetFeeJson(address='{address}')")
     suspend fun getFees(
         @Path("address") address: String
-    ): Response<FeeInfo>
+    ): Response<List<FeeInfo>>
 
     @GET("odata/apiaddresses/IsApiAddressInUse(address='{address}')")
     suspend fun isAddressInUse(
@@ -274,14 +274,14 @@ open class CrowdNodeWebApi @Inject constructor(
         }
     }
 
-    open suspend fun getFees(address: Address?): FeeInfo {
+    open suspend fun getFees(address: Address?): List<FeeInfo> {
         return try {
             val response = endpoint.getFees(address?.toBase58() ?: "")
 
             return if (response.isSuccessful) {
                 response.body()!!
             } else {
-                FeeInfo.default
+                listOf(FeeInfo.default)
             }
         } catch (ex: Exception) {
             log.error("Error in getFees: $ex")
@@ -290,7 +290,7 @@ open class CrowdNodeWebApi @Inject constructor(
                 analyticsService.logError(ex)
             }
 
-            FeeInfo.default
+            listOf(FeeInfo.default)
         }
     }
 
