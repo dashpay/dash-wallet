@@ -565,26 +565,41 @@ class MainViewModel @Inject constructor(
         val watch = Stopwatch.createStarted()
         // is the item currently in our list
         val txRowViewIndex = transactionViews.indexOfFirst {
-            it.txId == tx.txId
+            if (it.txId == tx.txId) {
+                true
+            } else {
+                it.txWrapper?.transactions?.find { txInGroup ->
+                    tx.txId == txInGroup.txId
+                } != null
+            }
         }
 
         if (txRowViewIndex != -1) {
             val currentTxRowView = transactionViews[txRowViewIndex]
-            log.info("observing transaction refresh: update {}", tx.txId)
-            // update the current item by replacing the current item
-            val newTransactionRow = TransactionRowView.fromTransaction(
-                tx,
-                walletData.transactionBag,
-                Constants.CONTEXT,
-                metadata[tx.txId],
-                currentTxRowView.contact
-            )
-            log.info("observing transaction refreshTransaction: updated {}, {} ms", tx.txId, watch.elapsed(TimeUnit.MILLISECONDS))
-            // some how tell the UI to update this item
-            val updatedList = transactionViews.toMutableList()
-            updatedList[txRowViewIndex] = newTransactionRow
-            transactionViews = updatedList
-            _transactions.postValue(transactionViews)
+            if (currentTxRowView.txWrapper == null) {
+                log.info("observing transaction refresh: update {}", tx.txId)
+                // update the current item by replacing the current item
+                val newTransactionRow = TransactionRowView.fromTransaction(
+                    tx,
+                    walletData.transactionBag,
+                    Constants.CONTEXT,
+                    metadata[tx.txId],
+                    currentTxRowView.contact
+                )
+                log.info(
+                    "observing transaction refreshTransaction: updated {}, {} ms",
+                    tx.txId,
+                    watch.elapsed(TimeUnit.MILLISECONDS)
+                )
+                // some how tell the UI to update this item
+                val updatedList = transactionViews.toMutableList()
+                updatedList[txRowViewIndex] = newTransactionRow
+                transactionViews = updatedList
+                _transactions.postValue(transactionViews)
+            } else {
+                // do nothing for updated transactions inside a wrapper
+                // we presume that value, timestamp and title and count do to change with updates
+            }
         } else {
             var replaceRowIndex = -1
             log.info("observing transaction refresh: add {}", tx.txId)
