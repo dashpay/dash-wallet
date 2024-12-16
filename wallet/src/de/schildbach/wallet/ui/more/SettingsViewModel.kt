@@ -28,7 +28,6 @@ import de.schildbach.wallet.service.MixingStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.WalletDataProvider
