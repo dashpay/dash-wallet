@@ -201,10 +201,8 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
 
         if (!isFinishing) {
             ContactSupportDialogFragment.newInstance(
-                null,
                 getString(R.string.report_issue_dialog_title_issue),
                 getString(R.string.report_issue_dialog_message_issue),
-                contextualData = "CrowdNode initiated report"
             ).show(this)
         }
     }

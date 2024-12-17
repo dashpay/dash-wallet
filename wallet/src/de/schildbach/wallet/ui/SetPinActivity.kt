@@ -517,7 +517,6 @@ class SetPinActivity : InteractionAwareActivity() {
 //                ).buildAlertDialog()
 //                alertDialog?.show()
                 ContactSupportDialogFragment.newInstance(
-                    null,
                     getString(R.string.report_issue_dialog_title_issue),
                     getString(R.string.report_issue_dialog_message_issue),
                     contextualData = "Wallet creation error (wallet is missing)"

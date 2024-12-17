@@ -457,7 +457,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 log.info("problem appending crash info", x)
             }
             val contactSupportDialog = ContactSupportDialogFragment.newInstance(
-                null,
                 getString(R.string.report_issue_dialog_title_crash),
                 getString(R.string.report_issue_dialog_message_crash),
                 stackTrace = stackTrace.toString(),
@@ -538,7 +537,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 //                        ).buildAlertDialog()
 //                        alertDialog.show()
                         ContactSupportDialogFragment.newInstance(
-                            null,
                             getString(R.string.report_issue_dialog_title_issue),
                             getString(R.string.report_issue_dialog_message_issue),
                             contextualData = getString(R.string.wallet_not_encrypted_error_message)

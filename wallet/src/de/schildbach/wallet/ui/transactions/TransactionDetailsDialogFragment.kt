@@ -150,16 +150,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
     }
 
     private fun showReportIssue() {
-//        ReportIssueDialogBuilder.createReportIssueDialog(
-//            requireActivity(),
-//            packageInfoProvider,
-//            configuration,
-//            viewModel.walletData.wallet,
-//            walletApplication
-//        ).buildAlertDialog().show()
-
         ContactSupportDialogFragment.newInstance(
-            null,
             getString(R.string.report_issue_dialog_title_issue),
             getString(R.string.report_issue_dialog_message_issue),
             contextualData = viewModel.transaction.toString()

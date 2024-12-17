@@ -231,7 +231,6 @@ class TransactionResultActivity : LockScreenActivity() {
 //        ).buildAlertDialog().show()
 
         ContactSupportDialogFragment.newInstance(
-            null,
             getString(R.string.report_issue_dialog_title_issue),
             getString(R.string.report_issue_dialog_message_issue),
             contextualData = viewModel.transaction.toString()

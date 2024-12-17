@@ -25,47 +25,28 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.database.dao.DashPayProfileDao
-import de.schildbach.wallet.service.PackageInfoProvider
-import de.schildbach.wallet.ui.ReportIssueDialogBuilder
-import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogContactSupportBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
-import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
  */
 @AndroidEntryPoint
 class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contact_support) {
-
-    private val log = LoggerFactory.getLogger(javaClass.simpleName)
-    private val txId by lazy {
-        if (arguments?.get(TX_ID) is Sha256Hash) {
-            arguments?.get(TX_ID) as Sha256Hash
-        } else {
-            Sha256Hash.wrap(arguments?.get(TX_ID) as String)
-        }
-    }
     private val binding by viewBinding(DialogContactSupportBinding::bind)
     private val viewModel: ContactSupportViewModel by viewModels()
 
     override val forceExpand = false
 
     companion object {
-        const val TX_ID = "tx_id"
         const val TITLE = "title"
         const val MESSAGE = "message"
         const val STACK_TRACE = "stack"
@@ -75,7 +56,6 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
 
         @JvmStatic
         fun newInstance(
-            txId: Sha256Hash? = null,
             title: String,
             message: String,
             contextualData: String? = null,
@@ -84,7 +64,6 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
         ): ContactSupportDialogFragment {
             val fragment = ContactSupportDialogFragment()
             fragment.arguments = bundleOf(
-                TX_ID to txId,
                 TITLE to title,
                 MESSAGE to message,
                 STACK_TRACE to stackTrace,
