@@ -22,32 +22,44 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import com.google.common.base.Charsets
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.util.CrashReporter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.bitcoinj.core.AbstractBlockChain
+import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStreamWriter
 import java.io.Writer
+import java.util.TreeSet
+import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
+
 
 @HiltViewModel
 class ContactSupportViewModel @Inject constructor(
     private val configuration: Configuration,
     private val application: WalletApplication,
-    private val walletDataProvider: WalletDataProvider,
+    walletDataProvider: WalletDataProvider,
     private val packageInfoProvider: PackageInfoProvider
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(ContactSupportViewModel::class.java)
+        private const val MAX_LOGS_SIZE = 20 * 1024 * 1024
+        private const val MAX_WALLET_DUMP_SIZE = 4// * 1024 * 1024
+
     }
 
     var isCrash: Boolean = false
@@ -55,19 +67,19 @@ class ContactSupportViewModel @Inject constructor(
     var contextualData: String? = null
     var stackTrace: String? = null
     suspend fun createReport(
-        viewDescription: String,
-        viewCollectDeviceInfo: Boolean,
-        viewCollectInstalledPackages: Boolean,
-        viewCollectApplicationLog: Boolean,
-        viewCollectWalletDump: Boolean
-    ): Pair<String, ArrayList<Uri>> {
+        userIssueDescription: String,
+        collectDeviceInfo: Boolean,
+        collectInstalledPackages: Boolean,
+        collectApplicationLog: Boolean,
+        collectWalletDump: Boolean
+    ): Pair<String, ArrayList<Uri>> = withContext(Dispatchers.IO) {
         val text = StringBuilder()
         val attachments = ArrayList<Uri>()
         val cacheDir = application.cacheDir
         val reportDir = File(cacheDir, "report")
         reportDir.mkdir()
 
-        text.append(viewDescription).append('\n')
+        text.append(userIssueDescription).append('\n')
 
         try {
             val contextualData: CharSequence? = collectContextualData()
@@ -98,7 +110,7 @@ class ContactSupportViewModel @Inject constructor(
             text.append(x.toString()).append('\n')
         }
 
-        if (viewCollectDeviceInfo) {
+        if (collectDeviceInfo) {
             try {
                 text.append("\n\n\n=== device info ===\n\n")
                 val deviceInfo: CharSequence = collectDeviceInfo()
@@ -108,7 +120,7 @@ class ContactSupportViewModel @Inject constructor(
             }
         }
 
-        if (viewCollectInstalledPackages) {
+        if (collectInstalledPackages) {
             try {
                 text.append("\n\n\n=== installed packages ===\n\n")
                 CrashReporter.appendInstalledPackages(text, application)
@@ -117,24 +129,52 @@ class ContactSupportViewModel @Inject constructor(
             }
         }
 
-        if (viewCollectApplicationLog) {
+        if (collectApplicationLog) {
             val logDir = File(application.filesDir, "log")
-            if (logDir.exists()) for (logFile in logDir.listFiles()) if (logFile.isFile() && logFile.length() > 0) attachments.add(
-                FileProvider.getUriForFile(
-                    application,
-                    application.packageName + ".file_attachment", logFile
-                )
-            )
+            var totalLogsSize = 0L
+            if (logDir.exists()) {
+                for (logFile in logDir.listFiles()!!) {
+                    if (logFile.isFile() && logFile.length() > 0 && totalLogsSize < MAX_LOGS_SIZE) {
+                        attachments.add(
+                            FileProvider.getUriForFile(
+                                application,
+                                application.packageName + ".file_attachment", logFile
+                            )
+                        )
+                        totalLogsSize += logFile.length()
+                    }
+                }
+            }
         }
 
-        if (viewCollectWalletDump) {
+        if (collectWalletDump) {
             try {
                 val walletDump: CharSequence = collectWalletDump()
-                if (walletDump != null) {
-                    val file = File.createTempFile("wallet-dump.", ".txt", reportDir)
-                    val writer: Writer = OutputStreamWriter(FileOutputStream(file), Charsets.UTF_8)
-                    writer.write(walletDump.toString())
-                    writer.close()
+                val file = File.createTempFile("wallet-dump.", ".txt", reportDir)
+                val writer: Writer = OutputStreamWriter(FileOutputStream(file), Charsets.UTF_8)
+                writer.write(walletDump.toString())
+                writer.close()
+                if(file.length() > MAX_WALLET_DUMP_SIZE) {
+                    // compress the wallet dump
+                    val compressedFile = File(file.absolutePath + ".gz")
+                    try {
+                        FileInputStream(file).use { fis ->
+                            GZIPOutputStream(FileOutputStream(compressedFile)).use { gzipOS ->
+                                val buffer = ByteArray(1024)
+                                var len: Int
+                                while (fis.read(buffer).also { len = it } != -1) {
+                                    gzipOS.write(buffer, 0, len)
+                                }
+                                log.info("wallet dump compressed successfully to $compressedFile")
+                                attachments.add(
+                                    FileProvider.getUriForFile(application, application.packageName + ".file_attachment", compressedFile)
+                                )
+                            }
+                        }
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                    }
+                } else {
                     attachments.add(
                         FileProvider.getUriForFile(application, application.packageName + ".file_attachment", file)
                     )
@@ -161,7 +201,7 @@ class ContactSupportViewModel @Inject constructor(
 
         text.append("\n\nPUT ADDITIONAL COMMENTS TO THE TOP. DOWN HERE NOBODY WILL NOTICE.")
 
-        return Pair(text.toString(), attachments)
+        return@withContext Pair(text.toString(), attachments)
     }
 
     fun subject(): CharSequence {
@@ -192,17 +232,63 @@ class ContactSupportViewModel @Inject constructor(
         return deviceInfo
     }
 
+    // taken from Wallet.toStringHelper (private)
+    private fun toStringHelper(
+        builder: java.lang.StringBuilder,
+        transactionMap: MutableMap<Sha256Hash, Transaction>,
+        chain: AbstractBlockChain?,
+        sortOrder: Comparator<Transaction>?
+    ) {
+        val txns: MutableCollection<Transaction>
+        if (sortOrder != null) {
+            txns = TreeSet(sortOrder)
+            txns.addAll(transactionMap.values)
+        } else {
+            txns = transactionMap.values
+        }
+        for (tx in txns) {
+            try {
+                builder.append(tx.getValue(wallet).toFriendlyString())
+                builder.append(" total value (sends ")
+                builder.append(tx.getValueSentFromMe(wallet).toFriendlyString())
+                builder.append(" and receives ")
+                builder.append(tx.getValueSentToMe(wallet).toFriendlyString())
+                builder.append(")\n")
+            } catch (e: ScriptException) {
+                // Ignore and don't print this line.
+            }
+            if (tx.hasConfidence()) builder.append("  confidence: ").append(tx.confidence).append('\n')
+            builder.append(tx.toString(chain, "  "))
+        }
+    }
+
     private fun collectWalletDump(): CharSequence {
         return wallet?.let {
             org.bitcoinj.core.Context.propagate(it.context)
             val walletDump = it.toString(
                 false,
-                false,
+                false, // don't include transactions here
                 true,
                 null
             )
-            it.getTransactionPool(WalletTransaction.Pool.DEAD)
-            walletDump
+            // only include pending and dead transactions
+            val txDump = StringBuilder()
+            txDump.append("\n\n")
+            txDump.append("\n>>> PENDING:\n")
+            toStringHelper(
+                txDump,
+                it.getTransactionPool(WalletTransaction.Pool.PENDING),
+                null,
+                Transaction.SORT_TX_BY_UPDATE_TIME
+            )
+            txDump.append("\n>>> DEAD:\n")
+            toStringHelper(
+                txDump,
+                it.getTransactionPool(WalletTransaction.Pool.DEAD),
+                null,
+                Transaction.SORT_TX_BY_UPDATE_TIME
+            )
+            walletDump + txDump
         } ?: "No wallet loaded"
     }
 
