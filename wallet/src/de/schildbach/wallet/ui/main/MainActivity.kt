@@ -61,6 +61,7 @@ import de.schildbach.wallet.ui.main.WalletActivityExt.requestDisableBatteryOptim
 import de.schildbach.wallet.ui.main.WalletActivityExt.setupBottomNavigation
 import de.schildbach.wallet.ui.main.WalletActivityExt.showFiatCurrencyChangeDetectedDialog
 import de.schildbach.wallet.ui.main.WalletActivityExt.showStaleRatesToast
+import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.more.MixDashFirstDialogFragment
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
@@ -448,8 +449,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun checkAlerts() {
-        val packageInfo = packageInfoProvider.packageInfo
-
         if (CrashReporter.hasSavedCrashTrace()) {
             val stackTrace = StringBuilder()
             try {
@@ -457,44 +456,52 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             } catch (x: IOException) {
                 log.info("problem appending crash info", x)
             }
-            alertDialog = object : ReportIssueDialogBuilder(this,
-                    R.string.report_issue_dialog_title_crash, R.string.report_issue_dialog_message_crash) {
+            val contactSupportDialog = ContactSupportDialogFragment.newInstance(
+                null,
+                getString(R.string.report_issue_dialog_title_crash),
+                getString(R.string.report_issue_dialog_message_crash),
+                stackTrace = stackTrace.toString(),
+                isCrash = true
+            )
 
-                override fun subject(): CharSequence {
-                    return Constants.REPORT_SUBJECT_BEGIN + packageInfo.versionName + " " + Constants.REPORT_SUBJECT_CRASH
-                }
-
-                @Throws(IOException::class)
-                override fun collectApplicationInfo(): CharSequence {
-                    val applicationInfo = StringBuilder()
-                    CrashReporter.appendApplicationInfo(
-                        applicationInfo,
-                        packageInfoProvider,
-                        configuration,
-                        walletData.wallet,
-                        walletApplication.getSystemService(PowerManager::class.java)
-                    )
-                    return applicationInfo
-                }
-
-                @Throws(IOException::class)
-                override fun collectStackTrace(): CharSequence? {
-                    return if (stackTrace.isNotEmpty()) stackTrace else null
-                }
-
-                @Throws(IOException::class)
-                override fun collectDeviceInfo(): CharSequence? {
-                    val deviceInfo = StringBuilder()
-                    CrashReporter.appendDeviceInfo(deviceInfo, this@MainActivity)
-                    return deviceInfo
-                }
-
-                override fun collectWalletDump(): CharSequence? {
-                    return walletData.wallet!!.toString(false, true, true, null)
-                }
-            }.buildAlertDialog()
+//            alertDialog = object : ReportIssueDialogBuilder(this,
+//                    R.string.report_issue_dialog_title_crash, R.string.report_issue_dialog_message_crash) {
+//
+//                override fun subject(): CharSequence {
+//                    return Constants.REPORT_SUBJECT_BEGIN + packageInfo.versionName + " " + Constants.REPORT_SUBJECT_CRASH
+//                }
+//
+//                @Throws(IOException::class)
+//                override fun collectApplicationInfo(): CharSequence {
+//                    val applicationInfo = StringBuilder()
+//                    CrashReporter.appendApplicationInfo(
+//                        applicationInfo,
+//                        packageInfoProvider,
+//                        configuration,
+//                        walletData.wallet,
+//                        walletApplication.getSystemService(PowerManager::class.java)
+//                    )
+//                    return applicationInfo
+//                }
+//
+//                @Throws(IOException::class)
+//                override fun collectStackTrace(): CharSequence? {
+//                    return if (stackTrace.isNotEmpty()) stackTrace else null
+//                }
+//
+//                @Throws(IOException::class)
+//                override fun collectDeviceInfo(): CharSequence? {
+//                    val deviceInfo = StringBuilder()
+//                    CrashReporter.appendDeviceInfo(deviceInfo, this@MainActivity)
+//                    return deviceInfo
+//                }
+//
+//                override fun collectWalletDump(): CharSequence? {
+//                    return walletData.wallet!!.toString(false, true, true, null)
+//                }
+//            }.buildAlertDialog()
             if (!isFinishing) {
-                alertDialog.show()
+                contactSupportDialog.show(this)
             }
         }
     }
@@ -522,14 +529,20 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             dialog.show(this) { reportIssue ->
                 if (reportIssue != null) {
                     if (reportIssue) {
-                        alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
-                            this@MainActivity,
-                            packageInfoProvider,
-                            configuration,
-                            walletData.wallet,
-                            walletApplication
-                        ).buildAlertDialog()
-                        alertDialog.show()
+//                        alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
+//                            this@MainActivity,
+//                            packageInfoProvider,
+//                            configuration,
+//                            walletData.wallet,
+//                            walletApplication
+//                        ).buildAlertDialog()
+//                        alertDialog.show()
+                        ContactSupportDialogFragment.newInstance(
+                            null,
+                            getString(R.string.report_issue_dialog_title_issue),
+                            getString(R.string.report_issue_dialog_message_issue),
+                            contextualData = getString(R.string.wallet_not_encrypted_error_message)
+                        ).show(this)
                     } else {
                         // is there way to try to fix it?
                         // can we encrypt the wallet with the SecurityGuard.Password

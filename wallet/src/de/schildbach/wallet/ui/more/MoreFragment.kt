@@ -141,15 +141,20 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
         binding.contactSupport.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.MoreMenu.CONTACT_SUPPORT, mapOf())
-            val alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
-                requireActivity(),
-                packageInfoProvider,
-                configuration,
-                walletData.wallet,
-                walletApplication
-            ).buildAlertDialog()
-            (requireActivity() as LockScreenActivity).alertDialog = alertDialog
-            alertDialog.show()
+//            val alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
+//                requireActivity(),
+//                packageInfoProvider,
+//                configuration,
+//                walletData.wallet,
+//                walletApplication
+//            ).buildAlertDialog()
+//            (requireActivity() as LockScreenActivity).alertDialog = alertDialog
+//            alertDialog.show()
+            ContactSupportDialogFragment.newInstance(
+                null,
+                getString(R.string.report_issue_dialog_title_issue),
+                getString(R.string.report_issue_dialog_message_issue)
+            ).show(requireActivity())
         }
 
         binding.invite.visibility = View.GONE
