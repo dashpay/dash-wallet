@@ -70,14 +70,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
@@ -208,9 +206,9 @@ class MainViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
-    private var transactionViews: List<TransactionRowView> = listOf()
-    private var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory? = null
-    private var coinJoinWrapperFactory: CoinJoinTxWrapperFactory? = null
+    private var transactionViews: MutableList<TransactionRowView> = arrayListOf()
+    private lateinit var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory
+    private lateinit var coinJoinWrapperFactory: CoinJoinTxWrapperFactory
     private val _mostRecentTransaction = MutableLiveData<Transaction>()
     val mostRecentTransaction: LiveData<Transaction>
         get() = _mostRecentTransaction
@@ -299,12 +297,6 @@ class MainViewModel @Inject constructor(
                     .flatMapLatest { metadata ->
                         val filter = TxDirectionFilter(direction, walletData.wallet!!)
                         refreshTransactions(filter, metadata)
-//                        walletData.observeWalletChanged()
-//                            .debounce(THROTTLE_DURATION)
-//                            .onEach {
-//                                log.info("observing wallet changed")
-//                                refreshTransactions(filter, metadata)
-//                            }
                         walletData.observeTransactions(true, filter)
                             .onEach {
                                 log.info("observing transaction: {}", it.txId)
@@ -509,6 +501,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    /** refresh all transactions */
     private suspend fun refreshTransactions(filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
         walletData.wallet?.let { wallet ->
             val watch = Stopwatch.createStarted()
@@ -527,8 +520,8 @@ class MainViewModel @Inject constructor(
             coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
             crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
             val _transactionViews = walletData.wrapAllTransactions(
-                crowdNodeWrapperFactory!!,
-                coinJoinWrapperFactory!!
+                crowdNodeWrapperFactory,
+                coinJoinWrapperFactory
             ).filter { it.passesFilter(filter, metadata) }
                 .sortedWith(TransactionWrapperComparator())
                 .map {
@@ -555,12 +548,15 @@ class MainViewModel @Inject constructor(
                     )
                 }
 
-            transactionViews = _transactionViews
+            transactionViews = _transactionViews.toMutableList()
             log.info("refreshTransactions: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
-            _transactions.postValue(_transactionViews)
+            _transactions.postValue(TransactionRowViewList(_transactionViews))
         }
     }
 
+    /**
+     * this will either add a single tranasction or update the transaction on the current view
+     */
     private suspend fun refreshTransaction(tx: Transaction, filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
         Context.propagate(Constants.CONTEXT)
         val watch = Stopwatch.createStarted()
@@ -593,7 +589,7 @@ class MainViewModel @Inject constructor(
                     watch.elapsed(TimeUnit.MILLISECONDS)
                 )
                 // some how tell the UI to update this item
-                val updatedList = transactionViews.toMutableList()
+                val updatedList = transactionViews
                 updatedList[txRowViewIndex] = newTransactionRow
                 transactionViews = updatedList
                 _transactions.postValue(TransactionRowViewList(transactionViews))
@@ -605,38 +601,28 @@ class MainViewModel @Inject constructor(
             var replaceRowIndex = -1
             log.info("observing transaction refresh: add {}", tx.txId)
             // add the item to the correct group
-            // if coinjoin, add to correct group based on date
             var newTransactionRow: TransactionRowView? = null
-            // these next to sections could be combined into a loop.
-            val (includedCoinJoin, txWrapperCoinJoin) = coinJoinWrapperFactory!!.tryInclude(tx)
-            if (includedCoinJoin) {
-                replaceRowIndex = transactionViews.indexOfFirst {
-                    it.txWrapper == txWrapperCoinJoin
-                }
+            val wrapperFactoryList = listOf(coinJoinWrapperFactory, crowdNodeWrapperFactory)
+            var includedInWrapper = false
+            wrapperFactoryList.forEach { factory ->
+                val (included, txWrapper) = factory.tryInclude(tx)
+                if (included) {
+                    replaceRowIndex = transactionViews.indexOfFirst {
+                        it.txWrapper == txWrapper
+                    }
 
-                newTransactionRow = TransactionRowView.fromTransactionWrapper(
-                    txWrapperCoinJoin!!,
-                    walletData.transactionBag,
-                    Constants.CONTEXT,
-                    null,
-                    metadata[tx.txId]
-                )
-            }
-            val (includedCrowdNode, txWrapperCrowdNode) = crowdNodeWrapperFactory!!.tryInclude(tx)
-            if (includedCrowdNode) {
-                // is it a new group?
-                replaceRowIndex = transactionViews.indexOfFirst {
-                    it.txWrapper == txWrapperCoinJoin
+                    newTransactionRow = TransactionRowView.fromTransactionWrapper(
+                        txWrapper!!,
+                        walletData.transactionBag,
+                        Constants.CONTEXT,
+                        null,
+                        metadata[tx.txId]
+                    )
                 }
-                newTransactionRow = TransactionRowView.fromTransactionWrapper(
-                    txWrapperCrowdNode!!,
-                    walletData.transactionBag,
-                    Constants.CONTEXT,
-                    null,
-                    metadata[tx.txId]
-                )
+                includedInWrapper = includedInWrapper || included
             }
-            if (!(includedCrowdNode || includedCoinJoin)) {
+
+            if (!includedInWrapper) {
                 // standalone TX
                 val isInternal = tx.isEntirelySelf(walletData.wallet!!)
                 var contact: DashPayProfile? = null
@@ -673,13 +659,13 @@ class MainViewModel @Inject constructor(
                         replaceRowIndex,
                         watch.elapsed(TimeUnit.MILLISECONDS)
                     )
-                    updatedList = updatedList.toMutableList().apply { set(replaceRowIndex, newTransactionRow) }
+                    updatedList.set(replaceRowIndex, newTransactionRow!!)
                 } else {
                     // add the item in the correct place in the sorted list of transaction views
                     val index =
-                        updatedList.binarySearch(newTransactionRow, TransactionRowViewComparator(walletData.wallet!!))
+                        updatedList.binarySearch(newTransactionRow!!, TransactionRowViewComparator(walletData.wallet!!))
                             .let { if (it < 0) -it - 1 else it }
-                    updatedList = updatedList.toMutableList().apply { add(index, newTransactionRow) }
+                    updatedList.add(index, newTransactionRow!!)
                     log.info(
                         "observing transaction: refreshTransaction adding to current list at index: {}; {} ms",
                         index,
@@ -705,7 +691,7 @@ class MainViewModel @Inject constructor(
             }
 
             if (state.replaying) {
-                _transactions.postValue(listOf())
+                _transactions.postValue(TransactionRowViewList(listOf()))
             }
         }
 
