@@ -55,8 +55,9 @@ class TransactionResultViewModel @Inject constructor(
     val wallet: Wallet?
         get() = walletData.wallet
 
-    var transaction: Transaction? = null
-        private set
+    private val _transaction = MutableStateFlow<Transaction?>(null)
+    val transaction: StateFlow<Transaction?>
+        get() = _transaction
 
     private val _transactionMetadata: MutableStateFlow<TransactionMetadata?> = MutableStateFlow(null)
     val transactionMetadata
