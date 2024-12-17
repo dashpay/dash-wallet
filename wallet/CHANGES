@@ -1,4 +1,11 @@
 Dash Wallet
+v11.0.5
+* Fix sync stuck problem (often at 33%)
+* Fix obtaining username voting information
+* Allow rescan blockchain to resume on app start if failing due to ANR
+* Add detector for corrupt blockchain file
+* Fix various crashes related to DashPay functionality
+
 v11.0.4
 * Fix username voting screen (support more than 100 contests)
 * Fix username requests during voting period

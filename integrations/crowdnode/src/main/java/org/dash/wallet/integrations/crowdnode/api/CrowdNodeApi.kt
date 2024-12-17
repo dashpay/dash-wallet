@@ -869,7 +869,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         if (lastFeeRequest == null || (lastFeeRequest + TimeUnit.DAYS.toMillis(1)) < System.currentTimeMillis()) {
             val feeInfo = webApi.getFees(accountAddress)
             log.info("crowdnode feeInfo: {}", feeInfo)
-            val fee = feeInfo.getNormal()?.fee
+            val fee = feeInfo.first().getNormal()?.fee
             fee?.let {
                 config.set(CrowdNodeConfig.FEE_PERCENTAGE, fee)
                 config.set(CrowdNodeConfig.LAST_FEE_REQUEST, System.currentTimeMillis())
