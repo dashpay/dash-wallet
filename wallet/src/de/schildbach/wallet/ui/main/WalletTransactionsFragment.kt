@@ -156,7 +156,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
-        viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
+        viewModel.transactions.observe(viewLifecycleOwner) { transactionViewList ->
+            val transactionViews = transactionViewList.rowViewList
             binding.loading.isVisible = false
             val watch = Stopwatch.createStarted()
             log.info("observing transaction list updated: {} items", transactionViews.size)

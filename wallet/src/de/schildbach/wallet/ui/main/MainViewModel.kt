@@ -58,6 +58,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet.ui.transactions.TransactionRowViewComparator
+import de.schildbach.wallet.ui.transactions.TransactionRowViewList
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -159,9 +160,9 @@ class MainViewModel @Inject constructor(
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
-    private val _transactions = MutableLiveData<List<TransactionRowView>>()
+    private val _transactions = MutableLiveData<TransactionRowViewList>()
     private val _modifyTransactionRow = MutableStateFlow<Pair<Boolean, TransactionRowView?>>(Pair(false, null))
-    val transactions: LiveData<List<TransactionRowView>>
+    val transactions: LiveData<TransactionRowViewList>
         get() = _transactions
 
     val modifyTransactionRow: StateFlow<Pair<Boolean, TransactionRowView?>>
@@ -595,7 +596,7 @@ class MainViewModel @Inject constructor(
                 val updatedList = transactionViews.toMutableList()
                 updatedList[txRowViewIndex] = newTransactionRow
                 transactionViews = updatedList
-                _transactions.postValue(transactionViews)
+                _transactions.postValue(TransactionRowViewList(transactionViews))
             } else {
                 // do nothing for updated transactions inside a wrapper
                 // we presume that value, timestamp and title and count do to change with updates
@@ -689,7 +690,7 @@ class MainViewModel @Inject constructor(
                 log.info("observing transaction: refreshTransaction adding item to a txwrapper; {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
             }
             transactionViews = updatedList
-            _transactions.postValue(updatedList)
+            _transactions.postValue(TransactionRowViewList(updatedList))
         }
     }
     private fun updateSyncStatus(state: BlockchainState) {
