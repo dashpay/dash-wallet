@@ -192,49 +192,8 @@ data class TransactionRowView(
             )
         }
     }
-    fun update(
-        tx: Transaction,
-        bag: TransactionBag,
-        context: Context,
-        resourceMapper: TxResourceMapper = TxResourceMapper()) {
-        if (txId == tx.txId) {
-            log.info("matches txId: {}", txId)
-            log.info("previous title, {}, {}, {}", title?.resourceId, title?.args, txId)
-            title = ResourceString(resourceMapper.getTransactionTypeName(tx, bag))
-            log.info("setting title, {}, {}, {}", title?.resourceId, title?.args, txId)
-            val isSent = value.signum() < 0
-            log.info("previous status, {}, {}", statusRes, txId)
-            statusRes = if (!hasErrors && !isSent) {
-                resourceMapper.getReceivedStatusString(tx, context)
-            } else {
-                -1
-            }
-            log.info("setting status, {}, {}", statusRes, txId)
-            // should we update this?
-            // time = tx.updateTime.time
-        } else if (txWrapper?.transactions?.find { it.txId == tx.txId } !== null) {
-            // not sure what to do, maybe nothing
-        }
-    }
-
-    fun update(
-        txWrapper: TransactionWrapper,
-        bag: TransactionBag,
-        context: Context,
-        resourceMapper: TxResourceMapper = TxResourceMapper()) {
-        val lastTx = txWrapper.transactions.last()
-        log.info("matches txId: {}", txId)
-        log.info("previous title, {}, {}, {}", title?.resourceId, title?.args, txId)
-        title = ResourceString(resourceMapper.getTransactionTypeName(lastTx, bag))
-        log.info("setting title, {}, {}, {}", title?.resourceId, title?.args, txId)
-        val isSent = value.signum() < 0
-        log.info("previous status, {}, {}", statusRes, txId)
-        statusRes = if (!hasErrors && !isSent) {
-            resourceMapper.getReceivedStatusString(lastTx, context)
-        } else {
-            -1
-        }
-        transactionAmount = txWrapper.transactions.size
-        log.info("setting status, {}, {}", statusRes, txId)
-    }
 }
+
+/** Wrapper class that avoids making copies of lists to trigger observers of the list */
+data class TransactionRowViewList (val rowViewList: List<TransactionRowView>)
+
