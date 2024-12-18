@@ -185,7 +185,11 @@ class UsernameRequestsViewModel @Inject constructor(
                                     }?.username?.lowercase() ?: list[0].username
                                 }
                             }
-                            val votingEndDate = sortedList.minOf { request -> request.createdAt } + UsernameRequest.VOTING_PERIOD_MILLIS
+                            val votingEndDate = if (sortedList.isNotEmpty()) {
+                                sortedList.minOf { request -> request.createdAt } + UsernameRequest.VOTING_PERIOD_MILLIS
+                            } else {
+                                -1L
+                            }
                             UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(prettyUsername), votes, votingEndDate)
                         }.filterNot { it.requests.isEmpty() && it.votingEndDate < System.currentTimeMillis() }
                 }.map { groupViews -> // Sort the list emitted by the Flow
