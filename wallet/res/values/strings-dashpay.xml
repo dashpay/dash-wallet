@@ -299,16 +299,6 @@
         <item>I have not approved</item>
         <item>Has Blocked votes</item>
     </string-array>
-    <string name="unblock_button">Unblock</string>
-    <plurals name="block_vote_button">
-        <item quantity="one">Block</item>
-        <item quantity="other">Blocks</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="one">Approval</item>
-        <item quantity="other">Approvals</item>
-    </plurals>
-    <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Create your username</string>
     <string name="request_your_hint">Please note that you will not be able to change it in the future</string>
     <string name="request_username">Request Username</string>
@@ -459,4 +449,5 @@
     <string name="voting_period_ends_in_days">Voting period ends in %d days</string>
     <string name="voting_period_ends_today">Voting period ends today</string>
     <string name="voting_period_ends_tomorrow">Voting period ends tomorrow</string>
+    <string name="link_included">link included</string>
 </resources>
