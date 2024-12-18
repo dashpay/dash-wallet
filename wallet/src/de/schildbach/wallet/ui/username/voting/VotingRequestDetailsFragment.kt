@@ -24,10 +24,14 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentVotingRequestDetailsBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -58,35 +62,44 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
             binding.username.text = myUsernameRequest?.username
             binding.identity.text = myUsernameRequest?.identity
             var isVotingOver = false
-            val votingResults = myUsernameRequest?.createdAt?.let { startTime ->
-                val endTime = startTime + UsernameRequest.VOTING_PERIOD_MILLIS
-                val dateFormat = DateFormat.getMediumDateFormat(requireContext())
-                isVotingOver = endTime < System.currentTimeMillis()
-                if (isVotingOver) {
-                    getString(R.string.request_username_taken_results)
-                } else {
-                    dateFormat.format(endTime)
-                }
-            } ?: "Voting Period not found"
-            binding.votingRange.text = votingResults
-            when {
-                isVotingOver -> {
-                    binding.link.text = if (myUsernameRequest?.link != null && myUsernameRequest.link != "") {
-                        myUsernameRequest.link
-                    } else {
-                        getString(R.string.none)
+            lifecycleScope.launch {
+                val startDate = withContext(Dispatchers.IO) {
+                    myUsernameRequest?.let {
+                        requestUserNameViewModel.getVotingStartDate(it.normalizedLabel)
                     }
-                    binding.linkLayout.isVisible = true
-                    binding.verifyNowLayout.isVisible = false
                 }
-                myUsernameRequest?.link != null && myUsernameRequest.link != "" -> {
-                    binding.link.text = myUsernameRequest.link
-                    binding.linkLayout.isVisible = true
-                    binding.verifyNowLayout.isVisible = false
-                }
-                else -> {
-                    binding.linkLayout.isVisible = false
-                    binding.verifyNowLayout.isVisible = true
+                val votingResults = startDate?.let { startTime ->
+                    val endTime = startTime + UsernameRequest.VOTING_PERIOD_MILLIS
+                    val dateFormat = DateFormat.getMediumDateFormat(requireContext())
+                    isVotingOver = endTime < System.currentTimeMillis()
+                    if (isVotingOver) {
+                        getString(R.string.request_username_taken_results)
+                    } else {
+                        dateFormat.format(endTime)
+                    }
+                } ?: "Voting period not found"
+                binding.votingRange.text = votingResults
+                when {
+                    isVotingOver -> {
+                        binding.link.text = if (myUsernameRequest?.link != null && myUsernameRequest.link != "") {
+                            myUsernameRequest.link
+                        } else {
+                            getString(R.string.none)
+                        }
+                        binding.linkLayout.isVisible = true
+                        binding.verifyNowLayout.isVisible = false
+                    }
+
+                    myUsernameRequest?.link != null && myUsernameRequest.link != "" -> {
+                        binding.link.text = myUsernameRequest.link
+                        binding.linkLayout.isVisible = true
+                        binding.verifyNowLayout.isVisible = false
+                    }
+
+                    else -> {
+                        binding.linkLayout.isVisible = false
+                        binding.verifyNowLayout.isVisible = true
+                    }
                 }
             }
         }

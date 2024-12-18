@@ -33,10 +33,12 @@ enum class UsernameSortOption {
     DateDescending,
     DateAscending,
     VotesDescending,
-    VotesAscending;
+    VotesAscending,
+    VotingPeriodSoonest,
+    VotingPeriodLatest;
 
     companion object {
-        val defaultOption = DateDescending
+        val defaultOption = VotingPeriodSoonest
     }
 }
 
@@ -82,11 +84,20 @@ class UsernameRequestFilterDialog : OffsetDialogFragment(R.layout.dialog_usernam
 
     private fun setupSortByOptions() {
         val optionNames = binding.root.resources.getStringArray(R.array.usernames_sort_by_options).mapIndexed { i, it ->
-            IconifiedViewItem(getString(if (i < 2) R.string.date else R.string.votes, it))
+            IconifiedViewItem(
+                getString(
+                    when {
+                        i < 2 -> R.string.date
+                        i < 4 -> R.string.votes
+                        else -> R.string.voting_ends
+                    },
+                    it
+                )
+            )
         }
 
         val sortOption = viewModel.filterState.value.sortByOption
-        val initialIndex = UsernameSortOption.values().indexOf(sortOption)
+        val initialIndex = UsernameSortOption.entries.indexOf(sortOption)
         val adapter = RadioGroupAdapter(initialIndex) { _, _ ->
             checkResetButton()
         }

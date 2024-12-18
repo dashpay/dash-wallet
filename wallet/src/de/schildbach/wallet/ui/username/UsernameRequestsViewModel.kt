@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -56,13 +57,8 @@ import org.bitcoinj.core.Base58
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.KeyId
-import org.bitcoinj.core.MasternodeAddress
-import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
-import org.bitcoinj.crypto.BLSLazyPublicKey
-import org.bitcoinj.crypto.BLSPublicKey
-import org.bitcoinj.evolution.SimplifiedMasternodeListEntry
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
@@ -189,8 +185,19 @@ class UsernameRequestsViewModel @Inject constructor(
                                     }?.username?.lowercase() ?: list[0].username
                                 }
                             }
-                            UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(prettyUsername), votes)
-                        }.filterNot { it.requests.isEmpty() }
+                            val votingEndDate = sortedList.minOf { request -> request.createdAt } + UsernameRequest.VOTING_PERIOD_MILLIS
+                            UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(prettyUsername), votes, votingEndDate)
+                        }.filterNot { it.requests.isEmpty() && it.votingEndDate < System.currentTimeMillis() }
+                }.map { groupViews -> // Sort the list emitted by the Flow
+                    when (_filterState.value.sortByOption) {
+                        UsernameSortOption.VotingPeriodSoonest -> groupViews.sortedBy { group ->
+                            group.votingEndDate
+                        }
+                        UsernameSortOption.VotingPeriodLatest -> groupViews.sortedByDescending { group ->
+                            group.votingEndDate
+                        }
+                        else -> groupViews // No sorting applied
+                    }
                 }
         }.onEach { requests -> _uiState.update { it.copy(filteredUsernameRequests = requests) } }
             .launchIn(viewModelWorkerScope)
@@ -434,6 +441,8 @@ class UsernameRequestsViewModel @Inject constructor(
                 UsernameSortOption.DateDescending -> compareByDescending { it.createdAt }
                 UsernameSortOption.VotesAscending -> compareBy { it.votes }
                 UsernameSortOption.VotesDescending -> compareByDescending { it.votes }
+                UsernameSortOption.VotingPeriodSoonest -> compareBy { it.createdAt }
+                UsernameSortOption.VotingPeriodLatest -> compareByDescending { it.createdAt }
             }
         )
         val approvedUsernames = sorted.filter { it.isApproved }.map { it.username }
@@ -713,5 +722,11 @@ class UsernameRequestsViewModel @Inject constructor(
 
     suspend fun isImported(masternode: ImportedMasternodeKey): Boolean {
         return importedMasternodeKeyDao.contains(masternode.proTxHash)
+    }
+
+    suspend fun getVotingStartDate(normalizedLabel: String): Long {
+        return usernameRequestDao.getRequestsByNormalizedLabel(normalizedLabel).minOf {
+            it.createdAt
+        }
     }
 }

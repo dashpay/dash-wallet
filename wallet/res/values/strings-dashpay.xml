@@ -280,14 +280,17 @@
     <string name="only_duplicates">Only duplicates</string>
     <string name="only_links">Only requests with links</string>
     <string name="only_links_short">With links</string>
-    <string name="date">Date: %s</string>
+    <string name="date">Request Date: %s</string>
     <string name="votes">Votes: %s</string>
+    <string name="voting_ends">Voting ends: %s</string>
 
     <string-array name="usernames_sort_by_options">
         <item>New to old</item>
         <item>Old to new</item>
         <item>High to low</item>
         <item>Low to high</item>
+        <item>Soonest first</item>
+        <item>Earliest first</item>
     </string-array>
 
     <string-array name="usernames_type_options">
@@ -452,4 +455,8 @@
     <string name="mix_dash_message">To help prevent other people from seeing who you make payments to, it is recommended to mix your balance before you create your username.</string>
     <string name="dash_private_key_mainnet" translatable="false">XKm5koXHMm7UrVV3ki2pbGA8yZztiSR2F9x6ucEyCSuqTHBMjJix</string>
     <string name="dash_private_key_testnet" translatable="false">cUR2TrX4U6t6g9kRfDoBbwF2WRKBNjV3gK7HwTgQgmUUQCKXcT3N</string>
+    <string name="voting_period">Voting Period</string>
+    <string name="voting_period_ends_in_days">Voting period ends in %d days</string>
+    <string name="voting_period_ends_today">Voting period ends today</string>
+    <string name="voting_period_ends_tomorrow">Voting period ends tomorrow</string>
 </resources>
