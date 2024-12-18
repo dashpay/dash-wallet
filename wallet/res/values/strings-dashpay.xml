@@ -446,8 +446,8 @@
     <string name="dash_private_key_mainnet" translatable="false">XKm5koXHMm7UrVV3ki2pbGA8yZztiSR2F9x6ucEyCSuqTHBMjJix</string>
     <string name="dash_private_key_testnet" translatable="false">cUR2TrX4U6t6g9kRfDoBbwF2WRKBNjV3gK7HwTgQgmUUQCKXcT3N</string>
     <string name="voting_period">Voting Period</string>
-    <string name="voting_period_ends_in_days">Voting period ends in %d days</string>
-    <string name="voting_period_ends_today">Voting period ends today</string>
-    <string name="voting_period_ends_tomorrow">Voting period ends tomorrow</string>
+    <string name="voting_period_ends_in_days">Voting ends in %d days</string>
+    <string name="voting_period_ends_today">Voting ends today</string>
+    <string name="voting_period_ends_tomorrow">Voting ends tomorrow</string>
     <string name="link_included">link included</string>
 </resources>

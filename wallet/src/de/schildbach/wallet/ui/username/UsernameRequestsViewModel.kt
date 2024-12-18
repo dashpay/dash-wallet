@@ -195,10 +195,18 @@ class UsernameRequestsViewModel @Inject constructor(
                 }.map { groupViews -> // Sort the list emitted by the Flow
                     when (_filterState.value.sortByOption) {
                         UsernameSortOption.VotingPeriodSoonest -> groupViews.sortedBy { group ->
-                            group.votingEndDate
+                            group.localDate
                         }
                         UsernameSortOption.VotingPeriodLatest -> groupViews.sortedByDescending { group ->
-                            group.votingEndDate
+                            group.localDate
+                        }
+                        UsernameSortOption.VotesAscending -> groupViews.sortedBy { it.requests.sumOf { request -> request.votes } }
+                        UsernameSortOption.VotesDescending -> groupViews.sortedByDescending { it.requests.sumOf { request -> request.votes } }
+                        UsernameSortOption.DateAscending -> groupViews.sortedBy { group ->
+                            group.requests.minOf { request -> request.createdAt }
+                        }
+                        UsernameSortOption.DateDescending -> groupViews.sortedByDescending { group ->
+                            group.requests.minOf { request -> request.createdAt }
                         }
                         else -> groupViews // No sorting applied
                     }
