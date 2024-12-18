@@ -26,6 +26,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.common.base.Stopwatch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -56,6 +57,8 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.transactions.TransactionRowView
+import de.schildbach.wallet.ui.transactions.TransactionRowViewComparator
+import de.schildbach.wallet.ui.transactions.TransactionRowViewList
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,9 +67,9 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
@@ -74,6 +77,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
@@ -108,6 +112,7 @@ import kotlin.math.abs
 import java.text.DecimalFormat
 import java.util.Currency
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.collections.set
 
@@ -153,10 +158,13 @@ class MainViewModel @Inject constructor(
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
-    private val _transactions = MutableLiveData<List<TransactionRowView>>()
-    val transactions: LiveData<List<TransactionRowView>>
+    private val _transactions = MutableLiveData<TransactionRowViewList>()
+    private val _modifyTransactionRow = MutableStateFlow<Pair<Boolean, TransactionRowView?>>(Pair(false, null))
+    val transactions: LiveData<TransactionRowViewList>
         get() = _transactions
 
+    val modifyTransactionRow: StateFlow<Pair<Boolean, TransactionRowView?>>
+        get() = _modifyTransactionRow
     private val _transactionsDirection = MutableStateFlow(TxFilterType.ALL)
     var transactionsDirection: TxFilterType
         get() = _transactionsDirection.value
@@ -198,6 +206,9 @@ class MainViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
+    private var transactionViews: MutableList<TransactionRowView> = arrayListOf()
+    private lateinit var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory
+    private lateinit var coinJoinWrapperFactory: CoinJoinTxWrapperFactory
     private val _mostRecentTransaction = MutableLiveData<Transaction>()
     val mostRecentTransaction: LiveData<Transaction>
         get() = _mostRecentTransaction
@@ -286,9 +297,11 @@ class MainViewModel @Inject constructor(
                     .flatMapLatest { metadata ->
                         val filter = TxDirectionFilter(direction, walletData.wallet!!)
                         refreshTransactions(filter, metadata)
-                        walletData.observeWalletChanged()
-                            .debounce(THROTTLE_DURATION)
-                            .onEach { refreshTransactions(filter, metadata) }
+                        walletData.observeTransactions(true, filter)
+                            .onEach {
+                                log.info("observing transaction: {}", it.txId)
+                                refreshTransaction(it, filter, metadata)
+                            }
                     }
             }
             .catch { analytics.logError(it, "is wallet null: ${walletData.wallet == null}") }
@@ -488,8 +501,10 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    /** refresh all transactions */
     private suspend fun refreshTransactions(filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
         walletData.wallet?.let { wallet ->
+            val watch = Stopwatch.createStarted()
             val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
 
             if (platformRepo.hasIdentity) {
@@ -502,10 +517,11 @@ class MainViewModel @Inject constructor(
                     contactsByIdentity[result.dashPayProfile.userId] = result.dashPayProfile
                 }
             }
-
-            val transactionViews = walletData.wrapAllTransactions(
-                FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet),
-                CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
+            coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
+            crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
+            val _transactionViews = walletData.wrapAllTransactions(
+                crowdNodeWrapperFactory,
+                coinJoinWrapperFactory
             ).filter { it.passesFilter(filter, metadata) }
                 .sortedWith(TransactionWrapperComparator())
                 .map {
@@ -532,10 +548,137 @@ class MainViewModel @Inject constructor(
                     )
                 }
 
-            _transactions.postValue(transactionViews)
+            transactionViews = _transactionViews.toMutableList()
+            log.info("refreshTransactions: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
+            _transactions.postValue(TransactionRowViewList(_transactionViews))
         }
     }
 
+    /**
+     * this will either add a single tranasction or update the transaction on the current view
+     */
+    private suspend fun refreshTransaction(tx: Transaction, filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
+        Context.propagate(Constants.CONTEXT)
+        val watch = Stopwatch.createStarted()
+        // is the item currently in our list
+        val txRowViewIndex = transactionViews.indexOfFirst {
+            if (it.txId == tx.txId) {
+                true
+            } else {
+                it.txWrapper?.transactions?.find { txInGroup ->
+                    tx.txId == txInGroup.txId
+                } != null
+            }
+        }
+
+        if (txRowViewIndex != -1) {
+            val currentTxRowView = transactionViews[txRowViewIndex]
+            if (currentTxRowView.txWrapper == null) {
+                log.info("observing transaction refresh: update {}", tx.txId)
+                // update the current item by replacing the current item
+                val newTransactionRow = TransactionRowView.fromTransaction(
+                    tx,
+                    walletData.transactionBag,
+                    Constants.CONTEXT,
+                    metadata[tx.txId],
+                    currentTxRowView.contact
+                )
+                log.info(
+                    "observing transaction refreshTransaction: updated {}, {} ms",
+                    tx.txId,
+                    watch.elapsed(TimeUnit.MILLISECONDS)
+                )
+                // some how tell the UI to update this item
+                val updatedList = transactionViews
+                updatedList[txRowViewIndex] = newTransactionRow
+                transactionViews = updatedList
+                _transactions.postValue(TransactionRowViewList(transactionViews))
+            } else {
+                // do nothing for updated transactions inside a wrapper
+                // we presume that value, timestamp and title and count do to change with updates
+            }
+        } else {
+            var replaceRowIndex = -1
+            log.info("observing transaction refresh: add {}", tx.txId)
+            // add the item to the correct group
+            var newTransactionRow: TransactionRowView? = null
+            val wrapperFactoryList = listOf(coinJoinWrapperFactory, crowdNodeWrapperFactory)
+            var includedInWrapper = false
+            wrapperFactoryList.forEach { factory ->
+                val (included, txWrapper) = factory.tryInclude(tx)
+                if (included) {
+                    replaceRowIndex = transactionViews.indexOfFirst {
+                        it.txWrapper == txWrapper
+                    }
+
+                    newTransactionRow = TransactionRowView.fromTransactionWrapper(
+                        txWrapper!!,
+                        walletData.transactionBag,
+                        Constants.CONTEXT,
+                        null,
+                        metadata[tx.txId]
+                    )
+                }
+                includedInWrapper = includedInWrapper || included
+            }
+
+            if (!includedInWrapper) {
+                // standalone TX
+                val isInternal = tx.isEntirelySelf(walletData.wallet!!)
+                var contact: DashPayProfile? = null
+                if (!isInternal && platformRepo.hasIdentity) {
+                    val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
+                    val contacts = platformRepo.searchContacts(
+                            "",
+                            UsernameSortOrderBy.LAST_ACTIVITY,
+                            false
+                        )
+                        contacts.data?.forEach { result ->
+                            contactsByIdentity[result.dashPayProfile.userId] = result.dashPayProfile
+                        }
+
+                    val contactId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
+                    if (contactId != null) {
+                        contact = contactsByIdentity[contactId]
+                    }
+                }
+                newTransactionRow = TransactionRowView.fromTransaction(
+                    tx,
+                    walletData.transactionBag,
+                    Constants.CONTEXT,
+                    metadata[tx.txId],
+                    contact
+                )
+            }
+            var updatedList = transactionViews // no changes
+            // is there a new row to add?
+            if (newTransactionRow != null) {
+                if (replaceRowIndex != -1) {
+                    log.info(
+                        "observing transaction: refreshTransaction replacing in current list at index: {}; {} ms",
+                        replaceRowIndex,
+                        watch.elapsed(TimeUnit.MILLISECONDS)
+                    )
+                    updatedList.set(replaceRowIndex, newTransactionRow!!)
+                } else {
+                    // add the item in the correct place in the sorted list of transaction views
+                    val index =
+                        updatedList.binarySearch(newTransactionRow!!, TransactionRowViewComparator(walletData.wallet!!))
+                            .let { if (it < 0) -it - 1 else it }
+                    updatedList.add(index, newTransactionRow!!)
+                    log.info(
+                        "observing transaction: refreshTransaction adding to current list at index: {}; {} ms",
+                        index,
+                        watch.elapsed(TimeUnit.MILLISECONDS)
+                    )
+                }
+            } else {
+                log.info("observing transaction: refreshTransaction adding item to a txwrapper; {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
+            }
+            transactionViews = updatedList
+            _transactions.postValue(TransactionRowViewList(updatedList))
+        }
+    }
     private fun updateSyncStatus(state: BlockchainState) {
         if (_isBlockchainSynced.value != state.isSynced()) {
             _isBlockchainSynced.postValue(state.isSynced())
@@ -548,7 +691,7 @@ class MainViewModel @Inject constructor(
             }
 
             if (state.replaying) {
-                _transactions.postValue(listOf())
+                _transactions.postValue(TransactionRowViewList(listOf()))
             }
         }
 

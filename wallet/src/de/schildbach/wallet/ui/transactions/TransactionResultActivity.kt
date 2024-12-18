@@ -149,37 +149,36 @@ class TransactionResultActivity : LockScreenActivity() {
         )
 
         viewModel.init(txId)
-        val tx = viewModel.transaction
 
-        if (tx != null) {
-            transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
-            contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
-            contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
-            binding.transactionCloseBtn.setOnClickListener {
-                onTransactionDetailsDismiss()
-            }
-            contentBinding.reportIssueCard.setOnClickListener {
-                showReportIssue()
+        viewModel.transaction.observe(this) { tx ->
+            if (tx != null) {
+                transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
+                contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
+                contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
+                binding.transactionCloseBtn.setOnClickListener {
+                    onTransactionDetailsDismiss()
+                }
+                contentBinding.reportIssueCard.setOnClickListener {
+                    showReportIssue()
+                }
+
+                viewModel.transactionMetadata.observe(this) {
+                    transactionResultViewBinder.setTransactionMetadata(it)
+                }
+                transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
+            } else {
+                log.error("Transaction not found. TxId: {}", txId)
+                finish()
+                return@observe
             }
 
             viewModel.transactionMetadata.observe(this) {
                 transactionResultViewBinder.setTransactionMetadata(it)
             }
-            transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
-        } else {
-            log.error("Transaction not found. TxId: {}", txId)
-            finish()
-            return
-        }
 
-        viewModel.transactionMetadata.observe(this) {
-            if(it != null) {
-                transactionResultViewBinder.setTransactionMetadata(it)
+            viewModel.contact.observe(this) { profile ->
+                finishInitialization(tx, profile)
             }
-        }
-
-        viewModel.contact.observe(this) { profile ->
-            finishInitialization(tx, profile)
         }
     }
 
@@ -205,7 +204,7 @@ class TransactionResultActivity : LockScreenActivity() {
         contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory()}
         contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
         contentBinding.addPrivateMemoBtn.setOnClickListener {
-            viewModel.transaction?.txId?.let { hash ->
+            viewModel.transaction?.value?.txId?.let { hash ->
                 PrivateMemoDialog().apply {
                     arguments = bundleOf(PrivateMemoDialog.TX_ID_ARG to hash)
                 }.show(supportFragmentManager, "private_memo")
@@ -258,7 +257,7 @@ class TransactionResultActivity : LockScreenActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.transaction?.confidence?.removeEventListener(transactionResultViewBinder)
+        viewModel.transaction.value?.confidence?.removeEventListener(transactionResultViewBinder)
     }
 
     private fun rescanBlockchain() {

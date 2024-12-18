@@ -33,6 +33,7 @@ import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionDetailsDialogBinding
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
+import kotlinx.coroutines.flow.filterNotNull
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Configuration
@@ -97,33 +98,33 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         )
 
         viewModel.init(txId)
-        val tx = viewModel.transaction
+        viewModel.transaction.filterNotNull().observe(viewLifecycleOwner) { tx ->
+            // the transactionResultViewBinder.bind is called later
+//            if (tx == null) {
+//                // log.error("Transaction not found. TxId: {}", txId)
+//                return@observe
+//            }
 
-        // the transactionResultViewBinder.bind is called later
-        if (tx == null) {
-            log.error("Transaction not found. TxId: {}", txId)
-            dismiss()
-            return
-        }
 
-        viewModel.transactionIcon.observe(this) {
-            transactionResultViewBinder.setTransactionIcon(it)
-        }
-
-        viewModel.merchantName.observe(this) {
-            transactionResultViewBinder.setCustomTitle(getString(R.string.gift_card_tx_title, it))
-        }
-
-        viewModel.transactionMetadata.observe(this) { metadata ->
-            if(metadata != null && tx.txId == metadata.txId) {
-                transactionResultViewBinder.setTransactionMetadata(metadata)
+            viewModel.transactionIcon.observe(this) {
+                transactionResultViewBinder.setTransactionIcon(it)
             }
-        }
 
-        viewModel.contact.observe(this) { profile ->
-            finishInitialization(tx, profile)
+            viewModel.merchantName.observe(this) {
+                transactionResultViewBinder.setCustomTitle(getString(R.string.gift_card_tx_title, it))
+            }
+
+            viewModel.transactionMetadata.observe(this) { metadata ->
+                if (metadata != null && tx.txId == metadata.txId) {
+                    transactionResultViewBinder.setTransactionMetadata(metadata)
+                }
+            }
+
+            viewModel.contact.observe(this) { profile ->
+                finishInitialization(tx, profile)
+            }
+            transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
         }
-        transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
     }
 
     private fun finishInitialization(tx: Transaction, dashPayProfile: DashPayProfile?) {
@@ -138,7 +139,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
         contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
         contentBinding.addPrivateMemoBtn.setOnClickListener {
-            viewModel.transaction?.txId?.let { hash ->
+            viewModel.transaction.value?.txId?.let { hash ->
                 PrivateMemoDialog().apply {
                     arguments = bundleOf(PrivateMemoDialog.TX_ID_ARG to hash)
                 }.show(requireActivity().supportFragmentManager, "private_memo")
@@ -159,7 +160,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
     private fun viewOnBlockExplorer() {
         imitateUserInteraction()
-        val tx = viewModel.transaction
+        val tx = viewModel.transaction.value
         if (tx != null) {
             WalletUtils.viewOnBlockExplorer(activity, tx.purpose, tx.txId.toString())
         }
@@ -172,7 +173,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
-        viewModel.transaction?.confidence?.removeEventListener(transactionResultViewBinder)
+        viewModel.transaction.value?.confidence?.removeEventListener(transactionResultViewBinder)
     }
 
     private fun imitateUserInteraction() {
