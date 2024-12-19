@@ -284,13 +284,16 @@
     <string name="votes">Votes: %s</string>
     <string name="voting_ends">Voting ends: %s</string>
 
+    <string-array name="usernames_group_by_options">
+        <item>Soonest first</item>
+        <item>Latest first</item>
+    </string-array>
+
     <string-array name="usernames_sort_by_options">
         <item>New to old</item>
         <item>Old to new</item>
         <item>High to low</item>
         <item>Low to high</item>
-        <item>Soonest first</item>
-        <item>Earliest first</item>
     </string-array>
 
     <string-array name="usernames_type_options">
@@ -450,4 +453,5 @@
     <string name="voting_period_ends_today">Voting ends today</string>
     <string name="voting_period_ends_tomorrow">Voting ends tomorrow</string>
     <string name="link_included">link included</string>
+    <string name="group_by">Group by</string>
 </resources>

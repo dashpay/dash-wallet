@@ -335,8 +335,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         val list = filterByQuery(itemList, binding.search.text.toString())
         val layoutManager = binding.requestGroups.layoutManager as LinearLayoutManager
         val scrollPosition = layoutManager.findFirstVisibleItemPosition()
-        val listForAdapter = if (list.isNotEmpty() && (viewModel.filterState.value.sortByOption == UsernameSortOption.VotingPeriodLatest ||
-            viewModel.filterState.value.sortByOption == UsernameSortOption.VotingPeriodSoonest)) {
+        val listForAdapter = if (list.isNotEmpty()) {
             list.groupBy {
                 Instant.ofEpochMilli(it.votingEndDate).atZone(ZoneId.systemDefault()).toLocalDate()
             }.map {

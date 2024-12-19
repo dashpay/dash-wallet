@@ -98,6 +98,7 @@ data class UsernameRequestsUIState(
 )
 
 data class FiltersUIState(
+    val groupByOption: UsernameGroupOption = UsernameGroupOption.defaultOption,
     val sortByOption: UsernameSortOption = UsernameSortOption.defaultOption,
     val typeOption: UsernameTypeOption = UsernameTypeOption.defaultOption,
     val onlyDuplicates: Boolean = true,
@@ -193,22 +194,13 @@ class UsernameRequestsViewModel @Inject constructor(
                             UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(prettyUsername), votes, votingEndDate)
                         }.filterNot { it.requests.isEmpty() && it.votingEndDate < System.currentTimeMillis() }
                 }.map { groupViews -> // Sort the list emitted by the Flow
-                    when (_filterState.value.sortByOption) {
-                        UsernameSortOption.VotingPeriodSoonest -> groupViews.sortedBy { group ->
+                    when (_filterState.value.groupByOption) {
+                        UsernameGroupOption.VotingPeriodSoonest -> groupViews.sortedBy { group ->
                             group.localDate
                         }
-                        UsernameSortOption.VotingPeriodLatest -> groupViews.sortedByDescending { group ->
+                        UsernameGroupOption.VotingPeriodLatest -> groupViews.sortedByDescending { group ->
                             group.localDate
                         }
-                        UsernameSortOption.VotesAscending -> groupViews.sortedBy { it.requests.sumOf { request -> request.votes } }
-                        UsernameSortOption.VotesDescending -> groupViews.sortedByDescending { it.requests.sumOf { request -> request.votes } }
-                        UsernameSortOption.DateAscending -> groupViews.sortedBy { group ->
-                            group.requests.minOf { request -> request.createdAt }
-                        }
-                        UsernameSortOption.DateDescending -> groupViews.sortedByDescending { group ->
-                            group.requests.minOf { request -> request.createdAt }
-                        }
-                        else -> groupViews // No sorting applied
                     }
                 }
         }.onEach { requests -> _uiState.update { it.copy(filteredUsernameRequests = requests) } }
@@ -264,6 +256,7 @@ class UsernameRequestsViewModel @Inject constructor(
     }
 
     fun applyFilters(
+        groupByOption: UsernameGroupOption,
         sortByOption: UsernameSortOption,
         typeOption: UsernameTypeOption,
         onlyDuplicates: Boolean,
@@ -271,6 +264,7 @@ class UsernameRequestsViewModel @Inject constructor(
     ) {
         _filterState.update {
             it.copy(
+                groupByOption = groupByOption,
                 sortByOption = sortByOption,
                 typeOption = typeOption,
                 onlyDuplicates = onlyDuplicates,
@@ -453,8 +447,6 @@ class UsernameRequestsViewModel @Inject constructor(
                 UsernameSortOption.DateDescending -> compareByDescending { it.createdAt }
                 UsernameSortOption.VotesAscending -> compareBy { it.votes }
                 UsernameSortOption.VotesDescending -> compareByDescending { it.votes }
-                UsernameSortOption.VotingPeriodSoonest -> compareBy { it.createdAt }
-                UsernameSortOption.VotingPeriodLatest -> compareByDescending { it.createdAt }
             }
         )
         val approvedUsernames = sorted.filter { it.isApproved }.map { it.username }
