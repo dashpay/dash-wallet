@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:scrollbars="none">
+
+    <LinearLayout style="@style/DialogContainer">
+
+        <View
+            android:id="@+id/drag_indicator"
+            android:layout_width="35dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center"
+            android:layout_marginVertical="7dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/DragIndicatorBackground"
+            tools:background="@color/light_gray" />
+
+        <TextView
+            android:id="@+id/title"
+            style="@style/Subtitle2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:textAlignment="gravity"
+            android:text="@string/about_contact_support" />
+
+        <TextView
+            android:id="@+id/report_issue_dialog_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/space_medium"
+            android:layout_marginTop="6dp"
+            style="@style/Overline"/>
+
+        <EditText
+            android:id="@+id/report_issue_dialog_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical"
+            android:hint="@string/report_issue_dialog_description"
+            android:inputType="text|textCapSentences|textMultiLine"
+            style="@style/Overline"/>
+
+        <de.schildbach.wallet.ui.widget.StyledCheckBox
+            android:id="@+id/report_issue_dialog_collect_device_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical"
+            android:checked="true"
+            android:text="@string/report_issue_dialog_collect_device_info"
+            style="@style/OldCheckBox"/>
+
+        <de.schildbach.wallet.ui.widget.StyledCheckBox
+            android:id="@+id/report_issue_dialog_collect_application_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical"
+            android:checked="true"
+            android:text="@string/report_issue_dialog_collect_application_log"
+            style="@style/OldCheckBox"/>
+
+        <de.schildbach.wallet.ui.widget.StyledCheckBox
+            android:id="@+id/report_issue_dialog_collect_wallet_dump"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical"
+            android:checked="true"
+            android:text="@string/report_issue_dialog_collect_wallet_dump"
+            style="@style/OldCheckBox"/>
+
+        <de.schildbach.wallet.ui.widget.StyledCheckBox
+            android:id="@+id/report_issue_dialog_collect_installed_packages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical"
+            android:checked="false"
+            android:text="@string/report_issue_dialog_collect_installed_packages"
+            style="@style/OldCheckBox"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="30dp"
+            android:layout_marginBottom="15dp">
+
+            <Button
+                android:id="@+id/dismiss_button"
+                style="@style/Button.Primary.Large.Grey"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:text="@string/cancel" />
+
+            <Button
+                android:id="@+id/submit_report"
+                style="@style/Button.Primary.Large.Blue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="15dp"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:text="@string/button_send_report" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/report_generation_progress_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="invisible"
+            tools:visibility="visible"
+            android:gravity="center_horizontal"
+            android:orientation="horizontal"
+            >
+            <ProgressBar
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:layout_gravity="center_vertical"
+                android:id="@+id/report_generation_progress_bar" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:layout_gravity="center_vertical"
+                android:text="@string/report_issue_dialog_generating_report"
+                />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
