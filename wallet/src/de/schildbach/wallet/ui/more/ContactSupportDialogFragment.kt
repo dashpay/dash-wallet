@@ -27,11 +27,13 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogContactSupportBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
@@ -110,6 +112,7 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
     private fun sendReport() {
         lifecycleScope.launch {
             binding.reportGenerationProgressContainer.isVisible = true
+            (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
             val (reportText, attachments) = withContext(Dispatchers.IO) {
                 viewModel.createReport(
                     binding.reportIssueDialogDescription.text.toString(),
@@ -123,6 +126,11 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
             binding.reportGenerationProgressContainer.isVisible = false
             dismiss()
         }
+    }
+
+    override fun dismiss() {
+        (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
+        super.dismiss()
     }
 
     private fun startSend(subject: CharSequence?, text: CharSequence, attachments: ArrayList<Uri>) {

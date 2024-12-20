@@ -21,6 +21,7 @@ import android.os.PowerManager
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import com.google.common.base.Charsets
+import com.google.common.base.Stopwatch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -58,14 +59,14 @@ class ContactSupportViewModel @Inject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(ContactSupportViewModel::class.java)
         private const val MAX_LOGS_SIZE = 20 * 1024 * 1024
-        private const val MAX_WALLET_DUMP_SIZE = 4// * 1024 * 1024
-
+        private const val MAX_WALLET_DUMP_SIZE = 4 * 1024 * 1024
     }
 
-    var isCrash: Boolean = false
     val wallet: Wallet? = walletDataProvider.wallet
     var contextualData: String? = null
     var stackTrace: String? = null
+    var isCrash: Boolean = false
+
     suspend fun createReport(
         userIssueDescription: String,
         collectDeviceInfo: Boolean,
@@ -78,7 +79,7 @@ class ContactSupportViewModel @Inject constructor(
         val cacheDir = application.cacheDir
         val reportDir = File(cacheDir, "report")
         reportDir.mkdir()
-
+        val watch = Stopwatch.createStarted()
         text.append(userIssueDescription).append('\n')
 
         try {
@@ -204,7 +205,7 @@ class ContactSupportViewModel @Inject constructor(
         }
 
         text.append("\n\nPUT ADDITIONAL COMMENTS TO THE TOP. DOWN HERE NOBODY WILL NOTICE.")
-
+        log.info("create report: {}", watch)
         return@withContext Pair(text.toString(), attachments)
     }
 
