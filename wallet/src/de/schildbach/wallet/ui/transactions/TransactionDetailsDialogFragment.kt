@@ -101,11 +101,6 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         viewModel.init(txId)
         viewModel.transaction.filterNotNull().observe(viewLifecycleOwner) { tx ->
             // the transactionResultViewBinder.bind is called later
-//            if (tx == null) {
-//                // log.error("Transaction not found. TxId: {}", txId)
-//                return@observe
-//            }
-
 
             viewModel.transactionIcon.observe(this) {
                 transactionResultViewBinder.setTransactionIcon(it)

@@ -41,6 +41,7 @@ import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySuccessfulTransactionBinding
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
+import kotlinx.coroutines.flow.filterNotNull
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -151,27 +152,22 @@ class TransactionResultActivity : LockScreenActivity() {
 
         viewModel.init(txId)
 
-        viewModel.transaction.observe(this) { tx ->
-            if (tx != null) {
-                transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
-                contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
-                contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
-                binding.transactionCloseBtn.setOnClickListener {
-                    onTransactionDetailsDismiss()
-                }
-                contentBinding.reportIssueCard.setOnClickListener {
-                    showReportIssue()
-                }
-
-                viewModel.transactionMetadata.observe(this) {
-                    transactionResultViewBinder.setTransactionMetadata(it)
-                }
-                transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
-            } else {
-                log.error("Transaction not found. TxId: {}", txId)
-                finish()
-                return@observe
+        viewModel.transaction.filterNotNull().observe(this) { tx ->
+            transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
+            contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
+            contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
+            binding.transactionCloseBtn.setOnClickListener {
+                onTransactionDetailsDismiss()
             }
+            contentBinding.reportIssueCard.setOnClickListener {
+                showReportIssue()
+            }
+
+            viewModel.transactionMetadata.observe(this) {
+                transactionResultViewBinder.setTransactionMetadata(it)
+            }
+            transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
+
 
             viewModel.transactionMetadata.observe(this) {
                 transactionResultViewBinder.setTransactionMetadata(it)
