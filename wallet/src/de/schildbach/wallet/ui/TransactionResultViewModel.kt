@@ -96,8 +96,9 @@ class TransactionResultViewModel @Inject constructor(
         }
     }
 
-    private suspend fun monitorTransactionMetadata(txId: Sha256Hash) {
-        withContext(Dispatchers.IO) {
+    private fun monitorTransactionMetadata(txId: Sha256Hash) {
+        // this might take some time, so let it run asynchronously
+        viewModelScope.launch(Dispatchers.IO) {
             transactionMetadataProvider.importTransactionMetadata(txId)
             transactionMetadataProvider.observeTransactionMetadata(txId).collect {
                 _transactionMetadata.value = it
