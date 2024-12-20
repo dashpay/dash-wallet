@@ -133,15 +133,19 @@ class ContactSupportViewModel @Inject constructor(
             val logDir = File(application.filesDir, "log")
             var totalLogsSize = 0L
             if (logDir.exists()) {
-                for (logFile in logDir.listFiles()!!) {
-                    if (logFile.isFile() && logFile.length() > 0 && totalLogsSize < MAX_LOGS_SIZE) {
-                        attachments.add(
-                            FileProvider.getUriForFile(
-                                application,
-                                application.packageName + ".file_attachment", logFile
+                val sortedLogFiles = logDir.listFiles()
+                sortedLogFiles?.let {
+                    it.sortByDescending { file -> file.lastModified() }
+                    for (logFile in sortedLogFiles) {
+                        if (logFile.isFile() && logFile.length() > 0 && totalLogsSize < MAX_LOGS_SIZE) {
+                            attachments.add(
+                                FileProvider.getUriForFile(
+                                    application,
+                                    application.packageName + ".file_attachment", logFile
+                                )
                             )
-                        )
-                        totalLogsSize += logFile.length()
+                            totalLogsSize += logFile.length()
+                        }
                     }
                 }
             }
