@@ -195,11 +195,37 @@ class UsernameRequestsViewModel @Inject constructor(
                         }.filterNot { it.requests.isEmpty() && it.votingEndDate < System.currentTimeMillis() }
                 }.map { groupViews -> // Sort the list emitted by the Flow
                     when (_filterState.value.groupByOption) {
-                        UsernameGroupOption.VotingPeriodSoonest -> groupViews.sortedBy { group ->
-                            group.localDate
-                        }
-                        UsernameGroupOption.VotingPeriodLatest -> groupViews.sortedByDescending { group ->
-                            group.localDate
+                        UsernameGroupOption.VotingPeriodSoonest -> groupViews.sortedWith(
+                            when (_filterState.value.sortByOption) {
+                                UsernameSortOption.DateAscending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenBy { group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.DateDescending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.VotesAscending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenBy {  group -> group.requests.maxOf { request -> request.votes } }
+                                UsernameSortOption.VotesDescending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.maxOf { request -> request.votes } }
+                            }
+                        )
+                        UsernameGroupOption.VotingPeriodLatest -> groupViews.sortedWith(
+                            when (_filterState.value.sortByOption) {
+                                UsernameSortOption.DateAscending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenBy { group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.DateDescending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.VotesAscending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenBy {  group -> group.requests.maxOf { request -> request.votes } }
+                                UsernameSortOption.VotesDescending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.maxOf { request -> request.votes } }
+                            }
+                        )
+                        else -> {
+                            when (_filterState.value.sortByOption) {
+                                UsernameSortOption.DateAscending -> groupViews.sortedBy {
+                                    it.requests.minOf { request -> request.createdAt }
+                                }
+                                UsernameSortOption.DateDescending -> groupViews.sortedByDescending {
+                                    it.requests.minOf { request -> request.createdAt }
+                                }
+                                UsernameSortOption.VotesAscending -> groupViews.sortedBy {
+                                    it.requests.maxOf { request -> request.votes }
+                                }
+                                UsernameSortOption.VotesDescending -> groupViews.sortedByDescending {
+                                    it.requests.maxOf { request -> request.votes }
+                                }
+                            }
                         }
                     }
                 }

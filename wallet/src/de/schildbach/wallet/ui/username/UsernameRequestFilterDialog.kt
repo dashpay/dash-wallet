@@ -30,6 +30,7 @@ import org.dash.wallet.common.ui.radio_group.setupRadioGroup
 import org.dash.wallet.common.ui.viewBinding
 
 enum class UsernameGroupOption {
+    VotingPeriodNone,
     VotingPeriodSoonest,
     VotingPeriodLatest;
 
@@ -94,12 +95,15 @@ class UsernameRequestFilterDialog : OffsetDialogFragment(R.layout.dialog_usernam
 
         val sortByOptionNames = binding.root.resources.getStringArray(R.array.usernames_sort_by_options).mapIndexed { i, it ->
             IconifiedViewItem(getString(if (i < 2) R.string.date else R.string.votes, it))
-
         }
 
         val groupByOptionNames = binding.root.resources.getStringArray(R.array.usernames_group_by_options).mapIndexed { i, it ->
             IconifiedViewItem(
-                getString(R.string.voting_ends, it)
+                if (i == 0) {
+                    it
+                } else {
+                    getString(R.string.voting_ends, it)
+                }
             )
         }
 

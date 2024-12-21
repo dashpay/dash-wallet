@@ -285,6 +285,7 @@
     <string name="voting_ends">Voting ends: %s</string>
 
     <string-array name="usernames_group_by_options">
+        <item>None</item>
         <item>Soonest first</item>
         <item>Latest first</item>
     </string-array>
