@@ -18,9 +18,11 @@
 package de.schildbach.wallet.transactions
 
 import android.os.Looper
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import org.bitcoinj.core.Context
@@ -31,6 +33,7 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.listeners.WalletChangeEventListener
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener
 import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener
+import org.bitcoinj.wallet.listeners.WalletResetEventListener
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.slf4j.LoggerFactory
 
@@ -47,6 +50,18 @@ class WalletObserver(private val wallet: Wallet) {
 
         awaitClose {
             wallet.removeChangeEventListener(walletChangeListener)
+        }
+    }
+
+    fun observeWalletReset(): Flow<Unit> = callbackFlow {
+        val walletChangeListener = WalletResetEventListener {
+            trySend(Unit)
+        }
+
+        wallet.addResetEventListener(Threading.USER_THREAD, walletChangeListener)
+
+        awaitClose {
+            wallet.removeResetEventListener(walletChangeListener)
         }
     }
 
@@ -71,7 +86,7 @@ class WalletObserver(private val wallet: Wallet) {
             val coinsSentListener = WalletCoinsSentEventListener { _, tx: Transaction?, _, _ ->
                 try {
                     if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
-                        log.info("observing transaction sent: {} [=====] {}", tx.txId, this@WalletObserver)
+                        // log.info("observing transaction sent: {} [=====] {}", tx.txId, this@WalletObserver)
                         trySend(tx).onFailure {
                             log.error("Failed to send transaction sent event", it)
                         }
@@ -85,7 +100,7 @@ class WalletObserver(private val wallet: Wallet) {
             val coinsReceivedListener = WalletCoinsReceivedEventListener { _, tx: Transaction?, _, _ ->
                 try {
                     if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
-                        log.info("observing transaction received: {} [=====] {}", tx.txId, this@WalletObserver)
+                        // log.info("observing transaction received: {} [=====] {}", tx.txId, this@WalletObserver)
                         trySend(tx).onFailure {
                             log.error("Failed to send transaction received event", it)
                         }
@@ -102,7 +117,7 @@ class WalletObserver(private val wallet: Wallet) {
                 transactionConfidenceChangedListener = TransactionConfidenceEventListener { _, tx: Transaction? ->
                     try {
                         if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
-                            log.info("observing transaction conf {} [=====] {}", tx.txId, this@WalletObserver)
+                            // log.info("observing transaction conf {} [=====] {}", tx.txId, this@WalletObserver)
                             if (tx.getConfidence(wallet.context).depthInBlocks < 7) {
                                 trySend(tx).onFailure {
                                     log.error("Failed to send transaction confidence event", it)
@@ -134,5 +149,5 @@ class WalletObserver(private val wallet: Wallet) {
         }
     }.catch { e ->
         log.error("observing transactions error", e)
-    }
+    }.buffer(capacity = Channel.UNLIMITED)
 }

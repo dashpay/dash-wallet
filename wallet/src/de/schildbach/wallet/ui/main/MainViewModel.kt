@@ -105,6 +105,7 @@ import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.common.util.window
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
@@ -158,13 +159,10 @@ class MainViewModel @Inject constructor(
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
-    private val _transactions = MutableLiveData<TransactionRowViewList>()
+    private val _transactions = MutableLiveData<List<TransactionRowView>>()
     private val _modifyTransactionRow = MutableStateFlow<Pair<Boolean, TransactionRowView?>>(Pair(false, null))
-    val transactions: LiveData<TransactionRowViewList>
+    val transactions: LiveData<List<TransactionRowView>>
         get() = _transactions
-
-    val modifyTransactionRow: StateFlow<Pair<Boolean, TransactionRowView?>>
-        get() = _modifyTransactionRow
     private val _transactionsDirection = MutableStateFlow(TxFilterType.ALL)
     var transactionsDirection: TxFilterType
         get() = _transactionsDirection.value
@@ -206,7 +204,7 @@ class MainViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
-    private var transactionViews: MutableList<TransactionRowView> = arrayListOf()
+    private var transactionViews: MutableList<TransactionRowView> = mutableListOf()
     private lateinit var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory
     private lateinit var coinJoinWrapperFactory: CoinJoinTxWrapperFactory
     private val _mostRecentTransaction = MutableLiveData<Transaction>()
@@ -287,7 +285,10 @@ class MainViewModel @Inject constructor(
     private var contactRequestTimer: AnalyticsTimer? = null
 
     // end DashPay
-
+    val refreshTxWatch: Stopwatch = Stopwatch.createUnstarted()
+    var refreshLastUpdate = 0L
+    private var refreshNewTx = 0
+    private var refreshStatusTx = 0
     init {
         transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
 
@@ -298,13 +299,35 @@ class MainViewModel @Inject constructor(
                         val filter = TxDirectionFilter(direction, walletData.wallet!!)
                         refreshTransactions(filter, metadata)
                         walletData.observeTransactions(true, filter)
+                            .window(500) // batch every 500 ms
                             .onEach {
-                                log.info("observing transaction: {}", it.txId)
-                                refreshTransaction(it, filter, metadata)
+                                if (!refreshTxWatch.isRunning) { refreshTxWatch.start() }
+                                val timeElapsed = refreshTxWatch.elapsed(TimeUnit.MILLISECONDS)
+                                if (timeElapsed - refreshLastUpdate >= 1000) {
+                                    val interval = timeElapsed - refreshLastUpdate
+                                    log.info(
+                                        "observing transactions: {} txes, {} new tx/s,  {} status tx/s",
+                                        it.size,
+                                        1000 * refreshNewTx / interval,
+                                        1000 * refreshStatusTx / interval
+                                    )
+                                    refreshNewTx = 0
+                                    refreshStatusTx = 0
+                                    refreshLastUpdate = timeElapsed
+                                }
+                                refreshTransactions(it, filter, metadata)
                             }
                     }
             }
             .catch { analytics.logError(it, "is wallet null: ${walletData.wallet == null}") }
+            .launchIn(viewModelWorkerScope)
+
+        walletData.observeWalletReset()
+            .filterNotNull()
+            .onEach {
+                val filter = TxDirectionFilter(transactionsDirection, walletData.wallet!!)
+                refreshTransactions(filter, mapOf())
+            }
             .launchIn(viewModelWorkerScope)
 
         blockchainStateProvider.observeState()
@@ -519,7 +542,7 @@ class MainViewModel @Inject constructor(
             }
             coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
             crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
-            val _transactionViews = walletData.wrapAllTransactions(
+            val allTransactionViews = walletData.wrapAllTransactions(
                 crowdNodeWrapperFactory,
                 coinJoinWrapperFactory
             ).filter { it.passesFilter(filter, metadata) }
@@ -548,16 +571,38 @@ class MainViewModel @Inject constructor(
                     )
                 }
 
-            transactionViews = _transactionViews.toMutableList()
+            transactionViews = allTransactionViews.toMutableList()
             log.info("refreshTransactions: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
-            _transactions.postValue(TransactionRowViewList(_transactionViews))
+            _transactions.postValue(transactionViews)
+        }
+    }
+
+    /** update a batch of transactions */
+    private suspend fun refreshTransactions(
+        txList: List<Transaction>,
+        filter: TxDirectionFilter,
+        metadata: Map<Sha256Hash, PresentableTxMetadata>
+    ) {
+        var updateCount = 0
+        log.info("refreshTransactions({}, but only {} unique tx)", txList.size, txList.toSet().size)
+        txList.toSet().forEach { tx ->
+            if (filter.matches(tx)) {
+                refreshTransaction(tx, transactionViews, filter, metadata)
+                updateCount++
+            }
+        }
+        if (updateCount > 0) {
+            _transactions.postValue(transactionViews.toList())
         }
     }
 
     /**
-     * this will either add a single tranasction or update the transaction on the current view
+     * this will either add a single transaction or update the transaction on the current view
      */
-    private suspend fun refreshTransaction(tx: Transaction, filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
+    private suspend fun refreshTransaction(
+        tx: Transaction,
+        updatedList: MutableList<TransactionRowView>,
+        filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
         Context.propagate(Constants.CONTEXT)
         val watch = Stopwatch.createStarted()
         // is the item currently in our list
@@ -573,6 +618,7 @@ class MainViewModel @Inject constructor(
 
         if (txRowViewIndex != -1) {
             val currentTxRowView = transactionViews[txRowViewIndex]
+            refreshStatusTx++
             if (currentTxRowView.txWrapper == null) {
                 log.info("observing transaction refresh: update {}", tx.txId)
                 // update the current item by replacing the current item
@@ -588,11 +634,7 @@ class MainViewModel @Inject constructor(
                     tx.txId,
                     watch.elapsed(TimeUnit.MILLISECONDS)
                 )
-                // some how tell the UI to update this item
-                val updatedList = transactionViews
                 updatedList[txRowViewIndex] = newTransactionRow
-                transactionViews = updatedList
-                _transactions.postValue(TransactionRowViewList(transactionViews))
             } else {
                 // do nothing for updated transactions inside a wrapper
                 // we presume that value, timestamp and title and count do to change with updates
@@ -650,7 +692,7 @@ class MainViewModel @Inject constructor(
                     contact
                 )
             }
-            var updatedList = transactionViews // no changes
+
             // is there a new row to add?
             if (newTransactionRow != null) {
                 if (replaceRowIndex != -1) {
@@ -675,8 +717,7 @@ class MainViewModel @Inject constructor(
             } else {
                 log.info("observing transaction: refreshTransaction adding item to a txwrapper; {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
             }
-            transactionViews = updatedList
-            _transactions.postValue(TransactionRowViewList(updatedList))
+            refreshNewTx++
         }
     }
     private fun updateSyncStatus(state: BlockchainState) {
@@ -691,7 +732,13 @@ class MainViewModel @Inject constructor(
             }
 
             if (state.replaying) {
-                _transactions.postValue(TransactionRowViewList(listOf()))
+                // remove all tx
+                transactionViews = mutableListOf()
+                _transactions.postValue(transactionViews)
+                //val filter = TxDirectionFilter(_transactionsDirection.value, walletData.wallet!!)
+                //viewModelScope.launch {
+                //    refreshTransactions(filter, mapOf())
+                //}
             }
         }
 
