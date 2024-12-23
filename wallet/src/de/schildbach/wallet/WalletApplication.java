@@ -1134,6 +1134,16 @@ public class WalletApplication extends MultiDexApplication
 
     @NonNull
     @Override
+    public Flow<Unit> observeWalletReset() {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        return new WalletObserver(wallet).observeWalletReset();
+    }
+
+    @NonNull
+    @Override
     public Flow<List<AuthenticationKeyUsage>> observeAuthenticationKeyUsage() {
         if (wallet == null || !wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID)) {
             return FlowKt.emptyFlow();
