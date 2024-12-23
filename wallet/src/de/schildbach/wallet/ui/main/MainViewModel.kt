@@ -158,13 +158,10 @@ class MainViewModel @Inject constructor(
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
-    private val _transactions = MutableLiveData<TransactionRowViewList>()
+    private val _transactions = MutableLiveData<List<TransactionRowView>>()
     private val _modifyTransactionRow = MutableStateFlow<Pair<Boolean, TransactionRowView?>>(Pair(false, null))
-    val transactions: LiveData<TransactionRowViewList>
+    val transactions: LiveData<List<TransactionRowView>>
         get() = _transactions
-
-    val modifyTransactionRow: StateFlow<Pair<Boolean, TransactionRowView?>>
-        get() = _modifyTransactionRow
     private val _transactionsDirection = MutableStateFlow(TxFilterType.ALL)
     var transactionsDirection: TxFilterType
         get() = _transactionsDirection.value
@@ -206,7 +203,7 @@ class MainViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
-    private var transactionViews: MutableList<TransactionRowView> = arrayListOf()
+    private var transactionViews: List<TransactionRowView> = listOf()
     private lateinit var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory
     private lateinit var coinJoinWrapperFactory: CoinJoinTxWrapperFactory
     private val _mostRecentTransaction = MutableLiveData<Transaction>()
@@ -519,7 +516,7 @@ class MainViewModel @Inject constructor(
             }
             coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
             crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
-            val _transactionViews = walletData.wrapAllTransactions(
+            val allTransactionViews = walletData.wrapAllTransactions(
                 crowdNodeWrapperFactory,
                 coinJoinWrapperFactory
             ).filter { it.passesFilter(filter, metadata) }
@@ -548,9 +545,9 @@ class MainViewModel @Inject constructor(
                     )
                 }
 
-            transactionViews = _transactionViews.toMutableList()
+            transactionViews = allTransactionViews
             log.info("refreshTransactions: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
-            _transactions.postValue(TransactionRowViewList(_transactionViews))
+            _transactions.postValue(allTransactionViews)
         }
     }
 
@@ -589,10 +586,10 @@ class MainViewModel @Inject constructor(
                     watch.elapsed(TimeUnit.MILLISECONDS)
                 )
                 // some how tell the UI to update this item
-                val updatedList = transactionViews
+                val updatedList = transactionViews.toMutableList()
                 updatedList[txRowViewIndex] = newTransactionRow
                 transactionViews = updatedList
-                _transactions.postValue(TransactionRowViewList(transactionViews))
+                _transactions.postValue(transactionViews)
             } else {
                 // do nothing for updated transactions inside a wrapper
                 // we presume that value, timestamp and title and count do to change with updates
@@ -650,7 +647,7 @@ class MainViewModel @Inject constructor(
                     contact
                 )
             }
-            var updatedList = transactionViews // no changes
+            val updatedList = transactionViews.toMutableList() // make a copy
             // is there a new row to add?
             if (newTransactionRow != null) {
                 if (replaceRowIndex != -1) {
@@ -676,7 +673,7 @@ class MainViewModel @Inject constructor(
                 log.info("observing transaction: refreshTransaction adding item to a txwrapper; {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
             }
             transactionViews = updatedList
-            _transactions.postValue(TransactionRowViewList(updatedList))
+            _transactions.postValue(updatedList)
         }
     }
     private fun updateSyncStatus(state: BlockchainState) {
@@ -691,7 +688,9 @@ class MainViewModel @Inject constructor(
             }
 
             if (state.replaying) {
-                _transactions.postValue(TransactionRowViewList(listOf()))
+                // remove all tx
+                transactionViews = listOf()
+                _transactions.postValue(transactionViews)
             }
         }
 
