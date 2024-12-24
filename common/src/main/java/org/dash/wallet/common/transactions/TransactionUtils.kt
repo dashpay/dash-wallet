@@ -17,10 +17,17 @@
 
 package org.dash.wallet.common.transactions
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.sample
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
 import org.bitcoinj.script.ScriptException
+import java.util.concurrent.ConcurrentHashMap
 
 object TransactionUtils {
     fun getWalletAddressOfReceived(tx: Transaction, bag: TransactionBag): Address? {
@@ -118,4 +125,22 @@ object TransactionUtils {
             }
             return result
         }
+}
+
+fun Flow<Transaction>.batchAndFilterUpdates(timeInterval: Long = 500): Flow<List<Transaction>> {
+    val latestTransactions = ConcurrentHashMap<Sha256Hash, Transaction>()
+
+    return this
+        .onEach { transaction ->
+            // Update the latest transaction for the hash
+            latestTransactions[transaction.txId] = transaction
+        }
+        .sample(timeInterval) // Emit events every 500ms
+        .map {
+            // Collect the latest transactions
+            latestTransactions.values.toList().also {
+                latestTransactions.clear() // Clear after collecting
+            }
+        }
+        .filter { it.isNotEmpty() } // Only emit non-empty lists
 }

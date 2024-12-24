@@ -104,8 +104,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
+import org.dash.wallet.common.transactions.batchAndFilterUpdates
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.common.util.window
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
@@ -160,7 +160,6 @@ class MainViewModel @Inject constructor(
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
     private val _transactions = MutableLiveData<List<TransactionRowView>>()
-    private val _modifyTransactionRow = MutableStateFlow<Pair<Boolean, TransactionRowView?>>(Pair(false, null))
     val transactions: LiveData<List<TransactionRowView>>
         get() = _transactions
     private val _transactionsDirection = MutableStateFlow(TxFilterType.ALL)
@@ -299,7 +298,7 @@ class MainViewModel @Inject constructor(
                         val filter = TxDirectionFilter(direction, walletData.wallet!!)
                         refreshTransactions(filter, metadata)
                         walletData.observeTransactions(true, filter)
-                            .window(500) // batch every 500 ms
+                            .batchAndFilterUpdates(500) // batch every 500 ms
                             .onEach {
                                 if (!refreshTxWatch.isRunning) { refreshTxWatch.start() }
                                 val timeElapsed = refreshTxWatch.elapsed(TimeUnit.MILLISECONDS)
