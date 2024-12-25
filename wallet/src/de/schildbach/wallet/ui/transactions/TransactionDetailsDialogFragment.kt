@@ -25,7 +25,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.service.PackageInfoProvider
-import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment

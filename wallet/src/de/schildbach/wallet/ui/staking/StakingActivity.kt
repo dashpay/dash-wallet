@@ -85,14 +85,6 @@ class StakingActivity : LockScreenActivity() {
             }
             NavigationRequest.SendReport -> {
                 log.info("CrowdNode initiated report")
-//                alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
-//                    this,
-//                    packageInfoProvider,
-//                    configuration,
-//                    walletData.wallet,
-//                    walletApplication
-//                ).buildAlertDialog()
-//                alertDialog.show()
                 ContactSupportDialogFragment.newInstance(
                     getString(R.string.report_issue_dialog_title_issue),
                     getString(R.string.report_issue_dialog_message_issue),

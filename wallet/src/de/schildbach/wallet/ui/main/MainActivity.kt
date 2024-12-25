@@ -371,21 +371,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         showRestoreWalletFromSeedDialog();
     }
 
-    private fun showLowStorageAlertDialog() {
-        baseAlertDialogBuilder.title = getString(R.string.wallet_low_storage_dialog_title)
-        baseAlertDialogBuilder.message = getString(R.string.wallet_low_storage_dialog_msg)
-        baseAlertDialogBuilder.positiveText =
-            getString(R.string.wallet_low_storage_dialog_button_apps)
-        baseAlertDialogBuilder.positiveAction = {
-            startActivity(Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS))
-            finish()
-        }
-        baseAlertDialogBuilder.negativeText = getString(R.string.button_dismiss)
-        baseAlertDialogBuilder.showIcon = true
-        alertDialog = baseAlertDialogBuilder.buildAlertDialog()
-        alertDialog.show()
-    }
-
     fun restoreWallet(wallet: Wallet?) {
         walletApplication.replaceWallet(wallet)
         getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
@@ -462,43 +447,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 stackTrace = stackTrace.toString(),
                 isCrash = true
             )
-
-//            alertDialog = object : ReportIssueDialogBuilder(this,
-//                    R.string.report_issue_dialog_title_crash, R.string.report_issue_dialog_message_crash) {
-//
-//                override fun subject(): CharSequence {
-//                    return Constants.REPORT_SUBJECT_BEGIN + packageInfo.versionName + " " + Constants.REPORT_SUBJECT_CRASH
-//                }
-//
-//                @Throws(IOException::class)
-//                override fun collectApplicationInfo(): CharSequence {
-//                    val applicationInfo = StringBuilder()
-//                    CrashReporter.appendApplicationInfo(
-//                        applicationInfo,
-//                        packageInfoProvider,
-//                        configuration,
-//                        walletData.wallet,
-//                        walletApplication.getSystemService(PowerManager::class.java)
-//                    )
-//                    return applicationInfo
-//                }
-//
-//                @Throws(IOException::class)
-//                override fun collectStackTrace(): CharSequence? {
-//                    return if (stackTrace.isNotEmpty()) stackTrace else null
-//                }
-//
-//                @Throws(IOException::class)
-//                override fun collectDeviceInfo(): CharSequence? {
-//                    val deviceInfo = StringBuilder()
-//                    CrashReporter.appendDeviceInfo(deviceInfo, this@MainActivity)
-//                    return deviceInfo
-//                }
-//
-//                override fun collectWalletDump(): CharSequence? {
-//                    return walletData.wallet!!.toString(false, true, true, null)
-//                }
-//            }.buildAlertDialog()
             if (!isFinishing) {
                 contactSupportDialog.show(this)
             }
@@ -526,29 +474,18 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             )
             dialog.isCancelable = false
             dialog.show(this) { reportIssue ->
-                if (reportIssue != null) {
-                    if (reportIssue) {
-//                        alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
-//                            this@MainActivity,
-//                            packageInfoProvider,
-//                            configuration,
-//                            walletData.wallet,
-//                            walletApplication
-//                        ).buildAlertDialog()
-//                        alertDialog.show()
-                        ContactSupportDialogFragment.newInstance(
-                            getString(R.string.report_issue_dialog_title_issue),
-                            getString(R.string.report_issue_dialog_message_issue),
-                            contextualData = getString(R.string.wallet_not_encrypted_error_message)
-                        ).show(this)
-                    } else {
-                        // is there way to try to fix it?
-                        // can we encrypt the wallet with the SecurityGuard.Password
-                        // for now, lets close the app
-                        this@MainActivity.finishAffinity()
-                    }
+                if (reportIssue == true) {
+                    ContactSupportDialogFragment.newInstance(
+                        getString(R.string.report_issue_dialog_title_issue),
+                        getString(R.string.report_issue_dialog_message_issue),
+                        contextualData = getString(R.string.wallet_not_encrypted_error_message)
+                    ).show(this)
+                } else {
+                    // is there way to try to fix it?
+                    // can we encrypt the wallet with the SecurityGuard.Password
+                    // for now, lets close the app
+                    this@MainActivity.finishAffinity()
                 }
-                Unit
             }
         }
     }

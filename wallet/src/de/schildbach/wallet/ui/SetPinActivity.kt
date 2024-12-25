@@ -508,14 +508,6 @@ class SetPinActivity : InteractionAwareActivity() {
         dialog.isCancelable = false
         dialog.show(this) {
             if (it == true) {
-//                alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
-//                    this,
-//                    packageInfoProvider,
-//                    viewModel.configuration,
-//                    viewModel.walletData.wallet,
-//                    application as WalletApplication
-//                ).buildAlertDialog()
-//                alertDialog?.show()
                 ContactSupportDialogFragment.newInstance(
                     getString(R.string.report_issue_dialog_title_issue),
                     getString(R.string.report_issue_dialog_message_issue),
