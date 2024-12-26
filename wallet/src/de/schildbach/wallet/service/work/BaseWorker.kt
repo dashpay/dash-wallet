@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui.dashpay.work
+package de.schildbach.wallet.service.work
 
 import android.content.Context
 import androidx.work.CoroutineWorker

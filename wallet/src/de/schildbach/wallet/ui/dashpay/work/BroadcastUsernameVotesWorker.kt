@@ -29,6 +29,7 @@ import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.work.BaseWorker
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
@@ -41,7 +42,6 @@ import org.dashj.platform.dpp.voting.ResourceVote
 import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.dpp.voting.TowardsIdentity
 import org.dashj.platform.dpp.voting.Vote
-import org.dashj.platform.sdk.PlatformValue
 import org.slf4j.LoggerFactory
 
 @HiltWorker
