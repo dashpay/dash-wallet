@@ -23,6 +23,7 @@ import android.view.ViewTreeObserver
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -450,14 +451,17 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             .start()
 
         viewModel.voteHandled()
+        // replace with our custom toast?
         binding.voteSubmittedIndicator.postDelayed({
-            binding.voteSubmittedIndicator.animate()
-                .alpha(0f)
-                .setDuration(animationDuration)
-                .withEndAction {
-                    binding.voteSubmittedIndicator.isVisible = false
-                }
-                .start()
+            if (isAdded && viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                binding.voteSubmittedIndicator.animate()
+                    .alpha(0f)
+                    .setDuration(animationDuration)
+                    .withEndAction {
+                        binding.voteSubmittedIndicator.isVisible = false
+                    }
+                    .start()
+            }
         }, 3000L)
     }
 
