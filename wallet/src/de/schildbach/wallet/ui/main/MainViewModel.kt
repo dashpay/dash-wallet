@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui.main
 
 import android.os.LocaleList
-import android.telephony.TelephonyManager
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
@@ -43,6 +42,7 @@ import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.DeviceInfoProvider
 import de.schildbach.wallet.service.MAX_ALLOWED_AHEAD_TIMESKEW
 import de.schildbach.wallet.service.MAX_ALLOWED_BEHIND_TIMESKEW
 import de.schildbach.wallet.service.MixingStatus
@@ -58,7 +58,6 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet.ui.transactions.TransactionRowViewComparator
-import de.schildbach.wallet.ui.transactions.TransactionRowViewList
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,7 +66,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -117,7 +115,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.collections.set
 
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
     val analytics: AnalyticsService,
@@ -134,7 +132,7 @@ class MainViewModel @Inject constructor(
     private val metadataProvider: TransactionMetadataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
     val biometricHelper: BiometricHelper,
-    private val telephonyManager: TelephonyManager,
+    private val deviceInfo: DeviceInfoProvider,
     private val invitationsDao: InvitationsDao,
     userAlertDao: UserAlertDao,
     dashPayProfileDao: DashPayProfileDao,
@@ -305,7 +303,7 @@ class MainViewModel @Inject constructor(
                                 if (timeElapsed - refreshLastUpdate >= 1000) {
                                     val interval = timeElapsed - refreshLastUpdate
                                     log.info(
-                                        "observing transactions: {} txes, {} new tx/s,  {} status tx/s",
+                                        "PERF: observing transactions: {} txes, {} new tx/s,  {} status tx/s",
                                         it.size,
                                         1000 * refreshNewTx / interval,
                                         1000 * refreshStatusTx / interval
@@ -470,49 +468,18 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Get ISO 3166-1 alpha-2 country code for this device (or null if not available)
-     * If available, call [.showFiatCurrencyChangeDetectedDialog]
-     * passing the country code.
-     */
     fun detectUserCountry() = viewModelScope.launch {
         if (walletUIConfig.get(WalletUIConfig.EXCHANGE_CURRENCY_DETECTED) == true) {
             return@launch
         }
 
         val selectedCurrencyCode = walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY)
+        val country = deviceInfo.getSimOrNetworkCountry()
 
-        try {
-            val simCountry = telephonyManager.simCountryIso
-            log.info("Detecting currency based on device, mobile network or locale:")
-
-            if (simCountry != null && simCountry.length == 2) { // SIM country code is available
-                log.info("Device Sim Country: $simCountry")
-                updateCurrencyExchange(simCountry.uppercase(Locale.getDefault()))
-            } else if (telephonyManager.phoneType != TelephonyManager.PHONE_TYPE_CDMA) {
-                // device is not 3G (would be unreliable)
-                val networkCountry = telephonyManager.networkCountryIso
-                log.info("Network Country: $simCountry")
-                if (networkCountry != null && networkCountry.length == 2) { // network country code is available
-                    updateCurrencyExchange(networkCountry.uppercase(Locale.getDefault()))
-                } else {
-                    // Couldn't obtain country code - Use Default
-                    if (selectedCurrencyCode == null) {
-                        setDefaultCurrency()
-                    }
-                }
-            } else {
-                // No cellular network - Wifi Only
-                if (selectedCurrencyCode == null) {
-                    setDefaultCurrency()
-                }
-            }
-        } catch (e: java.lang.Exception) {
-            // fail safe
-            log.info("NMA-243:  Exception thrown obtaining Locale information: ", e)
-            if (selectedCurrencyCode == null) {
-                setDefaultCurrency()
-            }
+        if (country.isNotEmpty()) {
+            updateCurrencyExchange(country.uppercase(Locale.getDefault()))
+        } else if (selectedCurrencyCode == null) {
+            setDefaultCurrency()
         }
     }
 
@@ -571,7 +538,7 @@ class MainViewModel @Inject constructor(
                 }
 
             transactionViews = allTransactionViews.toMutableList()
-            log.info("refreshTransactions: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
+            log.info("PERF: refreshTransactions: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
             _transactions.postValue(transactionViews)
         }
     }
@@ -583,7 +550,7 @@ class MainViewModel @Inject constructor(
         metadata: Map<Sha256Hash, PresentableTxMetadata>
     ) {
         var updateCount = 0
-        log.info("refreshTransactions({}, but only {} unique tx)", txList.size, txList.toSet().size)
+        log.info("PERF: refreshTransactions({}, but only {} unique tx)", txList.size, txList.toSet().size)
         txList.toSet().forEach { tx ->
             if (filter.matches(tx)) {
                 refreshTransaction(tx, transactionViews, filter, metadata)
@@ -619,7 +586,7 @@ class MainViewModel @Inject constructor(
             val currentTxRowView = transactionViews[txRowViewIndex]
             refreshStatusTx++
             if (currentTxRowView.txWrapper == null) {
-                log.info("observing transaction refresh: update {}", tx.txId)
+                log.info("PERF: observing transaction refresh: update {}", tx.txId)
                 // update the current item by replacing the current item
                 val newTransactionRow = TransactionRowView.fromTransaction(
                     tx,
@@ -629,7 +596,7 @@ class MainViewModel @Inject constructor(
                     currentTxRowView.contact
                 )
                 log.info(
-                    "observing transaction refreshTransaction: updated {}, {} ms",
+                    "PERF: observing transaction refreshTransaction: updated {}, {} ms",
                     tx.txId,
                     watch.elapsed(TimeUnit.MILLISECONDS)
                 )
@@ -640,7 +607,7 @@ class MainViewModel @Inject constructor(
             }
         } else {
             var replaceRowIndex = -1
-            log.info("observing transaction refresh: add {}", tx.txId)
+            log.info("PERF: observing transaction refresh: add {}", tx.txId)
             // add the item to the correct group
             var newTransactionRow: TransactionRowView? = null
             val wrapperFactoryList = listOf(coinJoinWrapperFactory, crowdNodeWrapperFactory)
@@ -696,7 +663,7 @@ class MainViewModel @Inject constructor(
             if (newTransactionRow != null) {
                 if (replaceRowIndex != -1) {
                     log.info(
-                        "observing transaction: refreshTransaction replacing in current list at index: {}; {} ms",
+                        "PERF: observing transaction: refreshTransaction replacing in current list at index: {}; {} ms",
                         replaceRowIndex,
                         watch.elapsed(TimeUnit.MILLISECONDS)
                     )
@@ -708,13 +675,13 @@ class MainViewModel @Inject constructor(
                             .let { if (it < 0) -it - 1 else it }
                     updatedList.add(index, newTransactionRow!!)
                     log.info(
-                        "observing transaction: refreshTransaction adding to current list at index: {}; {} ms",
+                        "PERF: observing transaction: refreshTransaction adding to current list at index: {}; {} ms",
                         index,
                         watch.elapsed(TimeUnit.MILLISECONDS)
                     )
                 }
             } else {
-                log.info("observing transaction: refreshTransaction adding item to a txwrapper; {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
+                log.info("PERF: observing transaction: refreshTransaction adding item to a txwrapper; {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
             }
             refreshNewTx++
         }

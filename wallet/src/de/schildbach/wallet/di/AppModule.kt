@@ -93,8 +93,8 @@ abstract class AppModule {
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
         @Provides
-        fun provideTelephonyService(@ApplicationContext context: Context): TelephonyManager =
-            context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        fun provideDeviceInfo(@ApplicationContext context: Context): DeviceInfoProvider =
+            DeviceInfoProvider(context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager)
 
         @Singleton
         @Provides
