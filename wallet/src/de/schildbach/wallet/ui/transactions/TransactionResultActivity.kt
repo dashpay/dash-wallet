@@ -33,8 +33,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
+import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -217,13 +217,11 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private fun showReportIssue() {
-        ReportIssueDialogBuilder.createReportIssueDialog(
-            this,
-            packageInfoProvider,
-            configuration,
-            viewModel.walletData.wallet,
-            walletApplication
-        ).buildAlertDialog().show()
+        ContactSupportDialogFragment.newInstance(
+            getString(R.string.report_issue_dialog_title_issue),
+            getString(R.string.report_issue_dialog_message_issue),
+            contextualData = viewModel.transaction.toString()
+        ).show(this)
     }
 
     private fun onTransactionDetailsDismiss() {

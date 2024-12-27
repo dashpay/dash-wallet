@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui.more
 import android.annotation.SuppressLint
 import android.content.*
 import android.content.Intent.ACTION_VIEW
-import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -35,9 +34,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityAboutBinding
@@ -190,14 +187,12 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
     }
 
     private fun handleReportIssue() {
-        alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
-            this,
-            packageInfoProvider,
-            configuration,
-            walletData.wallet,
-            application as WalletApplication
-        ).buildAlertDialog()
-        alertDialog.show()
+        if (!isFinishing) {
+            ContactSupportDialogFragment.newInstance(
+                getString(R.string.report_issue_dialog_title_issue),
+                getString(R.string.report_issue_dialog_message_issue),
+            ).show(this)
+        }
     }
 
     override fun onSensorChanged(event: SensorEvent?) {

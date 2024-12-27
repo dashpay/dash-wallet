@@ -25,9 +25,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.service.PackageInfoProvider
-import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
+import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import org.dash.wallet.common.UserInteractionAwareCallback
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -144,13 +144,11 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
     }
 
     private fun showReportIssue() {
-        ReportIssueDialogBuilder.createReportIssueDialog(
-            requireActivity(),
-            packageInfoProvider,
-            configuration,
-            viewModel.walletData.wallet,
-            walletApplication
-        ).buildAlertDialog().show()
+        ContactSupportDialogFragment.newInstance(
+            getString(R.string.report_issue_dialog_title_issue),
+            getString(R.string.report_issue_dialog_message_issue),
+            contextualData = viewModel.transaction.toString()
+        ).show(requireActivity())
     }
 
     private fun viewOnBlockExplorer() {
