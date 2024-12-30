@@ -29,6 +29,16 @@ import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
 import org.dash.wallet.common.ui.radio_group.setupRadioGroup
 import org.dash.wallet.common.ui.viewBinding
 
+enum class UsernameGroupOption {
+    VotingPeriodNone,
+    VotingPeriodSoonest,
+    VotingPeriodLatest;
+
+    companion object {
+        val defaultOption = VotingPeriodSoonest
+    }
+}
+
 enum class UsernameSortOption {
     DateDescending,
     DateAscending,
@@ -36,7 +46,7 @@ enum class UsernameSortOption {
     VotesAscending;
 
     companion object {
-        val defaultOption = DateDescending
+        val defaultOption = DateAscending
     }
 }
 
@@ -60,6 +70,7 @@ class UsernameRequestFilterDialog : OffsetDialogFragment(R.layout.dialog_usernam
 
     private lateinit var typeOptionsAdapter: RadioGroupAdapter
     private lateinit var sortByOptionsAdapter: RadioGroupAdapter
+    private lateinit var groupByOptionsAdapter: RadioGroupAdapter
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -81,17 +92,37 @@ class UsernameRequestFilterDialog : OffsetDialogFragment(R.layout.dialog_usernam
     }
 
     private fun setupSortByOptions() {
-        val optionNames = binding.root.resources.getStringArray(R.array.usernames_sort_by_options).mapIndexed { i, it ->
+
+        val sortByOptionNames = binding.root.resources.getStringArray(R.array.usernames_sort_by_options).mapIndexed { i, it ->
             IconifiedViewItem(getString(if (i < 2) R.string.date else R.string.votes, it))
         }
 
+        val groupByOptionNames = binding.root.resources.getStringArray(R.array.usernames_group_by_options).mapIndexed { i, it ->
+            IconifiedViewItem(
+                if (i == 0) {
+                    it
+                } else {
+                    getString(R.string.voting_ends, it)
+                }
+            )
+        }
+
+        val groupOption = viewModel.filterState.value.groupByOption
+        val initialGroupIndex = UsernameGroupOption.entries.indexOf(groupOption)
+        val groupAdapter = RadioGroupAdapter(initialGroupIndex) { _, _ ->
+            checkResetButton()
+        }
+        binding.groupByFilter.setupRadioGroup(groupAdapter)
+        groupAdapter.submitList(groupByOptionNames)
+        groupByOptionsAdapter = groupAdapter
+
         val sortOption = viewModel.filterState.value.sortByOption
-        val initialIndex = UsernameSortOption.values().indexOf(sortOption)
+        val initialIndex = UsernameSortOption.entries.indexOf(sortOption)
         val adapter = RadioGroupAdapter(initialIndex) { _, _ ->
             checkResetButton()
         }
         binding.sortByFilter.setupRadioGroup(adapter)
-        adapter.submitList(optionNames)
+        adapter.submitList(sortByOptionNames)
         sortByOptionsAdapter = adapter
     }
 
@@ -116,18 +147,20 @@ class UsernameRequestFilterDialog : OffsetDialogFragment(R.layout.dialog_usernam
     }
 
     private fun applyFilters() {
-        val sortByOption = UsernameSortOption.values()[sortByOptionsAdapter.selectedIndex]
-        val typeOption = UsernameTypeOption.values()[typeOptionsAdapter.selectedIndex]
+        val groupByOption = UsernameGroupOption.entries[groupByOptionsAdapter.selectedIndex]
+        val sortByOption = UsernameSortOption.entries[sortByOptionsAdapter.selectedIndex]
+        val typeOption = UsernameTypeOption.entries[typeOptionsAdapter.selectedIndex]
         val onlyDuplicates = binding.onlyDuplicatesCheckbox.isChecked
         val onlyLinks = binding.onlyLinksCheckbox.isChecked
 
-        viewModel.applyFilters(sortByOption, typeOption, onlyDuplicates, onlyLinks)
+        viewModel.applyFilters(groupByOption, sortByOption, typeOption, onlyDuplicates, onlyLinks)
     }
 
     private fun checkResetButton() {
         var isEnabled = false
 
-        if (sortByOptionsAdapter.selectedIndex != UsernameSortOption.defaultOption.ordinal ||
+        if (groupByOptionsAdapter.selectedIndex != UsernameGroupOption.defaultOption.ordinal ||
+            sortByOptionsAdapter.selectedIndex != UsernameSortOption.defaultOption.ordinal ||
             typeOptionsAdapter.selectedIndex != UsernameTypeOption.defaultOption.ordinal
         ) {
             isEnabled = true
@@ -145,6 +178,7 @@ class UsernameRequestFilterDialog : OffsetDialogFragment(R.layout.dialog_usernam
     }
 
     private fun resetFilters() {
+        groupByOptionsAdapter.selectedIndex = UsernameGroupOption.defaultOption.ordinal
         sortByOptionsAdapter.selectedIndex = UsernameSortOption.defaultOption.ordinal
         typeOptionsAdapter.selectedIndex = UsernameTypeOption.defaultOption.ordinal
         binding.onlyDuplicatesCheckbox.isChecked = true

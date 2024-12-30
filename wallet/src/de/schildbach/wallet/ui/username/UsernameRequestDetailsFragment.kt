@@ -1,6 +1,7 @@
 package de.schildbach.wallet.ui.username
 
 import android.os.Bundle
+import android.text.format.DateFormat
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -92,6 +93,13 @@ class UsernameRequestDetailsFragment : Fragment(R.layout.fragment_username_reque
                     }
                 }
             }
+            val votingPeriod = args.startDate.let { startTime ->
+                val endTime = startTime + UsernameRequest.VOTING_PERIOD_MILLIS
+                val dateFormat = DateFormat.getMediumDateFormat(requireContext())
+                String.format("%s - %s", dateFormat.format(startTime), dateFormat.format(endTime))
+            }
+
+            binding.votingPeriod.text = votingPeriod
         }
 
         viewModel.selectUsernameRequest(args.requestId)

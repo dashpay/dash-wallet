@@ -62,7 +62,7 @@
         android:id="@+id/link_included"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="link included"
+        android:text="@string/link_included"
         style="@style/Caption.Blue"
         app:layout_constraintTop_toTopOf="@id/link_badge"
         app:layout_constraintStart_toEndOf="@id/link_badge" />
@@ -79,32 +79,61 @@
         app:layout_constraintBottom_toBottomOf="@id/username"
         tools:text="4 requests" />
 
-    <Button
-        android:id="@+id/blocks_button"
+    <LinearLayout
+        android:id="@+id/blocks_button_container"
         style="@style/Button.Primary.Large.LightRed"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_marginVertical="5dp"
         android:layout_marginHorizontal="8dp"
-        app:layout_constraintEnd_toStartOf="@id/approvals_button"
+        android:layout_marginVertical="5dp"
+        app:layout_constraintEnd_toStartOf="@id/approvals_button_container"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        tools:text="1\nBlock"
-        />
+        tools:text="2" >
+        <TextView
+            android:id="@+id/blocks_button_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/system_red"
+            android:textSize="12sp"
+            tools:text="2"
+            />
+        <ImageView
+            android:id="@+id/blocks_button_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:src="@drawable/ic_thumb_down_red"
+            />
+    </LinearLayout>
 
-    <Button
-        android:id="@+id/approvals_button"
+    <LinearLayout
+        android:id="@+id/approvals_button_container"
         style="@style/Button.Primary.Large.LightBlue"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
+        android:layout_marginHorizontal="8dp"
         android:layout_marginVertical="5dp"
-        android:layout_marginHorizontal="10dp"
-        app:layout_constraintEnd_toStartOf="@id/chevron"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        tools:text="3\nApprovals"
-        />
-
+        tools:text="2" >
+        <TextView
+            android:id="@+id/approvals_button_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/dash_blue"
+            android:textSize="12sp"
+            tools:text="2"
+            />
+        <ImageView
+            android:id="@+id/approvals_button_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:src="@drawable/ic_thumb_up_blue"
+            />
+    </LinearLayout>
     <ImageView
         android:id="@+id/chevron"
         android:layout_width="11dp"

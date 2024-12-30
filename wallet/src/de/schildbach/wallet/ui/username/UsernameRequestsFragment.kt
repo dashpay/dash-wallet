@@ -23,6 +23,7 @@ import android.view.ViewTreeObserver
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -31,14 +32,18 @@ import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesWorker
+import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupAdapter
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
+import de.schildbach.wallet.ui.username.adapters.UsernameRequestRowView
 import de.schildbach.wallet.ui.username.utils.votingViewModels
 import de.schildbach.wallet.ui.username.voting.OneVoteLeftDialogFragment
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameRequestsBinding
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -50,6 +55,8 @@ import org.dashj.platform.dpp.voting.LockVoteChoice
 import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.dpp.voting.TowardsIdentity
 import org.slf4j.LoggerFactory
+import java.time.Instant
+import java.time.ZoneId
 
 @AndroidEntryPoint
 class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
@@ -79,7 +86,10 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
                 lifecycleScope.launch {
                     if (request.requestId != "") {
                         viewModel.logEvent(AnalyticsConstants.UsernameVoting.DETAILS)
-                        safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(request.requestId))
+                        val votingStartDate = withContext(Dispatchers.IO) {
+                            viewModel.getVotingStartDate(request.normalizedLabel)
+                        }
+                        safeNavigate(UsernameRequestsFragmentDirections.requestsToDetails(request.requestId, votingStartDate))
                     } else {
                         performVote(request)
                     }
@@ -326,7 +336,18 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         val list = filterByQuery(itemList, binding.search.text.toString())
         val layoutManager = binding.requestGroups.layoutManager as LinearLayoutManager
         val scrollPosition = layoutManager.findFirstVisibleItemPosition()
-        adapter.submitList(list)
+        val listForAdapter = if (list.isNotEmpty() && viewModel.filterState.value.groupByOption != UsernameGroupOption.VotingPeriodNone) {
+            list.groupBy {
+                Instant.ofEpochMilli(it.votingEndDate).atZone(ZoneId.systemDefault()).toLocalDate()
+            }.map {
+                val outList = mutableListOf<UsernameRequestRowView>()
+                outList.add(UsernameRequestRowView(it.key))
+                outList.apply { addAll(it.value) }
+            }.reduce { acc, list -> acc.apply { addAll(list) } }
+        } else {
+            requests
+        }
+        adapter.submitList(listForAdapter)
         binding.requestGroups.scrollToPosition(scrollPosition)
     }
 
@@ -430,14 +451,17 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
             .start()
 
         viewModel.voteHandled()
+        // replace with our custom toast?
         binding.voteSubmittedIndicator.postDelayed({
-            binding.voteSubmittedIndicator.animate()
-                .alpha(0f)
-                .setDuration(animationDuration)
-                .withEndAction {
-                    binding.voteSubmittedIndicator.isVisible = false
-                }
-                .start()
+            if (isAdded && viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                binding.voteSubmittedIndicator.animate()
+                    .alpha(0f)
+                    .setDuration(animationDuration)
+                    .withEndAction {
+                        binding.voteSubmittedIndicator.isVisible = false
+                    }
+                    .start()
+            }
         }, 3000L)
     }
 

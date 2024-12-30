@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -56,13 +57,8 @@ import org.bitcoinj.core.Base58
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.KeyId
-import org.bitcoinj.core.MasternodeAddress
-import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
-import org.bitcoinj.crypto.BLSLazyPublicKey
-import org.bitcoinj.crypto.BLSPublicKey
-import org.bitcoinj.evolution.SimplifiedMasternodeListEntry
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
@@ -102,6 +98,7 @@ data class UsernameRequestsUIState(
 )
 
 data class FiltersUIState(
+    val groupByOption: UsernameGroupOption = UsernameGroupOption.defaultOption,
     val sortByOption: UsernameSortOption = UsernameSortOption.defaultOption,
     val typeOption: UsernameTypeOption = UsernameTypeOption.defaultOption,
     val onlyDuplicates: Boolean = true,
@@ -189,8 +186,48 @@ class UsernameRequestsViewModel @Inject constructor(
                                     }?.username?.lowercase() ?: list[0].username
                                 }
                             }
-                            UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(prettyUsername), votes)
-                        }.filterNot { it.requests.isEmpty() }
+                            val votingEndDate = if (sortedList.isNotEmpty()) {
+                                sortedList.minOf { request -> request.createdAt } + UsernameRequest.VOTING_PERIOD_MILLIS
+                            } else {
+                                -1L
+                            }
+                            UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(prettyUsername), votes, votingEndDate)
+                        }.filterNot { it.requests.isEmpty() && it.votingEndDate < System.currentTimeMillis() }
+                }.map { groupViews -> // Sort the list emitted by the Flow
+                    when (_filterState.value.groupByOption) {
+                        UsernameGroupOption.VotingPeriodSoonest -> groupViews.sortedWith(
+                            when (_filterState.value.sortByOption) {
+                                UsernameSortOption.DateAscending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenBy { group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.DateDescending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.VotesAscending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenBy {  group -> group.requests.maxOf { request -> request.votes } }
+                                UsernameSortOption.VotesDescending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.maxOf { request -> request.votes } }
+                            }
+                        )
+                        UsernameGroupOption.VotingPeriodLatest -> groupViews.sortedWith(
+                            when (_filterState.value.sortByOption) {
+                                UsernameSortOption.DateAscending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenBy { group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.DateDescending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.VotesAscending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenBy {  group -> group.requests.maxOf { request -> request.votes } }
+                                UsernameSortOption.VotesDescending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.maxOf { request -> request.votes } }
+                            }
+                        )
+                        else -> {
+                            when (_filterState.value.sortByOption) {
+                                UsernameSortOption.DateAscending -> groupViews.sortedBy {
+                                    it.requests.minOf { request -> request.createdAt }
+                                }
+                                UsernameSortOption.DateDescending -> groupViews.sortedByDescending {
+                                    it.requests.minOf { request -> request.createdAt }
+                                }
+                                UsernameSortOption.VotesAscending -> groupViews.sortedBy {
+                                    it.requests.maxOf { request -> request.votes }
+                                }
+                                UsernameSortOption.VotesDescending -> groupViews.sortedByDescending {
+                                    it.requests.maxOf { request -> request.votes }
+                                }
+                            }
+                        }
+                    }
                 }
         }.onEach { requests -> _uiState.update { it.copy(filteredUsernameRequests = requests) } }
             .launchIn(viewModelWorkerScope)
@@ -245,6 +282,7 @@ class UsernameRequestsViewModel @Inject constructor(
     }
 
     fun applyFilters(
+        groupByOption: UsernameGroupOption,
         sortByOption: UsernameSortOption,
         typeOption: UsernameTypeOption,
         onlyDuplicates: Boolean,
@@ -252,6 +290,7 @@ class UsernameRequestsViewModel @Inject constructor(
     ) {
         _filterState.update {
             it.copy(
+                groupByOption = groupByOption,
                 sortByOption = sortByOption,
                 typeOption = typeOption,
                 onlyDuplicates = onlyDuplicates,
@@ -713,5 +752,11 @@ class UsernameRequestsViewModel @Inject constructor(
 
     suspend fun isImported(masternode: ImportedMasternodeKey): Boolean {
         return importedMasternodeKeyDao.contains(masternode.proTxHash)
+    }
+
+    suspend fun getVotingStartDate(normalizedLabel: String): Long {
+        return usernameRequestDao.getRequestsByNormalizedLabel(normalizedLabel).minOf {
+            it.createdAt
+        }
     }
 }

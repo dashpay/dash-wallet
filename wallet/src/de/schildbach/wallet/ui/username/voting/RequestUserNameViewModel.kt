@@ -420,4 +420,10 @@ class RequestUserNameViewModel @Inject constructor(
     fun logEvent(event: String) {
         analytics.logEvent(event, mapOf())
     }
+
+    suspend fun getVotingStartDate(normalizedLabel: String): Long {
+        return usernameRequestDao.getRequestsByNormalizedLabel(normalizedLabel).minOf {
+            it.createdAt
+        }
+    }
 }

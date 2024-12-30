@@ -280,8 +280,15 @@
     <string name="only_duplicates">Only duplicates</string>
     <string name="only_links">Only requests with links</string>
     <string name="only_links_short">With links</string>
-    <string name="date">Date: %s</string>
+    <string name="date">Request Date: %s</string>
     <string name="votes">Votes: %s</string>
+    <string name="voting_ends">Voting ends: %s</string>
+
+    <string-array name="usernames_group_by_options">
+        <item>None</item>
+        <item>Soonest first</item>
+        <item>Latest first</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>New to old</item>
@@ -296,16 +303,6 @@
         <item>I have not approved</item>
         <item>Has Blocked votes</item>
     </string-array>
-    <string name="unblock_button">Unblock</string>
-    <plurals name="block_vote_button">
-        <item quantity="one">Block</item>
-        <item quantity="other">Blocks</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="one">Approval</item>
-        <item quantity="other">Approvals</item>
-    </plurals>
-    <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Create your username</string>
     <string name="request_your_hint">Please note that you will not be able to change it in the future</string>
     <string name="request_username">Request Username</string>
@@ -452,4 +449,10 @@
     <string name="mix_dash_message">To help prevent other people from seeing who you make payments to, it is recommended to mix your balance before you create your username.</string>
     <string name="dash_private_key_mainnet" translatable="false">XKm5koXHMm7UrVV3ki2pbGA8yZztiSR2F9x6ucEyCSuqTHBMjJix</string>
     <string name="dash_private_key_testnet" translatable="false">cUR2TrX4U6t6g9kRfDoBbwF2WRKBNjV3gK7HwTgQgmUUQCKXcT3N</string>
+    <string name="voting_period">Voting Period</string>
+    <string name="voting_period_ends_in_days">Voting ends in %d days</string>
+    <string name="voting_period_ends_today">Voting ends today</string>
+    <string name="voting_period_ends_tomorrow">Voting ends tomorrow</string>
+    <string name="link_included">link included</string>
+    <string name="group_by">Group by</string>
 </resources>
