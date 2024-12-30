@@ -27,6 +27,7 @@ import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
 import de.schildbach.wallet.ui.main.TransactionAdapter
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionGroupDetailsBinding
+import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -71,7 +72,7 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment(R.layout.transact
         val adapter = TransactionAdapter(viewModel.dashFormat, resources) { item, _, _ ->
             if (item is TransactionRowView) {
                 TransactionDetailsDialogFragment
-                    .newInstance(item.txId)
+                    .newInstance(Sha256Hash.wrap(item.id))
                     .show(requireActivity())
             }
         }
