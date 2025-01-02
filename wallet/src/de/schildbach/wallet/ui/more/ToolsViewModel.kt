@@ -27,7 +27,10 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.transactions.TransactionExporter
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.DeterministicKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -40,6 +43,7 @@ class ToolsViewModel @Inject constructor(
     private val clipboardManager: ClipboardManager,
     private val transactionMetadataProvider: TransactionMetadataProvider,
     val blockchainStateDao: BlockchainStateDao,
+    val dashPayConfig: DashPayConfig
 ) : ViewModel() {
 
     val blockchainState = blockchainStateDao.observeState()
@@ -82,5 +86,12 @@ class ToolsViewModel @Inject constructor(
                 map,
             )
         }
+    }
+
+    suspend fun setCreditsExplained() = withContext(Dispatchers.IO) {
+        dashPayConfig.set(DashPayConfig.CREDIT_INFO_SHOWN, true)
+    }
+    suspend fun creditsExplained() = withContext(Dispatchers.IO) {
+        dashPayConfig.get(DashPayConfig.CREDIT_INFO_SHOWN) ?: false
     }
 }

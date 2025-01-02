@@ -16,6 +16,8 @@ abstract class BaseWorker(context: Context, parameters: WorkerParameters)
 
         const val KEY_PROGRESS = "BaseWorker.PROGRESS"
         const val KEY_ERROR_MESSAGE = "BaseWorker.ERROR_MESSAGE"
+        const val KEY_EXCEPTION = "BaseWorker.EXCEPTION"
+        const val KEY_EXCEPTION_ARGS = "BaseWorker.EXCEPTION_ARGS"
 
         fun extractError(date: Data): String? {
             return date.getString(KEY_ERROR_MESSAGE)

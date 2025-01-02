@@ -44,11 +44,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.crypto.IKey
 import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.NotificationService
@@ -212,6 +216,36 @@ class SendCoinsViewModel @Inject constructor(
                 finalPaymentIntent,
                 true,
                 dryrunSendRequest!!.ensureMinRequiredFee
+            )
+            finalSendRequest.memo = basePaymentIntent.memo
+            finalSendRequest.exchangeRate = exchangeRate
+
+            sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
+        } catch (ex: Exception) {
+            _state.value = State.FAILED
+            throw ex
+        }
+
+        _state.value = State.SENT
+        return transaction
+    }
+
+    suspend fun signAndSendAssetLock(
+        editedAmount: Coin,
+        exchangeRate: ExchangeRate?,
+        checkBalance: Boolean,
+        key: ECKey
+    ): Transaction {
+        _state.value = State.SENDING
+        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
+
+        val transaction = try {
+            val finalSendRequest = sendCoinsTaskRunner.createAssetLockSendRequest(
+                basePaymentIntent.mayEditAmount(),
+                finalPaymentIntent,
+                true,
+                dryrunSendRequest!!.ensureMinRequiredFee,
+                key
             )
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
@@ -397,5 +431,11 @@ class SendCoinsViewModel @Inject constructor(
             dashPayProfile.userId,
             paymentIntent.amount
         )
+    }
+
+    fun getNextTopupKey(): ECKey {
+        val authGroup = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
+        return authGroup.currentKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP) as ECKey
+
     }
 }

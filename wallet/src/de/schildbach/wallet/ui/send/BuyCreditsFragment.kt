@@ -4,12 +4,24 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.integration.android.BitcoinIntegration
+import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
+import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
+import de.schildbach.wallet.service.work.BaseWorker
+import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesWorker
+import de.schildbach.wallet.ui.more.tools.ConfirmTopUpDialogFragment
+import de.schildbach.wallet.ui.username.UsernameRequestsFragment
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.flow.filterNot
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.utils.ExchangeRate
@@ -19,16 +31,81 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
+import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 
 class BuyCreditsFragment : SendCoinsFragment() {
-
     companion object {
         private val log = LoggerFactory.getLogger(BuyCreditsFragment::class.java)
     }
+
+    private val buyCreditsViewModel by viewModels<BuyCreditsViewModel>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.paymentHeader.setTitle(getString(R.string.credit_balance_button_buy))
+        buyCreditsViewModel.currentWorkId.filterNot { it.isEmpty() }.observe(viewLifecycleOwner) { workId ->
+            buyCreditsViewModel.topWorkStatus(workId).observe(viewLifecycleOwner) { workData ->
+                log.info("topup work data: {}", workData)
+                try {
+                    val txIdString =
+                        workData.data?.outputData?.getString(TopupIdentityWorker.KEY_TOPUP_TX)
+
+                    when (workData.status) {
+                        Status.LOADING -> {
+                            log.info("  loading: {}", workData.data?.outputData)
+                        }
+
+                        Status.SUCCESS -> {
+                            log.info("  success: {}", workData.data?.outputData)
+                            lifecycleScope.launch {
+                                val tx = buyCreditsViewModel.getTransaction(Sha256Hash.wrap(txIdString))
+                                onSignAndSendPaymentSuccess(tx!!)
+                            }
+                        }
+
+                        Status.ERROR -> {
+                            log.info("  error: {}", workData.data?.outputData)
+                            lifecycleScope.launch {
+                                val ex = Exception(workData.data?.outputData?.getString(BaseWorker.KEY_EXCEPTION))
+                                val args = workData.data?.outputData?.getStringArray(BaseWorker.KEY_EXCEPTION_ARGS)
+                                    ?: Array<String?>(0) { "" }
+                                when (workData.data?.outputData?.getString(BaseWorker.KEY_EXCEPTION)) {
+                                    LeftoverBalanceException::class.java.simpleName -> {
+                                        val continueAgain = MinimumBalanceDialog().showAsync(requireActivity())
+
+                                        if (continueAgain == true) {
+                                            handleGo(false)
+                                        }
+                                    }
+
+                                    InsufficientMoneyException::class.java.simpleName -> {
+                                        showInsufficientMoneyDialog(Coin.parseCoin(args[0]) ?: Coin.ZERO)
+                                    }
+
+                                    KeyCrypterException::class.java.simpleName -> {
+                                        showFailureDialog(ex)
+                                    }
+
+                                    Wallet.CouldNotAdjustDownwards::class.java.simpleName -> {
+                                        showEmptyWalletFailedDialog()
+                                    }
+
+                                    else -> {
+                                        showFailureDialog(ex)
+                                    }
+                                }
+                            }
+                        }
+
+                        Status.CANCELED -> {
+                            log.info("  cancel: {}", workData.data?.outputData)
+                        }
+                    }
+                } catch (e: Exception) {
+                    log.error("error processing vote information", e)
+                }
+            }
+        }
     }
 
     override fun updateView() {
@@ -66,36 +143,35 @@ class BuyCreditsFragment : SendCoinsFragment() {
     }
 
     override suspend fun showPaymentConfirmation() {
+//        AdaptiveDialog.create(
+//            null,
+//            "Not Implemented",
+//            "The feature to topup your credits is not completed",
+//            getString(R.string.button_close)
+//        ).showAsync(requireActivity())
 
-        AdaptiveDialog.create(
-            null,
-            "Not Implemented",
-            "The feature to topup your credits is not completed",
-            getString(R.string.button_close)
-        ).showAsync(requireActivity())
+        val dryRunRequest = viewModel.dryrunSendRequest ?: return
+        //val address = viewModel.basePaymentIntent.address?.toBase58() ?: return
 
-//        val dryRunRequest = viewModel.dryrunSendRequest ?: return
-//        val address = viewModel.basePaymentIntent.address?.toBase58() ?: return
-//
-//        val txFee = dryRunRequest.tx.fee
-//        val amount: Coin?
-//        val total: String?
-//
-//        if (dryRunRequest.emptyWallet) {
-//            amount = enterAmountViewModel.amount.value?.minus(txFee)
-//            total = enterAmountViewModel.amount.value?.toPlainString()
-//        } else {
-//            amount = enterAmountViewModel.amount.value
-//            total = amount?.add(txFee ?: Coin.ZERO)?.toPlainString()
-//        }
-//
-//        val rate = enterAmountViewModel.selectedExchangeRate.value
-//        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
-//        val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
-//        val fee = txFee?.toPlainString() ?: ""
-//
-//        var dashPayProfile: DashPayProfile? = null
-//
+        val txFee = dryRunRequest.tx.fee
+        val amount: Coin?
+        val total: String?
+
+        if (dryRunRequest.emptyWallet) {
+            amount = enterAmountViewModel.amount.value?.minus(txFee)
+            total = enterAmountViewModel.amount.value?.toPlainString()
+        } else {
+            amount = enterAmountViewModel.amount.value
+            total = amount?.add(txFee ?: Coin.ZERO)?.toPlainString()
+        }
+
+        val rate = enterAmountViewModel.selectedExchangeRate.value
+        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
+        val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
+        val fee = txFee?.toPlainString() ?: ""
+
+        //var dashPayProfile: DashPayProfile? = null
+
 //        if (viewModel.contactData.value?.requestReceived == true) {
 //            dashPayProfile = viewModel.contactData.value?.dashPayProfile
 //        }
@@ -104,31 +180,21 @@ class BuyCreditsFragment : SendCoinsFragment() {
 //        val username = dashPayProfile?.username
 //        val displayName = (dashPayProfile?.displayName ?: "").ifEmpty { username }
 //        val avatarUrl = dashPayProfile?.avatarUrl
-//
-//        // need to put the conformation for used with Create UserName
-//        val dialog = ConfirmTransactionDialog()
-//        val confirmed = dialog.show(
-//            requireActivity(),
-//            address,
-//            amountStr,
-//            exchangeRate,
-//            fee,
-//            total ?: "",
-//            null,
-//            null,
-//            null,
-//            username,
-//            displayName,
-//            avatarUrl,
-//            isPendingContactRequest
-//        )
-//
-//        if (confirmed == true) {
-//            handleGo(true, dialog.autoAcceptContactRequest)
-//        }
+
+        // need to put the conformation for used with Create UserName
+        val dialog = ConfirmTopUpDialogFragment()
+        dialog.show(
+            requireActivity()
+        ) { confirmed ->
+            if (confirmed) {
+                lifecycleScope.launch {
+                    handleGo(true)//, dialog.autoAcceptContactRequest)
+                }
+            }
+        }
     }
 
-    private suspend fun handleGo(checkBalance: Boolean, autoAcceptContactRequest: Boolean) {
+    private suspend fun handleGo(checkBalance: Boolean) {
         if (viewModel.dryrunSendRequest == null) {
             log.error("illegal state dryrunSendRequest == null")
             return
@@ -140,52 +206,55 @@ class BuyCreditsFragment : SendCoinsFragment() {
         if (editedAmount != null) {
             val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it) }
 
-            try {
-                viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND)
+//            try {
+                //viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND)
 
-                if (enterAmountFragment?.maxSelected == true) {
-                    viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
-                }
+//                if (enterAmountFragment?.maxSelected == true) {
+//                    viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
+//                }
 
-                // buy do an asset lock transaction.
-                val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate, checkBalance)
+                // buy do an asset lock transaction or we do this in the worker?
+                //val topUpKey = viewModel.getNextTopupKey()
+                //val tx = viewModel.signAndSendAssetLock(editedAmount, exchangeRate, checkBalance, topUpKey)
 
-                onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
-            } catch (ex: LeftoverBalanceException) {
-                val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
+                buyCreditsViewModel.topUpOnPlatform(editedAmount)
 
-                if (shouldContinue == true) {
-                    handleGo(false, autoAcceptContactRequest)
-                }
-            } catch (ex: InsufficientMoneyException) {
-                showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
-            } catch (ex: KeyCrypterException) {
-                showFailureDialog(ex)
-            } catch (ex: Wallet.CouldNotAdjustDownwards) {
-                showEmptyWalletFailedDialog()
-            } catch (ex: Exception) {
-                showFailureDialog(ex)
-            }
+                //onSignAndSendPaymentSuccess(tx, false)
+//            } catch (ex: LeftoverBalanceException) {
+//                val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
+//
+//                if (shouldContinue == true) {
+//                    handleGo(false)
+//                }
+//            } catch (ex: InsufficientMoneyException) {
+//                showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
+//            } catch (ex: KeyCrypterException) {
+//                showFailureDialog(ex)
+//            } catch (ex: Wallet.CouldNotAdjustDownwards) {
+//                showEmptyWalletFailedDialog()
+//            } catch (ex: Exception) {
+//                showFailureDialog(ex)
+//            }
 
             viewModel.resetState()
         }
     }
 
-    private fun onSignAndSendPaymentSuccess(transaction: Transaction, autoAcceptContactRequest: Boolean) {
-        viewModel.logSentEvent(enterAmountViewModel.dashToFiatDirection.value ?: true)
-        val callingActivity = requireActivity().callingActivity
+    private fun onSignAndSendPaymentSuccess(transaction: Transaction) {
+//        viewModel.logSentEvent(enterAmountViewModel.dashToFiatDirection.value ?: true)
+//        val callingActivity = requireActivity().callingActivity
+//
+//        if (callingActivity != null) {
+//            log.info("returning result to calling activity: {}", callingActivity.flattenToString())
+//            val resultIntent = Intent()
+//            BitcoinIntegration.transactionHashToResult(
+//                resultIntent,
+//                transaction.txId.toString()
+//            )
+//            requireActivity().setResult(Activity.RESULT_OK, resultIntent)
+//        }
 
-        if (callingActivity != null) {
-            log.info("returning result to calling activity: {}", callingActivity.flattenToString())
-            val resultIntent = Intent()
-            BitcoinIntegration.transactionHashToResult(
-                resultIntent,
-                transaction.txId.toString()
-            )
-            requireActivity().setResult(Activity.RESULT_OK, resultIntent)
-        }
-
-        showTransactionResult(transaction, autoAcceptContactRequest)
+        //showTransactionResult(transaction, false)
         playSentSound()
         requireActivity().finish()
     }
