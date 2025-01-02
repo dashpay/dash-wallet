@@ -21,6 +21,7 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_TEXT
 import de.schildbach.wallet.ui.dashpay.work.GetUsernameVotingResultOperation
@@ -133,6 +134,7 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var platformRepo: PlatformRepo
     @Inject lateinit var platformSyncService: PlatformSyncService
+    @Inject lateinit var topUpRepository: TopUpRepository
     @Inject lateinit var userAlertDao: UserAlertDao
     @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityConfig
     @Inject lateinit var securityFunctions: SecurityFunctions
@@ -254,7 +256,7 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private suspend fun createIdentity(username: String?, retryWithNewUserName: Boolean) {
-        log.info("username registration starting")
+        log.info("username registration starting($username, $retryWithNewUserName)")
         org.bitcoinj.core.Context.propagate(walletApplication.wallet!!.context)
         val timerEntireProcess = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE)
         val timerStep1 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_1)
@@ -364,7 +366,7 @@ class CreateIdentityService : LifecycleService() {
             // check to see if the funding transaction exists
             if (blockchainIdentity.assetLockTransaction == null) {
                 val useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE
-                platformRepo.createAssetLockTransactionAsync(blockchainIdentity, blockchainIdentityData.username!!, encryptionKey, useCoinJoin)
+                topUpRepository.createAssetLockTransaction(blockchainIdentity, blockchainIdentityData.username!!, encryptionKey, useCoinJoin)
             }
         }
 
@@ -378,7 +380,7 @@ class CreateIdentityService : LifecycleService() {
             } ?: false
 
             if (!sent) {
-                sendTransaction(blockchainIdentity.assetLockTransaction!!)
+                topUpRepository.sendTransaction(blockchainIdentity.assetLockTransaction!!)
             }
             timerIsLock.logTiming()
         }
@@ -505,10 +507,10 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 2: Create and send the credit funding transaction
             //
-            platformRepo.obtainAssetLockTransactionAsync(blockchainIdentity, blockchainIdentityData.invite!!)
+            topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
         } else {
             // if we are retrying, then we need to initialize the credit funding tx
-            platformRepo.obtainAssetLockTransactionAsync(blockchainIdentity, blockchainIdentityData.invite!!)
+            topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
         }
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_SENDING) {
@@ -930,8 +932,8 @@ class CreateIdentityService : LifecycleService() {
 
                             // determine when voting started by finding the minimum timestamp
                             val earliestCreatedAt = voteContenders.map.values.minOf {
-                                val document = platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
-                                document.createdAt ?: 0
+                                val document = documentWithVotes.serializedDocument?.let { platformRepo.platform.names.deserialize(it) }
+                                document?.createdAt ?: 0
                             }
 
                             usernameInfo.votingStartedAt = earliestCreatedAt
@@ -996,81 +998,6 @@ class CreateIdentityService : LifecycleService() {
         } catch (e: Exception) {
             platformSyncService.triggerPreBlockDownloadComplete()
             throw e
-        }
-    }
-
-    /**
-     * Send the credit funding transaction and wait for confirmation from other nodes that the
-     * transaction was sent.  InstantSendLock, in a block or seen by more than one peer.
-     *
-     * Exceptions are returned in the case of a reject message (may not be sent with Dash Core 0.16)
-     * or in the case of a double spend or some other error.
-     *
-     * @param cftx The credit funding transaction to send
-     * @return True if successful
-     */
-    private suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
-        log.info("Sending credit funding transaction: ${cftx.txId}")
-        return suspendCoroutine { continuation ->
-            cftx.confidence.addEventListener(object : TransactionConfidence.Listener {
-                override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
-                    when (reason) {
-                        // If this transaction is in a block, then it has been sent successfully
-                        TransactionConfidence.Listener.ChangeReason.DEPTH -> {
-                            // TODO: a chainlock is needed to accompany the block information
-                            // to provide sufficient proof
-                        }
-                        // If this transaction is InstantSend Locked, then it has been sent successfully
-                        TransactionConfidence.Listener.ChangeReason.IX_TYPE -> {
-                            // TODO: allow for received (IX_REQUEST) instantsend locks
-                            // until the bug related to instantsend lock verification is fixed.
-                            if (confidence!!.isTransactionLocked || confidence.ixType == TransactionConfidence.IXType.IX_REQUEST) {
-                                log.info("credit funding transaction verified with instantsend: ${cftx.txId}")
-                                confidence.removeEventListener(this)
-                                continuation.resumeWith(Result.success(true))
-                            }
-                        }
-
-                        TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> {
-                            if (confidence!!.isChainLocked) {
-                                log.info("credit funding transaction verified with chainlock: ${cftx.txId}")
-                                confidence.removeEventListener(this)
-                                continuation.resumeWith(Result.success(true))
-                            }
-                        }
-                        // If this transaction has been seen by more than 1 peer, then it has been sent successfully
-                        TransactionConfidence.Listener.ChangeReason.SEEN_PEERS -> {
-                            // being seen by other peers is no longer sufficient proof
-                        }
-                        // If this transaction was rejected, then it was not sent successfully
-                        TransactionConfidence.Listener.ChangeReason.REJECT -> {
-                            if (confidence!!.hasRejections() && confidence.rejections.size >= 1) {
-                                confidence.removeEventListener(this)
-                                log.info("Error sending ${cftx.txId}: ${confidence.rejectedTransactionException.rejectMessage.reasonString}")
-                                continuation.resumeWithException(confidence.rejectedTransactionException)
-                            }
-                        }
-                        TransactionConfidence.Listener.ChangeReason.TYPE -> {
-                            if (confidence!!.hasErrors()) {
-                                confidence.removeEventListener(this)
-                                val code = when (confidence.confidenceType) {
-                                    TransactionConfidence.ConfidenceType.DEAD -> RejectMessage.RejectCode.INVALID
-                                    TransactionConfidence.ConfidenceType.IN_CONFLICT -> RejectMessage.RejectCode.DUPLICATE
-                                    else -> RejectMessage.RejectCode.OTHER
-                                }
-                                val rejectMessage = RejectMessage(Constants.NETWORK_PARAMETERS, code, confidence.transactionHash,
-                                        "Credit funding transaction is dead or double-spent", "cftx-dead-or-double-spent")
-                                log.info("Error sending ${cftx.txId}: ${rejectMessage.reasonString}")
-                                continuation.resumeWithException(RejectedTransactionException(cftx, rejectMessage))
-                            }
-                        }
-                        else -> {
-                            // ignore
-                        }
-                    }
-                }
-            })
-            walletApplication.broadcastTransaction(cftx)
         }
     }
 

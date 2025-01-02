@@ -32,6 +32,8 @@ import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformServiceImplementation
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.PlatformSynchronizationService
+import de.schildbach.wallet.service.platform.TopUpRepository
+import de.schildbach.wallet.service.platform.TopUpRepositoryImpl
 import javax.inject.Singleton
 
 @Module
@@ -55,6 +57,10 @@ abstract class DashPayModule {
     @Binds
     @Singleton
     abstract fun bindsCoinJoinService(coinJoinMixingService: CoinJoinMixingService): CoinJoinService
+
+    @Singleton // only want one of PlatformSyncService created
+    @Binds
+    abstract fun bindsTopupRepository(topUpRepositoryImpl: TopUpRepositoryImpl): TopUpRepository
 
     //@Binds
     //@Singleton
