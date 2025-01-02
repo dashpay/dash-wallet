@@ -44,7 +44,9 @@ import de.schildbach.wallet.service.platform.PlatformService
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.evolution.AssetLockTransaction
@@ -78,6 +80,7 @@ import javax.inject.Singleton
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class PlatformRepo @Inject constructor(
     val walletApplication: WalletApplication,
@@ -437,6 +440,92 @@ class PlatformRepo @Inject constructor(
         } catch (e: Exception) {
             Resource.error(formatExceptionMessage("search contact request", e), null)
         }
+    }
+
+    fun observeContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Flow<List<UsernameSearchResult>> {
+        val userId = blockchainIdentity.uniqueIdString
+
+        // Combine the two contact request flows
+        return combine(
+            dashPayContactRequestDao.observeToOthers(userId),
+            dashPayContactRequestDao.observeFromOthers(userId)
+        ) { toContacts, fromContacts ->
+            val userIdList = HashSet<String>()
+
+            val toContactMap = HashMap<String, DashPayContactRequest>()
+            toContacts.forEach {
+                userIdList.add(it.toUserId)
+                toContactMap[it.toUserId] = it
+            }
+
+            val fromContactMap = HashMap<String, DashPayContactRequest>()
+            fromContacts.forEach {
+                userIdList.add(it.userId)
+                if (!fromContactMap.containsKey(it.userId)) {
+                    fromContactMap[it.userId] = it
+                } else {
+                    val previous = fromContactMap[it.userId]!!
+                    if (previous.timestamp > it.timestamp) {
+                        fromContactMap[it.userId] = it
+                    }
+                }
+            }
+
+            Triple(userIdList, toContactMap, fromContactMap)
+        }.flatMapLatest { (userIdList, toContactMap, fromContactMap) ->
+            // For each user ID, observe their profile
+            val profileFlows = userIdList.map { userId ->
+                dashPayProfileDao.observeByUserId(userId)
+            }
+
+            combine(profileFlows) { profiles ->
+                val searchText = text.lowercase()
+                val usernameSearchResults = ArrayList<UsernameSearchResult>()
+
+                profiles.filterNotNull().forEach { profile ->
+                    val username = profile.username
+                    val displayName = profile.displayName
+
+                    val usernameContainsSearchText = username.findLastAnyOf(listOf(searchText), ignoreCase = true) != null ||
+                            displayName.findLastAnyOf(listOf(searchText), ignoreCase = true) != null
+
+                    if (!usernameContainsSearchText && searchText != "") {
+                        return@forEach
+                    }
+
+                    val toContact = toContactMap[profile.userId]
+                    val fromContact = fromContactMap[profile.userId]
+
+                    val usernameSearchResult = UsernameSearchResult(
+                        profile.username,
+                        profile,
+                        toContact,
+                        fromContact
+                    )
+
+                    if (usernameSearchResult.requestReceived || (includeSentPending && usernameSearchResult.requestSent)) {
+                        usernameSearchResults.add(usernameSearchResult)
+                    }
+                }
+
+                when (orderBy) {
+                    UsernameSortOrderBy.DISPLAY_NAME -> usernameSearchResults.sortBy {
+                        if (it.dashPayProfile.displayName.isNotEmpty())
+                            it.dashPayProfile.displayName.lowercase()
+                        else it.dashPayProfile.username.lowercase()
+                    }
+                    UsernameSortOrderBy.USERNAME -> usernameSearchResults.sortBy {
+                        it.dashPayProfile.username.lowercase()
+                    }
+                    UsernameSortOrderBy.DATE_ADDED -> usernameSearchResults.sortByDescending {
+                        it.date
+                    }
+                    else -> { /* ignore */ }
+                }
+
+                usernameSearchResults
+            }
+        }.distinctUntilChanged()
     }
 
     fun formatExceptionMessage(description: String, e: Exception): String {

@@ -195,7 +195,6 @@ class TransactionResultActivity : LockScreenActivity() {
         binding.transactionCloseBtn.setOnClickListener {
             onTransactionDetailsDismiss()
         }
-        contentBinding.viewOnExplorer.setOnClickListener { viewOnExplorer(tx) }
         contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
         contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory()}
         contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }

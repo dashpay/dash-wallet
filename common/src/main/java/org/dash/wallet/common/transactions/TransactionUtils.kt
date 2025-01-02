@@ -15,8 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+@file:OptIn(FlowPreview::class)
+
 package org.dash.wallet.common.transactions
 
+import android.util.Log
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
@@ -135,12 +139,11 @@ fun Flow<Transaction>.batchAndFilterUpdates(timeInterval: Long = 500): Flow<List
             // Update the latest transaction for the hash
             latestTransactions[transaction.txId] = transaction
         }
-        .sample(timeInterval) // Emit events every 500ms
+        .sample(timeInterval) // Emit events every [timeInterval]
         .map {
-            // Collect the latest transactions
             latestTransactions.values.toList().also {
-                latestTransactions.clear() // Clear after collecting
+                latestTransactions.clear()
             }
         }
-        .filter { it.isNotEmpty() } // Only emit non-empty lists
+        .filter { it.isNotEmpty() }
 }

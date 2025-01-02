@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.main
 
 import android.os.LocaleList
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
@@ -57,23 +58,23 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.transactions.TransactionRowView
-import de.schildbach.wallet.ui.transactions.TransactionRowViewComparator
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
@@ -101,19 +102,21 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
-import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.common.transactions.batchAndFilterUpdates
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
-import kotlin.math.abs
 import java.text.DecimalFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Currency
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.collections.set
+import kotlin.math.abs
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -143,7 +146,7 @@ class MainViewModel @Inject constructor(
     private val crowdNodeApi: CrowdNodeApi
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     companion object {
-        private const val THROTTLE_DURATION = 500L
+        private const val BATCHING_PERIOD = 500L
         private const val DIRECTION_KEY = "tx_direction"
         private const val TIME_SKEW_TOLERANCE = 3600000L // seconds (1 hour)
 
@@ -157,8 +160,8 @@ class MainViewModel @Inject constructor(
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
-    private val _transactions = MutableLiveData<List<TransactionRowView>>()
-    val transactions: LiveData<List<TransactionRowView>>
+    private val _transactions = MutableLiveData<Map<LocalDate, List<TransactionRowView>>>()
+    val transactions: LiveData<Map<LocalDate, List<TransactionRowView>>>
         get() = _transactions
     private val _transactionsDirection = MutableStateFlow(TxFilterType.ALL)
     var transactionsDirection: TxFilterType
@@ -201,7 +204,10 @@ class MainViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
-    private var transactionViews: MutableList<TransactionRowView> = mutableListOf()
+    private val txByHash: HashMap<String, TransactionRowView> = hashMapOf()
+    private var metadata: Map<Sha256Hash, PresentableTxMetadata> = mapOf()
+    private var contacts: Map<String, DashPayProfile> = mapOf()
+    private var minContactCreatedDate: LocalDate = LocalDate.now()
     private lateinit var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory
     private lateinit var coinJoinWrapperFactory: CoinJoinTxWrapperFactory
     private val _mostRecentTransaction = MutableLiveData<Transaction>()
@@ -282,48 +288,50 @@ class MainViewModel @Inject constructor(
     private var contactRequestTimer: AnalyticsTimer? = null
 
     // end DashPay
-    val refreshTxWatch: Stopwatch = Stopwatch.createUnstarted()
-    var refreshLastUpdate = 0L
-    private var refreshNewTx = 0
-    private var refreshStatusTx = 0
+
     init {
         transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
 
         _transactionsDirection
             .flatMapLatest { direction ->
-                metadataProvider.observePresentableMetadata()
-                    .flatMapLatest { metadata ->
-                        val filter = TxDirectionFilter(direction, walletData.wallet!!)
-                        refreshTransactions(filter, metadata)
-                        walletData.observeTransactions(true, filter)
-                            .batchAndFilterUpdates(500) // batch every 500 ms
-                            .onEach {
-                                if (!refreshTxWatch.isRunning) { refreshTxWatch.start() }
-                                val timeElapsed = refreshTxWatch.elapsed(TimeUnit.MILLISECONDS)
-                                if (timeElapsed - refreshLastUpdate >= 1000) {
-                                    val interval = timeElapsed - refreshLastUpdate
-                                    log.info(
-                                        "PERF: observing transactions: {} txes, {} new tx/s,  {} status tx/s",
-                                        it.size,
-                                        1000 * refreshNewTx / interval,
-                                        1000 * refreshStatusTx / interval
-                                    )
-                                    refreshNewTx = 0
-                                    refreshStatusTx = 0
-                                    refreshLastUpdate = timeElapsed
-                                }
-                                refreshTransactions(it, filter, metadata)
-                            }
+                val filter = TxDirectionFilter(direction, walletData.wallet!!)
+                refreshTransactions(filter)
+                walletData.observeTransactions(true, filter)
+                    .catch { Log.i("PERF", "prior batching error: ${it}") }
+                    .batchAndFilterUpdates(BATCHING_PERIOD)
+                    .onEach { batch ->
+                        refreshTransactionBatch(batch, filter, mapOf())
                     }
             }
-            .catch { analytics.logError(it, "is wallet null: ${walletData.wallet == null}") }
             .launchIn(viewModelWorkerScope)
+
+        metadataProvider.observePresentableMetadata()
+            .onEach { metadata ->
+                val oldMetadata = this.metadata
+                this.metadata = metadata
+                updateContactsAndMetadata(oldMetadata, metadata, mapOf())
+            }
+            .launchIn(viewModelWorkerScope)
+
+        platformRepo.observeContacts(
+            "",
+            UsernameSortOrderBy.LAST_ACTIVITY,
+            false
+        ).filter {
+            platformRepo.hasIdentity
+        }.onEach { contacts ->
+            this.minContactCreatedDate = contacts.minOfOrNull { it.dashPayProfile.createdAt }?.let {
+                Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+            } ?: LocalDate.now()
+            val contactsByIdentity = contacts.associate { it.dashPayProfile.userId to it.dashPayProfile }
+            this.contacts = contactsByIdentity
+        }.launchIn(viewModelWorkerScope)
 
         walletData.observeWalletReset()
             .filterNotNull()
             .onEach {
                 val filter = TxDirectionFilter(transactionsDirection, walletData.wallet!!)
-                refreshTransactions(filter, mapOf())
+                refreshTransactions(filter)
             }
             .launchIn(viewModelWorkerScope)
 
@@ -491,201 +499,228 @@ class MainViewModel @Inject constructor(
     }
 
     /** refresh all transactions */
-    private suspend fun refreshTransactions(filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
+    private fun refreshTransactions(filter: TxDirectionFilter) {
         walletData.wallet?.let { wallet ->
             val watch = Stopwatch.createStarted()
-            val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
-
-            if (platformRepo.hasIdentity) {
-                val contacts = platformRepo.searchContacts(
-                    "",
-                    UsernameSortOrderBy.LAST_ACTIVITY,
-                    false
-                )
-                contacts.data?.forEach { result ->
-                    contactsByIdentity[result.dashPayProfile.userId] = result.dashPayProfile
-                }
-            }
+            val contactsToUpdate = mutableListOf<Transaction>()
             coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
             crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
-            val allTransactionViews = walletData.wrapAllTransactions(
+            val allTransactionWrapped = walletData.wrapAllTransactions(
                 crowdNodeWrapperFactory,
                 coinJoinWrapperFactory
             ).filter { it.passesFilter(filter, metadata) }
-                .sortedWith(TransactionWrapperComparator())
+                .sortedByDescending { it.groupDate }
+
+            log.info("PERF: wrapAllTransactions: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
+            watch.reset()
+            watch.start()
+
+            txByHash.clear()
+            val allTransactionViews = allTransactionWrapped
                 .map {
-                    var contact: DashPayProfile? = null
-                    val tx = it.transactions.first()
-                    val isInternal = tx.isEntirelySelf(wallet)
+                    val tx = it.transactions.values.first()
+                    val dateKey = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
 
-                    if (it.transactions.size == 1) {
-                        if (!isInternal && platformRepo.hasIdentity) {
-                            val contactId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
-
-                            if (contactId != null) {
-                                contact = contactsByIdentity[contactId]
-                            }
-                        }
+                    if (it.transactions.count() == 1 && dateKey >= minContactCreatedDate) {
+                        contactsToUpdate.add(tx)
                     }
 
-                    TransactionRowView.fromTransactionWrapper(
+                    val rowView = TransactionRowView.fromTransactionWrapper(
                         it,
                         walletData.transactionBag,
                         Constants.CONTEXT,
-                        contact,
-                        metadata[it.transactions.first().txId]
+                        null,
+                        metadata[tx.txId]
                     )
+                    txByHash[rowView.id] = rowView
+                    rowView
+                }
+                .groupBy {
+                    Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
+                }
+                .mapValues { (_, transactions) ->
+                    transactions.sortedByDescending { it.time }
                 }
 
-            transactionViews = allTransactionViews.toMutableList()
-            log.info("PERF: refreshTransactions: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
-            _transactions.postValue(transactionViews)
-        }
-    }
+            log.info("PERF: refreshTransactions map: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
+            _transactions.postValue(allTransactionViews)
 
-    /** update a batch of transactions */
-    private suspend fun refreshTransactions(
-        txList: List<Transaction>,
-        filter: TxDirectionFilter,
-        metadata: Map<Sha256Hash, PresentableTxMetadata>
-    ) {
-        var updateCount = 0
-        log.info("PERF: refreshTransactions({}, but only {} unique tx)", txList.size, txList.toSet().size)
-        txList.toSet().forEach { tx ->
-            if (filter.matches(tx)) {
-                refreshTransaction(tx, transactionViews, filter, metadata)
-                updateCount++
+            if (platformRepo.hasIdentity) {
+                viewModelScope.launch {
+                    updateContacts(contactsToUpdate)
+                }
             }
-        }
-        if (updateCount > 0) {
-            _transactions.postValue(transactionViews.toList())
         }
     }
 
     /**
      * this will either add a single transaction or update the transaction on the current view
      */
-    private suspend fun refreshTransaction(
-        tx: Transaction,
-        updatedList: MutableList<TransactionRowView>,
-        filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
+    private fun refreshTransactionBatch(
+        transactions: List<Transaction>,
+        filter: TxDirectionFilter,
+        contacts: Map<Sha256Hash, DashPayProfile>
+    ) {
         Context.propagate(Constants.CONTEXT)
-        val watch = Stopwatch.createStarted()
-        // is the item currently in our list
-        val txRowViewIndex = transactionViews.indexOfFirst {
-            if (it.txId == tx.txId) {
-                true
-            } else {
-                it.txWrapper?.transactions?.find { txInGroup ->
-                    tx.txId == txInGroup.txId
-                } != null
-            }
-        }
+        val items = _transactions.value!!.toMutableMap()
+        val contactsToUpdate = mutableListOf<Transaction>()
 
-        if (txRowViewIndex != -1) {
-            val currentTxRowView = transactionViews[txRowViewIndex]
-            refreshStatusTx++
-            if (currentTxRowView.txWrapper == null) {
-                log.info("PERF: observing transaction refresh: update {}", tx.txId)
-                // update the current item by replacing the current item
-                val newTransactionRow = TransactionRowView.fromTransaction(
+        for (i in transactions.indices) {
+            val tx = transactions[i]
+
+            if (!filter.matches(tx)) {
+                continue
+            }
+
+            val watch = Stopwatch.createStarted()
+            var itemId = tx.txId.toString()
+            var included = false
+            var wrapper: TransactionWrapper? = null
+
+            if (!txByHash.containsKey(itemId)) {
+                // If tx isn't in txByHash by itself, we need to try to wrap it
+                this.coinJoinWrapperFactory.tryInclude(tx).also {
+                    included = it.first
+                    wrapper = it.second
+                }
+
+                if (included && wrapper != null) {
+                    itemId = wrapper!!.id
+                } else {
+                    this.crowdNodeWrapperFactory.tryInclude(tx).also {
+                        included = it.first
+                        wrapper = it.second
+                    }
+
+                    if (included && wrapper != null) {
+                        itemId = wrapper!!.id
+                    }
+                }
+            }
+
+            log.info("PERF: refreshTransaction: wrapping took; {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
+
+            // is the item currently in our list
+            val rowView = txByHash[itemId]
+
+            val transactionRow = if (!included || wrapper == null) {
+                TransactionRowView.fromTransaction(
                     tx,
                     walletData.transactionBag,
                     Constants.CONTEXT,
                     metadata[tx.txId],
-                    currentTxRowView.contact
+                    contacts[tx.txId] ?: rowView?.contact
                 )
-                log.info(
-                    "PERF: observing transaction refreshTransaction: updated {}, {} ms",
-                    tx.txId,
-                    watch.elapsed(TimeUnit.MILLISECONDS)
-                )
-                updatedList[txRowViewIndex] = newTransactionRow
             } else {
-                // do nothing for updated transactions inside a wrapper
-                // we presume that value, timestamp and title and count do to change with updates
+                TransactionRowView.fromTransactionWrapper(
+                    wrapper!!,
+                    walletData.transactionBag,
+                    Constants.CONTEXT,
+                    null,
+                    metadata[tx.txId]
+                )
             }
-        } else {
-            var replaceRowIndex = -1
-            log.info("PERF: observing transaction refresh: add {}", tx.txId)
-            // add the item to the correct group
-            var newTransactionRow: TransactionRowView? = null
-            val wrapperFactoryList = listOf(coinJoinWrapperFactory, crowdNodeWrapperFactory)
-            var includedInWrapper = false
-            wrapperFactoryList.forEach { factory ->
-                val (included, txWrapper) = factory.tryInclude(tx)
-                if (included) {
-                    replaceRowIndex = transactionViews.indexOfFirst {
-                        it.txWrapper == txWrapper
-                    }
+            txByHash[transactionRow.id] = transactionRow
+            val dateKey = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
 
-                    newTransactionRow = TransactionRowView.fromTransactionWrapper(
-                        txWrapper!!,
-                        walletData.transactionBag,
-                        Constants.CONTEXT,
-                        null,
-                        metadata[tx.txId]
-                    )
+            if (rowView != null) {
+                // update the current item by replacing the current item
+                items[dateKey]?.toMutableList()?.let { list ->
+                    val itemIndex = list.indexOfFirst { it.id == rowView.id }
+                    list[itemIndex] = transactionRow
+                    items[dateKey] = list
                 }
-                includedInWrapper = includedInWrapper || included
-            }
+            } else {
+                // add the item to the correct group
+                if (items.containsKey(dateKey)) {
+                    items[dateKey]?.toMutableList()?.let { list ->
+                        val insertIndex = list.indexOfFirst { it.time < transactionRow.time }
 
-            if (!includedInWrapper) {
-                // standalone TX
-                val isInternal = tx.isEntirelySelf(walletData.wallet!!)
-                var contact: DashPayProfile? = null
-                if (!isInternal && platformRepo.hasIdentity) {
-                    val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
-                    val contacts = platformRepo.searchContacts(
-                            "",
-                            UsernameSortOrderBy.LAST_ACTIVITY,
-                            false
-                        )
-                        contacts.data?.forEach { result ->
-                            contactsByIdentity[result.dashPayProfile.userId] = result.dashPayProfile
+                        if (insertIndex >= 0) {
+                            list.add(insertIndex, transactionRow)
+                        } else {
+                            list.add(transactionRow)
                         }
 
-                    val contactId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
-                    if (contactId != null) {
-                        contact = contactsByIdentity[contactId]
+                        items[dateKey] = list
                     }
+                } else {
+                    items[dateKey] = listOf(transactionRow)
                 }
-                newTransactionRow = TransactionRowView.fromTransaction(
-                    tx,
-                    walletData.transactionBag,
-                    Constants.CONTEXT,
-                    metadata[tx.txId],
-                    contact
-                )
             }
 
-            // is there a new row to add?
-            if (newTransactionRow != null) {
-                if (replaceRowIndex != -1) {
-                    log.info(
-                        "PERF: observing transaction: refreshTransaction replacing in current list at index: {}; {} ms",
-                        replaceRowIndex,
-                        watch.elapsed(TimeUnit.MILLISECONDS)
-                    )
-                    updatedList.set(replaceRowIndex, newTransactionRow!!)
-                } else {
-                    // add the item in the correct place in the sorted list of transaction views
-                    val index =
-                        updatedList.binarySearch(newTransactionRow!!, TransactionRowViewComparator(walletData.wallet!!))
-                            .let { if (it < 0) -it - 1 else it }
-                    updatedList.add(index, newTransactionRow!!)
-                    log.info(
-                        "PERF: observing transaction: refreshTransaction adding to current list at index: {}; {} ms",
-                        index,
-                        watch.elapsed(TimeUnit.MILLISECONDS)
-                    )
-                }
-            } else {
-                log.info("PERF: observing transaction: refreshTransaction adding item to a txwrapper; {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
+            if (dateKey >= minContactCreatedDate) {
+                contactsToUpdate.add(tx)
             }
-            refreshNewTx++
+
+            log.info("PERF: refreshTransaction: add/update a single tx; {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
+        }
+
+        _transactions.postValue(items)
+
+        if (platformRepo.hasIdentity) {
+            viewModelScope.launch {
+                updateContacts(contactsToUpdate)
+            }
         }
     }
+
+    private suspend fun updateContacts(txs: List<Transaction>) {
+        if (this.contacts.isEmpty()) {
+            return
+        }
+
+        withContext(Dispatchers.Default) {
+            val contactsMap = txs.filterNot { it.isEntirelySelf(walletData.transactionBag) }
+                .mapNotNull { tx ->
+                    platformRepo.blockchainIdentity.getContactForTransaction(tx)?.let { contactId ->
+                        contacts[contactId]?.let { contact ->
+                            tx.txId to contact
+                        }
+                    }
+                }.toMap()
+
+            updateContactsAndMetadata(mapOf(), metadata, contactsMap)
+        }
+    }
+
+    private fun updateContactsAndMetadata(
+        oldMetadata: Map<Sha256Hash, PresentableTxMetadata>,
+        metadata: Map<Sha256Hash, PresentableTxMetadata>,
+        contacts: Map<Sha256Hash, DashPayProfile>
+    ) {
+        val items = _transactions.value?.toMutableMap() ?: return
+        // Process both old and new metadata in case if some metadata was cleared
+        val allTxIds = (oldMetadata.keys + metadata.keys + contacts.keys).toSet()
+        
+        for (txId in allTxIds) {
+            val rowView = txByHash[txId.toString()]
+
+            rowView?.let {
+                walletData.getTransaction(txId)?.let { tx ->
+                    // Use new metadata if exists, otherwise create empty metadata
+                    val txMetadata = metadata[txId] ?: PresentableTxMetadata(txId)
+                    val updatedRowView = TransactionRowView.fromTransaction(
+                        tx,
+                        walletData.transactionBag,
+                        Constants.CONTEXT,
+                        txMetadata,
+                        contacts[txId] ?: rowView.contact
+                    )
+                    txByHash[txId.toString()] = updatedRowView
+                    val dateKey = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+                    items[dateKey]?.toMutableList()?.let { list ->
+                        val itemIndex = list.indexOfFirst { it.id == rowView.id }
+                        list[itemIndex] = updatedRowView
+                        items[dateKey] = list
+                    }
+                }
+            }
+        }
+
+        _transactions.postValue(items)
+    }
+
     private fun updateSyncStatus(state: BlockchainState) {
         if (_isBlockchainSynced.value != state.isSynced()) {
             _isBlockchainSynced.postValue(state.isSynced())
@@ -699,12 +734,8 @@ class MainViewModel @Inject constructor(
 
             if (state.replaying) {
                 // remove all tx
-                transactionViews = mutableListOf()
-                _transactions.postValue(transactionViews)
-                //val filter = TxDirectionFilter(_transactionsDirection.value, walletData.wallet!!)
-                //viewModelScope.launch {
-                //    refreshTransactions(filter, mapOf())
-                //}
+                txByHash.clear()
+                _transactions.postValue(mapOf())
             }
         }
 
@@ -728,11 +759,11 @@ class MainViewModel @Inject constructor(
         metadata: Map<Sha256Hash, PresentableTxMetadata>
     ): Boolean {
         return (filter.direction == TxFilterType.GIFT_CARD && isGiftCard(metadata)) ||
-            transactions.any { tx -> filter.matches(tx) }
+            transactions.values.any { tx -> filter.matches(tx) }
     }
 
     private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
-        return metadata[transactions.first().txId]?.service == ServiceName.DashDirect
+        return metadata[transactions.values.first().txId]?.service == ServiceName.DashDirect
     }
 
     /**

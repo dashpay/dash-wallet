@@ -102,7 +102,6 @@ data class TransactionRowView(
                     ServiceName.Unknown,
                     txWrapper
                 )
-
                 else -> fromTransaction(firstTx, bag, context, metadata, contact)
             }
         }
