@@ -56,8 +56,6 @@ import org.dashj.platform.wallet.IdentityVerify
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
 @AndroidEntryPoint
 class CreateIdentityService : LifecycleService() {
@@ -74,8 +72,6 @@ class CreateIdentityService : LifecycleService() {
 
         private const val ACTION_RETRY_INVITE_WITH_NEW_USERNAME = "org.dash.dashpay.action.ACTION_RETRY_INVITE_WITH_NEW_USERNAME"
         private const val ACTION_RETRY_INVITE_AFTER_INTERRUPTION = "org.dash.dashpay.action.ACTION_RETRY_INVITE_AFTER_INTERRUPTION"
-
-        private const val ACTION_RESTORE_IDENTITY = "org.dash.dashpay.action.RESTORE_IDENTITY"
 
         private const val EXTRA_USERNAME = "org.dash.dashpay.extra.USERNAME"
         private const val EXTRA_START_FOREGROUND_PROMISED = "org.dash.dashpay.extra.EXTRA_START_FOREGROUND_PROMISED"
@@ -129,14 +125,6 @@ class CreateIdentityService : LifecycleService() {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_RETRY_INVITE_AFTER_INTERRUPTION
                 putExtra(EXTRA_START_FOREGROUND_PROMISED, startForegroundPromised)
-            }
-        }
-
-        @JvmStatic
-        fun createIntentForRestore(context: Context, identity: ByteArray): Intent {
-            return Intent(context, CreateIdentityService::class.java).apply {
-                action = ACTION_RESTORE_IDENTITY
-                putExtra(EXTRA_IDENTITY, identity)
             }
         }
     }
@@ -247,10 +235,6 @@ class CreateIdentityService : LifecycleService() {
                         createIdentityNotification.startServiceForeground()
                     }
                     handleCreateIdentityFromInvitationAction(null, null)
-                }
-                ACTION_RESTORE_IDENTITY -> {
-                    val identity = intent.getByteArrayExtra(EXTRA_IDENTITY)!!
-                    handleRestoreIdentityAction(identity)
                 }
             }
         } else {

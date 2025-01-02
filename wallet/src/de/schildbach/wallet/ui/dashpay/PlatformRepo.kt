@@ -1237,4 +1237,11 @@ class PlatformRepo @Inject constructor(
     fun getIdentityBalance(identifier: Identifier): CreditBalanceInfo {
         return CreditBalanceInfo(platform.client.getIdentityBalance(identifier))
     }
+
+    suspend fun addInviteUserAlert() {
+        // this alert will be shown or not based on the current balance and will be
+        // managed by NotificationsLiveData
+        val userAlert = UserAlert(UserAlert.INVITATION_NOTIFICATION_TEXT, UserAlert.INVITATION_NOTIFICATION_ICON)
+        userAlertDao.insert(userAlert)
+    }
 }

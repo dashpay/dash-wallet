@@ -73,6 +73,7 @@
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Registering Username</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Requesting Username</string>
     <string name="processing_home_step_3_restoring">(3/3) Recovering Username</string>
+    <string name="restore_identity">Restore Identity</string>
     <string name="processing_done_title">Hello %s,</string>
     <string name="processing_done_subtitle">Your account is ready</string>
     <string name="processing_voting_subtitle">Voting for your username has begun</string>
