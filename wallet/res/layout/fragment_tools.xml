@@ -203,6 +203,8 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/buy_credits_container"
+        android:visibility="invisible"
+        tools:visibility="invisible"
         style="@style/MenuRow.Internal">
 
         <FrameLayout

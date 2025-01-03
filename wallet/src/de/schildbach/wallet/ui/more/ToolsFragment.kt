@@ -23,6 +23,7 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.os.bundleOf
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -140,6 +141,9 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
             }
         }
 
+        lifecycleScope.launch {
+            binding.buyCreditsContainer.isVisible = viewModel.hasIdentity()
+        }
         binding.buyCreditsInfoButton.setOnClickListener {
             WhatAreCreditsDialogFragment().show(requireActivity())
         }

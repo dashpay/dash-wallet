@@ -36,7 +36,10 @@ class BuyCreditsViewModel @Inject constructor(
     val currentWorkId: StateFlow<String>
         get() = _currentWorkId
 
-    private suspend fun getNextWorkId() = dashPayConfig.getTopupCounter().toString(16)
+    private suspend fun getNextWorkId() = withContext(Dispatchers.IO) {
+        dashPayConfig.getTopupCounter().toString(16)
+    }
+
     private val topupIdentityOperation = TopupIdentityOperation(walletApplication)
 
     fun topWorkStatus(workId: String): LiveData<Resource<WorkInfo>> {
@@ -45,11 +48,12 @@ class BuyCreditsViewModel @Inject constructor(
 
     suspend fun topUpOnPlatform(value: Coin) = withContext(Dispatchers.IO) {
         viewModelScope.launch {
-            val workId = withContext(Dispatchers.IO) { getNextWorkId() }
             identity.get(BlockchainIdentityConfig.IDENTITY_ID)?.let { identityId ->
+                val workId = getNextWorkId()
                 topupIdentityOperation
                     .create(workId, value)
                     .enqueue()
+                _currentWorkId.value = workId
             }
         }
     }

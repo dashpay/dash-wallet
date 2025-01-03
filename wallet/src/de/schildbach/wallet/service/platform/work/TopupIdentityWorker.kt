@@ -82,6 +82,7 @@ class TopupIdentityWorker @AssistedInject constructor(
         }
 
         return try {
+            org.bitcoinj.core.Context.propagate(walletDataProvider.wallet!!.context)
             if (topupTx == null) {
                 topupTx = topUpRepository.createTopupTransaction(
                     platformRepo.blockchainIdentity,
