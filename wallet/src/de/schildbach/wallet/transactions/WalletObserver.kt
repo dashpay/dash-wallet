@@ -18,18 +18,14 @@
 package de.schildbach.wallet.transactions
 
 import android.os.Looper
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.catch
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
-import org.bitcoinj.core.listeners.TransactionConfidenceEventListener
 import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.listeners.WalletChangeEventListener
@@ -38,7 +34,6 @@ import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener
 import org.bitcoinj.wallet.listeners.WalletResetEventListener
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.slf4j.LoggerFactory
-import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -78,26 +73,22 @@ class WalletObserver(private val wallet: Wallet) {
         log.info("PERF: observing transactions start {}", this@WalletObserver)
         try {
             Context.propagate(wallet.context)
-            if (Looper.myLooper() == null) {
-                Looper.prepare()
+            Threading.USER_THREAD.execute {
+                try {
+                    Context.propagate(wallet.context)
+                    if (Looper.myLooper() == null) {
+                        Looper.prepare()
+                    }
+                } catch (e: Exception) {
+                    log.error("PERF: Error during threading setup", e)
+                    close(e) // Propagate error to Flow
+                }
             }
-            val transactions = ConcurrentHashMap<Sha256Hash, Transaction>()
-//            Threading.USER_THREAD.execute {
-//                try {
-//                    Context.propagate(wallet.context)
-//                    if (Looper.myLooper() == null) {
-//                        Looper.prepare()
-//                    }
-//                } catch (e: Exception) {
-//                    log.error("PERF: Error during threading setup", e)
-//                    close(e) // Propagate error to Flow
-//                }
-//            }
 
+            val transactions = ConcurrentHashMap<Sha256Hash, Transaction>()
             var transactionConfidenceListener: TransactionConfidence.Listener? = null
 
             val coinsSentListener = WalletCoinsSentEventListener { _, tx: Transaction?, _, _ ->
-                Context.propagate(wallet.context)
                 try {
                     val oneHourAgo = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1)
                     if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
@@ -118,7 +109,6 @@ class WalletObserver(private val wallet: Wallet) {
             }
 
             val coinsReceivedListener = WalletCoinsReceivedEventListener { _, tx: Transaction?, _, _ ->
-                Context.propagate(wallet.context)
                 try {
                     if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
 //                         log.info("observing transaction received: {} [=====] {}", tx.txId, this@WalletObserver)

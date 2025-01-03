@@ -204,7 +204,7 @@ class MainViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
-    private val txByHash: HashMap<String, TransactionRowView> = hashMapOf()
+    private var txByHash: Map<String, TransactionRowView> = mapOf()
     private var metadata: Map<Sha256Hash, PresentableTxMetadata> = mapOf()
     private var contacts: Map<String, DashPayProfile> = mapOf()
     private var minContactCreatedDate: LocalDate = LocalDate.now()
@@ -297,7 +297,6 @@ class MainViewModel @Inject constructor(
                 val filter = TxDirectionFilter(direction, walletData.wallet!!)
                 refreshTransactions(filter)
                 walletData.observeTransactions(true, filter)
-                    .catch { Log.i("PERF", "prior batching error: ${it}") }
                     .batchAndFilterUpdates(BATCHING_PERIOD)
                     .onEach { batch ->
                         refreshTransactionBatch(batch, filter, mapOf())
@@ -317,23 +316,25 @@ class MainViewModel @Inject constructor(
             "",
             UsernameSortOrderBy.LAST_ACTIVITY,
             false
-        ).filter {
-            platformRepo.hasIdentity
-        }.onEach { contacts ->
+        ).onEach { contacts ->
             this.minContactCreatedDate = contacts.minOfOrNull { it.dashPayProfile.createdAt }?.let {
                 Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
             } ?: LocalDate.now()
             val contactsByIdentity = contacts.associate { it.dashPayProfile.userId to it.dashPayProfile }
+            Log.i("CONTACTS", "setting contacts, size: ${contactsByIdentity.size}, hasIdentity: ${platformRepo.hasIdentity}")
             this.contacts = contactsByIdentity
         }.launchIn(viewModelWorkerScope)
 
         walletData.observeWalletReset()
-            .filterNotNull()
             .onEach {
-                val filter = TxDirectionFilter(transactionsDirection, walletData.wallet!!)
-                refreshTransactions(filter)
+                txByHash = mapOf()
+                _transactions.value = mapOf()
+                walletData.wallet?.let { wallet ->
+                    coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
+                    crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
+                }
             }
-            .launchIn(viewModelWorkerScope)
+            .launchIn(viewModelScope)
 
         blockchainStateProvider.observeState()
             .filterNotNull()
@@ -515,7 +516,7 @@ class MainViewModel @Inject constructor(
             watch.reset()
             watch.start()
 
-            txByHash.clear()
+            val txByHash = mutableMapOf<String, TransactionRowView>()
             val allTransactionViews = allTransactionWrapped
                 .map {
                     val tx = it.transactions.values.first()
@@ -543,12 +544,11 @@ class MainViewModel @Inject constructor(
                 }
 
             log.info("PERF: refreshTransactions map: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
-            _transactions.postValue(allTransactionViews)
 
-            if (platformRepo.hasIdentity) {
-                viewModelScope.launch {
-                    updateContacts(contactsToUpdate)
-                }
+            viewModelScope.launch {
+                _transactions.value = allTransactionViews
+                this@MainViewModel.txByHash = txByHash
+                updateContacts(contactsToUpdate)
             }
         }
     }
@@ -563,6 +563,7 @@ class MainViewModel @Inject constructor(
     ) {
         Context.propagate(Constants.CONTEXT)
         val items = _transactions.value!!.toMutableMap()
+        val txByHash = this.txByHash.toMutableMap()
         val contactsToUpdate = mutableListOf<Transaction>()
 
         for (i in transactions.indices) {
@@ -572,7 +573,6 @@ class MainViewModel @Inject constructor(
                 continue
             }
 
-            val watch = Stopwatch.createStarted()
             var itemId = tx.txId.toString()
             var included = false
             var wrapper: TransactionWrapper? = null
@@ -597,8 +597,6 @@ class MainViewModel @Inject constructor(
                     }
                 }
             }
-
-            log.info("PERF: refreshTransaction: wrapping took; {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
 
             // is the item currently in our list
             val rowView = txByHash[itemId]
@@ -652,21 +650,19 @@ class MainViewModel @Inject constructor(
             if (dateKey >= minContactCreatedDate) {
                 contactsToUpdate.add(tx)
             }
-
-            log.info("PERF: refreshTransaction: add/update a single tx; {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
         }
 
-        _transactions.postValue(items)
+        viewModelScope.launch {
+            _transactions.value = items
+            this@MainViewModel.txByHash = txByHash
 
-        if (platformRepo.hasIdentity) {
-            viewModelScope.launch {
-                updateContacts(contactsToUpdate)
-            }
+            Log.i("CONTACTS", "calling updateContacts for a batch of ${contactsToUpdate.size}, hasIdentity: ${platformRepo.hasIdentity}")
+            updateContacts(contactsToUpdate)
         }
     }
 
     private suspend fun updateContacts(txs: List<Transaction>) {
-        if (this.contacts.isEmpty()) {
+        if (this.contacts.isEmpty() || txs.isEmpty()) {
             return
         }
 
@@ -690,6 +686,7 @@ class MainViewModel @Inject constructor(
         contacts: Map<Sha256Hash, DashPayProfile>
     ) {
         val items = _transactions.value?.toMutableMap() ?: return
+        val txByHash = this.txByHash.toMutableMap()
         // Process both old and new metadata in case if some metadata was cleared
         val allTxIds = (oldMetadata.keys + metadata.keys + contacts.keys).toSet()
         
@@ -718,7 +715,10 @@ class MainViewModel @Inject constructor(
             }
         }
 
-        _transactions.postValue(items)
+        viewModelScope.launch {
+            _transactions.value = items
+            this@MainViewModel.txByHash = txByHash
+        }
     }
 
     private fun updateSyncStatus(state: BlockchainState) {
@@ -730,12 +730,6 @@ class MainViewModel @Inject constructor(
                     val withoutFees = (100.0 - crowdNodeApi.getFee()) / 100
                     _stakingAPY.postValue(withoutFees * blockchainStateProvider.getMasternodeAPY())
                 }
-            }
-
-            if (state.replaying) {
-                // remove all tx
-                txByHash.clear()
-                _transactions.postValue(mapOf())
             }
         }
 
