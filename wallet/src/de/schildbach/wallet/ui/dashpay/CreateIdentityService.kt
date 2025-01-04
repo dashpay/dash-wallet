@@ -29,6 +29,7 @@ import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.RejectMessage
 import org.bitcoinj.core.RejectedTransactionException
 import org.bitcoinj.core.TransactionConfidence
@@ -60,13 +61,11 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class CreateIdentityService : LifecycleService() {
-
     companion object {
         private val log = LoggerFactory.getLogger(CreateIdentityService::class.java)
 
         private const val ACTION_CREATE_IDENTITY = "org.dash.dashpay.action.CREATE_IDENTITY"
         private const val ACTION_CREATE_IDENTITY_FROM_INVITATION = "org.dash.dashpay.action.CREATE_IDENTITY_FROM_INVITATION"
-
 
         private const val ACTION_RETRY_WITH_NEW_USERNAME = "org.dash.dashpay.action.ACTION_RETRY_WITH_NEW_USERNAME"
         private const val ACTION_RETRY_AFTER_INTERRUPTION = "org.dash.dashpay.action.ACTION_RETRY_AFTER_INTERRUPTION"
@@ -78,7 +77,6 @@ class CreateIdentityService : LifecycleService() {
         private const val EXTRA_START_FOREGROUND_PROMISED = "org.dash.dashpay.extra.EXTRA_START_FOREGROUND_PROMISED"
         private const val EXTRA_IDENTITY = "org.dash.dashpay.extra.IDENTITY"
         private const val EXTRA_INVITE = "org.dash.dashpay.extra.INVITE"
-
 
         @JvmStatic
         fun createIntentForNewUsername(context: Context, username: String): Intent {
@@ -357,16 +355,45 @@ class CreateIdentityService : LifecycleService() {
                 blockchainIdentity.initializeAssetLockTransaction(tx)
             }
         }
-
+        var assetLockTransaction: AssetLockTransaction? = null
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CREATING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_CREATING)
             //
             // Step 2: Create and send the credit funding transaction
             //
             // check to see if the funding transaction exists
+            val useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE
             if (blockchainIdentity.assetLockTransaction == null) {
-                val useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE
-                topUpRepository.createAssetLockTransaction(blockchainIdentity, blockchainIdentityData.username!!, encryptionKey, useCoinJoin)
+                if (blockchainIdentity.identity == null) {
+                    topUpRepository.createAssetLockTransaction(
+                        blockchainIdentity,
+                        blockchainIdentityData.username!!,
+                        encryptionKey,
+                        useCoinJoin
+                    )
+                    assetLockTransaction = blockchainIdentity.assetLockTransaction
+                }
+            } else {
+                    val balanceInfo = platformRepo.getIdentityBalance()
+                    val balanceRequirement = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
+                        Constants.DASH_PAY_FEE_CONTESTED
+                    } else {
+                        Constants.DASH_PAY_FEE
+                    }
+
+                    if (balanceInfo.balance < balanceRequirement.value * 1000) {
+                        val topupValue = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
+                            Constants.DASH_PAY_FEE_CONTESTED_NAME
+                        } else {
+                            Constants.DASH_PAY_FEE
+                        }
+                        assetLockTransaction = topUpRepository.createTopupTransaction(
+                            blockchainIdentity,
+                            topupValue,
+                            encryptionKey,
+                            useCoinJoin
+                        )
+                    }
             }
         }
 
@@ -375,12 +402,14 @@ class CreateIdentityService : LifecycleService() {
             val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_ISLOCK)
             // check to see if the funding transaction has been sent previously
             org.bitcoinj.core.Context.propagate(wallet.context)
-            val sent = blockchainIdentity.assetLockTransaction!!.confidence?.let {
-                it.isSent || it.isIX || it.numBroadcastPeers() > 0 || it.confidenceType == TransactionConfidence.ConfidenceType.BUILDING
-            } ?: false
+            if (assetLockTransaction != null) {
+                val sent = assetLockTransaction.confidence?.let {
+                    it.isSent || it.isIX || it.numBroadcastPeers() > 0 || it.confidenceType == TransactionConfidence.ConfidenceType.BUILDING
+                } ?: false
 
-            if (!sent) {
-                topUpRepository.sendTransaction(blockchainIdentity.assetLockTransaction!!)
+                if (!sent) {
+                    topUpRepository.sendTransaction(assetLockTransaction)
+                }
             }
             timerIsLock.logTiming()
         }
@@ -412,6 +441,9 @@ class CreateIdentityService : LifecycleService() {
             if (existingIdentity != null) {
                 val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
                 platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKeyHash)
+                if (assetLockTransaction != null) {
+                    topUpRepository.topUpIdentity(assetLockTransaction, encryptionKey)
+                }
             } else {
                 platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
             }

@@ -265,7 +265,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                             getString(R.string.request_username_blocked_message, mainActivityViewModel.getRequestedUsername())
                         binding.requestedUsernameSubtitleTwo.isVisible = false
                         binding.requestedUsernameSubtitle.maxLines = 4
-                        binding.retryRequestButton.isVisible = true
+                        binding.retryRequestButton.isVisible = false
                         binding.retryRequestButton.text = getString(R.string.try_again)
                         binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay_red)
                         binding.requestedUsernameArrow.isVisible = false
@@ -276,7 +276,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                             getString(R.string.request_username_lost_vote_message, mainActivityViewModel.getRequestedUsername())
                         binding.requestedUsernameSubtitle.maxLines = 4
                         binding.requestedUsernameSubtitleTwo.isVisible = false
-                        binding.retryRequestButton.isVisible = true
+                        binding.retryRequestButton.isVisible = false
                         binding.retryRequestButton.text = getString(R.string.try_again)
                         binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay_red)
                         binding.requestedUsernameArrow.isVisible = false
