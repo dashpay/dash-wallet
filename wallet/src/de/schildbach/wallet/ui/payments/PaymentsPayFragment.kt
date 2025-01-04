@@ -30,7 +30,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
+import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.livedata.Status
@@ -168,7 +168,12 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
         }
     }
 
+    private fun handleContactId(id: String) {
+        val paymentIntent = PaymentIntent.fromUserId(id)
+        SendCoinsActivity.start(requireContext(), paymentIntent)
+    }
+
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        handleString(usernameSearchResult.fromContactRequest!!.userId)
+        handleContactId(usernameSearchResult.fromContactRequest!!.userId)
     }
 }
