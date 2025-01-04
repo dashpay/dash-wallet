@@ -79,8 +79,7 @@ interface TopUpRepository {
 class TopUpRepositoryImpl @Inject constructor(
     private val walletApplication: WalletApplication,
     private val walletDataProvider: WalletDataProvider,
-    private val platformRepo: PlatformRepo,
-    private val sendTransaction: SendCoinsTaskRunner
+    private val platformRepo: PlatformRepo
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)

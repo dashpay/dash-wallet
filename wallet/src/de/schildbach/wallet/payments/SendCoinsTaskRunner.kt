@@ -108,7 +108,6 @@ class SendCoinsTaskRunner @Inject constructor(
         return sendCoins(sendRequest, checkBalanceConditions = false)
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
     override suspend fun estimateNetworkFee(
         address: Address,
         amount: Coin,
