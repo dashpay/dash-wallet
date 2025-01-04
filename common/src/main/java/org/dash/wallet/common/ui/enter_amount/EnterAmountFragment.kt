@@ -297,5 +297,6 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
 
     fun setMessage(message: String) {
         binding.messageText.text = message
+        binding.messageText.isVisible = message.isNotEmpty()
     }
 }
