@@ -1157,6 +1157,10 @@ public class WalletApplication extends MultiDexApplication
     @Nullable
     @Override
     public Transaction getTransaction(@NonNull Sha256Hash hash) {
+        if (wallet == null) {
+            return null;
+        }
+
         return wallet.getTransaction(hash);
     }
 

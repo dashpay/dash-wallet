@@ -316,12 +316,12 @@ class MainViewModel @Inject constructor(
             "",
             UsernameSortOrderBy.LAST_ACTIVITY,
             false
-        ).onEach { contacts ->
+        ).distinctUntilChanged()
+         .onEach { contacts ->
             this.minContactCreatedDate = contacts.minOfOrNull { it.dashPayProfile.createdAt }?.let {
                 Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
             } ?: LocalDate.now()
             val contactsByIdentity = contacts.associate { it.dashPayProfile.userId to it.dashPayProfile }
-            Log.i("CONTACTS", "setting contacts, size: ${contactsByIdentity.size}, hasIdentity: ${platformRepo.hasIdentity}")
             this.contacts = contactsByIdentity
         }.launchIn(viewModelWorkerScope)
 
@@ -655,8 +655,6 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             _transactions.value = items
             this@MainViewModel.txByHash = txByHash
-
-            Log.i("CONTACTS", "calling updateContacts for a batch of ${contactsToUpdate.size}, hasIdentity: ${platformRepo.hasIdentity}")
             updateContacts(contactsToUpdate)
         }
     }
@@ -686,6 +684,8 @@ class MainViewModel @Inject constructor(
         contacts: Map<Sha256Hash, DashPayProfile>
     ) {
         val items = _transactions.value?.toMutableMap() ?: return
+        if (items.isEmpty()) return
+
         val txByHash = this.txByHash.toMutableMap()
         // Process both old and new metadata in case if some metadata was cleared
         val allTxIds = (oldMetadata.keys + metadata.keys + contacts.keys).toSet()

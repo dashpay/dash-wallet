@@ -358,6 +358,10 @@ class PlatformRepo @Inject constructor(
      * @return
      */
     suspend fun searchContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Resource<List<UsernameSearchResult>> {
+        if (!hasIdentity) {
+            return Resource.success(emptyList())
+        }
+
         return try {
             val userIdList = HashSet<String>()
 
@@ -408,7 +412,6 @@ class PlatformRepo @Inject constructor(
         return blockchainIdentityDataStorage.observe()
             .filterNotNull()
             .flatMapLatest { _ ->
-                Log.i("CONTACTS", "calling init")
                 init()
 
                 if (!hasIdentity) {
@@ -416,14 +419,12 @@ class PlatformRepo @Inject constructor(
                 }
 
                 val userId = blockchainIdentity.uniqueIdString
-                Log.i("CONTACTS", "getting userId: $userId")
 
                 // Combine the two contact request flows
                 combine(
                     dashPayContactRequestDao.observeToOthers(userId),
                     dashPayContactRequestDao.observeFromOthers(userId)
                 ) { toContacts, fromContacts ->
-                    Log.i("CONTACTS", "toContacts: ${toContacts.size}, fromContacts: ${fromContacts.size}")
                     val userIdList = HashSet<String>()
 
                     val toContactMap = HashMap<String, DashPayContactRequest>()
@@ -451,7 +452,6 @@ class PlatformRepo @Inject constructor(
                         val profiles = list.associateBy { it.userId }
                         val usernameSearchResults = getFromProfiles(profiles, text.lowercase(), toContactMap, fromContactMap, includeSentPending)
                         usernameSearchResults.orderBy(orderBy)
-                        Log.i("CONTACTS", "return ${usernameSearchResults.size} results")
                         usernameSearchResults
                     }
                 }
