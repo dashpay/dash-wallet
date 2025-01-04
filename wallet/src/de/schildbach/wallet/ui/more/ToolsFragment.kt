@@ -48,7 +48,6 @@ import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
-import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Qr
@@ -142,7 +141,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         }
 
         lifecycleScope.launch {
-            binding.buyCreditsContainer.isVisible = viewModel.hasIdentity()
+            binding.buyCreditsContainer.isVisible = viewModel.hasUsername()
         }
         binding.buyCreditsInfoButton.setOnClickListener {
             WhatAreCreditsDialogFragment().show(requireActivity())
