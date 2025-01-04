@@ -21,7 +21,6 @@ import android.app.ActivityManager
 import android.content.Intent
 import android.text.format.DateUtils
 import android.util.Log
-import androidx.core.content.ContextCompat
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture

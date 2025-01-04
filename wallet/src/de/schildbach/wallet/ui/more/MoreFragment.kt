@@ -57,7 +57,6 @@ import de.schildbach.wallet_test.databinding.FragmentMoreBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -68,7 +67,6 @@ import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.slf4j.LoggerFactory
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint

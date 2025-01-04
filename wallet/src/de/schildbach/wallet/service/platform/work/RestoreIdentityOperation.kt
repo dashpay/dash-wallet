@@ -21,11 +21,9 @@ import android.annotation.SuppressLint
 import android.app.Application
 import androidx.work.*
 import de.schildbach.wallet.security.SecurityGuard
-import org.bitcoinj.core.Coin
 import org.slf4j.LoggerFactory
 
 class RestoreIdentityOperation(val application: Application) {
-
     class RestoreIdentityOperationException(message: String) : Exception(message)
 
     companion object {

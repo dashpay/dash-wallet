@@ -1,21 +1,14 @@
 package de.schildbach.wallet.ui.send
 
-import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.data.CreditBalanceInfo
-import de.schildbach.wallet.database.entity.DashPayProfile
-import de.schildbach.wallet.integration.android.BitcoinIntegration
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
 import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.service.work.BaseWorker
-import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesWorker
 import de.schildbach.wallet.ui.more.tools.ConfirmTopUpDialogFragment
-import de.schildbach.wallet.ui.username.UsernameRequestsFragment
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.launch
@@ -28,8 +21,6 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.LeftoverBalanceException
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory

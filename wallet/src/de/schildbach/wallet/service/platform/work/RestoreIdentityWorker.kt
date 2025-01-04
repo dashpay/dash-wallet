@@ -17,12 +17,7 @@
 package de.schildbach.wallet.service.platform.work
 
 import android.content.Context
-import android.content.pm.ServiceInfo
-import androidx.annotation.StringRes
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.work.HiltWorker
-import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dagger.assisted.Assisted
@@ -37,7 +32,6 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.work.BaseForegroundWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
-import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.work.GetUsernameVotingResultOperation
 import de.schildbach.wallet_test.R
 import org.bitcoinj.crypto.KeyCrypterException
@@ -82,7 +76,6 @@ class RestoreIdentityWorker @AssistedInject constructor(
         const val KEY_PASSWORD = "RestoreIdentityWorker.PASSWORD"
         const val KEY_IDENTITY = "RestoreIdentityWorker.IDENTITY"
         const val KEY_RETRY = "RestoreIdentityWorker.RETRY"
-        const val KEY_USERNAMES = "RestoreIdentityWorker.USERNAMES"
         const val CHANNEL_ID = "restore_identity_work_channel"
         const val NOTIFICATION_ID = 1000
     }
