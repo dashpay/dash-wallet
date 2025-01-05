@@ -318,7 +318,7 @@ public class WalletApplication extends MultiDexApplication
         Threading.warnOnLockCycles();
 
         Threading.uncaughtExceptionHandler = (thread, throwable) -> {
-            log.info("PERF: dashj uncaught exception", throwable);
+            log.info("dashj uncaught exception", throwable);
             CrashReporter.saveBackgroundTrace(throwable, packageInfoProvider.getPackageInfo());
         };
 
@@ -622,7 +622,7 @@ public class WalletApplication extends MultiDexApplication
         final SizeAndTimeBasedRollingPolicy<ILoggingEvent> rollingPolicy = new SizeAndTimeBasedRollingPolicy<ILoggingEvent>();
         rollingPolicy.setContext(context);
         rollingPolicy.setParent(fileAppender);
-        rollingPolicy.setFileNamePattern(logDir.getAbsolutePath() + "/wallet.%i.%d{yyyy-MM-dd,UTC}.log.gz");
+        rollingPolicy.setFileNamePattern(logDir.getAbsolutePath() + "/wallet.%i.%d{yyyy-MM-dd, UTC}.log.gz");
         rollingPolicy.setMaxHistory(20);
         rollingPolicy.setMaxFileSize(FileSize.valueOf("10MB"));
         rollingPolicy.setTotalSizeCap(FileSize.valueOf("200MB"));
