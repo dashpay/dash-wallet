@@ -165,6 +165,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
+    private val onCreateCompleted = CompletableDeferred<Unit>()
 
     @Inject lateinit var  application: WalletApplication
 
@@ -997,6 +998,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         return super.onUnbind(intent)
     }
 
+    private fun propagateContext() {
+        org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
+    }
+
     override fun onCreate() {
         serviceCreatedAt = System.currentTimeMillis()
         log.info(".onCreate()")
@@ -1011,6 +1016,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         val wallet = application.wallet
         serviceScope.launch {
             cleanupDeferred?.await()
+            propagateContext()
             peerConnectivityListener = PeerConnectivityListener()
             broadcastPeerState(0)
             blockChainFile =
@@ -1021,6 +1027,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             qrinfoBootStrapStream = loadStream(Constants.Files.QRINFO_BOOTSTRAP_FILENAME)
             if (!blockChainFileExists) {
                 log.info("blockchain does not exist, resetting wallet")
+                propagateContext()
                 wallet!!.reset()
                 resetMNLists(false)
                 resetMNListsOnPeerGroupStart = true
@@ -1075,7 +1082,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_LOW)
             intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK)
             registerReceiver(connectivityReceiver, intentFilter) // implicitly start PeerGroup
-            org.bitcoinj.core.Context.propagate(application.wallet!!.context)
             application.wallet!!.addCoinsReceivedEventListener(
                 Threading.SAME_THREAD,
                 walletEventListener
@@ -1096,6 +1102,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             coinJoinService.observeMixingProgress().observe(this@BlockchainServiceImpl) { mixingProgress ->
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
+            onCreateCompleted.complete(Unit) // Signal completion of onCreate
+            log.info(".onCreate() finished")
         }
     }
 
@@ -1146,8 +1154,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         log.info(".onStartCommand($intent)")
         super.onStartCommand(intent, flags, startId)
         serviceScope.launch {
+            onCreateCompleted.await() // wait until onCreate is finished
             if (intent != null) {
-                org.bitcoinj.core.Context.propagate(application.wallet!!.context)
+                propagateContext()
                 //Restart service as a Foreground Service if it's synchronizing the blockchain
                 val extras = intent.extras
                 if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
@@ -1199,6 +1208,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             } else {
                 log.warn("service restart, although it was started as non-sticky")
             }
+            log.info(".onStartCommand($intent) finished")
         }
         return START_NOT_STICKY
     }
@@ -1265,7 +1275,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 unregisterReceiver(connectivityReceiver)
                 platformSyncService.shutdown()
                 if (peerGroup != null) {
-                    org.bitcoinj.core.Context.propagate(application.wallet!!.context)
+                    propagateContext()
                     dashSystemService.system.close()
                     peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
                     peerGroup!!.removeConnectedEventListener(peerConnectivityListener)

@@ -191,6 +191,7 @@ public class WalletApplication extends MultiDexApplication
 
     private AutoLogout autoLogout;
     private AnrSupervisor anrSupervisor;
+    private Function0 afterWipeFunction;
 
     @Inject
     RestartService restartService;
@@ -975,8 +976,9 @@ public class WalletApplication extends MultiDexApplication
     /**
      * Removes all the data and restarts the app showing onboarding screen.
      */
-    public void triggerWipe() {
+    public void triggerWipe(Function0 afterWipeFunction) {
         log.info("Removing all the data and restarting the app.");
+        this.afterWipeFunction = afterWipeFunction;
         startService(new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));
     }
 
@@ -1019,6 +1021,9 @@ public class WalletApplication extends MultiDexApplication
         // wallet must be null for the OnboardingActivity flow
         log.info("removing wallet from memory during wipe");
         wallet = null;
+        if (afterWipeFunction != null)
+            afterWipeFunction.invoke();
+        afterWipeFunction = null;
     }
 
     public AnalyticsService getAnalyticsService() {
