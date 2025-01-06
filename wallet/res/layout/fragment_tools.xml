@@ -204,7 +204,7 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/buy_credits_container"
         android:visibility="invisible"
-        tools:visibility="invisible"
+        tools:visibility="visible"
         style="@style/MenuRow.Internal">
 
         <FrameLayout
@@ -251,7 +251,8 @@
                 android:id="@+id/buy_credits_info_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_info_circle" />
+                android:layout_gravity="center_vertical"
+                android:src="@drawable/ic_info_circle_filled_gray" />
         </LinearLayout>
 
 

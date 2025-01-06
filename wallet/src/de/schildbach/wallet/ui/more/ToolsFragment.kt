@@ -144,13 +144,13 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
             binding.buyCreditsContainer.isVisible = viewModel.hasUsername()
         }
         binding.buyCreditsInfoButton.setOnClickListener {
-            WhatAreCreditsDialogFragment().show(requireActivity())
+            WhatAreCreditsDialogFragment.newInstance(false).show(requireActivity())
         }
 
         binding.buyCreditsButton.setOnClickListener {
             lifecycleScope.launch {
                 if (!viewModel.creditsExplained()) {
-                    WhatAreCreditsDialogFragment().show(requireActivity()) {
+                    WhatAreCreditsDialogFragment.newInstance(true).show(requireActivity()) {
                         SendCoinsActivity.startBuyCredits(requireActivity())
                     }
                 } else {

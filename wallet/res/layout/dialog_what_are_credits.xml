@@ -66,37 +66,45 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
             android:orientation="horizontal"
-            android:layout_marginTop="10dp" >
+            android:layout_marginTop="28dp" >
             <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_marginStart="8dp"
                 android:src="@drawable/ic_mail_icon"
                 android:layout_marginEnd="10dp"
                 />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+
                 style="@style/Body1.Medium"
                 android:text="@string/credits_send_and_accept_contact_requests"/>
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginBottom="10dp"
             android:orientation="horizontal"
             android:layout_marginTop="10dp" >
             <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:src="@drawable/ic_profile_icon"
+                android:layout_gravity="center_vertical"
                 android:layout_marginEnd="10dp"
                 />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 style="@style/Body1.Medium"
+                android:layout_gravity="center_vertical"
                 android:text="@string/credits_profile_change_message"/>
         </LinearLayout>
 
@@ -106,11 +114,26 @@
     <Button
         android:id="@+id/close_button"
         android:layout_marginHorizontal="15dp"
-        android:layout_marginVertical="15dp"
+        android:layout_marginVertical="20dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         style="@style/Button.Primary.Blue"
-        android:text="@string/button_close"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        android:text="@string/button_continue"
+        app:layout_constraintBottom_toTopOf="@id/home_indicator" />
 
+    <FrameLayout
+        android:id="@+id/home_indicator"
+        android:layout_width="match_parent"
+        android:layout_height="24dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        >
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_block_home_indicator"
+            android:layout_gravity="center_horizontal"
+            />
+    </FrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
