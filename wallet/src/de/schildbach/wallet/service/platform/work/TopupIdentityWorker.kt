@@ -86,40 +86,22 @@ class TopupIdentityWorker @AssistedInject constructor(
 
         return try {
             org.bitcoinj.core.Context.propagate(walletDataProvider.wallet!!.context)
-//            if (topupTx == null) {
-//                topupTx = topUpRepository.createTopupTransaction(
-//                    platformRepo.blockchainIdentity,
-//                    coinValue,
-//                    encryptionKey,
-//                    coinJoinConfig.getMode() != CoinJoinMode.NONE
-//                )
-//            }
             val existingTopup = topUpsDao.getByTxId(topupTx.txId)
             if (existingTopup != null && existingTopup.used()) {
                 Result.success(
                     workDataOf(
                         KEY_IDENTITY to identity,
                         KEY_TOPUP_TX to existingTopup.txId.toString(),
-                        KEY_BALANCE to platformRepo.getIdentityBalance()
+                        KEY_BALANCE to platformRepo.getIdentityBalance().balance
                     )
                 )
             } else {
                 val topupEntry = TopUp(toUserId = identity, workId = id.toString(), txId = topupTx.txId)
                 topUpsDao.insert(topupEntry)
-
-//                val wasTxSent = topupTx.confidence.isChainLocked ||
-//                    topupTx.confidence.isTransactionLocked ||
-//                    topupTx.confidence.numBroadcastPeers() > 0
-//                if (!wasTxSent) {
-//                    topUpRepository.sendTransaction(topupTx)
-//                }
-//                log.info("topup tx sent: {}", topupTx.txId)
                 topUpRepository.topUpIdentity(
                     topupTx,
                     encryptionKey
                 )
-                // topUpsDao.insert(topupEntry.copy(creditedAt = System.currentTimeMillis()))
-               // log.info("topup success: {}", topupTx.txId)
                 Result.success(
                     workDataOf(
                         KEY_IDENTITY to identity,
@@ -134,7 +116,6 @@ class TopupIdentityWorker @AssistedInject constructor(
                 is InsufficientMoneyException -> arrayOf(ex.missing.toString())
                 else -> arrayOf()
             }
-            // check for already used?
             Result.failure(
                 workDataOf(
                     KEY_IDENTITY to identity,

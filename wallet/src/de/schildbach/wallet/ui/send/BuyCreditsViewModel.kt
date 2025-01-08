@@ -6,7 +6,6 @@ import androidx.work.WorkInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -17,6 +16,7 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 

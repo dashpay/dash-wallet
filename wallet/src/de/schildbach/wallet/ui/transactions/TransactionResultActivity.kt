@@ -32,6 +32,7 @@ import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
@@ -42,6 +43,7 @@ import de.schildbach.wallet_test.databinding.ActivitySuccessfulTransactionBindin
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.observe
@@ -180,6 +182,41 @@ class TransactionResultActivity : LockScreenActivity() {
 
         viewModel.contact.observe(this) { profile ->
             finishInitialization(tx, profile)
+        }
+
+        viewModel.topUpWork(txId).observe(this) { workData ->
+            log.info("topup work data: {}", workData)
+            try {
+                val txIdString = workData.data?.outputData?.getString(TopupIdentityWorker.KEY_TOPUP_TX)
+                log.info("txId from work matches viewModel: {} ==? {}", txIdString, txId)
+
+                when (workData.status) {
+                    Status.LOADING -> {
+                        log.info("  loading: {}", workData.data?.outputData)
+                    }
+
+                    Status.SUCCESS -> {
+                        log.info("  success: {}", workData.data?.outputData)
+                    }
+
+                    Status.ERROR -> {
+                        log.info("  error: {}", workData.data?.outputData)
+                        viewModel.topUpError = true
+                        transactionResultViewBinder.setSentToReturn(viewModel.topUpError, viewModel.topUpComplete)
+                    }
+
+                    Status.CANCELED -> {
+                        log.info("  cancel: {}", workData.data?.outputData)
+                    }
+                }
+            } catch (e: Exception) {
+                log.error("error processing topup information", e)
+            }
+        }
+
+        viewModel.topUpStatus(txId).observe(this) { topUp ->
+            viewModel.topUpComplete = topUp?.used() == true
+            transactionResultViewBinder.setSentToReturn(viewModel.topUpError, viewModel.topUpComplete)
         }
     }
 

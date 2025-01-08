@@ -250,9 +250,10 @@ class TopUpRepositoryImpl @Inject constructor(
             topUpTx.txId
         ) ?: addTopUp(topUpTx.txId)
         Context.propagate(walletDataProvider.wallet!!.context)
-        val wasTxSent = topUpTx.confidence.isChainLocked ||
-            topUpTx.confidence.isTransactionLocked ||
-            topUpTx.confidence.numBroadcastPeers() > 0
+        val confidence = topUpTx.getConfidence(walletDataProvider.wallet!!.context)
+        val wasTxSent = confidence.isChainLocked ||
+                confidence.isTransactionLocked ||
+                confidence.numBroadcastPeers() > 0
         if (!wasTxSent) {
             sendTransaction(topUpTx)
         }

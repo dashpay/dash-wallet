@@ -76,6 +76,7 @@ class TransactionResultViewBinder(
     private var iconRes: Int? = null
     private var customTitle: String? = null
     private var dashPayProfile: DashPayProfile? = null
+    private var outputAssetLocks = listOf<String>()
 
     fun bind(tx: Transaction, profile: DashPayProfile?, payeeName: String? = null, payeeSecuredBy: String? = null) {
         this.transaction = tx
@@ -101,7 +102,6 @@ class TransactionResultViewBinder(
         // Address List
         val inputAddresses: List<Address>
         val outputAddresses: List<Address>
-        val outputAssetLocks: List<String>
 
         if (isSent) {
             inputAddresses = TransactionUtils.getFromAddressOfSent(tx)
@@ -157,12 +157,11 @@ class TransactionResultViewBinder(
                 }
             }
 
-
             binding.checkIcon.setOnClickListener { openProfile(profile) }
         } else {
             setInputs(inputAddresses, inflater)
             setOutputs(outputAddresses, inflater)
-            setReturns(outputAssetLocks, inflater)
+            //setReturns(outputAssetLocks, inflater, false)
         }
 
         // For displaying purposes only
@@ -396,7 +395,7 @@ class TransactionResultViewBinder(
         }
     }
 
-    private fun setReturns(outputOpReturns: List<String>, inflater: LayoutInflater) {
+    private fun setReturns(outputOpReturns: List<String>, inflater: LayoutInflater, error: Boolean, completed: Boolean) {
         binding.outputsContainer.isVisible = outputOpReturns.isNotEmpty() && outputOpReturns.contains("OP RETURN")
         outputOpReturns.forEach {
             val addressView = inflater.inflate(
@@ -405,10 +404,19 @@ class TransactionResultViewBinder(
                 false
             ) as TextView
             addressView.text = when (it) {
-                "OP RETURN" -> context.getString(R.string.platform_credits)
+                "OP RETURN" -> when {
+                    error -> context.getString(R.string.platform_credits_error)
+                    completed -> context.getString(R.string.platform_credits)
+                    else -> context.getString(R.string.platform_credits_not_transferred)
+                }
                 else -> ""
             }
             binding.transactionOutputAddressesContainer.addView(addressView)
         }
+    }
+
+    fun setSentToReturn(error: Boolean, completed: Boolean) {
+        binding.transactionOutputAddressesContainer.removeAllViews()
+        setReturns(outputAssetLocks, LayoutInflater.from(context), error, completed)
     }
 }

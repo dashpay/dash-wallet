@@ -23,12 +23,12 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
 import androidx.work.*
-import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesOperation
 import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesWorker
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 
@@ -59,6 +59,28 @@ class TopupIdentityOperation(val application: Application) {
                                 workId
                             )
                         }")
+                        analytics.logError(e)
+                        throw e
+                    }
+                    emit(convertState(it.first()))
+                }
+            }
+        }
+
+        fun operationStatus(
+            application: Application,
+            txId: Sha256Hash,
+            analytics: AnalyticsService
+        ): LiveData<Resource<WorkInfo>> {
+            val workManager: WorkManager = WorkManager.getInstance(application)
+            return workManager.getWorkInfosByTagLiveData("txId:$txId").switchMap {
+                return@switchMap liveData {
+                    if (it.isNullOrEmpty()) {
+                        return@liveData
+                    }
+
+                    if (it.size > 1) {
+                        val e = RuntimeException("there should never be more than one unique work $txId")
                         analytics.logError(e)
                         throw e
                     }
@@ -138,6 +160,7 @@ class TopupIdentityOperation(val application: Application) {
                 )
             )
             .addTag("identity:$identity")
+            .addTag("txId:$txId")
             .build()
 
         return WorkManager.getInstance(application)
