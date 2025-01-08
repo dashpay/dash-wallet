@@ -105,6 +105,7 @@ class TransactionResultViewBinder(
         // Address List
         val inputAddresses: List<Address>
         val outputAddresses: List<Address>
+        val outputAssetLocks: List<String>
 
         if (isSent) {
             inputAddresses = TransactionUtils.getFromAddressOfSent(tx)
@@ -116,9 +117,11 @@ class TransactionResultViewBinder(
                 binding.outputAddressesLabel.setText(R.string.transaction_details_sent_to)
                 TransactionUtils.getToAddressOfSent(tx, wallet)
             }
+            outputAssetLocks = TransactionUtils.getOpReturnsOfSent(tx, wallet)
         } else {
             inputAddresses = arrayListOf()
             outputAddresses = TransactionUtils.getToAddressOfReceived(tx, wallet)
+            outputAssetLocks = TransactionUtils.getOpReturnsOfSent(tx, wallet)
             binding.outputAddressesLabel.setText(R.string.transaction_details_received_at)
         }
 
@@ -163,6 +166,7 @@ class TransactionResultViewBinder(
         } else {
             setInputs(inputAddresses, inflater)
             setOutputs(outputAddresses, inflater)
+            setReturns(outputAssetLocks, inflater)
         }
 
         // For displaying purposes only
@@ -392,6 +396,19 @@ class TransactionResultViewBinder(
                 false
             ) as TextView
             addressView.text = it.toBase58()
+            binding.transactionOutputAddressesContainer.addView(addressView)
+        }
+    }
+
+    private fun setReturns(outputAddresses: List<String>, inflater: LayoutInflater) {
+        binding.outputsContainer.isVisible = outputAddresses.isNotEmpty()
+        outputAddresses.forEach {
+            val addressView = inflater.inflate(
+                R.layout.transaction_result_address_row,
+                binding.transactionOutputAddressesContainer,
+                false
+            ) as TextView
+            addressView.text = it
             binding.transactionOutputAddressesContainer.addView(addressView)
         }
     }

@@ -21,6 +21,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
 import org.bitcoinj.script.ScriptException
+import org.bitcoinj.script.ScriptPattern
 
 object TransactionUtils {
     fun getWalletAddressOfReceived(tx: Transaction, bag: TransactionBag): Address? {
@@ -77,6 +78,22 @@ object TransactionUtils {
             try {
                 if (!output.isMine(bag)) {
                     result.add(output.scriptPubKey.getToAddress(tx.params, true))
+                }
+            } catch (x: ScriptException) {
+                // swallow
+            }
+        }
+
+        return result
+    }
+
+    fun getOpReturnsOfSent(tx: Transaction, bag: TransactionBag): List<String> {
+        val result = mutableListOf<String>()
+
+        for (output in tx.outputs) {
+            try {
+                if (!output.isMine(bag) && ScriptPattern.isOpReturn(output.scriptPubKey)) {
+                    result.add("OP RETURN")
                 }
             } catch (x: ScriptException) {
                 // swallow
