@@ -19,7 +19,9 @@ package de.schildbach.wallet.service.platform
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
-import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import de.schildbach.wallet.database.dao.TopUpsDao
+import de.schildbach.wallet.database.entity.TopUp
+import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -43,6 +45,8 @@ import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+
 /**
  * contains topup related functions that are used by [CreateIdentityService] to create
  * an identity and by [TopupIdentityWorker] to topup an identity
@@ -70,22 +74,26 @@ interface TopUpRepository {
     /** sends the transaction and waits for IS or CL */
     suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean
 
-    fun topUpIdentity(
+    suspend fun topUpIdentity(
         topupAssetLockTransaction: AssetLockTransaction,
         aesKeyParameter: KeyParameter
     )
+
+    suspend fun checkTopUps(aesKeyParameter: KeyParameter)
 }
 
 class TopUpRepositoryImpl @Inject constructor(
     private val walletApplication: WalletApplication,
     private val walletDataProvider: WalletDataProvider,
-    private val platformRepo: PlatformRepo
+    private val platformRepo: PlatformRepo,
+    private val topUpsDao: TopUpsDao
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
     }
 
-    val platform = platformRepo.platform
+    private val platform = platformRepo.platform
+    private val authExtension by lazy { walletDataProvider.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension }
 
     override fun createAssetLockTransaction(
         blockchainIdentity: BlockchainIdentity,
@@ -120,14 +128,13 @@ class TopUpRepositoryImpl @Inject constructor(
         Context.propagate(walletDataProvider.wallet!!.context)
         val balance = walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
         val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
-        val topupTx = blockchainIdentity.createTopupFundingTransaction(
+        return blockchainIdentity.createTopupFundingTransaction(
             topupAmount,
             keyParameter,
             useCoinJoin,
             returnChange = true,
             emptyWallet = emptyWallet
         )
-        return topupTx
     }
 
     //
@@ -257,5 +264,39 @@ class TopUpRepositoryImpl @Inject constructor(
         )
         log.info("topup success: {}", topUpTx.txId)
         topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
+    }
+
+    private var checkedPreviousTopUps = false
+
+    override suspend fun checkTopUps(aesKeyParameter: KeyParameter) {
+        val topUps = topUpsDao.getUnused()
+        topUps.forEach { topUp ->
+            try {
+                val tx = walletDataProvider.wallet!!.getTransaction(topUp.txId)
+                val assetLockTx = authExtension.getAssetLockTransaction(tx)
+                topUpIdentity(assetLockTx, aesKeyParameter)
+                topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
+            } catch (e: Exception) {
+                // swallow
+            }
+        }
+        // only check once per app start
+        if (!checkedPreviousTopUps) {
+            log.info("checking all topup transactions")
+            authExtension.topupFundingTransactions.forEach { assetLockTx ->
+                val topUp = topUpsDao.getByTxId(assetLockTx.txId)
+                if (topUp == null || topUp.notUsed()) {
+                    val identity = topUp?.toUserId ?: platformRepo.blockchainIdentity.uniqueIdentifier.toString()
+                    if (topUp == null) {
+                        topUpsDao.insert(TopUp(assetLockTx.txId, identity))
+                    }
+                    topUpIdentity(assetLockTx, platformRepo.getWalletEncryptionKey()!!)
+//                    TopupIdentityOperation(walletApplication)
+//                        .create(identity, assetLockTx.txId)
+//                        .enqueue()
+                }
+            }
+            checkedPreviousTopUps = true
+        }
     }
 }

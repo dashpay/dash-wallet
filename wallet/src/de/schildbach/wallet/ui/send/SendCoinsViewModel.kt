@@ -434,8 +434,11 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     fun getNextTopupKey(): ECKey {
-        val authGroup = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
-        return authGroup.currentKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP) as ECKey
-
+        val authGroup = wallet.getKeyChainExtension(
+            AuthenticationGroupExtension.EXTENSION_ID
+        ) as AuthenticationGroupExtension
+        return authGroup.freshKey(
+            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP
+        ) as ECKey
     }
 }

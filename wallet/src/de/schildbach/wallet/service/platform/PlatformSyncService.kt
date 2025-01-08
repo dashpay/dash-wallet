@@ -359,7 +359,9 @@ class PlatformSynchronizationService @Inject constructor(
                         // fetch updated transaction metadata
                         async { updateTransactionMetadata() },  // TODO: this is skipped in VOTING state, but shouldn't be
                         // fetch updated profiles from the network
-                        async { updateContactProfiles(userId, lastContactRequestTime) }
+                        async { updateContactProfiles(userId, lastContactRequestTime) },
+                        // check for unused topups
+                        async { checkTopUps() }
                     )
                 }
 
@@ -1437,6 +1439,12 @@ class PlatformSynchronizationService @Inject constructor(
     private fun firePreBlockProgressListeners(stage: PreBlockStage) {
         for (listener in onPreBlockContactListeners) {
             listener.onPreBlockProgressUpdated(stage)
+        }
+    }
+
+    private suspend fun checkTopUps() {
+        platformRepo.getWalletEncryptionKey()?.let {
+            topUpRepository.checkTopUps(it)
         }
     }
 }
