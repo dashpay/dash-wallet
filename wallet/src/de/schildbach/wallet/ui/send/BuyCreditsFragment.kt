@@ -35,69 +35,74 @@ class BuyCreditsFragment : SendCoinsFragment() {
         super.onViewCreated(view, savedInstanceState)
         binding.paymentHeader.setTitle(getString(R.string.credit_balance_button_buy))
         enterAmountViewModel.setMinAmount(Coin.valueOf(50_000))
-        buyCreditsViewModel.currentWorkId.filterNot { it.isEmpty() }.observe(viewLifecycleOwner) { workId ->
-            buyCreditsViewModel.topWorkStatus(workId).observe(viewLifecycleOwner) { workData ->
-                log.info("topup work data: {}", workData)
-                try {
-                    val txIdString =
-                        workData.data?.outputData?.getString(TopupIdentityWorker.KEY_TOPUP_TX)
-
-                    when (workData.status) {
-                        Status.LOADING -> {
-                            log.info("  loading: {}", workData.data?.outputData)
-                        }
-
-                        Status.SUCCESS -> {
-                            log.info("  success: {}", workData.data?.outputData)
-                            lifecycleScope.launch {
-                                val tx = buyCreditsViewModel.getTransaction(Sha256Hash.wrap(txIdString))
-                                onSignAndSendPaymentSuccess(tx!!)
-                            }
-                        }
-
-                        Status.ERROR -> {
-                            log.info("  error: {}", workData.data?.outputData)
-                            lifecycleScope.launch {
-                                val ex = Exception(workData.data?.outputData?.getString(BaseWorker.KEY_EXCEPTION))
-                                val args = workData.data?.outputData?.getStringArray(BaseWorker.KEY_EXCEPTION_ARGS)
-                                    ?: Array<String?>(0) { "" }
-                                when (workData.data?.outputData?.getString(BaseWorker.KEY_EXCEPTION)) {
-                                    LeftoverBalanceException::class.java.simpleName -> {
-                                        val continueAgain = MinimumBalanceDialog().showAsync(requireActivity())
-
-                                        if (continueAgain == true) {
-                                            handleGo(false)
-                                        }
-                                    }
-
-                                    InsufficientMoneyException::class.java.simpleName -> {
-                                        showInsufficientMoneyDialog(Coin.parseCoin(args[0]) ?: Coin.ZERO)
-                                    }
-
-                                    KeyCrypterException::class.java.simpleName -> {
-                                        showFailureDialog(ex)
-                                    }
-
-                                    Wallet.CouldNotAdjustDownwards::class.java.simpleName -> {
-                                        showEmptyWalletFailedDialog()
-                                    }
-
-                                    else -> {
-                                        showFailureDialog(ex)
-                                    }
-                                }
-                            }
-                        }
-
-                        Status.CANCELED -> {
-                            log.info("  cancel: {}", workData.data?.outputData)
-                        }
-                    }
-                } catch (e: Exception) {
-                    log.error("error processing vote information", e)
-                }
-            }
-        }
+//        buyCreditsViewModel.currentWorkId.filterNot { it.isEmpty() }.observe(viewLifecycleOwner) { workId ->
+//            buyCreditsViewModel.topWorkStatus(workId).observe(viewLifecycleOwner) { workData ->
+//                log.info("topup work data: {}", workData)
+//                try {
+//                    val txIdString =
+//                        workData.data?.outputData?.getString(TopupIdentityWorker.KEY_TOPUP_TX)
+//
+//                    when (workData.status) {
+//                        Status.LOADING -> {
+//                            log.info("  loading: {}", workData.data?.outputData)
+//                            //enterAmountFragment?.setContinueButtonText(getString(R.string.sending_topup_transaction))
+//                            txIdString?.let {
+//                                observeTopUp(Sha256Hash.wrap(txIdString))
+//                            }
+//                        }
+//
+//                        Status.SUCCESS -> {
+//                            log.info("  success: {}", workData.data?.outputData)
+//                            lifecycleScope.launch {
+//                                txIdString?.let {
+//                                    observeTopUp(Sha256Hash.wrap(txIdString))
+//                                }
+//                            }
+//                        }
+//
+//                        Status.ERROR -> {
+//                            log.info("  error: {}", workData.data?.outputData)
+//                            lifecycleScope.launch {
+//                                val ex = Exception(workData.data?.outputData?.getString(BaseWorker.KEY_EXCEPTION))
+//                                val args = workData.data?.outputData?.getStringArray(BaseWorker.KEY_EXCEPTION_ARGS)
+//                                    ?: Array<String?>(0) { "" }
+//                                when (workData.data?.outputData?.getString(BaseWorker.KEY_EXCEPTION)) {
+//                                    LeftoverBalanceException::class.java.simpleName -> {
+//                                        val continueAgain = MinimumBalanceDialog().showAsync(requireActivity())
+//
+//                                        if (continueAgain == true) {
+//                                            handleGo(false)
+//                                        }
+//                                    }
+//
+//                                    InsufficientMoneyException::class.java.simpleName -> {
+//                                        showInsufficientMoneyDialog(Coin.parseCoin(args[0]) ?: Coin.ZERO)
+//                                    }
+//
+//                                    KeyCrypterException::class.java.simpleName -> {
+//                                        showFailureDialog(ex)
+//                                    }
+//
+//                                    Wallet.CouldNotAdjustDownwards::class.java.simpleName -> {
+//                                        showEmptyWalletFailedDialog()
+//                                    }
+//
+//                                    else -> {
+//                                        showFailureDialog(ex)
+//                                    }
+//                                }
+//                            }
+//                        }
+//
+//                        Status.CANCELED -> {
+//                            log.info("  cancel: {}", workData.data?.outputData)
+//                        }
+//                    }
+//                } catch (e: Exception) {
+//                    log.error("error processing vote information", e)
+//                }
+//            }
+//        }
     }
 
     override fun updateView() {
@@ -135,13 +140,6 @@ class BuyCreditsFragment : SendCoinsFragment() {
     }
 
     override suspend fun showPaymentConfirmation() {
-//        AdaptiveDialog.create(
-//            null,
-//            "Not Implemented",
-//            "The feature to topup your credits is not completed",
-//            getString(R.string.button_close)
-//        ).showAsync(requireActivity())
-
         val dryRunRequest = viewModel.dryrunSendRequest ?: return
         //val address = viewModel.basePaymentIntent.address?.toBase58() ?: return
 
@@ -180,7 +178,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
         ) { confirmed ->
             if (confirmed) {
                 lifecycleScope.launch {
-                    handleGo(true)//, dialog.autoAcceptContactRequest)
+                    handleGo(true)
                 }
             }
         }
@@ -198,35 +196,35 @@ class BuyCreditsFragment : SendCoinsFragment() {
         if (editedAmount != null) {
             val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it) }
 
-//            try {
+            try {
                 //viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND)
 
-//                if (enterAmountFragment?.maxSelected == true) {
-//                    viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
-//                }
+                if (enterAmountFragment?.maxSelected == true) {
+                    viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
+                }
 
                 // buy do an asset lock transaction or we do this in the worker?
-                //val topUpKey = viewModel.getNextTopupKey()
-                //val tx = viewModel.signAndSendAssetLock(editedAmount, exchangeRate, checkBalance, topUpKey)
+                val topUpKey = viewModel.getNextTopupKey()
+                val tx = viewModel.signAndSendAssetLock(editedAmount, exchangeRate, checkBalance, topUpKey)
+                buyCreditsViewModel.topUpTransaction = tx
+                //buyCreditsViewModel.topUpOnPlatform(editedAmount)
 
-                buyCreditsViewModel.topUpOnPlatform(editedAmount)
+                onSignAndSendPaymentSuccess(tx)
+            } catch (ex: LeftoverBalanceException) {
+                val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
 
-                //onSignAndSendPaymentSuccess(tx, false)
-//            } catch (ex: LeftoverBalanceException) {
-//                val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
-//
-//                if (shouldContinue == true) {
-//                    handleGo(false)
-//                }
-//            } catch (ex: InsufficientMoneyException) {
-//                showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
-//            } catch (ex: KeyCrypterException) {
-//                showFailureDialog(ex)
-//            } catch (ex: Wallet.CouldNotAdjustDownwards) {
-//                showEmptyWalletFailedDialog()
-//            } catch (ex: Exception) {
-//                showFailureDialog(ex)
-//            }
+                if (shouldContinue == true) {
+                    handleGo(false)
+                }
+            } catch (ex: InsufficientMoneyException) {
+                showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
+            } catch (ex: KeyCrypterException) {
+                showFailureDialog(ex)
+            } catch (ex: Wallet.CouldNotAdjustDownwards) {
+                showEmptyWalletFailedDialog()
+            } catch (ex: Exception) {
+                showFailureDialog(ex)
+            }
 
             viewModel.resetState()
         }
@@ -245,9 +243,11 @@ class BuyCreditsFragment : SendCoinsFragment() {
 //            )
 //            requireActivity().setResult(Activity.RESULT_OK, resultIntent)
 //        }
-
-        //showTransactionResult(transaction, false)
-        playSentSound()
-        requireActivity().finish()
+        lifecycleScope.launch {
+            buyCreditsViewModel.topUpOnPlatform()
+            showTransactionResult(transaction, false)
+            playSentSound()
+            requireActivity().finish()
+        }
     }
 }

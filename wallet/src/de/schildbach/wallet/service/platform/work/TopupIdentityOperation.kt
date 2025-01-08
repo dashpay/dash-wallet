@@ -28,7 +28,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesOperation
 import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesWorker
-import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 
@@ -127,22 +127,24 @@ class TopupIdentityOperation(val application: Application) {
 //    val allOperationsData = workManager.getWorkInfosByTagLiveData(TopupIdentityOperation::class.qualifiedName!!)
 
     @SuppressLint("EnqueueWork")
-    fun create(identity: String, amount: Coin): WorkContinuation {
+    fun create(identity: String, txId: Sha256Hash): WorkContinuation {
         val password = SecurityGuard().retrievePassword()
-        val verifyIdentityWorker = OneTimeWorkRequestBuilder<TopupIdentityWorker>()
-                .setInputData(
-                    workDataOf(
-                        TopupIdentityWorker.KEY_PASSWORD to password,
-                        TopupIdentityWorker.KEY_IDENTITY to identity,
-                        TopupIdentityWorker.KEY_VALUE to amount.value
-                    )
+        val topUpIdentityWorker = OneTimeWorkRequestBuilder<TopupIdentityWorker>()
+            .setInputData(
+                workDataOf(
+                    TopupIdentityWorker.KEY_PASSWORD to password,
+                    TopupIdentityWorker.KEY_IDENTITY to identity,
+                    TopupIdentityWorker.KEY_TOPUP_TX to txId.toString()
                 )
-                .addTag("identity:$identity")
-                .build()
+            )
+            .addTag("identity:$identity")
+            .build()
 
         return WorkManager.getInstance(application)
-                .beginUniqueWork(uniqueWorkName(identity),
-                    ExistingWorkPolicy.KEEP,
-                    verifyIdentityWorker)
+            .beginUniqueWork(
+                uniqueWorkName(identity),
+                ExistingWorkPolicy.KEEP,
+                topUpIdentityWorker
+            )
     }
 }

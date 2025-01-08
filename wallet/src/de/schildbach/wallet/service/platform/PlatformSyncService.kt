@@ -117,7 +117,7 @@ interface PlatformSyncService {
 class PlatformSynchronizationService @Inject constructor(
     private val platform: PlatformService,
     private val platformRepo: PlatformRepo,
-    val analytics: AnalyticsService,
+    private val analytics: AnalyticsService,
     private val config: DashPayConfig,
     private val walletApplication: WalletApplication,
     private val transactionMetadataProvider: TransactionMetadataProvider,
@@ -129,7 +129,8 @@ class PlatformSynchronizationService @Inject constructor(
     private val invitationsDao: InvitationsDao,
     private val usernameRequestDao: UsernameRequestDao,
     private val usernameVoteDao: UsernameVoteDao,
-    private val identityConfig: BlockchainIdentityConfig
+    private val identityConfig: BlockchainIdentityConfig,
+    private val topUpRepository: TopUpRepository
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)

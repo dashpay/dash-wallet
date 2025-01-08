@@ -23,6 +23,8 @@ import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.database.dao.TopUpsDao
+import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.TopUpRepository
@@ -42,12 +44,13 @@ import org.slf4j.LoggerFactory
 class TopupIdentityWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
-    val analytics: AnalyticsService,
-    val platformBroadcastService: PlatformBroadcastService,
+    private val analytics: AnalyticsService,
+    private val platformBroadcastService: PlatformBroadcastService,
     private val topUpRepository: TopUpRepository,
-    val walletDataProvider: WalletDataProvider,
-    val platformRepo: PlatformRepo,
-    val coinJoinConfig: CoinJoinConfig
+    private val walletDataProvider: WalletDataProvider,
+    private val platformRepo: PlatformRepo,
+    private val coinJoinConfig: CoinJoinConfig,
+    private val topUpsDao: TopUpsDao
 ) : BaseWorker(context, parameters) {
     companion object {
         private val log = LoggerFactory.getLogger(TopupIdentityWorker::class.java)
@@ -63,14 +66,14 @@ class TopupIdentityWorker @AssistedInject constructor(
             ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
         val identity = inputData.getString(KEY_IDENTITY)
             ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_IDENTITY parameter"))
-        val value = inputData.getLong(KEY_VALUE, 0)
-        if (value == 0L) {
-            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_VALUE parameter"))
-        }
+//        val value = inputData.getLong(KEY_VALUE, 0)
+//        if (value == 0L) {
+//            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_VALUE parameter"))
+//        }
         val topupTxId = inputData.getString(KEY_TOPUP_TX)?.let { Sha256Hash.wrap(it) }
         val authGroupExtension = walletDataProvider.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
-        var topupTx = authGroupExtension.topupFundingTransactions.find { it.txId == topupTxId }
-        val coinValue = Coin.valueOf(value)
+        val topupTx = authGroupExtension.topupFundingTransactions.find { it.txId == topupTxId } ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_TOPUP_TX parameter"))
+        //val coinValue = Coin.valueOf(value)
 
         val encryptionKey: KeyParameter
         try {
@@ -83,42 +86,59 @@ class TopupIdentityWorker @AssistedInject constructor(
 
         return try {
             org.bitcoinj.core.Context.propagate(walletDataProvider.wallet!!.context)
-            if (topupTx == null) {
-                topupTx = topUpRepository.createTopupTransaction(
-                    platformRepo.blockchainIdentity,
-                    coinValue,
-                    encryptionKey,
-                    coinJoinConfig.getMode() != CoinJoinMode.NONE
+//            if (topupTx == null) {
+//                topupTx = topUpRepository.createTopupTransaction(
+//                    platformRepo.blockchainIdentity,
+//                    coinValue,
+//                    encryptionKey,
+//                    coinJoinConfig.getMode() != CoinJoinMode.NONE
+//                )
+//            }
+            val existingTopup = topUpsDao.getByTxId(topupTx.txId)
+            if (existingTopup != null && existingTopup.used()) {
+                Result.success(
+                    workDataOf(
+                        KEY_IDENTITY to identity,
+                        KEY_TOPUP_TX to existingTopup.txId.toString(),
+                        KEY_BALANCE to platformRepo.getIdentityBalance()
+                    )
+                )
+            } else {
+                val topupEntry = TopUp(toUserId = identity, workId = id.toString(), txId = topupTx.txId)
+                topUpsDao.insert(topupEntry)
+
+//                val wasTxSent = topupTx.confidence.isChainLocked ||
+//                    topupTx.confidence.isTransactionLocked ||
+//                    topupTx.confidence.numBroadcastPeers() > 0
+//                if (!wasTxSent) {
+//                    topUpRepository.sendTransaction(topupTx)
+//                }
+//                log.info("topup tx sent: {}", topupTx.txId)
+                topUpRepository.topUpIdentity(
+                    topupTx,
+                    encryptionKey
+                )
+                // topUpsDao.insert(topupEntry.copy(creditedAt = System.currentTimeMillis()))
+               // log.info("topup success: {}", topupTx.txId)
+                Result.success(
+                    workDataOf(
+                        KEY_IDENTITY to identity,
+                        KEY_TOPUP_TX to topupTx.txId.toString(),
+                        KEY_BALANCE to platformRepo.blockchainIdentity.creditBalance.value * 1000
+                    )
                 )
             }
-            val wasTxSent = topupTx.confidence.isChainLocked || topupTx.confidence.isTransactionLocked ||
-                topupTx.confidence.numBroadcastPeers() > 0
-            if (!wasTxSent) {
-                topUpRepository.sendTransaction(topupTx)
-            }
-            log.info("topup tx sent: {}", topupTx.txId)
-            topUpRepository.topUpIdentity(
-                topupTx,
-                encryptionKey
-            )
-            log.info("topup success: {}", topupTx.txId)
-            Result.success(
-                workDataOf(
-                    KEY_IDENTITY to identity,
-                    KEY_TOPUP_TX to topupTx.txId.toString(),
-                    KEY_BALANCE to platformRepo.blockchainIdentity.creditBalance.value * 1000
-                )
-            )
         } catch (ex: Exception) {
             analytics.logError(ex, "Topup Identity: failed to topup identity")
             val args = when (ex) {
                 is InsufficientMoneyException -> arrayOf(ex.missing.toString())
                 else -> arrayOf()
             }
+            // check for already used?
             Result.failure(
                 workDataOf(
                     KEY_IDENTITY to identity,
-                    KEY_TOPUP_TX to topupTx?.txId.toString(),
+                    KEY_TOPUP_TX to topupTx.txId.toString(),
                     KEY_EXCEPTION to ex.javaClass.simpleName,
                     KEY_ERROR_MESSAGE to formatExceptionMessage("topup exception:", ex),
                     KEY_EXCEPTION_ARGS to args

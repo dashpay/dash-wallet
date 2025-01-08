@@ -225,15 +225,37 @@ class TopUpRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun topUpIdentity(
-        topupAssetLockTransaction: AssetLockTransaction,
+    private suspend fun addTopUp(txId: Sha256Hash): TopUp {
+        val topUp = TopUp(
+            txId,
+            platformRepo.blockchainIdentity.uniqueIdString
+        )
+        topUpsDao.insert(topUp)
+        return topUp
+    }
+
+    override suspend fun topUpIdentity(
+        topUpTx: AssetLockTransaction,
         aesKeyParameter: KeyParameter
     ) {
+        val topUp = topUpsDao.getByTxId(
+            topUpTx.txId
+        ) ?: addTopUp(topUpTx.txId)
+
+        val wasTxSent = topUpTx.confidence.isChainLocked ||
+            topUpTx.confidence.isTransactionLocked ||
+            topUpTx.confidence.numBroadcastPeers() > 0
+        if (!wasTxSent) {
+            sendTransaction(topUpTx)
+        }
+        log.info("topup tx sent: {}", topUpTx.txId)
         platformRepo.blockchainIdentity.topUp(
-            topupAssetLockTransaction,
+            topUpTx,
             aesKeyParameter,
             useISLock = true,
             waitForChainlock = true
         )
+        log.info("topup success: {}", topUpTx.txId)
+        topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
     }
 }
