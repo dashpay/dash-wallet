@@ -74,6 +74,7 @@ interface TopUpRepository {
     /** sends the transaction and waits for IS or CL */
     suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean
 
+    /** top up identity and save topup state to the db */
     suspend fun topUpIdentity(
         topupAssetLockTransaction: AssetLockTransaction,
         aesKeyParameter: KeyParameter
@@ -248,7 +249,7 @@ class TopUpRepositoryImpl @Inject constructor(
         val topUp = topUpsDao.getByTxId(
             topUpTx.txId
         ) ?: addTopUp(topUpTx.txId)
-
+        Context.propagate(walletDataProvider.wallet!!.context)
         val wasTxSent = topUpTx.confidence.isChainLocked ||
             topUpTx.confidence.isTransactionLocked ||
             topUpTx.confidence.numBroadcastPeers() > 0
@@ -256,14 +257,24 @@ class TopUpRepositoryImpl @Inject constructor(
             sendTransaction(topUpTx)
         }
         log.info("topup tx sent: {}", topUpTx.txId)
-        platformRepo.blockchainIdentity.topUp(
-            topUpTx,
-            aesKeyParameter,
-            useISLock = true,
-            waitForChainlock = true
-        )
-        log.info("topup success: {}", topUpTx.txId)
-        topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
+        try {
+            platformRepo.blockchainIdentity.topUp(
+                topUpTx,
+                aesKeyParameter,
+                useISLock = true,
+                waitForChainlock = true
+            )
+            log.info("topup success: {}", topUpTx.txId)
+            topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
+        } catch (e: Exception) {
+            val regex = Regex(""".*Asset lock transaction [a-fA-F0-9]{64} output \d+ already completely used""")
+            if (e.message?.let { regex.matches(it) || it.contains("Object already exists: state transition already in chain")} == true) {
+                // the asset lock was already used
+                topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
+            } else {
+                throw e
+            }
+        }
     }
 
     private var checkedPreviousTopUps = false

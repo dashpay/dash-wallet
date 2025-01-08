@@ -45,6 +45,7 @@ interface TopUpsDao {
 
     @Query("SELECT COUNT(*) FROM topup_table")
     suspend fun count(): Int
-    @Query("SELECT * FROM topup_table WHERE creditedAt <> 0")
+
+    @Query("SELECT * FROM topup_table WHERE creditedAt == 0")
     fun getUnused(): List<TopUp>
 }
