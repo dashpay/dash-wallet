@@ -1,20 +1,18 @@
 package de.schildbach.wallet.ui.send
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.data.CreditBalanceInfo
-import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
-import de.schildbach.wallet.service.work.BaseWorker
+import de.schildbach.wallet.integration.android.BitcoinIntegration
 import de.schildbach.wallet.ui.more.tools.ConfirmTopUpDialogFragment
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.utils.ExchangeRate
@@ -23,7 +21,6 @@ import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
-import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 
 class BuyCreditsFragment : SendCoinsFragment() {
@@ -32,6 +29,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
     }
 
     private val buyCreditsViewModel by viewModels<BuyCreditsViewModel>()
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.paymentHeader.setTitle(getString(R.string.credit_balance_button_buy))
@@ -175,9 +173,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
 
         // need to put the conformation for used with Create UserName
         val dialog = ConfirmTopUpDialogFragment()
-        dialog.show(
-            requireActivity()
-        ) { confirmed ->
+        dialog.show(requireActivity()) { confirmed ->
             if (confirmed) {
                 lifecycleScope.launch {
                     handleGo(true)
@@ -199,7 +195,8 @@ class BuyCreditsFragment : SendCoinsFragment() {
             val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it) }
 
             try {
-                //viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND)
+                // TODO: there are no events for Topups
+                // viewModel.logEvent(AnalyticsConstants.Topup.ENTER_AMOUNT_TOPUP)
 
                 if (enterAmountFragment?.maxSelected == true) {
                     viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
@@ -209,7 +206,6 @@ class BuyCreditsFragment : SendCoinsFragment() {
                 val topUpKey = viewModel.getNextTopupKey()
                 val tx = viewModel.signAndSendAssetLock(editedAmount, exchangeRate, checkBalance, topUpKey)
                 buyCreditsViewModel.topUpTransaction = tx
-                //buyCreditsViewModel.topUpOnPlatform(editedAmount)
 
                 onSignAndSendPaymentSuccess(tx)
             } catch (ex: LeftoverBalanceException) {
@@ -234,17 +230,17 @@ class BuyCreditsFragment : SendCoinsFragment() {
 
     private fun onSignAndSendPaymentSuccess(transaction: Transaction) {
 //        viewModel.logSentEvent(enterAmountViewModel.dashToFiatDirection.value ?: true)
-//        val callingActivity = requireActivity().callingActivity
-//
-//        if (callingActivity != null) {
-//            log.info("returning result to calling activity: {}", callingActivity.flattenToString())
-//            val resultIntent = Intent()
-//            BitcoinIntegration.transactionHashToResult(
-//                resultIntent,
-//                transaction.txId.toString()
-//            )
-//            requireActivity().setResult(Activity.RESULT_OK, resultIntent)
-//        }
+        val callingActivity = requireActivity().callingActivity
+
+        if (callingActivity != null) {
+            log.info("returning result to calling activity: {}", callingActivity.flattenToString())
+            val resultIntent = Intent()
+            BitcoinIntegration.transactionHashToResult(
+                resultIntent,
+                transaction.txId.toString()
+            )
+            requireActivity().setResult(Activity.RESULT_OK, resultIntent)
+        }
         lifecycleScope.launch {
             buyCreditsViewModel.topUpOnPlatform()
             showTransactionResult(transaction, false)
