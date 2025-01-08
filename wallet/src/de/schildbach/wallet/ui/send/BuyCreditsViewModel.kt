@@ -2,24 +2,18 @@ package de.schildbach.wallet.ui.send
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.WalletDataProvider
@@ -33,8 +27,7 @@ class BuyCreditsViewModel @Inject constructor(
     val identity: BlockchainIdentityConfig,
     val walletDataProvider: WalletDataProvider,
     val analytics: AnalyticsService,
-    val dashPayConfig: DashPayConfig,
-    private val topUpsDao: TopUpsDao
+    val dashPayConfig: DashPayConfig
 ) : ViewModel() {
     var identityId: String? = null
     var topUpTransaction: Transaction? = null
