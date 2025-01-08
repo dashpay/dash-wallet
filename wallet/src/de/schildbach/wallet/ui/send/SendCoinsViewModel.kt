@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.send
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.common.base.Preconditions.checkState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -81,6 +82,7 @@ class SendCoinsViewModel @Inject constructor(
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
+        private val dryRunKey = ECKey()
     }
 
     enum class State {
@@ -132,6 +134,8 @@ class SendCoinsViewModel @Inject constructor(
     private var _coinJoinMode = MutableStateFlow(CoinJoinMode.NONE)
     val coinJoinMode: Flow<CoinJoinMode>
         get() = _coinJoinMode
+    /** the resulting transaction is an asset lock transaction (default = false) */
+    var isAssetLock = false
 
     init {
         blockchainStateDao.observeState()
@@ -208,6 +212,9 @@ class SendCoinsViewModel @Inject constructor(
         checkBalance: Boolean
     ): Transaction {
         _state.value = State.SENDING
+        if (isAssetLock) {
+            error("isAssetLock must be false, but is true")
+        }
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
 
         val transaction = try {
@@ -237,6 +244,9 @@ class SendCoinsViewModel @Inject constructor(
         key: ECKey
     ): Transaction {
         _state.value = State.SENDING
+        if (!isAssetLock) {
+            error("isAssetLock must be true, but is true")
+        }
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
 
         val transaction = try {
@@ -302,6 +312,31 @@ class SendCoinsViewModel @Inject constructor(
         return isInitialized && basePaymentIntent.hasOutputs()
     }
 
+    /** creates a send request using the payment intent and [isAssetLock] */
+    private fun createSendRequest(
+        mayEditAmount: Boolean,
+        paymentIntent: PaymentIntent,
+        signInputs: Boolean,
+        forceEnsureMinRequiredFee: Boolean
+    ): SendRequest {
+        return if (!isAssetLock) {
+            sendCoinsTaskRunner.createSendRequest(
+                mayEditAmount,
+                paymentIntent,
+                signInputs,
+                forceEnsureMinRequiredFee
+            )
+        } else {
+            sendCoinsTaskRunner.createAssetLockSendRequest(
+                mayEditAmount,
+                paymentIntent,
+                signInputs,
+                forceEnsureMinRequiredFee,
+                dryRunKey
+            )
+        }
+    }
+
     private fun executeDryrun(amount: Coin) {
         dryrunSendRequest = null
         dryRunException = null
@@ -316,7 +351,7 @@ class SendCoinsViewModel @Inject constructor(
 
         try {
             // check regular payment
-            var sendRequest = sendCoinsTaskRunner.createSendRequest(
+            var sendRequest = createSendRequest(
                 basePaymentIntent.mayEditAmount(),
                 finalPaymentIntent,
                 signInputs = false,
@@ -325,7 +360,7 @@ class SendCoinsViewModel @Inject constructor(
             wallet.completeTx(sendRequest)
 
             if (checkDust(sendRequest)) {
-                sendRequest = sendCoinsTaskRunner.createSendRequest(
+                sendRequest = createSendRequest(
                     basePaymentIntent.mayEditAmount(),
                     finalPaymentIntent,
                     signInputs = false,

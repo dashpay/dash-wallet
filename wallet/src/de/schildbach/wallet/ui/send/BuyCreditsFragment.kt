@@ -36,6 +36,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
         super.onViewCreated(view, savedInstanceState)
         binding.paymentHeader.setTitle(getString(R.string.credit_balance_button_buy))
         enterAmountViewModel.setMinAmount(Coin.valueOf(50_000))
+        viewModel.isAssetLock = true
 //        buyCreditsViewModel.currentWorkId.filterNot { it.isEmpty() }.observe(viewLifecycleOwner) { workId ->
 //            buyCreditsViewModel.topWorkStatus(workId).observe(viewLifecycleOwner) { workData ->
 //                log.info("topup work data: {}", workData)
