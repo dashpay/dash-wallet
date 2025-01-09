@@ -38,12 +38,10 @@ import org.dash.wallet.common.util.GenericUtils
 import javax.inject.Inject
 
 
-data class ConfirmUserNameUIState(
+data class ConfirmTopUpUIState(
     val amountStr: String = "",
     val fiatSymbol: String = "",
-    val fiatAmountStr: String = "",
-    val usernameSubmittedSuccess: Boolean = false,
-    val usernameSubmittedError: Boolean = false
+    val fiatAmountStr: String = ""
 )
 
 @HiltViewModel
@@ -53,8 +51,8 @@ class ConfirmTopupDialogViewModel @Inject constructor(
     private val walletUIConfig: WalletUIConfig
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ConfirmUserNameUIState())
-    val uiState: StateFlow<ConfirmUserNameUIState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(ConfirmTopUpUIState())
+    val uiState: StateFlow<ConfirmTopUpUIState> = _uiState.asStateFlow()
     val exchangeRate: ExchangeRate? = null
     var amount: Coin = Coin.ZERO
         set(value) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.send.SendCoinsViewModel
 import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.DialogConfirmTopupBinding
 import de.schildbach.wallet_test.databinding.DialogConfirmUsernameRequestBinding
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
@@ -36,30 +37,22 @@ import org.dash.wallet.common.util.observe
 
 @AndroidEntryPoint
 class ConfirmTopUpDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_topup) {
-    private val binding by viewBinding(DialogConfirmUsernameRequestBinding::bind)
+    private val binding by viewBinding(DialogConfirmTopupBinding::bind)
 
     private val viewModel by viewModels<ConfirmTopupDialogViewModel>()
     private val sendViewModel by activityViewModels<SendCoinsViewModel>()
     private var onConfirmAction: ((Boolean) -> Unit)? = null
 
-    //private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
-    //private val args by navArgs<ConfirmUsernameRequestDialogFragmentArgs>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.amount = sendViewModel.currentAmount
         binding.confirmBtn.setOnClickListener {
-           // requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_CONFIRM)
-            //requestUserNameViewModel.submit()
+            // requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.TOPUP_CONFIRM)
             lifecycleScope.launch {
                 onConfirmAction?.invoke(true)
                 dismiss()
             }
         }
-        binding.confirmBtn.isEnabled = false
-        binding.userAccepts.setOnClickListener {
-            binding.confirmBtn.isEnabled = binding.userAccepts.isChecked
-        }
-
         binding.dismissBtn.setOnClickListener { dismiss() }
 
         viewModel.uiState.observe(viewLifecycleOwner) {
