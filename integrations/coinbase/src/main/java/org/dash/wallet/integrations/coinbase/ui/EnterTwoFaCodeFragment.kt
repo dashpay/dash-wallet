@@ -31,9 +31,9 @@ import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.LockScreenAware
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.setRoundedBackground
@@ -47,8 +47,8 @@ import org.dash.wallet.integrations.coinbase.viewmodels.TransactionState
 
 @AndroidEntryPoint
 class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), LockScreenAware {
-
     private val binding by viewBinding(EnterTwoFaCodeFragmentBinding::bind)
+    private val args by navArgs<EnterTwoFaCodeFragmentArgs>()
     private val viewModel by viewModels<EnterTwoFaCodeViewModel>()
     private lateinit var loadingDialog: AdaptiveDialog
     private var onBackPressedCallback: OnBackPressedCallback? = null
@@ -56,11 +56,10 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         handleBackPress()
-        val params = arguments?.let { EnterTwoFaCodeFragmentArgs.fromBundle(it).transactionParams }
-        viewModel.sendInitialTransactionToSMSTwoFactorAuth(params?.params)
+        viewModel.sendInitialTransactionToSMSTwoFactorAuth(args.transactionParams.params)
 
         binding.verifyBtn.setOnClickListener {
-            viewModel.verifyUserAndCompleteTransaction(params?.params, binding.enterCodeField.text.toString())
+            viewModel.verifyUserAndCompleteTransaction(binding.enterCodeField.text.toString())
         }
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
 
@@ -68,11 +67,11 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
             setLoadingState(it)
         }
 
-        viewModel.transactionState.observe(viewLifecycleOwner){ state ->
-            params?.let { setTransactionState(it.type, state) }
+        viewModel.transactionState.observe(viewLifecycleOwner) { state ->
+            setTransactionState(args.transactionParams.type, state)
         }
 
-        viewModel.twoFaErrorState.observe(viewLifecycleOwner){
+        viewModel.twoFaErrorState.observe(viewLifecycleOwner) {
             binding.enterCodeField.setRoundedBackground(org.dash.wallet.common.R.style.InputErrorBackground)
             binding.incorrectCodeGroup.isVisible = true
             binding.enterCodeDetails.isVisible = false
@@ -93,21 +92,21 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
             val intent = Intent(ACTION_VIEW)
             intent.data = Uri.parse(helpUrl)
             startActivity(intent)
-        }catch (e: ActivityNotFoundException){
+        }catch (e: ActivityNotFoundException) {
             Toast.makeText(requireActivity(), helpUrl, Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun setTransactionState(transactionType: TransactionType, state: TransactionState) {
-       if (state.isTransactionSuccessful){
-           when(transactionType){
+       if (state.isTransactionSuccessful) {
+           when(transactionType) {
                TransactionType.BuyDash -> showTransactionStateDialog(CoinBaseResultDialog.Type.DEPOSIT_SUCCESS)
                TransactionType.BuySwap -> showTransactionStateDialog(CoinBaseResultDialog.Type.CONVERSION_SUCCESS)
                TransactionType.TransferDash -> showTransactionStateDialog(CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS)
                else -> {}
            }
        } else {
-           when(transactionType){
+           when(transactionType) {
                TransactionType.BuyDash -> showTransactionStateDialog(CoinBaseResultDialog.Type.DEPOSIT_ERROR, state.responseMessage)
                TransactionType.BuySwap -> showTransactionStateDialog(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, state.responseMessage)
                TransactionType.TransferDash -> showTransactionStateDialog(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, state.responseMessage)
@@ -117,7 +116,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
     }
 
     private fun setLoadingState(showLoading: Boolean) {
-        if (showLoading){
+        if (showLoading) {
             showProgressDialog()
         } else {
             hideProgressDialog()
@@ -127,7 +126,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
     private val keyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
         var value = StringBuilder()
 
-        fun refreshValue(){
+        fun refreshValue() {
             value.clear()
             value.append(binding.enterCodeField.text.toString())
         }
@@ -140,9 +139,9 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
 
         override fun onBack(longClick: Boolean) {
             refreshValue()
-            if (longClick){
+            if (longClick) {
                 value.clear()
-            } else if (value.isNotEmpty()){
+            } else if (value.isNotEmpty()) {
                 value.deleteCharAt(value.length - 1)
             }
             applyNewValue(value.toString())
@@ -168,16 +167,16 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
         }
     }
 
-    private fun showProgressDialog(){
-        if (::loadingDialog.isInitialized && loadingDialog.dialog?.isShowing == true){
+    private fun showProgressDialog() {
+        if (::loadingDialog.isInitialized && loadingDialog.dialog?.isShowing == true) {
             loadingDialog.dismissAllowingStateLoss()
         }
         loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
         loadingDialog.show(parentFragmentManager, tag)
     }
 
-    private fun hideProgressDialog(){
-        if (loadingDialog.isAdded){
+    private fun hideProgressDialog() {
+        if (loadingDialog.isAdded) {
             loadingDialog.dismissAllowingStateLoss()
         }
     }
@@ -189,13 +188,12 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
                 object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                     override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
                         when (type) {
-                            CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR , CoinBaseResultDialog.Type.DEPOSIT_ERROR-> {
+                            CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, CoinBaseResultDialog.Type.DEPOSIT_ERROR -> {
                                 viewModel.logRetry(type)
-                                viewModel.isRetryingTransfer(true)
                                 dismiss()
                                 binding.enterCodeField.text?.clear()
                             }
-                            CoinBaseResultDialog.Type.CONVERSION_ERROR-> {
+                            CoinBaseResultDialog.Type.CONVERSION_ERROR -> {
                                 viewModel.logRetry(type)
                                 dismiss()
                                 findNavController().popBackStack()

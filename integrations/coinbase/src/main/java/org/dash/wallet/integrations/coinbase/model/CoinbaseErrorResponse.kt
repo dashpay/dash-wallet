@@ -19,7 +19,9 @@ package org.dash.wallet.integrations.coinbase.model
 
 import android.os.Parcelable
 import com.google.gson.Gson
+import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
+import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 
 enum class CoinbaseErrorType {
     NONE,
@@ -58,4 +60,7 @@ data class CoinbaseErrorResponse(
 data class Error(
     val id: String? = null,
     val message: String? = null
-) : Parcelable
+) : Parcelable {
+    @IgnoredOnParcel
+    val isInvalidRequest = id == CoinbaseConstants.ERROR_ID_INVALID_REQUEST
+}

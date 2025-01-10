@@ -60,7 +60,7 @@ interface CoinBaseRepositoryInt {
     suspend fun sendFundsToWallet(
         sendTransactionToWalletParams: SendTransactionToWalletParams,
         api2FATokenVersion: String?
-    ): ResponseResource<SendTransactionToWalletResponse?>
+    ): SendTransactionToWalletResponse?
     suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel>
     suspend fun commitSwapTrade(buyOrderId: String): ResponseResource<SwapTradeUIModel>
     suspend fun completeCoinbaseAuthentication(authorizationCode: String): Boolean
@@ -211,9 +211,9 @@ class CoinBaseRepository @Inject constructor(
     override suspend fun sendFundsToWallet(
         sendTransactionToWalletParams: SendTransactionToWalletParams,
         api2FATokenVersion: String?
-    ) = safeApiCall {
+    ): SendTransactionToWalletResponse? {
         val userAccountId = config.get(CoinbaseConfig.USER_ACCOUNT_ID) ?: ""
-        servicesApi.sendCoinsToWallet(
+        return servicesApi.sendCoinsToWallet(
             accountId = userAccountId,
             sendTransactionToWalletParams = sendTransactionToWalletParams,
             api2FATokenVersion = api2FATokenVersion

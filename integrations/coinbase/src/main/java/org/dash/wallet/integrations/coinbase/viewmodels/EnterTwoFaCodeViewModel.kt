@@ -22,18 +22,15 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.model.CoinbaseErrorResponse
 import org.dash.wallet.integrations.coinbase.model.SendTransactionToWalletParams
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integrations.coinbase.ui.dialogs.CoinBaseResultDialog
-import java.io.IOException
+import retrofit2.HttpException
 import java.util.UUID
 import javax.inject.Inject
 
@@ -42,7 +39,7 @@ class EnterTwoFaCodeViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
-
+    private lateinit var transactionParams: SendTransactionToWalletParams
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
     val loadingState: LiveData<Boolean>
         get() = _loadingState
@@ -53,68 +50,48 @@ class EnterTwoFaCodeViewModel @Inject constructor(
 
     val twoFaErrorState = SingleLiveEvent<Unit>()
 
-    private var _isRetryingTransfer: Boolean = false
+    fun sendInitialTransactionToSMSTwoFactorAuth(params: SendTransactionToWalletParams) = viewModelScope.launch {
+        transactionParams = params.copy(idem = UUID.randomUUID().toString())
 
-    fun isRetryingTransfer(isRetryingTransfer: Boolean) {
-        _isRetryingTransfer = isRetryingTransfer
-    }
+        try {
+            coinBaseRepository.sendFundsToWallet(transactionParams, null)
+        } catch (ex: HttpException) {
+            // Meant to fail with 2fa required error
 
-    fun sendInitialTransactionToSMSTwoFactorAuth(
-        params: SendTransactionToWalletParams?
-    ) = viewModelScope.launch {
-        val sendTransactionToWalletParams = params?.copy(idem = UUID.randomUUID().toString())
-        sendTransactionToWalletParams?.let {
-            coinBaseRepository.sendFundsToWallet(it, null)
+            // TODO: does every account has 2fa?
+            //  iOS does a regular request first and only requires 2fa input in case of failure
         }
     }
 
-    fun verifyUserAndCompleteTransaction(
-        params: SendTransactionToWalletParams?,
-        twoFaCode: String
-    ) = viewModelScope.launch(Dispatchers.Main) {
+    fun verifyUserAndCompleteTransaction(twoFaCode: String) = viewModelScope.launch {
         _loadingState.value = true
 
-        val sendTransactionToWalletParams = if (_isRetryingTransfer) {
-            params?.copy(idem = UUID.randomUUID().toString())
-        } else {
-            params
-        }
+        try {
+            // 2fa request must have same parameters, including idem
+            val result = coinBaseRepository.sendFundsToWallet(transactionParams, twoFaCode)
+            _loadingState.value = false
+            _transactionState.value = TransactionState(result != null)
+        } catch (ex: Exception) {
+            _loadingState.value = false
+            var errorMessage = ex.message ?: ex.toString()
 
-        sendTransactionToWalletParams?.let {
-            _isRetryingTransfer = false
-            when (val result = coinBaseRepository.sendFundsToWallet(it, twoFaCode)) {
-                is ResponseResource.Success -> {
-                    _loadingState.value = false
-                    if (result.value == null) {
-                        _transactionState.value = TransactionState(false)
-                    } else {
-                        _transactionState.value = TransactionState(true)
-                    }
-                }
+            if (ex is HttpException) {
+                if (ex.code() == 400 || ex.code() == 402 || ex.code() == 429) {
+                    val error = ex.response()?.errorBody()?.string()
+                    error?.let { errorMsg ->
+                        val errorContent = CoinbaseErrorResponse.getErrorMessage(errorMsg)
 
-                is ResponseResource.Failure -> {
-                    _loadingState.value = false
-                    try {
-                        val error = result.errorBody
-                        if (result.errorCode == 400 || result.errorCode == 402 || result.errorCode == 429) {
-                            error?.let { errorMsg ->
-                                val errorContent = CoinbaseErrorResponse.getErrorMessage(errorMsg)
-                                if (errorContent?.id.equals(CoinbaseConstants.ERROR_ID_INVALID_REQUEST, true) &&
-                                    errorContent?.message?.contains(CoinbaseConstants.ERROR_MSG_INVALID_REQUEST) == true
-                                ) {
-                                    twoFaErrorState.call()
-                                } else {
-                                    _transactionState.value = TransactionState(false, errorContent?.message)
-                                }
-                            }
+                        if (errorContent?.isInvalidRequest == true) {
+                            twoFaErrorState.call()
+                            return@launch
                         } else {
-                            _transactionState.value = TransactionState(false, null)
+                            errorContent?.message?.let { errorMessage = it }
                         }
-                    } catch (e: IOException) {
-                        _transactionState.value = TransactionState(false, null)
                     }
                 }
             }
+
+            _transactionState.value = TransactionState(false, errorMessage)
         }
     }
 
