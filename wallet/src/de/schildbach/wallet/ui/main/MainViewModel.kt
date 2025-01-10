@@ -512,9 +512,7 @@ class MainViewModel @Inject constructor(
             ).filter { it.passesFilter(filter, metadata) }
                 .sortedByDescending { it.groupDate }
 
-            log.info("PERF: wrapAllTransactions: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
-            watch.reset()
-            watch.start()
+            log.info("wrapAllTransactions: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
 
             val txByHash = mutableMapOf<String, TransactionRowView>()
             val allTransactionViews = allTransactionWrapped
@@ -542,8 +540,6 @@ class MainViewModel @Inject constructor(
                 .mapValues { (_, transactions) ->
                     transactions.sortedByDescending { it.time }
                 }
-
-            log.info("PERF: refreshTransactions map: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
 
             viewModelScope.launch {
                 _transactions.value = allTransactionViews

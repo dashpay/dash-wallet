@@ -70,7 +70,7 @@ class WalletObserver(private val wallet: Wallet) {
         observeTxConfidence: Boolean,
         vararg filters: TransactionFilter
     ): Flow<Transaction> = callbackFlow {
-        log.info("PERF: observing transactions start {}", this@WalletObserver)
+        log.info("observing transactions start {}", this@WalletObserver)
         try {
             Context.propagate(wallet.context)
             Threading.USER_THREAD.execute {
@@ -80,7 +80,7 @@ class WalletObserver(private val wallet: Wallet) {
                         Looper.prepare()
                     }
                 } catch (e: Exception) {
-                    log.error("PERF: Error during threading setup", e)
+                    log.error("Error during threading setup", e)
                     close(e) // Propagate error to Flow
                 }
             }
@@ -92,18 +92,18 @@ class WalletObserver(private val wallet: Wallet) {
                 try {
                     val oneHourAgo = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1)
                     if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
-//                         log.info("PERF: observing transaction sent: {} [=====] {}", tx.txId, this@WalletObserver)
+                        // log.info("observing transaction sent: {} [=====] {}", tx.txId, this@WalletObserver)
                         if (tx.updateTime.time > oneHourAgo && observeTxConfidence) {
                             transactions[tx.txId] = tx
                             tx.confidence.addEventListener(Threading.USER_THREAD, transactionConfidenceListener)
                             // log.info("observing transaction: start listening to {}", tx.txId)
                         }
                         trySend(tx).onFailure {
-                            log.error("PERF: Failed to send transaction sent event", it)
+                            log.error("Failed to send transaction sent event", it)
                         }
                     }
                 } catch (e: Exception) {
-                    log.error("PERF: Error in coinsSentListener", e)
+                    log.error("Error in coinsSentListener", e)
                     close(e)
                 }
             }
@@ -111,7 +111,7 @@ class WalletObserver(private val wallet: Wallet) {
             val coinsReceivedListener = WalletCoinsReceivedEventListener { _, tx: Transaction?, _, _ ->
                 try {
                     if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
-//                         log.info("observing transaction received: {} [=====] {}", tx.txId, this@WalletObserver)
+                        // log.info("observing transaction received: {} [=====] {}", tx.txId, this@WalletObserver)
                         val oneHourAgo = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1)
                         if (tx.updateTime.time > oneHourAgo && observeTxConfidence) {
                             transactions[tx.txId] = tx
@@ -119,11 +119,11 @@ class WalletObserver(private val wallet: Wallet) {
                             // log.info("observing transaction: start listening to {}", tx.txId)
                         }
                         trySend(tx).onFailure {
-                            log.error("PERF: Failed to send transaction received event", it)
+                            log.error("Failed to send transaction received event", it)
                         }
                     }
                 } catch (e: Exception) {
-                    log.error("PERF: Error in coinsReceivedListener", e)
+                    log.error("Error in coinsReceivedListener", e)
                     close(e)
                 }
             }
@@ -133,9 +133,9 @@ class WalletObserver(private val wallet: Wallet) {
                     try {
                         val tx = transactions[transactionConfidence.transactionHash]
                         if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
-//                             log.info("observing transaction conf {} [=====] {}", tx.txId, this@WalletObserver)
+                            // log.info("observing transaction conf {} [=====] {}", tx.txId, this@WalletObserver)
                             trySend(tx).onFailure {
-                                log.error("PERF: Failed to send transaction confidence event", it)
+                                log.error("Failed to send transaction confidence event", it)
                             }
                         }
                         val shouldStopListening = when (changeReason) {
@@ -150,7 +150,7 @@ class WalletObserver(private val wallet: Wallet) {
                             transactions.remove(transactionConfidence.transactionHash)
                         }
                     } catch (e: Exception) {
-                        log.error("PERF: Error in transactionConfidenceChangedListener", e)
+                        log.error("Error in transactionConfidenceChangedListener", e)
                         close(e)
                     }
                 }
@@ -160,7 +160,7 @@ class WalletObserver(private val wallet: Wallet) {
             wallet.addCoinsReceivedEventListener(Threading.USER_THREAD, coinsReceivedListener)
 
             awaitClose {
-                log.info("PERF: observing transactions stop: {}", this@WalletObserver)
+                log.info("observing transactions stop: {}", this@WalletObserver)
                 wallet.removeCoinsSentEventListener(coinsSentListener)
                 wallet.removeCoinsReceivedEventListener(coinsReceivedListener)
                 if (observeTxConfidence) {
@@ -172,7 +172,7 @@ class WalletObserver(private val wallet: Wallet) {
                 }
             }
         } catch (e: Exception) {
-            log.error("PERF: Error setting up transaction observation", e)
+            log.error("Error setting up transaction observation", e)
             close(e)
         }
     }
