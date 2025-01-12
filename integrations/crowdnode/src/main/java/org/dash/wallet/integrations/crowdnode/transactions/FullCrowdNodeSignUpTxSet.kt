@@ -46,7 +46,7 @@ open class FullCrowdNodeSignUpTxSet(
         private set
 
     val isComplete: Boolean
-        get() = transactions.count() == 5
+        get() = welcomeToApiResponse != null && transactions.count() >= 5
 
     open val acceptTermsResponse: CrowdNodeAcceptTermsResponse?
         get() = matchedFilters.filterIsInstance<CrowdNodeAcceptTermsResponse>().firstOrNull()

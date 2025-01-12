@@ -9,7 +9,7 @@ import org.dash.wallet.common.transactions.TransactionWrapperFactory
 class FullCrowdNodeSignUpTxSetFactory(params: NetworkParameters, transactionBag: TransactionBag) :
     TransactionWrapperFactory {
     private val wrapper = FullCrowdNodeSignUpTxSet(params, transactionBag)
-    override val maxTransactions: Long = 5
+    override val averageTransactions: Long = 5
     override val wrappers = listOf(wrapper)
 
     override fun tryInclude(tx: Transaction): Pair<Boolean, TransactionWrapper?> {

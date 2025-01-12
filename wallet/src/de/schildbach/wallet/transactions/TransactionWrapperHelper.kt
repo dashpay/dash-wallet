@@ -28,7 +28,7 @@ object TransactionWrapperHelper {
         transactions: Set<Transaction?>,
         vararg wrapperFactories: TransactionWrapperFactory
     ): Collection<TransactionWrapper> {
-        wrapperFactories.sortByDescending { it.maxTransactions }
+        wrapperFactories.sortByDescending { it.averageTransactions }
         val wrappedTransactions = ArrayList<TransactionWrapper>()
 
         for (transaction in transactions) {

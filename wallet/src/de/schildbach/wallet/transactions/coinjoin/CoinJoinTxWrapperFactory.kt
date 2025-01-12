@@ -30,7 +30,7 @@ class CoinJoinTxWrapperFactory(val params: NetworkParameters, val wallet: Wallet
     private val wrapperMap = hashMapOf<LocalDate, CoinJoinMixingTxSet>()
     override val wrappers: List<TransactionWrapper>
         get() = wrapperMap.values.toList()
-    override val maxTransactions: Long = Long.MAX_VALUE
+    override val averageTransactions: Long = Long.MAX_VALUE
 
     override fun tryInclude(tx: Transaction): Pair<Boolean, TransactionWrapper?> {
         val localDate = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
