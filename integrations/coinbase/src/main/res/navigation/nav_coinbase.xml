@@ -129,7 +129,7 @@
         <argument
             android:name="transactionParams"
             app:argType="org.dash.wallet.integrations.coinbase.model.CoinbaseTransactionParams"
-            />
+            app:nullable="false" />
         <action
             android:id="@+id/conversionPreviewToTwoFaCode"
             app:destination="@id/enterTwoFaCodeFragment"
