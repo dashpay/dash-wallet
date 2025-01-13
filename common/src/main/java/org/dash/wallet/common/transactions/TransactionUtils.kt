@@ -15,12 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+@file:OptIn(FlowPreview::class)
+
 package org.dash.wallet.common.transactions
 
+import android.util.Log
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.sample
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
 import org.bitcoinj.script.ScriptException
+import java.util.concurrent.ConcurrentHashMap
 
 object TransactionUtils {
     fun getWalletAddressOfReceived(tx: Transaction, bag: TransactionBag): Address? {
@@ -118,4 +129,21 @@ object TransactionUtils {
             }
             return result
         }
+}
+
+fun Flow<Transaction>.batchAndFilterUpdates(timeInterval: Long = 500): Flow<List<Transaction>> {
+    val latestTransactions = ConcurrentHashMap<Sha256Hash, Transaction>()
+
+    return this
+        .onEach { transaction ->
+            // Update the latest transaction for the hash
+            latestTransactions[transaction.txId] = transaction
+        }
+        .sample(timeInterval) // Emit events every [timeInterval]
+        .map {
+            latestTransactions.values.toList().also {
+                latestTransactions.clear()
+            }
+        }
+        .filter { it.isNotEmpty() }
 }

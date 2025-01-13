@@ -63,7 +63,7 @@ public class TxResourceMapper {
                     typeId = R.string.transaction_row_status_masternode_update_service;
                     break;
                 default:
-                    TransactionConfidence confidence = tx.getConfidence();
+                    TransactionConfidence confidence = tx.getConfidence(Constants.CONTEXT);
                     Wallet dashPayWallet = null;
 
                     if (wallet instanceof Wallet) {
@@ -173,7 +173,7 @@ public class TxResourceMapper {
      */
     @StringRes
     public int getReceivedStatusString(Transaction tx, @NonNull Context context, int bestChainLockBlockHeight) {
-        TransactionConfidence confidence = tx.getConfidence();
+        TransactionConfidence confidence = tx.getConfidence(context);
         int statusId = -1;
         if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) {
             int confirmations = confidence.getDepthInBlocks();
@@ -224,7 +224,7 @@ public class TxResourceMapper {
      */
     public boolean isSending(Transaction tx, Wallet wallet) {
         Coin value = tx.getValue(wallet);
-        TransactionConfidence confidence = tx.getConfidence();
+        TransactionConfidence confidence = tx.getConfidence(wallet.getContext());
         return !(value.isPositive() ||
                 (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) ||
                 (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING && (

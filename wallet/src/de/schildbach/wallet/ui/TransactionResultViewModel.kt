@@ -55,8 +55,9 @@ class TransactionResultViewModel @Inject constructor(
     val wallet: Wallet?
         get() = walletData.wallet
 
-    var transaction: Transaction? = null
-        private set
+    private val _transaction = MutableStateFlow<Transaction?>(null)
+    val transaction: StateFlow<Transaction?>
+        get() = _transaction
 
     private val _transactionMetadata: MutableStateFlow<TransactionMetadata?> = MutableStateFlow(null)
     val transactionMetadata
@@ -83,15 +84,20 @@ class TransactionResultViewModel @Inject constructor(
 
     fun init(txId: Sha256Hash?) {
         txId?.let {
-            this.transaction = walletData.wallet!!.getTransaction(txId)
-            this.transaction?.let {
-                monitorTransactionMetadata(it.txId)
-                findContact(it)
+            // should this be viewModelScope.launch(Dispatchers.IO) and not use withContext
+            viewModelScope.launch {
+                val tx = withContext(Dispatchers.IO) { walletData.wallet!!.getTransaction(txId) }
+                tx?.let {
+                    _transaction.value = tx
+                    monitorTransactionMetadata(it.txId)
+                    findContact(it)
+                }
             }
         }
     }
 
     private fun monitorTransactionMetadata(txId: Sha256Hash) {
+        // this might take some time, so let it run asynchronously
         viewModelScope.launch(Dispatchers.IO) {
             transactionMetadataProvider.importTransactionMetadata(txId)
             transactionMetadataProvider.observeTransactionMetadata(txId).collect {
@@ -101,7 +107,7 @@ class TransactionResultViewModel @Inject constructor(
     }
 
     fun toggleTaxCategory() {
-        transaction?.let { tx ->
+        transaction.value?.let { tx ->
             val metadata = _transactionMetadata.value // can be null if there is no metadata in the table
 
             var currentTaxCategory = metadata?.taxCategory // can be null if user never specified a value
@@ -124,13 +130,15 @@ class TransactionResultViewModel @Inject constructor(
         }
     }
 
-    private fun findContact(tx: Transaction) {
+    private suspend fun findContact(tx: Transaction) {
         if (!platformRepo.hasIdentity) {
             _contact.postValue(null)
             return
         }
 
-        val userId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
+        val userId = withContext(Dispatchers.IO) {
+            platformRepo.blockchainIdentity.getContactForTransaction(tx)
+        }
 
         if (userId == null) {
             _contact.postValue(null)

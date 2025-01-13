@@ -39,11 +39,3 @@ class TransactionComparator: Comparator<Transaction> {
         return tx1.txId.compareTo(tx2.txId)
     }
 }
-
-class TransactionWrapperComparator: Comparator<TransactionWrapper> {
-    private val txComparator = TransactionComparator()
-
-    override fun compare(wrapper1: TransactionWrapper, wrapper2: TransactionWrapper): Int {
-        return txComparator.compare(wrapper1.transactions.last(), wrapper2.transactions.last())
-    }
-}

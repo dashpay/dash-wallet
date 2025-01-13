@@ -44,6 +44,8 @@ interface WalletDataProvider {
 
     fun observeWalletChanged(): Flow<Unit>
 
+    fun observeWalletReset(): Flow<Unit>
+
     fun observeBalance(
         balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED,
         coinSelector: CoinSelector? = null

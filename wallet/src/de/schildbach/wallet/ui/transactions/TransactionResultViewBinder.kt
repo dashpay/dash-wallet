@@ -23,7 +23,6 @@ import android.graphics.drawable.Animatable
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -34,8 +33,6 @@ import coil.transform.RoundedCornersTransformation
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.DashPayUserActivity
-import de.schildbach.wallet.ui.dashpay.utils.display
-import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Address
@@ -50,7 +47,6 @@ import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
-import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.util.currencySymbol
 import org.dash.wallet.common.util.makeLinks
 
@@ -200,8 +196,10 @@ class TransactionResultViewBinder(
         confidence: TransactionConfidence?,
         reason: TransactionConfidence.Listener.ChangeReason?
     ) {
-        org.bitcoinj.core.Context.propagate(wallet.context)
-        updateStatus(true)
+        binding.root.post {
+            org.bitcoinj.core.Context.propagate(wallet.context)
+            updateStatus(true)
+        }
     }
 
     private fun updateStatus(fromConfidence: Boolean = false) {

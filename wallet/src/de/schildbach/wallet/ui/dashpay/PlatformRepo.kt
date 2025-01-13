@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.dashpay
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
+import android.util.Log
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import dagger.hilt.EntryPoint
@@ -44,7 +45,12 @@ import de.schildbach.wallet.service.platform.PlatformService
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.evolution.AssetLockTransaction
@@ -78,10 +84,11 @@ import javax.inject.Singleton
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class PlatformRepo @Inject constructor(
     val walletApplication: WalletApplication,
-    val blockchainIdentityDataDao: BlockchainIdentityConfig,
+    val blockchainIdentityDataStorage: BlockchainIdentityConfig,
     val appDatabase: AppDatabase,
     val platform: PlatformService,
     val coinJoinConfig: CoinJoinConfig
@@ -134,12 +141,17 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun init() {
-        // load the dash-sdk library
-        System.loadLibrary("sdklib")
-        authenticationGroupExtension = walletApplication.wallet?.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as? AuthenticationGroupExtension
-        blockchainIdentityDataDao.load()?.let {
-            blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet!!)
-            initializeStateRepository()
+        if (authenticationGroupExtension == null) {
+            // load the dash-sdk library
+            System.loadLibrary("sdklib")
+            authenticationGroupExtension = walletApplication.wallet?.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as? AuthenticationGroupExtension
+        }
+
+        if (!hasIdentity) {
+            blockchainIdentityDataStorage.load()?.let {
+                blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet!!)
+                initializeStateRepository()
+            }
         }
     }
 
@@ -346,6 +358,10 @@ class PlatformRepo @Inject constructor(
      * @return
      */
     suspend fun searchContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Resource<List<UsernameSearchResult>> {
+        if (!hasIdentity) {
+            return Resource.success(emptyList())
+        }
+
         return try {
             val userIdList = HashSet<String>()
 
@@ -383,60 +399,107 @@ class PlatformRepo @Inject constructor(
                 profiles[user] = profile
             }
 
-            val usernameSearchResults = ArrayList<UsernameSearchResult>()
-            val searchText = text.lowercase()
+            val usernameSearchResults = getFromProfiles(profiles, text.lowercase(), toContactMap, fromContactMap, includeSentPending)
+            usernameSearchResults.orderBy(orderBy)
 
-            for (profile in profiles) {
-                if (profile.value == null) {
-                    // this happens occasionally when calling this method just after sending contact request
-                    // It occurs when calling NotificationsForUserLiveData.onContactsUpdated() after
-                    // sending contact request (even after adding long delay).
-                    continue
-                }
-
-                // find matches where the text matches part of the username or displayName
-                // if the text is blank, match everything
-                val username = profile.value!!.username
-                val displayName = profile.value!!.displayName
-                val usernameContainsSearchText = username.findLastAnyOf(listOf(searchText), ignoreCase = true) != null ||
-                        displayName.findLastAnyOf(listOf(searchText), ignoreCase = true) != null
-                if (!usernameContainsSearchText && searchText != "") {
-                    continue
-                }
-
-                // Determine if this identity is our contact
-                val toContact: DashPayContactRequest? = toContactMap[profile.value!!.userId]
-
-                // Determine if I am this identity's contact
-                val fromContact: DashPayContactRequest? = fromContactMap[profile.value!!.userId]
-
-                val usernameSearchResult = UsernameSearchResult(profile.value!!.username,
-                        profile.value!!, toContact, fromContact)
-
-                if (usernameSearchResult.requestReceived || (includeSentPending && usernameSearchResult.requestSent))
-                    usernameSearchResults.add(usernameSearchResult)
-            }
-            when (orderBy) {
-                UsernameSortOrderBy.DISPLAY_NAME -> usernameSearchResults.sortBy {
-                    if (it.dashPayProfile.displayName.isNotEmpty())
-                        it.dashPayProfile.displayName.lowercase()
-                    else it.dashPayProfile.username.lowercase()
-                }
-                UsernameSortOrderBy.USERNAME -> usernameSearchResults.sortBy {
-                    it.dashPayProfile.username.lowercase()
-                }
-                UsernameSortOrderBy.DATE_ADDED -> usernameSearchResults.sortByDescending {
-                    it.date
-                }
-                else -> {
-                    // ignore
-                }
-                //TODO: sort by last activity or date added
-            }
             Resource.success(usernameSearchResults)
         } catch (e: Exception) {
             Resource.error(formatExceptionMessage("search contact request", e), null)
         }
+    }
+
+    fun observeContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Flow<List<UsernameSearchResult>> {
+        return blockchainIdentityDataStorage.observe()
+            .filterNotNull()
+            .flatMapLatest { _ ->
+                init()
+
+                if (!hasIdentity) {
+                    return@flatMapLatest flowOf(emptyList())
+                }
+
+                val userId = blockchainIdentity.uniqueIdString
+
+                // Combine the two contact request flows
+                combine(
+                    dashPayContactRequestDao.observeToOthers(userId),
+                    dashPayContactRequestDao.observeFromOthers(userId)
+                ) { toContacts, fromContacts ->
+                    val userIdList = HashSet<String>()
+
+                    val toContactMap = HashMap<String, DashPayContactRequest>()
+                    toContacts.forEach {
+                        userIdList.add(it.toUserId)
+                        toContactMap[it.toUserId] = it
+                    }
+
+                    val fromContactMap = HashMap<String, DashPayContactRequest>()
+                    fromContacts.forEach {
+                        userIdList.add(it.userId)
+                        if (!fromContactMap.containsKey(it.userId)) {
+                            fromContactMap[it.userId] = it
+                        } else {
+                            val previous = fromContactMap[it.userId]!!
+                            if (previous.timestamp > it.timestamp) {
+                                fromContactMap[it.userId] = it
+                            }
+                        }
+                    }
+
+                    Triple(userIdList, toContactMap, fromContactMap)
+                }.flatMapLatest { (userIdList, toContactMap, fromContactMap) ->
+                    dashPayProfileDao.observeByUserIds(userIdList.toList()).map { list ->
+                        val profiles = list.associateBy { it.userId }
+                        val usernameSearchResults = getFromProfiles(profiles, text.lowercase(), toContactMap, fromContactMap, includeSentPending)
+                        usernameSearchResults.orderBy(orderBy)
+                        usernameSearchResults
+                    }
+                }
+            }
+            .distinctUntilChanged()
+    }
+
+    private fun getFromProfiles(
+        profiles: Map<String, DashPayProfile?>,
+        searchText: String,
+        toContactMap: Map<String, DashPayContactRequest>,
+        fromContactMap: Map<String, DashPayContactRequest>,
+        includeSentPending: Boolean
+    ): ArrayList<UsernameSearchResult> {
+        val usernameSearchResults = ArrayList<UsernameSearchResult>()
+
+        for (profile in profiles) {
+            if (profile.value == null) {
+                // this happens occasionally when calling this method just after sending contact request
+                // It occurs when calling NotificationsForUserLiveData.onContactsUpdated() after
+                // sending contact request (even after adding long delay).
+                continue
+            }
+
+            // find matches where the text matches part of the username or displayName
+            // if the text is blank, match everything
+            val username = profile.value!!.username
+            val displayName = profile.value!!.displayName
+            val usernameContainsSearchText = username.findLastAnyOf(listOf(searchText), ignoreCase = true) != null ||
+                    displayName.findLastAnyOf(listOf(searchText), ignoreCase = true) != null
+            if (!usernameContainsSearchText && searchText != "") {
+                continue
+            }
+
+            // Determine if this identity is our contact
+            val toContact: DashPayContactRequest? = toContactMap[profile.value!!.userId]
+
+            // Determine if I am this identity's contact
+            val fromContact: DashPayContactRequest? = fromContactMap[profile.value!!.userId]
+
+            val usernameSearchResult = UsernameSearchResult(profile.value!!.username,
+                profile.value!!, toContact, fromContact)
+
+            if (usernameSearchResult.requestReceived || (includeSentPending && usernameSearchResult.requestSent))
+                usernameSearchResults.add(usernameSearchResult)
+        }
+
+        return usernameSearchResults
     }
 
     fun formatExceptionMessage(description: String, e: Exception): String {
@@ -461,7 +524,7 @@ class PlatformRepo @Inject constructor(
 
     suspend fun shouldShowAlert(): Boolean {
         val hasSentInvites = invitationsDao.count() > 0
-        val blockchainIdentityData = blockchainIdentityDataDao.load()
+        val blockchainIdentityData = blockchainIdentityDataStorage.load()
         val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
         val canAffordIdentityCreation = walletApplication.canAffordIdentityCreation()
         return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || !hasSentInvites)
@@ -678,11 +741,11 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun loadBlockchainIdentityBaseData(): BlockchainIdentityBaseData? {
-        return blockchainIdentityDataDao.loadBase()
+        return blockchainIdentityDataStorage.loadBase()
     }
 
     suspend fun loadBlockchainIdentityData(): BlockchainIdentityData? {
-        return blockchainIdentityDataDao.load()
+        return blockchainIdentityDataStorage.load()
     }
 
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
@@ -756,7 +819,7 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun resetIdentityCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
-        blockchainIdentityDataDao.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, null)
+        blockchainIdentityDataStorage.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, null)
         blockchainIdentityData.creationStateErrorMessage = null
     }
 
@@ -776,13 +839,13 @@ class PlatformRepo @Inject constructor(
         } else {
             log.info("updating creation state {} ({})", state, errorMessage)
         }
-        blockchainIdentityDataDao.updateCreationState(blockchainIdentityData.id, state, errorMessage)
+        blockchainIdentityDataStorage.updateCreationState(blockchainIdentityData.id, state, errorMessage)
         blockchainIdentityData.creationState = state
         blockchainIdentityData.creationStateErrorMessage = errorMessage
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {
-        blockchainIdentityDataDao.insert(blockchainIdentityData)
+        blockchainIdentityDataStorage.insert(blockchainIdentityData)
     }
 
     /**
@@ -829,10 +892,10 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun doneAndDismiss() {
-        val blockchainIdentityData = blockchainIdentityDataDao.load()
+        val blockchainIdentityData = blockchainIdentityDataStorage.load()
         if (blockchainIdentityData != null && blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
             blockchainIdentityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
-            blockchainIdentityDataDao.insert(blockchainIdentityData)
+            blockchainIdentityDataStorage.insert(blockchainIdentityData)
         }
     }
 
@@ -929,7 +992,7 @@ class PlatformRepo @Inject constructor(
      */
     suspend fun clearDatabase(includeInvitations: Boolean) {
         log.info("clearing databases (includeInvitations = $includeInvitations)")
-        blockchainIdentityDataDao.clear()
+        blockchainIdentityDataStorage.clear()
         dashPayProfileDao.clear()
         dashPayContactRequestDao.clear()
         userAlertDao.clear()
@@ -1150,7 +1213,7 @@ class PlatformRepo @Inject constructor(
 
     fun clearBlockchainIdentityData() {
         GlobalScope.launch(Dispatchers.IO) {
-            blockchainIdentityDataDao.clear()
+            blockchainIdentityDataStorage.clear()
         }
     }
 
@@ -1236,5 +1299,23 @@ class PlatformRepo @Inject constructor(
 
     fun getIdentityBalance(identifier: Identifier): CreditBalanceInfo {
         return CreditBalanceInfo(platform.client.getIdentityBalance(identifier))
+    }
+}
+
+fun ArrayList<UsernameSearchResult>.orderBy(orderBy: UsernameSortOrderBy) {
+    when (orderBy) {
+        UsernameSortOrderBy.DISPLAY_NAME -> this.sortBy {
+            if (it.dashPayProfile.displayName.isNotEmpty())
+                it.dashPayProfile.displayName.lowercase()
+            else it.dashPayProfile.username.lowercase()
+        }
+        UsernameSortOrderBy.USERNAME -> this.sortBy {
+            it.dashPayProfile.username.lowercase()
+        }
+        UsernameSortOrderBy.DATE_ADDED -> this.sortByDescending {
+            it.date
+        }
+        else -> { /* ignore */ }
+        //TODO: sort by last activity or date added
     }
 }
