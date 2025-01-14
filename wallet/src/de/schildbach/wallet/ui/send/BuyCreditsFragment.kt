@@ -34,75 +34,8 @@ class BuyCreditsFragment : SendCoinsFragment() {
         super.onViewCreated(view, savedInstanceState)
         binding.paymentHeader.setTitle(getString(R.string.credit_balance_button_buy))
         enterAmountViewModel.setMinAmount(Coin.valueOf(50_000))
+        binding.paymentHeader.setPreposition("")
         viewModel.isAssetLock = true
-//        buyCreditsViewModel.currentWorkId.filterNot { it.isEmpty() }.observe(viewLifecycleOwner) { workId ->
-//            buyCreditsViewModel.topWorkStatus(workId).observe(viewLifecycleOwner) { workData ->
-//                log.info("topup work data: {}", workData)
-//                try {
-//                    val txIdString =
-//                        workData.data?.outputData?.getString(TopupIdentityWorker.KEY_TOPUP_TX)
-//
-//                    when (workData.status) {
-//                        Status.LOADING -> {
-//                            log.info("  loading: {}", workData.data?.outputData)
-//                            //enterAmountFragment?.setContinueButtonText(getString(R.string.sending_topup_transaction))
-//                            txIdString?.let {
-//                                observeTopUp(Sha256Hash.wrap(txIdString))
-//                            }
-//                        }
-//
-//                        Status.SUCCESS -> {
-//                            log.info("  success: {}", workData.data?.outputData)
-//                            lifecycleScope.launch {
-//                                txIdString?.let {
-//                                    observeTopUp(Sha256Hash.wrap(txIdString))
-//                                }
-//                            }
-//                        }
-//
-//                        Status.ERROR -> {
-//                            log.info("  error: {}", workData.data?.outputData)
-//                            lifecycleScope.launch {
-//                                val ex = Exception(workData.data?.outputData?.getString(BaseWorker.KEY_EXCEPTION))
-//                                val args = workData.data?.outputData?.getStringArray(BaseWorker.KEY_EXCEPTION_ARGS)
-//                                    ?: Array<String?>(0) { "" }
-//                                when (workData.data?.outputData?.getString(BaseWorker.KEY_EXCEPTION)) {
-//                                    LeftoverBalanceException::class.java.simpleName -> {
-//                                        val continueAgain = MinimumBalanceDialog().showAsync(requireActivity())
-//
-//                                        if (continueAgain == true) {
-//                                            handleGo(false)
-//                                        }
-//                                    }
-//
-//                                    InsufficientMoneyException::class.java.simpleName -> {
-//                                        showInsufficientMoneyDialog(Coin.parseCoin(args[0]) ?: Coin.ZERO)
-//                                    }
-//
-//                                    KeyCrypterException::class.java.simpleName -> {
-//                                        showFailureDialog(ex)
-//                                    }
-//
-//                                    Wallet.CouldNotAdjustDownwards::class.java.simpleName -> {
-//                                        showEmptyWalletFailedDialog()
-//                                    }
-//
-//                                    else -> {
-//                                        showFailureDialog(ex)
-//                                    }
-//                                }
-//                            }
-//                        }
-//
-//                        Status.CANCELED -> {
-//                            log.info("  cancel: {}", workData.data?.outputData)
-//                        }
-//                    }
-//                } catch (e: Exception) {
-//                    log.error("error processing vote information", e)
-//                }
-//            }
-//        }
     }
 
     override fun updateView() {
