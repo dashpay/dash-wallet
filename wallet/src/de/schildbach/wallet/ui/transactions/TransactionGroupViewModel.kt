@@ -42,9 +42,8 @@ import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
 
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
-@ExperimentalCoroutinesApi
 class TransactionGroupViewModel @Inject constructor(
     val walletData: WalletDataProvider,
     val config: Configuration,
@@ -69,7 +68,7 @@ class TransactionGroupViewModel @Inject constructor(
         get() = _transactions
 
     fun init(transactionWrapper: TransactionWrapper) {
-        _exchangeRate.value = transactionWrapper.transactions.last().exchangeRate
+        _exchangeRate.value = transactionWrapper.transactions.values.first().exchangeRate
 
         metadataProvider.observePresentableMetadata()
             .flatMapLatest { memos ->
@@ -95,7 +94,7 @@ class TransactionGroupViewModel @Inject constructor(
             else -> TxResourceMapper()
         }
 
-        _transactions.value = transactionWrapper.transactions.map {
+        _transactions.value = transactionWrapper.transactions.values.map {
             val txMetadata = metadata.getOrDefault(it.txId, null)
             TransactionRowView.fromTransaction(
                 it, walletData.wallet!!, walletData.wallet!!.context, txMetadata, null, resourceMapper

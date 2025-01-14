@@ -18,18 +18,14 @@
 package de.schildbach.wallet.transactions
 
 import android.os.Looper
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.catch
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
-import org.bitcoinj.core.listeners.TransactionConfidenceEventListener
 import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.listeners.WalletChangeEventListener
@@ -38,7 +34,6 @@ import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener
 import org.bitcoinj.wallet.listeners.WalletResetEventListener
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.slf4j.LoggerFactory
-import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -77,7 +72,7 @@ class WalletObserver(private val wallet: Wallet) {
     ): Flow<Transaction> = callbackFlow {
         log.info("observing transactions start {}", this@WalletObserver)
         try {
-            val transactions = ConcurrentHashMap<Sha256Hash, Transaction>()
+            Context.propagate(wallet.context)
             Threading.USER_THREAD.execute {
                 try {
                     Context.propagate(wallet.context)
@@ -90,6 +85,7 @@ class WalletObserver(private val wallet: Wallet) {
                 }
             }
 
+            val transactions = ConcurrentHashMap<Sha256Hash, Transaction>()
             var transactionConfidenceListener: TransactionConfidence.Listener? = null
 
             val coinsSentListener = WalletCoinsSentEventListener { _, tx: Transaction?, _, _ ->
@@ -179,7 +175,5 @@ class WalletObserver(private val wallet: Wallet) {
             log.error("Error setting up transaction observation", e)
             close(e)
         }
-    }.catch { e ->
-        log.error("observing transactions error", e)
-    }.buffer(capacity = Channel.UNLIMITED)
+    }
 }

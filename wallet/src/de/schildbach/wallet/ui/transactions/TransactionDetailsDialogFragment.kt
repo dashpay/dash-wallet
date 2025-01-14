@@ -130,7 +130,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
     private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
         contentBinding = TransactionResultContentBinding.bind(binding.transactionResultContainer)
         transactionResultViewBinder.bind(tx, dashPayProfile)
-        contentBinding.viewOnExplorer.setOnClickListener { viewOnBlockExplorer() }
+        contentBinding.openExplorerCard.setOnClickListener { viewOnBlockExplorer() }
         contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
         contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
         contentBinding.addPrivateMemoBtn.setOnClickListener {

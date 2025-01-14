@@ -1,50 +1,51 @@
 package de.schildbach.wallet.transactions.coinjoin
 
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.core.*
 import org.bitcoinj.wallet.WalletEx
-import org.dash.wallet.common.transactions.TransactionComparator
 import org.dash.wallet.common.transactions.TransactionWrapper
-import org.dash.wallet.common.transactions.filters.TransactionFilter
-import org.slf4j.LoggerFactory
+import java.time.LocalDate
+import java.time.ZoneId
 
 open class CoinJoinMixingTxSet(
-    private val networkParams: NetworkParameters,
     private val wallet: WalletEx
 ) : TransactionWrapper {
-    private val log = LoggerFactory.getLogger(CoinJoinMixingTxSet::class.java)
-    private var isFinished = false
-
-    private val coinjoinTxFilters = mutableListOf(
-        CreateDenominationTxFilter(wallet),
-        MakeCollateralTxFilter(wallet),
-        MixingFeeTxFilter(wallet),
-        MixingTxFilter(wallet)
-    )
-
-    private val matchedFilters = mutableListOf<TransactionFilter>()
-    override val transactions = sortedSetOf(TransactionComparator())
+    override val id: String
+        get() = "coinjoin_$groupDate"
+    override val transactions: HashMap<Sha256Hash, Transaction> = hashMapOf()
+    final override var groupDate: LocalDate = LocalDate.now()
+        private set
 
     override fun tryInclude(tx: Transaction): Boolean {
-        if (isFinished || transactions.any { it.txId == tx.txId }) {
-            return false
-        }
-
-        val matchedFilter = coinjoinTxFilters.firstOrNull { it.matches(tx) }
-
-        if (matchedFilter != null) {
-            transactions.add(tx)
-            matchedFilters.add(matchedFilter)
+        if (transactions.containsKey(tx.txId)) {
+            transactions[tx.txId] = tx
             return true
         }
 
-        return false
+        val type = CoinJoinTransactionType.fromTx(tx, wallet)
+
+        if (type == CoinJoinTransactionType.None || type == CoinJoinTransactionType.Send) {
+            return false
+        }
+
+        val txDate = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+
+        if (transactions.isEmpty()) {
+            groupDate = txDate
+        } else if (!groupDate.isEqual(txDate)) {
+            return false
+        }
+
+        transactions[tx.txId] = tx
+
+        return true
     }
 
     override fun getValue(bag: TransactionBag): Coin {
         var result = Coin.ZERO
 
-        for (tx in transactions) {
-            val value = tx.getValue(bag)
+        for (pair in transactions) {
+            val value = pair.value.getValue(bag)
             result = result.add(value)
         }
 

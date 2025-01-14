@@ -20,6 +20,7 @@ package org.dash.wallet.common.transactions
 import org.bitcoinj.core.Transaction
 
 interface TransactionWrapperFactory {
-    fun tryInclude(tx: Transaction): Pair<Boolean, TransactionWrapper?>
+    val averageTransactions: Long
     val wrappers: List<TransactionWrapper>
+    fun tryInclude(tx: Transaction): Pair<Boolean, TransactionWrapper?>
 }

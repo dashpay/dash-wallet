@@ -41,6 +41,9 @@ interface DashPayContactRequestDao {
     @Query("SELECT * FROM dashpay_contact_request WHERE toUserId = :toUserId")
     suspend fun loadFromOthers(toUserId: String): List<DashPayContactRequest>
 
+    @Query("SELECT * FROM dashpay_contact_request WHERE toUserId = :toUserId")
+    fun observeFromOthers(toUserId: String): Flow<List<DashPayContactRequest>>
+
     @Query("SELECT EXISTS (SELECT * FROM dashpay_contact_request WHERE userId = :userId AND toUserId = :toUserId AND accountReference = :accountReference)")
     suspend fun exists(userId: String, toUserId: String, accountReference: Int): Boolean
 

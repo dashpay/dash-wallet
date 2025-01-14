@@ -27,33 +27,17 @@ import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.transactions.TransactionComparator
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
-import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.slf4j.LoggerFactory
 
-class TransactionRowViewComparator(private val wallet: Wallet): Comparator<TransactionRowView> {
-    private val txComparator = TransactionComparator()
-
-    override fun compare(row1: TransactionRowView, row2: TransactionRowView): Int {
-        val tx1 = row1.txWrapper?.transactions?.last() ?: wallet.getTransaction(row1.txId)!!
-        val tx2 = row2.txWrapper?.transactions?.last() ?: wallet.getTransaction(row2.txId)!!
-        return txComparator.compare(
-            tx1,
-            tx2
-        )
-    }
-}
-
 data class TransactionRowView(
     override var title: ResourceString?,
-    val txId: Sha256Hash,
+    val id: String,
     val value: Coin,
     val exchangeRate: ExchangeRate?,
     val contact: DashPayProfile?,
@@ -78,14 +62,14 @@ data class TransactionRowView(
             contact: DashPayProfile?,
             metadata: PresentableTxMetadata? = null
         ): TransactionRowView {
-            val lastTx = txWrapper.transactions.last()
+            val firstTx = txWrapper.transactions.values.first()
 
             return when (txWrapper) {
                 is FullCrowdNodeSignUpTxSet -> TransactionRowView(
                         ResourceString(R.string.crowdnode_account),
-                        lastTx.txId,
+                        txWrapper.id,
                         txWrapper.getValue(bag),
-                        lastTx.exchangeRate,
+                        firstTx.exchangeRate,
                         null,
                         R.drawable.ic_crowdnode_logo,
                         null,
@@ -93,7 +77,7 @@ data class TransactionRowView(
                         -1,
                         metadata?.memo ?: "",
                         txWrapper.transactions.size,
-                        lastTx.updateTime.time,
+                        firstTx.updateTime.time,
                         TxResourceMapper().dateTimeFormat,
                         false,
                         ServiceName.CrowdNode,
@@ -102,24 +86,23 @@ data class TransactionRowView(
 
                 is CoinJoinMixingTxSet -> TransactionRowView(
                     ResourceString(R.string.coinjoin_mixing_transactions),
-                    lastTx.txId,
+                    txWrapper.id,
                     txWrapper.getValue(bag),
-                    lastTx.exchangeRate,
+                    firstTx.exchangeRate,
                     null,
                     R.drawable.ic_coinjoin_mixing_group,
                     null,
-                    R.style.TxNoBackground,
+                    R.style.TxSentBackground,
                     -1,
                     metadata?.memo ?: "",
                     txWrapper.transactions.size,
-                    lastTx.updateTime.time,
+                    firstTx.updateTime.time,
                     TxResourceMapper().dateTimeFormat,
                     false,
                     ServiceName.Unknown,
                     txWrapper
                 )
-
-                else -> fromTransaction(lastTx, bag, context, metadata, contact)
+                else -> fromTransaction(firstTx, bag, context, metadata, contact)
             }
         }
 
@@ -174,7 +157,7 @@ data class TransactionRowView(
 
             return TransactionRowView(
                 title,
-                tx.txId,
+                tx.txId.toString(),
                 if (removeFee) value.add(tx.fee) else value,
                 tx.exchangeRate,
                 contact,
@@ -193,7 +176,3 @@ data class TransactionRowView(
         }
     }
 }
-
-/** Wrapper class that avoids making copies of lists to trigger observers of the list */
-data class TransactionRowViewList (val rowViewList: List<TransactionRowView>)
-

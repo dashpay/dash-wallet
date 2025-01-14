@@ -202,6 +202,7 @@ if (file("../local.properties").exists()) {
 
 android {
     android.ndkVersion '21.3.6528147'
+    namespace "de.schildbach.wallet_test"
 
     defaultConfig {
         compileSdk 34
@@ -422,7 +423,7 @@ android {
         compose true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
     testOptions {
         unitTests.includeAndroidResources  = true

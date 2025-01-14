@@ -30,6 +30,7 @@ import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.filters.CoinsReceivedTxFilter
 import org.dash.wallet.common.transactions.filters.LockedTransaction
 import org.dash.wallet.common.transactions.filters.TxWithinTimePeriod
+import org.dash.wallet.common.transactions.waitToMatchFilters
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
@@ -51,7 +52,8 @@ open class CrowdNodeBlockchainApi @Inject constructor(
 
     suspend fun topUpAddress(accountAddress: Address, amount: Coin, emptyWallet: Boolean = false): Transaction {
         val topUpTx = paymentService.sendCoins(accountAddress, amount, null, emptyWallet)
-        return walletData.observeTransactions(true, LockedTransaction(topUpTx.txId)).first()
+        topUpTx.waitToMatchFilters(LockedTransaction())
+        return topUpTx
     }
 
     suspend fun makeSignUpRequest(accountAddress: Address): Transaction {

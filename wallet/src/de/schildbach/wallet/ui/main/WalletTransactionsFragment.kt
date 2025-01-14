@@ -48,6 +48,7 @@ import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
+import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.observeOnDestroy
@@ -88,10 +89,10 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                         TransactionGroupDetailsFragment(rowView.txWrapper)
                     } else if (rowView.service == ServiceName.DashDirect) {
                         viewModel.logEvent(AnalyticsConstants.DashDirect.DETAILS_GIFT_CARD)
-                        GiftCardDetailsDialog.newInstance(rowView.txId)
+                        GiftCardDetailsDialog.newInstance(Sha256Hash.wrap(rowView.id))
                     } else {
                         viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                        TransactionDetailsDialogFragment.newInstance(rowView.txId)
+                        TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(rowView.id))
                     }
 
                     fragment.show(requireActivity())
@@ -158,23 +159,21 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
             binding.loading.isVisible = false
-            val watch = Stopwatch.createStarted()
-            log.info("observing transaction list updated: {} items", transactionViews.size)
+
             if (transactionViews.isEmpty()) {
                 showEmptyView()
             } else {
-                val groupedByDate = transactionViews.groupBy {
-                    Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
-                }.map {
-                    val outList = mutableListOf<HistoryRowView>()
-                    outList.add(HistoryRowView(null, it.key))
-                    outList.apply { addAll(it.value) }
-                }.reduce { acc, list -> acc.apply { addAll(list) } }
+                val groupedByDate = transactionViews.entries
+                    .sortedByDescending { it.key }
+                    .map {
+                        val outList = mutableListOf<HistoryRowView>()
+                        outList.add(HistoryRowView(null, it.key))
+                        outList.apply { addAll(it.value) }
+                    }.reduce { acc, list -> acc.apply { addAll(list) } }
 
                 adapter.submitList(groupedByDate)
                 showTransactionList()
             }
-            log.info("refreshTransaction list: {} ms, {}", watch.elapsed(TimeUnit.MILLISECONDS), watch)
         }
 
         viewModel.blockchainIdentity.observe(viewLifecycleOwner) { identity ->
