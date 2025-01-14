@@ -280,8 +280,15 @@
     <string name="only_duplicates">Only duplicates</string>
     <string name="only_links">Only requests with links</string>
     <string name="only_links_short">With links</string>
-    <string name="date">Date: %s</string>
+    <string name="date">Request Date: %s</string>
     <string name="votes">Votes: %s</string>
+    <string name="voting_ends">Voting ends: %s</string>
+
+    <string-array name="usernames_group_by_options">
+        <item>None</item>
+        <item>Soonest first</item>
+        <item>Latest first</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>New to old</item>
@@ -296,16 +303,6 @@
         <item>I have not approved</item>
         <item>Has Blocked votes</item>
     </string-array>
-    <string name="unblock_button">Unblock</string>
-    <plurals name="block_vote_button">
-        <item quantity="one">Block</item>
-        <item quantity="other">Blocks</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="one">Approval</item>
-        <item quantity="other">Approvals</item>
-    </plurals>
-    <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Create your username</string>
     <string name="request_your_hint">Please note that you will not be able to change it in the future</string>
     <string name="request_username">Request Username</string>
@@ -360,7 +357,9 @@
     <string name="add_masternode_key">Add Masternode Voting Key</string>
     <string name="dont_ask_again">Don\'t ask me again</string>
     <string name="vote_submitting">Submitting your vote for %s username</string>
+    <string name="quick_vote_submitting">Submitting your votes for all usernames</string>
     <string name="vote_submitted">Voted for %s username</string>
+    <string name="quick_vote_submitted">Successfully voted for all usernames</string>
     <string name="cancel_submitting">Canceling your vote for %s username</string>
     <string name="cancel_submitted">Canceled vote for %s username</string>
     <string name="block_submitting">Blocking for %s username</string>
@@ -371,6 +370,10 @@
     <string name="quick_vote">Quick Voting</string>
     <string name="quick_vote_subtitle">By tapping the \"Vote for All\" button, you will automatically vote for all of the filtered usernames (%d) that were submitted first</string>
     <string name="vote_for_all">Vote for All</string>
+    <string name="one_vote_left_title">One Vote Left</string>
+    <string name="one_vote_left_show_usernames">Show usernames</string>
+    <string name="one_vote_left_subtitle">You have already voted for the following usernames %d times. You can only cast one more vote for these usernames.</string>
+    <string name="one_vote_left_username_examples" translatable="false">stargazer101, quantumquirk, dreamchaser22, pixelpioneer, nebulanavigator, echoexplorer, cyberscribe, lunalark, astroaficionado, mysticmuse, solarsage, galacticguru, horizonhunter, cosmiccrafter, celestialseeker, orbitoracle, stellarscribe, novanomad, astroartisan, meteormaverick</string>
     <string name="voting_period_active">Username Voting Period Active</string>
     <string name="there_was_a_network_error">There was a network error, you can try again at no extra cost</string>
     <string name="requested_username_has_been">Username has been requested.</string>
@@ -446,4 +449,10 @@
     <string name="mix_dash_message">To help prevent other people from seeing who you make payments to, it is recommended to mix your balance before you create your username.</string>
     <string name="dash_private_key_mainnet" translatable="false">XKm5koXHMm7UrVV3ki2pbGA8yZztiSR2F9x6ucEyCSuqTHBMjJix</string>
     <string name="dash_private_key_testnet" translatable="false">cUR2TrX4U6t6g9kRfDoBbwF2WRKBNjV3gK7HwTgQgmUUQCKXcT3N</string>
+    <string name="voting_period">Voting Period</string>
+    <string name="voting_period_ends_in_days">Voting ends in %d days</string>
+    <string name="voting_period_ends_today">Voting ends today</string>
+    <string name="voting_period_ends_tomorrow">Voting ends tomorrow</string>
+    <string name="link_included">link included</string>
+    <string name="group_by">Group by</string>
 </resources>

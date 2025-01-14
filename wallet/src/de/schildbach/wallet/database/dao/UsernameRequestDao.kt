@@ -35,6 +35,9 @@ interface UsernameRequestDao {
     @Query("SELECT * FROM username_requests WHERE requestId = :requestId")
     suspend fun getRequest(requestId: String): UsernameRequest?
 
+    @Query("SELECT * FROM username_requests WHERE normalizedLabel = :normalizedLabel")
+    suspend fun getRequestsByNormalizedLabel(normalizedLabel: String): List<UsernameRequest>
+
     @Query("SELECT * FROM username_requests WHERE requestId = :requestId")
     fun observeRequest(requestId: String): Flow<UsernameRequest?>
 
