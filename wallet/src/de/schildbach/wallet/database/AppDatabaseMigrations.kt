@@ -108,5 +108,21 @@ class AppDatabaseMigrations {
             }
 
         }
+
+        val migration14to15 = object : Migration(14, 15) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `topup_table` (
+                        `txId` BLOB NOT NULL, 
+                        `toUserId` TEXT NOT NULL, 
+                        `workId` TEXT NOT NULL, 
+                        `creditedAt` INTEGER NOT NULL, 
+                        PRIMARY KEY(`txId`)
+                    )
+                    """
+                )
+            }
+        }
     }
 }

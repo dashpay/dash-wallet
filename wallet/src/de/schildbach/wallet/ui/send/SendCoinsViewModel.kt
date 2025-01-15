@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.send
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.common.base.Preconditions.checkState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -44,11 +45,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.crypto.IKey
 import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.NotificationService
@@ -77,6 +82,7 @@ class SendCoinsViewModel @Inject constructor(
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
+        private val dryRunKey = ECKey()
     }
 
     enum class State {
@@ -128,6 +134,8 @@ class SendCoinsViewModel @Inject constructor(
     private var _coinJoinMode = MutableStateFlow(CoinJoinMode.NONE)
     val coinJoinMode: Flow<CoinJoinMode>
         get() = _coinJoinMode
+    /** the resulting transaction is an asset lock transaction (default = false) */
+    var isAssetLock = false
 
     init {
         blockchainStateDao.observeState()
@@ -204,6 +212,9 @@ class SendCoinsViewModel @Inject constructor(
         checkBalance: Boolean
     ): Transaction {
         _state.value = State.SENDING
+        if (isAssetLock) {
+            error("isAssetLock must be false, but is true")
+        }
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
 
         val transaction = try {
@@ -212,6 +223,39 @@ class SendCoinsViewModel @Inject constructor(
                 finalPaymentIntent,
                 true,
                 dryrunSendRequest!!.ensureMinRequiredFee
+            )
+            finalSendRequest.memo = basePaymentIntent.memo
+            finalSendRequest.exchangeRate = exchangeRate
+
+            sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
+        } catch (ex: Exception) {
+            _state.value = State.FAILED
+            throw ex
+        }
+
+        _state.value = State.SENT
+        return transaction
+    }
+
+    suspend fun signAndSendAssetLock(
+        editedAmount: Coin,
+        exchangeRate: ExchangeRate?,
+        checkBalance: Boolean,
+        key: ECKey
+    ): Transaction {
+        _state.value = State.SENDING
+        if (!isAssetLock) {
+            error("isAssetLock must be true, but is true")
+        }
+        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
+
+        val transaction = try {
+            val finalSendRequest = sendCoinsTaskRunner.createAssetLockSendRequest(
+                basePaymentIntent.mayEditAmount(),
+                finalPaymentIntent,
+                true,
+                dryrunSendRequest!!.ensureMinRequiredFee,
+                key
             )
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
@@ -268,6 +312,31 @@ class SendCoinsViewModel @Inject constructor(
         return isInitialized && basePaymentIntent.hasOutputs()
     }
 
+    /** creates a send request using the payment intent and [isAssetLock] */
+    private fun createSendRequest(
+        mayEditAmount: Boolean,
+        paymentIntent: PaymentIntent,
+        signInputs: Boolean,
+        forceEnsureMinRequiredFee: Boolean
+    ): SendRequest {
+        return if (!isAssetLock) {
+            sendCoinsTaskRunner.createSendRequest(
+                mayEditAmount,
+                paymentIntent,
+                signInputs,
+                forceEnsureMinRequiredFee
+            )
+        } else {
+            sendCoinsTaskRunner.createAssetLockSendRequest(
+                mayEditAmount,
+                paymentIntent,
+                signInputs,
+                forceEnsureMinRequiredFee,
+                dryRunKey
+            )
+        }
+    }
+
     private fun executeDryrun(amount: Coin) {
         dryrunSendRequest = null
         dryRunException = null
@@ -282,7 +351,7 @@ class SendCoinsViewModel @Inject constructor(
 
         try {
             // check regular payment
-            var sendRequest = sendCoinsTaskRunner.createSendRequest(
+            var sendRequest = createSendRequest(
                 basePaymentIntent.mayEditAmount(),
                 finalPaymentIntent,
                 signInputs = false,
@@ -291,7 +360,7 @@ class SendCoinsViewModel @Inject constructor(
             wallet.completeTx(sendRequest)
 
             if (checkDust(sendRequest)) {
-                sendRequest = sendCoinsTaskRunner.createSendRequest(
+                sendRequest = createSendRequest(
                     basePaymentIntent.mayEditAmount(),
                     finalPaymentIntent,
                     signInputs = false,
@@ -397,5 +466,14 @@ class SendCoinsViewModel @Inject constructor(
             dashPayProfile.userId,
             paymentIntent.amount
         )
+    }
+
+    fun getNextTopupKey(): ECKey {
+        val authGroup = wallet.getKeyChainExtension(
+            AuthenticationGroupExtension.EXTENSION_ID
+        ) as AuthenticationGroupExtension
+        return authGroup.freshKey(
+            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP
+        ) as ECKey
     }
 }

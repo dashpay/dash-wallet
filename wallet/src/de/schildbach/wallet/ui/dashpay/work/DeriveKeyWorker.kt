@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.work.BaseWorker
 import org.bitcoinj.crypto.KeyCrypterException
 
 class DeriveKeyWorker(context: Context, parameters: WorkerParameters)

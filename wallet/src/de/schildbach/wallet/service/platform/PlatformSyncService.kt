@@ -21,7 +21,6 @@ import android.app.ActivityManager
 import android.content.Intent
 import android.text.format.DateUtils
 import android.util.Log
-import androidx.core.content.ContextCompat
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
@@ -47,7 +46,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
-import de.schildbach.wallet.ui.dashpay.CreateIdentityService
+import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.dashpay.OnContactsUpdated
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -59,7 +58,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
-import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.EvolutionContact
@@ -76,7 +74,6 @@ import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ContestedDocumentResourceVotePoll
-import org.dashj.platform.sdk.PlatformValue
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.wallet.IdentityVerify
 import org.slf4j.Logger
@@ -92,14 +89,14 @@ import kotlin.time.Duration.Companion.seconds
 
 interface PlatformSyncService {
     fun init()
-    fun initSync()
+    suspend fun initSync(runFirstUpdateBlocking: Boolean = false)
     fun resume()
     fun shutdown()
 
     fun updateSyncStatus(stage: PreBlockStage)
     fun preBlockDownload(future: SettableFuture<Boolean>)
 
-    suspend fun updateContactRequests()
+    suspend fun updateContactRequests(initialSync: Boolean = false)
     fun postUpdateBloomFilters()
     suspend fun updateUsernameRequestsWithVotes()
     suspend fun updateUsernameRequestWithVotes(username: String)
@@ -120,7 +117,7 @@ interface PlatformSyncService {
 class PlatformSynchronizationService @Inject constructor(
     private val platform: PlatformService,
     private val platformRepo: PlatformRepo,
-    val analytics: AnalyticsService,
+    private val analytics: AnalyticsService,
     private val config: DashPayConfig,
     private val walletApplication: WalletApplication,
     private val transactionMetadataProvider: TransactionMetadataProvider,
@@ -132,9 +129,9 @@ class PlatformSynchronizationService @Inject constructor(
     private val invitationsDao: InvitationsDao,
     private val usernameRequestDao: UsernameRequestDao,
     private val usernameVoteDao: UsernameVoteDao,
-    private val identityConfig: BlockchainIdentityConfig
+    private val identityConfig: BlockchainIdentityConfig,
+    private val topUpRepository: TopUpRepository
 ) : PlatformSyncService {
-
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
         private val random = Random(System.currentTimeMillis())
@@ -167,7 +164,10 @@ class PlatformSynchronizationService @Inject constructor(
         // This method may not be required.  initSync must be called by PreBlockDownload handler
     }
 
-    override fun initSync() {
+    override suspend fun initSync(runFirstUpdateBlocking: Boolean) {
+        if (runFirstUpdateBlocking) {
+            updateContactRequests(true)
+        }
         platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY)
             .onEach { updateContactRequests() }
             .launchIn(syncScope)
@@ -207,7 +207,7 @@ class PlatformSynchronizationService @Inject constructor(
      * This method should not use blockchainIdentity because in some cases
      * when the app starts, it has not yet been initialized
      */
-    override suspend fun updateContactRequests() {
+    override suspend fun updateContactRequests(initialSync: Boolean) {
 
         // if there is no wallet or identity, then skip the remaining steps of the update
         if (!platformRepo.hasIdentity || walletApplication.wallet == null) {
@@ -339,31 +339,34 @@ class PlatformSynchronizationService @Inject constructor(
             }
             updateSyncStatus(PreBlockStage.GetSentRequests)
 
-            // If new keychains were added to the wallet, then update the bloom filters
-            if (addedContact) {
-                postUpdateBloomFilters()
+            if (!initialSync) {
+                // If new keychains were added to the wallet, then update the bloom filters
+                if (addedContact) {
+                    postUpdateBloomFilters()
+                }
+
+                // obtain profiles from new contacts
+                if (userIdList.isNotEmpty()) {
+                    updateContactProfiles(userIdList.toList(), 0L)
+                }
+
+                updateSyncStatus(PreBlockStage.GetNewProfiles)
+
+                coroutineScope {
+                    awaitAll(
+                        // fetch updated invitations
+                        async { updateInvitations() },
+                        // fetch updated transaction metadata
+                        async { updateTransactionMetadata() },  // TODO: this is skipped in VOTING state, but shouldn't be
+                        // fetch updated profiles from the network
+                        async { updateContactProfiles(userId, lastContactRequestTime) },
+                        // check for unused topups
+                        async { checkTopUps() }
+                    )
+                }
+
+                updateSyncStatus(PreBlockStage.GetUpdatedProfiles)
             }
-
-            // obtain profiles from new contacts
-            if (userIdList.isNotEmpty()) {
-                updateContactProfiles(userIdList.toList(), 0L)
-            }
-
-            updateSyncStatus(PreBlockStage.GetNewProfiles)
-
-            coroutineScope {
-                awaitAll(
-                    // fetch updated invitations
-                    async { updateInvitations() },
-                    // fetch updated transaction metadata
-                    async { updateTransactionMetadata() },  // TODO: this is skipped in VOTING state, but shouldn't be
-                    // fetch updated profiles from the network
-                    async { updateContactProfiles(userId, lastContactRequestTime) }
-                )
-            }
-
-            updateSyncStatus(PreBlockStage.GetUpdatedProfiles)
-
             // fire listeners if there were new contacts
             if (addedContact) {
                 fireContactsUpdatedListeners()
@@ -1278,13 +1281,9 @@ class PlatformSynchronizationService @Inject constructor(
 
                 if (identity != null) {
                     log.info("preBlockDownload: initiate recovery of existing identity ${identity.id}")
-                    ContextCompat.startForegroundService(
-                        walletApplication,
-                        CreateIdentityService.createIntentForRestore(
-                            walletApplication,
-                            identity.id.toBuffer()
-                        )
-                    )
+                    RestoreIdentityOperation(walletApplication)
+                        .create(identity.id.toString())
+                        .enqueue()
                     return@launch
                 } else {
                     log.info("preBlockDownload: no existing identity found")
@@ -1297,7 +1296,7 @@ class PlatformSynchronizationService @Inject constructor(
                 checkVotingStatus(identityData)
 
                 if (!updatingContacts.get()) {
-                    updateContactRequests()
+                    updateContactRequests(initialSync = true)
                 }
             }
             initSync()
@@ -1384,6 +1383,12 @@ class PlatformSynchronizationService @Inject constructor(
     private fun firePreBlockProgressListeners(stage: PreBlockStage) {
         for (listener in onPreBlockContactListeners) {
             listener.onPreBlockProgressUpdated(stage)
+        }
+    }
+
+    private suspend fun checkTopUps() {
+        platformRepo.getWalletEncryptionKey()?.let {
+            topUpRepository.checkTopUps(it)
         }
     }
 }

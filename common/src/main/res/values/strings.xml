@@ -66,6 +66,7 @@
     <string name="receive_enter_amount_button">Specify Amount</string>
     <string name="account_create">Create Account</string>
     <string name="submit">Submit</string>
+    <string name="try_again">Try Again</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>

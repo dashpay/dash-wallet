@@ -93,7 +93,9 @@ class RequestUserNameViewModel @Inject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
         private val CONTEST_DOCUMENT_FEE = Coin.valueOf(0, 20).value * 1000
+        private val NON_CONTEST_DOCUMENT_FEE = Coin.valueOf(1000000).value * 1000
     }
+
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
@@ -379,22 +381,31 @@ class RequestUserNameViewModel @Inject constructor(
         val contestable = Names.isUsernameContestable(username)
 
         // if we have an identity, then we must use our identity balance
-        val enoughIdentityBalance = if (contestable) {
-            _identityBalance.value >= CONTEST_DOCUMENT_FEE
-        } else {
-            _identityBalance.value >= Constants.DASH_PAY_FEE.value / 3 * 1000
-        }
-        val enoughBalance = if (contestable) {
-            _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
-        } else {
-            _walletBalance.value >= Constants.DASH_PAY_FEE
+//        val enoughIdentityBalance = if (contestable) {
+//            _identityBalance.value >= CONTEST_DOCUMENT_FEE
+//        } else {
+//            _identityBalance.value >= Constants.DASH_PAY_FEE.value / 3 * 1000
+//        }
+//        val enoughBalance = if (contestable) {
+//            _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
+//        } else {
+//            _walletBalance.value >= Constants.DASH_PAY_FEE
+//        }
+        val identityBalance = _identityBalance.value
+        val walletBalance = _walletBalance.value
+        val enoughBalance = when {
+            identityBalance > 0L && contestable -> Coin.valueOf(identityBalance / 1000) + walletBalance > Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000)
+            identityBalance > 0L && !contestable -> Coin.valueOf(identityBalance / 1000) + walletBalance > Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000)
+            identityBalance == 0L && contestable -> walletBalance > Constants.DASH_PAY_FEE_CONTESTED
+            identityBalance == 0L && !contestable -> walletBalance > Constants.DASH_PAY_FEE
+            else -> false // how can we get here?
         }
         _uiState.update {
             it.copy(
                 usernameLengthValid = validLength,
                 usernameCharactersValid = validCharacters && !startOrEndWithHyphen,
                 usernameContestable = contestable,
-                enoughBalance = if (identityBalance.value > 0) enoughIdentityBalance else enoughBalance,
+                enoughBalance = enoughBalance,
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameCheckSuccess = false,

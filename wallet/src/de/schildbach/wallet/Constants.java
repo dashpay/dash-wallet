@@ -307,6 +307,7 @@ public final class Constants {
 
     // 2,500,000,000 credits
     public static final Coin DASH_PAY_FEE_CONTESTED = Coin.parseCoin("0.25");
+    public static final Coin DASH_PAY_FEE_CONTESTED_NAME = Coin.parseCoin("0.20");
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.03");
 
     // 150,000,000

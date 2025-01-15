@@ -108,7 +108,6 @@ class SendCoinsTaskRunner @Inject constructor(
         return sendCoins(sendRequest, checkBalanceConditions = false)
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
     override suspend fun estimateNetworkFee(
         address: Address,
         amount: Coin,
@@ -273,6 +272,26 @@ class SendCoinsTaskRunner @Inject constructor(
         return sendRequest
     }
 
+    fun createAssetLockSendRequest(
+        mayEditAmount: Boolean,
+        paymentIntent: PaymentIntent,
+        signInputs: Boolean,
+        forceEnsureMinRequiredFee: Boolean,
+        topUpKey: ECKey
+    ): SendRequest {
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        val sendRequest = SendRequest.assetLock(wallet.params, topUpKey, paymentIntent.amount)
+        sendRequest.coinSelector = getCoinSelector()
+        sendRequest.useInstantSend = false
+        sendRequest.feePerKb = Constants.ECONOMIC_FEE
+        sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
+        sendRequest.signInputs = signInputs
+
+        val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
+        sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
+
+        return sendRequest
+    }
 
     @VisibleForTesting
     fun createSendRequest(

@@ -81,7 +81,7 @@ open class SendCoinsActivity : LockScreenActivity() {
                 "topup",
                 null,
                 listOf(PaymentIntent.Output(Coin.ZERO, ScriptBuilder.createOpReturnScript(ByteArray(20)))).toTypedArray(),
-                "topup", null, null, null, null,
+                null, null, null, null, null,
                 null, null, null
             )
             intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent)

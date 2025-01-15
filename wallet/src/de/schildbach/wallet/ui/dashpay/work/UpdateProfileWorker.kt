@@ -34,6 +34,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
+import de.schildbach.wallet.service.work.BaseWorker
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsService

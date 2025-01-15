@@ -42,6 +42,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
 import de.schildbach.wallet.ui.transactions.TransactionRowView
@@ -261,23 +262,44 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun openIdentityCreation() {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             if (blockchainIdentityData.creationStateErrorMessage != null) {
-                // Do we need to have the user request a new username
-                val errorMessage = blockchainIdentityData.creationStateErrorMessage
-                val needsNewUsername = blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING &&
-                        (errorMessage.contains("Document transitions with duplicate unique properties") ||
-                                errorMessage.contains("missing domain document for"))
-                if (needsNewUsername ||
-                    // do we need this, cause the error could be due to a stale node
-                    blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKING &&
-                        !errorMessage.contains("invalid quorum: quorum not found")) {
-                    startActivity(CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), blockchainIdentityData))
+                // are we restoring?
+                if (blockchainIdentityData.restoring) {
+                    RestoreIdentityOperation(requireActivity().application)
+                        .create(blockchainIdentityData.userId!!, true)
+                        .enqueue()
                 } else {
-                    Toast.makeText(requireContext(), blockchainIdentityData.creationStateErrorMessage, Toast.LENGTH_LONG).show()
+                    // Do we need to have the user request a new username
+                    val errorMessage = blockchainIdentityData.creationStateErrorMessage
+                    val needsNewUsername =
+                        blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING &&
+                                (errorMessage.contains("Document transitions with duplicate unique properties") ||
+                                        errorMessage.contains("missing domain document for"))
+                    if (needsNewUsername ||
+                        // do we need this, cause the error could be due to a stale node
+                        blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKING &&
+                        !errorMessage.contains("invalid quorum: quorum not found")
+                    ) {
+                        startActivity(
+                            CreateUsernameActivity.createIntentReuseTransaction(
+                                requireActivity(),
+                                blockchainIdentityData
+                            )
+                        )
+                    } else {
+                        // we don't know what to do in this case? (not good)
+                        Toast.makeText(
+                            requireContext(),
+                            blockchainIdentityData.creationStateErrorMessage,
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             } else if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
                 startActivity(Intent(requireActivity(), SearchUserActivity::class.java))
                 // hide "Hello Card" after first click
                 viewModel.dismissUsernameCreatedCard()
+            } else {
+                // not possible to get here?
             }
         }
     }

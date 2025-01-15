@@ -61,6 +61,7 @@
     <string name="invitation_accept_message_3">Upload your picture, personalize your identity</string>
     <string name="invitation_accept_continue">Continue</string>
     <string name="invitation_contact_request_sent_message">A contact request has been sent to %s since they invited you.</string>
+    <string name="topup_confirm_message">You have chosen to top up your identity. The following amount will be deducted from your balance.</string>
 
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="username_being_requested">Your username %s is being requested on the Dash Network</string>
@@ -73,6 +74,7 @@
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Registering Username</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Requesting Username</string>
     <string name="processing_home_step_3_restoring">(3/3) Recovering Username</string>
+    <string name="restore_identity">Restore Identity</string>
     <string name="processing_done_title">Hello %s,</string>
     <string name="processing_done_subtitle">Your account is ready</string>
     <string name="processing_voting_subtitle">Voting for your username has begun</string>
@@ -449,6 +451,14 @@
     <string name="mix_dash_message">To help prevent other people from seeing who you make payments to, it is recommended to mix your balance before you create your username.</string>
     <string name="dash_private_key_mainnet" translatable="false">XKm5koXHMm7UrVV3ki2pbGA8yZztiSR2F9x6ucEyCSuqTHBMjJix</string>
     <string name="dash_private_key_testnet" translatable="false">cUR2TrX4U6t6g9kRfDoBbwF2WRKBNjV3gK7HwTgQgmUUQCKXcT3N</string>
+    <string name="tools_credits_title">Credits</string>
+    <string name="tools_credits_buy_button">Buy</string>
+    <string name="dashpay_what_are_credits_title">What are credits?</string>
+    <string name="dashpay_what_are_credits_message">Users pay transaction fees to interact with the Dash network. This is why all changes to your profile require paying a small fee that can be paid by credits.\n\nYour credits can be used to:</string>
+    <string name="credits_send_and_accept_contact_requests">Send and accept contact requests</string>
+    <string name="platform_credits">Platform Credits</string>
+    <string name="platform_credits_error">Error</string>
+    <string name="platform_credits_not_transferred">Pending Platform Credits</string>
     <string name="voting_period">Voting Period</string>
     <string name="voting_period_ends_in_days">Voting ends in %d days</string>
     <string name="voting_period_ends_today">Voting ends today</string>
