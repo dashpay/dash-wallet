@@ -414,7 +414,7 @@ class PlatformRepo @Inject constructor(
             .flatMapLatest { _ ->
                 init()
 
-                if (!hasIdentity) {
+                if (!hasIdentity || blockchainIdentity.identity == null) {
                     return@flatMapLatest flowOf(emptyList())
                 }
 
