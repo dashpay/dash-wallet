@@ -19,18 +19,24 @@ package de.schildbach.wallet.ui.username.adapters
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet_test.databinding.ViewMasternodeIpBinding
 
-class IPAddressAdapter(private val deleteClickListener: (String) -> Unit) : ListAdapter<String, IPAddressViewHolder>(DiffCallback()) {
-    class DiffCallback : DiffUtil.ItemCallback<String>() {
-        override fun areItemsTheSame(oldItem: String, newItem: String): Boolean {
-            return oldItem == newItem
+data class MasternodeEntry(
+    val ipAddress: String,
+    val canDelete: Boolean
+)
+
+class IPAddressAdapter(private val deleteClickListener: (String) -> Unit) : ListAdapter<MasternodeEntry, IPAddressViewHolder>(DiffCallback()) {
+    class DiffCallback : DiffUtil.ItemCallback<MasternodeEntry>() {
+        override fun areItemsTheSame(oldItem: MasternodeEntry, newItem: MasternodeEntry): Boolean {
+            return oldItem.ipAddress == newItem.ipAddress
         }
 
-        override fun areContentsTheSame(oldItem: String, newItem: String): Boolean {
+        override fun areContentsTheSame(oldItem: MasternodeEntry, newItem: MasternodeEntry): Boolean {
             return oldItem == newItem
         }
     }
@@ -52,10 +58,11 @@ class IPAddressAdapter(private val deleteClickListener: (String) -> Unit) : List
 }
 
 class IPAddressViewHolder(val binding: ViewMasternodeIpBinding, private val deleteClickListener: (String) -> Unit): RecyclerView.ViewHolder(binding.root) {
-    fun bind(ipAddress: String) {
-        binding.ipAddress.text = ipAddress
+    fun bind(masternodeEntry: MasternodeEntry) {
+        binding.ipAddress.text = masternodeEntry.ipAddress
         binding.removeMasternode.setOnClickListener {
-            deleteClickListener.invoke(ipAddress)
+            deleteClickListener.invoke(masternodeEntry.ipAddress)
         }
+        binding.removeMasternode.isVisible = masternodeEntry.canDelete
     }
 }

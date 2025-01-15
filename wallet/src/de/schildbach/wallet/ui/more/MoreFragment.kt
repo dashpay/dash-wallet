@@ -251,6 +251,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                     }
                     UsernameRequestStatus.VOTING -> {
                         binding.requestedUsernameTitle.text = mainActivityViewModel.getRequestedUsername()
+                        binding.requestedUsernameSubtitleTwo.isVisible = true
                         binding.requestedUsernameSubtitleTwo.text =
                             getString(R.string.requested_voting_duration, votingPeriod)
                         binding.retryRequestButton.isVisible = false

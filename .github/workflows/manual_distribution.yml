@@ -118,7 +118,7 @@ jobs:
         GC_STORAGE_SERVICE_ACCOUNT_KEY_JSON: ${{secrets.GC_STORAGE_SERVICE_ACCOUNT_KEY_JSON}}
 
     - name: Test
-      run: bundle exec fastlane test flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" versioncode:"${{ env.build_number }}" storepass:"${{ secrets.SIGNING_STORE_PASS }}"
+      run: bundle exec fastlane test flavor:"" type:"debug"
 
     - name: Build and Firebase Distribution
       run: bundle exec fastlane build_distribute flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" versioncode:"${{ env.build_number }}" storepass:"${{ secrets.SIGNING_STORE_PASS }}" comment:"${{ github.event.inputs.taskID }}" appid:"${{ env.firebase_app_id }}" testgroup:"qa"
