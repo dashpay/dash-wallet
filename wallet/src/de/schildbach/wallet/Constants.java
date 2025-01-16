@@ -63,9 +63,6 @@ public final class Constants {
     public static boolean SUPPORTS_PLATFORM;
     // TODO: remove all references to this when invites are enabled and functional
     public static boolean SUPPORTS_INVITES;
-    // TODO: remove all references to this when quick voting is enabled and functional
-    public static final boolean SUPPORTS_QUICKVOTING = false;
-
 
     public static final EnumSet<MasternodeSync.SYNC_FLAGS> SYNC_FLAGS = MasternodeSync.SYNC_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.VERIFY_FLAGS> VERIFY_FLAGS = MasternodeSync.VERIFY_DEFAULT_SPV;
@@ -310,6 +307,7 @@ public final class Constants {
 
     // 2,500,000,000 credits
     public static final Coin DASH_PAY_FEE_CONTESTED = Coin.parseCoin("0.25");
+    public static final Coin DASH_PAY_FEE_CONTESTED_NAME = Coin.parseCoin("0.20");
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.03");
 
     // 150,000,000

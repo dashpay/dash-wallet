@@ -126,7 +126,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
 
         binding.paymentHeader.setTitle(getString(R.string.send_coins_fragment_button_send))
-        binding.paymentHeader.setProposition(getString(R.string.to))
+        binding.paymentHeader.setPreposition(getString(R.string.to))
         binding.paymentHeader.setOnShowHideBalanceClicked {
             lifecycleScope.launch { revealOrHideBalance(requirePinForBalance) }
         }

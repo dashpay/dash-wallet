@@ -220,7 +220,6 @@
     <string name="something_wrong_title" translatable="false">Something went wrong!</string>
     <string name="retry" translatable="false">Retry</string>
     <string name="gift_card_purchase_failed" translatable="false">Gift card purchase failed</string>
-    <string name="try_again" translatable="false">Try Again</string>
     <string name="cancel" translatable="false">Cancel</string>
     <string name="gift_card_error" translatable="false">For some reason we were not able to buy a gift card. Please, try again.</string>
     <string name="dashdirect_terms_conditions" translatable="false">Accept DashDirect terms and conditions</string>

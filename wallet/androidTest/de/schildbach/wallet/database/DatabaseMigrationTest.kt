@@ -54,14 +54,15 @@ open class DatabaseMigrationTest {
             "Pizza for Bob's party",
             ""
         )
-        private val address = "yNo1YJcNBoveEHWB7eYmxFZBVEAYQo46Yb"
-        private val service = ServiceName.CrowdNode
+        private const val address = "yNo1YJcNBoveEHWB7eYmxFZBVEAYQo46Yb"
+        private const val service = ServiceName.CrowdNode
     }
 
     private val migrations = arrayOf(
         AppDatabaseMigrations.migration11To12,
         AppDatabaseMigrations.migration12To13,
-        AppDatabaseMigrations.migration13to14
+        AppDatabaseMigrations.migration13to14,
+        AppDatabaseMigrations.migration14to15
     )
 
     @Rule

@@ -22,11 +22,8 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
-import org.bitcoinj.crypto.KeyCrypterException
-import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.service.work.BaseWorker
 import org.dash.wallet.common.services.analytics.AnalyticsService
 
 /**

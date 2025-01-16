@@ -63,14 +63,14 @@
             android:id="@+id/link_included"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="link included"
+            android:text="@string/link_included"
             style="@style/Caption.Blue"
             app:layout_constraintTop_toTopOf="@id/link_badge"
             app:layout_constraintStart_toEndOf="@id/link_badge" />
 
-        <Button
-            android:id="@+id/approvals_button"
-            style="@style/Button.Vote.LightBlue"
+        <LinearLayout
+            android:id="@+id/approvals_button_container"
+            style="@style/Button.Primary.Large.LightBlue"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_marginHorizontal="8dp"
@@ -78,38 +78,23 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/info"
             app:layout_constraintBottom_toBottomOf="@id/info"
-            tools:text="2\nApprovals"
-            />
+            tools:text="2" >
+            <TextView
+                android:id="@+id/approvals_button_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dash_blue"
+                android:textSize="12sp"
+                tools:text="2"
+                />
+            <ImageView
+                android:id="@+id/approvals_button_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:src="@drawable/ic_thumb_up_blue"
+                />
+        </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-<!--    <TextView-->
-<!--        android:id="@+id/cancel_approval_button"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_marginEnd="10dp"-->
-<!--        style="@style/Button.Tertiary.ExtraSmall"-->
-<!--        android:text="@string/cancel_approval"-->
-<!--        app:layout_constraintEnd_toStartOf="@id/vote_amount"-->
-<!--        app:layout_constraintTop_toTopOf="parent"-->
-<!--        app:layout_constraintBottom_toBottomOf="parent"-->
-<!--        />-->
-
-
-
-<!--    <TextView-->
-<!--        android:id="@+id/vote_amount"-->
-<!--        style="@style/Overline.Tertiary"-->
-<!--        android:layout_width="0dp"-->
-<!--        android:layout_height="20dp"-->
-<!--        android:layout_marginEnd="15dp"-->
-<!--        android:minWidth="20dp"-->
-<!--        android:paddingHorizontal="7dp"-->
-<!--        android:gravity="center"-->
-<!--        android:textAlignment="gravity"-->
-<!--        android:background="@drawable/rounded_background"-->
-<!--        android:theme="@style/InactiveBadgeTheme"-->
-<!--        app:layout_constraintEnd_toEndOf="parent"-->
-<!--        app:layout_constraintTop_toTopOf="parent"-->
-<!--        app:layout_constraintBottom_toBottomOf="parent"-->
-<!--        tools:text="10" />-->
 </androidx.constraintlayout.widget.ConstraintLayout>

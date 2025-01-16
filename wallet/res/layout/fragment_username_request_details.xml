@@ -114,6 +114,30 @@
                 android:layout_marginTop="2dp"
                 tools:text="90f95ff7bc2438a748dc8470255b888b2a9ea6837bf518d018dc3d6cddf698" />
         </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical"
+            android:paddingHorizontal="15dp"
+            android:paddingVertical="10dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/GrayPanelBackground">
+
+            <TextView
+                style="@style/Overline.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/voting_period" />
+
+            <TextView
+                android:id="@+id/voting_period"
+                style="@style/Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                tools:text="2024 Dec 1 to 2014 Dec 15" />
+        </LinearLayout>
     </LinearLayout>
 
     <FrameLayout

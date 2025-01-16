@@ -48,16 +48,19 @@
             tools:text="XXX.XXX.XX.X1" />
     </LinearLayout>
 
-    <Button
+    <FrameLayout
         android:id="@+id/remove_masternode"
-        android:layout_width="11dp"
-        android:layout_height="11dp"
-        android:padding="12dp"
-        android:layout_marginEnd="15dp"
-        android:background="@drawable/ic_x"
-        android:visibility="invisible"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="12dp"
+        android:layout_marginEnd="5dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
-
+        app:layout_constraintBottom_toBottomOf="parent" >
+        <ImageView
+            android:layout_width="11dp"
+            android:layout_height="11dp"
+            android:src="@drawable/ic_x" />
+    </FrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

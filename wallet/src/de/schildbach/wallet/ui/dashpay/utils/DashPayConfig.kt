@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.dashpay.utils
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
@@ -55,6 +56,9 @@ open class DashPayConfig @Inject constructor(
         val MIX_DASH_SHOWN = booleanPreferencesKey("mix_dash_shown")
         val KEYS_DONT_ASK_AGAIN = booleanPreferencesKey("dont_ask_again_for_keys")
         val FIRST_TIME_VOTING = booleanPreferencesKey("first_time_voting")
+        val CREDIT_INFO_SHOWN = booleanPreferencesKey("credit_info_shown")
+        val TOPUP_COUNTER = intPreferencesKey("topup_counter")
+        val USERNAME_VOTE_COUNTER = intPreferencesKey("username_vote_counter")
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {
@@ -63,5 +67,18 @@ open class DashPayConfig @Inject constructor(
 
     open suspend fun disableNotifications() {
         set(LAST_SEEN_NOTIFICATION_TIME, DISABLE_NOTIFICATIONS)
+    }
+
+
+    suspend fun getTopupCounter(): Int {
+        val counter = get(TOPUP_COUNTER) ?: 1
+        set(TOPUP_COUNTER, counter + 1)
+        return counter
+    }
+    
+    suspend fun getUsernameVoteCounter(): Int {
+        val counter = (get(USERNAME_VOTE_COUNTER) ?: 0) + 1
+        set(USERNAME_VOTE_COUNTER, counter)
+        return counter
     }
 }

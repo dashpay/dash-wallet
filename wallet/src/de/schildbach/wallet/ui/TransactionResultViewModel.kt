@@ -17,11 +17,15 @@
 package de.schildbach.wallet.ui
 
 import androidx.lifecycle.*
+import androidx.work.WorkInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.dao.TopUpsDao
+import de.schildbach.wallet.database.entity.TopUp
+import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Sha256Hash
@@ -30,6 +34,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
@@ -46,6 +51,7 @@ class TransactionResultViewModel @Inject constructor(
     val walletData: WalletDataProvider,
     val configuration: Configuration,
     private val dashPayProfileDao: DashPayProfileDao,
+    private val topUpsDao: TopUpsDao,
     private val platformRepo: PlatformRepo,
     private val analytics: AnalyticsService,
     val walletApplication: WalletApplication
@@ -82,6 +88,8 @@ class TransactionResultViewModel @Inject constructor(
     val contact: LiveData<DashPayProfile?>
         get() = _contact
 
+    var topUpError: Boolean = false
+    var topUpComplete: Boolean = false
     fun init(txId: Sha256Hash?) {
         txId?.let {
             // should this be viewModelScope.launch(Dispatchers.IO) and not use withContext
@@ -160,4 +168,8 @@ class TransactionResultViewModel @Inject constructor(
     fun logEvent(eventName: String) {
         analytics.logEvent(eventName, mapOf())
     }
+
+    fun topUpStatus(txId: Sha256Hash): Flow<TopUp?> = topUpsDao.observe(txId)
+    fun topUpWork(txId: Sha256Hash): LiveData<Resource<WorkInfo>> =
+        TopupIdentityOperation.operationStatus(walletApplication, txId, analytics)
 }
