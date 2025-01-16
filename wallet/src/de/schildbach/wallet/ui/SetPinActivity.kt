@@ -38,6 +38,7 @@ import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.PackageInfoProvider
+import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
@@ -507,14 +508,11 @@ class SetPinActivity : InteractionAwareActivity() {
         dialog.isCancelable = false
         dialog.show(this) {
             if (it == true) {
-                alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
-                    this,
-                    packageInfoProvider,
-                    viewModel.configuration,
-                    viewModel.walletData.wallet,
-                    application as WalletApplication
-                ).buildAlertDialog()
-                alertDialog?.show()
+                ContactSupportDialogFragment.newInstance(
+                    getString(R.string.report_issue_dialog_title_issue),
+                    getString(R.string.report_issue_dialog_message_issue),
+                    contextualData = "Wallet creation error (wallet is missing)"
+                ).show(this)
             }
         }
     }

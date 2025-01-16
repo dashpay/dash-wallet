@@ -221,6 +221,10 @@ open class BlockchainIdentityConfig @Inject constructor(
         }
     }
 
+    fun observe() : Flow<BlockchainIdentityData> {
+        return identityData
+    }
+
     suspend fun loadBase() : BlockchainIdentityBaseData {
         return identityBaseData.first()
     }

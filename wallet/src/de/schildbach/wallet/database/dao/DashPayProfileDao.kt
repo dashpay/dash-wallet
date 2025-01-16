@@ -35,6 +35,9 @@ interface DashPayProfileDao {
     @Query("SELECT * FROM dashpay_profile where userId = :userId")
     fun observeByUserId(userId: String): Flow<DashPayProfile?>
 
+    @Query("SELECT * FROM dashpay_profile WHERE userId IN (:userIds)")
+    fun observeByUserIds(userIds: List<String>): Flow<List<DashPayProfile>>
+
     @Query("SELECT * FROM dashpay_profile WHERE username = :username")
     suspend fun loadByUsername(username: String): DashPayProfile?
 

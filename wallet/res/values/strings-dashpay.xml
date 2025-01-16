@@ -250,7 +250,7 @@
     <string name="please_note_cant_change_this_later">Please note that you will not be able to change this later</string>
     <string name="Intermediate_level_WIFI_Warning">Intermediate privacy level requires a reliable internet connection</string>
     <string name="Advanced_level_WIFI_Warning">Advanced privacy level requires a reliable internet connection</string>
-    <string name="privcay_level_WIFI_warning_desc">It is recommended to be on a Wi-Fi network to avoid losing any funds</string>
+    <string name="privcay_level_WIFI_warning_desc">It is recommended to be on a Wi-Fi network to avoid incurring additional mixing fees</string>
     <string name="continue_anyway">Continue Anyway</string>
     <string name="welcome_to_dash_pay">Welcome to Dash Pay</string>
     <string name="pay_to_usernames">Pay to usernames. No more alphanumeric addresses.</string>

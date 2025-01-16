@@ -42,7 +42,6 @@ import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.SettingsActivity
 import de.schildbach.wallet.ui.coinjoin.CoinJoinLevelViewModel
 import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
@@ -139,15 +138,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
         binding.contactSupport.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.MoreMenu.CONTACT_SUPPORT, mapOf())
-            val alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
-                requireActivity(),
-                packageInfoProvider,
-                configuration,
-                walletData.wallet,
-                walletApplication
-            ).buildAlertDialog()
-            (requireActivity() as LockScreenActivity).alertDialog = alertDialog
-            alertDialog.show()
+            ContactSupportDialogFragment.newInstance(
+                getString(R.string.report_issue_dialog_title_issue),
+                getString(R.string.report_issue_dialog_message_issue)
+            ).show(requireActivity())
         }
 
         binding.invite.visibility = View.GONE

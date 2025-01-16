@@ -20,6 +20,7 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.TextUtils
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.preference.PreferenceManager
@@ -172,6 +173,8 @@ class ConfirmTransactionDialog(
             val payeeVerifiedBy = getString(ARG_PAYEE_VERIFIED_BY)
 
             if (payeeName != null && payeeVerifiedBy != null) {
+                binding.sendToAddress.isVisible = true
+                binding.sendToUser.isVisible = false
                 binding.address.text = payeeName
                 binding.payeeSecuredBy.text = payeeVerifiedBy
                 binding.payeeVerifiedByPane.visibility = View.VISIBLE
@@ -182,19 +185,17 @@ class ConfirmTransactionDialog(
                 binding.address.setOnClickListener(forceMarqueeOnClickListener)
                 binding.payeeSecuredBy.setOnClickListener(forceMarqueeOnClickListener)
             } else if (displayNameText != null) {
-                binding.address.visibility = View.GONE
-                binding.displayname.text = displayNameText
+                binding.sendToUser.isVisible = true
+                binding.sendToAddress.isVisible = false
+                binding.displayName.text = displayNameText
 
                 ProfilePictureDisplay.display(binding.avatar, avatarUrl!!, null, username!!)
                 binding.confirmAutoAccept.isChecked = autoAcceptLastValue
-                if (pendingContactRequest) {
-                    binding.confirmAutoAccept.visibility = View.VISIBLE
-                } else {
-                    binding.confirmAutoAccept.visibility = View.GONE
-                }
+                binding.confirmAutoAccept.isVisible = pendingContactRequest
             } else {
-                binding.sendtouser.visibility = View.GONE
-                binding.confirmAutoAccept.visibility = View.GONE
+                binding.sendToAddress.isVisible = true
+                binding.sendToUser.isVisible = false
+                binding.confirmAutoAccept.isVisible = false
                 binding.address.ellipsize = TextUtils.TruncateAt.MIDDLE
                 binding.address.text = getString(ARG_ADDRESS)
             }

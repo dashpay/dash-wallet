@@ -41,6 +41,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
@@ -48,18 +49,22 @@ import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
+import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.GiftCardDetailsDialog
+import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
     companion object {
         private const val HEADER_ITEM_TAG = "header"
+        private val log = LoggerFactory.getLogger(WalletTransactionsFragment::class.java)
     }
 
     private val viewModel by activityViewModels<MainViewModel>()
@@ -85,10 +90,10 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                         TransactionGroupDetailsFragment(rowView.txWrapper)
                     } else if (rowView.service == ServiceName.DashDirect) {
                         viewModel.logEvent(AnalyticsConstants.DashDirect.DETAILS_GIFT_CARD)
-                        GiftCardDetailsDialog.newInstance(rowView.txId)
+                        GiftCardDetailsDialog.newInstance(Sha256Hash.wrap(rowView.id))
                     } else {
                         viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                        TransactionDetailsDialogFragment.newInstance(rowView.txId)
+                        TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(rowView.id))
                     }
 
                     fragment.show(requireActivity())
@@ -159,13 +164,13 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             if (transactionViews.isEmpty()) {
                 showEmptyView()
             } else {
-                val groupedByDate = transactionViews.groupBy {
-                    Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
-                }.map {
-                    val outList = mutableListOf<HistoryRowView>()
-                    outList.add(HistoryRowView(null, it.key))
-                    outList.apply { addAll(it.value) }
-                }.reduce { acc, list -> acc.apply { addAll(list) } }
+                val groupedByDate = transactionViews.entries
+                    .sortedByDescending { it.key }
+                    .map {
+                        val outList = mutableListOf<HistoryRowView>()
+                        outList.add(HistoryRowView(null, it.key))
+                        outList.apply { addAll(it.value) }
+                    }.reduce { acc, list -> acc.apply { addAll(list) } }
 
                 adapter.submitList(groupedByDate)
                 showTransactionList()

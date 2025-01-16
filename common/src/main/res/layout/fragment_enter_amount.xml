@@ -86,6 +86,7 @@
         android:layout_marginHorizontal="20dp"
         android:paddingHorizontal="8dp"
         android:gravity="center_horizontal"
+        android:visibility="gone"
         android:background="@drawable/gray_button_background"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

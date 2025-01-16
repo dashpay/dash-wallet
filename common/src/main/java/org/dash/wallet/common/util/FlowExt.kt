@@ -9,6 +9,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.AbstractFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
@@ -40,4 +41,32 @@ fun <T> Flow<T>.observe(lifecycleOwner: LifecycleOwner, collector: FlowCollector
             collect(collector)
         }
     }
+}
+
+/** from ChatGPT */
+fun <T> Flow<T>.window(intervalMillis: Long): Flow<List<T>> = flow {
+    val buffer = mutableListOf<T>()
+    val lock = Any()
+    var lastEmitTime = System.currentTimeMillis()
+
+    this@window.collect { value ->
+        var batchToEmit: List<T>? = null
+
+        synchronized(lock) {
+            buffer.add(value)
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastEmitTime >= intervalMillis) {
+                batchToEmit = buffer.toList()
+                buffer.clear()
+                lastEmitTime = currentTime
+            }
+        }
+
+        batchToEmit?.let { emit(it) }
+    }
+
+    val finalBatch = synchronized(lock) {
+        if (buffer.isNotEmpty()) buffer.toList() else null
+    }
+    finalBatch?.let { emit(it) }
 }

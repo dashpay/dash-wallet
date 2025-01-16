@@ -59,7 +59,7 @@ class TransactionAdapter(
     class DiffCallback : DiffUtil.ItemCallback<HistoryRowView>() {
         override fun areItemsTheSame(oldItem: HistoryRowView, newItem: HistoryRowView): Boolean {
             val sameTransactions = (oldItem is TransactionRowView && newItem is TransactionRowView) &&
-                oldItem.txId == newItem.txId
+                oldItem.id == newItem.id
             return sameTransactions || oldItem == newItem
         }
 
@@ -213,8 +213,8 @@ class TransactionAdapter(
                 binding.primaryStatus.text = name
             } else if (txView.title != null) {
                 binding.primaryStatus.text = resources.getString(
-                    txView.title.resourceId,
-                    *txView.title.args.toTypedArray()
+                    txView.title!!.resourceId,
+                    *txView.title!!.args.toTypedArray()
                 )
             }
 

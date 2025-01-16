@@ -199,8 +199,10 @@ class TransactionResultViewBinder(
         confidence: TransactionConfidence?,
         reason: TransactionConfidence.Listener.ChangeReason?
     ) {
-        org.bitcoinj.core.Context.propagate(wallet.context)
-        updateStatus(true)
+        binding.root.post {
+            org.bitcoinj.core.Context.propagate(wallet.context)
+            updateStatus(true)
+        }
     }
 
     private fun updateStatus(fromConfidence: Boolean = false) {

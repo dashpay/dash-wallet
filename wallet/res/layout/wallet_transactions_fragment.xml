@@ -88,7 +88,7 @@
             android:animateLayoutChanges="false"
             android:clipToPadding="false"
             android:scrollbars="vertical"
-            android:paddingBottom="20dp"
+            android:paddingBottom="80dp"
             tools:itemCount="5"
             tools:listitem="@layout/transaction_row"/>
     </LinearLayout>

@@ -34,13 +34,14 @@ import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
+import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySuccessfulTransactionBinding
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
+import kotlinx.coroutines.flow.filterNotNull
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.Status
@@ -151,9 +152,8 @@ class TransactionResultActivity : LockScreenActivity() {
         )
 
         viewModel.init(txId)
-        val tx = viewModel.transaction
 
-        if (tx != null) {
+        viewModel.transaction.filterNotNull().observe(this) { tx ->
             transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
             contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
             contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
@@ -168,20 +168,15 @@ class TransactionResultActivity : LockScreenActivity() {
                 transactionResultViewBinder.setTransactionMetadata(it)
             }
             transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
-        } else {
-            log.error("Transaction not found. TxId: {}", txId)
-            finish()
-            return
-        }
 
-        viewModel.transactionMetadata.observe(this) {
-            if(it != null) {
+
+            viewModel.transactionMetadata.observe(this) {
                 transactionResultViewBinder.setTransactionMetadata(it)
             }
-        }
 
-        viewModel.contact.observe(this) { profile ->
-            finishInitialization(tx, profile)
+            viewModel.contact.observe(this) { profile ->
+                finishInitialization(tx, profile)
+            }
         }
 
         viewModel.topUpWork(txId).observe(this) { workData ->
@@ -237,12 +232,11 @@ class TransactionResultActivity : LockScreenActivity() {
         binding.transactionCloseBtn.setOnClickListener {
             onTransactionDetailsDismiss()
         }
-        contentBinding.viewOnExplorer.setOnClickListener { viewOnExplorer(tx) }
         contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
         contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory()}
         contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
         contentBinding.addPrivateMemoBtn.setOnClickListener {
-            viewModel.transaction?.txId?.let { hash ->
+            viewModel.transaction?.value?.txId?.let { hash ->
                 PrivateMemoDialog().apply {
                     arguments = bundleOf(PrivateMemoDialog.TX_ID_ARG to hash)
                 }.show(supportFragmentManager, "private_memo")
@@ -259,13 +253,11 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private fun showReportIssue() {
-        ReportIssueDialogBuilder.createReportIssueDialog(
-            this,
-            packageInfoProvider,
-            configuration,
-            viewModel.walletData.wallet,
-            walletApplication
-        ).buildAlertDialog().show()
+        ContactSupportDialogFragment.newInstance(
+            getString(R.string.report_issue_dialog_title_issue),
+            getString(R.string.report_issue_dialog_message_issue),
+            contextualData = viewModel.transaction.toString()
+        ).show(this)
     }
 
     private fun onTransactionDetailsDismiss() {
@@ -295,7 +287,7 @@ class TransactionResultActivity : LockScreenActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.transaction?.confidence?.removeEventListener(transactionResultViewBinder)
+        viewModel.transaction.value?.confidence?.removeEventListener(transactionResultViewBinder)
     }
 
     private fun rescanBlockchain() {

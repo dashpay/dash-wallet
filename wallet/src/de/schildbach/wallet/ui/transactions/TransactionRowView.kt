@@ -33,26 +33,28 @@ import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
+import org.slf4j.LoggerFactory
 
 data class TransactionRowView(
-    override val title: ResourceString?,
-    val txId: Sha256Hash,
+    override var title: ResourceString?,
+    val id: String,
     val value: Coin,
     val exchangeRate: ExchangeRate?,
     val contact: DashPayProfile?,
     @DrawableRes val icon: Int,
     val iconBitmap: Bitmap?,
     @StyleRes val iconBackground: Int?,
-    @StringRes val statusRes: Int,
+    @StringRes var statusRes: Int,
     val comment: String,
-    val transactionAmount: Int,
-    val time: Long,
+    var transactionAmount: Int,
+    var time: Long,
     val timeFormat: Int,
     val hasErrors: Boolean,
     val service: String?,
     val txWrapper: TransactionWrapper?
 ): HistoryRowView() {
     companion object {
+        private val log = LoggerFactory.getLogger(TransactionRowView::class.java)
         fun fromTransactionWrapper(
             txWrapper: TransactionWrapper,
             bag: TransactionBag,
@@ -60,14 +62,14 @@ data class TransactionRowView(
             contact: DashPayProfile?,
             metadata: PresentableTxMetadata? = null
         ): TransactionRowView {
-            val lastTx = txWrapper.transactions.last()
+            val firstTx = txWrapper.transactions.values.first()
 
             return when (txWrapper) {
                 is FullCrowdNodeSignUpTxSet -> TransactionRowView(
                         ResourceString(R.string.crowdnode_account),
-                        lastTx.txId,
+                        txWrapper.id,
                         txWrapper.getValue(bag),
-                        lastTx.exchangeRate,
+                        firstTx.exchangeRate,
                         null,
                         R.drawable.ic_crowdnode_logo,
                         null,
@@ -75,7 +77,7 @@ data class TransactionRowView(
                         -1,
                         metadata?.memo ?: "",
                         txWrapper.transactions.size,
-                        lastTx.updateTime.time,
+                        firstTx.updateTime.time,
                         TxResourceMapper().dateTimeFormat,
                         false,
                         ServiceName.CrowdNode,
@@ -84,24 +86,23 @@ data class TransactionRowView(
 
                 is CoinJoinMixingTxSet -> TransactionRowView(
                     ResourceString(R.string.coinjoin_mixing_transactions),
-                    lastTx.txId,
+                    txWrapper.id,
                     txWrapper.getValue(bag),
-                    lastTx.exchangeRate,
+                    firstTx.exchangeRate,
                     null,
                     R.drawable.ic_coinjoin_mixing_group,
                     null,
-                    R.style.TxNoBackground,
+                    R.style.TxSentBackground,
                     -1,
                     metadata?.memo ?: "",
                     txWrapper.transactions.size,
-                    lastTx.updateTime.time,
+                    firstTx.updateTime.time,
                     TxResourceMapper().dateTimeFormat,
                     false,
                     ServiceName.Unknown,
                     txWrapper
                 )
-
-                else -> fromTransaction(lastTx, bag, context, metadata, contact)
+                else -> fromTransaction(firstTx, bag, context, metadata, contact)
             }
         }
 
@@ -120,7 +121,7 @@ data class TransactionRowView(
             @DrawableRes val icon: Int
             @StyleRes val iconBackground: Int
             var title = ResourceString(resourceMapper.getTransactionTypeName(tx, bag))
-            val hasErrors = tx.confidence.hasErrors()
+            val hasErrors = tx.getConfidence(context).hasErrors()
 
             if (hasErrors) {
                 icon = R.drawable.ic_transaction_failed
@@ -156,7 +157,7 @@ data class TransactionRowView(
 
             return TransactionRowView(
                 title,
-                tx.txId,
+                tx.txId.toString(),
                 if (removeFee) value.add(tx.fee) else value,
                 tx.exchangeRate,
                 contact,
