@@ -123,7 +123,6 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
             }
             transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
         }
-    }
 
         transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
 
