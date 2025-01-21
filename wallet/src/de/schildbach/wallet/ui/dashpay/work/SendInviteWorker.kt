@@ -29,6 +29,7 @@ import dagger.assisted.AssistedInject
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
 import org.bitcoinj.crypto.KeyCrypterException

@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -50,12 +51,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.Base58
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.KeyId
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager
 import org.bitcoinj.wallet.AuthenticationKeyChain
@@ -67,7 +70,9 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.sdk.platform.Names
+import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
+import java.nio.ByteBuffer
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.min
@@ -94,6 +99,7 @@ data class UsernameRequestsUIState(
 )
 
 data class FiltersUIState(
+    val groupByOption: UsernameGroupOption = UsernameGroupOption.defaultOption,
     val sortByOption: UsernameSortOption = UsernameSortOption.defaultOption,
     val typeOption: UsernameTypeOption = UsernameTypeOption.defaultOption,
     val onlyDuplicates: Boolean = true,
@@ -120,7 +126,13 @@ class UsernameRequestsViewModel @Inject constructor(
     private val dashSystemService: DashSystemService,
     private val analytics: AnalyticsService
 ): ViewModel() {
-    var currentVote: ArrayList<UsernameVote>? = null
+    companion object {
+        private val log = LoggerFactory.getLogger(UsernameRequestsViewModel::class.java)
+    }
+
+    private val _currentWorkId = MutableStateFlow("")
+    val currentWorkId: StateFlow<String>
+        get() = _currentWorkId
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
@@ -131,7 +143,7 @@ class UsernameRequestsViewModel @Inject constructor(
     val filterState: StateFlow<FiltersUIState> = _filterState.asStateFlow()
 
     private val _selectedUsernameRequestId = MutableStateFlow<String?>(null)
-    val selectedUsernameRequest: Flow<UsernameRequest> = _selectedUsernameRequestId
+    val selectedUsernameRequestId: Flow<UsernameRequest> = _selectedUsernameRequestId
         .filterNotNull()
         .distinctUntilChanged()
         .flatMapLatest { id ->
@@ -153,8 +165,6 @@ class UsernameRequestsViewModel @Inject constructor(
 
     val keysAmount: Int
         get() = masternodes.value.size
-
-    val voteSubmissionLiveData = BroadcastUsernameVotesOperation.allOperationsStatus(walletApplication)
 
     init {
         dashPayConfig.observe(DashPayConfig.VOTING_INFO_SHOWN)
@@ -178,8 +188,48 @@ class UsernameRequestsViewModel @Inject constructor(
                                     }?.username?.lowercase() ?: list[0].username
                                 }
                             }
-                            UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(normalizedUsername), votes)
-                        }.filterNot { it.requests.isEmpty() }
+                            val votingEndDate = if (sortedList.isNotEmpty()) {
+                                sortedList.minOf { request -> request.createdAt } + UsernameRequest.VOTING_PERIOD_MILLIS
+                            } else {
+                                -1L
+                            }
+                            UsernameRequestGroupView(prettyUsername, sortedList, isExpanded = isExpanded(prettyUsername), votes, votingEndDate)
+                        }.filterNot { it.requests.isEmpty() && it.votingEndDate < System.currentTimeMillis() }
+                }.map { groupViews -> // Sort the list emitted by the Flow
+                    when (_filterState.value.groupByOption) {
+                        UsernameGroupOption.VotingPeriodSoonest -> groupViews.sortedWith(
+                            when (_filterState.value.sortByOption) {
+                                UsernameSortOption.DateAscending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenBy { group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.DateDescending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.VotesAscending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenBy {  group -> group.requests.maxOf { request -> request.votes } }
+                                UsernameSortOption.VotesDescending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.maxOf { request -> request.votes } }
+                            }
+                        )
+                        UsernameGroupOption.VotingPeriodLatest -> groupViews.sortedWith(
+                            when (_filterState.value.sortByOption) {
+                                UsernameSortOption.DateAscending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenBy { group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.DateDescending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.VotesAscending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenBy {  group -> group.requests.maxOf { request -> request.votes } }
+                                UsernameSortOption.VotesDescending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.maxOf { request -> request.votes } }
+                            }
+                        )
+                        else -> {
+                            when (_filterState.value.sortByOption) {
+                                UsernameSortOption.DateAscending -> groupViews.sortedBy {
+                                    it.requests.minOf { request -> request.createdAt }
+                                }
+                                UsernameSortOption.DateDescending -> groupViews.sortedByDescending {
+                                    it.requests.minOf { request -> request.createdAt }
+                                }
+                                UsernameSortOption.VotesAscending -> groupViews.sortedBy {
+                                    it.requests.maxOf { request -> request.votes }
+                                }
+                                UsernameSortOption.VotesDescending -> groupViews.sortedByDescending {
+                                    it.requests.maxOf { request -> request.votes }
+                                }
+                            }
+                        }
+                    }
                 }
         }.onEach { requests -> _uiState.update { it.copy(filteredUsernameRequests = requests) } }
             .launchIn(viewModelWorkerScope)
@@ -234,6 +284,7 @@ class UsernameRequestsViewModel @Inject constructor(
     }
 
     fun applyFilters(
+        groupByOption: UsernameGroupOption,
         sortByOption: UsernameSortOption,
         typeOption: UsernameTypeOption,
         onlyDuplicates: Boolean,
@@ -241,6 +292,7 @@ class UsernameRequestsViewModel @Inject constructor(
     ) {
         _filterState.update {
             it.copy(
+                groupByOption = groupByOption,
                 sortByOption = sortByOption,
                 typeOption = typeOption,
                 onlyDuplicates = onlyDuplicates,
@@ -259,100 +311,99 @@ class UsernameRequestsViewModel @Inject constructor(
         }
         logEvent(AnalyticsConstants.UsernameVoting.VOTE)
         viewModelScope.launch(Dispatchers.IO) {
+            val workId = getNextWorkId()
+            _currentWorkId.value = workId
             usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
+                    workId,
+                    listOf(request.username),
                     listOf(request.normalizedLabel),
                     listOf(ResourceVoteChoice.towardsIdentity(Identifier.from(request.identity))),
-                    masternodes.value.map { it.votingPrivateKey }
+                    masternodes.value.map { it.votingPrivateKey },
+                    isQuickVoting = false
                 ).enqueue()
 
-                usernameRequestDao.removeApproval(request.username)
-                usernameRequestDao.update(request.copy(votes = request.votes + keysAmount, isApproved = true))
-//                usernameVoteDao.insert(
-//                    UsernameVote(
-//                        request.normalizedLabel,
-//                        request.identity,
-//                        UsernameVote.APPROVE
-//                    )
-//                )
-                currentVote = arrayListOf(
-                    UsernameVote(
-                        request.normalizedLabel,
-                        request.identity,
-                        UsernameVote.APPROVE
-                    )
-                )
                 _uiState.update { it.copy(voteSubmitted = true) }
             }
         }
     }
 
-    fun revokeVote(requestId: String) {
+    private fun revokeVote(requestId: String) {
         if (keysAmount == 0) {
             return
         }
         logEvent(AnalyticsConstants.UsernameVoting.VOTE_CANCEL)
         viewModelScope.launch(Dispatchers.IO) {
+            val workId = getNextWorkId()
+            _currentWorkId.value = workId
             usernameRequestDao.getRequest(requestId)?.let { request ->
                 BroadcastUsernameVotesOperation(walletApplication).create(
+                    workId,
+                    listOf(request.username),
                     listOf(request.normalizedLabel),
                     listOf(ResourceVoteChoice.abstain()),
-                    masternodes.value.map { it.votingPrivateKey }
+                    masternodes.value.map { it.votingPrivateKey },
+                    isQuickVoting = false
                 ).enqueue()
-                usernameRequestDao.update(request.copy(votes = request.votes - keysAmount, isApproved = false))
-//                usernameVoteDao.insert(
-//                    UsernameVote(
-//                        request.normalizedLabel,
-//                        request.identity,
-//                        UsernameVote.ABSTAIN
-//                    )
-//                )
-                currentVote = arrayListOf(
-                    UsernameVote(
-                        request.normalizedLabel,
-                        "",
-                        UsernameVote.ABSTAIN
-                    )
-                )
                 _uiState.update { it.copy(voteCancelled = true) }
             }
         }
     }
+
+    private suspend fun getNextWorkId() = dashPayConfig.getUsernameVoteCounter().toString(16)
 
     fun voteForAll() {
         if (keysAmount == 0) {
             return
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            val filteredRequests = _uiState.value.filteredUsernameRequests
-            val requestIds = filteredRequests.flatMap {
-                it.requests
-            }.filterNot {
-                it.isApproved
-            }.map {
-                it.requestId
-            }
-            usernameRequestDao.voteForRequests(
-                requestIds,
-                keysAmount
-            )
-            _uiState.update { it.copy(voteSubmitted = true) }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val workId = getNextWorkId()
+                _currentWorkId.value = workId
+                val filteredRequests = _uiState.value.filteredUsernameRequests
+                // group the filtered requests according to the normalizedLabel
+                val requestsByUsername = hashMapOf<String, ArrayList<UsernameRequest>>()
+                filteredRequests.flatMap {
+                    it.requests
+                }.forEach {
+                    val requestList = if (!requestsByUsername.contains(it.normalizedLabel)) {
+                        val list = arrayListOf<UsernameRequest>()
+                        requestsByUsername[it.normalizedLabel] = list
+                        list
+                    } else {
+                        requestsByUsername[it.normalizedLabel]
+                    }
+                    requestList!!.add(it)
+                }
 
-            val usernames = arrayListOf<String>()
-            val voteChoices = arrayListOf<ResourceVoteChoice>()
-            requestIds.forEach {
-                usernameRequestDao.getRequest(it)?.let { request ->
-                    usernames.add(request.normalizedLabel)
+                // choose the first request submitted for each group based on the createdAt timestamp
+                val firstRequests = requestsByUsername.map {
+                    it.value.minByOrNull { request -> request.createdAt }!!
+                }
+
+                val usernames = arrayListOf<String>()
+                val normalizedLabels = arrayListOf<String>()
+                val voteChoices = arrayListOf<ResourceVoteChoice>()
+                // ignore the requests that already have been approved or have no votes remaining
+                firstRequests.filterNot {
+                    it.isApproved && usernameVoteDao.countVotes(it.normalizedLabel) < UsernameVote.MAX_VOTES
+                }.forEach { request ->
+                    usernames.add(request.username)
+                    normalizedLabels.add(request.normalizedLabel)
                     voteChoices.add(ResourceVoteChoice.towardsIdentity(Identifier.from(request.identity)))
                 }
-            }
 
-            BroadcastUsernameVotesOperation(walletApplication).create(
-                usernames,
-                voteChoices,
-                masternodes.value.map { it.votingPrivateKey }
-            ).enqueue()
+                BroadcastUsernameVotesOperation(walletApplication).create(
+                    workId,
+                    usernames,
+                    normalizedLabels,
+                    voteChoices,
+                    masternodes.value.map { it.votingPrivateKey },
+                    isQuickVoting = true
+                ).enqueue()
+            }
+            _uiState.update { it.copy(voteSubmitted = true) }
         }
     }
 
@@ -441,6 +492,15 @@ class UsernameRequestsViewModel @Inject constructor(
 
     private var nameCount = 1
     // TODO: remove this when development is completed.
+
+    private fun randomBytes(): ByteArray {
+        val uuid = UUID.randomUUID()
+        val byteBuffer = ByteBuffer.allocate(16)
+        byteBuffer.putLong(uuid.mostSignificantBits)
+        byteBuffer.putLong(uuid.leastSignificantBits)
+        return Sha256Hash.hash(byteBuffer.array())
+    }
+
     fun prepopulateList() {
         nameCount++
         val now = System.currentTimeMillis()// / 1000
@@ -449,13 +509,14 @@ class UsernameRequestsViewModel @Inject constructor(
 
         viewModelScope.launch {
             var name = names[Random.nextInt(0, min(names.size, nameCount))]
+            var identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     "https://www.figma.com/file/hh5juOSdGnNNPijJG1NGTi/DashPay%E3%83%BBIn-" +
                         "process%E3%83%BBAndroid?type=design&node-id=752-11735&mode=design&t=zasn6AKlSwb5NuYS-0",
                     Random.nextInt(0, 15),
@@ -464,13 +525,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -478,13 +540,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -492,12 +555,13 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),                    Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     "https://twitter.com/ProductHunt/",
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -505,12 +569,13 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),                    Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -518,13 +583,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 1),
@@ -532,13 +598,14 @@ class UsernameRequestsViewModel @Inject constructor(
                 )
             )
             name = names[Random.nextInt(0, min(names.size, nameCount))]
+            identifier = Identifier.from(randomBytes())
             usernameRequestDao.insert(
                 UsernameRequest(
-                    UUID.randomUUID().toString(),
+                    UsernameRequest.getRequestId(name, identifier.toString()),
                     name,
                     Names.normalizeString(name),
                     Random.nextLong(from, now),
-                    Base58.encode(UUID.randomUUID().toString().toByteArray()),
+                    identifier.toString(),
                     null,
                     Random.nextInt(0, 15),
                     Random.nextInt(0, 2),
@@ -554,28 +621,17 @@ class UsernameRequestsViewModel @Inject constructor(
         }
         logEvent(AnalyticsConstants.UsernameVoting.BLOCK)
         viewModelScope.launch(Dispatchers.IO) {
+            val workId = getNextWorkId()
+            _currentWorkId.value = workId
             BroadcastUsernameVotesOperation(walletApplication).create(
+                workId,
+                listOf(username),
                 listOf(username),
                 listOf(ResourceVoteChoice.lock()),
-                masternodes.value.map { it.votingPrivateKey }
+                masternodes.value.map { it.votingPrivateKey },
+                isQuickVoting = false
             ).enqueue()
-            //usernameRequestDao.update(request.copy(lockVotes = request.lockVotes + keysAmount, isApproved = true))
 
-            // TODO: put after actually submitting a vote
-//            usernameVoteDao.insert(
-//                UsernameVote(
-//                    Names.normalizeString(username),
-//                    "",
-//                    UsernameVote.LOCK
-//                )
-//            )
-            currentVote = arrayListOf(
-                UsernameVote(
-                    Names.normalizeString(username),
-                    "",
-                    UsernameVote.LOCK
-                )
-            )
             _uiState.update { it.copy(voteSubmitted = true) }
         }
     }
@@ -663,13 +719,15 @@ class UsernameRequestsViewModel @Inject constructor(
         }
     }
 
-    fun updateBroadcastVotesTimestamp() {
-        BroadcastUsernameVotesOperation.lastTimestamp = System.currentTimeMillis()
-    }
-
     fun updateUsernameRequestsWithVotes() {
         viewModelScope.launch(Dispatchers.IO) {
             platformSyncService.updateUsernameRequestsWithVotes()
+        }
+    }
+
+    fun updateUsernameRequestWithVotes(username: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            platformSyncService.updateUsernameRequestWithVotes(username)
         }
     }
 
@@ -680,6 +738,27 @@ class UsernameRequestsViewModel @Inject constructor(
             viewModelWorkerScope.launch {
                 importedMasternodeKeyDao.remove(masternode.proTxHash)
             }
+        }
+    }
+
+    /**
+     * returns names in [usernames] that have only [votesLeft] remaining votes that can be cast
+     */
+    suspend fun getUsernamesByVotesLeft(usernames: List<String>, votesLeft: Int): List<String> {
+        return usernames.filter { username ->
+            usernameVoteDao.countVotes(username) == UsernameVote.MAX_VOTES - votesLeft
+        }
+    }
+
+    fun voteObserver(workId: String) = BroadcastUsernameVotesOperation.operationStatus(walletApplication, workId, analytics)
+
+    suspend fun isImported(masternode: ImportedMasternodeKey): Boolean {
+        return importedMasternodeKeyDao.contains(masternode.proTxHash)
+    }
+
+    suspend fun getVotingStartDate(normalizedLabel: String): Long {
+        return usernameRequestDao.getRequestsByNormalizedLabel(normalizedLabel).minOf {
+            it.createdAt
         }
     }
 }

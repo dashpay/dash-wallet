@@ -40,6 +40,7 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.isContestableUsername = requestUserNameViewModel.isUsernameContestable()
+        viewModel.hasIdentity = requestUserNameViewModel.identity != null
         binding.confirmBtn.setOnClickListener {
             requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_CONFIRM)
             requestUserNameViewModel.submit()

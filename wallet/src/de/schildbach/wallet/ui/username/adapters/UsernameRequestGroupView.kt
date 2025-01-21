@@ -19,13 +19,31 @@ package de.schildbach.wallet.ui.username.adapters
 
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.UsernameVote
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
+/** Base class for items in the Username Request list.  This will be used to display
+ * hold a date to display some presentation of time.
+ */
+open class UsernameRequestRowView(
+    val localDate: LocalDate
+) {
+    override fun equals(other: Any?): Boolean {
+        return other is UsernameRequestRowView && other.localDate == localDate
+    }
+}
+
+/** Represents a username contest that has one or more username requests
+ *  for the same normalizedLabel.
+ */
 data class UsernameRequestGroupView(
     val username: String,
     val requests: List<UsernameRequest>,
     var isExpanded: Boolean = false,
-    var votes: List<UsernameVote>
-) {
+    var votes: List<UsernameVote>,
+    val votingEndDate: Long
+) : UsernameRequestRowView(Instant.ofEpochMilli(votingEndDate).atZone(ZoneId.systemDefault()).toLocalDate()) {
     val lastVote: UsernameVote?
         get() = votes.lastOrNull()
 

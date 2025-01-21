@@ -578,69 +578,7 @@ class PlatformRepo @Inject constructor(
     //
     // Step 2 is to create the credit funding transaction
     //
-    suspend fun createAssetLockTransactionAsync(
-        blockchainIdentity: BlockchainIdentity,
-        username: String,
-        keyParameter: KeyParameter?,
-        useCoinJoin: Boolean)
-    {
-        withContext(Dispatchers.IO) {
-            Context.propagate(walletApplication.wallet!!.context)
-            val fee = if (Names.isUsernameContestable(username)) {
-                Constants.DASH_PAY_FEE_CONTESTED
-            } else {
-                Constants.DASH_PAY_FEE
-            }
-            val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
-            val emptyWallet = balance == fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT)
-            val cftx = blockchainIdentity.createAssetLockTransaction(
-                fee,
-                keyParameter,
-                useCoinJoin,
-                returnChange = true,
-                emptyWallet = emptyWallet
-                )
-            blockchainIdentity.initializeAssetLockTransaction(cftx)
-        }
-    }
 
-    suspend fun createTopupTransactionAsync(blockchainIdentity: BlockchainIdentity, topupAmount: Coin, keyParameter: KeyParameter?, useCoinJoin: Boolean) {
-        withContext(Dispatchers.IO) {
-            Context.propagate(walletApplication.wallet!!.context)
-            val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
-            val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
-            val cftx = blockchainIdentity.createTopupFundingTransaction(
-                topupAmount,
-                keyParameter,
-                useCoinJoin,
-                returnChange = true,
-                emptyWallet = emptyWallet
-            )
-            blockchainIdentity.initializeAssetLockTransaction(cftx)
-        }
-    }
-
-    //
-    // Step 2 is to obtain the credit funding transaction for invites
-    //
-    suspend fun obtainAssetLockTransactionAsync(blockchainIdentity: BlockchainIdentity, invite: InvitationLinkData) {
-        withContext(Dispatchers.IO) {
-            Context.propagate(walletApplication.wallet!!.context)
-            var cftxData = platform.client.getTransaction(invite.cftx)
-            //TODO: remove when iOS uses big endian
-            if (cftxData == null)
-                cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
-            val assetLockTx = AssetLockTransaction(platform.params, cftxData!!)
-            val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
-            assetLockTx.addAssetLockPublicKey(privateKey)
-
-            // TODO: when all instantsend locks are deterministic, we don't need the catch block
-            val instantSendLock = InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISDLOCK_VERSION)
-
-            assetLockTx.confidence.setInstantSendLock(instantSendLock)
-            blockchainIdentity.initializeAssetLockTransaction(assetLockTx)
-        }
-    }
 
     //
     // Step 3: Register the identity
@@ -1299,6 +1237,13 @@ class PlatformRepo @Inject constructor(
 
     fun getIdentityBalance(identifier: Identifier): CreditBalanceInfo {
         return CreditBalanceInfo(platform.client.getIdentityBalance(identifier))
+    }
+
+    suspend fun addInviteUserAlert() {
+        // this alert will be shown or not based on the current balance and will be
+        // managed by NotificationsLiveData
+        val userAlert = UserAlert(UserAlert.INVITATION_NOTIFICATION_TEXT, UserAlert.INVITATION_NOTIFICATION_ICON)
+        userAlertDao.insert(userAlert)
     }
 }
 

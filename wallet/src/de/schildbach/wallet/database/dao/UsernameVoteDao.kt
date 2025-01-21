@@ -29,6 +29,9 @@ interface UsernameVoteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(usernameVote: UsernameVote)
 
+    @Query("SELECT COUNT(*) FROM username_votes WHERE username = :username")
+    suspend fun countVotes(username: String): Int
+
     @Query("SELECT * FROM username_votes WHERE username = :username ORDER BY timestamp")
     suspend fun getVotes(username: String): List<UsernameVote>
 

@@ -29,6 +29,7 @@ import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.work.BaseWorker
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
@@ -41,38 +42,42 @@ import org.dashj.platform.dpp.voting.ResourceVote
 import org.dashj.platform.dpp.voting.ResourceVoteChoice
 import org.dashj.platform.dpp.voting.TowardsIdentity
 import org.dashj.platform.dpp.voting.Vote
-import org.dashj.platform.sdk.PlatformValue
 import org.slf4j.LoggerFactory
 
 @HiltWorker
 class BroadcastUsernameVotesWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
-    val analytics: AnalyticsService,
-    val platformBroadcastService: PlatformBroadcastService,
-    val platformSyncService: PlatformSyncService,
-    val walletDataProvider: WalletDataProvider,
-    val usernameRequestDao: UsernameRequestDao,
-    val usernameVoteDao: UsernameVoteDao
+    private val analytics: AnalyticsService,
+    private val platformBroadcastService: PlatformBroadcastService,
+    private val platformSyncService: PlatformSyncService,
+    private val walletDataProvider: WalletDataProvider,
+    private val usernameRequestDao: UsernameRequestDao,
+    private val usernameVoteDao: UsernameVoteDao
 ) : BaseWorker(context, parameters) {
     companion object {
         private val log = LoggerFactory.getLogger(BroadcastUsernameVotesWorker::class.java)
 
         const val KEY_PASSWORD = "BroadcastUsernameVotesWorker.PASSWORD"
-        const val KEY_USERNAMES = "BroadcastUsernameVotesWorker.USERNAMES"
+        const val KEY_NORMALIZED_LABELS = "BroadcastUsernameVotesWorker.NORMALIZED_LABELS"
+        const val KEY_LABELS = "BroadcastUsernameVotesWorker.LABELS"
         const val KEY_VOTE_CHOICES = "BroadcastUsernameVotesWorker.VOTE_CHOICES"
         const val KEY_MASTERNODE_KEYS = "BroadcastUsernameVotesWorker.MASTERNODE_KEYS"
+        const val KEY_QUICK_VOTING = "BroadcastUsernameVotesWorker.QUICK_VOTING"
     }
 
     override suspend fun doWorkWithBaseProgress(): Result {
         val password = inputData.getString(KEY_PASSWORD)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
-        val usernames = inputData.getStringArray(KEY_USERNAMES)
+        val normalizedLabels = inputData.getStringArray(KEY_NORMALIZED_LABELS)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_USERNAMES parameter"))
+        val labels = inputData.getStringArray(KEY_LABELS)
+            ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_USERNAMES parameter"))
         val voteChoices = inputData.getStringArray(KEY_VOTE_CHOICES)
             ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_VOTE_CHOICES parameter"))
         val masternodeKeys = inputData.getStringArray(KEY_MASTERNODE_KEYS)
             ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_MASTERNODE_KEYS parameter"))
+        val isQuickVoting = inputData.getBoolean(KEY_QUICK_VOTING, false)
 
         // TODO: add decryption later?
         val encryptionKey: KeyParameter
@@ -85,17 +90,19 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
         }
 
         return try {
-            log.info("executing BroadcastUsernameVotesWorker({}, {})", usernames, voteChoices)
-            log.info("voting BroadcastUsernameVotesWorker({}, {})", usernames, voteChoices)
+            val labelMap = hashMapOf<String, String>()
+            normalizedLabels.forEachIndexed { i, normalizedLabel ->  labelMap[normalizedLabel] = labels[i] }
+            log.info("executing BroadcastUsernameVotesWorker({}, {})", normalizedLabels, voteChoices)
+            log.info("voting BroadcastUsernameVotesWorker({}, {})", normalizedLabels, voteChoices)
 
             // comment this out for now
             val votingResults = platformBroadcastService.broadcastUsernameVotes(
-                usernames.toList(),
+                normalizedLabels.toList(),
                 voteChoices.map { ResourceVoteChoice.from(it) },
                 masternodeKeys.map { DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, it).key.privKeyBytes },
                 encryptionKey
             )
-            log.info("voted BroadcastUsernameVotesWorker({}, {})", usernames, voteChoices)
+            log.info("voted BroadcastUsernameVotesWorker({}, {})", normalizedLabels, voteChoices)
             // mock the voting results
 //            val votingResults = arrayListOf<Triple<ResourceVoteChoice, Vote?, Exception?>>()
 //            usernames.forEachIndexed { i, username ->
@@ -151,21 +158,25 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                     log.info("all votes succeeded: total submitted {}", errorCount, votingResults.size)
                     Result.success(
                         workDataOf(
-                            KEY_USERNAMES to if (votingResults.isNotEmpty()) {
+                            KEY_NORMALIZED_LABELS to if (votingResults.isNotEmpty()) {
                                 arrayOfnames
                             } else {
                                 listOf("").toTypedArray()
                             },
+                            KEY_LABELS to labels,
                             KEY_VOTE_CHOICES to votingResults.map {
                                 it.first.toString()
-                            }.toTypedArray()
+                            }.toTypedArray(),
+                            KEY_QUICK_VOTING to isQuickVoting
                         )
                     )
                 }
                 votingResults.size -> {
                     // all have failed
                     log.error("all votes failed: errors: {} vs total submitted {}", errorCount, votingResults.size)
-                    // java.lang.Exception: Attempted to unwrap a Failure: Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode vote is already present for masternode EbitFAjpGsuf7qKPpsQMZw2ZKZ8rs2S1PdqKvYA8J2Ux voting for ContestedDocumentResourceVotePoll(ContestedDocumentResourceVotePoll { contract_id: GWRSAVFMjXx8HpQFaNJMqBV7MBgMK4br5UESsB4S31Ec, document_type_name: domain, index_name: parentNameAndLabel, index_values: [string dash, string test-1101] })", metadata: MetadataMap { headers: {"drive-error-data-bin": "oW9zZXJpYWxpemVkRXJyb3KYbwIYKxjKDQkQABgqGO0YuRh/GLMDGOkYexgdGLEVGIMYvhhiGLMY2xiLGGEYRxj/GKgYSxiYGDAYnxjOGHEAGOYYaBjGGFkYrxhmGK4Y4RjnGCwYGBhtGN4YexhbGH4KGB0YcRgqCRjEDRhXGCEY9hgiGL8YUxjFGDEYVQYYZBhvGG0YYRhpGG4SGHAYYRhyGGUYbhh0GE4YYRhtGGUYQRhuGGQYTBhhGGIYZRhsAhIEGGQYYRhzGGgSCRh0GGUYcxh0GC0YMRgxGDAYMQ==", "code": "40304", "grpc-accept-encoding": "identity", "grpc-encoding": "identity", "content-type": "application/grpc+proto", "date": "Mon, 28 Oct 2024 22:27:37 GMT", "x-envoy-upstream-service-time": "55", "server": "envoy"} }, source: None }, Address { ban_count: 0, banned_until: None, uri: https://52.89.154.48:1443/ })
+                    // errors that can be returned
+                    // Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode vote is already present for masternode EbitFAjpGsuf7qKPpsQMZw2ZKZ8rs2S1PdqKvYA8J2Ux voting for ContestedDocumentResourceVotePoll(ContestedDocumentResourceVotePoll { contract_id: GWRSAVFMjXx8HpQFaNJMqBV7MBgMK4br5UESsB4S31Ec, document_type_name: domain, index_name: parentNameAndLabel, index_values: [string dash, string test-1101] })", metadata: MetadataMap { headers: {"drive-error-data-bin": "oW9zZXJpYWxpemVkRXJyb3KYbwIYKxjKDQkQABgqGO0YuRh/GLMDGOkYexgdGLEVGIMYvhhiGLMY2xiLGGEYRxj/GKgYSxiYGDAYnxjOGHEAGOYYaBjGGFkYrxhmGK4Y4RjnGCwYGBhtGN4YexhbGH4KGB0YcRgqCRjEDRhXGCEY9hgiGL8YUxjFGDEYVQYYZBhvGG0YYRhpGG4SGHAYYRhyGGUYbhh0GE4YYRhtGGUYQRhuGGQYTBhhGGIYZRhsAhIEGGQYYRhzGGgSCRh0GGUYcxh0GC0YMRgxGDAYMQ==", "code": "40304", "grpc-accept-encoding": "identity", "grpc-encoding": "identity", "content-type": "application/grpc+proto", "date": "Mon, 28 Oct 2024 22:27:37 GMT", "x-envoy-upstream-service-time": "55", "server": "envoy"} }, source: None }, Address { ban_count: 0, banned_until: None, uri: https://52.89.154.48:1443/ })
+                    // Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode with id: CmbJumQ1ALJXHYFpUdCCnvbfgvXKSajErNXGhv3H4GN1 already voted 5 times and is trying to vote again, they can only vote 5 times"
                     votingResults.forEach {
                         it.third?.let { e ->
                             log.error("error with vote: {}", it.first, e)
@@ -173,14 +184,12 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                     }
                     Result.failure(
                         workDataOf(
-                            KEY_USERNAMES to if (votingResults.isNotEmpty()) {
-                                arrayOfnames
-                            } else {
-                                listOf("").toTypedArray()
-                            },
+                            KEY_NORMALIZED_LABELS to arrayOfnames,
+                            KEY_LABELS to arrayOfnames.map { labelMap[it] },
                             KEY_VOTE_CHOICES to votingResults.map {
                                 it.first.toString()
-                            }.toTypedArray()
+                            }.toTypedArray(),
+                            KEY_QUICK_VOTING to isQuickVoting
                         )
                     )
                 }
@@ -194,8 +203,10 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                     }
                     Result.success(
                         workDataOf(
-                            KEY_USERNAMES to usernames,
-                            KEY_VOTE_CHOICES to voteChoices
+                            KEY_NORMALIZED_LABELS to arrayOfnames,
+                            KEY_LABELS to arrayOfnames.map { labelMap[it] },
+                            KEY_VOTE_CHOICES to voteChoices,
+                            KEY_QUICK_VOTING to isQuickVoting
                         )
                     )
                 }
@@ -206,12 +217,13 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
             Result.failure(
                 workDataOf(
                     KEY_ERROR_MESSAGE to formatExceptionMessage("broadcast username vote", ex),
-                    KEY_USERNAMES to usernames,
-                    KEY_VOTE_CHOICES to voteChoices
+                    KEY_NORMALIZED_LABELS to normalizedLabels,
+                    KEY_VOTE_CHOICES to voteChoices,
+                    KEY_QUICK_VOTING to isQuickVoting
                 )
             )
         } finally {
-            log.info("finshed BroadcastUsernameVotesWorker({}, {})", usernames, voteChoices)
+            log.info("finished BroadcastUsernameVotesWorker({}, {})", normalizedLabels, voteChoices)
         }
     }
 

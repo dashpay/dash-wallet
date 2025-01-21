@@ -6,6 +6,7 @@ import androidx.lifecycle.Observer
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.service.work.BaseWorker
 
 abstract class SingleWorkStatusLiveData<T>(val application: Application) : LiveData<Resource<T>>(), Observer<List<WorkInfo>> {
 

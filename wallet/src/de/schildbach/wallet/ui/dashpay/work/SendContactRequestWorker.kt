@@ -25,7 +25,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.service.work.BaseWorker
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsService

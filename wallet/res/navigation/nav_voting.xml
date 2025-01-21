@@ -74,6 +74,10 @@
             android:name="requestId"
             app:argType="string" />
 
+        <argument
+            android:name="startDate"
+            app:argType="long" />
+
         <action
             android:id="@+id/details_to_votingKeyInput"
             app:destination="@id/votingKeyInputFragment"

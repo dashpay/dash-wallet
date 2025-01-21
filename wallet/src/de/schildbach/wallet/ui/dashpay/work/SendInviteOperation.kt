@@ -23,6 +23,7 @@ import androidx.lifecycle.switchMap
 import androidx.work.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.work.BaseWorker
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 

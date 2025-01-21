@@ -70,8 +70,8 @@ class PaymentHeaderView @JvmOverloads constructor(
         binding.paymentAddressViewBalanceTitle.text = title
     }
 
-    fun setProposition(title: String) {
-        binding.paymentAddressViewProposition.text = title
+    fun setPreposition(title: String) {
+        binding.paymentAddressViewPreposition.text = title
     }
 
     fun setSubtitle(title: String) {

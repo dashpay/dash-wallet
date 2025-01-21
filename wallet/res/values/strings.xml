@@ -296,6 +296,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">Append wallet dump</string>
     <string name="report_issue_dialog_mail_intent_chooser">Send report using…</string>
     <string name="report_issue_dialog_mail_intent_failed">Sending report failed.</string>
+    <string name="report_issue_dialog_generating_report">Generating report</string>
     <string name="report_transaction_history_export">Export</string>
     <string name="report_transaction_history_title">CSV Export</string>
     <string name="report_transaction_history_not_synced_title">CSV Export</string>
@@ -415,5 +416,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">Do you want to receive payments in the background?</string>
     <string name="battery_optimization_dialog_message_not_optimized">This app is configured to continue running after not being visible for some time.\n\nWe suggest allowing this app to always stay up-to-date with the blockchain, even in the background.\n\nDon\'t worry, we will always mind your battery usage.</string>
     <string name="battery_optimization_dialog_button_change">Open Settings</string>
+    <string name="credits_profile_change_message">Update profile information</string>
 
 </resources>
