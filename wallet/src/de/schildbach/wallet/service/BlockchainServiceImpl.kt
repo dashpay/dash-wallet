@@ -1270,6 +1270,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         cleanupDeferred = CompletableDeferred()
         serviceScope.launch {
             try {
+                onCreateCompleted.await() // wait until onCreate is finished
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
                 unregisterReceiver(tickReceiver)
                 application.wallet!!.removeChangeEventListener(walletEventListener)
