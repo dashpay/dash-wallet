@@ -178,7 +178,6 @@ class TransactionResultActivity : LockScreenActivity() {
                 finishInitialization(tx, profile)
             }
         }
-    }
 
         viewModel.topUpWork(txId).observe(this) { workData ->
             log.info("topup work data: {}", workData)
