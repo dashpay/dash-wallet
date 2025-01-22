@@ -7,7 +7,7 @@
   <string name="blockchain_state_progress_days">%1$s, %2$d ימי איחור</string>
   <string name="blockchain_state_progress_weeks">%1$s, %2$d שבועות איחור</string>
   <string name="blockchain_state_progress_months">%1$s, %2$d חודשי איחור</string>
-  <string name="blockchain_state_progress_downloading">מסנכרן רשת</string>
+  <string name="blockchain_state_progress_downloading">(%1$s%%) מסנכרן רשת</string>
   <string name="blockchain_state_progress_stalled">סינכרון עוקב</string>
   <string name="blockchain_state_progress_problem_storage">סינכרון: בעיית אחסון</string>
   <string name="blockchain_state_progress_problem_network">סינכרון:בעיית רשת</string>

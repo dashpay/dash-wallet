@@ -414,7 +414,7 @@ class PlatformRepo @Inject constructor(
             .flatMapLatest { _ ->
                 init()
 
-                if (!hasIdentity || blockchainIdentity.identity == null) {
+                if (!hasIdentity) {
                     return@flatMapLatest flowOf(emptyList())
                 }
 
@@ -1238,7 +1238,7 @@ class PlatformRepo @Inject constructor(
     fun getIdentityBalance(identifier: Identifier): CreditBalanceInfo {
         return CreditBalanceInfo(platform.client.getIdentityBalance(identifier))
     }
-    
+
     suspend fun addInviteUserAlert() {
         // this alert will be shown or not based on the current balance and will be
         // managed by NotificationsLiveData

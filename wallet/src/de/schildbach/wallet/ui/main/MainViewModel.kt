@@ -58,6 +58,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.transactions.TransactionRowView
+import de.schildbach.wallet.ui.transactions.TxResourceMapper
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -182,6 +183,7 @@ class MainViewModel @Inject constructor(
     private val _blockchainSyncPercentage = MutableLiveData<Int>()
     val blockchainSyncPercentage: LiveData<Int>
         get() = _blockchainSyncPercentage
+    private var chainLockBlockHeight: Int = 0
 
     private val _exchangeRate = MutableLiveData<ExchangeRate>()
     val exchangeRate: LiveData<ExchangeRate>
@@ -341,6 +343,7 @@ class MainViewModel @Inject constructor(
             .onEach { state ->
                 updateSyncStatus(state)
                 updatePercentage(state)
+                chainLockBlockHeight = state.chainlockHeight
             }
             .launchIn(viewModelWorkerScope)
 
@@ -529,7 +532,8 @@ class MainViewModel @Inject constructor(
                         walletData.transactionBag,
                         Constants.CONTEXT,
                         null,
-                        metadata[tx.txId]
+                        metadata[tx.txId],
+                        chainLockBlockHeight
                     )
                     txByHash[rowView.id] = rowView
                     rowView
@@ -603,7 +607,9 @@ class MainViewModel @Inject constructor(
                     walletData.transactionBag,
                     Constants.CONTEXT,
                     metadata[tx.txId],
-                    contacts[tx.txId] ?: rowView?.contact
+                    contacts[tx.txId] ?: rowView?.contact,
+                    TxResourceMapper(),
+                    chainLockBlockHeight
                 )
             } else {
                 TransactionRowView.fromTransactionWrapper(
@@ -611,7 +617,8 @@ class MainViewModel @Inject constructor(
                     walletData.transactionBag,
                     Constants.CONTEXT,
                     null,
-                    metadata[tx.txId]
+                    metadata[tx.txId],
+                    chainLockBlockHeight
                 )
             }
             txByHash[transactionRow.id] = transactionRow
@@ -685,7 +692,7 @@ class MainViewModel @Inject constructor(
         val txByHash = this.txByHash.toMutableMap()
         // Process both old and new metadata in case if some metadata was cleared
         val allTxIds = (oldMetadata.keys + metadata.keys + contacts.keys).toSet()
-        
+
         for (txId in allTxIds) {
             val rowView = txByHash[txId.toString()]
 
@@ -698,7 +705,9 @@ class MainViewModel @Inject constructor(
                         walletData.transactionBag,
                         Constants.CONTEXT,
                         txMetadata,
-                        contacts[txId] ?: rowView.contact
+                        contacts[txId] ?: rowView.contact,
+                        TxResourceMapper(),
+                        chainLockBlockHeight
                     )
                     txByHash[txId.toString()] = updatedRowView
                     val dateKey = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()

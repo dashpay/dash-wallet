@@ -22,6 +22,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinTxResourceMapper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,13 +47,14 @@ import javax.inject.Inject
 @HiltViewModel
 class TransactionGroupViewModel @Inject constructor(
     val walletData: WalletDataProvider,
+    val dashSystemService: DashSystemService,
     val config: Configuration,
     private val metadataProvider: TransactionMetadataProvider
 ) : ViewModel() {
     companion object {
         private const val THROTTLE_DURATION = 500L
     }
-
+    private var chainLockBlockHeight: Int = 0
     val dashFormat: MonetaryFormat = config.format.noCode()
 
     private val _dashValue = MutableLiveData<Coin>()
@@ -76,6 +78,7 @@ class TransactionGroupViewModel @Inject constructor(
                 walletData.observeTransactions(true)
                     .debounce(THROTTLE_DURATION)
                     .onEach { tx ->
+                        chainLockBlockHeight = dashSystemService.system.chainLockHandler.getBestChainLockBlockHeight()
                         if (transactionWrapper.tryInclude(tx)) {
                             refreshTransactions(transactionWrapper, memos)
                         }
@@ -97,7 +100,7 @@ class TransactionGroupViewModel @Inject constructor(
         _transactions.value = transactionWrapper.transactions.values.map {
             val txMetadata = metadata.getOrDefault(it.txId, null)
             TransactionRowView.fromTransaction(
-                it, walletData.wallet!!, walletData.wallet!!.context, txMetadata, null, resourceMapper
+                it, walletData.wallet!!, walletData.wallet!!.context, txMetadata, null, resourceMapper, chainLockBlockHeight
             )
         }
         _dashValue.value = transactionWrapper.getValue(walletData.transactionBag)

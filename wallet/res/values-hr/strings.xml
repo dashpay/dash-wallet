@@ -5,7 +5,7 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d dani iza</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d tjedana iza</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d mjeseci iza</string>
-    <string name="blockchain_state_progress_downloading">Sinkroniziranje sa mrežom</string>
+    <string name="blockchain_state_progress_downloading">Sinkroniziranje sa mrežom (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Sinkronizacija u zastoju</string>
     <string name="blockchain_state_progress_problem_storage">Sinkroniziranje: Spremišni problem</string>
     <string name="blockchain_state_progress_problem_network">Sinkroniziranje: Mrežni problem</string>

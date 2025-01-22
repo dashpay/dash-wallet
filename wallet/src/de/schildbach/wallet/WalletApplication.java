@@ -61,6 +61,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.LinuxSecureRandom;
+import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.IKey;
@@ -91,6 +92,7 @@ import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
+import de.schildbach.wallet.service.DashSystemService;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.transactions.MasternodeObserver;
@@ -173,7 +175,6 @@ public class WalletApplication extends MultiDexApplication
 
     private File walletFile;
     private Wallet wallet;
-
     public static final String ACTION_WALLET_REFERENCE_CHANGED = WalletApplication.class.getPackage().getName()
             + ".wallet_reference_changed";
 
@@ -191,6 +192,7 @@ public class WalletApplication extends MultiDexApplication
 
     private AutoLogout autoLogout;
     private AnrSupervisor anrSupervisor;
+    private Function0 afterWipeFunction;
 
     @Inject
     RestartService restartService;
@@ -212,6 +214,8 @@ public class WalletApplication extends MultiDexApplication
     PackageInfoProvider packageInfoProvider;
     @Inject
     WalletFactory walletFactory;
+    @Inject
+    DashSystemService dashSystemService;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -433,7 +437,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void finalizeInitialization() {
-        wallet.getContext().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
+        dashSystemService.getSystem().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
 
         if (config.versionCodeCrossed(packageInfoProvider.getVersionCode(), VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
@@ -992,8 +996,9 @@ public class WalletApplication extends MultiDexApplication
     /**
      * Removes all the data and restarts the app showing onboarding screen.
      */
-    public void triggerWipe() {
+    public void triggerWipe(Function0 afterWipeFunction) {
         log.info("Removing all the data and restarting the app.");
+        this.afterWipeFunction = afterWipeFunction;
         startService(new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));
     }
 
@@ -1036,6 +1041,9 @@ public class WalletApplication extends MultiDexApplication
         // wallet must be null for the OnboardingActivity flow
         log.info("removing wallet from memory during wipe");
         wallet = null;
+        if (afterWipeFunction != null)
+            afterWipeFunction.invoke();
+        afterWipeFunction = null;
     }
 
     public AnalyticsService getAnalyticsService() {

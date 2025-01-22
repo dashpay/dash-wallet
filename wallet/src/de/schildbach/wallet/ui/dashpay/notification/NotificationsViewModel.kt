@@ -24,6 +24,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsLiveData
@@ -43,7 +44,8 @@ class NotificationsViewModel @Inject constructor(
     private val userAlert: UserAlertDao,
     platformSyncService: PlatformSyncService,
     private val userAlertDao: UserAlertDao,
-    private val dashPayConfig: DashPayConfig
+    private val dashPayConfig: DashPayConfig,
+    private val dashSystemService: DashSystemService,
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
     val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope, userAlertDao)
@@ -66,5 +68,9 @@ class NotificationsViewModel @Inject constructor(
             val updatedTime = max(time, getLastNotificationTime()) + DateUtils.SECOND_IN_MILLIS
             dashPayConfig.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, updatedTime)
         }
+    }
+
+    fun getChainLockBlockHeight(): Int {
+        return dashSystemService.system.chainLockHandler.bestChainLockBlockHeight
     }
 }

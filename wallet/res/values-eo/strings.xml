@@ -7,7 +7,7 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d tagoj malantaŭ</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d semajnoj malantaŭ</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d monatoj malantaŭ</string>
-    <string name="blockchain_state_progress_downloading">Sinkronigado kun reto</string>
+    <string name="blockchain_state_progress_downloading">Sinkronigado kun reto (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Sinkronigo stagnis</string>
     <string name="blockchain_state_progress_problem_storage">Sinkronigado: Stokante problemo</string>
     <string name="blockchain_state_progress_problem_network">Sinkronigado: Reta problemo</string>

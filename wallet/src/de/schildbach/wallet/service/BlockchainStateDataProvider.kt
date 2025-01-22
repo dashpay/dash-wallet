@@ -21,6 +21,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -65,6 +66,7 @@ import kotlin.math.min
 class BlockchainStateDataProvider @Inject constructor(
     @ApplicationContext
     private val context: Context,
+    private val dashSystemService: DashSystemService,
     private val blockchainStateDao: BlockchainStateDao,
     private val walletDataProvider: WalletDataProvider,
     private val configuration: Configuration
@@ -114,9 +116,9 @@ class BlockchainStateDataProvider @Inject constructor(
                 blockchainState = BlockchainState()
             }
             val chainHead: StoredBlock = blockChain.chainHead
-            val chainLockHeight = walletDataProvider.wallet!!.context.chainLockHandler.bestChainLockBlockHeight
+            val chainLockHeight = dashSystemService.system.chainLockHandler.bestChainLockBlockHeight
             val mnListHeight: Int =
-                walletDataProvider.wallet!!.context.masternodeListManager.listAtChainTip.height.toInt()
+                dashSystemService.system.masternodeListManager.listAtChainTip.height.toInt()
             blockchainState.bestChainDate = chainHead.header.time
             blockchainState.bestChainHeight = chainHead.height
             blockchainState.impediments = EnumSet.copyOf(impediments)
@@ -180,7 +182,7 @@ class BlockchainStateDataProvider @Inject constructor(
     }
 
     override fun getBlockChain(): AbstractBlockChain? {
-        return walletDataProvider.wallet?.context?.blockChain
+        return dashSystemService.system.blockChain
     }
 
     override fun observeBlockChain(): Flow<AbstractBlockChain?> {
@@ -192,8 +194,8 @@ class BlockchainStateDataProvider @Inject constructor(
     }
 
     override fun getMasternodeAPY(): Double {
-        val masternodeListManager = walletDataProvider.wallet?.context?.masternodeListManager
-        val blockChain = walletDataProvider.wallet?.context?.blockChain
+        val masternodeListManager = dashSystemService.system.masternodeListManager
+        val blockChain = dashSystemService.system.blockChain
         if (masternodeListManager != null && blockChain != null) {
             val mnlist = masternodeListManager.listAtChainTip
             if (mnlist.height != 0L) {
