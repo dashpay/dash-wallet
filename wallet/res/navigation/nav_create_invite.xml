@@ -26,11 +26,6 @@
         tools:layout="@layout/fragment_invite_created">
 
         <argument
-            android:name="started_from_history"
-            android:defaultValue="false"
-            app:argType="boolean" />
-
-        <argument
             android:name="identity_id"
             app:argType="string" />
     </fragment>

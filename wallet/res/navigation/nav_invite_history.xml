@@ -49,10 +49,6 @@
         tools:layout="@layout/fragment_invite_details">
 
         <argument
-            android:name="started_from_history"
-            android:defaultValue="false"
-            app:argType="boolean" />
-        <argument
             android:name="invite_index"
             app:argType="integer" />
         <argument
