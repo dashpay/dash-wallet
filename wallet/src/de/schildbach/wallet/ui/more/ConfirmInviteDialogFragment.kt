@@ -48,20 +48,15 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
     private val invitationFragmentViewModel by viewModels<InvitationFragmentViewModel>()
     // private val sendViewModel by activityViewModels<SendCoinsViewModel>()
     private val args by navArgs<ConfirmInviteDialogFragmentArgs>()
-    // private var onConfirmAction: ((Boolean) -> Unit)? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.amount = Coin.valueOf(args.amount)
         binding.confirmBtn.setOnClickListener {
             // requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.TOPUP_CONFIRM)
-//            lifecycleScope.launch {
-//                onConfirmAction?.invoke(true)
-//                dismiss()
-//            }
             val identityId = invitationFragmentViewModel.sendInviteTransaction(Coin.valueOf(args.amount))
             findNavController().navigate(
-                ConfirmInviteDialogFragmentDirections.toInviteCreatedFragment(identityId, false)
+                ConfirmInviteDialogFragmentDirections.toInviteCreatedFragment(identityId)
             )
         }
         binding.dismissBtn.setOnClickListener { dismiss() }
