@@ -465,4 +465,13 @@
     <string name="voting_period_ends_tomorrow">Voting ends tomorrow</string>
     <string name="link_included">link included</string>
     <string name="group_by">Group by</string>
+    <string name="invitation_fee_title">Invitation Fee</string>
+    <string name="invitation_fee_message">Each invitation will be funded so that the receiver can quickly create their username on the Dash Network.</string>
+    <string name="invitation_fee_noncontested">Non-contested</string>
+    <string name="invitation_fee_contested">Contested</string>
+    <string name="invitation_fee_contested_message">The person that you send this invitation to can request any username they want and the network will vote to approve it.</string>
+    <string name="invitation_fee_noncontested_message">The person that you send this invitation to can  request a username that has a number 2-9, is more than 20 characters or that has a hyphen.</string>
+    <string name="invitation_creating_progress_loading">Loading Invite...</string>
+    <string name="invitation_creating_progress_wip">Creating Invitation...</string>
+    <string name="invitation_fee_confirm_and_pay_button">Confirm and pay</string>
 </resources>
