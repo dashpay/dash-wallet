@@ -170,7 +170,7 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
             if (inviteHistory.isEmpty()) {
                 safeNavigate(SearchUserFragmentDirections.searchUserToInviteFee())
             } else {
-                safeNavigate(SearchUserFragmentDirections.searchUserToInviteHistory())
+                safeNavigate(SearchUserFragmentDirections.searchUserToInviteHistory("search_user"))
             }
         }
     }

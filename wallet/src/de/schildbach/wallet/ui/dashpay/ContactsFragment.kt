@@ -168,7 +168,7 @@ class ContactsFragment : Fragment(),
                         safeNavigate(ContactsFragmentDirections.contactsToInviteFee())
                     } else {
                         dashPayViewModel.logEvent(AnalyticsConstants.Invites.INVITE_CONTACTS)
-                        safeNavigate(ContactsFragmentDirections.contactsToInviteHistory())
+                        safeNavigate(ContactsFragmentDirections.contactsToInviteHistory("contacts"))
                     }
                 }
             }

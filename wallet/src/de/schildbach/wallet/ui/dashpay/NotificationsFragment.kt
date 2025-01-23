@@ -36,7 +36,6 @@ import de.schildbach.wallet.ui.dashpay.notification.NotificationsViewModel
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentNotificationsBinding
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
@@ -249,7 +248,7 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
                     if (inviteHistory.isEmpty()) {
                         safeNavigate(NotificationsFragmentDirections.notificationsToInviteFee())
                     } else {
-                        safeNavigate(ContactsFragmentDirections.contactsToInviteHistory())
+                        safeNavigate(NotificationsFragmentDirections.notificationsToInviteHistory("notifications"))
                     }
                 }
             }

@@ -37,6 +37,10 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
 
+        <argument
+            android:name="caller"
+            app:argType="string" />
+
     </fragment>
 
     <fragment

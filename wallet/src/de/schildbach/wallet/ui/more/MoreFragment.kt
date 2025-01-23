@@ -158,7 +158,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                             }
                     }
                 } else {
-                    safeNavigate(MoreFragmentDirections.moreToInviteHistory())
+                    safeNavigate(MoreFragmentDirections.moreToInviteHistory("more"))
                 }
             }
         }

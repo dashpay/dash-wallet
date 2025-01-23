@@ -121,7 +121,11 @@
             app:destination="@id/nav_host_invite_history"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left"/>
+            app:popExitAnim="@anim/slide_out_left">
+            <argument
+                android:name="caller"
+                app:argType="string"/>
+        </action>
 
         <action android:id="@+id/contacts_to_search_user"
             app:destination="@id/searchUserFragment"
@@ -267,7 +271,11 @@
             app:destination="@id/nav_host_invite_history"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left"/>
+            app:popExitAnim="@anim/slide_out_left">
+            <argument
+                android:name="caller"
+                app:argType="string"/>
+        </action>
     </fragment>
 
     <fragment
@@ -414,7 +422,11 @@
             app:destination="@id/nav_host_invite_history"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left"/>
+            app:popExitAnim="@anim/slide_out_left">
+            <argument
+                android:name="caller"
+                app:argType="string"/>
+        </action>
 
         <argument
             android:name="mode"
@@ -438,7 +450,11 @@
             app:destination="@id/nav_host_invite_history"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left"/>
+            app:popExitAnim="@anim/slide_out_left">
+            <argument
+                android:name="caller"
+                app:argType="string"/>
+        </action>
 
         <argument
             android:name="query"
