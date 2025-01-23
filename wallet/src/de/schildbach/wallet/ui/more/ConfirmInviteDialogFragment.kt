@@ -46,7 +46,6 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
 
     private val viewModel by viewModels<ConfirmTopupDialogViewModel>()
     private val invitationFragmentViewModel by viewModels<InvitationFragmentViewModel>()
-    // private val sendViewModel by activityViewModels<SendCoinsViewModel>()
     private val args by navArgs<ConfirmInviteDialogFragmentArgs>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

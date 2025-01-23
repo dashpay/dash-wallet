@@ -71,6 +71,9 @@ open class InvitationFragmentViewModel @Inject constructor(
     val shortDynamicLinkData
         get() = sendInviteStatusLiveData.value!!.data!!.shortDynamicLink
 
+    val walletData
+        get() = walletApplication
+
     fun sendInviteTransaction(value: Coin): String {
         SendInviteOperation(walletApplication)
             .create(inviteId, value)

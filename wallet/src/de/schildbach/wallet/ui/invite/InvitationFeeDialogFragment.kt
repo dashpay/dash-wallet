@@ -19,33 +19,39 @@ package de.schildbach.wallet.ui.invite
 
 import android.os.Bundle
 import android.view.View
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.ui.CheckPinDialog
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogInvitationFeeBinding
-import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 
 @AndroidEntryPoint
 class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitation_fee) {
     private val binding by viewBinding(DialogInvitationFeeBinding::bind)
     private var selectedFee = Constants.DASH_PAY_FEE_CONTESTED
-    //val viewModel by viewModels<MixDashFirstViewModel>()
-    //private val settingsViewModel: SettingsViewModel by viewModels()
+    private val viewModel by viewModels<InvitationFragmentViewModel>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setMode(true)
         binding.mixButton.setOnClickListener {
-            findNavController().navigate(InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value))
-            lifecycleScope.launch {
-
+            CheckPinDialog.show(requireActivity()) { pin ->
+                if (pin != null) {
+                    findNavController().navigate(
+                        InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value)
+                    )
+                    // TODO: why doesn't safeNavigate work
+                    // safeNavigate(InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value))
+                }
             }
+        }
+        viewModel.walletData.observeBalance().observe(viewLifecycleOwner) { walletBalance ->
+            binding.contestedName.isEnabled = walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
         }
         binding.contestedName.setOnClickListener {
             setMode(true)
