@@ -162,9 +162,7 @@ class ContactsFragment : Fragment(),
             emptyStatePane.inviteHintLayout.root.isVisible = de.schildbach.wallet.Constants.SUPPORTS_INVITES
             emptyStatePane.inviteHintLayout.inviteFriendHint.setOnClickListener {
                 lifecycleScope.launch {
-                    val inviteHistory = dashPayViewModel.getInviteHistory()
-
-                    if (inviteHistory.isEmpty()) {
+                    if (dashPayViewModel.getInviteCount() == 0) {
                         safeNavigate(ContactsFragmentDirections.contactsToInviteFee())
                     } else {
                         dashPayViewModel.logEvent(AnalyticsConstants.Invites.INVITE_CONTACTS)

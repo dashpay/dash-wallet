@@ -235,17 +235,9 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
             }
             is NotificationItemUserAlert -> {
                 lifecycleScope.launch {
-                    val inviteHistory = dashPayViewModel.getInviteHistory()
                     userAlertItem = null
                     viewModel.dismissUserAlert(R.string.invitation_notification_text)
-
-//                    if (inviteHistory.isEmpty()) {
-//                        InviteFriendActivity.startOrError(requireActivity())
-//                    } else {
-//                        startActivity(InvitesHistoryActivity.createIntent(requireActivity()))
-//                    }
-
-                    if (inviteHistory.isEmpty()) {
+                    if (dashPayViewModel.getInviteCount() == 0) {
                         safeNavigate(NotificationsFragmentDirections.notificationsToInviteFee())
                     } else {
                         safeNavigate(NotificationsFragmentDirections.notificationsToInviteHistory("notifications"))
