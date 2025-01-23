@@ -32,6 +32,7 @@ import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
+import org.bitcoinj.core.Coin
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bouncycastle.crypto.params.KeyParameter
@@ -44,17 +45,14 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-private val log = LoggerFactory.getLogger(SendInviteWorker::class.java)
-
-
 @HiltWorker
 class SendInviteWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
     val analytics: AnalyticsService,
     val platformRepo: PlatformRepo,
-    val walletDataProvider: WalletDataProvider)
-    : BaseWorker(context, parameters) {
+    val walletDataProvider: WalletDataProvider
+): BaseWorker(context, parameters) {
 
     companion object {
         const val KEY_PASSWORD = "SendInviteWorker.PASSWORD"
@@ -62,6 +60,8 @@ class SendInviteWorker @AssistedInject constructor(
         const val KEY_USER_ID = "SendInviteWorker.KEY_USER_ID"
         const val KEY_DYNAMIC_LINK = "SendInviteWorker.KEY_DYNAMIC_LINK"
         const val KEY_SHORT_DYNAMIC_LINK = "SendInviteWorker.KEY_SHORT_DYNAMIC_LINK"
+        const val KEY_VALUE = "SendInviteWorker.KEY_VALUE"
+        private val log = LoggerFactory.getLogger(SendInviteWorker::class.java)
     }
 
     class OutputDataWrapper(private val data: Data) {
@@ -73,6 +73,8 @@ class SendInviteWorker @AssistedInject constructor(
             get() = data.getString(KEY_DYNAMIC_LINK)!!
         val shortDynamicLink
             get() = data.getString(KEY_SHORT_DYNAMIC_LINK)!!
+        val value: Coin
+            get() = Coin.valueOf(data.getLong(KEY_VALUE, 0L))
     }
 
     private val wallet = walletDataProvider.wallet!!
@@ -80,6 +82,10 @@ class SendInviteWorker @AssistedInject constructor(
     override suspend fun doWorkWithBaseProgress(): Result {
         val password = inputData.getString(KEY_PASSWORD)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
+        val value = inputData.getLong(KEY_VALUE, 0L)
+        if (value == 0L) {
+            error("missing KEY_VALUE parameter")
+        }
 
         val encryptionKey: KeyParameter
         org.bitcoinj.core.Context.propagate(wallet.context)
@@ -93,17 +99,22 @@ class SendInviteWorker @AssistedInject constructor(
 
         return try {
             val blockchainIdentity = platformRepo.blockchainIdentity
-            val cftx = platformRepo.createInviteFundingTransactionAsync(blockchainIdentity, encryptionKey)
+            val assetLockTx = platformRepo.createInviteFundingTransactionAsync(
+                blockchainIdentity,
+                encryptionKey,
+                Coin.valueOf(value)
+            )
             val dashPayProfile = platformRepo.getLocalUserProfile()
-            val dynamicLink = createDynamicLink(dashPayProfile!!, cftx, encryptionKey)
+            val dynamicLink = createDynamicLink(dashPayProfile!!, assetLockTx, encryptionKey)
             val shortDynamicLink = buildShortDynamicLink(dynamicLink)
-            val invitation = platformRepo.getInvitation(cftx.identityId.toStringBase58())!!
+            val invitation = platformRepo.getInvitation(assetLockTx.identityId.toStringBase58())!!
             invitation.shortDynamicLink = shortDynamicLink.shortLink.toString()
             invitation.dynamicLink = dynamicLink.uri.toString()
             platformRepo.updateInvitation(invitation)
             Result.success(workDataOf(
-                    KEY_TX_ID to cftx.txId.bytes,
-                    KEY_USER_ID to cftx.identityId.toStringBase58(),
+                    KEY_TX_ID to assetLockTx.txId.bytes,
+                    KEY_VALUE to value,
+                    KEY_USER_ID to assetLockTx.identityId.toStringBase58(),
                     KEY_DYNAMIC_LINK to dynamicLink.uri.toString(),
                     KEY_SHORT_DYNAMIC_LINK to shortDynamicLink.shortLink.toString()
             ))
@@ -114,7 +125,7 @@ class SendInviteWorker @AssistedInject constructor(
         }
     }
 
-    private fun createDynamicLink(dashPayProfile: DashPayProfile, cftx: AssetLockTransaction, aesKeyParameter: KeyParameter): DynamicLink {
+    private fun createDynamicLink(dashPayProfile: DashPayProfile, assetLockTx: AssetLockTransaction, aesKeyParameter: KeyParameter): DynamicLink {
         log.info("creating dynamic link for invitation")
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
@@ -123,7 +134,7 @@ class SendInviteWorker @AssistedInject constructor(
         val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.displayName())
         return FirebaseDynamicLinks.getInstance()
                 .createDynamicLink().apply {
-                    link = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, cftx, aesKeyParameter).link
+                    link = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, assetLockTx, aesKeyParameter).link
                     domainUriPrefix = Constants.Invitation.DOMAIN_URI_PREFIX
                     setAndroidParameters(DynamicLink.AndroidParameters.Builder().build())
                     setIosParameters(DynamicLink.IosParameters.Builder(
@@ -140,7 +151,7 @@ class SendInviteWorker @AssistedInject constructor(
                     description = applicationContext.getString(R.string.invitation_preview_message, nameLabel)
                 }.build())
                 .setGoogleAnalyticsParameters(DynamicLink.GoogleAnalyticsParameters.Builder(
-                        applicationContext.getString(R.string.app_name),
+                        applicationContext.getString(R.string.app_name_dashpay),
                         Constants.Invitation.UTM_MEDIUM,
                         Constants.Invitation.UTM_CAMPAIGN
                 ).build())
