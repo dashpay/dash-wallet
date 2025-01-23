@@ -20,11 +20,14 @@ package de.schildbach.wallet.ui.more
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
+import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogMixDashFirstBinding
 import kotlinx.coroutines.launch
@@ -36,12 +39,13 @@ class MixDashFirstDialogFragment : OffsetDialogFragment(R.layout.dialog_mix_dash
     private val binding by viewBinding(DialogMixDashFirstBinding::bind)
     val viewModel by viewModels<MixDashFirstViewModel>()
     private val settingsViewModel: SettingsViewModel by viewModels()
+    private var onConfirm: (() -> Unit)? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.skipButton.setOnClickListener {
-            startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+            onConfirm?.invoke()
             viewModel.setMixDashShown()
             dismiss()
         }
@@ -61,5 +65,10 @@ class MixDashFirstDialogFragment : OffsetDialogFragment(R.layout.dialog_mix_dash
                 dismiss()
             }
         }
+    }
+
+    fun show(fragmentActivity: FragmentActivity, onConfirm: () -> Unit) {
+        this.onConfirm = onConfirm
+        show(fragmentActivity)
     }
 }
