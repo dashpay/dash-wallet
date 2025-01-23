@@ -24,31 +24,16 @@ import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentInviteCreatedBinding
 import de.schildbach.wallet_test.databinding.InvitationBitmapTemplateBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.util.KeyboardUtil
-import org.dash.wallet.common.util.safeNavigate
 
 class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_created) {
-
-    companion object {
-        private const val ARG_IDENTITY_ID = "identity_id"
-        private const val ARG_STARTED_FROM_HISTORY = "started_from_history"
-
-        fun newInstance(identity: String, startedFromHistory: Boolean = false): InviteCreatedFragment {
-            val fragment = InviteCreatedFragment()
-            fragment.arguments = Bundle().apply {
-                putString(ARG_IDENTITY_ID, identity)
-                putBoolean(ARG_STARTED_FROM_HISTORY, startedFromHistory)
-            }
-            return fragment
-        }
-    }
     private lateinit var binding: FragmentInviteCreatedBinding
     private val args by navArgs<InviteCreatedFragmentArgs>()
     override val invitationBitmapTemplateBinding: InvitationBitmapTemplateBinding
@@ -80,20 +65,10 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         binding.maybeLaterButton.setOnClickListener {
             viewModel.saveTag(binding.tagEdit.text.toString())
             viewModel.logEvent(AnalyticsConstants.Invites.CREATED_LATER)
-            finishActivity()
+            findNavController().popBackStack()
         }
 
         initViewModel()
-    }
-
-    private fun finishActivity() {
-        // was this fragment created indirectly by InvitesHistoryActivity
-        // If yes, then Maybe Later will start InvitesHistoryActivity
-        // If no, InvitesHistoryActivity started this fragment, so just finish()
-        if (!requireArguments().getBoolean(ARG_STARTED_FROM_HISTORY)) {
-            startActivity(InvitesHistoryActivity.createIntent(requireContext()))
-        }
-        requireActivity().finish()
     }
 
     private fun initViewModel() {
@@ -116,19 +91,17 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
             when (it.status) {
                 Status.SUCCESS -> {
                     if (it.data != null) {
-//                        safeNavigate(
-//                            InviteFriendFragmentDirections
-//                                .inviteFriendFragmentToInviteCreatedFragment(identityId = it.data.userId, startedFromHistory = startedByHistory),
-//                        )
                         viewModel.identityIdLiveData.value = it.data.userId
                         binding.profilePictureEnvelope.isVisible = true
                         binding.previewButton.isVisible = true
                         binding.inviteCreationProgressTitle.text = getString(R.string.invitation_created_successfully)
+                        binding.sendButton.isEnabled = true
                     }
                 }
                 Status.LOADING -> {
                     // sending has begun
                     binding.inviteCreationProgressTitle.text = getString(R.string.invitation_creating_progress_wip)
+                    binding.sendButton.isEnabled = false
                 }
                 else -> {
                     binding.inviteCreationProgressTitle.text = getString(R.string.invitation_creating_error_title)
@@ -163,31 +136,11 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_CODE_SHARE) {
-            finishActivity()
+            findNavController().popBackStack()
         }
     }
 
     private fun copyInvitationLink() {
         super.copyInvitationLink(viewModel.shortDynamicLinkData)
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
-        menuInflater.inflate(R.menu.close_button_white_options, menu)
-        super.onCreateOptionsMenu(menu, menuInflater)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.option_close -> {
-                requireActivity().run {
-                    KeyboardUtil.hideKeyboard(this, binding.tagEdit)
-                    finish()
-                }
-                true
-            }
-            else -> {
-                super.onOptionsItemSelected(item)
-            }
-        }
     }
 }

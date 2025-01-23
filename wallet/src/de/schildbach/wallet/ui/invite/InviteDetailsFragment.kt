@@ -18,13 +18,13 @@
 package de.schildbach.wallet.ui.invite
 
 import android.os.Bundle
-import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 
 import de.schildbach.wallet.database.entity.Invitation
@@ -38,7 +38,6 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.util.KeyboardUtil
 
 @AndroidEntryPoint
 class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_details) {
@@ -79,6 +78,9 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         actionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
             setDisplayShowHomeEnabled(true)
+        }
+        toolbar.setNavigationOnClickListener {
+            findNavController().popBackStack()
         }
 
         binding.previewButton.setOnClickListener {
@@ -134,20 +136,22 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         viewModel.identityIdLiveData.value = identityId
 
         viewModel.invitationLiveData.observe(viewLifecycleOwner) {
-            if (it.memo.isNotEmpty()) {
-                binding.tagEdit.setText(it.memo)
-                binding.memo.text = it.memo
-            } else {
-                val hint = getTagHint()
-                binding.tagEdit.hint = hint
-                binding.memo.text = hint
-            }
+            if (it != null) {
+                if (it.memo.isNotEmpty()) {
+                    binding.tagEdit.setText(it.memo)
+                    binding.memo.text = it.memo
+                } else {
+                    val hint = getTagHint()
+                    binding.tagEdit.hint = hint
+                    binding.memo.text = hint
+                }
 
-            binding.date.text = WalletUtils.formatDate(it.sentAt)
-            if (it.acceptedAt != 0L) {
-                showClaimed()
-            } else {
-                showPending(it)
+                binding.date.text = WalletUtils.formatDate(it.sentAt)
+                if (it.acceptedAt != 0L) {
+                    showClaimed()
+                } else {
+                    showPending(it)
+                }
             }
         }
 
@@ -213,25 +217,6 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
 
     private fun copyInvitationLink() {
         super.copyInvitationLink(viewModel.invitation.shortDynamicLink)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.option_close -> {
-                requireActivity().run {
-                    KeyboardUtil.hideKeyboard(this, binding.tagEdit)
-                    finish()
-                }
-                true
-            }
-            android.R.id.home -> {
-                requireActivity().onBackPressed()
-                return true
-            }
-            else -> {
-                super.onOptionsItemSelected(item)
-            }
-        }
     }
 
     override fun onStop() {

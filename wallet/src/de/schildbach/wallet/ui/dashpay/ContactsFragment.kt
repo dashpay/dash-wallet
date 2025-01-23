@@ -168,10 +168,10 @@ class ContactsFragment : Fragment(),
                     val inviteHistory = dashPayViewModel.getInviteHistory()
 
                     if (inviteHistory.isEmpty()) {
-                        InviteFriendActivity.startOrError(requireActivity())
+                        safeNavigate(ContactsFragmentDirections.contactsToInviteFee())
                     } else {
                         dashPayViewModel.logEvent(AnalyticsConstants.Invites.INVITE_CONTACTS)
-                        startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+                        safeNavigate(ContactsFragmentDirections.contactsToInviteHistory())
                     }
                 }
             }

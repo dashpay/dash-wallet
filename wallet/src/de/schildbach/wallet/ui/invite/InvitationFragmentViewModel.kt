@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -70,10 +71,10 @@ open class InvitationFragmentViewModel @Inject constructor(
     val shortDynamicLinkData
         get() = sendInviteStatusLiveData.value!!.data!!.shortDynamicLink
 
-    fun sendInviteTransaction(): String {
+    fun sendInviteTransaction(value: Coin): String {
         SendInviteOperation(walletApplication)
-                .create(inviteId)
-                .enqueue()
+            .create(inviteId, value)
+            .enqueue()
         return inviteId
     }
 
@@ -109,7 +110,7 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     fun saveTag(tag: String) {
         invitation.memo = tag
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             invitationDao.insert(invitation)
         }
     }
@@ -134,7 +135,7 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     val invitationLiveData = identityIdLiveData.switchMap {
         liveData(Dispatchers.IO) {
-            emit(invitationDao.loadByUserId(it)!!)
+            emit(invitationDao.loadByUserId(it))
         }
     }
 

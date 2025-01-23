@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+    ~ Copyright 2025 Dash Core Group.
+    ~
+    ~ This program is free software: you can redistribute it and/or modify
+    ~ it under the terms of the GNU General Public License as published by
+    ~ the Free Software Foundation, either version 3 of the License, or
+    ~ (at your option) any later version.
+    ~
+    ~ This program is distributed in the hope that it will be useful,
+    ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+    ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    ~ GNU General Public License for more details.
+    ~
+    ~ You should have received a copy of the GNU General Public License
+    ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    -->
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_host_invite_history"
+    app:startDestination="@+id/inviteHistoryFragment">
+
+    <fragment
+        android:id="@+id/inviteHistoryFragment"
+        android:name="de.schildbach.wallet.ui.invite.InvitesHistoryFragment"
+        tools:layout="@layout/fragment_invites_history">
+
+        <action android:id="@+id/toCreateInvite"
+            app:destination="@id/nav_host_create_invite"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action android:id="@+id/toInviteDetails"
+            app:destination="@id/inviteDetailsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/inviteDetailsFragment"
+        android:name="de.schildbach.wallet.ui.invite.InviteDetailsFragment"
+        tools:layout="@layout/fragment_invite_details">
+
+        <argument
+            android:name="started_from_history"
+            android:defaultValue="false"
+            app:argType="boolean" />
+        <argument
+            android:name="invite_index"
+            app:argType="integer" />
+        <argument
+            android:name="identity_id"
+            app:argType="string" />
+    </fragment>
+    <include app:graph="@navigation/nav_create_invite" />
+
+</navigation>

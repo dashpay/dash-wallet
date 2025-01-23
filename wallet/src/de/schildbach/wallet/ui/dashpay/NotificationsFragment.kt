@@ -47,6 +47,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import java.util.*
 import javax.inject.Inject
@@ -241,10 +242,16 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
                     userAlertItem = null
                     viewModel.dismissUserAlert(R.string.invitation_notification_text)
 
+//                    if (inviteHistory.isEmpty()) {
+//                        InviteFriendActivity.startOrError(requireActivity())
+//                    } else {
+//                        startActivity(InvitesHistoryActivity.createIntent(requireActivity()))
+//                    }
+
                     if (inviteHistory.isEmpty()) {
-                        InviteFriendActivity.startOrError(requireActivity())
+                        safeNavigate(NotificationsFragmentDirections.notificationsToInviteFee())
                     } else {
-                        startActivity(InvitesHistoryActivity.createIntent(requireActivity()))
+                        safeNavigate(ContactsFragmentDirections.contactsToInviteHistory())
                     }
                 }
             }

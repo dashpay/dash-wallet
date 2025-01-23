@@ -993,16 +993,15 @@ class PlatformRepo @Inject constructor(
     //
     // Step 2 is to create the credit funding transaction
     //
-    suspend fun createInviteFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?)
+    suspend fun createInviteFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, topupAmount: Coin)
             : AssetLockTransaction {
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)
         val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
-        val fee = DASH_PAY_FEE_CONTESTED
-        val emptyWallet = balance == fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT)
+        val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
         val cftx = blockchainIdentity.createInviteFundingTransaction(
-            Constants.DASH_PAY_FEE,
+            topupAmount,
             keyParameter,
             useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE,
             returnChange = true,
@@ -1031,7 +1030,7 @@ class PlatformRepo @Inject constructor(
     private suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
         log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
-            cftx.confidence.addEventListener(object : TransactionConfidence.Listener {
+            cftx.getConfidence(walletApplication.wallet!!.context).addEventListener(object : TransactionConfidence.Listener {
                 override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
                     when (reason) {
                         // If this transaction is in a block, then it has been sent successfully

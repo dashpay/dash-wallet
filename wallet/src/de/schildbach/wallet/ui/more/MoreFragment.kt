@@ -48,8 +48,6 @@ import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
-import de.schildbach.wallet.ui.invite.InviteFriendActivity
-import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
@@ -150,12 +148,17 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 val inviteHistory = mainActivityViewModel.getInviteHistory()
                 mainActivityViewModel.logEvent(AnalyticsConstants.MoreMenu.INVITE)
                 if (inviteHistory.isEmpty()) {
-                    InviteFriendActivity.startOrError(requireActivity())
-                } else {
-                    val intent = InvitesHistoryActivity.createIntent(requireContext()).apply {
-                        putExtra(AnalyticsConstants.CALLING_ACTIVITY, "more")
+                    val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
+                    if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
+                        safeNavigate(MoreFragmentDirections.moreToInviteFee())
+                    } else {
+                        MixDashFirstDialogFragment()
+                            .show(requireActivity()) {
+                                safeNavigate(MoreFragmentDirections.moreToInviteFee())
+                            }
                     }
-                    startActivity(intent)
+                } else {
+                    safeNavigate(MoreFragmentDirections.moreToInviteHistory())
                 }
             }
         }

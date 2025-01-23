@@ -94,7 +94,7 @@ class InviteFriendFragment() :
 
     private fun confirmButtonClick(startedByHistory: Boolean) {
         showProgress()
-        viewModel.sendInviteTransaction()
+        viewModel.sendInviteTransaction(Constants.DASH_PAY_FEE)
         viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner) {
             if (it.status != Status.LOADING) {
                 dismissProgress()
