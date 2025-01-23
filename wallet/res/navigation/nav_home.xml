@@ -42,6 +42,13 @@
             app:destination="@id/contactsFragment" />
 
         <action
+            android:id="@+id/home_to_searchUser"
+            app:destination="@id/searchUserFragment"
+            app:enterAnim="@anim/slide_in_bottom"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
             android:id="@+id/home_to_notifications"
             app:destination="@id/showNotificationsFragment">
 
@@ -112,6 +119,12 @@
 
         <action android:id="@+id/contacts_to_invite_history"
             app:destination="@id/nav_host_invite_history"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"/>
+
+        <action android:id="@+id/contacts_to_search_user"
+            app:destination="@id/searchUserFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left"/>
@@ -407,6 +420,30 @@
             android:name="mode"
             app:argType="integer"
             android:defaultValue="2" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/searchUserFragment"
+        android:name="de.schildbach.wallet.ui.SearchUserFragment"
+        android:label="ShowSeed"
+        tools:layout="@layout/activity_search_dashpay_profile_root">
+
+        <action android:id="@+id/search_user_to_invite_fee"
+            app:destination="@id/nav_host_create_invite"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"/>
+
+        <action android:id="@+id/search_user_to_invite_history"
+            app:destination="@id/nav_host_invite_history"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"/>
+
+        <argument
+            android:name="query"
+            app:argType="string"
+            android:defaultValue="" />
     </fragment>
 
     <fragment

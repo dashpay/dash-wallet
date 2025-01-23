@@ -31,18 +31,16 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentInviteCreatedBinding
 import de.schildbach.wallet_test.databinding.InvitationBitmapTemplateBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.util.KeyboardUtil
+import org.dash.wallet.common.ui.viewBinding
 
 class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_created) {
-    private lateinit var binding: FragmentInviteCreatedBinding
+    private val binding by viewBinding(FragmentInviteCreatedBinding::bind)
     private val args by navArgs<InviteCreatedFragmentArgs>()
     override val invitationBitmapTemplateBinding: InvitationBitmapTemplateBinding
         get() = binding.invitationBitmapTemplate
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding = FragmentInviteCreatedBinding.bind(view)
-        setHasOptionsMenu(true)
 
         binding.toolbar.title = ""
         binding.profilePictureEnvelope.isVisible = false

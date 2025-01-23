@@ -19,12 +19,12 @@ package de.schildbach.wallet.ui.invite
 
 import android.os.Bundle
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 
 import de.schildbach.wallet.database.entity.Invitation
@@ -38,47 +38,23 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.viewBinding
 
 @AndroidEntryPoint
 class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_details) {
-
-    companion object {
-        private const val ARG_IDENTITY_ID = "identity_id"
-        private const val ARG_STARTED_FROM_HISTORY = "started_from_history"
-        private const val ARG_INVITE_INDEX = "invite_index"
-
-        fun newInstance(identity: String, inviteIndex: Int, startedFromHistory: Boolean = false): InviteDetailsFragment {
-            val fragment = InviteDetailsFragment()
-            fragment.arguments = Bundle().apply {
-                putString(ARG_IDENTITY_ID, identity)
-                putBoolean(ARG_STARTED_FROM_HISTORY, startedFromHistory)
-                putInt(ARG_INVITE_INDEX, inviteIndex)
-            }
-            return fragment
-        }
-    }
-    private lateinit var binding: FragmentInviteDetailsBinding
+    private val binding by viewBinding(FragmentInviteDetailsBinding::bind)
+    private val args by navArgs<InviteDetailsFragmentArgs>()
     override val invitationBitmapTemplateBinding: InvitationBitmapTemplateBinding
         get() = binding.invitationBitmapTemplate
 
-    var tagModified = false
-    var inviteIndex = -1
+    private var tagModified = false
+    private var inviteIndex = -1
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding = FragmentInviteDetailsBinding.bind(view)
-        setHasOptionsMenu(true)
 
         val toolbar = view.findViewById<Toolbar>(R.id.toolbar)
         toolbar.title = getString(R.string.menu_invite_title)
-        val appCompatActivity = requireActivity() as AppCompatActivity
-        appCompatActivity.setSupportActionBar(toolbar)
-
-        val actionBar = appCompatActivity.supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
-        }
         toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
@@ -113,7 +89,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                 if (profile != null) {
                     startActivity(DashPayUserActivity.createIntent(requireContext(), profile))
                 } else {
-                    /*not sure why this is happening*/
+                    /* not sure why this is happening */
                     AdaptiveDialog.create(
                         R.drawable.ic_warning,
                         getString(R.string.invitation_creating_error_message_not_synced),
@@ -131,8 +107,8 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
     }
 
     private fun initViewModel() {
-        val identityId = requireArguments().getString(ARG_IDENTITY_ID)
-        inviteIndex = requireArguments().getInt(ARG_INVITE_INDEX)
+        val identityId = args.identityId
+        inviteIndex = args.inviteIndex
         viewModel.identityIdLiveData.value = identityId
 
         viewModel.invitationLiveData.observe(viewLifecycleOwner) {
@@ -162,8 +138,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         viewModel.logEvent(AnalyticsConstants.Invites.DETAILS)
     }
 
-    private fun getTagHint() =
-        requireContext().getString(R.string.invitation_created_title) + " " + inviteIndex
+    private fun getTagHint() = requireContext().getString(R.string.invitation_created_title) + " " + inviteIndex
 
     private fun showPending(it: Invitation) {
         binding.sendButton.isVisible = it.canSendAgain()

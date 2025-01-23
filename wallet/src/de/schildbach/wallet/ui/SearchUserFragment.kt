@@ -17,25 +17,24 @@
 
 package de.schildbach.wallet.ui
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
-import android.view.MenuItem
 import android.view.View
-import android.view.Window
-import androidx.activity.viewModels
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.text.HtmlCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.transition.ChangeBounds
 import androidx.transition.Transition
@@ -47,63 +46,50 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
-import de.schildbach.wallet.ui.invite.InviteFriendActivity
-import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySearchDashpayProfileRootBinding
 import kotlinx.coroutines.launch
-import org.bitcoinj.wallet.AuthenticationKeyChain
-import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.onUserInteraction
+import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
-class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactRequestButtonClickListener {
-
-    companion object {
-
-        private const val EXTRA_INIT_QUERY = "extra_init_query"
-
-        fun createIntent(context: Context, initQuery: String?): Intent {
-            return Intent(context, SearchUserActivity::class.java).apply {
-                putExtra(EXTRA_INIT_QUERY, initQuery)
-            }
-        }
-    }
-
+class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_root), OnItemClickListener, OnContactRequestButtonClickListener {
     private val dashPayViewModel: DashPayViewModel by viewModels()
-    private lateinit var binding: ActivitySearchDashpayProfileRootBinding
+    private val binding by viewBinding(ActivitySearchDashpayProfileRootBinding::bind)
+    private val args by navArgs<SearchUserFragmentArgs>()
     private var handler: Handler = Handler()
     private lateinit var searchUserRunnable: Runnable
     private val adapter: UsernameSearchResultsAdapter = UsernameSearchResultsAdapter(this)
     private var query = ""
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            with(window) {
-                requestFeature(Window.FEATURE_CONTENT_TRANSITIONS)
-            }
-        }
-        super.onCreate(savedInstanceState)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        binding = ActivitySearchDashpayProfileRootBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        //binding = ActivitySearchDashpayProfileRootBinding.inflate(layoutInflater)
+        //setContentView(binding.root)
 
         val toolbar = binding.appBarLayout.toolbar
-        setSupportActionBar(toolbar)
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
+//        requireActivity().setSupportActionBar(toolbar)
+//        val actionBar = supportActionBar
+//        actionBar?.apply {
+//            setDisplayHomeAsUpEnabled(true)
+//            setDisplayShowHomeEnabled(true)
+//        }
+        toolbar.setNavigationOnClickListener {
+            findNavController().popBackStack()
         }
-        setTitle(R.string.add_new_contact)
+        //setTitle(R.string.add_new_contact)
+        toolbar.title = getString(R.string.add_new_contact)
 
         binding.profile1.apply {
-            searchResultsRv.layoutManager = LinearLayoutManager(this@SearchUserActivity)
+            searchResultsRv.layoutManager = LinearLayoutManager(requireContext())
             searchResultsRv.adapter = adapter
-            adapter.itemClickListener = this@SearchUserActivity
+            adapter.itemClickListener = this@SearchUserFragment
 
             initViewModel()
 
@@ -111,11 +97,11 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
             val constraintSet1 = ConstraintSet()
             constraintSet1.clone(root)
             val constraintSet2 = ConstraintSet()
-            constraintSet2.clone(this@SearchUserActivity, R.layout.activity_search_dashpay_profile_2)
+            constraintSet2.clone(requireContext(), R.layout.activity_search_dashpay_profile_2)
 
             search.doAfterTextChanged {
                 it?.let {
-                    imitateUserInteraction()
+                    requireActivity().onUserInteraction()
                     query = it.toString()
                     searchUser()
                 }
@@ -152,7 +138,7 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
                 }
             }
 
-            val initQuery = intent.getStringExtra(EXTRA_INIT_QUERY)
+            val initQuery = args.query
             if (!TextUtils.isEmpty(initQuery)) {
                 constraintSet2.applyTo(root)
                 setChanged = true
@@ -182,9 +168,9 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
             val inviteHistory = dashPayViewModel.getInviteHistory()
 
             if (inviteHistory.isEmpty()) {
-                InviteFriendActivity.startOrError(this@SearchUserActivity)
+                safeNavigate(SearchUserFragmentDirections.searchUserToInviteFee())
             } else {
-                startActivity(InvitesHistoryActivity.createIntent(this@SearchUserActivity))
+                safeNavigate(SearchUserFragmentDirections.searchUserToInviteHistory())
             }
         }
     }
@@ -195,13 +181,13 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             val searchPadding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 60f, resources.displayMetrics).toInt()
             setPadding(searchPadding, 0, 0, 0)
-            typeface = ResourcesCompat.getFont(this@SearchUserActivity, R.font.inter_semibold)
+            typeface = ResourcesCompat.getFont(requireContext(), R.font.inter_semibold)
         }
     }
 
     private fun initViewModel() {
-        dashPayViewModel.searchUsernamesLiveData.observe(this) {
-            imitateUserInteraction()
+        dashPayViewModel.searchUsernamesLiveData.observe(viewLifecycleOwner) {
+            onUserInteraction()
             if (Status.LOADING == it.status) {
                 if (clearList) {
                     startLoading()
@@ -223,8 +209,8 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
                 }
             }
         }
-        dashPayViewModel.sendContactRequestState.observe(this) {
-            imitateUserInteraction()
+        dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner) {
+            onUserInteraction()
             adapter.sendContactRequestWorkStateMap = it
         }
         dashPayViewModel.blockchainStateData.observe(this) {
@@ -295,21 +281,21 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        startActivityForResult(DashPayUserActivity.createIntent(this@SearchUserActivity, usernameSearchResult),
+        startActivityForResult(DashPayUserActivity.createIntent(requireContext(), usernameSearchResult),
                 DashPayUserActivity.REQUEST_CODE_DEFAULT)
 
-        overridePendingTransition(R.anim.slide_in_bottom, R.anim.activity_stay)
+        //overridePendingTransition(R.anim.slide_in_bottom, R.anim.activity_stay)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressed()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
-    }
+//    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+//        when (item.itemId) {
+//            android.R.id.home -> {
+//                onBackPressed()
+//                return true
+//            }
+//        }
+//        return super.onOptionsItemSelected(item)
+//    }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.ACCEPT_REQUEST)
@@ -328,10 +314,10 @@ class SearchUserActivity : LockScreenActivity(), OnItemClickListener, OnContactR
                     if (isEmpty) getString(R.string.credit_balance_empty_warning_message) else getString(R.string.credit_balance_low_warning_message),
                     getString(R.string.credit_balance_button_maybe_later),
                     getString(R.string.credit_balance_button_buy)
-                ).showAsync(this@SearchUserActivity)
+                ).showAsync(requireActivity())
 
                 if (answer == true) {
-                    SendCoinsActivity.startBuyCredits(this@SearchUserActivity)
+                    SendCoinsActivity.startBuyCredits(requireActivity())
                 } else {
                     if (shouldWarn)
                         dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)

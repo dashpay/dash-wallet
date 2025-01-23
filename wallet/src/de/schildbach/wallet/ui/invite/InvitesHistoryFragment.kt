@@ -29,6 +29,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentInvitesHistoryBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 
@@ -45,7 +46,7 @@ class InvitesHistoryFragment(private val caller: String) :
     // need default constructor to prevent crashes
     constructor() :this("")
 
-    private lateinit var binding: FragmentInvitesHistoryBinding
+    private val binding by viewBinding(FragmentInvitesHistoryBinding::bind)
 
     private val invitesHistoryViewModel: InvitesHistoryViewModel by viewModels()
     private val filterViewModel: InvitesHistoryFilterViewModel by viewModels()
@@ -55,18 +56,9 @@ class InvitesHistoryFragment(private val caller: String) :
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding = FragmentInvitesHistoryBinding.bind(view)
-        // setHasOptionsMenu(true)
 
         val toolbar = view.findViewById<Toolbar>(R.id.toolbar)
         toolbar.title = requireContext().getString(R.string.menu_invite_title)
-        val appCompatActivity = requireActivity() as AppCompatActivity
-        appCompatActivity.setSupportActionBar(toolbar)
-        val actionBar = appCompatActivity.supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
-        }
         toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }

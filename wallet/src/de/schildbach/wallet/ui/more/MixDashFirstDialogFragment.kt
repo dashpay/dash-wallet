@@ -27,7 +27,6 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
-import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogMixDashFirstBinding
 import kotlinx.coroutines.launch
