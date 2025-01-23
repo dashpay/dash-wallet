@@ -65,6 +65,7 @@
                         android:layout_gravity="center_horizontal" />
 
                     <TextView
+                        android:id="@+id/invite_creation_progress_title"
                         style="@style/Headline6.Secondary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

@@ -23,11 +23,16 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
+import androidx.navigation.fragment.navArgs
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentInviteCreatedBinding
 import de.schildbach.wallet_test.databinding.InvitationBitmapTemplateBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.util.KeyboardUtil
+import org.dash.wallet.common.util.safeNavigate
 
 class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_created) {
 
@@ -45,6 +50,7 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         }
     }
     private lateinit var binding: FragmentInviteCreatedBinding
+    private val args by navArgs<InviteCreatedFragmentArgs>()
     override val invitationBitmapTemplateBinding: InvitationBitmapTemplateBinding
         get() = binding.invitationBitmapTemplate
 
@@ -54,6 +60,9 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         setHasOptionsMenu(true)
 
         binding.toolbar.title = ""
+        binding.profilePictureEnvelope.isVisible = false
+        binding.previewButton.isVisible = false
+        binding.inviteCreationProgressTitle.text = getString(R.string.invitation_creating_progress_loading)
         val appCompatActivity = requireActivity() as AppCompatActivity
         appCompatActivity.setSupportActionBar(binding.toolbar)
 
@@ -88,16 +97,54 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
     }
 
     private fun initViewModel() {
-        val identityId = requireArguments().getString(ARG_IDENTITY_ID)
-        viewModel.identityIdLiveData.value = identityId
+        // val identityId = args.identityId
+        // viewModel.identityIdLiveData.value = identityId
 
         viewModel.invitationLiveData.observe(viewLifecycleOwner) {
-            binding.tagEdit.setText(it.memo)
+            binding.tagEdit.setText(it?.memo)
         }
 
         viewModel.dashPayProfile.observe(viewLifecycleOwner) {
             binding.profilePictureEnvelope.avatarProfile = it
             setupInvitationPreviewTemplate(it!!)
+        }
+
+        viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner) {
+//            if (it.status != Status.LOADING) {
+//                dismissProgress()
+//            }
+            when (it.status) {
+                Status.SUCCESS -> {
+                    if (it.data != null) {
+//                        safeNavigate(
+//                            InviteFriendFragmentDirections
+//                                .inviteFriendFragmentToInviteCreatedFragment(identityId = it.data.userId, startedFromHistory = startedByHistory),
+//                        )
+                        viewModel.identityIdLiveData.value = it.data.userId
+                        binding.profilePictureEnvelope.isVisible = true
+                        binding.previewButton.isVisible = true
+                        binding.inviteCreationProgressTitle.text = getString(R.string.invitation_created_successfully)
+                    }
+                }
+                Status.LOADING -> {
+                    // sending has begun
+                    binding.inviteCreationProgressTitle.text = getString(R.string.invitation_creating_progress_wip)
+                }
+                else -> {
+                    binding.inviteCreationProgressTitle.text = getString(R.string.invitation_creating_error_title)
+
+//                    // there was an error sending
+//                    val errorDialog = FancyAlertDialog.newInstance(
+//                        R.string.invitation_creating_error_title,
+//                        R.string.invitation_creating_error_message,
+//                        R.drawable.ic_error_creating_invitation,
+//                        R.string.okay,
+//                        0,
+//                    )
+//                    errorDialog.show(childFragmentManager, null)
+                    viewModel.logEvent(AnalyticsConstants.Invites.ERROR_CREATE)
+                }
+            }
         }
     }
 

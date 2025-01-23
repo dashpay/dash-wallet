@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+    ~ Copyright 2025 Dash Core Group.
+    ~
+    ~ This program is free software: you can redistribute it and/or modify
+    ~ it under the terms of the GNU General Public License as published by
+    ~ the Free Software Foundation, either version 3 of the License, or
+    ~ (at your option) any later version.
+    ~
+    ~ This program is distributed in the hope that it will be useful,
+    ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+    ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    ~ GNU General Public License for more details.
+    ~
+    ~ You should have received a copy of the GNU General Public License
+    ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    -->
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_host_create_invite"
+    app:startDestination="@+id/invitationFeeDialog">
+
+    <fragment
+        android:id="@+id/inviteCreatedFragment"
+        android:name="de.schildbach.wallet.ui.invite.InviteCreatedFragment"
+        tools:layout="@layout/fragment_invite_created">
+
+        <argument
+            android:name="started_from_history"
+            android:defaultValue="false"
+            app:argType="boolean" />
+
+        <argument
+            android:name="identity_id"
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/inviteDetailsFragment"
+        android:name="de.schildbach.wallet.ui.invite.InviteDetailsFragment"
+        tools:layout="@layout/fragment_invite_details">
+
+        <argument
+            android:name="started_from_history"
+            android:defaultValue="false"
+            app:argType="boolean" />
+        <argument
+            android:name="invite_index"
+            app:argType="integer" />
+        <argument
+            android:name="identity_id"
+            app:argType="string" />
+    </fragment>
+
+    <dialog
+        android:id="@+id/confirmInviteDialog"
+        android:name="de.schildbach.wallet.ui.more.ConfirmInviteDialogFragment"
+        android:layout="@layout/dialog_confirm_topup"
+        android:label="Confirm Invite Dialog">
+
+        <argument
+            android:name="amount"
+            app:argType="long" />
+
+        <action
+            android:id="@+id/toInviteCreatedFragment"
+            app:destination="@id/inviteCreatedFragment"
+            app:popUpTo="@id/inviteCreatedFragment"
+            app:popUpToInclusive="true" />
+
+    </dialog>
+
+    <dialog
+        android:id="@+id/invitationFeeDialog"
+        android:name="de.schildbach.wallet.ui.invite.InvitationFeeDialogFragment"
+        android:layout="@layout/dialog_invitation_fee"
+        android:label="CustomDialogFragment">
+
+        <action
+            android:id="@+id/toConfirmInviteDialog"
+            app:destination="@id/confirmInviteDialog"
+            app:popUpTo="@id/invitationFeeDialog"
+            app:popUpToInclusive="true" />
+    </dialog>
+</navigation>
