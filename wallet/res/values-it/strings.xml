@@ -296,6 +296,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">Allega il dump del portafoglio</string>
     <string name="report_issue_dialog_mail_intent_chooser">Invio della segnalazione…</string>
     <string name="report_issue_dialog_mail_intent_failed">Invio della segnalazione non riuscito.</string>
+    <string name="report_issue_dialog_generating_report">Generazione del report</string>
     <string name="report_transaction_history_export">Esporta</string>
     <string name="report_transaction_history_title">Esporta CSV</string>
     <string name="report_transaction_history_not_synced_title">Esporta CSV</string>
@@ -412,5 +413,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">Vuoi ricevere pagamenti in background?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Questa app è configurata per continuare a funzionare anche dopo non essere stata visibile per un po\' di tempo.\n\nSuggeriamo di consentire a questa app di rimanere sempre aggiornata con la blockchain, anche in background.\n\nNon preoccuparti,  faremo sempre attenzione al consumo della batteria.</string>
     <string name="battery_optimization_dialog_button_change">Apri Impostazioni</string>
+    <string name="credits_profile_change_message">Aggiorna le informazioni del profilo</string>
 
 </resources>

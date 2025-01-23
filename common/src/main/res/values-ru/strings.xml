@@ -64,6 +64,7 @@
     <string name="receive_enter_amount_button">Введите сумму</string>
     <string name="account_create">Создать аккаунт</string>
     <string name="submit">Отправить</string>
+    <string name="try_again">Попробуйте ещё раз</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Поиск</string>

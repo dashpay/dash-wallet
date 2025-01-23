@@ -288,9 +288,7 @@
     <string name="about_review_and_rate">어플 리뷰 및 평점</string>
     <string name="about_contact_support">고객 지원부에 문의하기</string>
     <string name="about_fork_disclaimer">이 어플은 비트코인 지갑에서 포크한 오픈 소스 어플입니다.</string>
-    <string name="about_copyright">Copyright © 2023 대시 코어 그룹</string>
     <string name="about_license">GNU General Public License v3.0</string>
-    <string name="about_version_name">대시 지갑 %s</string>
     <string name="about_last_explore_device_sync">마지막 익스플로어 기기 동기화</string>
     <string name="about_last_explore_server_update">마지막 익스플로어 서버 업데이트</string>
     <string name="about_firebase_installation_id">파이어베이스 설치 ID</string>

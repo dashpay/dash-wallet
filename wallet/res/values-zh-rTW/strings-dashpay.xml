@@ -62,6 +62,7 @@
     <string name="invitation_accept_message_3">上傳您的照片，個性化您的身份</string>
     <string name="invitation_accept_continue">繼續</string>
     <string name="invitation_contact_request_sent_message">自從 %s 邀請您以來，聯絡請求已發送至對方。</string>
+    <string name="topup_confirm_message">您已選擇充值您的身份，將從您的餘額中扣除以下金額。</string>
 
     <string name="username_being_created">您的用戶名 %s 正在達世幣網路上創建</string>
     <string name="username_being_requested">達世幣網路正在請求您的用戶名 %s </string>
@@ -74,6 +75,7 @@
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) 正在註冊用戶名</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) 請求用戶名稱</string>
     <string name="processing_home_step_3_restoring">(3/3) 恢復使用者名稱</string>
+    <string name="restore_identity">恢復身份</string>
     <string name="processing_done_title">你好 %s,</string>
     <string name="processing_done_subtitle">您的帳戶已準備好了</string>
     <string name="processing_voting_subtitle">為您的用戶名的投票已經開始</string>
@@ -249,7 +251,7 @@
     <string name="please_note_cant_change_this_later">請注意，稍後您將無法變更此設置</string>
     <string name="Intermediate_level_WIFI_Warning">中級隱私等級需要可靠的網路連接</string>
     <string name="Advanced_level_WIFI_Warning">高級隱私等級需要可靠的網路連接</string>
-    <string name="privcay_level_WIFI_warning_desc">建議使用 Wi-Fi 網路以避免損失任何資金</string>
+    <string name="privcay_level_WIFI_warning_desc">建議使用 Wi-Fi 網路以避免產生額外的混合費用</string>
     <string name="continue_anyway">無論如何都要繼續</string>
     <string name="welcome_to_dash_pay">歡迎使用 Dash Pay</string>
     <string name="pay_to_usernames">向用戶名付費。無須再使用有字母數字地址。</string>
@@ -281,8 +283,15 @@
     <string name="only_duplicates">僅重複的項目</string>
     <string name="only_links">僅限帶有連結的請求</string>
     <string name="only_links_short">有連結</string>
-    <string name="date">日期: %s</string>
+    <string name="date">請求日期: %s</string>
     <string name="votes">投票數: %s</string>
+    <string name="voting_ends">投票結束: %s</string>
+
+    <string-array name="usernames_group_by_options">
+        <item>沒有</item>
+        <item>最快優先</item>
+        <item>最新優先</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>從新到舊</item>
@@ -297,14 +306,6 @@
         <item>我己否決的</item>
         <item>已阻止投票</item>
     </string-array>
-    <string name="unblock_button">解禁</string>
-    <plurals name="block_vote_button">
-        <item quantity="other">禁止</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="other">核准</item>
-    </plurals>
-    <string name="block_vote_count">%d 區塊</string>
     <string name="request_your_username">建立您的用戶名</string>
     <string name="request_your_hint">請注意，您未來將無法更改它</string>
     <string name="request_username">申请用戶名</string>
@@ -359,7 +360,9 @@
     <string name="add_masternode_key">新增主節點投票金鑰</string>
     <string name="dont_ask_again">不要再詢問我</string>
     <string name="vote_submitting">正在提交您對 %s 用戶名的投票</string>
+    <string name="quick_vote_submitting">提交您對所有用戶名的投票</string>
     <string name="vote_submitted">已投票給 %s 用戶名</string>
+    <string name="quick_vote_submitted">已成功投票給​​所有用戶名</string>
     <string name="cancel_submitting">取消您對 %s 用戶名的投票</string>
     <string name="cancel_submitted">已取消對 %s 用戶名的投票</string>
     <string name="block_submitting">阻止 %s 用戶名</string>
@@ -370,6 +373,9 @@
     <string name="quick_vote">快速投票</string>
     <string name="quick_vote_subtitle">點擊 \"為所有人投票\" 按鈕，您將自動為首先提交的所有已過濾用戶名 (%d) 投票</string>
     <string name="vote_for_all">給所有人投票</string>
+    <string name="one_vote_left_title">還剩一票</string>
+    <string name="one_vote_left_show_usernames">顯示使用者名稱</string>
+    <string name="one_vote_left_subtitle">您已經為以下用戶名投了 %d 次票。您只能為這些用戶名再投一票。</string>
     <string name="voting_period_active">用戶名投票期活躍</string>
     <string name="there_was_a_network_error">網路錯誤，您可以重試，無需額外費用</string>
     <string name="requested_username_has_been">已請求用戶名。</string>
@@ -442,4 +448,18 @@
     <string name="mix_dash_mix">混合資金結餘</string>
     <string name="mix_dash_title">混合你的達世幣</string>
     <string name="mix_dash_message">為了防止其他人看到您的付款對象，建議您在建立使用者名稱之前混合您的餘額。</string>
-    </resources>
+    <string name="tools_credits_title">積分</string>
+    <string name="tools_credits_buy_button">購買</string>
+    <string name="dashpay_what_are_credits_title">什麼是積分\?</string>
+    <string name="dashpay_what_are_credits_message">用戶支付交易費用才能與達世幣網路進行交互，這就是為什麼您的個人資料的所有更改都需要支付少量費用，你亦可以透過積分來支付。.\n\n您的積分可用於:</string>
+    <string name="credits_send_and_accept_contact_requests">發送和接受聯繫請求</string>
+    <string name="platform_credits">平台積分</string>
+    <string name="platform_credits_error">錯誤</string>
+    <string name="platform_credits_not_transferred">待定平台積分</string>
+    <string name="voting_period">投票期間</string>
+    <string name="voting_period_ends_in_days">投票將在  %d 天後結束</string>
+    <string name="voting_period_ends_today">投票今天結束</string>
+    <string name="voting_period_ends_tomorrow">投票明天結束</string>
+    <string name="link_included">包含連結</string>
+    <string name="group_by">排序方式</string>
+</resources>

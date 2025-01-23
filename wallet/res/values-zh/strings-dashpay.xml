@@ -62,7 +62,6 @@
     <string name="invitation_accept_message_3">上传您的照片, 个性化您的身份信息</string>
     <string name="invitation_accept_continue">继续</string>
     <string name="invitation_contact_request_sent_message">一个好友请求已被发送到%s因为他们邀请了您.</string>
-
     <string name="username_being_created">您的用户名%s已经在 Dash 网络被创建</string>
     <string name="username_being_requested">您的用户名%s正在 Dash 网络中被请求</string>
 
@@ -249,7 +248,6 @@
     <string name="please_note_cant_change_this_later">请注意您在之后无法再进行更改</string>
     <string name="Intermediate_level_WIFI_Warning">中等隐私级别需要稳定的网络连接</string>
     <string name="Advanced_level_WIFI_Warning">高等隐私级别需要稳定的网络连接</string>
-    <string name="privcay_level_WIFI_warning_desc">建议连接到Wi-Fi网络以避免任何资金损失</string>
     <string name="continue_anyway">仍然继续</string>
     <string name="welcome_to_dash_pay">欢迎来到 DashPay</string>
     <string name="pay_to_usernames">以用户名支付. 无需使用字母数字地址.</string>
@@ -281,8 +279,10 @@
     <string name="only_duplicates">仅重复项</string>
     <string name="only_links">仅以链接申请</string>
     <string name="only_links_short">伴有链接</string>
-    <string name="date">日期: %s</string>
     <string name="votes">投票数: %s</string>
+    <string-array name="usernames_group_by_options">
+        <item>无</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>新到旧</item>
@@ -297,14 +297,6 @@
         <item>我已否决的</item>
         <item>已阻止投票</item>
     </string-array>
-    <string name="unblock_button">解禁</string>
-    <plurals name="block_vote_button">
-        <item quantity="other">禁止的</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="other">通过的</item>
-    </plurals>
-    <string name="block_vote_count">%d (多个)区块</string>
     <string name="request_your_username">创建您的用户名</string>
     <string name="request_your_hint">请注意您在之后将无法进行修改</string>
     <string name="request_username">申请用户名</string>
@@ -442,4 +434,6 @@
     <string name="mix_dash_mix">混币余额</string>
     <string name="mix_dash_title">混币您的 Dash</string>
     <string name="mix_dash_message">为了防止其他人看到您的付款对象, 建议您在创建用户名之前对您的 Dash 进行混币.</string>
+    <string name="tools_credits_buy_button">购买</string>
+    <string name="platform_credits_error">错误</string>
     </resources>

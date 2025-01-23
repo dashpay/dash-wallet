@@ -64,6 +64,7 @@
     <string name="receive_enter_amount_button">مبلغ را مشخص کنید</string>
     <string name="account_create">ایجاد حساب</string>
     <string name="submit">ثبت</string>
+    <string name="try_again">دوباره امتحان کنید</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">جستجو</string>

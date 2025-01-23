@@ -291,9 +291,9 @@
     <string name="about_review_and_rate">Suriin at i-rate ang app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">Ito ay open source app forked mula sa Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
+    <string name="about_copyright">Copyright © 2024 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
-    <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_version_name">DashPay Wallet %s</string>
     <string name="about_last_explore_device_sync">Pag-sync ng device sa huling Explore</string>
     <string name="about_last_explore_server_update">Huling pag-update ng server ng Explore</string>
     <string name="about_firebase_installation_id">Firebase installation ID</string>

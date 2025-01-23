@@ -412,5 +412,4 @@
     <string name="battery_optimization_dialog_unrestricted_title">Apakah anda ingin menerima pembayaran di latar belakang?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Aplikasi ini dikonfigurasi untuk terus berjalan setelah tidak terlihat selama beberapa waktu.\n\nKami menyarankan agar aplikasi ini selalu mengikuti perkembangan blockchain, bahkan di latar belakang.\n\nJangan khawatir, kami akan melakukannya selalu perhatikan penggunaan baterai Anda.</string>
     <string name="battery_optimization_dialog_button_change">Buka Pengaturan</string>
-
-</resources>
+    </resources>

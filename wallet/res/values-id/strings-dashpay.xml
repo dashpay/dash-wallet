@@ -62,7 +62,6 @@ Dash</b> anda</string>
     <string name="invitation_accept_message_3">Unggah gambar Anda, sesuaikan identitas Anda</string>
     <string name="invitation_accept_continue">Teruskan</string>
     <string name="invitation_contact_request_sent_message">Permintaan kontak telah dikirim ke %s karena mereka mengundang Anda.</string>
-
     <string name="username_being_created">Nama pengguna anda %s sendag dibuat di jaringan Dash</string>
     <string name="username_being_requested">Nama pengguna anda %s sedang diminta di jaringan Dash</string>
 
@@ -249,7 +248,6 @@ Dash</b> anda</string>
     <string name="please_note_cant_change_this_later">Harap dicatat bahwa Anda tidak akan dapat mengubahnya nanti</string>
     <string name="Intermediate_level_WIFI_Warning">Tingkat privasi menengah memerlukan koneksi internet yang andal</string>
     <string name="Advanced_level_WIFI_Warning">Tingkat privasi tingkat lanjut memerlukan koneksi internet yang andal</string>
-    <string name="privcay_level_WIFI_warning_desc">Disarankan untuk berada di jaringan Wi-Fi untuk menghindari kehilangan dana</string>
     <string name="continue_anyway">Lanjutkan</string>
     <string name="welcome_to_dash_pay">Selamat Datang ke Dash Pay</string>
     <string name="pay_to_usernames">Bayar ke nama pengguna. Tidak ada lagi alamat alfanumerik.</string>
@@ -281,8 +279,10 @@ Dash</b> anda</string>
     <string name="only_duplicates">Hanya duplikat</string>
     <string name="only_links">Hanya permintaan dengan tautan</string>
     <string name="only_links_short">dengan tautan</string>
-    <string name="date">Tanggal: %s</string>
     <string name="votes">Suara: %s</string>
+    <string-array name="usernames_group_by_options">
+        <item>Tidak ada</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>Baru ke Lama</item>
@@ -297,14 +297,6 @@ Dash</b> anda</string>
         <item>Saya tidak menyetujui</item>
         <item>Telah memblokir suara</item>
     </string-array>
-    <string name="unblock_button">buka blokir</string>
-    <plurals name="block_vote_button">
-        <item quantity="other">Blocks</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="other">Persetujuan</item>
-    </plurals>
-    <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Buat Nama Pengguna anda</string>
     <string name="request_your_hint">Harap dicatat bahwa Anda tidak akan dapat mengubahnya di masa mendatang</string>
     <string name="request_username">Minta Nama Pengguna</string>
@@ -442,4 +434,6 @@ Dash</b> anda</string>
     <string name="mix_dash_mix">Campur Saldo</string>
     <string name="mix_dash_title">Campur Dash anda</string>
     <string name="mix_dash_message">Untuk membantu mencegah orang lain melihat kepada siapa Anda melakukan pembayaran, disarankan untuk mencampur saldo Anda sebelum Anda membuat nama pengguna.</string>
+    <string name="tools_credits_buy_button">Beli</string>
+    <string name="platform_credits_error">Kesalahan</string>
     </resources>

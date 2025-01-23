@@ -62,6 +62,7 @@ gebruikersnaam</b></string>
     <string name="invitation_accept_message_3">Upload je foto, personaliseer je identiteit</string>
     <string name="invitation_accept_continue">Doorgaan</string>
     <string name="invitation_contact_request_sent_message">Een contactverzoek is verzonden naar %s omdat zij je hebben uitgenodigd.</string>
+    <string name="topup_confirm_message">Je hebt er voor gekozen om je identiteit op te waarderen. Het volgende bedrag wordt van je saldo afgetrokken.</string>
 
     <string name="username_being_created">Je gebruikersnaam %s wordt aangemaakt op het Dash Netwerk</string>
     <string name="username_being_requested">Je gebruikersnaam %s wordt aangevraagd op het Dash Netwerk</string>
@@ -74,6 +75,7 @@ gebruikersnaam</b></string>
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Gebruikersnaam registreren</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Gebruikersnaam aanvragen</string>
     <string name="processing_home_step_3_restoring">(3/3) Gebruikersnaam herstellen</string>
+    <string name="restore_identity">Identiteit herstellen</string>
     <string name="processing_done_title">Hallo %s,</string>
     <string name="processing_done_subtitle">Je account is klaar</string>
     <string name="processing_voting_subtitle">Het stemmen voor je gebruikersnaam is begonnen</string>
@@ -250,7 +252,7 @@ gebruikersnaam</b></string>
     <string name="please_note_cant_change_this_later">Let op dat je dit later niet kunt veranderen</string>
     <string name="Intermediate_level_WIFI_Warning">Het privacy niveau \'Gemiddeld\' vereist een betrouwbare internetverbinding</string>
     <string name="Advanced_level_WIFI_Warning">Het privacy niveau \'Geavanceerd\' vereist een betrouwbare internetverbinding</string>
-    <string name="privcay_level_WIFI_warning_desc">Het wordt aanbevolen om verbonden te zijn met een WiFi netwerk om te voorkomen dat je geld verliest.</string>
+    <string name="privcay_level_WIFI_warning_desc">Het wordt aanbevolen om op een WiFi netwerk verbonden te zijn om extra mix kosten te vermijden.</string>
     <string name="continue_anyway">Ga toch door</string>
     <string name="welcome_to_dash_pay">Welkom bij Dash Pay</string>
     <string name="pay_to_usernames">Betaal aan gebruikersnamen. Geen alfanumerieke adressen meer.</string>
@@ -282,8 +284,15 @@ gebruikersnaam</b></string>
     <string name="only_duplicates">Alleen duplicaten</string>
     <string name="only_links">Alleen aanvragen met links</string>
     <string name="only_links_short">Met links</string>
-    <string name="date">Datum: %s</string>
+    <string name="date">Verzoekdatum: %s</string>
     <string name="votes">Stemmen: %s</string>
+    <string name="voting_ends">Stemming eindigt: %s</string>
+
+    <string-array name="usernames_group_by_options">
+        <item>Geen</item>
+        <item>Eerste eerst</item>
+        <item>laatste eerst</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>Nieuw naar oud</item>
@@ -298,16 +307,6 @@ gebruikersnaam</b></string>
         <item>Ik heb het niet goedgekeurd</item>
         <item>Heeft geblokkeerde stemmen </item>
     </string-array>
-    <string name="unblock_button">Deblokkeren</string>
-    <plurals name="block_vote_button">
-        <item quantity="one">Block</item>
-        <item quantity="other">Blocks</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="one">Goedkeuring</item>
-        <item quantity="other">Goedkeuringen</item>
-    </plurals>
-    <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Maak je gebruikersnaam aan</string>
     <string name="request_your_hint">Let op dat je deze in de toekomst niet meer kunt wijzigen</string>
     <string name="request_username">Vraag gebruikersnaam aan</string>
@@ -362,7 +361,9 @@ gebruikersnaam</b></string>
     <string name="add_masternode_key">Voeg Masternode stemsleutel toe</string>
     <string name="dont_ask_again">Vraag me niet nog een keer</string>
     <string name="vote_submitting">Je stem indienen voor gebruikersnaam %s</string>
+    <string name="quick_vote_submitting">Je stemmen indienen voor alle gebruikersnamen</string>
     <string name="vote_submitted">Gestemd voor gebruikersnaam %s</string>
+    <string name="quick_vote_submitted">Met succes gestemd op alle gebruikersnamen.</string>
     <string name="cancel_submitting">Je stem voor gebruikersnaam %s annuleren</string>
     <string name="cancel_submitted">Stemming voor gebruikersnaam %s geannuleerd</string>
     <string name="block_submitting">Blokkeren van gebruikersnaam %s</string>
@@ -373,6 +374,9 @@ gebruikersnaam</b></string>
     <string name="quick_vote">Snel stemmen</string>
     <string name="quick_vote_subtitle">Door op de knop \"Stem op Alles\" te drukken, stem je automatisch voor alle gefilterde gebruikersnamen (%d) die als eerste zijn ingediend.</string>
     <string name="vote_for_all">Stem voor alle</string>
+    <string name="one_vote_left_title">Nog één stem over</string>
+    <string name="one_vote_left_show_usernames">Toon gebruikersnamen</string>
+    <string name="one_vote_left_subtitle">Je hebt al %d keer gestemd op deze gebruikersnamen. Je kan nog maar één stem uitbrengen voor deze gebruikersnamen.</string>
     <string name="voting_period_active">Periode voor stemmen op gebruikersnamen actief</string>
     <string name="there_was_a_network_error">Er is een netwerkfout opgetreden. Je kan het zonder extra kosten opnieuw proberen</string>
     <string name="requested_username_has_been">Gebruikersnaam is aangevraagd.</string>
@@ -445,4 +449,18 @@ gebruikersnaam</b></string>
     <string name="mix_dash_mix">Gemixt saldo</string>
     <string name="mix_dash_title">Mix je Dash</string>
     <string name="mix_dash_message">Om te voorkomen dat anderen kunnen zien aan wie je betalingen doet, raden wij u aan om je saldo te mixen voordat je je gebruikersnaam aanmaakt.</string>
-    </resources>
+    <string name="tools_credits_title">Credits</string>
+    <string name="tools_credits_buy_button">Koop</string>
+    <string name="dashpay_what_are_credits_title">Wat zijn credits\?</string>
+    <string name="dashpay_what_are_credits_message">Gebruikers betalen transactiekosten voor interactie met het Dash netwerk. Daarom vereist elke wijziging aan je profiel het betalen van een kleine vergoeding die met credits kan worden betaald.\n\nJe credits kunnen worden gebruikt om:</string>
+    <string name="credits_send_and_accept_contact_requests">Stuur en accepteer contactverzoeken.</string>
+    <string name="platform_credits">Platform Credits</string>
+    <string name="platform_credits_error">Fout</string>
+    <string name="platform_credits_not_transferred">Platformcredits in afwachting</string>
+    <string name="voting_period">Stemperiode</string>
+    <string name="voting_period_ends_in_days">De stemperiode eindigt over %d dagen.</string>
+    <string name="voting_period_ends_today">De stemperiode eindigt vandaag.</string>
+    <string name="voting_period_ends_tomorrow">De stemperiode eindigt morgen.</string>
+    <string name="link_included">Link inbegrepen.</string>
+    <string name="group_by">groepeer op</string>
+</resources>

@@ -60,6 +60,8 @@
     <string name="verify">تحقق</string>
     <string name="receive_enter_amount_button">حدد المبلغ</string>
     <string name="account_create">إنشاء حساب</string>
+    <string name="try_again">حاول ثانية</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">بحث</string>
     <string name="permission_allow">السماح</string>

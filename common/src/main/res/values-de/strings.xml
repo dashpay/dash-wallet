@@ -64,6 +64,7 @@
     <string name="receive_enter_amount_button">Betrag festsetzen</string>
     <string name="account_create">Konto erstellen</string>
     <string name="submit">Einreichen</string>
+    <string name="try_again">Erneut versuchen</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Suchen</string>

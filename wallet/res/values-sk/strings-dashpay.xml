@@ -62,6 +62,7 @@ používateľské meno</b></string>
     <string name="invitation_accept_message_3">Nahrajte svoj obrázok, prispôsobte si svoju identitu</string>
     <string name="invitation_accept_continue">Pokračovať</string>
     <string name="invitation_contact_request_sent_message">Žiadosť o kontakt bola odoslaná používateľovi %s, keďže vás pozval.</string>
+    <string name="topup_confirm_message">Rozhodli ste sa doplniť svoju identitu. Z vášho zostatku bude odpočítaná nasledujúca suma.</string>
 
     <string name="username_being_created">Vaše používateľské meno %s sa vytvára v sieti Dash</string>
     <string name="username_being_requested">Vaše používateľské meno %s sa požaduje po sieti Dash</string>
@@ -74,6 +75,7 @@ používateľské meno</b></string>
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Registrácia používateľského mena</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Žiadosť o používateľské meno</string>
     <string name="processing_home_step_3_restoring">(3/3) Obnovenie používateľského mena</string>
+    <string name="restore_identity">Obnoviť identitu</string>
     <string name="processing_done_title">Ahoj %s,</string>
     <string name="processing_done_subtitle">Váš účet je pripravený</string>
     <string name="processing_voting_subtitle">Hlasovanie o vašom používateľskom mene sa začalo</string>
@@ -127,7 +129,7 @@ používateľské meno</b></string>
     <string name="notifications_none_new">Nie sú k dispozícii žiadne nové upozornenia</string>
     <string name="notifications_contact_has_accepted">%s prijal vašu žiadosť o kontakt.</string>
     <string name="notifications_you_have_accepted">Prijali ste žiadosť o kontakt od %s</string>
-    <string name="notifications_you_sent">Poslali ste žiadosť o kontakt ku %s</string>
+    <string name="notifications_you_sent">Poslali ste žiadosť o kontakt pre %s</string>
     <string name="notifications_you_received">%s vám poslal žiadosť o kontakt</string>
 
     <string name="identity_complete_message">Vaše používateľské meno %s bolo úspešne vytvorené v sieti Dash</string>
@@ -249,7 +251,7 @@ používateľské meno</b></string>
     <string name="please_note_cant_change_this_later">Upozorňujeme, že neskôr to už nebudete môcť zmeniť</string>
     <string name="Intermediate_level_WIFI_Warning">Stredná úroveň ochrany osobných údajov vyžaduje spoľahlivé internetové pripojenie</string>
     <string name="Advanced_level_WIFI_Warning">Pokročilá úroveň ochrany osobných údajov vyžaduje spoľahlivé internetové pripojenie</string>
-    <string name="privcay_level_WIFI_warning_desc">Odporúča sa byť pripojený na Wi-Fi, aby ste predišli strate finančných prostriedkov</string>
+    <string name="privcay_level_WIFI_warning_desc">Aby ste sa vyhli ďalším poplatkom za miešanie, odporúča sa byť v pripojený naWi-Fi</string>
     <string name="continue_anyway">Napriek tomu pokračovať</string>
     <string name="welcome_to_dash_pay">Vitajte v Dash Pay</string>
     <string name="pay_to_usernames">Plaťte na používateľské mená. Už žiadne alfanumerické adresy.</string>
@@ -281,8 +283,15 @@ používateľské meno</b></string>
     <string name="only_duplicates">Iba duplikáty</string>
     <string name="only_links">Iba žiadosti s odkazmi</string>
     <string name="only_links_short">S odkazmi</string>
-    <string name="date">Dátum: %s</string>
+    <string name="date">Dátum žiadosti: %s</string>
     <string name="votes">Hlasy: %s</string>
+    <string name="voting_ends">Hlasovanie končí: %s</string>
+
+    <string-array name="usernames_group_by_options">
+        <item>Žiadne</item>
+        <item>Od prvého</item>
+        <item>Od posledého</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>Od najnovších</item>
@@ -297,20 +306,6 @@ používateľské meno</b></string>
         <item>Neschválil som</item>
         <item>Má zablokované hlasy</item>
     </string-array>
-    <string name="unblock_button">Odblokovať</string>
-    <plurals name="block_vote_button">
-        <item quantity="one">Blok</item>
-        <item quantity="few">Bloky</item>
-        <item quantity="many">Blokov</item>
-        <item quantity="other">Blokov</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="one">Schválenie</item>
-        <item quantity="few">Schválenia</item>
-        <item quantity="many">Schválení</item>
-        <item quantity="other">Schválení</item>
-    </plurals>
-    <string name="block_vote_count">%d Blok(y)</string>
     <string name="request_your_username">Vytvorte si používateľské meno</string>
     <string name="request_your_hint">Upozorňujeme, že v budúcnosti ho už nebudete môcť zmeniť</string>
     <string name="request_username">Požiadať o používateľské meno</string>
@@ -365,7 +360,9 @@ používateľské meno</b></string>
     <string name="add_masternode_key">Pridať hlasovací kľúč Masternode</string>
     <string name="dont_ask_again">Znova sa nepýtať</string>
     <string name="vote_submitting">Odosielanie hlasu pre používateľské meno %s</string>
+    <string name="quick_vote_submitting">Odosielanie hlasov pre všetky používateľské mená</string>
     <string name="vote_submitted">Hlasovali ste za používateľské meno %s</string>
+    <string name="quick_vote_submitted">Hlasovanie úspešné za všetky používateľské mená</string>
     <string name="cancel_submitting">Ruší sa váš hlas pre používateľské meno %s</string>
     <string name="cancel_submitted">Zrušený hlas za používateľské meno %s</string>
     <string name="block_submitting">Blokuje sa používateľské meno %s</string>
@@ -376,6 +373,9 @@ používateľské meno</b></string>
     <string name="quick_vote">Rýchle hlasovanie</string>
     <string name="quick_vote_subtitle">Klepnutím na tlačidlo „Hlasovať za všetkých“ budete automaticky hlasovať za všetky filtrované používateľské mená (%d), ktoré boli odoslané ako prvé</string>
     <string name="vote_for_all">Hlasovať za všetkých</string>
+    <string name="one_vote_left_title">Zostáva jeden hlas</string>
+    <string name="one_vote_left_show_usernames">Zobraziť používateľské mená</string>
+    <string name="one_vote_left_subtitle">Za nasledujúce používateľské mená ste už hlasovali %dkrát. Pre tieto používateľské mená môžete odovzdať už len jeden hlas.</string>
     <string name="voting_period_active">Obdobie hlasovania o menách je aktívne</string>
     <string name="there_was_a_network_error">Vyskytla sa chyba siete. Môžete skúsiť znova bez ďalších poplatkov</string>
     <string name="requested_username_has_been">Používateľské meno bolo vyžiadané.</string>
@@ -448,4 +448,18 @@ používateľské meno</b></string>
     <string name="mix_dash_mix">Miešaný zostatok</string>
     <string name="mix_dash_title">Namiešajte váš Dash</string>
     <string name="mix_dash_message">Ak chcete zabrániť tomu, aby ostatní ľudia videli, komu uskutočňujete platby, odporúča sa pred vytvorením používateľského mena zmiešať zostatok.</string>
-    </resources>
+    <string name="tools_credits_title">Kredity</string>
+    <string name="tools_credits_buy_button">Kúpiť</string>
+    <string name="dashpay_what_are_credits_title">Čo sú to kredity\?</string>
+    <string name="dashpay_what_are_credits_message">Používatelia platia transakčné poplatky za interakciu so sieťou Dash. To je dôvod, prečo všetky zmeny vo vašom profile vyžadujú zaplatenie malého poplatku, ktorý je možné zaplatiť kreditmi.\n\nVaše kredity môžete použiť na:</string>
+    <string name="credits_send_and_accept_contact_requests">Posielajte a prijímajte žiadosti o kontakt</string>
+    <string name="platform_credits">Platformové kredity</string>
+    <string name="platform_credits_error">Chyba</string>
+    <string name="platform_credits_not_transferred">Čakajúce kredity platformy</string>
+    <string name="voting_period">Obdobie hlasovania</string>
+    <string name="voting_period_ends_in_days">Hlasovanie končí o %d dní</string>
+    <string name="voting_period_ends_today">Hlasovanie končí dnes</string>
+    <string name="voting_period_ends_tomorrow">Hlasovanie končí zajtra</string>
+    <string name="link_included">pridaný odkaz</string>
+    <string name="group_by">Zoskupiť podľa</string>
+</resources>

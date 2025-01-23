@@ -61,6 +61,7 @@
     <string name="invitation_accept_message_3">Transmettre votre image, personnaliser votre identité</string>
     <string name="invitation_accept_continue">Continuer</string>
     <string name="invitation_contact_request_sent_message">Une demande de contact a été envoyée à %s pour vous avoir invité(e).</string>
+    <string name="topup_confirm_message">Vous avez choisi de recharger votre identité. Le montant suivant sera déduit de votre solde.</string>
 
     <string name="username_being_created">Votre nom d\'utilisateur %s est en cours de création sur le réseau Dash</string>
     <string name="username_being_requested">Votre nom d\'utilisateur %s est en cours de demande sur le réseau Dash</string>
@@ -73,6 +74,7 @@
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Enregistrement du nom d\'utilisateur</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Demande de nom d\'utilisateur</string>
     <string name="processing_home_step_3_restoring">(3/3) Récupération de nom d\'utilisateur</string>
+    <string name="restore_identity">Restaurer l\'identité</string>
     <string name="processing_done_title">Bonjour %s,</string>
     <string name="processing_done_subtitle">Votre compte est prêt</string>
     <string name="processing_voting_subtitle">Le vote pour votre nom d\'utilisateur a commencé</string>
@@ -248,7 +250,7 @@
     <string name="please_note_cant_change_this_later">Veuillez noter que vous ne pourrez pas modifier cela plus tard.</string>
     <string name="Intermediate_level_WIFI_Warning">Le niveau intermédiaire de confidentialité réclame une connexion Internet fiable.</string>
     <string name="Advanced_level_WIFI_Warning">Le niveau avancé de confidentialité réclame une connexion Internet fiable.</string>
-    <string name="privcay_level_WIFI_warning_desc">Il est recommandé d\'être connecté à un réseau wifi pour éviter de perdre des fonds.</string>
+    <string name="privcay_level_WIFI_warning_desc">Il est conseillé d\'être connecté à un réseau Wi-Fi pour éviter des frais de mélange supplémentaires</string>
     <string name="continue_anyway">Continuer quand même</string>
     <string name="welcome_to_dash_pay">Bienvenue dans Dash Pay</string>
     <string name="pay_to_usernames">Payez à des noms d\'utilisateur. Les adresses alphanumériques, c\'est fini !</string>
@@ -280,8 +282,15 @@
     <string name="only_duplicates">Doublons seulement</string>
     <string name="only_links">Requêtes avec liens seulement</string>
     <string name="only_links_short">Avec liens</string>
-    <string name="date">Date : %s</string>
+    <string name="date">Date de la requête : %s</string>
     <string name="votes">Votes : %s</string>
+    <string name="voting_ends">Fin du vote : %s</string>
+
+    <string-array name="usernames_group_by_options">
+        <item>Aucun</item>
+        <item>Le plus récent en haut</item>
+        <item>Le plus ancien en haut</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>De récent à ancien</item>
@@ -296,18 +305,6 @@
         <item>Je n\'ai pas approuvé</item>
         <item>A des votes de blocage</item>
     </string-array>
-    <string name="unblock_button">Débloquer</string>
-    <plurals name="block_vote_button">
-        <item quantity="one">Blocage</item>
-        <item quantity="many">Blocages</item>
-        <item quantity="other">Blocages</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="one">Approbation</item>
-        <item quantity="many">Approbations</item>
-        <item quantity="other">Approbations</item>
-    </plurals>
-    <string name="block_vote_count">%d bloc(s)</string>
     <string name="request_your_username">Créez votre nom d\'utilisateur</string>
     <string name="request_your_hint">Veuillez noter que vous ne pourrez pas le changer plus tard</string>
     <string name="request_username">Demander un nom d\'utilisateur</string>
@@ -362,7 +359,9 @@
     <string name="add_masternode_key">Ajouter la clé de vote d\'un masternode</string>
     <string name="dont_ask_again">Ne plus me demander</string>
     <string name="vote_submitting">Soumission de votre vote pour le nom d\'utilisateur %s</string>
+    <string name="quick_vote_submitting">Enregistrement de vos votes pour tous les noms d\'utilisateur</string>
     <string name="vote_submitted">A voté pour le nom d\'utilisateur %s</string>
+    <string name="quick_vote_submitted">Votes enregistrés pour tous les noms d\'utilisateur</string>
     <string name="cancel_submitting">Annulation de votre vote pour le nom d\'utilisateur %s</string>
     <string name="cancel_submitted">Vote annulé pour le nom d\'utilisateur %s </string>
     <string name="block_submitting">Blocage du nom d\'utilisateur %s</string>
@@ -373,6 +372,9 @@
     <string name="quick_vote">Vote rapide</string>
     <string name="quick_vote_subtitle">En appuyant sur le bouton “Voter pour tous\", vous voterez automatiquement pour tous les noms d\'utilisateur filtrés (%d) qui ont été proposés en premier</string>
     <string name="vote_for_all">Voter pour tous</string>
+    <string name="one_vote_left_title">Il reste un vote</string>
+    <string name="one_vote_left_show_usernames">Voir les noms d\'utilisateur</string>
+    <string name="one_vote_left_subtitle">Vous avez déjà voté %d fois pour les noms d\'utilisateur ci-dessous. Vous pouvez voter une seule autre fois pour ces noms.</string>
     <string name="voting_period_active">Période de vote de nom d\'utilisateur active</string>
     <string name="there_was_a_network_error">Il y a eu une erreur de réseau, vous pouvez réessayer sans frais supplémentaires</string>
     <string name="requested_username_has_been">Le nom d\'utilisateur a été demandé.</string>
@@ -445,4 +447,18 @@
     <string name="mix_dash_mix">Solde mélangé</string>
     <string name="mix_dash_title">Mélangez vos dashs</string>
     <string name="mix_dash_message">Pour empêcher d\'autres gens de voir à qui vous faites des paiements, il est recommandé de mélanger votre solde avant de créer votre nom d\'utilisateur.</string>
-    </resources>
+    <string name="tools_credits_title">Crédits</string>
+    <string name="tools_credits_buy_button">Acheter</string>
+    <string name="dashpay_what_are_credits_title">Que sont les crédits \?</string>
+    <string name="dashpay_what_are_credits_message">Les utilisateurs paient des frais de transaction pour utiliser le réseau Dash. C\'est pourquoi les modifications apportées à votre profil nécessitent le paiement d\'une petite somme qui peut être réglée en crédits.\n\nVos crédits peuvent être utilisés pour :</string>
+    <string name="credits_send_and_accept_contact_requests">Envoyer et accepter les demandes de contact</string>
+    <string name="platform_credits">Crédits Platform</string>
+    <string name="platform_credits_error">Erreur</string>
+    <string name="platform_credits_not_transferred">Crédits Platform en attente</string>
+    <string name="voting_period">Période de vote</string>
+    <string name="voting_period_ends_in_days">Le vote se termine dans %d jours</string>
+    <string name="voting_period_ends_today">Le vote se termine aujourd\'hui</string>
+    <string name="voting_period_ends_tomorrow">Le vote se termine demain</string>
+    <string name="link_included">lien inclus</string>
+    <string name="group_by">Grouper par</string>
+</resources>

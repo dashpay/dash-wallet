@@ -24,6 +24,8 @@
     <string name="dash_address">Адреса Dash</string>
     <string name="username">Ім\'я користувача</string>
     <string name="balance">Баланс:</string>
+    <string name="nothing_here">Тут нічого немає</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсійський фунт</string>
     <!-- Local Currency List: JEP -->
@@ -61,6 +63,9 @@
     <string name="verify">Підтвердити</string>
     <string name="receive_enter_amount_button">Вкажіть суму</string>
     <string name="account_create">Створити обліковий запис</string>
+    <string name="submit">Надіслати</string>
+    <string name="try_again">Спробуйте ще раз</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">Пошук</string>
     <string name="permission_allow">Дозволити</string>
@@ -77,6 +82,7 @@
     <string name="select_currency">Вибрати Валюту</string>
     <string name="send_coins_error_dusty_send">Сума надто мала для відправки</string>
     <string name="send_coins_error_insufficient_money">Недостатньо коштів</string>
+    <string name="send_coins_error_insufficient_mixed_money">Недостатньо змішаних фондів. Зачекайте, поки змішування CoinJoin завершиться, або вимкніть цю функцію в налаштуваннях, щоб завершити цю транзакцію.</string>
     <string name="syncing">Синхронізація</string>
     <string name="no_connection">Немає підключення до Інтернету</string>
     <string name="rate_not_available">Недоступний</string>
