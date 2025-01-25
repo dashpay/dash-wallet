@@ -35,6 +35,9 @@ interface InvitationsDao {
     @Query("SELECT * FROM invitation_table WHERE txid = :txid")
     suspend fun loadByUsername(txid: Sha256Hash): Invitation?
 
+    @Query("SELECT * FROM invitation_table WHERE userId = :userId")
+    fun observeByUserId(userId: String): Flow<Invitation?>
+
     @Query("SELECT * FROM invitation_table")
     suspend fun loadAll(): List<Invitation>
 

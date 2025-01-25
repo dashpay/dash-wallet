@@ -93,6 +93,8 @@ class TopUpRepositoryImpl @Inject constructor(
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
     }
 
+    private val workerJob = Job()
+    private var workerScope = CoroutineScope(workerJob + Dispatchers.IO)
     private val platform = platformRepo.platform
     private val authExtension by lazy { walletDataProvider.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension }
 

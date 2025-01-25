@@ -30,9 +30,13 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentInviteCreatedBinding
 import de.schildbach.wallet_test.databinding.InvitationBitmapTemplateBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.filterNotNull
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 
+@ExperimentalCoroutinesApi
 class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_created) {
     private val binding by viewBinding(FragmentInviteCreatedBinding::bind)
     private val args by navArgs<InviteCreatedFragmentArgs>()
@@ -70,11 +74,8 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
     }
 
     private fun initViewModel() {
-        // val identityId = args.identityId
-        // viewModel.identityIdLiveData.value = identityId
-
-        viewModel.invitationLiveData.observe(viewLifecycleOwner) {
-            binding.tagEdit.setText(it?.memo)
+        viewModel.invitation.filterNotNull().observe(viewLifecycleOwner) {
+            binding.tagEdit.setText(it.memo)
         }
 
         viewModel.dashPayProfile.observe(viewLifecycleOwner) {
@@ -83,13 +84,10 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         }
 
         viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner) {
-//            if (it.status != Status.LOADING) {
-//                dismissProgress()
-//            }
             when (it.status) {
                 Status.SUCCESS -> {
                     if (it.data != null) {
-                        viewModel.identityIdLiveData.value = it.data.userId
+                        viewModel.identityId.value = it.data.userId
                         binding.profilePictureEnvelope.isVisible = true
                         binding.previewButton.isVisible = true
                         binding.inviteCreationProgressTitle.text = getString(R.string.invitation_created_successfully)

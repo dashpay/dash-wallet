@@ -16,22 +16,16 @@
 package de.schildbach.wallet.ui.dashpay.work
 
 import android.content.Context
-import android.net.Uri
 import androidx.hilt.work.HiltWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.google.firebase.dynamiclinks.DynamicLink
-import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
-import com.google.firebase.dynamiclinks.ShortDynamicLink
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import de.schildbach.wallet.Constants
-import de.schildbach.wallet.database.entity.DashPayProfile
-import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.AssetLockTransaction
@@ -39,11 +33,6 @@ import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
 @HiltWorker
 class SendInviteWorker @AssistedInject constructor(

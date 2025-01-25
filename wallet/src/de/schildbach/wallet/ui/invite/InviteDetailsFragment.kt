@@ -34,12 +34,16 @@ import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentInviteDetailsBinding
 import de.schildbach.wallet_test.databinding.InvitationBitmapTemplateBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 
+@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_details) {
     private val binding by viewBinding(FragmentInviteDetailsBinding::bind)
@@ -109,25 +113,23 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
     private fun initViewModel() {
         val identityId = args.identityId
         inviteIndex = args.inviteIndex
-        viewModel.identityIdLiveData.value = identityId
+        viewModel.identityId.value = identityId
 
-        viewModel.invitationLiveData.observe(viewLifecycleOwner) {
-            if (it != null) {
-                if (it.memo.isNotEmpty()) {
-                    binding.tagEdit.setText(it.memo)
-                    binding.memo.text = it.memo
-                } else {
-                    val hint = getTagHint()
-                    binding.tagEdit.hint = hint
-                    binding.memo.text = hint
-                }
+        viewModel.invitation.filterNotNull().observe(viewLifecycleOwner) {
+            if (it.memo.isNotEmpty()) {
+                binding.tagEdit.setText(it.memo)
+                binding.memo.text = it.memo
+            } else {
+                val hint = getTagHint()
+                binding.tagEdit.hint = hint
+                binding.memo.text = hint
+            }
 
-                binding.date.text = WalletUtils.formatDate(it.sentAt)
-                if (it.acceptedAt != 0L) {
-                    showClaimed()
-                } else {
-                    showPending(it)
-                }
+            binding.date.text = WalletUtils.formatDate(it.sentAt)
+            if (it.acceptedAt != 0L) {
+                showClaimed()
+            } else {
+                showPending(it)
             }
         }
 
@@ -187,11 +189,11 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_TAG)
         }
 
-        super.shareInvitation(shareImage, viewModel.invitation.shortDynamicLink)
+        super.shareInvitation(shareImage, viewModel.invitation.value!!.shortDynamicLink)
     }
 
     private fun copyInvitationLink() {
-        super.copyInvitationLink(viewModel.invitation.shortDynamicLink)
+        super.copyInvitationLink(viewModel.invitation.value!!.shortDynamicLink)
     }
 
     override fun onStop() {

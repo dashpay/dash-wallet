@@ -141,6 +141,7 @@ import org.dash.wallet.common.data.entity.BlockchainState;
 import de.schildbach.wallet.database.dao.BlockchainStateDao;
 import de.schildbach.wallet.database.dao.ExchangeRatesDao;
 import de.schildbach.wallet.service.platform.PlatformSyncService;
+import de.schildbach.wallet.service.platform.TopUpRepository;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
@@ -175,6 +176,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject ConnectivityManager connectivityManager;
     @Inject BlockchainStateDataProvider blockchainStateDataProvider;
     @Inject CoinJoinService coinJoinService; // not used in this class, but we need to create it
+    @Inject TopUpRepository topUpRepository;
     private BlockStore blockStore;
     private BlockStore headerStore;
     private File blockChainFile;
@@ -340,7 +342,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 AssetLockTransaction cftx = authExtension.getAssetLockTransaction(tx);
 
                 long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
-                platformRepo.handleSentAssetLockTransaction(cftx, blockChainHeadTime);
+                topUpRepository.handleSentAssetLockTransaction(cftx, blockChainHeadTime);
 
                 // TODO: if we detect a username creation that we haven't processed, should we?
             }
