@@ -124,9 +124,10 @@ open class InvitationFragmentViewModel @Inject constructor(
     }
 
     fun saveTag(tag: String) {
-        invitation.memo = tag
         viewModelScope.launch(Dispatchers.IO) {
-            invitationDao.insert(invitation)
+            _invitation.value?.let {
+                invitationDao.insert(it.copy(memo = tag))
+            }
         }
     }
 

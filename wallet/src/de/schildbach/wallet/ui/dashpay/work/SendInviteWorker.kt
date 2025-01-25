@@ -28,7 +28,7 @@ import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Coin
 import org.bitcoinj.crypto.KeyCrypterException
-import org.bitcoinj.evolution.AssetLockTransaction
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -38,13 +38,16 @@ import org.slf4j.LoggerFactory
 class SendInviteWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
-    val analytics: AnalyticsService,
-    val platformRepo: PlatformRepo,
-    val walletDataProvider: WalletDataProvider
+    private val analytics: AnalyticsService,
+    private val platformRepo: PlatformRepo,
+    private val invitationsDao: InvitationsDao,
+    private val topUpRepository: TopUpRepository,
+    private val walletDataProvider: WalletDataProvider
 ): BaseWorker(context, parameters) {
 
     companion object {
         const val KEY_PASSWORD = "SendInviteWorker.PASSWORD"
+        const val KEY_FUNDING_ADDRESS = "SendInviteWorker.FUNDING_ADDRESS"
         const val KEY_TX_ID = "SendInviteWorker.KEY_TX_ID"
         const val KEY_USER_ID = "SendInviteWorker.KEY_USER_ID"
         const val KEY_DYNAMIC_LINK = "SendInviteWorker.KEY_DYNAMIC_LINK"
@@ -54,6 +57,8 @@ class SendInviteWorker @AssistedInject constructor(
     }
 
     class OutputDataWrapper(private val data: Data) {
+        val fundingAddress
+            get() = data.getString(KEY_FUNDING_ADDRESS)
         val txId
             get() = data.getByteArray(KEY_TX_ID)!!
         val userId
@@ -67,7 +72,9 @@ class SendInviteWorker @AssistedInject constructor(
     }
 
     private val wallet = walletDataProvider.wallet!!
+    private val authGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
 
+    // TODO: align with the topup-worker for retry and skip completed steps
     override suspend fun doWorkWithBaseProgress(): Result {
         val password = inputData.getString(KEY_PASSWORD)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
@@ -75,9 +82,10 @@ class SendInviteWorker @AssistedInject constructor(
         if (value == 0L) {
             error("missing KEY_VALUE parameter")
         }
+        val fundingAddress = inputData.getString(KEY_FUNDING_ADDRESS) ?:
+            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_FUNDING_ADDRESS parameter"))
 
         val encryptionKey: KeyParameter
-        org.bitcoinj.core.Context.propagate(wallet.context)
         try {
             encryptionKey = wallet.keyCrypter!!.deriveKey(password)
         } catch (ex: KeyCrypterException) {
@@ -87,79 +95,57 @@ class SendInviteWorker @AssistedInject constructor(
         }
 
         return try {
+            org.bitcoinj.core.Context.propagate(wallet.context)
             val blockchainIdentity = platformRepo.blockchainIdentity
-            val assetLockTx = platformRepo.createInviteFundingTransactionAsync(
-                blockchainIdentity,
-                encryptionKey,
-                Coin.valueOf(value)
-            )
-            val dashPayProfile = platformRepo.getLocalUserProfile()
-            val dynamicLink = createDynamicLink(dashPayProfile!!, assetLockTx, encryptionKey)
-            val shortDynamicLink = buildShortDynamicLink(dynamicLink)
-            val invitation = platformRepo.getInvitation(assetLockTx.identityId.toStringBase58())!!
-            invitation.shortDynamicLink = shortDynamicLink.shortLink.toString()
-            invitation.dynamicLink = dynamicLink.uri.toString()
-            platformRepo.updateInvitation(invitation)
-            Result.success(workDataOf(
+            var invitation = invitationsDao.loadByFundingAddress(fundingAddress)
+            val assetLockTx = if (!invitation.hasTransaction()) {
+                topUpRepository.createInviteFundingTransactionAsync(
+                    blockchainIdentity,
+                    encryptionKey,
+                    Coin.valueOf(value)
+                )
+            } else {
+                authGroupExtension.invitationFundingTransactions.find { it.txId == invitation.txid }
+                    ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "invite funding tx ${invitation.txid} not found"))
+            }
+
+            // make sure TX has been sent
+            val confidence = assetLockTx.getConfidence(walletDataProvider.wallet!!.context)
+            val wasTxSent = confidence.isChainLocked ||
+                    confidence.isTransactionLocked ||
+                    confidence.numBroadcastPeers() > 0
+            if (!wasTxSent) {
+                topUpRepository.sendTransaction(assetLockTx)
+            }
+
+            // create the dynamic link
+            invitation = invitationsDao.loadByFundingAddress(fundingAddress)
+            if (invitation.dynamicLink == null) {
+                val dashPayProfile = platformRepo.getLocalUserProfile()
+                val dynamicLink = topUpRepository.createDynamicLink(dashPayProfile!!, assetLockTx, encryptionKey)
+                val shortDynamicLink = topUpRepository.buildShortDynamicLink(dynamicLink)
+                invitation = invitation.copy(
+                    shortDynamicLink = shortDynamicLink.shortLink.toString(),
+                    dynamicLink = dynamicLink.uri.toString()
+                )
+                topUpRepository.updateInvitation(invitation)
+            }
+            Result.success(
+                workDataOf(
                     KEY_TX_ID to assetLockTx.txId.bytes,
                     KEY_VALUE to value,
                     KEY_USER_ID to assetLockTx.identityId.toStringBase58(),
-                    KEY_DYNAMIC_LINK to dynamicLink.uri.toString(),
-                    KEY_SHORT_DYNAMIC_LINK to shortDynamicLink.shortLink.toString()
-            ))
+                    KEY_DYNAMIC_LINK to invitation.dynamicLink,
+                    KEY_SHORT_DYNAMIC_LINK to invitation.shortDynamicLink
+                )
+            )
         } catch (ex: Exception) {
             analytics.logError(ex, "Send Invite: failed to send contact request")
-            Result.failure(workDataOf(
-                    KEY_ERROR_MESSAGE to formatExceptionMessage("send invite", ex)))
-        }
-    }
-
-    private fun createDynamicLink(dashPayProfile: DashPayProfile, assetLockTx: AssetLockTransaction, aesKeyParameter: KeyParameter): DynamicLink {
-        log.info("creating dynamic link for invitation")
-        // dashj Context does not work with coroutines well, so we need to call Context.propogate
-        // in each suspend method that uses the dashj Context
-        org.bitcoinj.core.Context.propagate(wallet.context)
-        val username = dashPayProfile.username
-        val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.displayName())
-        return FirebaseDynamicLinks.getInstance()
-                .createDynamicLink().apply {
-                    link = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, assetLockTx, aesKeyParameter).link
-                    domainUriPrefix = Constants.Invitation.DOMAIN_URI_PREFIX
-                    setAndroidParameters(DynamicLink.AndroidParameters.Builder().build())
-                    setIosParameters(DynamicLink.IosParameters.Builder(
-                            Constants.Invitation.IOS_APP_BUNDLEID
-                    ).apply {
-                        appStoreId = Constants.Invitation.IOS_APP_APPSTOREID
-                    }.build())
-                }
-                .setSocialMetaTagParameters(DynamicLink.SocialMetaTagParameters.Builder().apply {
-                    title = applicationContext.getString(R.string.invitation_preview_title)
-                    val nameLabel = dashPayProfile.nameLabel
-                    val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.displayName())
-                    imageUrl = Uri.parse("https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded")
-                    description = applicationContext.getString(R.string.invitation_preview_message, nameLabel)
-                }.build())
-                .setGoogleAnalyticsParameters(DynamicLink.GoogleAnalyticsParameters.Builder(
-                        applicationContext.getString(R.string.app_name_dashpay),
-                        Constants.Invitation.UTM_MEDIUM,
-                        Constants.Invitation.UTM_CAMPAIGN
-                ).build())
-                .buildDynamicLink()
-    }
-
-    private suspend fun buildShortDynamicLink(dynamicLink: DynamicLink): ShortDynamicLink {
-        return suspendCoroutine { continuation ->
-            FirebaseDynamicLinks.getInstance().createDynamicLink()
-                    .setLongLink(dynamicLink.uri)
-                    .buildShortDynamicLink()
-                    .addOnSuccessListener {
-                        log.debug("dynamic link successfully created")
-                        continuation.resume(it)
-                    }
-                    .addOnFailureListener {
-                        log.error(it.message, it)
-                        continuation.resumeWithException(it)
-                    }
+            Result.failure(
+                workDataOf(
+                    KEY_ERROR_MESSAGE to formatExceptionMessage("send invite", ex)
+                )
+            )
         }
     }
 }

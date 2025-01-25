@@ -993,39 +993,6 @@ class PlatformRepo @Inject constructor(
     //
     // Step 2 is to create the credit funding transaction
     //
-    suspend fun createInviteFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, topupAmount: Coin)
-            : AssetLockTransaction {
-        // dashj Context does not work with coroutines well, so we need to call Context.propogate
-        // in each suspend method that uses the dashj Context
-        Context.propagate(walletApplication.wallet!!.context)
-        val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
-        val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
-        val cftx = blockchainIdentity.createInviteFundingTransaction(
-            topupAmount,
-            keyParameter,
-            useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE,
-            returnChange = true,
-            emptyWallet = emptyWallet
-        )
-        val invitation = Invitation(cftx.identityId.toStringBase58(), cftx.txId,
-                System.currentTimeMillis())
-        // update database
-        updateInvitation(invitation)
-
-        sendTransaction(cftx)
-        //update database
-        invitation.sentAt = System.currentTimeMillis()
-        updateInvitation(invitation)
-        return cftx
-    }
-
-    suspend fun updateInvitation(invitation: Invitation) {
-        invitationsDao.insert(invitation)
-    }
-
-    suspend fun getInvitation(userId: String): Invitation? {
-        return invitationsDao.loadByUserId(userId)
-    }
 
     private suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
         log.info("Sending credit funding transaction: ${cftx.txId}")
@@ -1151,46 +1118,6 @@ class PlatformRepo @Inject constructor(
     fun clearBlockchainIdentityData() {
         GlobalScope.launch(Dispatchers.IO) {
             blockchainIdentityDataStorage.clear()
-        }
-    }
-
-    fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long) {
-        val extension = authenticationGroupExtension
-
-        if (this::blockchainIdentity.isInitialized && extension != null) {
-            GlobalScope.launch(Dispatchers.IO) {
-                // Context.getOrCreate(platform.params)
-                val isInvite = extension.invitationFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
-                val isTopup = extension.identityTopupKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
-                val isIdentity = extension.identityFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
-                val identityId = cftx.identityId.toStringBase58()
-                if (isInvite && !isTopup && !isIdentity && invitationsDao.loadByUserId(identityId) == null) {
-                    // this is not in our database
-                    val invite = Invitation(
-                        identityId,
-                        cftx.txId,
-                        blockTimestamp,
-                        "",
-                        blockTimestamp,
-                        0
-                    )
-
-                    // profile information here
-                    try {
-                        if (updateDashPayProfile(identityId)) {
-                            val profile = dashPayProfileDao.loadByUserId(identityId)
-                            invite.acceptedAt = profile?.createdAt
-                                    ?: -1 // it was accepted in the past, use profile creation as the default
-                        }
-                    } catch (e: NullPointerException) {
-                        // swallow, the identity was not found for this invite
-                    } catch (e: MaxRetriesReachedException) {
-                        // swallow, the profile could not be retrieved
-                        // the invite status update function should be able to try again
-                    }
-                    invitationsDao.insert(invite)
-                }
-            }
         }
     }
 
