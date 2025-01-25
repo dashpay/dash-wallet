@@ -73,9 +73,9 @@ open class InvitationFragmentViewModel @Inject constructor(
         AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING
     ).pubKeyHash
 
-    private val inviteId = Address.fromPubKeyHash(walletApplication.wallet!!.params, pubkeyHash).toBase58()
+    private val fundingAddress = Address.fromPubKeyHash(walletApplication.wallet!!.params, pubkeyHash).toBase58()
 
-    val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, inviteId)
+    val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, fundingAddress)
 
     val dynamicLinkData
         get() = sendInviteStatusLiveData.value!!.data!!.dynamicLink
@@ -88,9 +88,9 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     fun sendInviteTransaction(value: Coin): String {
         SendInviteOperation(walletApplication)
-            .create(inviteId, value)
+            .create(fundingAddress, value)
             .enqueue()
-        return inviteId
+        return fundingAddress
     }
 
     val invitationPreviewImageFile by lazy {
