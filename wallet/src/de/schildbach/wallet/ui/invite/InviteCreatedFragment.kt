@@ -18,11 +18,9 @@ package de.schildbach.wallet.ui.invite
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -92,16 +90,18 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
                         binding.previewButton.isVisible = true
                         binding.inviteCreationProgressTitle.text = getString(R.string.invitation_created_successfully)
                         binding.sendButton.isEnabled = true
+                        binding.progress.isGone = true
                     }
                 }
                 Status.LOADING -> {
                     // sending has begun
                     binding.inviteCreationProgressTitle.text = getString(R.string.invitation_creating_progress_wip)
                     binding.sendButton.isEnabled = false
+                    binding.progress.isGone = false
                 }
                 else -> {
                     binding.inviteCreationProgressTitle.text = getString(R.string.invitation_creating_error_title)
-
+                    binding.progress.isGone = true
 //                    // there was an error sending
 //                    val errorDialog = FancyAlertDialog.newInstance(
 //                        R.string.invitation_creating_error_title,

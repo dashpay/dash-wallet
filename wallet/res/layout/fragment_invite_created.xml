@@ -74,6 +74,15 @@
                         android:textAlignment="gravity"
                         android:text="@string/invitation_created_successfully" />
 
+                    <ProgressBar
+                        android:id="@+id/progress"
+                        android:layout_width="25dp"
+                        android:layout_height="25dp"
+                        android:layout_gravity="center"
+                        android:visibility="gone"
+                        tools:visibility="visible"
+                        />
+
                     <Button
                         android:id="@+id/preview_button"
                         style="@style/Button.Tertiary.Blue"
