@@ -51,5 +51,5 @@ interface InvitationsDao {
     suspend fun count(): Int
 
     @Query("SELECT * FROM invitation_table WHERE fundingAddress = :fundingAddress")
-    suspend fun loadByFundingAddress(fundingAddress: String): Invitation
+    suspend fun loadByFundingAddress(fundingAddress: String): Invitation?
 }

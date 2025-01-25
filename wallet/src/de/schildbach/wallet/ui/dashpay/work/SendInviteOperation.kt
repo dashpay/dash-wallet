@@ -142,21 +142,22 @@ class SendInviteOperation(val application: Application) {
     val allOperationsData = workManager.getWorkInfosByTagLiveData(SendInviteWorker::class.qualifiedName!!)
 
     @SuppressLint("EnqueueWork")
-    fun create(id: String, value: Coin): WorkContinuation {
+    fun create(fundingAddress: String, value: Coin): WorkContinuation {
 
         val password = SecurityGuard().retrievePassword()
         val sendInviteWorker = OneTimeWorkRequestBuilder<SendInviteWorker>()
                 .setInputData(
                     workDataOf(
                         SendInviteWorker.KEY_PASSWORD to password,
+                        SendInviteWorker.KEY_FUNDING_ADDRESS to fundingAddress,
                         SendInviteWorker.KEY_VALUE to value.value
                     )
                 )
-                .addTag("invite:$id")
+                .addTag("invite:$fundingAddress")
                 .build()
 
         return WorkManager.getInstance(application)
-                .beginUniqueWork(uniqueWorkName(id),
+                .beginUniqueWork(uniqueWorkName(fundingAddress),
                         ExistingWorkPolicy.KEEP,
                         sendInviteWorker)
     }

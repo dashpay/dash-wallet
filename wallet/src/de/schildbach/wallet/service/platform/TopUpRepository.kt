@@ -470,6 +470,7 @@ class TopUpRepositoryImpl @Inject constructor(
                     if (invitation.dynamicLink != null) {
                         fundingTxes.remove(invitation.txid)
                     } else {
+                        // TODO: should we fix the link now or let the user do it
                         val dashPayProfile = platformRepo.getLocalUserProfile()
                         val assetLockTx = fundingTxes[invitation.txid]
                         if (assetLockTx != null) {

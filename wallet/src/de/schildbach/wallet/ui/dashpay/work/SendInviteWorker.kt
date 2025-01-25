@@ -98,28 +98,28 @@ class SendInviteWorker @AssistedInject constructor(
             org.bitcoinj.core.Context.propagate(wallet.context)
             val blockchainIdentity = platformRepo.blockchainIdentity
             var invitation = invitationsDao.loadByFundingAddress(fundingAddress)
-            val assetLockTx = if (!invitation.hasTransaction()) {
+            val assetLockTx = if (invitation == null || !invitation.hasTransaction()) {
                 topUpRepository.createInviteFundingTransactionAsync(
                     blockchainIdentity,
                     encryptionKey,
                     Coin.valueOf(value)
                 )
             } else {
-                authGroupExtension.invitationFundingTransactions.find { it.txId == invitation.txid }
+                authGroupExtension.invitationFundingTransactions.find { it.txId == invitation!!.txid }
                     ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "invite funding tx ${invitation.txid} not found"))
             }
 
             // make sure TX has been sent
             val confidence = assetLockTx.getConfidence(walletDataProvider.wallet!!.context)
             val wasTxSent = confidence.isChainLocked ||
-                    confidence.isTransactionLocked ||
-                    confidence.numBroadcastPeers() > 0
+                confidence.isTransactionLocked ||
+                confidence.numBroadcastPeers() > 0
             if (!wasTxSent) {
                 topUpRepository.sendTransaction(assetLockTx)
             }
 
             // create the dynamic link
-            invitation = invitationsDao.loadByFundingAddress(fundingAddress)
+            invitation = invitationsDao.loadByFundingAddress(fundingAddress)!!
             if (invitation.dynamicLink == null) {
                 val dashPayProfile = platformRepo.getLocalUserProfile()
                 val dynamicLink = topUpRepository.createDynamicLink(dashPayProfile!!, assetLockTx, encryptionKey)
