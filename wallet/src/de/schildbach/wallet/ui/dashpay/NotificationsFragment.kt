@@ -96,7 +96,8 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
             { u, position -> onAcceptRequest(u, position) },
             { u, position -> onIgnoreRequest(u, position) },
             { onUserAlertDismiss(it) },
-            { onItemClicked(it) }
+            { onItemClicked(it) },
+            viewModel.getChainLockBlockHeight()
         )
 
         if (arguments != null && requireArguments().containsKey(EXTRA_MODE)) {

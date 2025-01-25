@@ -403,5 +403,4 @@
     <string name="battery_optimization_dialog_unrestricted_title">Arka planda ödeme almak ister misiniz?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Bu uygulama bir süre görünmez kaldıktan sonra çalışmaya devam edecek şekilde yapılandırılmıştır.\n\nBu uygulamanın arka planda bile her zaman blockchain ile güncel kalmasına izin vermenizi öneririz.\n\nMerak etmeyin, pil kullanımınıza her zaman önem vereceğiz.</string>
     <string name="battery_optimization_dialog_button_change">Ayarları aç</string>
-
-</resources>
+    </resources>

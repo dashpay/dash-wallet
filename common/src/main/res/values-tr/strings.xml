@@ -61,6 +61,8 @@
     <string name="verify">Onayla</string>
     <string name="receive_enter_amount_button">Tutarı Belirleyin</string>
     <string name="account_create">Hesab Oluştur</string>
+    <string name="try_again">Tekrar Dene</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">Ara</string>
     <string name="permission_allow">İzin ver</string>

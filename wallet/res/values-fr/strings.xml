@@ -296,6 +296,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">Inclure une exportation du portefeuille</string>
     <string name="report_issue_dialog_mail_intent_chooser">Envoyer le rapport avec…</string>
     <string name="report_issue_dialog_mail_intent_failed">Échec lors de l\'envoi du rapport.</string>
+    <string name="report_issue_dialog_generating_report">Génération du rapport</string>
     <string name="report_transaction_history_export">Exportation</string>
     <string name="report_transaction_history_title">Exportation CSV</string>
     <string name="report_transaction_history_not_synced_title">Exportation CSV</string>
@@ -412,5 +413,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">Souhaitez-vous pouvoir recevoir des paiements en arrière-plan ?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Cette application est configurée pour continuer à fonctionner après n\'avoir pas été visible ou consultée pendant un certain temps.\n\nNous conseillons d\'autoriser cette application à toujours rester à jour de la blockchain, même en arrière-plan.\n\nNe vous inquiétez pas, nous prendrons soin de l\'utilisation de la batterie.</string>
     <string name="battery_optimization_dialog_button_change">Ouvrir les Réglages</string>
+    <string name="credits_profile_change_message">Mise à jour des infos du profil</string>
 
 </resources>

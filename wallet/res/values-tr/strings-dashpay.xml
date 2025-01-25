@@ -61,7 +61,6 @@
     <string name="invitation_accept_message_3">Resminizi yükleyin, kimliğinizi kişiselleştirin</string>
     <string name="invitation_accept_continue">Devam</string>
     <string name="invitation_contact_request_sent_message">%s sizi davet ettiğinden beri bir iletişim isteği gönderildi.</string>
-
     <string name="username_being_created">Kullanıcı adınız %s olarak Dash Ağı\'nda oluşturuluyor</string>
     <string name="username_being_requested">Kullanıcı adınız %s olarak Dash Ağı\'nda talep ediliyor</string>
 
@@ -247,7 +246,6 @@
     <string name="please_note_cant_change_this_later">Lütfen bunu daha sonra değiştiremeyeceğinizi unutmayın</string>
     <string name="Intermediate_level_WIFI_Warning">Orta düzey gizlilik için güvenilir bir internet bağlantısı gerekir</string>
     <string name="Advanced_level_WIFI_Warning">Gelişmiş gizlilik düzeyi güvenilir bir internet bağlantısı gerektirir</string>
-    <string name="privcay_level_WIFI_warning_desc">Herhangi bir para kaybını önlemek için bir Wi-Fi ağında olmanız önerilir</string>
     <string name="continue_anyway">Her şeye rağmen devam et</string>
     <string name="welcome_to_dash_pay">Dash Pay\'e hoş geldiniz</string>
     <string name="pay_to_usernames">Kullanıcı adlarına ödeme yapın. Artık alfanümerik adres yok.</string>
@@ -274,8 +272,10 @@
     <string name="only_duplicates">Yalnızca kopyalar</string>
     <string name="only_links">Yalnızca bağlantı içeren istekler</string>
     <string name="only_links_short">Bağlantılarla</string>
-    <string name="date">Tarih: %s</string>
     <string name="votes">Oylar: %s</string>
+    <string-array name="usernames_group_by_options">
+        <item>Hiçbiri</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>Yeniden eskiye</item>
@@ -387,4 +387,6 @@
     <string name="request_username_balance_requirement">Bu kullanıcı adını oluşturmak için 0.25 DASH\'a sahip olmanız gerekiyor</string>
     <string name="request_username_length_requirement">3 ile 23 karakter arasında</string>
     <string name="request_username_confirm">Kabul ediyorum</string>
+    <string name="tools_credits_buy_button">Al</string>
+    <string name="platform_credits_error">Hata</string>
     </resources>

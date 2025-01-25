@@ -75,10 +75,11 @@ class TransactionViewHolder(val binding: NotificationTransactionRowBinding) :
         @Suppress("UNCHECKED_CAST")
         val transactionCache = (args[0] as HashMap<Sha256Hash, TransactionCacheEntry>)
         val wallet = (args[1] as Wallet)
-        bind(tx, transactionCache, wallet)
+        val chainLockBlockHeight = (args[2] as Int)
+        bind(tx, transactionCache, wallet, chainLockBlockHeight)
     }
 
-    private fun bind(tx: Transaction, transactionCache: HashMap<Sha256Hash, TransactionCacheEntry>, wallet: Wallet) {
+    private fun bind(tx: Transaction, transactionCache: HashMap<Sha256Hash, TransactionCacheEntry>, wallet: Wallet, chainLockBlockHeight: Int) {
         if (itemView is CardView) {
             (itemView as CardView).setCardBackgroundColor(if (itemView.isActivated()) colorBackgroundSelected else colorBackground)
         }
@@ -186,7 +187,7 @@ class TransactionViewHolder(val binding: NotificationTransactionRowBinding) :
         // Show the secondary status:
         //
         var secondaryStatusId = -1
-        if (confidence.hasErrors()) secondaryStatusId = txResourceMapper.getErrorName(tx) else if (!txCache.sent) secondaryStatusId = txResourceMapper.getReceivedStatusString(tx, wallet.context)
+        if (confidence.hasErrors()) secondaryStatusId = txResourceMapper.getErrorName(tx) else if (!txCache.sent) secondaryStatusId = txResourceMapper.getReceivedStatusString(tx, wallet.context, chainLockBlockHeight)
         if (secondaryStatusId != -1) secondaryStatusView.setText(secondaryStatusId) else secondaryStatusView.text = null
         secondaryStatusView.setTextColor(secondaryStatusColor)
     }

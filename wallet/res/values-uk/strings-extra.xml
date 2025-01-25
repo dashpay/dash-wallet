@@ -25,6 +25,8 @@
     <string name="dialog_confirm_secured_by">Захищено</string>
     <string name="dialog_confirm_fee">Комісія мережі</string>
     <string name="dialog_confirm_total">Всього</string>
+    <string name="dialog_confirm_accept_contact_request">Прийняти запит на додавання до контактів</string>
+
     <string name="shortcut_action_join_dashpay">Приєднатись до DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Резервне копіювання</string>
@@ -194,6 +196,9 @@
     <string name="notification_settings_title">Сповіщення</string>
     <string name="notification_explainer_title">Dash Wallet хоче надсилати вам сповіщення</string>
     <string name="notification_explainer_message">Сповіщення можуть включати сповіщення, звуки та піктограми. Їх можна налаштувати в налаштуваннях телефону.</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">Статус поточних операцій DashPay.</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Для розблокування використовуйте відбиток пальця</string>
@@ -246,6 +251,7 @@
     <string name="transaction_close">Закрити</string>
     <string name="transaction_details_amount_received">Отримана сума</string>
     <string name="transaction_details_amount_sent">Відправлена сума</string>
+    <string name="transaction_details_amount_sent_successfully">Успішно відправлено</string>
     <string name="transaction_details_sent_from">Відправлено з</string>
     <string name="transaction_details_sent_to">Відправити</string>
     <string name="transaction_details_received_at">Отримано на</string>
@@ -264,6 +270,7 @@
     <string name="authenticate_switch_to_pin">Використати PIN-код</string>
 
     <string name="menu_invite_title">Запросити</string>
+    <string name="menu_invite_subtitle">Допоможіть друзям і родині приєднатися до Dash</string>
     <string name="menu_buy_and_sell_title">Купити &amp; Продати Dash</string>
     <string name="menu_buy_and_sell_subtitle">Підключитися до сторонніх бірж</string>
     <string name="liquid_unavailable">Інтеграція Liquid з Dash Wallet більше недоступна</string>
@@ -290,9 +297,9 @@
     <string name="about_review_and_rate">Напишіть відгук і оцініть додаток</string>
     <string name="about_contact_support">Служба підтримки</string>
     <string name="about_fork_disclaimer">Це додаток з відкритим кодом, заснований на Bitcoin Wallet</string>
-    <string name="about_copyright">Всі права захищено © 2023 Dash Core Group</string>
+    <string name="about_copyright">Всі права захищено © 2024 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
-    <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_version_name">Гаманець Dash %s</string>
     <string name="about_last_explore_device_sync">Останнє дослідження синхронізації пристрою</string>
     <string name="about_last_explore_server_update">Останнє дослідження оновлення сервера</string>
     <string name="about_firebase_installation_id">Ідентифікатор встановлення Firebase</string>
@@ -375,16 +382,28 @@
     <string name="import_image_invalid_private">Неправильний приватний ключ</string>
     <string name="okay">Згода</string>
 
+    <string name="onboard_from_invite_title">Давайте розпочнемо</string>
     <string name="onboard_from_invite_subtitle">Ласкаво просимо до DashPay</string>
+    <string name="onboard_from_invite_step1">Крок 1</string>
+    <string name="onboard_from_invite_step2">Крок 2</string>
+    <string name="onboard_from_invite_step3">Крок 3</string>
     <string name="onboard_from_invite_step1_title">Виберіть своє ім\'я користувача</string>
     <string name="onboard_from_invite_step2_title">Встановіть PIN-код</string>
     <string name="onboard_from_invite_step3_title">Захистіть свій гаманець</string>
 
     <string name="restore_wallet_please_wait">Будь ласка, зачекайте</string>
+    <string name="restore_wallet_restoring">Ваш гаманець відновлюється</string>
+
+
+
     <string name="network_unavailable">Мережа Недоступна</string>
     <string name="network_error_contact_details">Не вдалося отримати контактні дані</string>
     <string name="network_error_user_search">Не вдалося знайти користувача</string>
     <string name="network_error_contact_suggestions">Неможливо надати пропозиції</string>
+    <string name="network_error_unable_to_update_profile">Не вдалося оновити ваш профіль</string>
+
+
+
     <string name="today">Сьогодні</string>
     <string name="yesterday">Вчора</string>
 
@@ -394,6 +413,8 @@
     <string name="all_transactions">Все</string>
     <string name="received_transactions">Отримано</string>
     <string name="sent_transactions">Відправлено</string>
+    <string name="serious_error_title">Критична помилка</string>
+    <string name="serious_error_unknown">Будь-ласка зверніться до служби підтримки.</string>
     <string name="set_pin_error_missing_wallet_title">Помилка: гаманець відсутній</string>
     <string name="set_pin_error_missing_wallet_message">Гаманець відсутній. Будь ласка, зверніться до Служби підтримки.</string>
     <string name="wallet_encryption_error_title">Помилка при створенні гаманця</string>
@@ -443,6 +464,9 @@
     <string name="masternode_key_not_used">Не використано</string>
     <string name="masternode_key_revoked">Анульовано</string>
     <string name="masternode_key_private_public_base64">Приватні / публічні ключі (base64)</string>
+    <string name="timeskew_ahead">попереду</string>
+    <string name="timeskew_behind">позаду</string>
+
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Ціни не отримано. Фіатні значення можуть бути неправильними.</string>
     <string name="stale_exchange_rates_stale">Цінам що найменше 30 хвилин. Фіатні значення можуть бути неправильними.</string>

@@ -297,9 +297,9 @@
     <string name="about_review_and_rate">Напишите отзыв и оцените приложение</string>
     <string name="about_contact_support">Связаться с поддержкой</string>
     <string name="about_fork_disclaimer">Это приложение с открытым кодом, основанное на Bitcoin Wallet</string>
-    <string name="about_copyright">Авторские права © 2023 Dash Core Group</string>
+    <string name="about_copyright">Авторские права © 2024 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
-    <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_version_name">Кошелёк DashPay %s</string>
     <string name="about_last_explore_device_sync">Последняя синхронизация с Explore</string>
     <string name="about_last_explore_server_update">Последнее обновление сервера Explore</string>
     <string name="about_firebase_installation_id">Идентификатор установки Firebase</string>

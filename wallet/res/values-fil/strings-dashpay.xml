@@ -62,6 +62,7 @@ Username</b></string>
     <string name="invitation_accept_message_3">I-upload ang iyong larawan, i-personalize ang iyong pagkakakilanlan</string>
     <string name="invitation_accept_continue">Ipagpatuloy</string>
     <string name="invitation_contact_request_sent_message">Ipinadala ang isang kahilingan sa pakikipag-ugnayan sa %s mula noong inanyayahan ka nila.</string>
+    <string name="topup_confirm_message">Pinili mong i-top up ang iyong pagkakakilanlan. Ang sumusunod na halaga ay ibabawas sa iyong balanse.</string>
 
     <string name="username_being_created">Ang iyong username %s ay nilikha sa Network ng Dash</string>
     <string name="username_being_requested">Ang iyong username %s ay hinihiling sa Network ng Dash</string>
@@ -74,6 +75,7 @@ Username</b></string>
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Pagrerehistro ng Username</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Humihiling ng Username</string>
     <string name="processing_home_step_3_restoring">(3/3) Pagbawi ng Username</string>
+    <string name="restore_identity">Ibalik ang Pagkakakilanlan</string>
     <string name="processing_done_title">Hello %s,</string>
     <string name="processing_done_subtitle">Handa na ang iyong account</string>
     <string name="processing_voting_subtitle">Nagsimula na ang pagboto para sa iyong username</string>
@@ -249,7 +251,7 @@ Username</b></string>
     <string name="please_note_cant_change_this_later">Pakitandaan na hindi mo na ito mababago sa ibang pagkakataon</string>
     <string name="Intermediate_level_WIFI_Warning">Ang intermediate na antas ng privacy ay nangangailangan ng maaasahang koneksyon sa internet</string>
     <string name="Advanced_level_WIFI_Warning">Ang advanced na antas ng privacy ay nangangailangan ng maaasahang koneksyon sa internet</string>
-    <string name="privcay_level_WIFI_warning_desc">Inirerekomenda na nasa isang Wi-Fi network upang maiwasan ang pagkawala ng anumang mga pondo</string>
+    <string name="privcay_level_WIFI_warning_desc">Inirerekomenda na nasa isang Wi-Fi network upang maiwasan ang pagkakaroon ng karagdagang mga bayarin sa paghahalo</string>
     <string name="continue_anyway">Magpatuloy pa rin</string>
     <string name="welcome_to_dash_pay">Maligayang pagdating sa Dash Pay</string>
     <string name="pay_to_usernames">Magbayad sa mga username. Wala nang mga alphanumeric na address.</string>
@@ -281,8 +283,15 @@ Username</b></string>
     <string name="only_duplicates">Mga duplicate lang</string>
     <string name="only_links">Mga kahilingan lamang na may mga link</string>
     <string name="only_links_short">Sa mga link</string>
-    <string name="date">Petsa: %s</string>
+    <string name="date">Petsa ng Kahilingan: %s</string>
     <string name="votes">Mga Boto: %s</string>
+    <string name="voting_ends">Matatapos ang botohan: %s</string>
+
+    <string-array name="usernames_group_by_options">
+        <item>Wala</item>
+        <item>Sa lalong madaling panahon muna</item>
+        <item>Pinakabago muna</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>Bago sa luma</item>
@@ -297,16 +306,6 @@ Username</b></string>
         <item>hindi ko na inaprubahan</item>
         <item>May Naka-block na mga boto</item>
     </string-array>
-    <string name="unblock_button">i-unblock</string>
-    <plurals name="block_vote_button">
-        <item quantity="one">Mga bloke</item>
-        <item quantity="other">Mga bloke</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="one">Mga pag-apruba</item>
-        <item quantity="other">Mga pag-apruba</item>
-    </plurals>
-    <string name="block_vote_count">%d (mga) block</string>
     <string name="request_your_username">Gumawa ng iyong username</string>
     <string name="request_your_hint">Pakitandaan na hindi mo na ito mababago sa hinaharap</string>
     <string name="request_username">Humiling ng Username</string>
@@ -361,7 +360,9 @@ Username</b></string>
     <string name="add_masternode_key">Magdagdag ng Masternode Voting Key</string>
     <string name="dont_ask_again">Wag mo na akong tanungin ulit</string>
     <string name="vote_submitting">Pagsusumite ng iyong boto para sa%s username</string>
+    <string name="quick_vote_submitting">Pagsusumite ng iyong mga boto para sa lahat ng mga username</string>
     <string name="vote_submitted">Bumoto para sa %s username</string>
+    <string name="quick_vote_submitted">Matagumpay na bumoto para sa lahat ng mga username</string>
     <string name="cancel_submitting">Kinakansela ang iyong boto para sa %s username</string>
     <string name="cancel_submitted">Kinansela ang pagboto para sa %s username</string>
     <string name="block_submitting">Pag-block para sa %s username</string>
@@ -372,6 +373,9 @@ Username</b></string>
     <string name="quick_vote">Mabilis na Pagboto</string>
     <string name="quick_vote_subtitle">Sa pamamagitan ng pag-tap sa \"Vote for All\" na button, awtomatiko kang bumoto para sa lahat ng na-filter na username (%d) na unang isinumite</string>
     <string name="vote_for_all">Bumoto para sa Lahat</string>
+    <string name="one_vote_left_title">Isang Boto ang natitira</string>
+    <string name="one_vote_left_show_usernames">Ipakita ang mga username</string>
+    <string name="one_vote_left_subtitle">Nakaboto ka na para sa mga sumusunod na username %d beses. Maaari ka lamang magsumite ng isa pang boto para sa mga username na ito.</string>
     <string name="voting_period_active">Aktibo ang Panahon ng Pagboto ng Username</string>
     <string name="there_was_a_network_error">Nagkaroon ng error sa network, maaari mong subukang muli nang walang karagdagang gastos</string>
     <string name="requested_username_has_been">Ang username ay hiniling.</string>
@@ -444,4 +448,18 @@ Username</b></string>
     <string name="mix_dash_mix">Paghaluin ang Balanse</string>
     <string name="mix_dash_title">Paghaluin ang iyong Dash</string>
     <string name="mix_dash_message">Upang makatulong na pigilan ang ibang tao na makita kung kanino ka magbabayad, inirerekomendang ihalo ang iyong balanse bago mo gawin ang iyong username.</string>
-    </resources>
+    <string name="tools_credits_title">mga kredito</string>
+    <string name="tools_credits_buy_button">Bumili</string>
+    <string name="dashpay_what_are_credits_title">Ano ang mga kredito\?</string>
+    <string name="dashpay_what_are_credits_message">Nagbabayad ang mga user ng mga bayarin sa transaksyon upang makipag-ugnayan sa network ng Dash. Ito ang dahilan kung bakit ang lahat ng mga pagbabago sa iyong profile ay nangangailangan ng pagbabayad ng maliit na bayad na maaaring bayaran ng mga kredito.\n\nAng iyong mga kredito ay maaaring gamitin sa:</string>
+    <string name="credits_send_and_accept_contact_requests">Magpadala at tumanggap ng mga kahilingan sa pakikipag-ugnayan</string>
+    <string name="platform_credits">Mga Kredito sa Platform</string>
+    <string name="platform_credits_error">Mali</string>
+    <string name="platform_credits_not_transferred">Nakabinbing Mga Kredito sa Platform</string>
+    <string name="voting_period">Panahon ng Pagboto</string>
+    <string name="voting_period_ends_in_days">Nagtatapos ang pagboto %d araw</string>
+    <string name="voting_period_ends_today">Matatapos na ang botohan ngayong araw</string>
+    <string name="voting_period_ends_tomorrow">Matatapos ang botohan bukas</string>
+    <string name="link_included">kasama ang link</string>
+    <string name="group_by">Pangkatin ayon sa</string>
+</resources>

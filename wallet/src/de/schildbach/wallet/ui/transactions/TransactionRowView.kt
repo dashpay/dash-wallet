@@ -60,7 +60,8 @@ data class TransactionRowView(
             bag: TransactionBag,
             context: Context,
             contact: DashPayProfile?,
-            metadata: PresentableTxMetadata? = null
+            metadata: PresentableTxMetadata? = null,
+            chainLockBlockHeight: Int
         ): TransactionRowView {
             val firstTx = txWrapper.transactions.values.first()
 
@@ -102,7 +103,7 @@ data class TransactionRowView(
                     ServiceName.Unknown,
                     txWrapper
                 )
-                else -> fromTransaction(firstTx, bag, context, metadata, contact)
+                else -> fromTransaction(firstTx, bag, context, metadata, contact, chainLockBlockHeight = chainLockBlockHeight)
             }
         }
 
@@ -112,7 +113,8 @@ data class TransactionRowView(
             context: Context,
             metadata: PresentableTxMetadata? = null,
             contact: DashPayProfile? = null,
-            resourceMapper: TxResourceMapper = TxResourceMapper()
+            resourceMapper: TxResourceMapper = TxResourceMapper(),
+            chainLockBlockHeight: Int
         ): TransactionRowView {
             val value = tx.getValue(bag)
             val isInternal = tx.isEntirelySelf(bag)
@@ -150,7 +152,7 @@ data class TransactionRowView(
             }
 
             val status = if (!hasErrors && !isSent) {
-                resourceMapper.getReceivedStatusString(tx, context)
+                resourceMapper.getReceivedStatusString(tx, context, chainLockBlockHeight)
             } else {
                 -1
             }

@@ -47,6 +47,8 @@
     <string name="verify">Ověřit</string>
     <string name="receive_enter_amount_button">Uvést částku</string>
     <string name="account_create">Vytvořit účet</string>
+    <string name="try_again">Zkusit znovu</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">Vyhledávání</string>
     <string name="permission_allow">Povolit</string>

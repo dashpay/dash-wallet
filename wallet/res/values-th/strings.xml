@@ -393,5 +393,4 @@
     <string name="battery_optimization_dialog_unrestricted_title">คุณต้องการรับการชำระเงินในเบื้องหลังหรือไม่?</string>
     <string name="battery_optimization_dialog_message_not_optimized">แอปนี้ได้รับการกำหนดค่าให้ทำงานต่อไปหลังจากที่ไม่ปรากฏให้เห็นมาระยะหนึ่งแล้ว \n\n เราขอแนะนำให้อนุญาตให้แอปนี้อัปเดตบล็อกเชนอยู่เสมอ แม้จะอยู่เบื้องหลังก็ตาม \n\n อย่ากังวล เราจะ คำนึงถึงการใช้งานแบตเตอรี่ของคุณเสมอ</string>
     <string name="battery_optimization_dialog_button_change">เปิดการตั้งค่า</string>
-
-</resources>
+    </resources>

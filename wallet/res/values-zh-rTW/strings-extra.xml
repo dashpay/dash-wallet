@@ -288,9 +288,9 @@
     <string name="about_review_and_rate">對應用程式進行評價和評分</string>
     <string name="about_contact_support">聯繫支援服務</string>
     <string name="about_fork_disclaimer">這是一個從比特幣錢包分叉的開源應用程序</string>
-    <string name="about_copyright">版權所有 © 2023 Dash Core Group</string>
+    <string name="about_copyright">版權所有 © 2024 Dash Core Group</string>
     <string name="about_license">GNU通用公共許可證 v3.0</string>
-    <string name="about_version_name">達世幣錢包 %s</string>
+    <string name="about_version_name">DashPay 錢包%s</string>
     <string name="about_last_explore_device_sync">上一次探索設備同步</string>
     <string name="about_last_explore_server_update">上一次探索服務器更新</string>
     <string name="about_firebase_installation_id">Firebase 安裝 ID</string>

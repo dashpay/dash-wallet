@@ -62,7 +62,6 @@
     <string name="invitation_accept_message_3">Ανεβάστε τη φωτογραφία σας, εξατομικεύστε την ταυτότητά σας</string>
     <string name="invitation_accept_continue">Συνέχεια</string>
     <string name="invitation_contact_request_sent_message">Ένα αίτημα επαφής έχει σταλεί σε %s από τότε που σας προσκάλεσε.</string>
-
     <string name="username_being_created">Το όνομα χρήστη %s δημιουργείται στο δίκτυο Dash</string>
     <string name="username_being_requested">Το όνομα χρήστη σας %s ζητείται στο δίκτυο Dash Network</string>
 
@@ -249,7 +248,6 @@
     <string name="please_note_cant_change_this_later">Σημειώστε ότι δεν θα μπορείτε να το αλλάξετε αργότερα.</string>
     <string name="Intermediate_level_WIFI_Warning">Το επίπεδο προστασίας προσωπικών δεδομένων ενδιάμεσου επιπέδου απαιτεί αξιόπιστη σύνδεση στο διαδίκτυο.</string>
     <string name="Advanced_level_WIFI_Warning">Το προχωρημένο επίπεδο απορρήτου απαιτεί αξιόπιστη σύνδεση στο διαδίκτυο</string>
-    <string name="privcay_level_WIFI_warning_desc">Συνιστάται να βρίσκεστε σε δίκτυο Wi-Fi για να αποφύγετε την απώλεια κεφαλαίων.</string>
     <string name="continue_anyway">Συνέχεια Ούτως ή άλλως</string>
     <string name="welcome_to_dash_pay">Καλώς ήρθατε στο Dash Pay</string>
     <string name="pay_to_usernames">Πληρώστε για ονόματα χρήστη. χωρίς αλφαριθμητικές διευθύνσεις.</string>
@@ -281,8 +279,10 @@
     <string name="only_duplicates">Μόνο διπλότυπα</string>
     <string name="only_links">Μόνο αιτήματα με συνδέσμους</string>
     <string name="only_links_short">Με συνδέσμους</string>
-    <string name="date">Ημερομηνία:%s</string>
     <string name="votes">Ψήφοι: %s</string>
+    <string-array name="usernames_group_by_options">
+        <item>κανενα</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>Νέα σε παλιά</item>
@@ -297,16 +297,6 @@
         <item>Δεν έχω εγκρίνει</item>
         <item>Έχει μπλοκάρει ψήφους</item>
     </string-array>
-    <string name="unblock_button">Ξεμπλοκάρισμα</string>
-    <plurals name="block_vote_button">
-        <item quantity="one">Μπλόκ</item>
-        <item quantity="other">Μπλόκ</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="one">Έγκριση</item>
-        <item quantity="other">Εγκρίσεις</item>
-    </plurals>
-    <string name="block_vote_count">%d Μπλοκ(ς)</string>
     <string name="request_your_username">Δημιουργήστε το όνομα χρήστη σας</string>
     <string name="request_your_hint">Παρακαλώ σημειώστε ότι δεν θα μπορείτε να το αλλάξετε στο μέλλον.</string>
     <string name="request_username">Αίτημα ονόματος χρήστη</string>
@@ -444,4 +434,6 @@
     <string name="mix_dash_mix">Υπόλοιπο Ανάμειξης</string>
     <string name="mix_dash_title">Αναμείξτε τα Dash σας</string>
     <string name="mix_dash_message">Για να αποτρέψετε άλλα άτομα από το να βλέπουν σε ποιον κάνετε πληρωμές, συνιστάται να αναμίξετε το υπόλοιπό σας πριν δημιουργήσετε το όνομα χρήστη σας.</string>
+    <string name="tools_credits_buy_button">Αγορά</string>
+    <string name="platform_credits_error">Σφάλμα</string>
     </resources>

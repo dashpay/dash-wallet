@@ -64,6 +64,7 @@
     <string name="receive_enter_amount_button">金額を指定する</string>
     <string name="account_create">アカウントの作成</string>
     <string name="submit">提出する</string>
+    <string name="try_again">再試行する</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">検索</string>

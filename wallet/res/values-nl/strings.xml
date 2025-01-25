@@ -296,6 +296,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">Voeg portemonnee dump toe</string>
     <string name="report_issue_dialog_mail_intent_chooser">Stuur rapport met...</string>
     <string name="report_issue_dialog_mail_intent_failed">Versturen van rapport is mislukt.</string>
+    <string name="report_issue_dialog_generating_report">Rapport wordt gegenereerd.</string>
     <string name="report_transaction_history_export">Exporteer</string>
     <string name="report_transaction_history_title">CSV exporteren</string>
     <string name="report_transaction_history_not_synced_title">CSV exporteren</string>
@@ -412,5 +413,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">Wilt je betalingen op de achtergrond ontvangen?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Deze app is geconfigureerd om actief te blijven nadat hij enige tijd niet zichtbaar is geweest.\n\nWe raden aan deze app altijd up-to-date te laten blijven met de blockchain, zelfs op de achtergrond.\n\nMaak je geen zorgen, we houden rekening met je batterijgebruik.</string>
     <string name="battery_optimization_dialog_button_change">Open instellingen</string>
+    <string name="credits_profile_change_message">Profielinformatie bijwerken.</string>
 
 </resources>

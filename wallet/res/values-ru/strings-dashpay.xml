@@ -62,6 +62,7 @@ Dash</b></string>
     <string name="invitation_accept_message_3">Загрузите аватар и дополнительную информацию</string>
     <string name="invitation_accept_continue">Продолжить</string>
     <string name="invitation_contact_request_sent_message">Запрос на добавление в контакты был отправлен %s, так как вы получили приглашение от этого пользователя</string>
+    <string name="topup_confirm_message">Вы выбрали пополнение ID-cчёта. С вашего баланса спишется следующая сумма.</string>
 
     <string name="username_being_created">Ваше Имя пользователя %s создаётся в Dash Network</string>
     <string name="username_being_requested">Вы подали запрос на имя пользователя %s в Dash Network</string>
@@ -74,6 +75,7 @@ Dash</b></string>
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Регистрация имени пользователя</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Запрос Имени пользователя</string>
     <string name="processing_home_step_3_restoring">(3/3) Восстановление Имени пользователя</string>
+    <string name="restore_identity">Восстановить ID</string>
     <string name="processing_done_title">Привет %s,</string>
     <string name="processing_done_subtitle">Ваш аккаунт готов</string>
     <string name="processing_voting_subtitle">Голосование за ваше имя пользователя началось</string>
@@ -249,7 +251,7 @@ Dash</b></string>
     <string name="please_note_cant_change_this_later">Обратите внимание, что вы не сможете изменить их позже</string>
     <string name="Intermediate_level_WIFI_Warning">Для среднего уровня приватности необходимо надёжное подключение к интернету</string>
     <string name="Advanced_level_WIFI_Warning">Для высокого уровня приватности необходимо надёжное подключение к интернету</string>
-    <string name="privcay_level_WIFI_warning_desc">Во избежание потери средств, рекомендуется пользоваться Wi-Fi сетью</string>
+    <string name="privcay_level_WIFI_warning_desc">Во избежание увеличения комиссии за перемешивание, рекомендуется пользоваться Wi-Fi сетью</string>
     <string name="continue_anyway">Продолжить</string>
     <string name="welcome_to_dash_pay">Добро пожаловать в Dash Pay</string>
     <string name="pay_to_usernames">Платите по имени пользователя. Больше никаких буквенно-цифровых адресов. </string>
@@ -281,8 +283,15 @@ Dash</b></string>
     <string name="only_duplicates">Только дубликаты</string>
     <string name="only_links">Только запросы со ссылками</string>
     <string name="only_links_short">Со ссылками</string>
-    <string name="date">Дата: %s</string>
+    <string name="date">Дата запроса: %s</string>
     <string name="votes">Голоса: %s</string>
+    <string name="voting_ends">Голосование закончится: %s</string>
+
+    <string-array name="usernames_group_by_options">
+        <item>Не указана</item>
+        <item>Сначала первые</item>
+        <item>Сначала последние</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>Сначала новые</item>
@@ -297,20 +306,6 @@ Dash</b></string>
         <item>Не одобрено мной</item>
         <item>Есть заблокированные голоса</item>
     </string-array>
-    <string name="unblock_button">Разблокировать</string>
-    <plurals name="block_vote_button">
-        <item quantity="one">Блок</item>
-        <item quantity="few">Блока</item>
-        <item quantity="many">Блоков</item>
-        <item quantity="other">Против</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="one">Голос \"За\"</item>
-        <item quantity="few">Голоса \"За\"</item>
-        <item quantity="many">Голосов \"За\"</item>
-        <item quantity="other">За</item>
-    </plurals>
-    <string name="block_vote_count">%d Блок(ов)</string>
     <string name="request_your_username">Создать имя пользователя</string>
     <string name="request_your_hint">Обратите внимание, что в будущем вы не сможете его изменить</string>
     <string name="request_username">Запросить имя пользователя</string>
@@ -365,7 +360,9 @@ Dash</b></string>
     <string name="add_masternode_key">Введите ключ для голосования мастерноды</string>
     <string name="dont_ask_again">Не спрашивать снова</string>
     <string name="vote_submitting">Голосовать \"за\" имя пользователя %s</string>
+    <string name="quick_vote_submitting">Голосовать за все имена пользователей</string>
     <string name="vote_submitted">Голос отдан за имя пользователя %s</string>
+    <string name="quick_vote_submitted">Вы успешно проголосовали за все имена пользователей</string>
     <string name="cancel_submitting">Отзывается голос за имя пользователя %s</string>
     <string name="cancel_submitted">Отозвать голос за имя пользователя %s</string>
     <string name="block_submitting">Блокирование имени пользователя %s</string>
@@ -376,6 +373,9 @@ Dash</b></string>
     <string name="quick_vote">Быстрое голосование</string>
     <string name="quick_vote_subtitle">Нажав кнопку \"Голосовать за все\" вы автоматически проголосуете за все отфильтрованные имена пользователей (%d), которые были поданы первыми</string>
     <string name="vote_for_all">Голосовать за все</string>
+    <string name="one_vote_left_title">Остался один голос</string>
+    <string name="one_vote_left_show_usernames">Показать имена пользователей</string>
+    <string name="one_vote_left_subtitle">Вы уже проголосовали за эти имена пользователей %d раз. За них можно проголосовать ещё один раз. </string>
     <string name="voting_period_active">Идёт активное голосование за имя пользователя</string>
     <string name="there_was_a_network_error">Произошла ошибка сети, можете сделать ещё одну попытку без дополнительной платы</string>
     <string name="requested_username_has_been">Запрос на имя пользователя отправлен.</string>
@@ -448,4 +448,18 @@ Dash</b></string>
     <string name="mix_dash_mix">Перемешать баланс</string>
     <string name="mix_dash_title">Перемешайте свои Dash</string>
     <string name="mix_dash_message">Чтобы никто не смог узнать, кому вы отправляете платежи, рекомендуется перемешать баланс до создания имени пользователя.</string>
-    </resources>
+    <string name="tools_credits_title">Кредиты</string>
+    <string name="tools_credits_buy_button">Купить</string>
+    <string name="dashpay_what_are_credits_title">Что такое кредиты\?</string>
+    <string name="dashpay_what_are_credits_message">Чтобы взаимодействовать с сетью Dash, пользователи платят комиссию за транзакцию. Поэтому внесение изменений в профиль предполагает небольшую комиссию, которую можно оплатить кредитами. \n\nКредиты можно использовать для:</string>
+    <string name="credits_send_and_accept_contact_requests">Отправить и принять запросы на добавление в контакты</string>
+    <string name="platform_credits">Кредиты Platform</string>
+    <string name="platform_credits_error">Ошибка</string>
+    <string name="platform_credits_not_transferred">Ожидаемые кредиты Platform</string>
+    <string name="voting_period">Период голосования</string>
+    <string name="voting_period_ends_in_days">Голосование закончится через %d дней</string>
+    <string name="voting_period_ends_today">Голосование закончится сегодня</string>
+    <string name="voting_period_ends_tomorrow">Голосование закончится завтра</string>
+    <string name="link_included">со ссылкой</string>
+    <string name="group_by">Сгруппировать по</string>
+</resources>

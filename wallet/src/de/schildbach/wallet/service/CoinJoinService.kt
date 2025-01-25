@@ -111,6 +111,7 @@ const val MAX_ALLOWED_BEHIND_TIMESKEW = 20000L // 20 seconds
 @Singleton
 class CoinJoinMixingService @Inject constructor(
     @ApplicationContext private val context: Context,
+    val dashSystemService: DashSystemService,
     val walletDataProvider: WalletDataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
     private val config: CoinJoinConfig,
@@ -138,7 +139,7 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private val coinJoinManager: CoinJoinManager?
-        get() = walletDataProvider.wallet?.context?.coinJoinManager
+        get() = dashSystemService.system.coinJoinManager
     private lateinit var clientManager: CoinJoinClientManager
 
     private var mixingCompleteListeners: ArrayList<MixingCompleteListener> = arrayListOf()
@@ -489,7 +490,13 @@ class CoinJoinMixingService @Inject constructor(
         clear()
         val wallet = walletDataProvider.wallet!!
         coinJoinManager?.run {
-            clientManager = CoinJoinClientManager(wallet)
+            clientManager = CoinJoinClientManager(
+                wallet,
+                dashSystemService.system.masternodeSync,
+                this,
+                dashSystemService.system.masternodeListManager,
+                dashSystemService.system.masternodeMetaDataManager,
+            )
             coinJoinClientManagers[wallet.description] = clientManager
             // this allows mixing to wait for the last transaction to be confirmed
             // clientManager.addContinueMixingOnError(PoolStatus.ERR_NO_INPUTS)

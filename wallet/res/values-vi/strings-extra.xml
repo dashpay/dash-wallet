@@ -228,7 +228,6 @@
     <string name="about_contact_support">Liên hệ hỗ trợ</string>
     <string name="about_fork_disclaimer">Đây là một ứng dụng mã nguồn mở được xây dựng dựa trên ví Bitcoin</string>
     <string name="about_license">Giấy phép GNU General Public v3.0</string>
-    <string name="about_version_name">Dash Wallet %s</string>
     <string name="block">Khối</string>
     <string name="time">Thời gian</string>
     <string name="hash">Băm</string>
