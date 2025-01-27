@@ -39,9 +39,9 @@ import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
 import de.schildbach.wallet.ui.invite.InviteHandler
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
@@ -56,9 +56,6 @@ import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.GiftCardDetailsDialog
 import org.slf4j.LoggerFactory
-import java.time.Instant
-import java.time.ZoneId
-import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
@@ -159,21 +156,23 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
-            binding.loading.isVisible = false
+            if (viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                binding.loading.isVisible = false
 
-            if (transactionViews.isEmpty()) {
-                showEmptyView()
-            } else {
-                val groupedByDate = transactionViews.entries
-                    .sortedByDescending { it.key }
-                    .map {
-                        val outList = mutableListOf<HistoryRowView>()
-                        outList.add(HistoryRowView(null, it.key))
-                        outList.apply { addAll(it.value) }
-                    }.reduce { acc, list -> acc.apply { addAll(list) } }
+                if (transactionViews.isEmpty()) {
+                    showEmptyView()
+                } else {
+                    val groupedByDate = transactionViews.entries
+                        .sortedByDescending { it.key }
+                        .map {
+                            val outList = mutableListOf<HistoryRowView>()
+                            outList.add(HistoryRowView(null, it.key))
+                            outList.apply { addAll(it.value) }
+                        }.reduce { acc, list -> acc.apply { addAll(list) } }
 
-                adapter.submitList(groupedByDate)
-                showTransactionList()
+                    adapter.submitList(groupedByDate)
+                    showTransactionList()
+                }
             }
         }
 
