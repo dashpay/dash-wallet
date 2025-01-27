@@ -354,12 +354,16 @@ class WalletTransactionMetadataProvider @Inject constructor(
             val exchangeRate = tx.exchangeRate
             // sync exchange rates
             if (metadata.rate != null && tx.exchangeRate == null) {
-                tx.exchangeRate = org.bitcoinj.utils.ExchangeRate(
-                    Fiat.parseFiat(
-                        metadata.currencyCode,
-                        metadata.rate
+                try {
+                    tx.exchangeRate = org.bitcoinj.utils.ExchangeRate(
+                        Fiat.parseFiat(
+                            metadata.currencyCode,
+                            metadata.rate
+                        )
                     )
-                )
+                } catch (e: Exception) {
+                    log.info("metadata.rate: {}", metadata)
+                }
             } else if (metadata.rate == null && exchangeRate != null) {
                 transactionMetadataDao.updateExchangeRate(
                     tx.txId,
