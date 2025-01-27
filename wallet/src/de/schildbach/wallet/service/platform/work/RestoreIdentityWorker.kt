@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Dash Core Group
+ * Copyright 2025 Dash Core Group
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,16 +86,6 @@ class RestoreIdentityWorker @AssistedInject constructor(
         val identity = inputData.getString(KEY_IDENTITY)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_IDENTITY parameter"))
         val retrying = inputData.getBoolean(KEY_RETRY, false)
-        val authGroupExtension = walletDataProvider.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
-
-        val encryptionKey: KeyParameter
-        try {
-            encryptionKey = walletDataProvider.wallet!!.keyCrypter!!.deriveKey(password)
-        } catch (ex: KeyCrypterException) {
-            analytics.logError(ex, "Restore Identity: failed to derive encryption key")
-            val msg = formatExceptionMessage("derive encryption key", ex)
-            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
-        }
 
         return try {
             // restore identity and all other
@@ -142,6 +132,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
                 return
             }
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 1)
             val loadingFromAssetLockTransaction = creditFundingTransaction != null
             val existingIdentity: Identity?
@@ -348,6 +339,10 @@ class RestoreIdentityWorker @AssistedInject constructor(
             platformRepo.init()
             platformSyncService.initSync()
         } catch (e: Exception) {
+            val blockchainIdentityData = identityConfig.load()
+            blockchainIdentityData?.let {
+                platformRepo.updateIdentityCreationState(it, it.creationState, e)
+            }
             // triggering the end of the preBlockDownload stage as complete
             // could be problematic, what if there were errors
             platformSyncService.triggerPreBlockDownloadComplete()
