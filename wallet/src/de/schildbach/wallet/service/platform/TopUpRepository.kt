@@ -107,7 +107,7 @@ interface TopUpRepository {
     suspend fun checkTopUps(aesKeyParameter: KeyParameter)
 
     // invitation related methods
-    suspend fun createInviteFundingTransactionAsync(
+    suspend fun createInviteFundingTransaction(
         blockchainIdentity: BlockchainIdentity,
         keyParameter: KeyParameter?,
         topupAmount: Coin
@@ -358,7 +358,7 @@ class TopUpRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun createInviteFundingTransactionAsync(
+    override suspend fun createInviteFundingTransaction(
         blockchainIdentity: BlockchainIdentity,
         keyParameter: KeyParameter?,
         topupAmount: Coin
@@ -366,6 +366,7 @@ class TopUpRepositoryImpl @Inject constructor(
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)
+        log.info("createInviteFundingTransactionAsync prop context")
         val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
         val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
         val fundingAddress = Address.fromKey(

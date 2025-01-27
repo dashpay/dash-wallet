@@ -99,7 +99,7 @@ class SendInviteWorker @AssistedInject constructor(
             val blockchainIdentity = platformRepo.blockchainIdentity
             var invitation = invitationsDao.loadByFundingAddress(fundingAddress)
             val assetLockTx = if (invitation == null || !invitation.hasTransaction()) {
-                topUpRepository.createInviteFundingTransactionAsync(
+                topUpRepository.createInviteFundingTransaction(
                     blockchainIdentity,
                     encryptionKey,
                     Coin.valueOf(value)
