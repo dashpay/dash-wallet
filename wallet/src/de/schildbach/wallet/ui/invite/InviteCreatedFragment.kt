@@ -16,9 +16,10 @@
 
 package de.schildbach.wallet.ui.invite
 
-import android.content.Intent
+import android.app.Activity
 import android.os.Bundle
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -69,6 +70,12 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         }
 
         initViewModel()
+
+        sendInviteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (it.resultCode == Activity.RESULT_OK) {
+                findNavController().popBackStack()
+            }
+        }
     }
 
     private fun initViewModel() {
@@ -127,13 +134,6 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         }
 
         super.shareInvitation(shareImage, viewModel.shortDynamicLinkData)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_CODE_SHARE) {
-            findNavController().popBackStack()
-        }
     }
 
     private fun copyInvitationLink() {
