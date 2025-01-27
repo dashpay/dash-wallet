@@ -132,6 +132,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
                 return
             }
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 1)
             val loadingFromAssetLockTransaction = creditFundingTransaction != null
             val existingIdentity: Identity?
