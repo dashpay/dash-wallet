@@ -155,9 +155,9 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         if (!it.canSendAgain()) {
             binding.memo.setText(R.string.invitation_invalid_invite_title)
             binding.pendingView.isVisible = false
-            binding.recoverView.isVisible = true
+            // binding.recoverView.isVisible = true
         } else {
-            binding.recoverView.isVisible = false
+            // binding.recoverView.isVisible = false
         }
     }
 
@@ -167,7 +167,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                 binding.icon.setImageResource(R.drawable.ic_claimed_invite)
                 binding.claimedView.isVisible = true
                 binding.pendingView.isVisible = false
-                binding.recoverView.isVisible = false
+                // binding.recoverView.isVisible = false
                 binding.previewButton.isVisible = false
                 binding.profileButton.isVisible = true
                 binding.status.setText(R.string.invitation_details_invite_used_by)
