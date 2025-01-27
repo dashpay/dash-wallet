@@ -52,11 +52,13 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
         super.onViewCreated(view, savedInstanceState)
         viewModel.amount = Coin.valueOf(args.amount)
         binding.confirmBtn.setOnClickListener {
-            // requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.TOPUP_CONFIRM)
-            val identityId = invitationFragmentViewModel.sendInviteTransaction(Coin.valueOf(args.amount))
-            findNavController().navigate(
-                ConfirmInviteDialogFragmentDirections.toInviteCreatedFragment(identityId)
-            )
+            lifecycleScope.launch {
+                // requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.TOPUP_CONFIRM)
+                val identityId = invitationFragmentViewModel.sendInviteTransaction(Coin.valueOf(args.amount))
+                findNavController().navigate(
+                    ConfirmInviteDialogFragmentDirections.toInviteCreatedFragment(identityId)
+                )
+            }
         }
         binding.dismissBtn.setOnClickListener { dismiss() }
         binding.confirmMessage.isVisible = false
