@@ -62,7 +62,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         super.onViewCreated(view, savedInstanceState)
 
         val toolbar = view.findViewById<Toolbar>(R.id.toolbar)
-        toolbar.title = getString(R.string.menu_invite_title)
+        toolbar.title = getString(R.string.invitation_title)
         toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
