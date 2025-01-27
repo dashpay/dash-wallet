@@ -42,10 +42,14 @@ import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.slf4j.LoggerFactory
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_details) {
+    companion object {
+        val log = LoggerFactory.getLogger(InviteDetailsFragment::class.java)
+    }
     private val binding by viewBinding(FragmentInviteDetailsBinding::bind)
     private val args by navArgs<InviteDetailsFragmentArgs>()
     override val invitationBitmapTemplateBinding: InvitationBitmapTemplateBinding
@@ -71,7 +75,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_COPY_LINK)
             copyInvitationLink()
         }
-        binding. sendButton.setOnClickListener {
+        binding.sendButton.setOnClickListener {
             shareInvitation(true)
         }
         binding.sendButton.setOnLongClickListener {
@@ -116,6 +120,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         viewModel.identityId.value = identityId
 
         viewModel.invitation.filterNotNull().observe(viewLifecycleOwner) {
+            log.info("invitation changed: $it")
             if (it.memo.isNotEmpty()) {
                 binding.tagEdit.setText(it.memo)
                 binding.memo.text = it.memo
@@ -150,6 +155,9 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         if (!it.canSendAgain()) {
             binding.memo.setText(R.string.invitation_invalid_invite_title)
             binding.pendingView.isVisible = false
+            binding.recoverView.isVisible = true
+        } else {
+            binding.recoverView.isVisible = false
         }
     }
 
@@ -159,6 +167,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                 binding.icon.setImageResource(R.drawable.ic_claimed_invite)
                 binding.claimedView.isVisible = true
                 binding.pendingView.isVisible = false
+                binding.recoverView.isVisible = false
                 binding.previewButton.isVisible = false
                 binding.profileButton.isVisible = true
                 binding.status.setText(R.string.invitation_details_invite_used_by)

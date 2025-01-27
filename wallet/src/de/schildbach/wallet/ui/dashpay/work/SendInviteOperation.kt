@@ -143,23 +143,24 @@ class SendInviteOperation(val application: Application) {
 
     @SuppressLint("EnqueueWork")
     fun create(fundingAddress: String, value: Coin): WorkContinuation {
-
         val password = SecurityGuard().retrievePassword()
         val sendInviteWorker = OneTimeWorkRequestBuilder<SendInviteWorker>()
-                .setInputData(
-                    workDataOf(
-                        SendInviteWorker.KEY_PASSWORD to password,
-                        SendInviteWorker.KEY_FUNDING_ADDRESS to fundingAddress,
-                        SendInviteWorker.KEY_VALUE to value.value
-                    )
+            .setInputData(
+                workDataOf(
+                    SendInviteWorker.KEY_PASSWORD to password,
+                    SendInviteWorker.KEY_FUNDING_ADDRESS to fundingAddress,
+                    SendInviteWorker.KEY_VALUE to value.value
                 )
-                .addTag("invite:$fundingAddress")
-                .build()
+            )
+            .addTag("invite:$fundingAddress")
+            .build()
 
         return WorkManager.getInstance(application)
-                .beginUniqueWork(uniqueWorkName(fundingAddress),
-                        ExistingWorkPolicy.KEEP,
-                        sendInviteWorker)
+            .beginUniqueWork(
+                uniqueWorkName(fundingAddress),
+                ExistingWorkPolicy.KEEP,
+                sendInviteWorker
+            )
     }
 
 }

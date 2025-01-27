@@ -44,7 +44,6 @@ class SendInviteWorker @AssistedInject constructor(
     private val topUpRepository: TopUpRepository,
     private val walletDataProvider: WalletDataProvider
 ): BaseWorker(context, parameters) {
-
     companion object {
         const val KEY_PASSWORD = "SendInviteWorker.PASSWORD"
         const val KEY_FUNDING_ADDRESS = "SendInviteWorker.FUNDING_ADDRESS"
@@ -77,13 +76,10 @@ class SendInviteWorker @AssistedInject constructor(
     // TODO: align with the topup-worker for retry and skip completed steps
     override suspend fun doWorkWithBaseProgress(): Result {
         val password = inputData.getString(KEY_PASSWORD)
-                ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
+            ?: return errorResult("missing KEY_PASSWORD parameter")
         val value = inputData.getLong(KEY_VALUE, 0L)
-        if (value == 0L) {
-            error("missing KEY_VALUE parameter")
-        }
-        val fundingAddress = inputData.getString(KEY_FUNDING_ADDRESS) ?:
-            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_FUNDING_ADDRESS parameter"))
+        val fundingAddress = inputData.getString(KEY_FUNDING_ADDRESS)
+            ?: return errorResult("missing KEY_FUNDING_ADDRESS parameter")
 
         val encryptionKey: KeyParameter
         try {
@@ -91,7 +87,7 @@ class SendInviteWorker @AssistedInject constructor(
         } catch (ex: KeyCrypterException) {
             analytics.logError(ex, "Send Invite: failed to derive encryption key")
             val msg = formatExceptionMessage("derive encryption key", ex)
-            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
+            return errorResult(msg)
         }
 
         return try {
@@ -99,14 +95,21 @@ class SendInviteWorker @AssistedInject constructor(
             val blockchainIdentity = platformRepo.blockchainIdentity
             var invitation = invitationsDao.loadByFundingAddress(fundingAddress)
             val assetLockTx = if (invitation == null || !invitation.hasTransaction()) {
+                if (value == 0L) {
+                    error("missing KEY_VALUE parameter or KEY_VALUE is 0")
+                }
                 topUpRepository.createInviteFundingTransaction(
                     blockchainIdentity,
                     encryptionKey,
                     Coin.valueOf(value)
                 )
             } else {
-                authGroupExtension.invitationFundingTransactions.find { it.txId == invitation!!.txid }
-                    ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "invite funding tx ${invitation.txid} not found"))
+                val tx = authGroupExtension.invitationFundingTransactions.find { it.txId == invitation!!.txid }
+                    ?: return errorResult("invite funding tx ${invitation.txid} not found")
+                if (invitation.createdAt == 0L) {
+                    invitationsDao.insert(invitation.copy(createdAt = tx.updateTime.time))
+                }
+                tx
             }
 
             // make sure TX has been sent
@@ -116,6 +119,9 @@ class SendInviteWorker @AssistedInject constructor(
                 confidence.numBroadcastPeers() > 0
             if (!wasTxSent) {
                 topUpRepository.sendTransaction(assetLockTx)
+                if (invitation?.sentAt == 0L) {
+                    invitationsDao.insert(invitation.copy(createdAt = System.currentTimeMillis()))
+                }
             }
 
             // create the dynamic link
@@ -140,12 +146,8 @@ class SendInviteWorker @AssistedInject constructor(
                 )
             )
         } catch (ex: Exception) {
-            analytics.logError(ex, "Send Invite: failed to send contact request")
-            Result.failure(
-                workDataOf(
-                    KEY_ERROR_MESSAGE to formatExceptionMessage("send invite", ex)
-                )
-            )
+            analytics.logError(ex, "Send Invite: failed to create invite")
+            errorResult(formatExceptionMessage("send invite", ex))
         }
     }
 }
