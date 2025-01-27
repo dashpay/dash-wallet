@@ -238,8 +238,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun retryIdentityCreation(header: HistoryHeaderAdapter) {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             viewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
-            // check to see if an invite was used
-            if (!blockchainIdentityData.usingInvite) {
+            // check to see if restoring or if an invite was used
+            if (blockchainIdentityData.restoring) {
+                RestoreIdentityOperation(requireActivity().application)
+                    .create(blockchainIdentityData.userId!!, true)
+                    .enqueue()
+            } else if (!blockchainIdentityData.usingInvite) {
                 requireActivity().startService(
                     CreateIdentityService.createIntentForRetry(
                         requireActivity(),
