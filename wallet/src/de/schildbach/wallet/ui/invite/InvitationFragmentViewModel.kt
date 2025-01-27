@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.AuthenticationKeyChain
@@ -67,13 +68,14 @@ open class InvitationFragmentViewModel @Inject constructor(
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     private val log = LoggerFactory.getLogger(InvitationFragmentViewModel::class.java)
     private val workerJob = Job()
-    private var workerScope = CoroutineScope(workerJob + Dispatchers.IO)
+    private val workerScope = CoroutineScope(workerJob + Dispatchers.IO)
+    private val authExtension = platformRepo.authenticationGroupExtension!!
 
-    private val pubkeyHash = platformRepo.authenticationGroupExtension!!.currentKey(
-        AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING
-    ).pubKeyHash
+    private val pubkeyHash: ByteArray
+        get() = authExtension.currentKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
 
-    private val fundingAddress = Address.fromPubKeyHash(walletApplication.wallet!!.params, pubkeyHash).toBase58()
+    private val fundingAddress: String
+        get() = Address.fromPubKeyHash(walletApplication.wallet!!.params, pubkeyHash).toBase58()
 
     val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, fundingAddress)
 
@@ -86,7 +88,15 @@ open class InvitationFragmentViewModel @Inject constructor(
     val walletData
         get() = walletApplication
 
-    fun sendInviteTransaction(value: Coin): String {
+    suspend fun sendInviteTransaction(value: Coin): String {
+        // ensure that the fundingAddress hasn't been used
+        withContext(Dispatchers.IO) {
+            val invitation = invitationDao.loadByFundingAddress(fundingAddress)
+            while (invitation?.txid != null) {
+                authExtension.freshKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING)
+            }
+        }
+        val fundingAddress = this.fundingAddress // save the address locally
         SendInviteOperation(walletApplication)
             .create(fundingAddress, value)
             .enqueue()
