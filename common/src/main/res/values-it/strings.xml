@@ -65,6 +65,7 @@
     <string name="receive_enter_amount_button">Specifica Importo</string>
     <string name="account_create">Crea un Account</string>
     <string name="submit">Invia</string>
+    <string name="try_again">Prova Ancora</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Cerca</string>

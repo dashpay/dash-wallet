@@ -64,6 +64,7 @@
     <string name="receive_enter_amount_button">指定数额</string>
     <string name="account_create">创建账户</string>
     <string name="submit">提交</string>
+    <string name="try_again">再试一次</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">搜索</string>

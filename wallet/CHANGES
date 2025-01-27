@@ -1,4 +1,11 @@
 Dash Wallet
+v11.1.0
+* Username Voting Improvements
+* Improve Contact Support dialog and report export
+* Improve Home Screen Transaction List
+* Add Platform Identity Topup Support
+* Add Quick Voting
+
 v11.0.5
 * Fix sync stuck problem (often at 33%)
 * Fix obtaining username voting information

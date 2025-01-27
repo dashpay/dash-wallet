@@ -296,6 +296,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">Añadir el volcado de datos de la billetera</string>
     <string name="report_issue_dialog_mail_intent_chooser">Enviar informe mediante…</string>
     <string name="report_issue_dialog_mail_intent_failed">Ha fallado el envío del informe.</string>
+    <string name="report_issue_dialog_generating_report">Generando reporte</string>
     <string name="report_transaction_history_export">Exportar</string>
     <string name="report_transaction_history_title">Exportar CSV</string>
     <string name="report_transaction_history_not_synced_title">Exportar CSV</string>
@@ -412,5 +413,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">¿Quieres recibir pagos en segundo plano?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Esta aplicación está configurada para continuar ejecutándose después de no estar visible durante algún tiempo.\n\nSugerimos permitir que esta aplicación se mantenga siempre actualizada con la cadena de bloques, incluso en segundo plano.\n\nNo te preocupes, lo haremos siempre teniendo en cuenta el uso de la batería.</string>
     <string name="battery_optimization_dialog_button_change">Abrir Configuración </string>
+    <string name="credits_profile_change_message">Actualizar información del perfil</string>
 
 </resources>

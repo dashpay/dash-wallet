@@ -42,6 +42,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
                            private val ignoreRequest: (usernameSearchResult: UsernameSearchResult, position: Int) -> Unit,
                            private val onUserAlertDismissListener: (Int) -> Unit,
                            private val onItemClicked: ((NotificationItem) -> Unit)?,
+                           private val chainLockBlockHeight: Int,
                            private val fromProfile: Boolean = false,
                            private val fromStrangerQr: Boolean = false)
 
@@ -74,7 +75,6 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
             notifyDataSetChanged()
         }
     var filteredResults: MutableList<NotificationViewItem> = arrayListOf()
-
     var sendContactRequestWorkStateMap: Map<String, Resource<WorkInfo>> = mapOf()
         set(value) {
             field = value
@@ -126,7 +126,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
                         notificationViewItem.isNew, position == 0, recentlyModified, showAvatars, acceptRequest, ignoreRequest)
             }
             NOTIFICATION_PAYMENT -> {
-                holder.bind(notificationItem, transactionCache, wallet)
+                holder.bind(notificationItem, transactionCache, wallet, chainLockBlockHeight)
             }
             NOTIFICATION_ALERT -> {
                 val userAlertItem = notificationItem as NotificationItemUserAlert

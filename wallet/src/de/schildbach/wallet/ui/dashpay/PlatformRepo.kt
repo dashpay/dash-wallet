@@ -47,6 +47,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -411,14 +412,9 @@ class PlatformRepo @Inject constructor(
     fun observeContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Flow<List<UsernameSearchResult>> {
         return blockchainIdentityDataStorage.observe()
             .filterNotNull()
-            .flatMapLatest { _ ->
-                init()
-
-                if (!hasIdentity || blockchainIdentity.identity == null) {
-                    return@flatMapLatest flowOf(emptyList())
-                }
-
-                val userId = blockchainIdentity.uniqueIdString
+            .filter { it.creationState >= BlockchainIdentityData.CreationState.DONE }
+            .flatMapLatest { identityData ->
+                val userId = identityData.userId!!
 
                 // Combine the two contact request flows
                 combine(
@@ -1238,7 +1234,7 @@ class PlatformRepo @Inject constructor(
     fun getIdentityBalance(identifier: Identifier): CreditBalanceInfo {
         return CreditBalanceInfo(platform.client.getIdentityBalance(identifier))
     }
-    
+
     suspend fun addInviteUserAlert() {
         // this alert will be shown or not based on the current balance and will be
         // managed by NotificationsLiveData

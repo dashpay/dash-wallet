@@ -61,6 +61,8 @@
     <string name="verify">ตรวจสอบ</string>
     <string name="receive_enter_amount_button">ระบุจำนวน</string>
     <string name="account_create">สร้างบัญชี</string>
+    <string name="try_again">ลองอีกครั้ง</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">ค้นหา</string>
     <string name="permission_allow">อนุญาติ</string>

@@ -172,12 +172,12 @@ public class TxResourceMapper {
      * @return the secondary status or -1 if there is none
      */
     @StringRes
-    public int getReceivedStatusString(Transaction tx, @NonNull Context context) {
+    public int getReceivedStatusString(Transaction tx, @NonNull Context context, int bestChainLockBlockHeight) {
         TransactionConfidence confidence = tx.getConfidence(context);
         int statusId = -1;
         if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) {
             int confirmations = confidence.getDepthInBlocks();
-            boolean isChainLocked = context.chainLockHandler.getBestChainLockBlockHeight() >= confidence.getDepthInBlocks();
+            boolean isChainLocked = bestChainLockBlockHeight >= confidence.getDepthInBlocks();
 
             // process coinbase transactions (Mining Rewards) before other BUILDING transactions
             if (tx.isCoinBase()) {

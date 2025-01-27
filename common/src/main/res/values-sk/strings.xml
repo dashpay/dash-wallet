@@ -64,6 +64,7 @@
     <string name="receive_enter_amount_button">Zadať množstvo</string>
     <string name="account_create">Vytvoriť účet</string>
     <string name="submit">Odoslať</string>
+    <string name="try_again">Skúsiť znova</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Hľadať</string>

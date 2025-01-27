@@ -968,6 +968,9 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private suspend fun publishTransactionMetadata(txMetadataItems: List<TransactionMetadataCacheItem>) {
+        if (!platformRepo.hasIdentity) {
+            return
+        }
         Log.i("PUBLISH", txMetadataItems.joinToString("\n") { it.toString() })
         val metadataList = txMetadataItems.map {
             TxMetadataItem(

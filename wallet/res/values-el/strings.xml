@@ -412,5 +412,4 @@
     <string name="battery_optimization_dialog_unrestricted_title">Θέλετε να λαμβάνετε πληρωμές στο παρασκήνιο;</string>
     <string name="battery_optimization_dialog_message_not_optimized">Αυτή η εφαρμογή έχει ρυθμιστεί ώστε να συνεχίζει να εκτελείται ακόμη και όταν δεν είναι ορατή για κάποιο χρονικό διάστημα.\n\nΠροτείνουμε να επιτρέψετε σε αυτή την εφαρμογή να παραμένει πάντα ενημερωμένη με TO blockchain, ακόμη και στο παρασκήνιο.\n\nΜην ανησυχείτε, θα προσέχουμε πάντα τη χρήση της μπαταρίας σας.</string>
     <string name="battery_optimization_dialog_button_change">Άνοιγμα Ρυθμίσεων</string>
-
-</resources>
+    </resources>

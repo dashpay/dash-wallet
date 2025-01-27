@@ -412,5 +412,4 @@
     <string name="battery_optimization_dialog_unrestricted_title">您想要在后台接收支付推送么?</string>
     <string name="battery_optimization_dialog_message_not_optimized">此 app 被设置为在后台运行一段时间后仍继续运行.\n\n我们推荐允许此 app 一直保持更新最新状态, 即便是在后台运行.\n\n无需担心, 我们将经常提醒您电池用量.</string>
     <string name="battery_optimization_dialog_button_change">打开设置</string>
-
-</resources>
+    </resources>

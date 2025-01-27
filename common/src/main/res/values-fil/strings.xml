@@ -64,6 +64,7 @@
     <string name="receive_enter_amount_button">Tukuyin ang halaga</string>
     <string name="account_create">Lumikha ng Account</string>
     <string name="submit">Isumite</string>
+    <string name="try_again">Subukan muli</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Maghanap</string>

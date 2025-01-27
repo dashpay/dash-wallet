@@ -28,6 +28,7 @@ import de.schildbach.wallet.database.dao.UsernameVoteDao
 import de.schildbach.wallet.database.entity.ImportedMasternodeKey
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.UsernameVote
+import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesOperation
@@ -122,6 +123,7 @@ class UsernameRequestsViewModel @Inject constructor(
     private val platformSyncService: PlatformSyncService,
     private val walletDataProvider: WalletDataProvider,
     private val walletApplication: WalletApplication,
+    private val dashSystemService: DashSystemService,
     private val analytics: AnalyticsService
 ): ViewModel() {
     companion object {
@@ -151,7 +153,7 @@ class UsernameRequestsViewModel @Inject constructor(
         }
 
     private val masternodeListManager: SimplifiedMasternodeListManager
-        get() = walletDataProvider.wallet!!.context.masternodeListManager
+        get() = dashSystemService.system.masternodeListManager
 
     private val _addedKeys = MutableStateFlow(listOf<ECKey>())
     private val _masternodes =  MutableStateFlow<List<ImportedMasternodeKey>>(listOf())

@@ -61,6 +61,7 @@
     <string name="invitation_accept_message_3">写真をアップロードして、自分のIDをパーソナライズする</string>
     <string name="invitation_accept_continue">続ける</string>
     <string name="invitation_contact_request_sent_message">お客様を招待したため、%sに連絡先リクエストが送信されました。</string>
+    <string name="topup_confirm_message">お客様はIDの更新を選択しました。以下の金額が残高から差し引かれます。</string>
 
     <string name="username_being_created">%sのユーザー名をDashネットワークで作成中です</string>
     <string name="username_being_requested">%sのユーザー名をDashネットワークで申請中です</string>
@@ -73,6 +74,7 @@
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) ユーザー名の登録中</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) ユーザー名のリクエスト中</string>
     <string name="processing_home_step_3_restoring">(3/3) ユーザー名のリカバリー中</string>
+    <string name="restore_identity">IDを復元する</string>
     <string name="processing_done_title">こんにちは、%sさん</string>
     <string name="processing_done_subtitle">お客様のアカウントは準備完了です</string>
     <string name="processing_voting_subtitle">ユーザー名の投票が始まりました</string>
@@ -248,7 +250,7 @@
     <string name="please_note_cant_change_this_later">この設定は後で変更することはできませんのでご注意ください</string>
     <string name="Intermediate_level_WIFI_Warning">中程度のプライバシーレベルには、安定したインターネット接続が必要です</string>
     <string name="Advanced_level_WIFI_Warning">高度のプライバシーレベルには、安定したインターネット接続が必要です</string>
-    <string name="privcay_level_WIFI_warning_desc">資金の損失を防止するため、Wi-Fiネットワークに接続することを推奨します</string>
+    <string name="privcay_level_WIFI_warning_desc">余分なミキシング料金を防ぐため、Wi-Fiネットワークに接続することを推奨します</string>
     <string name="continue_anyway">このまま続行する</string>
     <string name="welcome_to_dash_pay">Dash Payへようこそ</string>
     <string name="pay_to_usernames">ユーザー名に支払い。英数字のアドレスはもう不要。</string>
@@ -280,8 +282,15 @@
     <string name="only_duplicates">重複分のみ</string>
     <string name="only_links">リンク付きの請求のみ</string>
     <string name="only_links_short">リンク付き</string>
-    <string name="date">日程：%s</string>
+    <string name="date">リクエスト日：%s</string>
     <string name="votes">投票数：%s</string>
+    <string name="voting_ends">投票締切：%s</string>
+
+    <string-array name="usernames_group_by_options">
+        <item>無し</item>
+        <item>早い順</item>
+        <item>遅い順</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>新しい順</item>
@@ -296,14 +305,6 @@
         <item>承認しませんでした</item>
         <item>投票をブロックしました</item>
     </string-array>
-    <string name="unblock_button">ブロックを解除</string>
-    <plurals name="block_vote_button">
-        <item quantity="other">ブロックした投票</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="other">承認した投票</item>
-    </plurals>
-    <string name="block_vote_count">%dブロック</string>
     <string name="request_your_username">ユーザー名の作成</string>
     <string name="request_your_hint">一度決めたユーザー名は、今後変更することはできませんのでご注意ください</string>
     <string name="request_username">ユーザー名の申請</string>
@@ -358,7 +359,9 @@
     <string name="add_masternode_key">マスターノードの投票キーを追加する</string>
     <string name="dont_ask_again">次から同じ質問を表示しない</string>
     <string name="vote_submitting">%sのユーザー名への投票を送信</string>
+    <string name="quick_vote_submitting">全てのユーザー名への投票を送信</string>
     <string name="vote_submitted">%sのユーザー名に投票しました</string>
+    <string name="quick_vote_submitted">全てのユーザー名に投票しました</string>
     <string name="cancel_submitting">%sのユーザー名への投票をキャンセル中</string>
     <string name="cancel_submitted">%sのユーザー名への投票をキャンセルしました</string>
     <string name="block_submitting">%sのユーザー名をブロック中</string>
@@ -369,6 +372,9 @@
     <string name="quick_vote">クイック投票</string>
     <string name="quick_vote_subtitle">「全てに投票」ボタンをタップすると、絞り込んだユーザー名のうち、最初に投稿されたもの(%d)全てに自動的に投票されます</string>
     <string name="vote_for_all">全てに投票</string>
+    <string name="one_vote_left_title">残り1票</string>
+    <string name="one_vote_left_show_usernames">ユーザー名を表示</string>
+    <string name="one_vote_left_subtitle">お客様は以下のユーザー名にすでに%d回投票しています。これらのユーザー名にはあと1回しか投票できません。</string>
     <string name="voting_period_active">ユーザー名の投票期間が有効です</string>
     <string name="there_was_a_network_error">ネットワークエラーが発生しました、追加料金なしで再試行できます</string>
     <string name="requested_username_has_been">ユーザー名を申請しました</string>
@@ -441,4 +447,18 @@
     <string name="mix_dash_mix">ミキシング残高</string>
     <string name="mix_dash_title">Dashをミキシングする</string>
     <string name="mix_dash_message">他者に送金先を閲覧されないようにするため、残高をミキシングしてからユーザー名を作成することを推奨します。</string>
-    </resources>
+    <string name="tools_credits_title">残高</string>
+    <string name="tools_credits_buy_button">購入</string>
+    <string name="dashpay_what_are_credits_title">残高とは\?</string>
+    <string name="dashpay_what_are_credits_message">ユーザーは、取引手数料を支払ってからDashネットワークでやりとりすることになります。そのため、プロフィールを変更するには少額の手数料を支払う必要があり、その支払いはDashの残高で行うことができます。\n\nお客様の残高は、下記の用途に使用できます。</string>
+    <string name="credits_send_and_accept_contact_requests">連絡先リクエストの送信と承認</string>
+    <string name="platform_credits">プラットフォーム残高</string>
+    <string name="platform_credits_error">エラー</string>
+    <string name="platform_credits_not_transferred">プラットフォーム残高の保留中</string>
+    <string name="voting_period">投票期間</string>
+    <string name="voting_period_ends_in_days">投票は%dで締め切ります</string>
+    <string name="voting_period_ends_today">投票は本日で締め切ります</string>
+    <string name="voting_period_ends_tomorrow">投票は明日で締め切ります</string>
+    <string name="link_included">リンクは含まれています</string>
+    <string name="group_by">グループ</string>
+</resources>

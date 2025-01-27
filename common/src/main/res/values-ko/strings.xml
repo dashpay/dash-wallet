@@ -64,6 +64,7 @@
     <string name="receive_enter_amount_button">금액 특정하기</string>
     <string name="account_create">계정 생성하기</string>
     <string name="submit">제출</string>
+    <string name="try_again">다시 시도하세요</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">검색</string>
