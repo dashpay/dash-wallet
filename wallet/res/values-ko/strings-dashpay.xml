@@ -62,7 +62,6 @@
     <string name="invitation_accept_message_3">사진을 업로드하고 아이덴티티를 개인화하세요</string>
     <string name="invitation_accept_continue">계속</string>
     <string name="invitation_contact_request_sent_message">초대장을 받았으므로 %s에게 연락처 요청이 발송되었습니다.</string>
-
     <string name="username_being_created">당신의 상숑자 이름인 %s 가 대시 네트워크에 생성되는 중입니다</string>
     <string name="username_being_requested">당신의 상요자 이름인 %s가 대시 네트워크에 요청되었습니다</string>
 
@@ -249,7 +248,6 @@
     <string name="please_note_cant_change_this_later">다시 변경할 수 없음에 주의하세요</string>
     <string name="Intermediate_level_WIFI_Warning">중간 프라이버시 레벨은 신뢰할 수 있는 인터넷 연결이 필요합니다</string>
     <string name="Advanced_level_WIFI_Warning">향상된 프라이버시 레벨은 신뢰할 수 있는 인터넷 연결이 필요합니다</string>
-    <string name="privcay_level_WIFI_warning_desc">자금의 손실을 방지하기 위하여는 Wi-Fi 네트워크에 접속할 것을 권장합니다</string>
     <string name="continue_anyway">그래도 계속하기</string>
     <string name="welcome_to_dash_pay">대시페이에 오신 것을 환영합니다</string>
     <string name="pay_to_usernames">사용자 이름으로 지불하세요. 더 이상 알파벳과 숫자로 이루어진 주소는 필요하지 않습니다.</string>
@@ -281,8 +279,10 @@
     <string name="only_duplicates">복사만</string>
     <string name="only_links">링크를 가진 요청만</string>
     <string name="only_links_short">링크와 함께</string>
-    <string name="date">날짜: %s</string>
     <string name="votes">투표: %s</string>
+    <string-array name="usernames_group_by_options">
+        <item>없음</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>현재부터 과거</item>
@@ -297,14 +297,6 @@
         <item>승인하지 않았습니다</item>
         <item>투표를 차단했습니다</item>
     </string-array>
-    <string name="unblock_button">차단 해제</string>
-    <plurals name="block_vote_button">
-        <item quantity="other">차단</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="other">승인</item>
-    </plurals>
-    <string name="block_vote_count">%d 블록</string>
     <string name="request_your_username">당신의 사용자 이름을 생성하세요</string>
     <string name="request_your_hint">이를 다시 변경할 수 없다는 점에 주의하세요</string>
     <string name="request_username">사용자 이름 요청하기</string>
@@ -442,4 +434,6 @@
     <string name="mix_dash_mix">믹스 잔고</string>
     <string name="mix_dash_title">당신의 대시를 믹스하세요</string>
     <string name="mix_dash_message">당신이 누구에게 송금하는 지를 아무도 알 수 없게 하기 위해서는, 사용자 이름을 만들기 전에 잔고를 믹싱할 것을 권장합니다.</string>
+    <string name="tools_credits_buy_button">구매</string>
+    <string name="platform_credits_error">오류</string>
     </resources>

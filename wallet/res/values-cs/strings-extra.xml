@@ -266,7 +266,6 @@
     <string name="about_contact_support">Podpora</string>
     <string name="about_fork_disclaimer">Toto je aplikace s otevřeným zdrojovým kódem vycházející z bitcoinové peněženky.</string>
     <string name="about_license">GNU General Public License v3.0</string>
-    <string name="about_version_name">Dash Wallet %s</string>
     <string name="about_last_explore_dash_update_error">nelze načíst</string>
     <string name="about_last_explore_dash_sync_never">nikdy</string>
     <string name="block">Blok</string>

@@ -64,6 +64,7 @@
     <string name="receive_enter_amount_button">Καθορίστε το ποσό</string>
     <string name="account_create">Δημιουργία λογαριασμού</string>
     <string name="submit">Υποβολή</string>
+    <string name="try_again">Προσπαθήστε ξανά</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Αναζήτηση</string>

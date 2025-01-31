@@ -226,7 +226,6 @@
     <string name="about_contact_support">Връзка с поддръжката</string>
     <string name="about_fork_disclaimer">Това е приложение с отворен код, разклонено от Bitcoin Wallet</string>
     <string name="about_license">GNU General Public License v3.0</string>
-    <string name="about_version_name">Dash Wallet %s</string>
     <string name="block">Блок</string>
     <string name="time">Време</string>
     <string name="hash">Хеш</string>

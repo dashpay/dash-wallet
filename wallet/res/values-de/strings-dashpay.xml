@@ -62,6 +62,7 @@ Benutzernamen</b></string>
     <string name="invitation_accept_message_3">Lade dein Bild hoch, personalisiere deine Identität</string>
     <string name="invitation_accept_continue">Fortfahren</string>
     <string name="invitation_contact_request_sent_message">Da du von %s eingeladen wurdest, hat diese Person eine Kontaktanfrage erhalten.</string>
+    <string name="topup_confirm_message">Du hast dich entschieden, deine Identität aufzuladen. Der folgende Betrag wird von deinem Guthaben abgezogen.</string>
 
     <string name="username_being_created">Dein Benutzername %s wird nun im Dash-Netzwerk erstellt.</string>
     <string name="username_being_requested">Dein Benutzername %s wird nun im Dash-Netzwerk angefragt.</string>
@@ -74,6 +75,7 @@ Benutzernamen</b></string>
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Registriere Benutzernamen</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Benutzername anfordern</string>
     <string name="processing_home_step_3_restoring">(3/3) Benutzername wiederherstellen</string>
+    <string name="restore_identity">Identität wiederherstellen</string>
     <string name="processing_done_title">Hallo %s,</string>
     <string name="processing_done_subtitle">Dein Konto ist fertig.</string>
     <string name="processing_voting_subtitle">Die Abstimmung für deinen Benutzernamen hat begonnen.</string>
@@ -249,7 +251,7 @@ Benutzernamen</b></string>
     <string name="please_note_cant_change_this_later">Bitte beachte, dass du dies später nicht mehr ändern kannst</string>
     <string name="Intermediate_level_WIFI_Warning">Ein durchschnittliches Privatsphäre-Level erfordert eine zuverlässige Internetverbindung</string>
     <string name="Advanced_level_WIFI_Warning">Ein fortschrittliches Privatsphäre-Level erfordert eine zuverlässige Internetverbindung</string>
-    <string name="privcay_level_WIFI_warning_desc">Es wird empfohlen sich mit einem WiFi-Netzwerk zu verbinden, um Guthabenverlust zu vermeiden</string>
+    <string name="privcay_level_WIFI_warning_desc">Es wird empfohlen, ein Wi-Fi-Netzwerk zu nutzen, um zusätzliche Mixing-Gebühren zu vermeiden.</string>
     <string name="continue_anyway">Trotzdem fortfahren</string>
     <string name="welcome_to_dash_pay">Willkommen bei Dash Pay</string>
     <string name="pay_to_usernames">Direkt an Nutzernamen zahlen. Keine alphanumerischen Adressen mehr.</string>
@@ -281,8 +283,15 @@ Benutzernamen</b></string>
     <string name="only_duplicates">Nur Duplikate</string>
     <string name="only_links">Nur Anfragen mit Links</string>
     <string name="only_links_short">Mit Links</string>
-    <string name="date">Datum: %s</string>
+    <string name="date">Anfragedatum: %s</string>
     <string name="votes">Stimmen: %s</string>
+    <string name="voting_ends">Abstimmung endet: %s</string>
+
+    <string-array name="usernames_group_by_options">
+        <item>Kein</item>
+        <item>Früheste zuerst</item>
+        <item>Spätesten zuerst</item>
+    </string-array>
 
     <string-array name="usernames_sort_by_options">
         <item>Neu nach alt</item>
@@ -297,16 +306,6 @@ Benutzernamen</b></string>
         <item>Ich habe nicht zugestimmt.</item>
         <item>Beinhalted blockierte Votes</item>
     </string-array>
-    <string name="unblock_button">Freigeben</string>
-    <plurals name="block_vote_button">
-        <item quantity="one">Einwand</item>
-        <item quantity="other">Einwände</item>
-    </plurals>
-    <plurals name="approval_button">
-        <item quantity="one">Bewilligung</item>
-        <item quantity="other">Bewilligungen</item>
-    </plurals>
-    <string name="block_vote_count">%d Block(s)</string>
     <string name="request_your_username">Benutzernamen erstellen</string>
     <string name="request_your_hint">Bitte beachte, dass du dies in der Zukunft nicht mehr ändern kannst</string>
     <string name="request_username">Nutzernamen beantragen</string>
@@ -361,7 +360,9 @@ Benutzernamen</b></string>
     <string name="add_masternode_key">Masternode Voting-Schlüssel hinzufügen</string>
     <string name="dont_ask_again">Bitte nicht noch einmal nachfragen</string>
     <string name="vote_submitting">Deine Stimme für Nutzername %s abgeben</string>
+    <string name="quick_vote_submitting">Deine Stimme für alle Nutzernamen abgeben</string>
     <string name="vote_submitted">Gestimmt für Nutzername %s </string>
+    <string name="quick_vote_submitted">Erfolgreich für alle Nutzernamen abgestimmt</string>
     <string name="cancel_submitting">Deine Stimme für Nutzername %s zurückziehen</string>
     <string name="cancel_submitted">Stimme für Nutzername %s zurückgezogen</string>
     <string name="block_submitting">Nutzname %s blockieren</string>
@@ -372,6 +373,9 @@ Benutzernamen</b></string>
     <string name="quick_vote">Schnelles Abstimmen</string>
     <string name="quick_vote_subtitle">Wenn du die Schaltfläche \"Für alle abstimmen\" tippst, stimmst du automatisch für alle gefilterten Benutzernamen (%d), die zuerst eingereicht wurden</string>
     <string name="vote_for_all">Stimme für alle</string>
+    <string name="one_vote_left_title">Ein Vote übrig</string>
+    <string name="one_vote_left_show_usernames">Nutzernamen anzeigen</string>
+    <string name="one_vote_left_subtitle">Du hast für die folgenden Nutzernamen bereits %d Mal abgestimmt. Du kannst nur noch ein Vote für diesen Nutzernamen abgeben.</string>
     <string name="voting_period_active">Abstimmungszeitraum für Benutzernamen aktiv</string>
     <string name="there_was_a_network_error">Ein Netzwerkfehler ist aufgetreten. Du kannst es ohne zusätzliche Kosten erneut versuchen.</string>
     <string name="requested_username_has_been">Benutzername wurde beantragt.</string>
@@ -444,4 +448,18 @@ Benutzernamen</b></string>
     <string name="mix_dash_mix">Gemixtes Guthaben</string>
     <string name="mix_dash_title">Mixe deine Dash</string>
     <string name="mix_dash_message">Um zu verhindern, dass andere Personen sehen können, an wen du Zahlungen vornimmst, wird empfohlen, dein Guthaben zu mixen, bevor du deinen Benutzernamen erstellst.</string>
-    </resources>
+    <string name="tools_credits_title">Credits</string>
+    <string name="tools_credits_buy_button">Kaufen</string>
+    <string name="dashpay_what_are_credits_title">Was sind Credits\?</string>
+    <string name="dashpay_what_are_credits_message">Nutzer zahlen Transaktionsgebühren, um mit dem Dash-Netzwerk interagieren zu können. Deshalb kosten alle Änderungen an deinem Profil eine kleine Gebühr, die ihn Credits bezahlt werden kann.\n\nDeine Credits kannst du nutzen für:</string>
+    <string name="credits_send_and_accept_contact_requests">Kontaktanfragen senden und erhalten</string>
+    <string name="platform_credits">Platform Credits</string>
+    <string name="platform_credits_error">Fehler</string>
+    <string name="platform_credits_not_transferred">Ausstehende Platform Credits</string>
+    <string name="voting_period">Abstimmungsperiode</string>
+    <string name="voting_period_ends_in_days">Abstimmung endet in %d Tagen</string>
+    <string name="voting_period_ends_today">Die Abstimmung endet heute</string>
+    <string name="voting_period_ends_tomorrow">Die Abstimmung endet morgen</string>
+    <string name="link_included">Link enthalten</string>
+    <string name="group_by">Gruppieren nach</string>
+</resources>

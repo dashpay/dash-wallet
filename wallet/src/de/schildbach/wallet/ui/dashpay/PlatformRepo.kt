@@ -47,12 +47,14 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
+import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.AuthenticationKeyChain
@@ -411,14 +413,9 @@ class PlatformRepo @Inject constructor(
     fun observeContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Flow<List<UsernameSearchResult>> {
         return blockchainIdentityDataStorage.observe()
             .filterNotNull()
-            .flatMapLatest { _ ->
-                init()
-
-                if (!hasIdentity) {
-                    return@flatMapLatest flowOf(emptyList())
-                }
-
-                val userId = blockchainIdentity.uniqueIdString
+            .filter { it.creationState >= BlockchainIdentityData.CreationState.DONE }
+            .flatMapLatest { identityData ->
+                val userId = identityData.userId!!
 
                 // Combine the two contact request flows
                 combine(
@@ -958,7 +955,14 @@ class PlatformRepo @Inject constructor(
 
     fun getIdentityFromPublicKeyId(): Identity? {
         val encryptionKey = getWalletEncryptionKey()
-        val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey) ?: return null
+        val firstIdentityKey = try {
+            getBlockchainIdentityKey(0, encryptionKey) ?: return null
+        } catch (e: KeyCrypterException.InvalidCipherText) {
+            log.info("failure to decrypt identity keychain", e)
+            log.info("attempt again to obtain the wallet encryption key and the identity")
+            val encryptionKeyTwo = getWalletEncryptionKey()
+            getBlockchainIdentityKey(0, encryptionKeyTwo) ?: return null
+        }
 
         return try {
             platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)

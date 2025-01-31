@@ -6,13 +6,16 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
@@ -50,12 +53,22 @@ class CreateIdentityViewModel @Inject constructor(
 
     fun retryCreateIdentity() {
         viewModelScope.launch {
-            val username = blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME)
-            walletApplication.startService(
-                CreateIdentityService.createIntentForRetry(
-                    walletApplication
+            val isRestoring = withContext(Dispatchers.IO) { blockchainIdentityDataDao.get(BlockchainIdentityConfig.RESTORING) ?: false }
+
+            if (isRestoring) {
+                val identityId = withContext(Dispatchers.IO) {blockchainIdentityDataDao.get(BlockchainIdentityConfig.IDENTITY_ID) }
+                identityId?.let {
+                    RestoreIdentityOperation(walletApplication)
+                        .create(identityId, true)
+                        .enqueue()
+                }
+            } else {
+                walletApplication.startService(
+                    CreateIdentityService.createIntentForRetry(
+                        walletApplication
+                    )
                 )
-            )
+            }
         }
     }
 

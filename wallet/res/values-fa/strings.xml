@@ -298,6 +298,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">پیوست کردن والت دامپ</string>
     <string name="report_issue_dialog_mail_intent_chooser">در حال ارسال گزارش...</string>
     <string name="report_issue_dialog_mail_intent_failed">ارسال گزارش ناموفق بود</string>
+    <string name="report_issue_dialog_generating_report"> ایجاد گزارش</string>
     <string name="report_transaction_history_export">بیرون دادن</string>
     <string name="report_transaction_history_title">بیرون دادن فرمت CSV</string>
     <string name="report_transaction_history_not_synced_title">بیرون دادن فرمت CSV</string>
@@ -419,5 +420,6 @@
 پیشنهاد می‌کنیم اجازه دهید این اپلیکیشن همچنان با بلاکچین هماهنگ باشد، حتی در مواقعی که در پس‌زمینه فعال است. 
 نگران نباشید! ما همیشه به مقدار مصرف باتری شما اهمیت می‌دهیم. </string>
     <string name="battery_optimization_dialog_button_change">باز کردن تنظیمات</string>
+    <string name="credits_profile_change_message">به‌روزرسانی اطلاعات پروفایل</string>
 
 </resources>

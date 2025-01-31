@@ -64,6 +64,7 @@
     <string name="receive_enter_amount_button">Tentukan Jumlah</string>
     <string name="account_create">Buat Akun</string>
     <string name="submit">Kirim</string>
+    <string name="try_again">Coba lagi</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Cari</string>

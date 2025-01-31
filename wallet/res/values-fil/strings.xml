@@ -296,6 +296,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">Ilakip ang wallet dump</string>
     <string name="report_issue_dialog_mail_intent_chooser">Magpadala ng report gamit ang...</string>
     <string name="report_issue_dialog_mail_intent_failed">Nabigo ang pagpapadala ng report.</string>
+    <string name="report_issue_dialog_generating_report">Pagbuo ng ulat</string>
     <string name="report_transaction_history_export">Export</string>
     <string name="report_transaction_history_title">CSV Export</string>
     <string name="report_transaction_history_not_synced_title">CSV Export</string>
@@ -412,5 +413,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">Gusto mo bang makatanggap ng mga pagbabayad sa background?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Ang app na ito ay na-configure upang magpatuloy sa pagtakbo pagkatapos na hindi makita sa loob ng ilang oras.\n\nIminumungkahi namin na payagan ang app na ito na laging manatiling up-to-date sa blockchain, kahit na nasa background.\n\nHuwag mag-alala, gagawin namin laging isipin ang iyong paggamit ng baterya.</string>
     <string name="battery_optimization_dialog_button_change">Buksan ang settings</string>
+    <string name="credits_profile_change_message">I-update ang impormasyon ng profile</string>
 
 </resources>

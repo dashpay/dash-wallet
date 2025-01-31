@@ -636,6 +636,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 lastPreBlockStage = stage
             }
         }
+    private var connectivityReceiverRegistered = false
     private val connectivityReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             serviceScope.launch {
@@ -678,8 +679,16 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
 
-        @SuppressLint("Wakelock")
         private fun check() {
+            serviceScope.launch {
+                // make sure that onCreate is finished
+                onCreateCompleted.await()
+                checkService()
+            }
+        }
+
+        @SuppressLint("Wakelock")
+        private fun checkService() {
             log.info("check()")
             val wallet = application.wallet
             if (impediments.isEmpty() && peerGroup == null) {
@@ -907,6 +916,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     }
 
+    private var tickRecieverRegistered = false
     private val tickReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         private var lastChainHeight = 0
         private var lastHeaderHeight = 0
@@ -1081,11 +1091,16 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             } catch (x: BlockStoreException) {
                 throw Error("blockchain cannot be created", x)
             }
-            val intentFilter = IntentFilter()
-            intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION)
-            intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_LOW)
-            intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK)
-            registerReceiver(connectivityReceiver, intentFilter) // implicitly start PeerGroup
+            // register receivers on the main thread
+            withContext(Dispatchers.Main) {
+                val intentFilter = IntentFilter()
+                intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION)
+                intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_LOW)
+                intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK)
+                registerReceiver(connectivityReceiver, intentFilter) // implicitly start PeerGroup
+                connectivityReceiverRegistered = true
+                log.info("receiver register: connectivityReceiver, {}", connectivityReceiver)
+            }
             application.wallet!!.addCoinsReceivedEventListener(
                 Threading.SAME_THREAD,
                 walletEventListener
@@ -1093,7 +1108,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             application.wallet!!.addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener)
             application.wallet!!.addChangeEventListener(Threading.SAME_THREAD, walletEventListener)
             config.registerOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
-            registerReceiver(tickReceiver, IntentFilter(Intent.ACTION_TIME_TICK))
+            withContext(Dispatchers.Main) {
+                registerReceiver(tickReceiver, IntentFilter(Intent.ACTION_TIME_TICK))
+                tickRecieverRegistered = true
+                log.info("receiver register: tickReceiver, {}", tickReceiver)
+            }
             peerDiscoveryList.add(dnsDiscovery)
             updateAppWidget()
             blockchainStateDao.observeState().observe(this@BlockchainServiceImpl) { blockchainState ->
@@ -1267,17 +1286,25 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     override fun onDestroy() {
         log.info(".onDestroy()")
         super.onDestroy()
+        // unregister receivers on the main thread, if they were registered
+        // in some cases, onDestroy is called soon after onCreate and before its coroutine finishes
+        if (tickRecieverRegistered) {
+            unregisterReceiver(tickReceiver)
+            tickRecieverRegistered = false
+        }
+        if (connectivityReceiverRegistered) {
+            unregisterReceiver(connectivityReceiver)
+            connectivityReceiverRegistered = false
+        }
         cleanupDeferred = CompletableDeferred()
         serviceScope.launch {
             try {
                 onCreateCompleted.await() // wait until onCreate is finished
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
-                unregisterReceiver(tickReceiver)
                 application.wallet!!.removeChangeEventListener(walletEventListener)
                 application.wallet!!.removeCoinsSentEventListener(walletEventListener)
                 application.wallet!!.removeCoinsReceivedEventListener(walletEventListener)
                 config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
-                unregisterReceiver(connectivityReceiver)
                 platformSyncService.shutdown()
                 if (peerGroup != null) {
                     propagateContext()
