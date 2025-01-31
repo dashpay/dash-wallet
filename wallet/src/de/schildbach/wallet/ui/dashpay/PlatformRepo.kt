@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
+import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.AuthenticationKeyChain
@@ -954,7 +955,14 @@ class PlatformRepo @Inject constructor(
 
     fun getIdentityFromPublicKeyId(): Identity? {
         val encryptionKey = getWalletEncryptionKey()
-        val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey) ?: return null
+        val firstIdentityKey = try {
+            getBlockchainIdentityKey(0, encryptionKey) ?: return null
+        } catch (e: KeyCrypterException.InvalidCipherText) {
+            log.info("failure to decrypt identity keychain", e)
+            log.info("attempt again to obtain the wallet encryption key and the identity")
+            val encryptionKeyTwo = getWalletEncryptionKey()
+            getBlockchainIdentityKey(0, encryptionKeyTwo) ?: return null
+        }
 
         return try {
             platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
