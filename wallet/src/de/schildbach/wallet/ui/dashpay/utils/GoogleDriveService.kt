@@ -116,7 +116,7 @@ object GoogleDriveService {
 
     fun getSigninAccount(context: Context?): GoogleSignInAccount? {
         val opts = getGoogleSigninOptions()
-        val account = GoogleSignIn.getLastSignedInAccount(context)
+        val account = GoogleSignIn.getLastSignedInAccount(context!!)
         val permissions = arrayOf(Scope(DriveScopes.DRIVE_FILE))
         return if (GoogleSignIn.hasPermissions(account, *permissions)) {
             account
