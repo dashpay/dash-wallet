@@ -69,13 +69,14 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.util.TickerFlow
-import org.dashj.platform.contracts.wallet.TxMetadataItem
+import org.dashj.platform.contracts.wallet.TxMetadataDocument
 import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ContestedDocumentResourceVotePoll
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.wallet.IdentityVerify
+import org.dashj.platform.wallet.TxMetadataItem
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
@@ -140,6 +141,9 @@ class PlatformSynchronizationService @Inject constructor(
         val PUSH_PERIOD = if (BuildConfig.DEBUG) 3.minutes else 3.hours
         val CUTOFF_MIN = if (BuildConfig.DEBUG) 3.minutes else 3.hours
         val CUTOFF_MAX = if (BuildConfig.DEBUG) 6.minutes else 6.hours
+        const val MIN_TXMETADATA_BATCHSIZE = 2
+        const val MAX_TXMETADATA_BATCHSIZE = 35
+        val MIN_TXMETADATA_DURATION = 168.hours
     }
 
     private var platformSyncJob: Job? = null
@@ -173,18 +177,22 @@ class PlatformSynchronizationService @Inject constructor(
             .launchIn(syncScope)
 
         syncScope.launch {
-            val lastPush = config.get(DashPayConfig.LAST_METADATA_PUSH) ?: 0
-            val now = System.currentTimeMillis()
+            maybePublishChangeCache()
+        }
+    }
 
-            if (lastPush < now - PUSH_PERIOD.inWholeMilliseconds) {
-                val everythingBeforeTimestamp = random.nextLong(
-                    now - CUTOFF_MAX.inWholeMilliseconds,
-                    now - CUTOFF_MIN.inWholeMilliseconds
-                ) // Choose cutoff time between 3 and 6 hours ago
-                publishChangeCache(everythingBeforeTimestamp)
-            } else {
-                log.info("last platform push was less than 3 hours ago, skipping")
-            }
+    private suspend fun PlatformSynchronizationService.maybePublishChangeCache() {
+        val lastPush = config.get(DashPayConfig.LAST_METADATA_PUSH) ?: 0
+        val now = System.currentTimeMillis()
+
+        if (lastPush < now - PUSH_PERIOD.inWholeMilliseconds) {
+            val everythingBeforeTimestamp = random.nextLong(
+                now - CUTOFF_MAX.inWholeMilliseconds,
+                now - CUTOFF_MIN.inWholeMilliseconds
+            ) // Choose cutoff time between 3 and 6 hours ago
+            publishChangeCache(everythingBeforeTimestamp)
+        } else {
+            log.info("last platform push was less than 3 hours ago, skipping")
         }
     }
 
@@ -692,6 +700,9 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private suspend fun updateTransactionMetadata() {
+        if (!Constants.SUPPORTS_TXMETADATA) {
+            return
+        }
         val watch = Stopwatch.createStarted()
         val myEncryptionKey = platformRepo.getWalletEncryptionKey()
 
@@ -726,7 +737,7 @@ class PlatformSynchronizationService @Inject constructor(
 
         items.forEach { (doc, list) ->
             if (transactionMetadataDocumentDao.count(doc.id) == 0) {
-                val timestamp = doc.createdAt!!
+                val timestamp = doc.updatedAt!!
                 log.info("processing TxMetadata: ${doc.id} with ${list.size} items")
                 list.forEach { metadata ->
                     if (metadata.isNotEmpty()) {
@@ -747,7 +758,7 @@ class PlatformSynchronizationService @Inject constructor(
                         val txIdAsHash = Sha256Hash.wrap(metadata.txId)
                         val metadataDocumentRecord = TransactionMetadataDocument(
                             doc.id,
-                            doc.createdAt!!,
+                            doc.updatedAt!!,
                             txIdAsHash
                         )
                         val updatedMetadata = TransactionMetadata(txIdAsHash, 0, Coin.ZERO, TransactionCategory.Invalid)
@@ -758,7 +769,7 @@ class PlatformSynchronizationService @Inject constructor(
                             metadataDocumentRecord.sentTimestamp = timestamp
                             log.info("processing TxMetadata: sent time stamp")
                             if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.sentTimestamp != null && it.sentTimestamp != timestamp
                                 } == null
                             ) {
@@ -770,7 +781,7 @@ class PlatformSynchronizationService @Inject constructor(
                             metadataDocumentRecord.service = service
                             log.info("processing TxMetadata: service change")
                             if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.service != null && it.service != service
                                 } == null
                             ) {
@@ -783,12 +794,12 @@ class PlatformSynchronizationService @Inject constructor(
                             log.info(
                                 "processing TxMetadata: memo change: {}",
                                 cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.memo != null && it.memo != memo
                                 }
                             )
                             if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.memo != null && it.memo != memo
                                 } == null
                             ) {
@@ -801,7 +812,7 @@ class PlatformSynchronizationService @Inject constructor(
                                 metadataDocumentRecord.taxCategory = taxCategory
                                 log.info("processing TxMetadata: tax category change")
                                 if (cachedItems.find {
-                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                             it.taxCategory != null && it.taxCategory?.name != taxCategoryAsString
                                     } == null
                                 ) {
@@ -815,7 +826,7 @@ class PlatformSynchronizationService @Inject constructor(
                             metadataDocumentRecord.currencyCode = metadata.currencyCode
 
                             val prevItem = cachedItems.find {
-                                it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                     it.currencyCode != null && it.rate != null &&
                                     (
                                         it.currencyCode != metadata.currencyCode ||
@@ -824,7 +835,7 @@ class PlatformSynchronizationService @Inject constructor(
                             }
                             log.info("processing TxMetadata: exchange rate change change: $prevItem")
                             if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.currencyCode != null && it.rate != null &&
                                         (
                                             it.currencyCode != metadata.currencyCode ||
@@ -841,7 +852,7 @@ class PlatformSynchronizationService @Inject constructor(
                             metadataDocumentRecord.customIconUrl = url
                             log.info("processing TxMetadata: custom icon url change")
                             if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.customIconUrl != null && it.customIconUrl != url
                                 } == null
                             ) {
@@ -853,7 +864,7 @@ class PlatformSynchronizationService @Inject constructor(
                             metadataDocumentRecord.giftCardNumber = number
                             log.info("processing TxMetadata: gift card number change")
                             if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.giftCardNumber != null && it.giftCardNumber != number
                                 } == null
                             ) {
@@ -865,7 +876,7 @@ class PlatformSynchronizationService @Inject constructor(
                             metadataDocumentRecord.giftCardPin = pin
                             log.info("processing TxMetadata: gift card pin change")
                             if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.giftCardPin != null && it.giftCardPin != pin
                                 } == null
                             ) {
@@ -877,7 +888,7 @@ class PlatformSynchronizationService @Inject constructor(
                             metadataDocumentRecord.merchantName = name
                             log.info("processing TxMetadata: merchant name change")
                             if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.merchantName != null && it.merchantName != name
                                 } == null
                             ) {
@@ -901,7 +912,7 @@ class PlatformSynchronizationService @Inject constructor(
                             metadataDocumentRecord.barcodeValue = barcodeValue
                             log.info("processing TxMetadata: barcode value change")
                             if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.barcodeValue != null && it.barcodeValue != barcodeValue
                                 } == null
                             ) {
@@ -913,19 +924,23 @@ class PlatformSynchronizationService @Inject constructor(
                             metadataDocumentRecord.barcodeFormat = barcodeFormat
                             log.info("processing TxMetadata: barcode format change")
                             if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.barcodeFormat != null && it.barcodeFormat != barcodeFormat
                                 } == null
                             ) {
                                 log.info("processing TxMetadata: barcode value change: changing value")
-                                giftCard.barcodeFormat = BarcodeFormat.valueOf(barcodeFormat)
+                                try {
+                                    giftCard.barcodeFormat = BarcodeFormat.valueOf(barcodeFormat)
+                                } catch (e: IllegalArgumentException) {
+                                    log.warn("Invalid barcode format: {}", barcodeFormat, e)
+                                }
                             }
                         }
                         metadata.merchantUrl?.let { url ->
                             metadataDocumentRecord.merchantUrl = url
                             log.info("processing TxMetadata: merchant url change")
                             if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.merchantUrl != null && it.merchantUrl != url
                                 } == null
                             ) {
@@ -952,7 +967,7 @@ class PlatformSynchronizationService @Inject constructor(
         log.info("fetching ${items.size} tx metadata items in $watch")
     }
 
-    private fun publishTransactionMetadata(txMetadataItems: List<TransactionMetadataCacheItem>) {
+    private suspend fun publishTransactionMetadata(txMetadataItems: List<TransactionMetadataCacheItem>) {
         if (!platformRepo.hasIdentity) {
             return
         }
@@ -977,10 +992,14 @@ class PlatformSynchronizationService @Inject constructor(
             )
         }
         val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
-        platformRepo.blockchainIdentity.publishTxMetaData(metadataList, walletEncryptionKey)
+        val keyIndex = transactionMetadataChangeCacheDao.count() + transactionMetadataDocumentDao.countAllRequests()
+        platformRepo.blockchainIdentity.publishTxMetaData(metadataList, walletEncryptionKey, keyIndex, TxMetadataDocument.VERSION_PROTOBUF)
     }
 
     private suspend fun publishChangeCache(before: Long) {
+        if (!Constants.SUPPORTS_TXMETADATA) {
+            return
+        }
         log.info("publishing updates to tx metadata items before $before")
         val itemsToPublish = hashMapOf<Sha256Hash, TransactionMetadataCacheItem>()
         val changedItems = transactionMetadataChangeCacheDao.findAllBefore(before)
@@ -989,6 +1008,11 @@ class PlatformSynchronizationService @Inject constructor(
             log.info("no tx metadata changes before this time")
             return
         }
+
+//        if (changedItems.size < MIN_TXMETADATA_BATCHSIZE) {
+//            log.info("not enough tx metadata changes before this time")
+//            return
+//        }
 
         log.info("preparing to publish ${changedItems.size} tx metadata changes to platform")
 

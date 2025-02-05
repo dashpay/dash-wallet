@@ -28,6 +28,7 @@ import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import okhttp3.*
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.core.*
 import org.bitcoinj.core.Address
 import org.bitcoinj.script.ScriptPattern
@@ -131,8 +132,12 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 service = platformService
             )
             transactionMetadataDao.insert(metadata)
-            // only add to the change cache if some metadata exists
-            if (metadata.isNotEmpty() && !isSyncingPlatform && hasChanges) {
+            // only add to the change cache if some metadata exists and this is not a CoinJoin tx
+            val isCoinJoinTx = when (CoinJoinTransactionType.fromTx(this, walletData.wallet!!)) {
+                CoinJoinTransactionType.None, CoinJoinTransactionType.Send -> false
+                else -> true
+            }
+            if (!isCoinJoinTx && metadata.isNotEmpty() && !isSyncingPlatform && hasChanges) {
                 transactionMetadataChangeCacheDao.insert(TransactionMetadataCacheItem(metadata))
             }
             log.info("txmetadata: inserting $metadata")
@@ -354,12 +359,16 @@ class WalletTransactionMetadataProvider @Inject constructor(
             val exchangeRate = tx.exchangeRate
             // sync exchange rates
             if (metadata.rate != null && tx.exchangeRate == null) {
-                tx.exchangeRate = org.bitcoinj.utils.ExchangeRate(
-                    Fiat.parseFiat(
-                        metadata.currencyCode,
-                        metadata.rate
+                try {
+                    tx.exchangeRate = org.bitcoinj.utils.ExchangeRate(
+                        Fiat.parseFiat(
+                            metadata.currencyCode,
+                            metadata.rate
+                        )
                     )
-                )
+                } catch (e: Exception) {
+                    log.error("Failed to parse exchange rate for metadata: {}. Error: {}", metadata, e.message, e)
+                }
             } else if (metadata.rate == null && exchangeRate != null) {
                 transactionMetadataDao.updateExchangeRate(
                     tx.txId,

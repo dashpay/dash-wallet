@@ -131,6 +131,9 @@ interface TransactionMetadataChangeCacheDao {
         cacheTimestamp: Long = System.currentTimeMillis()
     )
 
+    @Query("SELECT COUNT(*) FROM transaction_metadata_cache")
+    suspend fun count(): Int
+
     @Query("DELETE FROM transaction_metadata_cache")
     suspend fun clear()
 }
