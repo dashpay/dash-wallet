@@ -367,7 +367,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                         )
                     )
                 } catch (e: Exception) {
-                    log.info("metadata.rate: {}", metadata)
+                    log.error("Failed to parse exchange rate for metadata: {}. Error: {}", metadata, e.message, e)
                 }
             } else if (metadata.rate == null && exchangeRate != null) {
                 transactionMetadataDao.updateExchangeRate(

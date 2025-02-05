@@ -932,7 +932,7 @@ class PlatformSynchronizationService @Inject constructor(
                                 try {
                                     giftCard.barcodeFormat = BarcodeFormat.valueOf(barcodeFormat)
                                 } catch (e: IllegalArgumentException) {
-                                    // ignore invalid barcode format
+                                    log.warn("Invalid barcode format: {}", barcodeFormat, e)
                                 }
                             }
                         }
