@@ -934,6 +934,7 @@ class PlatformRepo @Inject constructor(
         if (includeInvitations) {
             invitationsDao.clear()
         }
+        authenticationGroupExtension = null // remove references to current wallet
     }
 
     fun getBlockchainIdentityKey(index: Int, keyParameter: KeyParameter?): IDeterministicKey? {
@@ -947,7 +948,7 @@ class PlatformRepo @Inject constructor(
         } else {
             authenticationChain
         }
-        val key = decryptedChain.getKey(index) // watchingKey
+        val key = decryptedChain.getKey(index)
         Preconditions.checkState(key.path.last().isHardened)
         return key
 
@@ -955,14 +956,7 @@ class PlatformRepo @Inject constructor(
 
     fun getIdentityFromPublicKeyId(): Identity? {
         val encryptionKey = getWalletEncryptionKey()
-        val firstIdentityKey = try {
-            getBlockchainIdentityKey(0, encryptionKey) ?: return null
-        } catch (e: KeyCrypterException.InvalidCipherText) {
-            log.info("failure to decrypt identity keychain", e)
-            log.info("attempt again to obtain the wallet encryption key and the identity")
-            val encryptionKeyTwo = getWalletEncryptionKey()
-            getBlockchainIdentityKey(0, encryptionKeyTwo) ?: return null
-        }
+        val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey) ?: return null
 
         return try {
             platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
