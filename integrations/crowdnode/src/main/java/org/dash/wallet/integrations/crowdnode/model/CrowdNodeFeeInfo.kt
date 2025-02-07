@@ -1,9 +1,10 @@
 package org.dash.wallet.integrations.crowdnode.model
 
 import android.os.Parcelable
+import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import com.google.gson.reflect.TypeToken
 import kotlinx.parcelize.Parcelize
-import kotlinx.parcelize.RawValue
 
 @Parcelize
 data class FeeLadder(
@@ -36,7 +37,7 @@ data class FeeLadder(
 @Parcelize
 data class FeeInfo(
     @SerializedName("Key") val key: String,
-    @SerializedName("Value") val value: @RawValue List<FeeLadder>
+    @SerializedName("Value") val rawValue: String
 ) : Parcelable {
     companion object {
         const val DEFAULT_FEE = 35.0
@@ -44,7 +45,23 @@ data class FeeInfo(
         const val KEY_FEELADDER = "FeeLadder"
         const val TYPE_NORMAL = "Normal"
         const val TYPE_TRUSTLESS = "Trustless"
-        val default = FeeInfo("FeeLadder", listOf(FeeLadder("", TYPE_NORMAL, DEFAULT_AMOUNT, DEFAULT_FEE)))
+        const val DEFAULT_FEE_LADDER = """[
+        {
+            \"name\":\"Up to 10 Dash and above\",
+            \"type\":\"Normal\",
+            \"amount\":10.0,\"fee\":35.0
+        },
+        {
+            \"name\":\"Trustless up to 100 Dash and above\",
+            \"type\":\"Trustless\",
+            \"amount\":100.0,
+            \"fee\":20.0
+        }
+        ]"""
+        val default = FeeInfo(KEY_FEELADDER, DEFAULT_FEE_LADDER)
+    }
+    val value: List<FeeLadder> by lazy {
+        Gson().fromJson(rawValue, object : TypeToken<List<FeeLadder>>() {}.type)
     }
 
     fun getNormal() = value.find { it.type == TYPE_NORMAL }
