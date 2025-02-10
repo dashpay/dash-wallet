@@ -417,7 +417,4 @@
     <string name="battery_optimization_dialog_message_not_optimized">This app is configured to continue running after not being visible for some time.\n\nWe suggest allowing this app to always stay up-to-date with the blockchain, even in the background.\n\nDon\'t worry, we will always mind your battery usage.</string>
     <string name="battery_optimization_dialog_button_change">Open Settings</string>
     <string name="credits_profile_change_message">Update profile information</string>
-    <string name="select_security_level_12_words_message">12 word recovery phrase</string>
-    <string name="select_security_level_24_words_title">Very secure</string>
-
 </resources>
