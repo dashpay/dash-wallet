@@ -98,6 +98,11 @@
         </activity>
 
         <activity
+            android:name="de.schildbach.wallet.ui.onboarding.SelectSecurityLevelActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
+        <activity
             android:name="de.schildbach.wallet.ui.verify.VerifySeedActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"  />
