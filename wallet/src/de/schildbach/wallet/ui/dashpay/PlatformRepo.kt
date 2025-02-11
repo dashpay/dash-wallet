@@ -18,14 +18,11 @@ package de.schildbach.wallet.ui.dashpay
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
-import android.util.Log
 import com.google.common.base.Preconditions
-import com.google.common.base.Stopwatch
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.Constants.DASH_PAY_FEE_CONTESTED
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.database.AppDatabase
@@ -39,7 +36,6 @@ import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformService
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
@@ -49,13 +45,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
-import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.AssetLockTransaction
-import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
@@ -73,7 +66,6 @@ import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofException
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
-import org.dashj.platform.dpp.toHex
 import org.dashj.platform.dpp.voting.Contenders
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
@@ -1102,23 +1094,5 @@ class PlatformRepo @Inject constructor(
         // managed by NotificationsLiveData
         val userAlert = UserAlert(UserAlert.INVITATION_NOTIFICATION_TEXT, UserAlert.INVITATION_NOTIFICATION_ICON)
         userAlertDao.insert(userAlert)
-    }
-}
-
-fun ArrayList<UsernameSearchResult>.orderBy(orderBy: UsernameSortOrderBy) {
-    when (orderBy) {
-        UsernameSortOrderBy.DISPLAY_NAME -> this.sortBy {
-            if (it.dashPayProfile.displayName.isNotEmpty())
-                it.dashPayProfile.displayName.lowercase()
-            else it.dashPayProfile.username.lowercase()
-        }
-        UsernameSortOrderBy.USERNAME -> this.sortBy {
-            it.dashPayProfile.username.lowercase()
-        }
-        UsernameSortOrderBy.DATE_ADDED -> this.sortByDescending {
-            it.date
-        }
-        else -> { /* ignore */ }
-        //TODO: sort by last activity or date added
     }
 }
