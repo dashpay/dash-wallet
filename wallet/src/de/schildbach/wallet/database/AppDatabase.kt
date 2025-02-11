@@ -60,7 +60,7 @@ import org.dash.wallet.features.exploredash.utils.RoomConverters
         ImportedMasternodeKey::class,
         TopUp::class
     ],
-    version = 15, // if increasing version, we need migrations to preserve tx/addr metadata,
+    version = 16, // if increasing version, we need migrations to preserve tx/addr metadata,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class, BlockchainStateRoomConverters::class)

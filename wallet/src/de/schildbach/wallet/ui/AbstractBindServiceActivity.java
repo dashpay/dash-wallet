@@ -78,7 +78,7 @@ public abstract class AbstractBindServiceActivity extends LockScreenActivity {
         super.onPause();
     }
 
-    protected void doUnbindService() {
+    public void doUnbindService() {
         if (shouldUnbind) {
             unbindService(serviceConnection);
             shouldUnbind = false;

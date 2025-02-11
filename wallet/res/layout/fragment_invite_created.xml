@@ -65,6 +65,7 @@
                         android:layout_gravity="center_horizontal" />
 
                     <TextView
+                        android:id="@+id/invite_creation_progress_title"
                         style="@style/Headline6.Secondary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -72,6 +73,15 @@
                         android:gravity="center_horizontal"
                         android:textAlignment="gravity"
                         android:text="@string/invitation_created_successfully" />
+
+                    <ProgressBar
+                        android:id="@+id/progress"
+                        android:layout_width="25dp"
+                        android:layout_height="25dp"
+                        android:layout_gravity="center"
+                        android:visibility="gone"
+                        tools:visibility="visible"
+                        />
 
                     <Button
                         android:id="@+id/preview_button"

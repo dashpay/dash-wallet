@@ -41,8 +41,6 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.invite.InviteFriendActivity
-import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.util.InputParser
@@ -57,7 +55,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
@@ -165,13 +162,11 @@ class ContactsFragment : Fragment(),
             emptyStatePane.inviteHintLayout.root.isVisible = de.schildbach.wallet.Constants.SUPPORTS_INVITES
             emptyStatePane.inviteHintLayout.inviteFriendHint.setOnClickListener {
                 lifecycleScope.launch {
-                    val inviteHistory = dashPayViewModel.getInviteHistory()
-
-                    if (inviteHistory.isEmpty()) {
-                        InviteFriendActivity.startOrError(requireActivity())
+                    if (dashPayViewModel.getInviteCount() == 0) {
+                        safeNavigate(ContactsFragmentDirections.contactsToInviteFee())
                     } else {
                         dashPayViewModel.logEvent(AnalyticsConstants.Invites.INVITE_CONTACTS)
-                        startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+                        safeNavigate(ContactsFragmentDirections.contactsToInviteHistory("contacts"))
                     }
                 }
             }
@@ -335,7 +330,8 @@ class ContactsFragment : Fragment(),
     }
 
     private fun searchUser() {
-        startActivity(SearchUserActivity.createIntent(requireContext(), query))
+        safeNavigate(ContactsFragmentDirections.contactsToSearchUser())
+        //startActivity(SearchUserActivity.createIntent(requireContext(), query))
     }
 
     private fun searchContacts() {

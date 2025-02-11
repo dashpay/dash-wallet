@@ -44,7 +44,7 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
                     .appendQueryParameter(PARAM_USER, username)
                     .appendQueryParameter(PARAM_CFTX, cftx.txId.toString())
                     .appendQueryParameter(PARAM_PRIVATE_KEY, privateKey.getPrivateKeyAsWiF(Constants.NETWORK_PARAMETERS))
-                    .appendQueryParameter(PARAM_IS_LOCK, cftx.confidence.instantSendlock.toStringHex())
+                    .appendQueryParameter(PARAM_IS_LOCK, cftx.confidence.instantSendlock?.toStringHex())
 
             if (displayName.isNotEmpty()) {
                 linkBuilder.appendQueryParameter(PARAM_DISPLAY_NAME, displayName)

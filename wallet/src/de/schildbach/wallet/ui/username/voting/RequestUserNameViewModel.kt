@@ -394,10 +394,10 @@ class RequestUserNameViewModel @Inject constructor(
         val identityBalance = _identityBalance.value
         val walletBalance = _walletBalance.value
         val enoughBalance = when {
-            identityBalance > 0L && contestable -> Coin.valueOf(identityBalance / 1000) + walletBalance > Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000)
-            identityBalance > 0L && !contestable -> Coin.valueOf(identityBalance / 1000) + walletBalance > Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000)
-            identityBalance == 0L && contestable -> walletBalance > Constants.DASH_PAY_FEE_CONTESTED
-            identityBalance == 0L && !contestable -> walletBalance > Constants.DASH_PAY_FEE
+            identityBalance > 0L && contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000)
+            identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000)
+            identityBalance == 0L && contestable -> walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
+            identityBalance == 0L && !contestable -> walletBalance >= Constants.DASH_PAY_FEE
             else -> false // how can we get here?
         }
         _uiState.update {

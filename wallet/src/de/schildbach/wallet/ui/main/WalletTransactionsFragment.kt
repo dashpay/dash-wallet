@@ -33,7 +33,6 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.SearchUserActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
 import de.schildbach.wallet.ui.invite.InviteHandler
@@ -54,6 +53,7 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.GiftCardDetailsDialog
 import org.slf4j.LoggerFactory
 
@@ -303,7 +303,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     }
                 }
             } else if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
-                startActivity(Intent(requireActivity(), SearchUserActivity::class.java))
+                safeNavigate(WalletFragmentDirections.homeToSearchUser())
+                //startActivity(Intent(requireActivity(), SearchUserActivity::class.java))
                 // hide "Hello Card" after first click
                 viewModel.dismissUsernameCreatedCard()
             } else {
