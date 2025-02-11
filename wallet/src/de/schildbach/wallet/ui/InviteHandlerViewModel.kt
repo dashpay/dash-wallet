@@ -26,8 +26,8 @@ import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
@@ -37,7 +37,7 @@ import javax.inject.Inject
 class InviteHandlerViewModel @Inject constructor(
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao,
-    private val platformRepo: PlatformRepo
+    private val topUpRepository: TopUpRepository
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
     private val log = LoggerFactory.getLogger(InviteHandlerViewModel::class.java)
@@ -69,7 +69,7 @@ class InviteHandlerViewModel @Inject constructor(
         inviteData.value = Resource.loading()
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                invite.validation = platformRepo.validateInvitation(invite)
+                invite.validation = topUpRepository.validateInvitation(invite)
 
                 if (hasIdentity) {
                     // we have an identity, so cancel this invite

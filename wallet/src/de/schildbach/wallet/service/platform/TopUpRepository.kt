@@ -17,6 +17,7 @@
 package de.schildbach.wallet.service.platform
 
 import android.net.Uri
+import com.google.common.base.Stopwatch
 import com.google.firebase.dynamiclinks.DynamicLink
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import com.google.firebase.dynamiclinks.ShortDynamicLink
@@ -55,6 +56,7 @@ import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
+import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion
 import de.schildbach.wallet.ui.dashpay.work.SendInviteWorker
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CoroutineScope
@@ -62,6 +64,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.AddressFormatException
+import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dashj.platform.dapiclient.MaxRetriesReachedException
@@ -115,13 +119,18 @@ interface TopUpRepository {
 
     suspend fun updateInvitation(invitation: Invitation)
     suspend fun getInvitation(userId: String): Invitation?
-    suspend fun createDynamicLink(dashPayProfile: DashPayProfile, assetLockTx: AssetLockTransaction, aesKeyParameter: KeyParameter): DynamicLink
+    suspend fun createDynamicLink(
+        dashPayProfile: DashPayProfile,
+        assetLockTx: AssetLockTransaction,
+        aesKeyParameter: KeyParameter
+    ): DynamicLink
 
     suspend fun buildShortDynamicLink(dynamicLink: DynamicLink): ShortDynamicLink
 
     suspend fun checkInvites(encryptionKey: KeyParameter)
     suspend fun updateInvitations()
     fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long)
+    fun validateInvitation(invite: InvitationLinkData): Boolean
 }
 
 class TopUpRepositoryImpl @Inject constructor(
@@ -571,5 +580,69 @@ class TopUpRepositoryImpl @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * validates an invite
+     *
+     * @return Returns true if it is valid, false if the invite has been used.
+     *
+     * @throws Exception if the invite is invalid
+     */
+
+    override fun validateInvitation(invite: InvitationLinkData): Boolean {
+        val stopWatch = Stopwatch.createStarted()
+        var tx = platform.client.getTransaction(invite.cftx)
+        log.info("validateInvitation: obtaining transaction info took $stopWatch")
+        //TODO: remove when iOS uses big endian
+        if (tx == null) {
+            tx = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
+        }
+        if (tx != null) {
+            val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx)
+            val identity = platform.identities.get(cfTx.identityId.toStringBase58())
+            if (identity == null) {
+                // determine if the invite has enough credits
+                if (cfTx.lockedOutput.value < Constants.DASH_PAY_INVITE_MIN) {
+                    val reason = "Invite does not have enough credits ${cfTx.lockedOutput.value} < ${Constants.DASH_PAY_INVITE_MIN}"
+                    log.warn(reason)
+                    log.info("validateInvitation took $stopWatch")
+                    throw InsufficientMoneyException(cfTx.lockedOutput.value, reason)
+                }
+                return try {
+                    DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, invite.privateKey)
+                    // TODO: when all instantsend locks are deterministic, we don't need the catch block
+                    try {
+                        InstantSendLock(
+                            Constants.NETWORK_PARAMETERS,
+                            Utils.HEX.decode(invite.instantSendLock),
+                            InstantSendLock.ISDLOCK_VERSION
+                        )
+                    } catch (e: Exception) {
+                        InstantSendLock(
+                            Constants.NETWORK_PARAMETERS,
+                            Utils.HEX.decode(invite.instantSendLock),
+                            InstantSendLock.ISLOCK_VERSION
+                        )
+                    }
+                    log.info("Invite is valid and took $stopWatch")
+                    true
+                } catch (e: AddressFormatException.WrongNetwork) {
+                    log.warn("Invite has private key from wrong network: $e and took $stopWatch")
+                    throw e
+                } catch (e: AddressFormatException) {
+                    log.warn("Invite has invalid private key: $e and took $stopWatch")
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("Invite has invalid instantSendLock: $e and took $stopWatch")
+                    throw e
+                }
+            } else {
+                log.warn("Invitation has been used: ${identity.id} and took $stopWatch")
+                return false
+            }
+        }
+        log.warn("Invitation uses an invalid transaction ${invite.cftx} and took $stopWatch")
+        throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.cftx}")
     }
 }
