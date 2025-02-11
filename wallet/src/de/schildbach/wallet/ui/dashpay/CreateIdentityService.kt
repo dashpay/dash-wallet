@@ -374,26 +374,28 @@ class CreateIdentityService : LifecycleService() {
                     assetLockTransaction = blockchainIdentity.assetLockTransaction
                 }
             } else {
-                    val balanceInfo = platformRepo.getIdentityBalance()
-                    val balanceRequirement = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
-                        Constants.DASH_PAY_FEE_CONTESTED
+                // don't use platformRepo.getIdentityBalance() because platformRepo.blockchainIdentity is not initialized
+                val balanceInfo = blockchainIdentityData.identity?.let { platformRepo.getIdentityBalance(it.id) }
+                    ?: CreditBalanceInfo(0L)
+                val balanceRequirement = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
+                    Constants.DASH_PAY_FEE_CONTESTED
+                } else {
+                    Constants.DASH_PAY_FEE
+                }
+
+                if (balanceInfo.balance < balanceRequirement.value * 1000) {
+                    val topupValue = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
+                        Constants.DASH_PAY_FEE_CONTESTED_NAME
                     } else {
                         Constants.DASH_PAY_FEE
                     }
-
-                    if (balanceInfo.balance < balanceRequirement.value * 1000) {
-                        val topupValue = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
-                            Constants.DASH_PAY_FEE_CONTESTED_NAME
-                        } else {
-                            Constants.DASH_PAY_FEE
-                        }
-                        assetLockTransaction = topUpRepository.createTopupTransaction(
-                            blockchainIdentity,
-                            topupValue,
-                            encryptionKey,
-                            useCoinJoin
-                        )
-                    }
+                    assetLockTransaction = topUpRepository.createTopupTransaction(
+                        blockchainIdentity,
+                        topupValue,
+                        encryptionKey,
+                        useCoinJoin
+                    )
+                }
             }
         }
 
