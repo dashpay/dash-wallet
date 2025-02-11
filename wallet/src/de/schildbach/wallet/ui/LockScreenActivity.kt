@@ -224,6 +224,7 @@ open class LockScreenActivity : SecureActivity() {
         if (!keepUnlocked && configuration.autoLogoutEnabled &&
             (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())
         ) {
+            log.info("onStart: $keepUnlocked && ${configuration.autoLogoutEnabled} && (${autoLogout.keepLockedUntilPinEntered} || ${autoLogout.shouldLogout()})")
             setLockState(
                 if (pinRetryController.isLocked) {
                     State.LOCKED
