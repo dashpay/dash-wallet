@@ -35,19 +35,7 @@ import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
-class InviteFriendFragment() :
-    Fragment(R.layout.fragment_invite_friend) {
-
-    companion object {
-        private const val ARG_STARTED_FROM_HISTORY = "started_from_history"
-        fun newInstance(startedFromHistory: Boolean = false): InviteFriendFragment {
-            val fragment = InviteFriendFragment()
-            fragment.arguments = Bundle().apply {
-                putBoolean(ARG_STARTED_FROM_HISTORY, startedFromHistory)
-            }
-            return fragment
-        }
-    }
+class InviteFriendFragment: Fragment(R.layout.fragment_invite_friend) {
 
     private lateinit var binding: FragmentInviteFriendBinding
 
@@ -75,7 +63,11 @@ class InviteFriendFragment() :
 
         walletApplication = requireActivity().application as WalletApplication
         binding.createInvitationButton.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Invites.INVITE_FRIEND)
+            if (arguments?.getString("source") == "contacts") {
+                viewModel.logEvent(AnalyticsConstants.UsersContacts.INVITE_CONTACTS_CREATE)
+            } else {
+                viewModel.logEvent(AnalyticsConstants.Invites.INVITE_FRIEND)
+            }
             showConfirmationDialog()
         }
         
@@ -83,16 +75,17 @@ class InviteFriendFragment() :
     }
 
     private fun initViewModel() {
-        val startedByHistory = arguments?.getBoolean("startedFromHistory") ?: false
+        val source = arguments?.getString("source") ?: ""
         val platformPaymentConfirmDialogViewModel = ViewModelProvider(requireActivity())[PlatformPaymentConfirmDialog.SharedViewModel::class.java]
         platformPaymentConfirmDialogViewModel.clickConfirmButtonEvent.observe(
             viewLifecycleOwner,
         ) {
-            confirmButtonClick(startedByHistory)
+            confirmButtonClick(source)
         }
     }
 
-    private fun confirmButtonClick(startedByHistory: Boolean) {
+    private fun confirmButtonClick(source: String) {
+        viewModel.logEvent(AnalyticsConstants.UsersContacts.INVITE_CONTACTS_CREATE_PAY)
         showProgress()
         viewModel.sendInviteTransaction()
         viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner) {
@@ -102,9 +95,10 @@ class InviteFriendFragment() :
             when (it.status) {
                 Status.SUCCESS -> {
                     if (it.data != null) {
+                        viewModel.logEvent(AnalyticsConstants.UsersContacts.INVITE_CONTACTS_CREATE_SUCCESS)
                         safeNavigate(
                             InviteFriendFragmentDirections
-                                .inviteFriendFragmentToInviteCreatedFragment(identityId = it.data.userId, startedFromHistory = startedByHistory),
+                                .inviteFriendFragmentToInviteCreatedFragment(identityId = it.data.userId, source = source),
                         )
                     }
                 }
@@ -121,7 +115,12 @@ class InviteFriendFragment() :
                         0,
                     )
                     errorDialog.show(childFragmentManager, null)
-                    viewModel.logEvent(AnalyticsConstants.Invites.ERROR_CREATE)
+
+                    if (source == "contacts") {
+                        viewModel.logEvent(AnalyticsConstants.UsersContacts.INVITE_CONTACTS_CREATE_FAIL)
+                    } else {
+                        viewModel.logEvent(AnalyticsConstants.Invites.ERROR_CREATE)
+                    }
                 }
             }
         }

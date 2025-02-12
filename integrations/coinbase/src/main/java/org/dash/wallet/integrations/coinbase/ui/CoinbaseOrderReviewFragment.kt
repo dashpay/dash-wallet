@@ -169,6 +169,7 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
                 viewModel.buyDash()
             }
         } catch (ex: Exception) {
+            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ERROR)
             showBuyOrderDialog(ex.message ?: getString(R.string.retry_later_message))
             return false
         }

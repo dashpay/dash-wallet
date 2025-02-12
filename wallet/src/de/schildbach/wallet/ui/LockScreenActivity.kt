@@ -59,6 +59,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.LockScreenBroadcaster
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.LockScreenAware
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
@@ -256,10 +257,12 @@ open class LockScreenActivity : SecureActivity() {
                 setLockState(State.USE_FINGERPRINT)
             }
             actionReceive.setOnClickListener {
+                checkPinViewModel.logEvent(AnalyticsConstants.LockScreen.QUICK_RECEIVE)
                 startActivity(QuickReceiveActivity.createIntent(this@LockScreenActivity))
                 autoLogout.keepLockedUntilPinEntered = true
             }
             actionScanToPay.setOnClickListener {
+                checkPinViewModel.logEvent(AnalyticsConstants.LockScreen.SCAN_TO_SEND)
                 startActivity(SendCoinsQrActivity.createIntent(this@LockScreenActivity, true))
                 autoLogout.keepLockedUntilPinEntered = true
             }
