@@ -287,7 +287,7 @@ class CoinJoinMixingService @Inject constructor(
 
         val hasBalanceLeftToMix = when {
             hasPartiallyMixedCoins -> true
-            hasAnonymizableBalance && canDenominate -> true
+            hasAnonymizableBalance -> true
             else -> false
         }
 
