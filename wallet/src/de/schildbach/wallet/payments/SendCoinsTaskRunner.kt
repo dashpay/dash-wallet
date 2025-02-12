@@ -60,6 +60,8 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.call
 import org.dash.wallet.common.util.ensureSuccessful
 import org.slf4j.LoggerFactory
+import java.util.function.Consumer
+import java.util.function.Predicate
 import javax.inject.Inject
 
 class SendCoinsTaskRunner @Inject constructor(
@@ -94,7 +96,9 @@ class SendCoinsTaskRunner @Inject constructor(
         amount: Coin,
         coinSelector: CoinSelector?,
         emptyWallet: Boolean,
-        checkBalanceConditions: Boolean
+        checkBalanceConditions: Boolean,
+        beforeSending: Consumer<Transaction>?,
+        canSendLockedOutput: Predicate<TransactionOutput>?
     ): Transaction {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
@@ -104,8 +108,12 @@ class SendCoinsTaskRunner @Inject constructor(
             walletData.checkSendingConditions(address, amount)
         }
 
-        val sendRequest = createSendRequest(address, amount, coinSelector, emptyWallet)
-        return sendCoins(sendRequest, checkBalanceConditions = false)
+        val sendRequest = createSendRequest(address, amount, coinSelector, emptyWallet, canSendLockedOutput = canSendLockedOutput)
+        return sendCoins(
+            sendRequest,
+            checkBalanceConditions = false,
+            beforeSending = beforeSending
+        )
     }
 
     override suspend fun estimateNetworkFee(
@@ -299,7 +307,8 @@ class SendCoinsTaskRunner @Inject constructor(
         amount: Coin,
         coinSelector: CoinSelector? = null,
         emptyWallet: Boolean = false,
-        forceMinFee: Boolean = true
+        forceMinFee: Boolean = true,
+        canSendLockedOutput: Predicate<TransactionOutput>? = null
     ): SendRequest {
         return SendRequest.to(address, amount).apply {
             this.feePerKb = Constants.ECONOMIC_FEE
@@ -307,6 +316,7 @@ class SendCoinsTaskRunner @Inject constructor(
             this.emptyWallet = emptyWallet
 
             val selector = coinSelector ?: getCoinSelector()
+            this.canUseLockedOutputPredicate = canSendLockedOutput
             this.coinSelector = selector
 
             if (selector is ByAddressCoinSelector) {
@@ -335,7 +345,8 @@ class SendCoinsTaskRunner @Inject constructor(
     suspend fun sendCoins(
         sendRequest: SendRequest,
         txCompleted: Boolean = false,
-        checkBalanceConditions: Boolean = true
+        checkBalanceConditions: Boolean = true,
+        beforeSending: Consumer<Transaction>? = null
     ): Transaction = withContext(Dispatchers.IO) {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
@@ -355,6 +366,7 @@ class SendCoinsTaskRunner @Inject constructor(
             }
 
             val transaction = sendRequest.tx
+            beforeSending?.accept(transaction)
             log.info("send successful, transaction committed: {}", transaction.txId.toString())
             walletApplication.broadcastTransaction(transaction)
             logSendTxEvent(transaction, wallet)
