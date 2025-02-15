@@ -108,6 +108,7 @@ import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
 import java.text.DecimalFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -205,6 +206,9 @@ class MainViewModel @Inject constructor(
     private val _balance = MutableLiveData<Coin>()
     val balance: LiveData<Coin>
         get() = _balance
+    private val _mixedBalance = MutableLiveData<Coin>()
+    val mixedBalance: LiveData<Coin>
+        get() = _mixedBalance
 
     private var txByHash: Map<String, TransactionRowView> = mapOf()
     private var metadata: Map<Sha256Hash, PresentableTxMetadata> = mapOf()
@@ -249,11 +253,11 @@ class MainViewModel @Inject constructor(
         get() = coinJoinService.observeActiveSessions()
 
     var decimalFormat: DecimalFormat = DecimalFormat("0.000")
-    val walletBalance: String
-        get() = decimalFormat.format(walletData.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED).toBigDecimal())
+    val walletBalanceString: String
+        get() = decimalFormat.format(balance.value?.toBigDecimal() ?: BigDecimal.ZERO)
 
-    val mixedBalance: String
-        get() = decimalFormat.format((walletData.wallet as WalletEx).coinJoinBalance.toBigDecimal())
+    val mixedBalanceString: String
+        get() = decimalFormat.format(mixedBalance.value?.toBigDecimal() ?: BigDecimal.ZERO)
 
     // DashPay
     private val isPlatformAvailable = MutableStateFlow(false)
@@ -349,6 +353,10 @@ class MainViewModel @Inject constructor(
 
         walletData.observeBalance()
             .onEach(_balance::postValue)
+            .launchIn(viewModelScope)
+
+        walletData.observeBalance(Wallet.BalanceType.COINJOIN_SPENDABLE)
+            .onEach(_mixedBalance::postValue)
             .launchIn(viewModelScope)
 
         walletData.observeMostRecentTransaction()
