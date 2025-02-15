@@ -215,7 +215,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var peerGroup: PeerGroup? = null
     private val handler = Handler()
     private val delayHandler = Handler()
-    private val metadataHandler = Handler()
     private var wakeLock: PowerManager.WakeLock? = null
     private var peerConnectivityListener: PeerConnectivityListener? = null
     private var nm: NotificationManager? = null
@@ -254,10 +253,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS)
     private var apiConfirmationHandler: CrowdNodeAPIConfirmationHandler? = null
     private fun handleMetadata(tx: Transaction) {
-        metadataHandler.post {
-            transactionMetadataProvider.syncTransactionBlocking(
-                tx
-            )
+        serviceScope.launch {
+            transactionMetadataProvider.syncTransaction(tx)
         }
     }
 
@@ -708,7 +705,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         packageInfoProvider.packageInfo
                     )
                 }
-                org.bitcoinj.core.Context.propagate(wallet.context)
+                propagateContext()
                 dashSystemService.system.initDashSync(getDir("masternode", MODE_PRIVATE).absolutePath)
                 log.info("starting peergroup")
                 peerGroup = PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain)
@@ -1012,6 +1009,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     private fun propagateContext() {
+        if (application.wallet?.context != Constants.CONTEXT) {
+            log.warn("wallet context does not equal Constants.CONTEXT")
+        }
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
     }
 
@@ -1330,6 +1330,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     throw RuntimeException(x)
                 }
                 if (!deleteWalletFileOnShutdown) {
+                    propagateContext()
                     application.saveWallet()
                 }
                 if (wakeLock!!.isHeld) {
