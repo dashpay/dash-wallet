@@ -361,7 +361,7 @@ class CoinJoinMixingService @Inject constructor(
             _mixingState.value = mixingStatus
             log.info("coinjoin-mixing: $previousMixingStatus -> $mixingStatus")
 
-            if (previousMixingStatus != mixingStatus && !walletDataProvider.getWalletBalance().isZero) {
+            if (previousMixingStatus != mixingStatus && !CoinJoinClientOptions.getAmount().isZero) {
                 if (mixingStatus == MixingStatus.FINISHED) {
                     analyticsService.logEvent(AnalyticsConstants.CoinJoinPrivacy.COINJOIN_MIXING_SUCCESS, mapOf())
                 } else if (mixingStatus == MixingStatus.ERROR) {
