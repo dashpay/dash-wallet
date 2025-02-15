@@ -240,6 +240,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var syncPercentage = 0 // 0 to 100%
     private var mixingStatus = MixingStatus.NOT_STARTED
     private var mixingProgress = 0.0
+    private var balance = Coin.ZERO
+    private var mixedBalance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
 
     // Risk Analyser for Transactions that is PeerGroup Aware
@@ -1125,14 +1127,23 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             coinJoinService.observeMixingProgress().observe(this@BlockchainServiceImpl) { mixingProgress ->
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
+
+            application.observeBalance().observe(this@BlockchainServiceImpl) {
+                balance = it
+                handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+            }
+
+            application.observeBalance(Wallet.BalanceType.COINJOIN_SPENDABLE).observe(this@BlockchainServiceImpl) {
+                mixedBalance = it
+                handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+            }
+
             onCreateCompleted.complete(Unit) // Signal completion of onCreate
             log.info(".onCreate() finished")
         }
     }
 
     private fun createCoinJoinNotification(): Notification {
-        val mixedBalance = (application.wallet as WalletEx?)!!.coinJoinBalance
-        val totalBalance = application.wallet!!.balance
         val notificationIntent = createIntent(this)
         val pendingIntent = PendingIntent.getActivity(
             this, 0,
@@ -1150,7 +1161,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             getString(statusStringId),
             mixingProgress,
             decimalFormat.format(mixedBalance.toBigDecimal()),
-            decimalFormat.format(totalBalance.toBigDecimal())
+            decimalFormat.format(balance.toBigDecimal())
         )
         return NotificationCompat.Builder(
             this,
