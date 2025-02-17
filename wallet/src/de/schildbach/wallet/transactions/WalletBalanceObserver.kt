@@ -24,6 +24,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
@@ -33,17 +35,62 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.slf4j.LoggerFactory
 
+
 class WalletBalanceObserver(
-    private val wallet: Wallet,
-    private val balanceType: BalanceType = BalanceType.ESTIMATED,
-    private val coinSelector: CoinSelector? = null
+    private val wallet: Wallet
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(WalletBalanceObserver::class.java)
     }
     private val emitterJob = SupervisorJob()
     private val emitterScope = CoroutineScope(Dispatchers.IO + emitterJob)
-    fun observe(): Flow<Coin> = callbackFlow {
+
+    private val _totalBalance = MutableStateFlow(Coin.ZERO)
+    val totalBalance: StateFlow<Coin>
+        get() = _totalBalance
+
+    private val _mixedBalance = MutableStateFlow(Coin.ZERO)
+    val mixedBalance: StateFlow<Coin>
+        get() = _mixedBalance
+
+    private val walletChangeListener = object : ThrottlingWalletChangeListener() {
+        override fun onThrottledWalletChanged() {
+            // log.info("emitting balance: wallet changed {}", this@WalletBalanceObserver)
+            emitBalances()
+        }
+    }
+
+    init {
+        wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
+        emitBalances()
+    }
+
+    fun close() {
+        wallet.removeChangeEventListener(walletChangeListener)
+        walletChangeListener.removeCallbacks()
+        emitterJob.cancel()
+    }
+
+    fun emitBalances() {
+        emitterScope.launch {
+            //log.info("emitting balance {}", this@WalletBalanceObserver)
+            //val watch = Stopwatch.createStarted()
+            org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
+
+            _mixedBalance.emit(wallet.getBalance(BalanceType.COINJOIN_SPENDABLE))
+            _totalBalance.emit(wallet.getBalance(BalanceType.ESTIMATED))
+
+            //log.info("emit balance time: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
+        }
+    }
+
+    /** custom observer */
+    fun observe(
+        balanceType: BalanceType = BalanceType.ESTIMATED,
+        coinSelector: CoinSelector? = null
+    ): Flow<Coin> = callbackFlow {
+        val emitterJob = SupervisorJob()
+        val emitterScope = CoroutineScope(Dispatchers.IO + emitterJob)
         fun emitBalance() {
             emitterScope.launch {
                 //log.info("emitting balance {}", this@WalletBalanceObserver)
@@ -68,17 +115,14 @@ class WalletBalanceObserver(
             }
         }
 
-        wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener)
-        wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener)
         wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
 
         emitBalance()
 
         awaitClose {
             wallet.removeChangeEventListener(walletChangeListener)
-            wallet.removeCoinsSentEventListener(walletChangeListener)
-            wallet.removeCoinsReceivedEventListener(walletChangeListener)
             walletChangeListener.removeCallbacks()
+            emitterJob.cancel()
         }
     }
 }

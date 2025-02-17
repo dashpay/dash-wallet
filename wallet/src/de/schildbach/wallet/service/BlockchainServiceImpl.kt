@@ -1133,7 +1133,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
 
-            application.observeBalance(Wallet.BalanceType.COINJOIN_SPENDABLE).observe(this@BlockchainServiceImpl) {
+            application.observeMixedBalance().observe(this@BlockchainServiceImpl) {
                 mixedBalance = it
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
@@ -1151,6 +1151,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
         val decimalFormat = DecimalFormat("0.000")
         val statusStringId = when (mixingStatus) {
+            MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
             MixingStatus.MIXING -> R.string.coinjoin_mixing
             MixingStatus.PAUSED -> R.string.coinjoin_paused
             MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
