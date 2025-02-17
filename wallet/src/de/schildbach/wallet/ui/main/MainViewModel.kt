@@ -162,6 +162,8 @@ class MainViewModel @Inject constructor(
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
+    var transactionsLoaded = false
+        private set
     private val _transactions = MutableLiveData<Map<LocalDate, List<TransactionRowView>>>()
     val transactions: LiveData<Map<LocalDate, List<TransactionRowView>>>
         get() = _transactions
@@ -355,7 +357,7 @@ class MainViewModel @Inject constructor(
             .onEach(_balance::postValue)
             .launchIn(viewModelScope)
 
-        walletData.observeBalance(Wallet.BalanceType.COINJOIN_SPENDABLE)
+        walletData.observeMixedBalance()
             .onEach(_mixedBalance::postValue)
             .launchIn(viewModelScope)
 
@@ -554,6 +556,7 @@ class MainViewModel @Inject constructor(
                 }
 
             viewModelScope.launch {
+                transactionsLoaded = true
                 _transactions.value = allTransactionViews
                 this@MainViewModel.txByHash = txByHash
                 updateContacts(contactsToUpdate)
