@@ -981,6 +981,9 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private suspend fun publishChangeCache(before: Long) {
+        if (!Constants.SUPPORTS_TXMETADATA) {
+            return
+        }
         log.info("publishing updates to tx metadata items before $before")
         val itemsToPublish = hashMapOf<Sha256Hash, TransactionMetadataCacheItem>()
         val changedItems = transactionMetadataChangeCacheDao.findAllBefore(before)
