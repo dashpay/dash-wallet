@@ -1140,7 +1140,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
         val decimalFormat = DecimalFormat("0.000")
         val statusStringId = when (mixingStatus) {
-            MixingStatus.MIXING -> R.string.coinjoin_mixing
+            MixingStatus.MIXING, MixingStatus.FINISHING -> R.string.coinjoin_mixing
             MixingStatus.PAUSED -> R.string.coinjoin_paused
             MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
             else -> R.string.error
@@ -1441,7 +1441,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             //Handle Ongoing notification state
             val syncing =
                 blockchainState.bestChainDate!!.time < Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS //1 hour
-            if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver && mixingStatus != MixingStatus.MIXING) {
+            if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver && mixingStatus != MixingStatus.MIXING && mixingStatus == MixingStatus.FINISHING) {
                 //Remove ongoing notification if blockchain sync finished
                 stopForeground(true)
                 foregroundService = ForegroundService.NONE
@@ -1450,7 +1450,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 //Shows ongoing notification when synchronizing the blockchain
                 val notification = createNetworkSyncNotification(blockchainState)
                 nm!!.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
-            } else if (mixingStatus == MixingStatus.MIXING || mixingStatus == MixingStatus.PAUSED) {
+            } else if (mixingStatus == MixingStatus.MIXING || mixingStatus == MixingStatus.PAUSED || mixingStatus == MixingStatus.FINISHING) {
                 log.info("foreground service: {}", foregroundService)
                 if (foregroundService == ForegroundService.NONE) {
                     log.info("foreground service not active, create notification")
