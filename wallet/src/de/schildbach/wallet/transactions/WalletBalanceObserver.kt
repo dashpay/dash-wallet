@@ -87,8 +87,12 @@ class WalletBalanceObserver(
             //val watch = Stopwatch.createStarted()
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
 
-            _mixedBalance.emit(wallet.getBalance(BalanceType.COINJOIN_SPENDABLE))
-            _totalBalance.emit(wallet.getBalance(BalanceType.ESTIMATED))
+            val mixedBalance = wallet.getBalance(BalanceType.COINJOIN_SPENDABLE)
+            walletUIConfig.set(WalletUIConfig.LAST_MIXED_BALANCE, mixedBalance.value)
+            _mixedBalance.emit(mixedBalance)
+            val totalBalance = wallet.getBalance(BalanceType.ESTIMATED)
+            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, totalBalance.value)
+            _totalBalance.emit(totalBalance)
 
             //log.info("emit balance time: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
         }

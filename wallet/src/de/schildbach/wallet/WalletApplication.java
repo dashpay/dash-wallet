@@ -211,6 +211,8 @@ public class WalletApplication extends MultiDexApplication
     WalletFactory walletFactory;
     @Inject
     DashSystemService dashSystemService;
+    @Inject
+    WalletUIConfig walletUIConfig;
     private WalletBalanceObserver walletBalanceObserver;
 
     @Override
@@ -578,7 +580,7 @@ public class WalletApplication extends MultiDexApplication
             backupWallet();
 
         // setup WalletBalanceObserver
-        walletBalanceObserver = new WalletBalanceObserver(wallet);
+        walletBalanceObserver = new WalletBalanceObserver(wallet, walletUIConfig);
     }
 
     private void deleteBlockchainFiles() {
