@@ -26,10 +26,13 @@ import de.schildbach.wallet.payments.parsers.PaymentIntentParser
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import okhttp3.CacheControl
@@ -72,6 +75,7 @@ class SendCoinsTaskRunner @Inject constructor(
     private val analyticsService: AnalyticsService,
     private val identityConfig: BlockchainIdentityConfig,
     coinJoinConfig: CoinJoinConfig,
+    coinJoinService: CoinJoinService,
     private val platformRepo: PlatformRepo
 ) : SendPaymentService {
     companion object {
@@ -79,15 +83,31 @@ class SendCoinsTaskRunner @Inject constructor(
         private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
     }
     private var coinJoinSend = false
+    private var coinJoinMode = CoinJoinMode.NONE
+    private var coinJoinMixingState = MixingStatus.NOT_STARTED
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
     init {
         coinJoinConfig
             .observeMode()
             .filterNotNull()
             .onEach { mode ->
-                coinJoinSend = mode != CoinJoinMode.NONE
+                coinJoinMode = mode
+                updateCoinJoinSend()
             }
             .launchIn(coroutineScope)
+        coinJoinService
+            .observeMixingState()
+            .onEach { mixingState ->
+                coinJoinMixingState = mixingState
+                updateCoinJoinSend()
+            }
+            .launchIn(coroutineScope)
+    }
+
+    // use CoinJoin mode of Sending if CoinJoin is not OFF [CoinJoinMode.NONE]
+    // and is not finishing [MixingStatus.FINISHING]
+    private fun updateCoinJoinSend() {
+        coinJoinSend = coinJoinMode != CoinJoinMode.NONE || coinJoinMixingState != MixingStatus.FINISHING
     }
 
     @Throws(LeftoverBalanceException::class)
