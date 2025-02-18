@@ -33,11 +33,13 @@ import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.Wallet.BalanceType
+import org.dash.wallet.common.data.WalletUIConfig
 import org.slf4j.LoggerFactory
 
 
 class WalletBalanceObserver(
-    private val wallet: Wallet
+    private val wallet: Wallet,
+    private val walletUIConfig: WalletUIConfig
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(WalletBalanceObserver::class.java)
@@ -62,6 +64,7 @@ class WalletBalanceObserver(
 
     init {
         wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
+        emitLastBalances()
         emitBalances()
     }
 
@@ -69,6 +72,13 @@ class WalletBalanceObserver(
         wallet.removeChangeEventListener(walletChangeListener)
         walletChangeListener.removeCallbacks()
         emitterJob.cancel()
+    }
+
+    private fun emitLastBalances() {
+        emitterScope.launch {
+            _totalBalance.value = Coin.valueOf(walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) ?: 0L)
+            _mixedBalance.value = Coin.valueOf(walletUIConfig.get(WalletUIConfig.LAST_MIXED_BALANCE) ?: 0L)
+        }
     }
 
     fun emitBalances() {

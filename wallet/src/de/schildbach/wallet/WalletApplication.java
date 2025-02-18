@@ -75,6 +75,7 @@ import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
+import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
