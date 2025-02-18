@@ -91,6 +91,7 @@ import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
+import de.schildbach.wallet.data.CoinJoinConfig;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.DashSystemService;
 import de.schildbach.wallet.service.PackageInfoProvider;
@@ -216,6 +217,8 @@ public class WalletApplication extends MultiDexApplication
     WalletFactory walletFactory;
     @Inject
     DashSystemService dashSystemService;
+    @Inject
+    CoinJoinConfig coinJoinConfig;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -1117,6 +1120,16 @@ public class WalletApplication extends MultiDexApplication
         }
 
         return new WalletBalanceObserver(wallet, balanceType, coinSelector).observe();
+    }
+
+    @NonNull
+    @Override
+    public Flow<Coin> observeSpendableBalance() {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        return new WalletBalanceObserver(wallet, Wallet.BalanceType.ESTIMATED_SPENDABLE, null).observeSpendable(coinJoinConfig);
     }
 
     @NonNull
