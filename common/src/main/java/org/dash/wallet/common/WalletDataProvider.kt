@@ -76,4 +76,6 @@ interface WalletDataProvider {
     fun checkSendingConditions(address: Address?, amount: Coin)
 
     fun observeMostRecentTransaction(): Flow<Transaction>
+    fun observeMixedBalance(): Flow<Coin>
+    fun observeBalance(): Flow<Coin>
 }

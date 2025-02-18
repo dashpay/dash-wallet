@@ -215,7 +215,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var peerGroup: PeerGroup? = null
     private val handler = Handler()
     private val delayHandler = Handler()
-    private val metadataHandler = Handler()
     private var wakeLock: PowerManager.WakeLock? = null
     private var peerConnectivityListener: PeerConnectivityListener? = null
     private var nm: NotificationManager? = null
@@ -241,6 +240,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var syncPercentage = 0 // 0 to 100%
     private var mixingStatus = MixingStatus.NOT_STARTED
     private var mixingProgress = 0.0
+    private var balance = Coin.ZERO
+    private var mixedBalance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
 
     // Risk Analyser for Transactions that is PeerGroup Aware
@@ -254,10 +255,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS)
     private var apiConfirmationHandler: CrowdNodeAPIConfirmationHandler? = null
     private fun handleMetadata(tx: Transaction) {
-        metadataHandler.post {
-            transactionMetadataProvider.syncTransactionBlocking(
-                tx
-            )
+        serviceScope.launch {
+            transactionMetadataProvider.syncTransaction(tx)
         }
     }
 
@@ -708,7 +707,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         packageInfoProvider.packageInfo
                     )
                 }
-                org.bitcoinj.core.Context.propagate(wallet.context)
+                propagateContext()
                 dashSystemService.system.initDashSync(getDir("masternode", MODE_PRIVATE).absolutePath)
                 log.info("starting peergroup")
                 peerGroup = PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain)
@@ -1012,6 +1011,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     private fun propagateContext() {
+        if (application.wallet?.context != Constants.CONTEXT) {
+            log.warn("wallet context does not equal Constants.CONTEXT")
+        }
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
     }
 
@@ -1125,14 +1127,23 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             coinJoinService.observeMixingProgress().observe(this@BlockchainServiceImpl) { mixingProgress ->
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
+
+            application.observeBalance().observe(this@BlockchainServiceImpl) {
+                balance = it
+                handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+            }
+
+            application.observeMixedBalance().observe(this@BlockchainServiceImpl) {
+                mixedBalance = it
+                handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+            }
+
             onCreateCompleted.complete(Unit) // Signal completion of onCreate
             log.info(".onCreate() finished")
         }
     }
 
     private fun createCoinJoinNotification(): Notification {
-        val mixedBalance = (application.wallet as WalletEx?)!!.coinJoinBalance
-        val totalBalance = application.wallet!!.balance
         val notificationIntent = createIntent(this)
         val pendingIntent = PendingIntent.getActivity(
             this, 0,
@@ -1140,6 +1151,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
         val decimalFormat = DecimalFormat("0.000")
         val statusStringId = when (mixingStatus) {
+            MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
             MixingStatus.MIXING, MixingStatus.FINISHING -> R.string.coinjoin_mixing
             MixingStatus.PAUSED -> R.string.coinjoin_paused
             MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
@@ -1150,7 +1162,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             getString(statusStringId),
             mixingProgress,
             decimalFormat.format(mixedBalance.toBigDecimal()),
-            decimalFormat.format(totalBalance.toBigDecimal())
+            decimalFormat.format(balance.toBigDecimal())
         )
         return NotificationCompat.Builder(
             this,
@@ -1330,6 +1342,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     throw RuntimeException(x)
                 }
                 if (!deleteWalletFileOnShutdown) {
+                    propagateContext()
                     application.saveWallet()
                 }
                 if (wakeLock!!.isHeld) {

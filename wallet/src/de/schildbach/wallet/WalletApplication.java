@@ -61,17 +61,13 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.LinuxSecureRandom;
-import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.utils.Threading;
-import org.bitcoinj.core.VersionMessage;
-import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
-import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage;
@@ -97,12 +93,12 @@ import de.schildbach.wallet.service.DashSystemService;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.transactions.MasternodeObserver;
+import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integrations.uphold.api.UpholdClient;
 import org.dash.wallet.integrations.uphold.data.UpholdConstants;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,7 +115,6 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -131,8 +126,6 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import dagger.hilt.android.HiltAndroidApp;
-import org.dash.wallet.common.data.entity.BlockchainState;
-import de.schildbach.wallet.database.dao.BlockchainStateDao;
 import de.schildbach.wallet.security.SecurityGuard;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
@@ -217,6 +210,7 @@ public class WalletApplication extends MultiDexApplication
     WalletFactory walletFactory;
     @Inject
     DashSystemService dashSystemService;
+    private WalletBalanceObserver walletBalanceObserver;
     @Inject
     CoinJoinConfig coinJoinConfig;
 
@@ -583,6 +577,9 @@ public class WalletApplication extends MultiDexApplication
         // make sure there is at least one recent backup
         if (!getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists())
             backupWallet();
+
+        // setup WalletBalanceObserver
+        walletBalanceObserver = new WalletBalanceObserver(wallet);
     }
 
     private void deleteBlockchainFiles() {
@@ -1044,6 +1041,8 @@ public class WalletApplication extends MultiDexApplication
         // wallet must be null for the OnboardingActivity flow
         log.info("removing wallet from memory during wipe");
         wallet = null;
+        walletBalanceObserver.close();
+        walletBalanceObserver = null;
         if (afterWipeFunction != null)
             afterWipeFunction.invoke();
         afterWipeFunction = null;
@@ -1106,7 +1105,28 @@ public class WalletApplication extends MultiDexApplication
             return Coin.ZERO;
         }
 
-        return wallet.getBalance(Wallet.BalanceType.ESTIMATED);
+        //return wallet.getBalance(Wallet.BalanceType.ESTIMATED);
+       return  walletBalanceObserver.getTotalBalance().getValue();
+    }
+
+    @NonNull
+    @Override
+    public Flow<Coin> observeBalance() {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        return walletBalanceObserver.getTotalBalance();
+    }
+
+    @NonNull
+    @Override
+    public Flow<Coin> observeMixedBalance() {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        return walletBalanceObserver.getMixedBalance();
     }
 
     @NonNull
@@ -1119,7 +1139,7 @@ public class WalletApplication extends MultiDexApplication
             return FlowKt.emptyFlow();
         }
 
-        return new WalletBalanceObserver(wallet, balanceType, coinSelector).observe();
+        return walletBalanceObserver.observe(balanceType, coinSelector);
     }
 
     @NonNull

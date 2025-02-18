@@ -172,11 +172,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
 
         viewModel.mixingProgress.observe(viewLifecycleOwner) { progress ->
-            mixingBinding.balance.text = getString(
-                R.string.coinjoin_progress_balance,
-                viewModel.mixedBalance,
-                viewModel.walletBalance
-            )
+            updateMixedAndTotalBalance()
             mixingBinding.mixingPercent.text = getString(R.string.percent, progress.toInt())
             mixingBinding.mixingProgress.progress = progress.toInt()
         }
@@ -210,16 +206,24 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
 
         viewModel.balance.observe(viewLifecycleOwner) {
-            mixingBinding.balance.text = getString(
-                R.string.coinjoin_progress_balance,
-                viewModel.mixedBalance,
-                viewModel.walletBalance
-            )
+            updateMixedAndTotalBalance()
+        }
+
+        viewModel.mixedBalance.observe(viewLifecycleOwner) {
+            updateMixedAndTotalBalance()
         }
 
         viewModel.hasContacts.observe(viewLifecycleOwner) {
             refreshShortcutBar()
         }
+    }
+
+    private fun updateMixedAndTotalBalance() {
+        mixingBinding.balance.text = getString(
+            R.string.coinjoin_progress_balance,
+            viewModel.mixedBalanceString,
+            viewModel.walletBalanceString
+        )
     }
 
     fun scrollToTop() {
