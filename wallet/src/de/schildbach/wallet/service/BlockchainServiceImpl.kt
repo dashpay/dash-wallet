@@ -65,6 +65,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Block
@@ -169,6 +170,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     private val onCreateCompleted = CompletableDeferred<Unit>()
+    private var checkMutex = Mutex(false)
 
     @Inject lateinit var  application: WalletApplication
 
@@ -682,7 +684,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             serviceScope.launch {
                 // make sure that onCreate is finished
                 onCreateCompleted.await()
-                checkService()
+                checkMutex.lock()
+                try {
+                    checkService()
+                } finally {
+                    checkMutex.unlock()
+                }
             }
         }
 
@@ -1312,6 +1319,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         serviceScope.launch {
             try {
                 onCreateCompleted.await() // wait until onCreate is finished
+                checkMutex.lock()
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
                 application.wallet!!.removeChangeEventListener(walletEventListener)
                 application.wallet!!.removeCoinsSentEventListener(walletEventListener)
@@ -1366,6 +1374,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             } finally {
                 log.info("serviceJob cancelled after " + (System.currentTimeMillis() - serviceCreatedAt) / 1000 / 60 + " minutes")
                 serviceJob.cancel()
+                checkMutex.unlock()
                 cleanupDeferred?.complete(Unit)
             }
         }
