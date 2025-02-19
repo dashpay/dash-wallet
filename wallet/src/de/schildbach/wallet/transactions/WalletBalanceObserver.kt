@@ -64,12 +64,16 @@ class WalletBalanceObserver(
 
     init {
         wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
+        wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener)
+        wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener)
         emitLastBalances()
         emitBalances()
     }
 
     fun close() {
         wallet.removeChangeEventListener(walletChangeListener)
+        wallet.removeCoinsSentEventListener(walletChangeListener)
+        wallet.removeCoinsReceivedEventListener(walletChangeListener)
         walletChangeListener.removeCallbacks()
         emitterJob.cancel()
     }
@@ -130,11 +134,15 @@ class WalletBalanceObserver(
         }
 
         wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
+        wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener)
+        wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener)
 
         emitBalance()
 
         awaitClose {
             wallet.removeChangeEventListener(walletChangeListener)
+            wallet.removeCoinsSentEventListener(walletChangeListener)
+            wallet.removeCoinsReceivedEventListener(walletChangeListener)
             walletChangeListener.removeCallbacks()
             emitterJob.cancel()
         }
