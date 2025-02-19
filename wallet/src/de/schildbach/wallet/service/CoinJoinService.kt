@@ -228,7 +228,7 @@ class CoinJoinMixingService @Inject constructor(
             }
             .launchIn(coroutineScope)
 
-        walletDataProvider.observeBalance()
+        walletDataProvider.observeTotalBalance()
             .distinctUntilChanged()
             .onEach { balance ->
                 // switch to our context

@@ -59,7 +59,7 @@ class CreateInviteViewModel @Inject constructor(
         addSource(blockchainIdentity) {
             value = combineLatestData()
         }
-        addSource(walletData.observeBalance().asLiveData()) {
+        addSource(walletData.observeTotalBalance().asLiveData()) {
             value = combineLatestData()
         }
     }

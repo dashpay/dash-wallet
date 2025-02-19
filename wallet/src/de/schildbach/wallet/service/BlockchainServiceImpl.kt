@@ -1128,7 +1128,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
 
-            application.observeBalance().observe(this@BlockchainServiceImpl) {
+            application.observeTotalBalance().observe(this@BlockchainServiceImpl) {
                 balance = it
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
