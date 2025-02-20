@@ -421,6 +421,7 @@ class CoinJoinMixingService @Inject constructor(
     private suspend fun updateMode(mode: CoinJoinMode) {
         walletApplication.setCoinJoinService(this)
         if (mode != CoinJoinMode.NONE && this.mode == CoinJoinMode.NONE) {
+            CoinJoinClientOptions.setEnabled(true)
             configureMixing()
         }
         updateBalance(walletDataProvider.getWalletBalance())
