@@ -23,6 +23,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import com.google.common.base.Stopwatch
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.getTimeSkew
@@ -111,6 +112,7 @@ const val MAX_ALLOWED_BEHIND_TIMESKEW = 20000L // 20 seconds
 @Singleton
 class CoinJoinMixingService @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val walletApplication: WalletApplication,
     val dashSystemService: DashSystemService,
     val walletDataProvider: WalletDataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
@@ -384,7 +386,7 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateMode(mode: CoinJoinMode) {
-        CoinJoinClientOptions.setEnabled(mode != CoinJoinMode.NONE)
+        walletApplication.setCoinJoinService(this)
         if (mode != CoinJoinMode.NONE && this.mode == CoinJoinMode.NONE) {
             configureMixing()
         }
