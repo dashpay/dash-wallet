@@ -149,7 +149,10 @@ class EditProfileViewModel @Inject constructor(
         )
 
         lastAttemptedProfile = updatedProfile
-
+        viewModelScope.launch {
+            // Save updated profile ahead of broadcast to reflect changes in UI immediately
+            platformRepo.updateDashPayProfile(updatedProfile)
+        }
         UpdateProfileOperation(walletApplication).create(updatedProfile, uploadService, localAvatarUrl).enqueue()
     }
 
