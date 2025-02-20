@@ -169,14 +169,14 @@ class CoinJoinMixingService @Inject constructor(
     // private var isSynced = false
     private var hasAnonymizableBalance: Boolean = false
     private var timeSkew: Long = 0L
-    private var activeSessions = 0
-    private val activeSessionsFlow = MutableStateFlow(0)
+    private val activeSessions = MutableStateFlow(0)
 
     // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
     private val updateMutex = Mutex(locked = false)
     private val updateMixingStateMutex = Mutex(locked = false)
     private var exception: Throwable? = null
 
+    private var timeChangeReceiverRegistered = false
     private val timeChangeReceiver = object: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_TIME_CHANGED) {
@@ -408,7 +408,7 @@ class CoinJoinMixingService @Inject constructor(
             message: PoolMessage?
         ) {
             super.onSessionStarted(wallet, sessionId, denomination, message)
-            updateActiveSessions()
+            updateActiveSessions(1)
         }
 
         override fun onSessionComplete(
@@ -421,7 +421,8 @@ class CoinJoinMixingService @Inject constructor(
             joined: Boolean
         ) {
             super.onSessionComplete(wallet, sessionId, denomination, state, message, address, joined)
-            updateActiveSessions()
+            log.info("session complete: $sessionId")
+            updateActiveSessions(-1)
         }
 
         override fun onTransactionProcessed(tx: Transaction?, type: CoinJoinTransactionType?, sessionId: Int) {
@@ -566,6 +567,7 @@ class CoinJoinMixingService @Inject constructor(
             addAction(Intent.ACTION_TIME_CHANGED)
         }
         context.registerReceiver(timeChangeReceiver, filter)
+        timeChangeReceiverRegistered = true
         clientManager.setBlockChain(blockChain)
         return if (!clientManager.startMixing()) {
             log.info("Mixing has been started already.")
@@ -604,7 +606,10 @@ class CoinJoinMixingService @Inject constructor(
         sessionStartedListeners.forEach { coinJoinManager?.removeSessionStartedListener(it) }
         clientManager.stopMixing()
         coinJoinManager?.stop()
-        context.unregisterReceiver(timeChangeReceiver)
+        if (timeChangeReceiverRegistered) {
+            context.unregisterReceiver(timeChangeReceiver)
+        }
+        CoinJoinClientOptions.setEnabled(false)
     }
 
     private fun setBlockchain(blockChain: AbstractBlockChain?) {
@@ -649,19 +654,13 @@ class CoinJoinMixingService @Inject constructor(
         _progressFlow.emit(progress)
     }
 
-    private fun updateActiveSessions() {
+    private fun updateActiveSessions(change: Int) {
         coroutineScope.launch {
-            activeSessions = if (this@CoinJoinMixingService::clientManager.isInitialized) {
-                clientManager.sessionsStatus?.count { poolStatus ->
-                    poolStatus == PoolStatus.CONNECTING || poolStatus == PoolStatus.CONNECTED ||
-                        poolStatus == PoolStatus.MIXING
-                } ?: 0
-            } else {
-                0
-            }
-            // log.info("coinjoin-activeSessions: {}", activeSessions)
-            activeSessionsFlow.emit(activeSessions)
+            val currentSessions = this@CoinJoinMixingService.activeSessions.value
+            val activeSessions = max(0, currentSessions + change)
+            log.info("coinjoin-state-activeSessions: {}", activeSessions)
+            this@CoinJoinMixingService.activeSessions.emit(activeSessions)
         }
     }
-    override fun observeActiveSessions(): Flow<Int> = activeSessionsFlow
+    override fun observeActiveSessions(): Flow<Int> = activeSessions
 }
