@@ -20,6 +20,7 @@ package de.schildbach.wallet.transactions
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +58,10 @@ class WalletBalanceObserver(
     val mixedBalance: StateFlow<Coin>
         get() = _mixedBalance
 
+    private val _spendableBalance = MutableStateFlow(Coin.ZERO)
+    val spendableBalance: StateFlow<Coin>
+        get() = _spendableBalance
+
     private val walletChangeListener = object : ThrottlingWalletChangeListener() {
         override fun onThrottledWalletChanged() {
             // log.info("emitting balance: wallet changed {}", this@WalletBalanceObserver)
@@ -83,7 +88,6 @@ class WalletBalanceObserver(
 
             _mixedBalance.emit(wallet.getBalance(BalanceType.COINJOIN_SPENDABLE))
             _totalBalance.emit(wallet.getBalance(BalanceType.ESTIMATED))
-
             //log.info("emit balance time: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
         }
     }
@@ -130,51 +134,53 @@ class WalletBalanceObserver(
         }
     }
 
-    /** the emitted balance depends on the current [CoinJoinMode]. [balanceType] and [coinSelector] are ignored */
-    fun observeSpendable(coinJoinConfig: CoinJoinConfig): Flow<Coin> = callbackFlow {
-        var lastMode: CoinJoinMode? = null
+    /** the emitted balance depends on the current [CoinJoinMode] and if mixing is ongoing */
+    fun observeSpendable(coinJoinService: CoinJoinService): Flow<Coin> = callbackFlow {
+        val emitterJob = SupervisorJob()
+        val emitterScope = CoroutineScope(Dispatchers.IO + emitterJob)
+
+        suspend fun emitSpendingBalance(isMixing: Boolean) {
+            _spendableBalance.emit(
+                if (isMixing) {
+                    _mixedBalance.value
+                } else {
+                    _totalBalance.value
+                }
+            )
+        }
+
         fun emitBalance() {
             emitterScope.launch {
-                //log.info("emitting balance {}", this@WalletBalanceObserver)
-                //val watch = Stopwatch.createStarted()
-                org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
-
-                trySend(
-                    if (lastMode == CoinJoinMode.NONE) {
-                        wallet.getBalance(BalanceType.ESTIMATED)
-                    } else {
-                        wallet.getBalance(BalanceType.COINJOIN_SPENDABLE)
-                    }
-                )
-                //log.info("emit balance time: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
+                //org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
+                emitSpendingBalance(coinJoinService.isMixing())
             }
         }
 
-        coinJoinConfig.observeMode().onEach {
-            if (it != lastMode)  {
-                emitBalance()
-                lastMode = it
+        coinJoinService.observeMixing()
+            .onEach { isMixing ->
+                emitSpendingBalance(isMixing)
+                val sourceFlow = if (isMixing) _mixedBalance else _totalBalance
+                sourceFlow.onEach {
+                    _spendableBalance.value = it
+                }.launchIn(emitterScope)
             }
-        }.launchIn(emitterScope)
+            .launchIn(emitterScope)
 
-        val walletChangeListener = object : ThrottlingWalletChangeListener() {
-            override fun onThrottledWalletChanged() {
-                // log.info("emitting balance: wallet changed {}", this@WalletBalanceObserver)
-                emitBalance()
-            }
-        }
 
-        wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener)
-        wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener)
-        wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
+//        val walletChangeListener = object : ThrottlingWalletChangeListener() {
+//            override fun onThrottledWalletChanged() {
+//                // log.info("emitting balance: wallet changed {}", this@WalletBalanceObserver)
+//                emitBalance()
+//            }
+//        }
+
+//        wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
 
         emitBalance()
 
         awaitClose {
-            wallet.removeChangeEventListener(walletChangeListener)
-            wallet.removeCoinsSentEventListener(walletChangeListener)
-            wallet.removeCoinsReceivedEventListener(walletChangeListener)
-            walletChangeListener.removeCallbacks()
+            //wallet.removeChangeEventListener(walletChangeListener)
+            //walletChangeListener.removeCallbacks()
             emitterJob.cancel()
         }
     }
