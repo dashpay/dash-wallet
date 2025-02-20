@@ -75,6 +75,7 @@ import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
+import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
@@ -211,6 +212,8 @@ public class WalletApplication extends MultiDexApplication
     WalletFactory walletFactory;
     @Inject
     DashSystemService dashSystemService;
+    @Inject
+    WalletUIConfig walletUIConfig;
     private WalletBalanceObserver walletBalanceObserver;
     private CoinJoinService coinJoinService;
 
@@ -579,7 +582,7 @@ public class WalletApplication extends MultiDexApplication
             backupWallet();
 
         // setup WalletBalanceObserver
-        walletBalanceObserver = new WalletBalanceObserver(wallet);
+        walletBalanceObserver = new WalletBalanceObserver(wallet, walletUIConfig);
     }
 
     private void deleteBlockchainFiles() {
@@ -1111,7 +1114,7 @@ public class WalletApplication extends MultiDexApplication
 
     @NonNull
     @Override
-    public Flow<Coin> observeBalance() {
+    public Flow<Coin> observeTotalBalance() {
         if (wallet == null) {
             return FlowKt.emptyFlow();
         }

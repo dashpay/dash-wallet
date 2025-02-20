@@ -228,7 +228,7 @@ class CoinJoinMixingService @Inject constructor(
             }
             .launchIn(coroutineScope)
 
-        walletDataProvider.observeBalance()
+        walletDataProvider.observeTotalBalance()
             .distinctUntilChanged()
             .onEach { balance ->
                 // switch to our context
@@ -388,7 +388,7 @@ class CoinJoinMixingService @Inject constructor(
         if (mode != CoinJoinMode.NONE && this.mode == CoinJoinMode.NONE) {
             configureMixing()
         }
-        updateBalance(walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.AVAILABLE))
+        updateBalance(walletDataProvider.getWalletBalance())
         val currentTimeSkew = getCurrentTimeSkew()
         updateState(mode, currentTimeSkew, hasAnonymizableBalance, networkStatus, blockchainState, blockChain)
     }

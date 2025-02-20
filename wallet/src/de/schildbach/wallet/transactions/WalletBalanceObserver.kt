@@ -38,11 +38,13 @@ import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.Wallet.BalanceType
+import org.dash.wallet.common.data.WalletUIConfig
 import org.slf4j.LoggerFactory
 
 
 class WalletBalanceObserver(
-    private val wallet: Wallet
+    private val wallet: Wallet,
+    private val walletUIConfig: WalletUIConfig
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(WalletBalanceObserver::class.java)
@@ -71,13 +73,25 @@ class WalletBalanceObserver(
 
     init {
         wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
+        wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener)
+        wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener)
+        emitLastBalances()
         emitBalances()
     }
 
     fun close() {
         wallet.removeChangeEventListener(walletChangeListener)
+        wallet.removeCoinsSentEventListener(walletChangeListener)
+        wallet.removeCoinsReceivedEventListener(walletChangeListener)
         walletChangeListener.removeCallbacks()
         emitterJob.cancel()
+    }
+
+    private fun emitLastBalances() {
+        emitterScope.launch {
+            _totalBalance.value = Coin.valueOf(walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) ?: 0L)
+            _mixedBalance.value = Coin.valueOf(walletUIConfig.get(WalletUIConfig.LAST_MIXED_BALANCE) ?: 0L)
+        }
     }
 
     fun emitBalances() {
@@ -86,8 +100,13 @@ class WalletBalanceObserver(
             //val watch = Stopwatch.createStarted()
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
 
-            _mixedBalance.emit(wallet.getBalance(BalanceType.COINJOIN_SPENDABLE))
-            _totalBalance.emit(wallet.getBalance(BalanceType.ESTIMATED))
+            val mixedBalance = wallet.getBalance(BalanceType.COINJOIN_SPENDABLE)
+            walletUIConfig.set(WalletUIConfig.LAST_MIXED_BALANCE, mixedBalance.value)
+            _mixedBalance.emit(mixedBalance)
+            val totalBalance = wallet.getBalance(BalanceType.ESTIMATED)
+            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, totalBalance.value)
+            _totalBalance.emit(totalBalance)
+
             //log.info("emit balance time: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
         }
     }
@@ -124,11 +143,15 @@ class WalletBalanceObserver(
         }
 
         wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
+        wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener)
+        wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener)
 
         emitBalance()
 
         awaitClose {
             wallet.removeChangeEventListener(walletChangeListener)
+            wallet.removeCoinsSentEventListener(walletChangeListener)
+            wallet.removeCoinsReceivedEventListener(walletChangeListener)
             walletChangeListener.removeCallbacks()
             emitterJob.cancel()
         }

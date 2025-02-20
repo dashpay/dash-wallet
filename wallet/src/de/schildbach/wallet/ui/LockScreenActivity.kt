@@ -175,7 +175,7 @@ open class LockScreenActivity : SecureActivity() {
 
     private fun setupBackupSeedReminder() {
         lifecycleScope.launch {
-            val hasBalance = walletApplication.observeBalance().first().isPositive
+            val hasBalance = walletApplication.observeTotalBalance().first().isPositive
             if (hasBalance && configuration.lastBackupSeedTime == 0L) {
                 configuration.setLastBackupSeedTime()
             }

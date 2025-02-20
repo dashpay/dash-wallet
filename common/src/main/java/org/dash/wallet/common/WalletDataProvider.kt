@@ -77,5 +77,5 @@ interface WalletDataProvider {
 
     fun observeMostRecentTransaction(): Flow<Transaction>
     fun observeMixedBalance(): Flow<Coin>
-    fun observeBalance(): Flow<Coin>
+    fun observeTotalBalance(): Flow<Coin>
 }

@@ -353,7 +353,7 @@ class MainViewModel @Inject constructor(
             }
             .launchIn(viewModelWorkerScope)
 
-        walletData.observeBalance()
+        walletData.observeTotalBalance()
             .onEach(_balance::postValue)
             .launchIn(viewModelScope)
 

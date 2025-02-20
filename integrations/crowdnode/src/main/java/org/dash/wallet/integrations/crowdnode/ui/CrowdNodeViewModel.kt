@@ -131,7 +131,6 @@ class CrowdNodeViewModel @Inject constructor(
             (crowdNodeBalance.value?.balance?.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT) ?: true)
 
     init {
-
         walletDataProvider.observeSpendableBalance()
             .distinctUntilChanged()
             .onEach {
