@@ -94,6 +94,8 @@ interface CoinJoinService {
     fun observeActiveSessions(): Flow<Int>
     suspend fun getMixingState(): MixingStatus
     fun observeMixingState(): Flow<MixingStatus>
+    fun isMixing(): Boolean
+    fun observeMixing(): Flow<Boolean>
     suspend fun getMixingProgress(): Double
     fun observeMixingProgress(): Flow<Double>
     fun updateTimeSkew(timeSkew: Long)
@@ -103,6 +105,7 @@ enum class MixingStatus {
     NOT_STARTED, // Mixing has not begun or CoinJoinMode is NONE
     MIXING, // Mixing is underway
     PAUSED, // Mixing is not finished, but is blocked by network connectivity
+    FINISHING, // Mixing will stop after all active sessions are complete
     FINISHED, // The entire balance has been mixed
     ERROR // An error stopped the mixing process
 }
@@ -152,9 +155,12 @@ class CoinJoinMixingService @Inject constructor(
     var mode: CoinJoinMode = CoinJoinMode.NONE
     private val _mixingState = MutableStateFlow(MixingStatus.NOT_STARTED)
     private val _progressFlow = MutableStateFlow(0.00)
+    private val _isMixing = MutableStateFlow(false)
 
     override suspend fun getMixingState(): MixingStatus = _mixingState.value
     override fun observeMixingState(): Flow<MixingStatus> = _mixingState
+    override fun isMixing(): Boolean = _isMixing.value
+    override fun observeMixing(): Flow<Boolean> = _isMixing
 
     private val executor = Executors.newFixedThreadPool(2, ContextPropagatingThreadFactory("coinjoin-pool"))
     private val coroutineScope = CoroutineScope(executor.asCoroutineDispatcher())
@@ -280,7 +286,7 @@ class CoinJoinMixingService @Inject constructor(
         val hasAnonymizableBalance = anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())
 
         val canDenominate = if (this::clientManager.isInitialized) {
-            clientManager.doAutomaticDenominating(true)
+            clientManager.doAutomaticDenominating(false, true)
         } else {
             // if the client manager is not running, just say canDenominate is true
             // The first round of execution will determine if mixing can happen
@@ -333,7 +339,11 @@ class CoinJoinMixingService @Inject constructor(
             this.timeSkew = timeSkew
 
             if (mode == CoinJoinMode.NONE || !isInsideTimeSkewBounds(timeSkew) || blockchainState.replaying) {
-                updateMixingState(MixingStatus.NOT_STARTED)
+                if (_mixingState.value == MixingStatus.MIXING || _mixingState.value == MixingStatus.FINISHING) {
+                    updateMixingState(MixingStatus.FINISHING)
+                } else {
+                    updateMixingState(MixingStatus.NOT_STARTED)
+                }
             } else {
                 configureMixing()
                 if (hasAnonymizableBalance) {
@@ -343,10 +353,15 @@ class CoinJoinMixingService @Inject constructor(
                         updateMixingState(MixingStatus.PAUSED)
                     }
                 } else {
-                    updateMixingState(MixingStatus.FINISHED)
+                    if (_mixingState.value == MixingStatus.MIXING) {
+                        updateMixingState(MixingStatus.FINISHING)
+                    } else {
+                        updateMixingState(MixingStatus.FINISHED)
+                    }
                 }
             }
             updateProgress()
+            updateIsMixing()
         } finally {
             updateMutex.unlock()
         }
@@ -370,12 +385,29 @@ class CoinJoinMixingService @Inject constructor(
 
                 previousMixingStatus == MixingStatus.MIXING && mixingStatus != MixingStatus.MIXING -> {
                     // finish mixing
+                    val isFinishing = mixingStatus == MixingStatus.FINISHING
+                    if (!isFinishing || activeSessions.value == 0) {
+                        log.info("coinjoin-state stopping, active sessions = ${activeSessions.value}")
+                        _mixingState.value = MixingStatus.FINISHED
+                        stopMixing()
+                    } else {
+                        log.info("coinjoin-state not stopping, active sessions = ${activeSessions.value}")
+                        coinJoinManager?.setFinishCurrentSessions(true)
+                    }
+                }
+
+                previousMixingStatus == MixingStatus.FINISHING && mixingStatus == MixingStatus.FINISHED -> {
+                    // finish mixing
                     stopMixing()
                 }
             }
+            updateIsMixing()
         } finally {
             updateMixingStateMutex.unlock()
         }
+    }
+    private fun updateIsMixing() {
+        _isMixing.value = mode != CoinJoinMode.NONE || _mixingState.value == MixingStatus.FINISHING
     }
 
     private suspend fun updateBlockChain(blockChain: AbstractBlockChain?) {
@@ -580,7 +612,7 @@ class CoinJoinMixingService @Inject constructor(
                 org.bitcoinj.core.Context.propagate(walletDataProvider.wallet!!.context)
                 (walletDataProvider.wallet as WalletEx).coinJoin.refreshUnusedKeys()
                 coinJoinManager?.initMasternodeGroup(blockChain)
-                clientManager.doAutomaticDenominating()
+                clientManager.doAutomaticDenominating(false)
             }
             val result = asyncStart.await()
             log.info(
