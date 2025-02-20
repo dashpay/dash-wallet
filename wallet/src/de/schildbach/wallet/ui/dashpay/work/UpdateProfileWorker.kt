@@ -21,10 +21,7 @@ import android.provider.Settings
 import androidx.hilt.work.HiltWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.google.android.gms.auth.GoogleAuthException
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIOException
-import com.google.api.services.drive.Drive
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.WalletApplication
@@ -50,7 +47,8 @@ class UpdateProfileWorker @AssistedInject constructor(
     @Assisted parameters: WorkerParameters,
     val analytics: AnalyticsService,
     val platformRepo: PlatformRepo,
-    val platformBroadcastService: PlatformBroadcastService)
+    val platformBroadcastService: PlatformBroadcastService,
+    val googleDriveService: GoogleDriveService)
     : BaseWorker(context, parameters) {
 
     companion object {
@@ -136,29 +134,21 @@ class UpdateProfileWorker @AssistedInject constructor(
         }
     }
 
-    private fun saveToGoogleDrive(context: Context, encryptedBackup: ByteArray): String? {
+    private suspend fun saveToGoogleDrive(context: Context, encryptedBackup: ByteArray): String? { // TODO
         return try {
-            val account: GoogleSignInAccount = GoogleDriveService.getSigninAccount(context)
-                    ?: throw GoogleAuthException()
-
-            // 1 - retrieve existing backup so we know whether we have to create a new one, or update existing file
-            val drive: Drive? = Objects.requireNonNull(GoogleDriveService.getDriveServiceFromAccount(context, account), "drive service must not be null")
-
-            // 2 - upload the image
-            val uploadedAvatarFilename = UUID.randomUUID().toString()
-            val secureId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
-            return GoogleDriveService.uploadImage(drive!!, uploadedAvatarFilename, encryptedBackup, secureId)
+//            val credential = googleAuthService.getGoogleCredential()
+//                ?: throw AuthenticationException("Failed to get Google credentials")
+//
+//            // Upload the image
+//            val uploadedAvatarFilename = UUID.randomUUID().toString()
+//            val secureId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+//            return googleDriveService.uploadImage(credential, uploadedAvatarFilename, encryptedBackup, secureId)
+            return "hola" // TODO:
         } catch (t: Throwable) {
             analytics.logError(t, "Failed to upload to Google Drive")
-
-            //log.error("failed to save channels backup on google drive", t)
-            if (t is GoogleAuthIOException || t is GoogleAuthException) {
-                //BackupHelper.GoogleDrive.disableGDriveBackup(context)
-            } else if (t.cause != null) {
-                val cause = t.cause
-                if (cause is GoogleAuthIOException || cause is GoogleAuthException) {
-                    //BackupHelper.GoogleDrive.disableGDriveBackup(context)
-                }
+            if (t is GoogleAuthIOException) {
+                // Handle authentication errors
+                log.error("Google authentication failed", t)
             }
             null
         }

@@ -1229,12 +1229,16 @@ class PlatformRepo @Inject constructor(
         return report.toString()
     }
 
-    fun getIdentityBalance(): CreditBalanceInfo {
-        return CreditBalanceInfo(platform.client.getIdentityBalance(blockchainIdentity.uniqueIdentifier))
+    suspend fun getIdentityBalance(): CreditBalanceInfo {
+        return withContext(Dispatchers.IO) {
+            CreditBalanceInfo(platform.client.getIdentityBalance(blockchainIdentity.uniqueIdentifier))
+        }
     }
 
-    fun getIdentityBalance(identifier: Identifier): CreditBalanceInfo {
-        return CreditBalanceInfo(platform.client.getIdentityBalance(identifier))
+    suspend fun getIdentityBalance(identifier: Identifier): CreditBalanceInfo {
+        return withContext(Dispatchers.IO) {
+            CreditBalanceInfo(platform.client.getIdentityBalance(identifier))
+        }
     }
 
     suspend fun addInviteUserAlert() {
