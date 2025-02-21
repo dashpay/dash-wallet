@@ -3,7 +3,7 @@ Welcome to _Dash Wallet_, a standalone Dash payment app for your Android device!
 This project contains several sub-projects:
 
  * __wallet__:
-     The Android app itself. This is probably what you're searching for.
+     The Android app itself. This is probably what you're searching for. [wallet README](wallet/README.md)
  * __common__:
      Contains common components used by integrations.
  * __features__:

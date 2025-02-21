@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d dnů pozadu</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d týdnů pozadu</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d měsíců pozadu</string>
-    <string name="blockchain_state_progress_downloading">Synchronizace se sítí</string>
     <string name="blockchain_state_progress_stalled">Synchronizace pozastavena</string>
     <string name="blockchain_state_progress_problem_storage">Synchronizace: Problém úložiště</string>
     <string name="blockchain_state_progress_problem_network">Synchronizace: Problém se sítí</string>

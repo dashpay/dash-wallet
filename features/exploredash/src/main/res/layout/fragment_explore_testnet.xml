@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_explore"
+    android:paddingBottom="@dimen/bottom_nav_bar_height"
+    tools:context="org.dash.wallet.features.exploredash.ui.ExploreTestNetFragment">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/title_bar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:navigationIcon="@drawable/ic_arrow_back_white"
+        android:translationZ="5dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/explore_wallet"
+                app:layout_constraintBottom_toTopOf="@id/explore_title"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/explore_title"
+                style="@style/Headline4.White"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="28dp"
+                android:layout_marginTop="17dp"
+                android:layout_marginBottom="4dp"
+                android:text="@string/explore_dash"
+                android:textAlignment="center"
+                app:layout_constraintBottom_toTopOf="@id/explore_subtitle" />
+
+            <TextView
+                android:id="@+id/explore_subtitle"
+                style="@style/Body2.White"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="28dp"
+                android:layout_marginBottom="27dp"
+                android:lineSpacingExtra="3sp"
+                android:text="@string/explore_test_subtitle"
+                android:textAlignment="center"
+                app:layout_constraintBottom_toTopOf="@id/bottom_content" />
+
+            <LinearLayout
+                android:id="@+id/bottom_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:layout_marginBottom="-8dp"
+                android:background="@drawable/rounded_background"
+                android:orientation="vertical"
+                android:paddingHorizontal="15dp"
+                android:paddingTop="25dp"
+                android:paddingBottom="90dp"
+                android:theme="@style/ExploreBottomContentBackground"
+                app:layout_constraintBottom_toBottomOf="parent">
+
+                <TextView
+                    style="@style/Headline6"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/explore_test_dash_title" />
+
+                <TextView
+                    style="@style/Body2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="3sp"
+                    android:text="@string/explore_test_dash_text_1" />
+
+                <TextView
+                    style="@style/Body2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="13dp"
+                    android:lineSpacingExtra="3sp"
+                    android:text="@string/explore_test_dash_text_2" />
+            </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </ScrollView>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="15dp"
+        android:paddingVertical="16dp"
+        android:background="@drawable/sticky_button_gradient_bg"
+        android:layout_gravity="bottom">
+
+        <Button
+            android:id="@+id/get_dash_btn"
+            style="@style/Button.Primary.Blue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/explore_get_test_dash" />
+    </FrameLayout>
+</FrameLayout>

@@ -149,6 +149,13 @@
     <string name="buy_gift_card_with_dash_text">使用達世幣購買禮品卡。</string>
     <string name="redeem_gift_card_text">在幾秒鐘內在線或在收銀台兌換您的禮品卡。</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">測試用的達世幣在現實世界中沒有任何價值，但您可以與其他 DashPay Alpha 用戶一起發送和接收它。</string>
+    <string name="explore_test_dash_title">如何才能索取測試的達世幣?</string>
+    <string name="explore_test_dash_text_1">測試達世幣是免費的，可以透過所謂的「水龍頭」獲得。</string>
+    <string name="explore_test_dash_text_2">點擊下面的按鈕從該錢包複製達世幣地址，以便您可以獲得測試達世幣。</string>
+    <string name="explore_get_test_dash">索取測試的達世幣</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">同步中...  結果可能不完整。</string>
     <string name="sync_in_progress_error">同步中... 出現錯誤。</string>

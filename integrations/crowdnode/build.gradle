@@ -69,6 +69,9 @@ dependencies {
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
 
+    // Logs
+    implementation "org.slf4j:slf4j-api:$slf4jVersion"
+
     // Tests
     testImplementation "junit:junit:$junitVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"

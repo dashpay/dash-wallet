@@ -75,6 +75,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Pair;
 
+import de.schildbach.wallet_test.BuildConfig;
+
 import okhttp3.Call;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -338,6 +340,8 @@ public final class RequestWalletBalanceTask {
 			blockExplorers.push(new Pair<>("https://insight.dash.org/insight-api/addr/", UnspentAPI.Insight));
 		} else if (BuildConfig.FLAVOR.equals("_testNet3") || BuildConfig.FLAVOR.equals("staging")) {
 			blockExplorers.push(new Pair<>("https://insight.testnet.networks.dash.org:3002/insight-api/addr/", UnspentAPI.Insight));
+		} else if (BuildConfig.FLAVOR.equals("schnapps")) {
+			blockExplorers.push(new Pair<>(String.format("http://insight.%s.networks.dash.org:3002/insight-api/addr/", Constants.NETWORK_PARAMETERS.getDevNetName().substring("devnet-".length())), UnspentAPI.Insight));
 		}
 
 		while (!blockExplorers.empty()) {

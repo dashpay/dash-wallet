@@ -85,10 +85,74 @@
         <item name="android:textSize">@dimen/verify_seed_word_text_button_size</item>
     </style>
 
+    <style name="SuccessfulTransactionSeparator">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:background">@color/menu_gray</item>
+    </style>
+
+    <style name="MenuRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">70dp</item>
+        <item name="android:layout_marginLeft">15dp</item>
+        <item name="android:layout_marginTop">10dp</item>
+        <item name="android:layout_marginRight">15dp</item>
+        <item name="android:layout_marginBottom">10dp</item>
+        <item name="android:background">@drawable/selectable_round_corners_white</item>
+    </style>
+
+    <style name="MenuRowIcon">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">36dp</item>
+        <item name="android:layout_marginStart">20dp</item>
+        <item name="android:layout_marginLeft">20dp</item>
+    </style>
+
+    <style name="MenuRowArrow">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginEnd">20dp</item>
+        <item name="android:layout_marginRight">20dp</item>
+    </style>
+
+    <style name="MenuRow.Internal">
+        <item name="android:layout_marginTop">0dp</item>
+    </style>
+
+    <style name="MenuRow.Sources">
+        <item name="android:layout_marginTop">0dp</item>
+        <item name="android:background">@drawable/selectable_round_corners_border</item>
+    </style>
+
     <style name="HorizontalLine">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">1dp</item>
         <item name="android:background">@color/bg_list_selected</item>
+    </style>
+
+    <style name="ContactRequestButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:layout_marginStart">32dp</item>
+        <item name="android:layout_marginTop">43dp</item>
+        <item name="android:layout_marginEnd">32dp</item>
+        <item name="android:background">@drawable/blue_outline_button_bg</item>
+        <item name="android:drawableStart">@drawable/ic_add_contact</item>
+        <item name="android:paddingStart">26dp</item>
+        <item name="android:paddingEnd">26dp</item>
+<!--        <item name="android:visibility">gone</item>-->
+    </style>
+
+    <style name="ContactRequestButton.Sent">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:layout_marginStart">32dp</item>
+        <item name="android:layout_marginTop">43dp</item>
+        <item name="android:layout_marginEnd">32dp</item>
+        <item name="android:drawableStart">@drawable/ic_add_contact</item>
+        <item name="android:paddingStart">26dp</item>
+        <item name="android:paddingEnd">26dp</item>
+<!--        <item name="android:visibility">gone</item>-->
     </style>
 
     <style name="SwitchCompat">
@@ -162,5 +226,29 @@
     <style name="BuySellServiceBackground" parent="SecondaryBackground">
         <item name="cornerRadius">8dp</item>
         <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
+    <style name="InactiveBadgeTheme">
+        <item name="backgroundColor">@android:color/transparent</item>
+        <item name="strokeColor">@color/dash_black_0.1</item>
+        <item name="cornerRadius">10dp</item>
+    </style>
+
+    <style name="BlueBadgeTheme">
+        <item name="backgroundColor">@color/dash_blue</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">10dp</item>
+    </style>
+
+    <style name="LightBlueBadgeTheme">
+        <item name="backgroundColor">@color/dash_blue_0.05</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">10dp</item>
+    </style>
+
+    <style name="ProfilePictureBorder">
+        <item name="backgroundColor">@android:color/transparent</item>
+        <item name="strokeColor">@color/dash_white_0.25</item>
+        <item name="cornerRadius">15dp</item>
     </style>
 </resources>

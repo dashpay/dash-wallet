@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_voting"
+    app:startDestination="@id/usernameRequestsFragment">
+
+    <fragment
+        android:id="@+id/usernameRequestsFragment"
+        android:name="de.schildbach.wallet.ui.username.UsernameRequestsFragment"
+        android:label="UsernameRequestsFragment"
+        tools:layout="@layout/fragment_username_requests">
+
+        <action
+            android:id="@+id/requests_to_filters"
+            app:destination="@id/usernameRequestFilterDialog"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/requests_to_details"
+            app:destination="@id/usernameRequestDetailsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/requests_to_addVotingKeysFragment"
+            app:destination="@+id/addVotingKeysFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            />
+
+        <action
+            android:id="@+id/requests_to_votingKeyInputFragment"
+            app:destination="@+id/votingKeyInputFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            />
+    </fragment>
+
+    <dialog
+        android:id="@+id/usernameRequestFilterDialog"
+        android:name="de.schildbach.wallet.ui.username.UsernameRequestFilterDialog"
+        android:label="UsernameRequestFilterDialog"
+        tools:layout="@layout/dialog_username_request_filters" />
+
+    <fragment
+        android:id="@+id/usernameRequestDetailsFragment"
+        android:name="de.schildbach.wallet.ui.username.UsernameRequestDetailsFragment"
+        android:label="UsernameRequestsFragment"
+        tools:layout="@layout/fragment_username_request_details">
+
+        <argument
+            android:name="requestId"
+            app:argType="string" />
+
+        <argument
+            android:name="startDate"
+            app:argType="long" />
+
+        <action
+            android:id="@+id/details_to_votingKeyInput"
+            app:destination="@id/votingKeyInputFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/details_to_addKeys"
+            app:destination="@id/addVotingKeysFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/votingKeyInputFragment"
+        android:name="de.schildbach.wallet.ui.username.VotingKeyInputFragment"
+        android:label="VotingKeyInputFragment"
+        tools:layout="@layout/fragment_voting_key_input">
+
+        <argument
+            android:name="requestId"
+            app:argType="string" />
+
+        <argument
+            android:name="vote"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/votingKeyInput_to_addKeys"
+            app:popUpTo="@id/usernameRequestDetailsFragment"
+            app:popUpToInclusive="false"
+            app:destination="@id/addVotingKeysFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/addVotingKeysFragment"
+        android:name="de.schildbach.wallet.ui.username.AddVotingKeysFragment"
+        android:label="AddVotingKeysFragment"
+        tools:layout="@layout/fragment_add_voting_keys">
+
+        <argument
+            android:name="requestId"
+            app:argType="string" />
+
+        <argument android:name="vote"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/addKeys_to_votingKeyInput"
+            app:destination="@id/votingKeyInputFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+</navigation>

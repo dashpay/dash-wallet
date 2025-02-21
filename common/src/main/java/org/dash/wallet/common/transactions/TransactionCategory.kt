@@ -32,7 +32,7 @@ private const val TRANSFER = TRANSFER_IN or TRANSFER_OUT
 
 enum class TransactionCategory(val value: Long) {
     Sent(OUTGOING or 1),
-    Received (INCOMING or 2),
+    Received(INCOMING or 2),
     MiningReward(INCOME or 3),
     MasternodeRegister(EXPENSE or 4),
     MasternodeUpdateService(EXPENSE or 5),

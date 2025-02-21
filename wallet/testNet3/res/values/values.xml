@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="app_name">Dash Wallet [testnet]</string>
-	<string name="app_name_short">Dash [testnet]</string>
+	<string name="app_name">DashPay Wallet [testnet]</string>
+	<string name="app_name_short">DashPay [testnet]</string>
+	<string name="app_name_dashpay_short">DashPay Testnet</string>
+	<string name="app_name_dashpay">DashPay Testnet</string>
 
 	<string-array name="preferences_precision_values">
 		<item>8</item>

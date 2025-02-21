@@ -93,8 +93,8 @@ class SecurityViewModel @Inject constructor(
         analytics.logEvent(event, mapOf())
     }
 
-    fun triggerWipe() {
-        walletApplication.triggerWipe()
+    fun triggerWipe(afterWipeFunction: () -> Unit) {
+        walletApplication.triggerWipe(afterWipeFunction)
     }
 
     fun setEnableFingerprint(enable: Boolean) {

@@ -19,23 +19,41 @@ package de.schildbach.wallet.ui.send
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.common.base.Preconditions.checkState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.dao.BlockchainStateDao
+import de.schildbach.wallet.database.dao.DashPayContactRequestDao
+import de.schildbach.wallet.database.entity.DashPayContactRequest
+import de.schildbach.wallet.payments.MaxOutputAmountCoinJoinCoinSelector
 import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.crypto.IKey
 import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.NotificationService
@@ -43,6 +61,10 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import kotlin.math.min
+
+class SendException(message: String) : Exception(message)
+class InsufficientCoinJoinMoneyException(ex: InsufficientMoneyException) : InsufficientMoneyException(ex.missing, "${ex.message} [coinjoin]")
 
 @HiltViewModel
 class SendCoinsViewModel @Inject constructor(
@@ -53,10 +75,14 @@ class SendCoinsViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val configuration: Configuration,
     private val sendCoinsTaskRunner: SendCoinsTaskRunner,
-    private val notificationService: NotificationService
+    private val notificationService: NotificationService,
+    private val platformRepo: PlatformRepo,
+    private val dashPayContactRequestDao: DashPayContactRequestDao,
+    coinJoinConfig: CoinJoinConfig
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
+        private val dryRunKey = ECKey()
     }
 
     enum class State {
@@ -101,6 +127,16 @@ class SendCoinsViewModel @Inject constructor(
     val shouldPlaySounds: Boolean
         get() = !notificationService.isDoNotDisturb
 
+    private val _contactData = MutableLiveData<UsernameSearchResult>()
+    val contactData: LiveData<UsernameSearchResult>
+        get() = _contactData
+
+    private var _coinJoinMode = MutableStateFlow(CoinJoinMode.NONE)
+    val coinJoinMode: Flow<CoinJoinMode>
+        get() = _coinJoinMode
+    /** the resulting transaction is an asset lock transaction (default = false) */
+    var isAssetLock = false
+
     init {
         blockchainStateDao.observeState()
             .filterNotNull()
@@ -109,7 +145,18 @@ class SendCoinsViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        walletDataProvider.observeBalance(coinSelector = MaxOutputAmountCoinSelector())
+        coinJoinConfig.observeMode()
+            .map { mode ->
+                _coinJoinMode.value = mode
+                if (mode == CoinJoinMode.NONE) {
+                    MaxOutputAmountCoinSelector()
+                } else {
+                    MaxOutputAmountCoinJoinCoinSelector(wallet)
+                }
+            }
+            .flatMapLatest { coinSelector ->
+                walletDataProvider.observeBalance(Wallet.BalanceType.ESTIMATED, coinSelector)
+            }
             .distinctUntilChanged()
             .onEach(_maxOutputAmount::postValue)
             .launchIn(viewModelScope)
@@ -117,17 +164,19 @@ class SendCoinsViewModel @Inject constructor(
         walletApplication.startBlockchainService(false)
     }
 
-    override fun initPaymentIntent(paymentIntent: PaymentIntent) {
-        super.initPaymentIntent(paymentIntent)
-
+    override suspend fun initPaymentIntent(paymentIntent: PaymentIntent) {
         if (paymentIntent.hasPaymentRequestUrl()) {
             throw IllegalArgumentException(
                 PaymentProtocolFragment::class.java.simpleName +
-                    "class should be used to handle Payment requests (BIP70 and BIP270)"
+                        "class should be used to handle Payment requests (BIP70 and BIP270)"
             )
         }
 
         log.info("got {}", paymentIntent)
+        val finalIntent = checkIdentity(paymentIntent)
+
+        log.info("proceeding with {}", finalIntent)
+        super.initPaymentIntent(finalIntent)
         _state.value = State.INPUT
         executeDryrun(currentAmount)
     }
@@ -136,12 +185,36 @@ class SendCoinsViewModel @Inject constructor(
         return state.value === State.INPUT && isPayeePlausible() && isAmountPlausible()
     }
 
+    private suspend fun loadUserDataByUsername(username: String): UsernameSearchResult? {
+        platformRepo.getLocalUserDataByUsername(username)?.run {
+            return this
+        }
+
+        return try {
+            platformRepo.searchUsernames(username, true).firstOrNull()
+        } catch (ex: Exception) {
+            analytics.logError(ex, "Failed to load user")
+            null
+        }
+    }
+
+    suspend fun loadUserDataByUserId(userId: String): UsernameSearchResult? {
+        platformRepo.getLocalUserDataByUserId(userId)?.run {
+            return this
+        }
+
+        return null
+    }
+
     suspend fun signAndSendPayment(
         editedAmount: Coin,
         exchangeRate: ExchangeRate?,
         checkBalance: Boolean
     ): Transaction {
         _state.value = State.SENDING
+        if (isAssetLock) {
+            error("isAssetLock must be false, but is true")
+        }
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
 
         val transaction = try {
@@ -150,6 +223,39 @@ class SendCoinsViewModel @Inject constructor(
                 finalPaymentIntent,
                 true,
                 dryrunSendRequest!!.ensureMinRequiredFee
+            )
+            finalSendRequest.memo = basePaymentIntent.memo
+            finalSendRequest.exchangeRate = exchangeRate
+
+            sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
+        } catch (ex: Exception) {
+            _state.value = State.FAILED
+            throw ex
+        }
+
+        _state.value = State.SENT
+        return transaction
+    }
+
+    suspend fun signAndSendAssetLock(
+        editedAmount: Coin,
+        exchangeRate: ExchangeRate?,
+        checkBalance: Boolean,
+        key: ECKey
+    ): Transaction {
+        _state.value = State.SENDING
+        if (!isAssetLock) {
+            error("isAssetLock must be true, but is true")
+        }
+        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
+
+        val transaction = try {
+            val finalSendRequest = sendCoinsTaskRunner.createAssetLockSendRequest(
+                basePaymentIntent.mayEditAmount(),
+                finalPaymentIntent,
+                true,
+                dryrunSendRequest!!.ensureMinRequiredFee,
+                key
             )
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
@@ -203,7 +309,32 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     private fun isPayeePlausible(): Boolean {
-        return basePaymentIntent.hasOutputs()
+        return isInitialized && basePaymentIntent.hasOutputs()
+    }
+
+    /** creates a send request using the payment intent and [isAssetLock] */
+    private fun createSendRequest(
+        mayEditAmount: Boolean,
+        paymentIntent: PaymentIntent,
+        signInputs: Boolean,
+        forceEnsureMinRequiredFee: Boolean
+    ): SendRequest {
+        return if (!isAssetLock) {
+            sendCoinsTaskRunner.createSendRequest(
+                mayEditAmount,
+                paymentIntent,
+                signInputs,
+                forceEnsureMinRequiredFee
+            )
+        } else {
+            sendCoinsTaskRunner.createAssetLockSendRequest(
+                mayEditAmount,
+                paymentIntent,
+                signInputs,
+                forceEnsureMinRequiredFee,
+                dryRunKey
+            )
+        }
     }
 
     private fun executeDryrun(amount: Coin) {
@@ -220,7 +351,7 @@ class SendCoinsViewModel @Inject constructor(
 
         try {
             // check regular payment
-            var sendRequest = sendCoinsTaskRunner.createSendRequest(
+            var sendRequest = createSendRequest(
                 basePaymentIntent.mayEditAmount(),
                 finalPaymentIntent,
                 signInputs = false,
@@ -229,7 +360,7 @@ class SendCoinsViewModel @Inject constructor(
             wallet.completeTx(sendRequest)
 
             if (checkDust(sendRequest)) {
-                sendRequest = sendCoinsTaskRunner.createSendRequest(
+                sendRequest = createSendRequest(
                     basePaymentIntent.mayEditAmount(),
                     finalPaymentIntent,
                     signInputs = false,
@@ -241,16 +372,108 @@ class SendCoinsViewModel @Inject constructor(
             dryrunSendRequest = sendRequest
             _dryRunSuccessful.value = true
         } catch (ex: Exception) {
-            dryRunException = ex
+            dryRunException = if (ex is InsufficientMoneyException && _coinJoinMode.value != CoinJoinMode.NONE && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
+                 InsufficientCoinJoinMoneyException(ex)
+            } else {
+                ex
+            }
             _dryRunSuccessful.value = false
         }
     }
 
     private fun isAmountPlausible(): Boolean {
+        if (!isInitialized) {
+            return false
+        }
+
         return if (basePaymentIntent.mayEditAmount()) {
             currentAmount.isGreaterThan(Coin.ZERO)
         } else {
             basePaymentIntent.hasAmount()
         }
+    }
+
+    private suspend fun checkIdentity(paymentIntent: PaymentIntent): PaymentIntent {
+        var isDashUserOrNotMe = platformRepo.hasIdentity
+
+        // make sure that this payment intent is not to me
+        if (paymentIntent.isIdentityPaymentRequest &&
+            paymentIntent.payeeUsername != null &&
+            platformRepo.hasIdentity &&
+            platformRepo.blockchainIdentity.currentUsername != null &&
+            paymentIntent.payeeUsername == platformRepo.blockchainIdentity.currentUsername
+        ) {
+            isDashUserOrNotMe = false
+        }
+
+        if (isDashUserOrNotMe && paymentIntent.isIdentityPaymentRequest) {
+            if (paymentIntent.payeeUsername != null) {
+                val searchResult = loadUserDataByUsername(paymentIntent.payeeUsername)
+
+                if (searchResult != null) {
+                    return handleDashIdentity(searchResult, paymentIntent)
+                } else {
+                    log.error("error loading identity for username {}", paymentIntent.payeeUsername)
+                    throw SendException("error loading identity for username ${paymentIntent.payeeUsername}")
+                }
+            } else if (paymentIntent.payeeUserId != null) {
+                val searchResult = loadUserDataByUserId(paymentIntent.payeeUserId)
+
+                if (searchResult != null) {
+                    return handleDashIdentity(searchResult, paymentIntent)
+                } else {
+                    log.error("error loading identity for userId {}", paymentIntent.payeeUserId)
+                    throw SendException("error loading identity for userId ${paymentIntent.payeeUserId}")
+                }
+            } else {
+                throw IllegalStateException("not identity payment request")
+            }
+        } else {
+            return paymentIntent
+        }
+    }
+
+    private suspend fun handleDashIdentity(
+        userData: UsernameSearchResult,
+        paymentIntent: PaymentIntent
+    ): PaymentIntent {
+        _contactData.postValue(userData)
+
+        if (!userData.requestReceived) {
+            return paymentIntent
+        }
+
+        val dashPayProfile = userData.dashPayProfile
+        val dashPayContactRequests = dashPayContactRequestDao.loadToOthers(dashPayProfile.userId)
+        val map = HashMap<Long, DashPayContactRequest>(dashPayContactRequests.size)
+
+        // This is currently using the first version, but it should use the version specified
+        // in the ContactInfo.accountRef related to this contact.  Ideally the user should
+        // approve of a change to the "accountReference" that is used.
+        var firstTimestamp = Long.MAX_VALUE
+        for (contactRequest in dashPayContactRequests) {
+            map[contactRequest.timestamp] = contactRequest
+            firstTimestamp = min(firstTimestamp, contactRequest.timestamp)
+        }
+
+        val mostRecentContactRequest = map[firstTimestamp]
+        val address = platformRepo.getNextContactAddress(
+            dashPayProfile.userId,
+            mostRecentContactRequest!!.accountReference
+        )
+        return PaymentIntent.fromAddressWithIdentity(
+            Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
+            dashPayProfile.userId,
+            paymentIntent.amount
+        )
+    }
+
+    fun getNextTopupKey(): ECKey {
+        val authGroup = wallet.getKeyChainExtension(
+            AuthenticationGroupExtension.EXTENSION_ID
+        ) as AuthenticationGroupExtension
+        return authGroup.freshKey(
+            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP
+        ) as ECKey
     }
 }

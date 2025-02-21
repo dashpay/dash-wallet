@@ -28,6 +28,7 @@ import com.google.android.flexbox.AlignItems
 import com.google.android.flexbox.FlexDirection
 import com.google.android.flexbox.FlexboxLayout
 import com.google.android.flexbox.JustifyContent
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 import kotlin.math.min
 
@@ -65,6 +66,12 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : FlexboxLayout(conte
             this
         )
     }
+    val payToContactButton: ShortcutButton by lazy {
+        ShortcutButton(context,
+                R.drawable.ic_shortcut_pay_to_contact,
+                R.string.shortcut_pay_to_contact,
+                this)
+    }
     val buySellButton: ShortcutButton by lazy {
         ShortcutButton(
             context,
@@ -98,6 +105,8 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : FlexboxLayout(conte
         explore,
         receiveButton,
         payToAddressButton,
+        // TODO: for the time being, never display the "Send to Contact" button
+        // payToContactButton,
         buySellButton,
         scanToPayButton
     )
@@ -117,6 +126,19 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : FlexboxLayout(conte
             scanToPayButton.shouldAppear = value
             buySellButton.shouldAppear = !value
             payToAddressButton.shouldAppear = value
+            // TODO: will the send to contact button ever be displayed, if not remove
+            // payToContactButton.shouldAppear = value && userHasContacts
+
+            if (field != value) {
+                field = value
+                refresh()
+            }
+        }
+
+    var userHasContacts: Boolean = false
+        set(value) {
+            // TODO: will the send to contact button ever be displayed, if not remove
+            // payToContactButton.shouldAppear = value && userHasBalance
 
             if (field != value) {
                 field = value

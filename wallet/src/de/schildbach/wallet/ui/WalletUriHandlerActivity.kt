@@ -29,7 +29,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.integration.android.BitcoinIntegration
 import de.schildbach.wallet.ui.buy_sell.IntegrationOverviewFragment
-import de.schildbach.wallet.ui.main.WalletActivity
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity.Companion.sendFromWalletUri
 import de.schildbach.wallet.ui.util.InputParser.WalletUriParser
@@ -90,7 +90,7 @@ class WalletUriHandlerActivity : AppCompatActivity() {
 
             if (Intent.ACTION_VIEW == action && Constants.WALLET_URI_SCHEME == scheme) {
                 if (intentUri.host.equals("brokers", ignoreCase = true)) {
-                    val activityIntent = Intent(this, WalletActivity::class.java)
+                    val activityIntent = Intent(this, MainActivity::class.java)
                     activityIntent.putExtra("uri", intentUri)
                     activityIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     activityIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)

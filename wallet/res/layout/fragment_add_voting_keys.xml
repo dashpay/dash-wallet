@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_primary"
+    tools:context="de.schildbach.wallet.ui.username.AddVotingKeysFragment">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/title_bar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:layout_constraintTop_toTopOf="parent"
+        app:navigationIcon="@drawable/ic_arrow_back" />
+
+    <TextView
+        android:id="@+id/headline"
+        style="@style/Headline4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/voting_key_add"
+        android:layout_marginHorizontal="15dp"
+        app:layout_constraintTop_toBottomOf="@+id/title_bar" />
+
+    <TextView
+        android:id="@+id/subtitle"
+        style="@style/Body2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginHorizontal="15dp"
+        android:text="@string/voting_key_add_subtitle"
+        app:layout_constraintTop_toBottomOf="@+id/headline" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginBottom="4dp"
+        app:layout_constraintTop_toBottomOf="@+id/subtitle"
+        app:layout_constraintBottom_toTopOf="@+id/add_key_button">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginHorizontal="15dp"
+            android:orientation="vertical">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/ip_addresses"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:overScrollMode="never"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                tools:itemCount="5"
+                tools:listitem="@layout/view_masternode_ip" />
+
+            </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <LinearLayout
+        android:id="@+id/add_key_button"
+        style="@style/Button.Tertiary.Large.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginBottom="10dp"
+        android:paddingEnd="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/dont_ask_again_button">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_plus_icon"
+            android:layout_marginEnd="2dp"
+            app:tint="@color/dash_blue" />
+
+        <TextView
+            style="@style/Subtitle2.Blue"
+            android:textSize="15sp"
+            android:text="@string/add_masternode_key"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/dont_ask_again_button"
+        style="@style/Button.Tertiary.Large.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginBottom="10dp"
+        android:paddingEnd="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/submit_button">
+
+        <TextView
+            style="@style/Subtitle2.Blue"
+            android:textSize="15sp"
+            android:text="@string/dont_ask_again"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/submit_button"
+        style="@style/Button.Primary.Large.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="15dp"
+        android:text="@string/submit"
+        app:layout_constraintBottom_toTopOf="@id/votes_cast_text" />
+
+    <TextView
+        android:id="@+id/votes_cast_text"
+        style="@style/Overline.Secondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginBottom="15dp"
+        android:gravity="center"
+        android:textAlignment="gravity"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:text="@string/multiple_votes_cast" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

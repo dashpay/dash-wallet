@@ -18,11 +18,15 @@
 package org.dash.wallet.common.transactions
 
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
+import java.time.LocalDate
 
 interface TransactionWrapper {
-    val transactions: Set<Transaction>
+    val id: String
+    val transactions: HashMap<Sha256Hash, Transaction>
+    val groupDate: LocalDate
     fun tryInclude(tx: Transaction): Boolean
     fun getValue(bag: TransactionBag): Coin
 }

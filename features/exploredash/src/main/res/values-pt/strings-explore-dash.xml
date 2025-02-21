@@ -157,6 +157,13 @@
     <string name="buy_gift_card_with_dash_text">Compre um cartão presente com Dash.</string>
     <string name="redeem_gift_card_text">Resgate seu cartão presente on-line em segundos ou no caixa.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">O Dash de teste não tem valor no mundo real, mas você pode enviá-lo e recebê-lo com outros usuários do DashPay Alpha.</string>
+    <string name="explore_test_dash_title">Como eu consigo Dash de teste?</string>
+    <string name="explore_test_dash_text_1">O Test Dash é gratuito e pode ser obtido no que chamamos de faucet.</string>
+    <string name="explore_test_dash_text_2">Clique no botão abaixo para copiar um endereço Dash desta carteira para que você possa receber seu Test Dash..</string>
+    <string name="explore_get_test_dash">Obtenha Dash de teste</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">Sincronização em andamento... Os resultados podem não estar completos.</string>
     <string name="sync_in_progress_error">Sincronização em andamento... Ocorreu um erro.</string>

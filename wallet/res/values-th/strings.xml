@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s,%2$d วันที่ผ่านมา</string>
     <string name="blockchain_state_progress_weeks">%1$s,%2$d สัปดาห์ที่ผ่านมา</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d เดือนที่ผ่านมา</string>
-    <string name="blockchain_state_progress_downloading">การซิงโครไนซ์กับเครือข่าย</string>
     <string name="blockchain_state_progress_stalled">การซิงโครไนซ์ถูกขัดขวาง</string>
     <string name="blockchain_state_progress_problem_storage">การซิงโครไนซ์: ปัญหาในการจัดเก็บ</string>
     <string name="blockchain_state_progress_problem_network">การซิงโครไนซ์: ปัญหาเครือข่าย</string>
@@ -394,4 +393,4 @@
     <string name="battery_optimization_dialog_unrestricted_title">คุณต้องการรับการชำระเงินในเบื้องหลังหรือไม่?</string>
     <string name="battery_optimization_dialog_message_not_optimized">แอปนี้ได้รับการกำหนดค่าให้ทำงานต่อไปหลังจากที่ไม่ปรากฏให้เห็นมาระยะหนึ่งแล้ว \n\n เราขอแนะนำให้อนุญาตให้แอปนี้อัปเดตบล็อกเชนอยู่เสมอ แม้จะอยู่เบื้องหลังก็ตาม \n\n อย่ากังวล เราจะ คำนึงถึงการใช้งานแบตเตอรี่ของคุณเสมอ</string>
     <string name="battery_optimization_dialog_button_change">เปิดการตั้งค่า</string>
-</resources>
+    </resources>

@@ -25,9 +25,14 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.BlockchainStateDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.transactions.TransactionExporter
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.DeterministicKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -40,8 +45,9 @@ class ToolsViewModel @Inject constructor(
     private val clipboardManager: ClipboardManager,
     private val transactionMetadataProvider: TransactionMetadataProvider,
     val blockchainStateDao: BlockchainStateDao,
+    val dashPayConfig: DashPayConfig,
+    val identityConfig: BlockchainIdentityConfig
 ) : ViewModel() {
-
     val blockchainState = blockchainStateDao.observeState()
 
     val xpub: String
@@ -82,5 +88,18 @@ class ToolsViewModel @Inject constructor(
                 map,
             )
         }
+    }
+
+    suspend fun setCreditsExplained() = withContext(Dispatchers.IO) {
+        dashPayConfig.set(DashPayConfig.CREDIT_INFO_SHOWN, true)
+    }
+    suspend fun creditsExplained() = withContext(Dispatchers.IO) {
+        dashPayConfig.get(DashPayConfig.CREDIT_INFO_SHOWN) ?: false
+    }
+
+    suspend fun hasUsername(): Boolean = withContext(Dispatchers.IO) {
+        identityConfig.get(BlockchainIdentityConfig.IDENTITY_ID) != null &&
+                BlockchainIdentityData.CreationState.valueOf(identityConfig.get(BlockchainIdentityConfig.CREATION_STATE)
+                    ?: "NONE") >= BlockchainIdentityData.CreationState.DONE
     }
 }

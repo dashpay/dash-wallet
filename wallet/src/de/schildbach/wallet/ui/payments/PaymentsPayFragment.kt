@@ -21,13 +21,25 @@ import android.app.Activity
 import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.FragmentNavigator
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.payments.parsers.PaymentIntentParser
 import de.schildbach.wallet.payments.parsers.PaymentIntentParserException
+import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel
+import de.schildbach.wallet.ui.dashpay.FrequentContactsAdapter
+import de.schildbach.wallet.ui.dashpay.OnContactItemClickListener
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
@@ -37,16 +49,20 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay) {
+class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactItemClickListener {
     companion object {
         @JvmStatic
         fun newInstance() = PaymentsPayFragment()
     }
 
+    private var frequentContactsAdapter: FrequentContactsAdapter = FrequentContactsAdapter()
+    private val dashPayViewModel by viewModels<DashPayViewModel>()
     @Inject lateinit var analytics: AnalyticsService
+    @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityConfig
     private val binding by viewBinding(FragmentPaymentsPayBinding::bind)
 
     private val scanLauncher = registerForActivityResult(
@@ -63,6 +79,16 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.contactsBtn.isVisible = false
+
+        dashPayViewModel.hasContacts.observe(viewLifecycleOwner) {
+            binding.contactsBtn.isVisible = it
+        }
+
+        binding.contactsBtn.setOnClickListener {
+            handleSelectContact()
+        }
+
         binding.scanBtn.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.SendReceive.SCAN_TO_SEND, mapOf())
             val intent = ScanActivity.getTransitionIntent(activity, binding.scanBtn)
@@ -77,6 +103,53 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay) {
                 findNavController().navigate(PaymentsFragmentDirections.paymentsToAddressInput())
             }
         }
+
+        binding.frequentContactsRv.layoutManager = LinearLayoutManager(requireContext(), RecyclerView.HORIZONTAL, false)
+        binding.frequentContactsRv.adapter = this.frequentContactsAdapter
+        this.frequentContactsAdapter.itemClickListener = this
+
+        initViewModel()
+        dashPayViewModel.getFrequentContacts()
+    }
+
+    private fun initViewModel() {
+        dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+            val visibility = if (it == null) View.GONE else View.VISIBLE
+            binding.contactsPane.visibility = visibility
+        }
+
+        dashPayViewModel.frequentContactsLiveData.observe(viewLifecycleOwner) {
+            if (Status.SUCCESS == it.status) {
+                if (it.data == null || it.data.isEmpty()) {
+                    binding.frequentContactsRv.visibility = View.GONE
+                    // TODO: how do we show an arrow
+                    // binding.payByContactSelect.showForwardArrow(false)
+                } else {
+                    binding.frequentContactsRv.visibility = View.VISIBLE
+                    // TODO: how do we show an arrow
+                    // binding.payByContactSelect.showForwardArrow(true)
+                }
+                binding.frequentContactsRv.visibility = binding.frequentContactsRv.visibility
+
+                if (it.data != null) {
+                    val results = arrayListOf<UsernameSearchResult>()
+                    results.addAll(it.data)
+                    frequentContactsAdapter.results = results
+                }
+            } else if (it.status == Status.ERROR) {
+                binding.frequentContactsRv.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun handleSelectContact() {
+        dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.TAB_SEND_TO_CONTACT)
+        findNavController().navigate(
+            PaymentsFragmentDirections.paymentsToContacts(
+                ShowNavBar = false,
+                mode = ContactsScreenMode.SELECT_CONTACT
+            )
+        )
     }
 
     private fun handleString(input: String) {
@@ -93,5 +166,14 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay) {
                 ).show(requireActivity())
             }
         }
+    }
+
+    private fun handleContactId(id: String) {
+        val paymentIntent = PaymentIntent.fromUserId(id)
+        SendCoinsActivity.start(requireContext(), paymentIntent)
+    }
+
+    override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
+        handleContactId(usernameSearchResult.fromContactRequest!!.userId)
     }
 }

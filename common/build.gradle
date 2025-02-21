@@ -39,7 +39,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
@@ -95,10 +95,12 @@ dependencies {
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
+    implementation 'com.github.amulyakhare:textdrawable:558677ea31'
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     ksp "com.google.dagger:hilt-compiler:$hiltVersion"
+    implementation 'javax.inject:javax.inject:1'
 
     testImplementation "junit:junit:$junitVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"

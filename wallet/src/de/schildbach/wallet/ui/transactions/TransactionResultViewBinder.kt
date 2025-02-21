@@ -25,16 +25,20 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
 import androidx.annotation.DrawableRes
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import coil.load
 import coil.transform.RoundedCornersTransformation
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.ServiceName
@@ -53,7 +57,7 @@ class TransactionResultViewBinder(
     private val wallet: Wallet,
     private val dashFormat: MonetaryFormat,
     private val binding: TransactionResultContentBinding
-) {
+): TransactionConfidence.Listener {
     private val iconSize = binding.root.context.resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
     private val context by lazy { binding.root.context }
     private val resourceMapper = TxResourceMapper()
@@ -71,10 +75,12 @@ class TransactionResultViewBinder(
     @DrawableRes
     private var iconRes: Int? = null
     private var customTitle: String? = null
+    private var dashPayProfile: DashPayProfile? = null
+    private var outputAssetLocks = listOf<String>()
 
-    fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
+    fun bind(tx: Transaction, profile: DashPayProfile?, payeeName: String? = null, payeeSecuredBy: String? = null) {
         this.transaction = tx
-
+        this.dashPayProfile = profile
         val value = tx.getValue(wallet)
         val isSent = value.signum() < 0
 
@@ -107,16 +113,56 @@ class TransactionResultViewBinder(
                 binding.outputAddressesLabel.setText(R.string.transaction_details_sent_to)
                 TransactionUtils.getToAddressOfSent(tx, wallet)
             }
+            outputAssetLocks = TransactionUtils.getOpReturnsOfSent(tx, wallet)
         } else {
             inputAddresses = arrayListOf()
             outputAddresses = TransactionUtils.getToAddressOfReceived(tx, wallet)
+            outputAssetLocks = TransactionUtils.getOpReturnsOfSent(tx, wallet)
             binding.outputAddressesLabel.setText(R.string.transaction_details_received_at)
         }
 
         val inflater = LayoutInflater.from(context)
-        setInputs(inputAddresses, inflater)
-        setOutputs(outputAddresses, inflater)
         binding.dashAmount.setFormat(dashFormat)
+
+        if (profile != null && !transaction.isEntirelySelf(wallet)) {
+            binding.outputsContainer.isVisible = true
+
+            val userNameView = inflater.inflate(R.layout.transaction_result_address_row,
+                binding.outputsContainer, false) as TextView
+            userNameView.text = profile.username
+
+            if (isSent) {
+                setInputs(inputAddresses, inflater)
+                binding.outputsContainer.addView(userNameView)
+                binding.outputsContainer.setOnClickListener { openProfile(profile) }
+            } else {
+                binding.inputsContainer.addView(userNameView)
+                binding.inputsContainer.setOnClickListener { openProfile(profile) }
+                setOutputs(outputAddresses, inflater)
+            }
+
+            if (profile.displayName.isNotEmpty()) {
+                val displayNameView = inflater.inflate(R.layout.transaction_result_address_row,
+                    binding.outputsContainer, false) as TextView
+                displayNameView.text = profile.displayName
+                (userNameView.layoutParams as ConstraintLayout.LayoutParams).apply {
+                    topToBottom = displayNameView.id
+                }
+                userNameView.setTextColor(context.getColor(R.color.content_secondary))
+
+                if (isSent) {
+                    binding.outputsContainer.addView(displayNameView)
+                } else {
+                    binding.inputsContainer.addView(displayNameView)
+                }
+            }
+
+            binding.checkIcon.setOnClickListener { openProfile(profile) }
+        } else {
+            setInputs(inputAddresses, inflater)
+            setOutputs(outputAddresses, inflater)
+            //setReturns(outputAssetLocks, inflater, false)
+        }
 
         // For displaying purposes only
         if (value.isNegative) {
@@ -149,6 +195,16 @@ class TransactionResultViewBinder(
         }
     }
 
+    override fun onConfidenceChanged(
+        confidence: TransactionConfidence?,
+        reason: TransactionConfidence.Listener.ChangeReason?
+    ) {
+        binding.root.post {
+            org.bitcoinj.core.Context.propagate(wallet.context)
+            updateStatus(true)
+        }
+    }
+
     private fun updateStatus(fromConfidence: Boolean = false) {
         if (!fromConfidence || isError) {
             // If it's a confidence update, not need to set the send/receive icons again.
@@ -165,6 +221,17 @@ class TransactionResultViewBinder(
         } else {
             taxCategoryNames[transactionMetadata.defaultTaxCategory]
         }
+
+        binding.privateMemoText.text = transactionMetadata.memo
+
+        if (transactionMetadata.memo.isNotEmpty()) {
+            binding.privateMemoText.isVisible = true
+            binding.addPrivateMemoBtn.setText(R.string.edit_note)
+        } else {
+            binding.privateMemoText.isVisible = false
+            binding.addPrivateMemoBtn.setText(R.string.add_note)
+        }
+
         binding.taxCategory.text = context.getString(strResource!!)
 
         if (transactionMetadata.service == ServiceName.CTXSpend) {
@@ -191,6 +258,10 @@ class TransactionResultViewBinder(
     }
 
     private fun updateIcon() {
+        if (!::transaction.isInitialized) {
+            return
+        }
+
         val iconRes = if (isError) {
             R.drawable.ic_transaction_failed
         } else if (iconRes != null) {
@@ -203,7 +274,15 @@ class TransactionResultViewBinder(
             R.drawable.ic_transaction_sent
         }
 
-        if (iconBitmap == null) {
+        if (dashPayProfile != null) {
+            binding.checkIcon.load(dashPayProfile!!.avatarUrl) {
+                transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
+                placeholder(R.drawable.ic_avatar)
+                error(R.drawable.ic_avatar)
+            }
+            binding.secondaryIcon.isVisible = true
+            binding.secondaryIcon.setImageResource(iconRes)
+        } else if (iconBitmap == null) {
             binding.checkIcon.setImageResource(iconRes)
             binding.secondaryIcon.isVisible = false
 
@@ -288,6 +367,10 @@ class TransactionResultViewBinder(
         return transactionFee != null && transactionFee.isPositive
     }
 
+    private fun openProfile(profile: DashPayProfile) {
+        context.startActivity(DashPayUserActivity.createIntent(context, profile))
+    }
+
     private fun setInputs(inputAddresses: List<Address>, inflater: LayoutInflater) {
         binding.inputsContainer.isVisible = inputAddresses.isNotEmpty()
         inputAddresses.forEach {
@@ -312,5 +395,30 @@ class TransactionResultViewBinder(
             addressView.text = it.toBase58()
             binding.transactionOutputAddressesContainer.addView(addressView)
         }
+    }
+
+    private fun setReturns(outputOpReturns: List<String>, inflater: LayoutInflater, error: Boolean, completed: Boolean) {
+        binding.outputsContainer.isVisible = outputOpReturns.isNotEmpty() && outputOpReturns.contains("OP RETURN")
+        outputOpReturns.forEach {
+            val addressView = inflater.inflate(
+                R.layout.transaction_result_address_row,
+                binding.transactionOutputAddressesContainer,
+                false
+            ) as TextView
+            addressView.text = when (it) {
+                "OP RETURN" -> when {
+                    error -> context.getString(R.string.platform_credits_error)
+                    completed -> context.getString(R.string.platform_credits)
+                    else -> context.getString(R.string.platform_credits_not_transferred)
+                }
+                else -> ""
+            }
+            binding.transactionOutputAddressesContainer.addView(addressView)
+        }
+    }
+
+    fun setSentToReturn(error: Boolean, completed: Boolean) {
+        binding.transactionOutputAddressesContainer.removeAllViews()
+        setReturns(outputAssetLocks, LayoutInflater.from(context), error, completed)
     }
 }

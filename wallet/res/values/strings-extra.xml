@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Create a New Wallet</string>
     <string name="onboarding_recover_wallet">Restore Wallet From Recovery Phrase</string>
@@ -25,13 +25,17 @@
     <string name="dialog_confirm_secured_by">Secured by</string>
     <string name="dialog_confirm_fee">Network fee</string>
     <string name="dialog_confirm_total">Total</string>
+    <string name="dialog_confirm_accept_contact_request">Accept contact request</string>
 
+    <string name="shortcut_action_join_dashpay">Join DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Backup</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Scan</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Send</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_contact">Send to Contact</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Buy &amp; Sell</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -75,6 +79,9 @@
     <string name="payments_title">Payments</string>
     <string name="payments_tab_pay_label">Send</string>
     <string name="payments_tab_receive_label">Receive</string>
+    <string name="payments_pay_to_contact_title">Send to a Contact</string>
+    <string name="payments_pay_to_contact_sub_title">A person in your contacts</string>
+    <string name="payments_pay_to_contact_button">Select</string>
     <string name="payments_pay_by_qr_title">Send by</string>
     <string name="payments_pay_by_qr_sub_title">Scanning QR code</string>
     <string name="payments_pay_to_clipboard_title">Send to copied address</string>
@@ -185,6 +192,8 @@
     <string name="notification_settings_title">Notifications</string>
     <string name="notification_explainer_title">Dash Wallet would like to send you notifications</string>
     <string name="notification_explainer_message">Notifications may include alerts, sounds, and icon badges. These can be configured in phone Settings.</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">Status of ongoing DashPay operations.</string>
 
     <string name="net_type_indicator" />
 
@@ -238,9 +247,11 @@
     <string name="transaction_close">Close</string>
     <string name="transaction_details_amount_received">Amount Received</string>
     <string name="transaction_details_amount_sent">Amount Sent</string>
+    <string name="transaction_details_amount_sent_successfully">Sent Successfully</string>
     <string name="transaction_details_sent_from">Sent from</string>
     <string name="transaction_details_sent_to">Sent to</string>
     <string name="transaction_details_received_at">Received at</string>
+    <string name="transaction_details_received_from">Received from</string>
     <string name="transaction_details_moved_from">Moved from</string>
     <string name="transaction_details_moved_internally_to">Internally moved to</string>
     <string name="transaction_failed_details">Transaction failed</string>
@@ -254,6 +265,8 @@
     <string name="authenticate_switch_to_fingerprint">Use Fingerprint</string>
     <string name="authenticate_switch_to_pin">Use PIN</string>
 
+    <string name="menu_invite_title">Invite</string>
+    <string name="menu_invite_subtitle">Help your friends and family join Dash</string>
     <string name="menu_buy_and_sell_title">Buy &amp; Sell Dash</string>
     <string name="menu_buy_and_sell_subtitle">Connect with third party exchanges</string>
     <string name="liquid" translatable="false">Liquid</string>
@@ -281,10 +294,11 @@
     <string name="about_review_and_rate">Review and rate the app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">This is an open source app forked from Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
+    <string name="about_copyright">Copyright © 2024 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_github_link" translatable="false">https://github.com/dashevo/dash-wallet</string>
-    <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_version_name">DashPay Wallet %s</string>
+    <string name="about_build_number" translatable="false">(%d)</string>
     <string name="about_last_explore_device_sync">Last Explore device sync</string>
     <string name="about_last_explore_server_update">Last Explore server update</string>
     <string name="about_firebase_installation_id">Firebase installation ID</string>
@@ -335,6 +349,12 @@
     <string name="welcome_screen_title_3">More Control</string>
     <string name="welcome_screen_subtitle_3">Have complete control and customize your wallet based on your needs</string>
 
+    <string-array name="history_filter">
+        <item>All</item>
+        <item>Received</item>
+        <item>Sent</item>
+    </string-array>
+
     <string name="sync_status_wait">Please wait for the sync to complete</string>
     <string name="sync_status_syncing_sub_title">with Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Unable to connect</string>
@@ -359,6 +379,29 @@
     <string name="import_image_no_private_key_copied">No private key copied</string>
     <string name="import_image_import_valid_private_key">Copy a valid private key to import Dash from it</string>
     <string name="import_image_invalid_private">Invalid Private Key</string>
+    <string name="okay">Okay</string>
+
+    <string name="onboard_from_invite_title">Let\'s Get Started</string>
+    <string name="onboard_from_invite_subtitle">Welcome to DashPay</string>
+    <string name="onboard_from_invite_step1">Step 1</string>
+    <string name="onboard_from_invite_step2">Step 2</string>
+    <string name="onboard_from_invite_step3">Step 3</string>
+    <string name="onboard_from_invite_step1_title">Choose Your Username</string>
+    <string name="onboard_from_invite_step2_title">Set Your PIN</string>
+    <string name="onboard_from_invite_step3_title">Secure Your Wallet</string>
+
+    <string name="restore_wallet_please_wait">Please Wait</string>
+    <string name="restore_wallet_restoring">Your wallet is being restored</string>
+
+
+
+    <string name="network_unavailable">Network Unavailable</string>
+    <string name="network_error_contact_details">Unable to fetch contact details</string>
+    <string name="network_error_user_search">Unable to search for a user</string>
+    <string name="network_error_contact_suggestions">Unable to provide suggestions</string>
+    <string name="network_error_unable_to_update_profile">Unable to update your profile</string>
+
+
 
     <string name="today">Today</string>
     <string name="yesterday">Yesterday</string>
@@ -370,6 +413,9 @@
     <string name="received_transactions">Received</string>
     <string name="sent_transactions">Sent</string>
     <string name="services_portal_subtitle_error" translatable="false">Keys are missing for these services. See CONFIGURATION FOR UPHOLD AND COINBASE in README.md for more information.</string>
+    <string name="serious_error_title">Serious Error</string>
+    <string name="serious_error_unknown">Please contact support.</string>
+    <string name="serious_error_security_missing_iv" translatable="false">Invalid security state detected.\n\nSee if you can view your recovery phrase under the Security Settings. After that send a report to the support desk with Contact Support.\n\nLastly, restart this app and try again.</string>
     <string name="set_pin_error_missing_wallet_title">Missing Wallet Error</string>
     <string name="set_pin_error_missing_wallet_message">The wallet is missing.  Please report this to the Support Desk.</string>
     <string name="wallet_encryption_error_title">Wallet Creation Error</string>
@@ -386,6 +432,10 @@
     <string name="launch_reset_wallet_extra_message">Back up your recovery phrase</string>
     <string name="start_reset_wallet_title">You may lose %s</string>
     <string name="reset_wallet_text">Reset Wallet</string>
+
+
+
+    <!-- Tax category -->
     <string name="reclassify_transactions_title">Reclassify Your Transactions</string>
     <string name="reclassify_transactions_title_message">These classifications will be reflected in the CSV Export that can be used to import into tax reporting services.</string>
     <string name="reclassify_transactions_question">Where can I change the tax category?</string>
@@ -416,6 +466,8 @@
     <string name="masternode_key_not_used">Not used</string>
     <string name="masternode_key_revoked">Revoked</string>
     <string name="masternode_key_private_public_base64">Private / Public Keys (base64)</string>
+    <string name="timeskew_ahead">ahead</string>
+    <string name="timeskew_behind">behind</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Prices weren\'t retrieved. Fiat values may be incorrect.</string>

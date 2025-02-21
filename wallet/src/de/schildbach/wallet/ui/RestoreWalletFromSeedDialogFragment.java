@@ -56,7 +56,7 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.service.WalletFactory;
-import de.schildbach.wallet.ui.main.WalletActivity;
+import de.schildbach.wallet.ui.main.MainActivity;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet.util.WalletUtils;
@@ -199,7 +199,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
 
     @SuppressLint("StringFormatInvalid")
     private void restoreWalletFromSeed(final List<String> words) {
-        final WalletActivity activity = (WalletActivity) this.activity;
+        final MainActivity activity = (MainActivity) this.activity;
         try {
             MnemonicCodeExt.getInstance().check(activity, words);
             activity.restoreWallet(walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, words));

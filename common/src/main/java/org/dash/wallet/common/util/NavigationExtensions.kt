@@ -64,3 +64,8 @@ fun Fragment.deepLinkNavigate(destination: DeepLinkDestination) {
 fun Fragment.goBack() {
     findNavController().popBackStack()
 }
+
+fun Fragment.onUserInteraction() {
+    requireActivity().onUserInteraction()
+    //(requireActivity().application as AutoLogoutTimerHandler).resetAutoLogoutTimer()
+}

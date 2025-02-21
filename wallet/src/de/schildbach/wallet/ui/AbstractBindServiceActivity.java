@@ -28,15 +28,23 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * @author Andreas Schildbach
  */
 public abstract class AbstractBindServiceActivity extends LockScreenActivity {
 
+    private static final Logger log = LoggerFactory.getLogger(AbstractBindServiceActivity.class);
+
     @Nullable
     private BlockchainService blockchainService;
 
+    private boolean shouldUnbind;
+
     private final ServiceConnection serviceConnection = new ServiceConnection() {
+
         @Override
         public void onServiceConnected(final ComponentName name, final IBinder binder) {
             blockchainService = ((BlockchainServiceImpl.LocalBinder) binder).getService();
@@ -52,18 +60,33 @@ public abstract class AbstractBindServiceActivity extends LockScreenActivity {
     protected void onResume() {
         super.onResume();
 
-        bindService(new Intent(this, BlockchainServiceImpl.class), serviceConnection, Context.BIND_AUTO_CREATE);
+        doBindService();
+    }
+
+    private void doBindService() {
+        if (bindService(new Intent(this, BlockchainServiceImpl.class), serviceConnection, Context.BIND_AUTO_CREATE)) {
+            shouldUnbind = true;
+        } else {
+            log.error("error: the requested service doesn't exist, or this client isn't allowed access to it.");
+        }
     }
 
     @Override
     protected void onPause() {
-        unbindService(serviceConnection);
+        doUnbindService();
 
         super.onPause();
     }
 
+    public void doUnbindService() {
+        if (shouldUnbind) {
+            unbindService(serviceConnection);
+            shouldUnbind = false;
+        }
+    }
+
     protected void unbindServiceServiceConnection(){
-        unbindService(serviceConnection);
+        doUnbindService();
     }
 
     @Nullable

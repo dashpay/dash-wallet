@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_primary"
+    tools:context="de.schildbach.wallet.ui.username.UsernameRequestsFragment">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+
+        <com.google.android.material.appbar.CollapsingToolbarLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/background_primary"
+            app:contentScrim="@color/background_secondary"
+            app:layout_scrollFlags="scroll|snap|exitUntilCollapsed"
+            app:title="@string/username_voting"
+            app:maxLines="2"
+            app:collapsedTitleTextColor="@color/content_primary"
+            app:expandedTitleTextColor="@color/content_primary"
+            app:expandedTitleTextAppearance="@style/Headline3"
+            app:collapsedTitleTextAppearance="@style/Subtitle2"
+            app:collapsedTitleGravity="center"
+            app:expandedTitleMarginStart="15dp"
+            app:expandedTitleMarginBottom="10dp">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="130dp"
+                app:layout_collapseMode="parallax" />
+
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                app:layout_collapseMode="pin"
+                app:contentInsetEnd="10dp"
+                app:navigationIcon="@drawable/ic_arrow_back"
+                app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+
+                <LinearLayout
+                    android:id="@+id/quick_vote_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    android:layout_gravity="end"
+                    android:paddingVertical="4dp"
+                    android:paddingHorizontal="12dp" >
+                    <ImageView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:src="@drawable/ic_blue_bolt"
+                        android:layout_gravity="center_vertical"
+                        />
+                    <TextView
+                        style="@style/Subtitle2.Blue"
+                        android:textSize="13sp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:text="@string/quick_vote" />
+                </LinearLayout>
+            </androidx.appcompat.widget.Toolbar>
+        </com.google.android.material.appbar.CollapsingToolbarLayout>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/main_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="28dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false">
+
+            <TextView
+                android:id="@+id/subtitle"
+                style="@style/Body2.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginTop="2dp"
+                android:text="@string/username_voting_subtitle"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/subtitletwo"
+                style="@style/Body2.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginTop="2dp"
+                android:text="@string/username_voting_subtitle_two"
+                app:layout_constraintTop_toBottomOf="@id/subtitle" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/filter_panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="15dp"
+                android:orientation="horizontal"
+                app:layout_constraintTop_toBottomOf="@id/subtitletwo">
+
+                <TextView
+                    android:id="@+id/filter_title"
+                    style="@style/Headline6"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginEnd="15dp"
+                    android:text="@string/all"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/filter_btn"
+                    app:layout_constraintBottom_toTopOf="@id/filter_subtitle" />
+
+                <TextView
+                    android:id="@+id/filter_subtitle"
+                    style="@style/Caption.Tertiary"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginEnd="15dp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/filter_btn"
+                    app:layout_constraintTop_toBottomOf="@id/filter_title"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    tools:text="X duplicates" />
+
+                <Button
+                    android:id="@+id/filter_btn"
+                    style="@style/Button.Tertiary.Small.Blue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginTop="1dp"
+                    android:drawableEnd="@drawable/ic_transaction_filter"
+                    android:drawablePadding="8dp"
+                    android:text="@string/explore_filter"
+                    android:textSize="13sp"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <FrameLayout
+                android:id="@+id/search_panel"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginTop="14dp"
+                app:layout_constraintTop_toBottomOf="@id/filter_panel">
+
+                <EditText
+                    android:id="@+id/search"
+                    style="@style/Body2"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/rounded_background"
+                    android:drawableStart="@drawable/ic_search"
+                    android:drawablePadding="9dp"
+                    android:hint="@string/search_by_username"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="40dp"
+                    android:textColor="@color/content_primary"
+                    android:theme="@style/SearchInputBackground"
+                    android:textColorHint="@color/dash_black_0.3" />
+
+                <ImageButton
+                    android:id="@+id/clear_btn"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/ic_clear_input"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </FrameLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/request_groups"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginTop="15dp"
+                android:clipToPadding="false"
+                android:overScrollMode="never"
+                android:paddingBottom="15dp"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/search_panel"
+                tools:listitem="@layout/username_request_group_view" />
+
+            <TextView
+                android:id="@+id/no_items_txt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/Overline.Tertiary"
+                android:text="@string/nothing_here"
+                android:layout_marginTop="20dp"
+                android:gravity="center"
+                android:textAlignment="gravity"
+                app:layout_constraintTop_toBottomOf="@id/search_panel" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <FrameLayout
+        android:id="@+id/applied_filters_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/background_secondary"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:layout_gravity="bottom">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/divider_color" />
+
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="15dp"
+            android:layout_marginVertical="12dp"
+            android:padding="8dp"
+            android:layout_gravity="start"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/FilterIconBackground"
+            android:src="@drawable/ic_transaction_filter"
+            app:tint="@color/white"
+            tools:background="@color/dash_blue"
+            tools:tint="@color/white" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="40dp">
+
+            <TextView
+                style="@style/Overline.Tertiary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/explore_filtered_by"
+                android:gravity="center"
+                android:textAlignment="gravity" />
+
+            <TextView
+                android:id="@+id/filtered_by_txt"
+                style="@style/Overline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textAlignment="gravity"
+                tools:text="California, 5 miles" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/vote_submitted_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/NoNetworkBackground"
+        android:layout_gravity="center_horizontal|bottom"
+        android:paddingVertical="8dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="15dp"
+        android:layout_marginBottom="15dp"
+        android:visibility="gone"
+        tools:background="@color/dash_black_0.9"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/vote_submitted_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_check_circle"
+            android:layout_gravity="center_vertical"/>
+
+        <TextView
+            android:id="@+id/vote_submitted_txt"
+            style="@style/Caption.White"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/vote_submitted"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -73,7 +73,7 @@
         <item quantity="other">sati</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Nadogradnja</string>
+	<string name="encrypt_new_key_chain_upgrade_button">Nadogradnja</string>
     <string name="encrypt_new_key_chain_dialog_title">Nadogradite vaš novčanik</string>
     <string name="encrypt_new_key_chain_dialog_message">Vaš novčnik će biti nadogradjen kako bi podržavao uvoz i eksportovanje iz više aplikacija.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Morate uneti vaš PIN da bi se proces nadogranje završio.</string>

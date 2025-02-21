@@ -54,12 +54,12 @@ The app can send extensive debug information. Use **Options > Settings > Report 
 In the generated e-mail, replace the support address with yours.
 
 
-### BUILDING THE DEVELOPMENT VERSION
+### BUILDING THE DEVELOPMENT VERSION (TESTNET)
 
 It's important to know that the development version uses Testnet, is debuggable and the wallet file
 is world readable/writeable. The goal is to be able to debug easily.
 
-The _testNet3 flavor builds for Testnet.
+The _testNet3 and staging flavors builds for Testnet.
 
 You can probably skip some steps, especially if you built Android apps before.
 
@@ -103,6 +103,53 @@ To install the app on your Android device, use:
 If installation fails, make sure "Developer options" and "USB debugging" are enabled on your Android device, and an ADB
 connection is established.
 
+
+### BUILDING THE TESTNET VERSION
+
+It's important to know that this development version uses TestNet, is debuggable and the wallet file
+is world readable/writeable. The goal is to be able to debug easily.
+
+The `_testNet3` flavor builds for the TestNet.
+
+	# first time only
+	git clone -b evonet-develop https://github.com/dashevo/dash-wallet.git dash-wallet
+	cd dash-wallet
+	git pull
+    cd ..
+
+	git clone -b master https://github.com/dashevo/android-dpp.git android-dpp
+	cd android-dpp
+	gradlew build
+    cd ..
+
+	git clone -b master https://github.com/dashevo/dapi-client-android dapi-client-android
+	cd dapi-client-android
+	gradlew build
+	cd ..
+
+    git clone -b master https://github.com/dashevo/android-dashpay.git android-dashpay
+    cd android-dashpay
+    gradlew build
+    cd ..
+
+    # optional
+    git clone -b evonet https://github.com/dashevo/dashj.git dashj
+    cd dashj
+    ./gradlew assemble
+    cd ..
+
+	# each time or build in Android Studio
+	cd dash-wallet
+	git pull
+    gradle clean assemble_testNet3Release -x test
+
+To install the app on your Android device, use:
+
+    # first time only
+    sudo apt install android-tools-adb
+
+	# each time
+	adb install wallet/build/outputs/apk/dash-wallet-_testNet3-debug.apk
 
 
 ### BUILDING THE PRODUCTION VERSION
@@ -203,6 +250,8 @@ Explore features of Dash Wallet.
 ### SETTING UP FOR DEVELOPMENT
 
 You should be able to import the project into Android Studio, as it uses Gradle for building.
+* Set the build variant on the wallet module to the required flavor (mobileDebug for mobile devnet)
+* From Tools | SDK Manager, select Android SDK Build Tools version 28 and NDK (side by side) version 16 or above
 
 
 ### TRANSLATIONS

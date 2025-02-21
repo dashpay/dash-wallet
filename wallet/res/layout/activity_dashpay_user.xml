@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_primary">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/dash_white"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/close"
+                android:layout_width="?attr/actionBarSize"
+                android:layout_height="?attr/actionBarSize"
+                android:layout_gravity="end"
+                android:background="?attr/selectableItemBackground"
+                android:padding="16dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_close_blue" />
+
+            <ImageView
+                android:id="@+id/avatar"
+                android:layout_width="128dp"
+                android:layout_height="128dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:transitionName="avatar"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:src="@drawable/user4" />
+
+            <TextView
+                android:id="@+id/displayNameTxt"
+                style="@style/Body1.Medium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="17dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="Bean Swanson" />
+
+            <TextView
+                android:id="@+id/usernameTxt"
+                style="@style/Overline.Medium.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="2dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/displayNameTxt"
+                tools:text="Bean_Swason_98" />
+
+            <de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane
+                android:id="@+id/contact_request_pane"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/activity_rv_top_line"
+            android:layout_width="match_parent"
+            android:layout_height="1px"
+            android:layout_marginStart="25dp"
+            android:layout_marginEnd="25dp"
+            android:layout_marginTop="8dp"
+            android:background="@color/dash_light_gray" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/activity_rv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
+            android:layout_marginTop="28dp"
+            android:layout_marginEnd="15dp"
+            android:overScrollMode="never"
+            tools:listitem="@layout/notification_contact_request_received_row" />
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

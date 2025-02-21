@@ -23,8 +23,8 @@ import android.os.Handler
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import de.schildbach.wallet.ui.main.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
@@ -90,7 +90,7 @@ class AppUpgradeActivity : AppCompatActivity() {
 
     private fun onCorrectPin(pin: String) {
         configuration.pinLength = pin.length
-        startActivity(WalletActivity.createIntent(this))
+        startActivity(MainActivity.createIntent(this))
     }
 
     private fun walletLocked() {

@@ -16,6 +16,30 @@
         <attr name="custom_layout" format="reference" />
     </declare-styleable>
 
+    <declare-styleable name="PlanetView">
+        <attr name="drawable" format="reference" />
+        <attr name="animStartDelay" format="integer" />
+        <attr name="fromAngle" format="integer" />
+        <attr name="toAngle" format="integer" />
+        <attr name="orbitDuration" format="integer" />
+        <attr name="repeatCount" format="integer" />
+        <attr name="interpolator" format="enum">
+            <enum name="linear" value="0" />
+            <enum name="accelerate" value="1" />
+            <enum name="accelerate_decelerate" value="2" />
+            <enum name="anticipate" value="3" />
+            <enum name="anticipate_overshoot" value="4" />
+            <enum name="bounce" value="5" />
+            <enum name="decelerate" value="6" />
+            <enum name="overshoot" value="7" />
+        </attr>
+    </declare-styleable>
+
+    <declare-styleable name="OrbitView">
+        <attr name="orbitColor" format="color" />
+        <attr name="orbitWidth" format="dimension" />
+    </declare-styleable>
+
     <declare-styleable name="VectorColors">
         <attr name="primaryColor" format="color" />
         <attr name="secondaryColor" format="color" />

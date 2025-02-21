@@ -8,7 +8,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d dana kasni</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d nedelja kasni</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d meseci kasni</string>
-    <string name="blockchain_state_progress_downloading">Sinhronizacija sa mrežom</string>
     <string name="blockchain_state_progress_stalled">Sinhronizacija nije uspela</string>
     <string name="blockchain_state_progress_problem_storage">Sinhronizacija: Problem sa skladištem</string>
     <string name="blockchain_state_progress_problem_network">Sinhronizacija: Problem sa mrežom</string>

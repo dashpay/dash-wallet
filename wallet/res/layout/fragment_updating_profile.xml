@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/update_profile"
+    android:layout_width="match_parent"
+    android:layout_height="212dp"
+    android:layout_marginStart="15dp"
+    android:layout_marginTop="24dp"
+    android:layout_marginEnd="15dp"
+    android:background="@drawable/selectable_round_corners_white"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <ImageView
+        android:id="@+id/update_profile_status_icon"
+        app:srcCompat="@drawable/identity_processing"
+        tools:ignore="ContentDescription"
+        android:layout_marginTop="31dp"
+        android:layout_width="69dp"
+        android:layout_height="69dp"
+        android:layout_gravity="center_horizontal" />
+
+    <TextView
+        android:id="@+id/update_profile_status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:textSize="16sp"
+        android:maxLines="2"
+        android:text="@string/updating_profile" />
+
+</LinearLayout>

@@ -10,6 +10,12 @@
     <color name="dash_orange">#E78010</color>
     <color name="dash_red">#d0021b</color>
     <color name="dash_green">#27C509</color>
+    <color name="dash_aqua_green">#6FCF97</color>
+    <color name="dash_green_dark">#27AE60</color>
+    <color name="dash_medium_gray">#979797</color>
+    <color name="dash_golden">#F5A623</color>
+    <color name="dash_light_blue">#A6D7F5</color>
+
     <color name="ripple_light">#60ffffff</color>
     <color name="ripple_dark">#80012060</color>
     <color name="error_red">#BF2827</color>
@@ -29,6 +35,7 @@
     <!-- background -->
     <color name="bg_bright">#ffffffff</color>
     <color name="bg_list">#40ffffff</color>
+    <color name="bg_panel">#fff2f2f8</color>
     <color name="bg_list_selected">#40808090</color>
     <color name="bg_dialog_title">@android:color/transparent</color>
     <color name="bg_shortcut">@color/colorPrimary</color>
@@ -92,15 +99,19 @@
     <color name="system_teal">#78C4F5</color>
     <color name="purple">#6273BD</color>
 
+    <color name="dash_black_0.9">#E6191C1F</color>
     <color name="dash_black_0.7">#B3191C1F</color>
     <color name="dash_black_0.05">#0D191C1F</color>
     <color name="dash_black_0.08">#14191C1F</color>
-    <color name="dash_black_0.9">#E5191C1F</color>
+    <color name="dash_black_0.1">#1A191C1F</color>
+    <color name="dash_black_0.3">#4D191C1F</color>
     <color name="system_green_0.1">#1A3CB878</color>
     <color name="extra_dark_gray_0.1">#1A525C66</color>
     <color name="dash_blue_0.1">#1A008DE4</color>
     <color name="dash_blue_0.05">#0D008DE4</color>
     <color name="dash_blue_0.08">#14008DE4</color>
+    <color name="system_red_0.1">#1AE85C4A</color>
+    <color name="dash_white_0.25">#40FFFFFF</color>
 
     <color name="blue_50">#F0F8FE</color>
     <color name="light_blue">#1A008DE4</color>
@@ -110,4 +121,7 @@
     <color name="gray_200">#C4C8CC</color>
     <color name="gray_300">#AAAEB3</color>
     <color name="gray_600">#5D5F61</color>
+
+    <color name="red">#EA3943</color>
+    <color name="red_0.05">#0DEA3943</color>
 </resources>

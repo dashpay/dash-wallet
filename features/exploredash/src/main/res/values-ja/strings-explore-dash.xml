@@ -149,6 +149,13 @@
     <string name="buy_gift_card_with_dash_text">Dashでギフトカードを購入</string>
     <string name="redeem_gift_card_text">ギフトカードは、オンラインで数秒以内またはレジでご利用いただけます。</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">テストDashは現実世界では何の価値もありませんが、他のDashPayのアルファユーザーと送受金ができます。</string>
+    <string name="explore_test_dash_title">テストDashを取得するには</string>
+    <string name="explore_test_dash_text_1">テストDashは無料で、一般的にフォーセットから入手できます。</string>
+    <string name="explore_test_dash_text_2">以下のボタンをクリックして、このウォレットからDashアドレスをコピーすると、テストDashを入手できます。</string>
+    <string name="explore_get_test_dash">テストDashを取得する</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">同期中... 入力結果が完了していない可能性があります。</string>
     <string name="sync_in_progress_error">同期中... エラーが発生しました。</string>

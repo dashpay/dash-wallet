@@ -21,7 +21,10 @@
     <string name="transfer_dash">Preniesť Dash</string>
     <string name="login_error_title">Nedá sa prihlásiť na váš účet %s</string>
     <string name="login_error_message">Pri prihlasovaní do vášho účtu %s sa vyskytla chyba</string>
+    <string name="dash_address">Dash adresa</string>
+    <string name="username">Používateľské meno</string>
     <string name="balance">Zostatok:</string>
+    <string name="nothing_here">Nič tu nie je</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernseyova libra</string>
@@ -55,10 +58,13 @@
     <string name="button_understand">Rozumiem</string>
     <string name="button_okay">Dobre</string>
     <string name="button_share">Zdieľať</string>
+    <string name="button_skip">Preskočiť</string>
     <string name="share_address">Zdieľať adresu</string>
     <string name="verify">Overiť</string>
     <string name="receive_enter_amount_button">Zadať množstvo</string>
     <string name="account_create">Vytvoriť účet</string>
+    <string name="submit">Odoslať</string>
+    <string name="try_again">Skúsiť znova</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Hľadať</string>
@@ -76,6 +82,7 @@
     <string name="select_currency">Vyberte menu</string>
     <string name="send_coins_error_dusty_send">Čiastka je príliš nízka pre odoslanie</string>
     <string name="send_coins_error_insufficient_money">Nedostatok prostriedkov</string>
+    <string name="send_coins_error_insufficient_mixed_money">Nedostatočné zmiešané prostriedky. Počkajte, kým sa miešanie CoinJoin dokončí, alebo túto funkciu zakážte v nastaveniach pre dokončenie tejto transakcie.</string>
     <string name="syncing">Synchronizuje sa</string>
     <string name="no_connection">Žiadne pripojenie k internetu</string>
     <string name="rate_not_available">Nie je k dispozícií</string>
@@ -101,4 +108,4 @@
 
     <string name="chain_syncing">Reťazec sa synchronizuje...</string>
 
-</resources>
+    </resources>

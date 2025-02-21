@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">ایجاد یک کیف پول جدید</string>
     <string name="onboarding_recover_wallet">بازگردانی کیف پول از طریق عبارت بازیابی</string>
@@ -25,13 +25,17 @@
     <string name="dialog_confirm_secured_by">تامین امنیت توسط</string>
     <string name="dialog_confirm_fee">کارمزد شبکه</string>
     <string name="dialog_confirm_total">مجموع</string>
+    <string name="dialog_confirm_accept_contact_request">پذیرش درخواست ارتباط</string>
 
+    <string name="shortcut_action_join_dashpay">به دش‌پی بپیوندید</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">نسخه پشتیبان‌گیری</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">اسکن</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">ارسال</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_contact">ارسال برای مخاطب</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">خرید &amp;؛ فروش</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -77,6 +81,9 @@
     <string name="payments_title">پرداخت‌ها</string>
     <string name="payments_tab_pay_label">ارسال</string>
     <string name="payments_tab_receive_label">دریافت</string>
+    <string name="payments_pay_to_contact_title">ارسال برای یک مخاطب</string>
+    <string name="payments_pay_to_contact_sub_title">یک نفر در فهرست مخاطبان شما</string>
+    <string name="payments_pay_to_contact_button">انتخاب</string>
     <string name="payments_pay_by_qr_title">ارسال توسط</string>
     <string name="payments_pay_by_qr_sub_title">اسکن کیوآر کد</string>
     <string name="payments_pay_to_clipboard_title">ارسال به نشانی کپی‌شده</string>
@@ -185,6 +192,8 @@
     <string name="notification_settings_title">نوتیفیکیشن‌ها</string>
     <string name="notification_explainer_title">دش والت می‌خواهد برایتان نوتیفیکیشن بفرستد</string>
     <string name="notification_explainer_message">نوتیفیکیشن شامل هشدار، صدا و آیکون هستند. همه اینها را می‌توان در بخش تنظیمات گوشی مشخص کرد. </string>
+    <string name="notification_dashpay_channel_name">دش پی</string>
+    <string name="notification_dashpay_channel_description">وضعیت عملیات در حال اجرای دش‌پی</string>
 
     <string name="net_type_indicator" />
 
@@ -238,9 +247,11 @@
     <string name="transaction_close">بستن</string>
     <string name="transaction_details_amount_received">مبلغ دریافتی</string>
     <string name="transaction_details_amount_sent">مبلغ ارسالی</string>
+    <string name="transaction_details_amount_sent_successfully">ارسال موفق</string>
     <string name="transaction_details_sent_from">ارسال شد از</string>
     <string name="transaction_details_sent_to">ارسال شد به</string>
     <string name="transaction_details_received_at">دریافت شد در</string>
+    <string name="transaction_details_received_from">دریافت از</string>
     <string name="transaction_details_moved_from">منتقل شد از</string>
     <string name="transaction_details_moved_internally_to">به صورت داخلی منتقل شد به</string>
     <string name="transaction_failed_details">تراکنش ناموفق</string>
@@ -254,6 +265,8 @@
     <string name="authenticate_switch_to_fingerprint">استفاده از اثرانگشت</string>
     <string name="authenticate_switch_to_pin">استفاده از پین کد</string>
 
+    <string name="menu_invite_title">دعوت</string>
+    <string name="menu_invite_subtitle">به دوستان و خانواده‌تان کمک کنید به دش بپیوندند</string>
     <string name="menu_buy_and_sell_title">خرید &amp;؛ فروش دش </string>
     <string name="menu_buy_and_sell_subtitle">ارتباط با صرافی‌های طرف سوم</string>
     <string name="liquid_unavailable">امکان ادغام لیکوئید با دش والت دیگر امکان‌پذیر نیست</string>
@@ -280,9 +293,9 @@
     <string name="about_review_and_rate">امتیاز‌دهی و نوشتن نقدونظر برای این اپلیکیشن</string>
     <string name="about_contact_support">تماس با پشتیبانی</string>
     <string name="about_fork_disclaimer">این یک اپلیکیشن متن‌ باز است که از بیت کوین والت انشعاب گرفته است</string>
-    <string name="about_copyright">کپی رایت © ۲۰۲۳ دش کر گروپ</string>
+    <string name="about_copyright">کپی‌رایت© ۲۰۲۴ گروه دش کر</string>
     <string name="about_license">GNU General Public License v3.0</string>
-    <string name="about_version_name">دش والت %s</string>
+    <string name="about_version_name">دش‌پی والت %s</string>
     <string name="about_last_explore_device_sync">آخرین کاوش همگام‌سازی دستگاه </string>
     <string name="about_last_explore_server_update">آخرین کاوش به‌روزرسانی سرور</string>
     <string name="about_firebase_installation_id">شناسه نصب فایربیس</string>
@@ -333,6 +346,12 @@
     <string name="welcome_screen_title_3">کنترل بیشتر</string>
     <string name="welcome_screen_subtitle_3">کنترل بیشتری روی کیف پول‌تان داشته باشید و آن را بر اساس نیازهایتان، تغییر دهید. </string>
 
+    <string-array name="history_filter">
+        <item>همه</item>
+        <item>دریافتی</item>
+        <item>ارسالی</item>
+    </string-array>
+
     <string name="sync_status_wait">لطفا منتظر بمانید تا همزمان‌سازی کامل شود</string>
     <string name="sync_status_syncing_sub_title"> بلاکچین دش</string>
     <string name="sync_status_unable_to_connect">امکان اتصال وجود ندارد</string>
@@ -357,6 +376,29 @@
     <string name="import_image_no_private_key_copied">هیچ کلید خصوصی کپی نشد</string>
     <string name="import_image_import_valid_private_key">کلید خصوصی را برای برداشت دش از آن کپی کنید</string>
     <string name="import_image_invalid_private">کلید خصوصی نامعتبر است</string>
+    <string name="okay">باشه</string>
+
+    <string name="onboard_from_invite_title">بیایید شروع کنیم</string>
+    <string name="onboard_from_invite_subtitle">به دش‌پی خوش آمدید</string>
+    <string name="onboard_from_invite_step1">گام یک</string>
+    <string name="onboard_from_invite_step2">گام دو</string>
+    <string name="onboard_from_invite_step3">گام سه</string>
+    <string name="onboard_from_invite_step1_title">نام کاربری‌تان را انتخاب کنید</string>
+    <string name="onboard_from_invite_step2_title">رمز چهاررقمی‌تان را انتخاب کنید</string>
+    <string name="onboard_from_invite_step3_title">کیف پول‌تان را امن کنید</string>
+
+    <string name="restore_wallet_please_wait">لطفا منتظر بمانید</string>
+    <string name="restore_wallet_restoring">کیف پول‌تان در حال بازیابی است</string>
+
+
+
+    <string name="network_unavailable">شبکه در دسترس نیست</string>
+    <string name="network_error_contact_details">جزئیات مخاطبان منتقل نشد</string>
+    <string name="network_error_user_search">جستجو برای یک کاربر ناموفق بود</string>
+    <string name="network_error_contact_suggestions">ارائه پیشنهاد ناموفق بود</string>
+    <string name="network_error_unable_to_update_profile">به‌روزرسانی پروفایل ناموفق بود</string>
+
+
 
     <string name="today">امروز</string>
     <string name="yesterday">دیروز</string>
@@ -367,6 +409,8 @@
     <string name="all_transactions">همه</string>
     <string name="received_transactions">دریافتی</string>
     <string name="sent_transactions">ارسالی</string>
+    <string name="serious_error_title">خطای جدی</string>
+    <string name="serious_error_unknown">لطفا با پشتیبانی تماس بگیرید</string>
     <string name="set_pin_error_missing_wallet_title">خطای عدم دسترسی به کیف پول</string>
     <string name="set_pin_error_missing_wallet_message">کیف پول در دسترس نیست. این موضوع را به بخش پشتیبانی اطلاع دهید. </string>
     <string name="wallet_encryption_error_title">خطای ایجاد کیف پول</string>
@@ -382,6 +426,10 @@
     <string name="launch_reset_wallet_extra_message">گرفتن نسخه پشتیبان از عبارت بازیابی</string>
     <string name="start_reset_wallet_title">ممکن است %s از دست بدهید</string>
     <string name="reset_wallet_text">ریست کیف پول</string>
+
+
+
+    <!-- Tax category -->
     <string name="reclassify_transactions_title">دسته‌بندی دوباره تراکنش‌ها </string>
     <string name="reclassify_transactions_title_message">این دسته‌بندی‌ها در فایل CSV خروجی مشخص خواهد بود و از آن می‌توانید برای اظهارنامه مالیاتی‌تان استفاده کنید. </string>
     <string name="reclassify_transactions_question">کجا می‌توانم دسته‌بندی مالیاتی را تغییر دهم؟ </string>
@@ -412,5 +460,11 @@
     <string name="masternode_key_not_used">استفاده‌نشده</string>
     <string name="masternode_key_revoked">لغوشده</string>
     <string name="masternode_key_private_public_base64">کلیدهای خصوصی/عمومی (بیش۶۴)</string>
+    <string name="timeskew_ahead">جلو</string>
+    <string name="timeskew_behind">عقب</string>
 
-    </resources>
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">قیمت‌ها به دست نیامد. قیمت‌های پول رسمی شاید نادرست باشد</string>
+    <string name="stale_exchange_rates_stale">قیمت‌ها متعلق به حداقل ۳۰ دقیقه پیش است. قیمت‌های پول رسمی شاید درست نباشد. </string>
+    <string name="stale_exchange_rates_volatile">قیمت‌ها از به‌روزرسانی قبلی بیش از ۵۰ درصد نوسان کرده است. </string>
+</resources>

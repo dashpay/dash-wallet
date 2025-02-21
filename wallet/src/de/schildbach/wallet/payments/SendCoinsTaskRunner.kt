@@ -18,12 +18,20 @@ package de.schildbach.wallet.payments
 
 import androidx.annotation.VisibleForTesting
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_ID
 import de.schildbach.wallet.payments.parsers.PaymentIntentParser
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.PackageInfoProvider
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import okhttp3.CacheControl
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -33,6 +41,7 @@ import okio.BufferedSink
 import okio.IOException
 import org.bitcoin.protocols.payments.Protos
 import org.bitcoin.protocols.payments.Protos.Payment
+import org.bitcoinj.coinjoin.CoinJoinCoinSelector
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IKey
 import org.bitcoinj.crypto.KeyCrypterException
@@ -44,6 +53,8 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.call
@@ -55,11 +66,26 @@ class SendCoinsTaskRunner @Inject constructor(
     private val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
     private val securityFunctions: SecurityFunctions,
-    private val packageInfoProvider: PackageInfoProvider
+    private val packageInfoProvider: PackageInfoProvider,
+    private val analyticsService: AnalyticsService,
+    private val identityConfig: BlockchainIdentityConfig,
+    coinJoinConfig: CoinJoinConfig,
+    private val platformRepo: PlatformRepo
 ) : SendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
         private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
+    }
+    private var coinJoinSend = false
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    init {
+        coinJoinConfig
+            .observeMode()
+            .filterNotNull()
+            .onEach { mode ->
+                coinJoinSend = mode != CoinJoinMode.NONE
+            }
+            .launchIn(coroutineScope)
     }
 
     @Throws(LeftoverBalanceException::class)
@@ -82,7 +108,6 @@ class SendCoinsTaskRunner @Inject constructor(
         return sendCoins(sendRequest, checkBalanceConditions = false)
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
     override suspend fun estimateNetworkFee(
         address: Address,
         amount: Coin,
@@ -234,16 +259,35 @@ class SendCoinsTaskRunner @Inject constructor(
         forceEnsureMinRequiredFee: Boolean
     ): SendRequest {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
-        // to make sure the correct instance of Transaction class is used in toSendRequest() method
-        paymentIntent.setInstantX(false)
         val sendRequest = paymentIntent.toSendRequest()
-        sendRequest.coinSelector = ZeroConfCoinSelector.get()
+        sendRequest.coinSelector = getCoinSelector()
         sendRequest.useInstantSend = false
         sendRequest.feePerKb = Constants.ECONOMIC_FEE
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
         sendRequest.signInputs = signInputs
 
-        val walletBalance = wallet.getBalance(MaxOutputAmountCoinSelector())
+        val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
+        sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
+
+        return sendRequest
+    }
+
+    fun createAssetLockSendRequest(
+        mayEditAmount: Boolean,
+        paymentIntent: PaymentIntent,
+        signInputs: Boolean,
+        forceEnsureMinRequiredFee: Boolean,
+        topUpKey: ECKey
+    ): SendRequest {
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        val sendRequest = SendRequest.assetLock(wallet.params, topUpKey, paymentIntent.amount)
+        sendRequest.coinSelector = getCoinSelector()
+        sendRequest.useInstantSend = false
+        sendRequest.feePerKb = Constants.ECONOMIC_FEE
+        sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
+        sendRequest.signInputs = signInputs
+
+        val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
         sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
 
         return sendRequest
@@ -262,13 +306,29 @@ class SendCoinsTaskRunner @Inject constructor(
             this.ensureMinRequiredFee = forceMinFee
             this.emptyWallet = emptyWallet
 
-            val selector = coinSelector ?: ZeroConfCoinSelector.get()
+            val selector = coinSelector ?: getCoinSelector()
             this.coinSelector = selector
 
             if (selector is ByAddressCoinSelector) {
                 changeAddress = selector.address
             }
         }
+    }
+
+    private fun getCoinSelector() = if (coinJoinSend) {
+        // mixed only
+        CoinJoinCoinSelector(walletData.wallet)
+    } else {
+        // collect all coins, mixed and unmixed
+        ZeroConfCoinSelector.get()
+    }
+
+    private fun getMaxOutputCoinSelector() = if (coinJoinSend) {
+        // mixed only
+        MaxOutputAmountCoinJoinCoinSelector(walletData.wallet!!)
+    } else {
+        // collect all coins, mixed and unmixed
+        MaxOutputAmountCoinSelector()
     }
 
     @Throws(LeftoverBalanceException::class)
@@ -283,7 +343,6 @@ class SendCoinsTaskRunner @Inject constructor(
         if (checkBalanceConditions) {
             checkBalanceConditions(wallet, sendRequest.tx)
         }
-
         signSendRequest(sendRequest)
 
         try {
@@ -298,6 +357,7 @@ class SendCoinsTaskRunner @Inject constructor(
             val transaction = sendRequest.tx
             log.info("send successful, transaction committed: {}", transaction.txId.toString())
             walletApplication.broadcastTransaction(transaction)
+            logSendTxEvent(transaction, wallet)
             transaction
         } catch (ex: Exception) {
             when (ex) {
@@ -310,6 +370,38 @@ class SendCoinsTaskRunner @Inject constructor(
                 is Wallet.CompletionException -> log.info("send failed, cannot complete: {}", ex.message)
             }
             throw ex
+        }
+    }
+
+    private suspend fun logSendTxEvent(
+        transaction: Transaction,
+        wallet: Wallet
+    ) {
+        identityConfig.get(IDENTITY_ID)?.let {
+            val valueSent: Long = transaction.outputs.filter {
+                !it.isMine(wallet)
+            }.sumOf {
+                it.value.value
+            }
+            val isSentToContact = try {
+                platformRepo.blockchainIdentity.getContactForTransaction(transaction) != null
+            } catch (e: Exception) {
+                false
+            }
+            analyticsService.logEvent(
+                AnalyticsConstants.SendReceive.SEND_TX,
+                mapOf(
+                    AnalyticsConstants.Parameter.VALUE to valueSent
+                )
+            )
+            if (isSentToContact) {
+                analyticsService.logEvent(
+                    AnalyticsConstants.SendReceive.SEND_TX_CONTACT,
+                    mapOf(
+                        AnalyticsConstants.Parameter.VALUE to valueSent
+                    )
+                )
+            }
         }
     }
 

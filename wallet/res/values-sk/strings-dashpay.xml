@@ -1,0 +1,465 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="choose_your_username">Vyberte si svoje <b>Dash
+používateľské meno</b></string>
+    <string name="identity_min_3_chars">Medzi 3 a 23 znakmi</string>
+    <string name="identity_alphanum_only">Iba písmená, čísla a spojovníky</string>
+    <string name="identity_hyphen_rule">Musí začínať a končiť písmenom alebo číslom</string>
+    <string name="identity_username_validating">Overuje sa používateľské meno…</string>
+    <string name="identity_username_available">Používateľské meno je k dispozícii</string>
+    <string name="identity_username_taken">Používateľské meno sa už používa</string>
+    <string name="platform_communication_error">Chyba komunikácie s platformou Dash</string>
+    <string name="register">Registrovať</string>
+
+    <string name="new_account_confirm_button_text">Potvrdiť a zaplatiť</string>
+    <string name="invitation_confirm_button_text">Potvrdiť</string>
+    <string name="new_account_confirm_accept">Súhlasím</string>
+    <string name="new_account_confirm_upgrade_fee">Poplatok za inováciu</string>
+    <string name="new_account_confirm_message">Ako svoje používateľské meno ste si vybrali %s. Vezmite prosím na vedomie, že používateľské meno sa NEDÁ po registrácii zmeniť.</string>
+    <string name="invitation_confirm_title">Poplatok za pozvanie</string>
+    <string name="invitation_confirm_message">Každá pozvánka bude financovaná touto sumou, aby si príjemca mohol rýchlo vytvoriť svoje používateľské meno v sieti Dash</string>
+    <string name="invitation_init_title">Pozvať</string>
+    <string name="invitation_init_header">Pozvať svojich priateľov a rodinu</string>
+    <string name="invitation_init_message">Pomôžte svojim priateľom a rodine pripojiť sa k sieti Dash. Pozvite ich do sveta sociálneho bankovníctva.</string>
+    <string name="invitation_init_button_text">Vytvoriť novú pozvánku</string>
+    <string name="invitation_notifications_hint">Pozvite svojich priateľov a rodinu k sieti Dash</string>
+    <string name="invitation_notifications_hint1">Pozvať niekoho, aby sa pripojil k sieti Dash</string>
+    <string name="invitation_notifications_hint1_or">alebo</string>
+    <string name="invitation_created_title">Pozvánka</string>
+    <string name="invitation_created_successfully">Pozvánka bola úspešne vytvorená</string>
+    <string name="invitation_created_tag_title">Značka pre vašu referenciu</string>
+    <string name="invitation_created_tag">napr.: Otec</string>
+    <string name="invitation_created_preview">Ukážka pozvánky</string>
+    <string name="invitation_created_copy_link">Skopírovať odkaz na pozvánku</string>
+    <string name="invitation_created_send_invitation">Poslať pozvánku</string>
+    <string name="invitation_created_send_invitation_again">Poslať znova</string>
+    <string name="invitation_created_maybe_later">Možno neskôr</string>
+    <string name="invitation_preview_title">Pridať sa teraz</string>
+    <string name="invitation_preview_message">Používateľ %s vás pozval. Začnite používať kryptomenu Dash.</string>
+    <string name="invitation_preview_close">Zatvoriť</string>
+    <string name="invitation_cant_afford_title">Nedostatočný zostatok v peňaženke</string>
+    <string name="invitation_cant_afford_message">Na vytvorenie pozvánky potrebujete aspoň %s Dash</string>
+    <string name="invitation_creating_error_title">Chyba pri vytváraní pozvánky</string>
+    <string name="invitation_creating_error_message">Pri vytváraní vašej pozvánky sa vyskytol problém. Skúste to znova.</string>
+    <string name="invitation_creating_error_message_not_synced">Počkajte na dokončenie synchronizácie a skúste to znova.</string>
+    <string name="invitation_creating_progress_title">Pozvánka sa vytvára </string>
+    <string name="invitation_verifying_progress_title">Pozvánka sa overuje</string>
+    <string name="invitation_share_message">Pozvánky sú len na jedno použitie. Nezdieľajte so skupinou.</string>
+    <string name="invitation_share_title">Pozvánka DashPay</string>
+    <string name="invitation_already_claimed_title">Pozvánka už bola akceptovaná</string>
+    <string name="invitation_already_claimed_message">Vaša pozvánka od %s už bola využitá</string>
+    <string name="invitation_invalid_invite_title">Neplatná pozvánka</string>
+    <string name="invitation_invalid_invite_message">Vaša pozvánka od %s nie je platná</string>
+    <string name="invitation_username_already_found_title">Používateľské meno sa už našlo</string>
+    <string name="invitation_username_already_found_message">Túto pozvánku si nemôžete nárokovať, pretože už máte používateľské meno Dash</string>
+    <string name="invitation_onboarding_has_began_error_title">Chyba pri registrácii</string>
+    <string name="invitation_onboarding_has_began_error">Prebieha registrácia. Využite pozvánku až po vytvorení peňaženky.</string>
+    <string name="invitation_accept_title_1">Získajte svoje používateľské meno</string>
+    <string name="invitation_accept_title_2">Pridať vašich priateľov a rodinu</string>
+    <string name="invitation_accept_message_2">Pozvite svoju rodinu, nájdite svojich priateľov vyhľadaním ich používateľských mien</string>
+    <string name="invitation_accept_title_3">Prispôsobiť</string>
+    <string name="invitation_accept_message_3">Nahrajte svoj obrázok, prispôsobte si svoju identitu</string>
+    <string name="invitation_accept_continue">Pokračovať</string>
+    <string name="invitation_contact_request_sent_message">Žiadosť o kontakt bola odoslaná používateľovi %s, keďže vás pozval.</string>
+    <string name="topup_confirm_message">Rozhodli ste sa doplniť svoju identitu. Z vášho zostatku bude odpočítaná nasledujúca suma.</string>
+
+    <string name="username_being_created">Vaše používateľské meno %s sa vytvára v sieti Dash</string>
+    <string name="username_being_requested">Vaše používateľské meno %s sa požaduje po sieti Dash</string>
+
+    <string name="processing_let_me_know">Dajte mi vedieť, keď to bude hotové</string>
+    <string name="processing_home_title">Aktualizácia na Evolution</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) Spracovanie platby</string>
+    <string name="processing_home_step_2">(2/3) Vytváranie ID</string>
+    <string name="processing_home_step_2_restoring">(2/3) Obnovenie ID</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Registrácia používateľského mena</string>
+    <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Žiadosť o používateľské meno</string>
+    <string name="processing_home_step_3_restoring">(3/3) Obnovenie používateľského mena</string>
+    <string name="restore_identity">Obnoviť identitu</string>
+    <string name="processing_done_title">Ahoj %s,</string>
+    <string name="processing_done_subtitle">Váš účet je pripravený</string>
+    <string name="processing_voting_subtitle">Hlasovanie o vašom používateľskom mene sa začalo</string>
+    <string name="processing_error_title">Chyba pri inovácii</string>
+    <string name="processing_error_title_from_invite">Chyba pri aktualizácii z pozvánky</string>
+    <string name="processing_error_retry">Znovu</string>
+    <string name="processing_username_unavailable_title">Používateľské meno je nedostupné</string>
+    <string name="processing_username_unavailable_subtitle">Vyberte si prosím iné</string>
+
+    <string name="dashpay_upgrade_fee">Poplatok za inováciu</string>
+    <string name="dashpay_invite_fee">Poplatok za pozvanie</string>
+    <string name="dashpay_topup_fee">Poplatok za doplnenie</string>
+    <string name="search_user_find_a_user">Nájsť používateľa v sieti Dash</string>
+    <string name="search_for_a_user">Vyhľadať používateľa v sieti Dash</string>
+    <string name="search_user_input_placeholder">Vyhľadať používateľské meno</string>
+    <string name="add_new_contact">Pridať nový kontakt</string>
+    <string name="send_contact_request">Poslať žiadosť o kontakt</string>
+    <string name="sending_contact_request">Odosielanie žiadosti o kontakt</string>
+    <string name="sending_contact_request_short">Pozývanie</string>
+    <string name="accepting_contact_request">Prijímanie žiadosti o kontakt</string>
+    <string name="accepting_contact_request_short">Prijímanie</string>
+    <string name="search_user_no_results">Žiadni používatelia, ktorí by sa zhodovali</string>
+    <string name="search_user_loading">V sieti Dash sa hľadá používateľské meno <b>"%"</b> </string>
+    <string name="contact_request_pending">Žiadosť o kontakt čaká na potvrdenie</string>
+    <string name="pay">Zaplatiť</string>
+    <string name="contact_request_received_title">%s požiadal o priateľstvo</string>
+    <string name="contact_request_accept">Prijať</string>
+    <string name="contact_request_ignore">Ignorovať</string>
+
+    <string name="contacts_no_results">Neexistujú žiadne zhodné kontakty</string>
+
+    <string name="contacts_title">Kontakty</string>
+    <string name="contacts_send_to_contact_title">Poslať kontaktu</string>
+    <string name="contacts_search_for">Vyhľadať kontakt</string>
+    <string name="contact_requests_title">Žiadosť o kontakt</string>
+    <string name="contacts_add_new_contact">Pridať nový kontakt</string>
+    <string name="contacts_contact_requests_count">Žiadosti o kontakt (%d)</string>
+    <string name="contacts_contact_requests">Žiadosť o kontakt</string>
+    <string name="contacts_contact_requests_view">zobraziť všetky</string>
+    <string name="contacts_my_contacts">Moje kontakty</string>
+    <string name="contacts_sort_order">Zoradiť podľa:</string>
+    <string-array name="contacts_sort">
+        <item>Meno</item>
+    </string-array>
+
+    <string name="notifications_title">Oznámenia</string>
+    <string name="notifications_title_with_count">Oznámenia (%d)</string>
+    <string name="notifications_profile_activity">Aktivita</string>
+    <string name="notifications_new">nových</string>
+    <string name="notifications_earlier">pred</string>
+    <string name="notifications_none_new">Nie sú k dispozícii žiadne nové upozornenia</string>
+    <string name="notifications_contact_has_accepted">%s prijal vašu žiadosť o kontakt.</string>
+    <string name="notifications_you_have_accepted">Prijali ste žiadosť o kontakt od %s</string>
+    <string name="notifications_you_sent">Poslali ste žiadosť o kontakt pre %s</string>
+    <string name="notifications_you_received">%s vám poslal žiadosť o kontakt</string>
+
+    <string name="identity_complete_message">Vaše používateľské meno %s bolo úspešne vytvorené v sieti Dash</string>
+    <string name="request_complete_message">Vaše používateľské meno %s bolo úspešne vyžiadané v sieti Dash</string>
+
+    <string name="scan_to_pay_username_dialog_message">Neplatné používateľské meno alebo identita Dash\n\n%s</string>
+    <string name="send_coins_to_username">Posiela sa</string>
+    <string name="contact_history_disclaimer">Pridajte % ako svoj kontakt pre <b>platbu priamo na používateľské meno</b> a <b>zachovanie histórie vzájomných transakcií</b></string>
+    <string name="contact_history_disclaimer_pending">Keď % prijme vašu požiadavku, môžete <b>platiť priamo na používateľské meno</b></string>
+    <string name="stranger_activity_disclaimer_text">Platby uskutočnené priamo na adresy nebudú zachované v aktivite.</string>
+    <string name="error_loading_identity">Chyba pri načítavaní identity</string>
+
+    <string name="edit_profile">Upraviť profil</string>
+    <string name="display_name">Zobrazované meno</string>
+    <string name="about_me">O mne</string>
+    <string name="char_count">%1$d z %2$d znakov</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">Uložiť</string>
+    <string name="edit_profile_take_picture">Urobiť fotografiu pomocou fotoaparátu</string>
+    <string name="edit_profile_choose_picture">Vybrať z galérie</string>
+    <string name="upgrade_to_evolution_title">Pridať sa k DashPay</string>
+    <string name="upgrade_to_evolution_message">Vytvorte si svoje používateľské meno, nájdite priateľov a rodinu s ich používateľskými menami a pridajte ich do svojich kontaktov</string>
+    <string name="image_cropper_title">Posuňte a priblížte svoju fotografiu, aby ste našli to najlepšie</string>
+    <string name="select">Vybrať</string>
+    <string name="unable_to_load_image">Nie je možné načítať obrázok.</string>
+    <string name="profile_picture_upload_error_title">Chyba nahrávania</string>
+    <string name="profile_picture_upload_error_message">Váš obrázok sa nepodarilo nahrať.\nSkúste to znova.</string>
+    <string name="profile_picture_upload_try_again">Skúsiť znova</string>
+    <string name="profile_picture_uploading_title">Prosím čakajte</string>
+    <string name="profile_picture_uploading_message">Nahrajte svoj obrázok do siete</string>
+    <string name="picture_upload_policy">Pravidlá nahrávania obrázkov</string>
+    <string name="imgur_policy_1">Obrázok, ktorý vyberiete, bude anonymne nahraný na Imgur.</string>
+    <string name="imgur_policy_2">Nahraný obrázok si môže ktokoľvek verejne pozrieť.</string>
+    <string name="imgur_policy_3">Nahraný obrázok môžete kedykoľvek odstrániť, pokiaľ máte prístup k tejto peňaženke.</string>
+    <string name="profile_picture_delete_title">Ste si istý\?</string>
+    <string name="profile_picture_delete_message">Tento obrázok sa už nebude používať v sieti Dash</string>
+    <string name="agree">Súhlasím</string>
+    <string name="yes">Áno</string>
+    <string name="no">Nie</string>
+
+    <string name="updating_profile">Aktualizácia profilu v sieti Dash</string>
+    <string name="google_drive_policy_one">V sieti Dash ani v peňaženke DashPay nie sú uložené žiadne informácie o účte.</string>
+    <string name="google_drive_policy_two">Nahraný obrázok si môže ktokoľvek verejne pozrieť.</string>
+    <string name="google_drive_policy_three">Obrázok môžete kedykoľvek odstrániť alebo zmeniť, pokiaľ máte prístup k peňaženke v tomto zariadení.</string>
+
+    <string name="upload_image_message">Nahrajte svoj obrázok do siete</string>
+    <string name="upload_image_please_wait">Prosím čakajte</string>
+    <string name="upload_image_error_message">Váš obrázok sa nepodarilo nahrať. Prosím skúste znova.</string>
+    <string name="upload_image_upload_error">Chyba nahrávania</string>
+
+    <string name="edit_profile_google_drive">Disk Google</string>
+    <string name="edit_profile_imgur">Imgur</string>
+    <string name="google_drive_failed_authorization">Autorizácia služby Disk Google zlyhala.</string>
+
+
+    <string name="error_updating_profile_try_again">Skúsiť znova</string>
+    <string name="error_updating_profile_cancel">Zrušiť</string>
+    <string name="error_updating_profile_msg">Chyba pri aktualizácii profilu</string>
+    <string name="error_updating_profile_code">Kód: %s</string>
+    <string name="edit_profile_public_url">Verejná adresa URL</string>
+    <string name="public_url_enter_url">Vložte URL vášho obrázku</string>
+    <string name="public_url_error_message">Nie je možné načítať obrázok. Zadajte platnú webovú adresu obrázka.</string>
+    <string name="public_url_message">Môžete zadať ľubovoľnú adresu URL, ktorá je verejne dostupná na internete, aby ju používatelia mohli vidieť v sieti Dash.</string>
+    <string name="public_url_more_info">Viac informácií</string>
+    <string name="public_url_fetching_image">Načítava sa obrázok</string>
+
+    <string name="gravatar">Gravatar</string>
+    <string name="gravatar_email_prompt">Zadajte svoje e-mailové ID služby Gravatar</string>
+    <string name="gravatar_fetching">Načítavam váš Gravatar</string>
+    <string name="gravatar_email_sample">sample\@email.com</string>
+    <string name="gravatar_disclaimer">Váš e-mail nie je uložený v peňaženke DashPay ani na žiadnych serveroch. Použije sa jeden krát na získanie podrobností o vašom Gravatar účte a potom sa zahodí.</string>
+    <string name="gravatar_email_error">Nie je možné získať váš Gravatar. Zadajte platné e-mailové ID služby Gravatar.</string>
+
+    <string name="where_to_store_your_picture">Kde chcete uložiť svoj obrázok\?</string>
+    <string name="external_storage_disclaimer">Váš obrázok budete mať vždy pod kontrolou. Dash neukladá žiadne vaše údaje vrátane vášho profilového obrázka.</string>
+    <string name="select_source_sign_in_required">Vyžaduje sa prihlásenie</string>
+    <string name="select_source_google_drive">Disk Google</string>
+    <string name="select_source_no_sign_in_required">Nevyžaduje sa žiadny účet</string>
+
+    <string name="join_dashpay_subtitle">Vytvorte si používateľské meno, pridajte svojich priateľov…</string>
+    <string name="join_dashpay_more_subtitle">Vytvorte si používateľské meno, nájdite svojich priateľov a pridajte si ich do kontaktov</string>
+    <string name="join">Pridať sa</string>
+
+    <string name="more_suggestions">Ďalšie návrhy</string>
+    <string name="users_that_matches">Používatelia, ktorí sa zhodujú</string>
+    <string name="not_in_your_contacts">ktorí momentálne nie sú vo vašich kontaktoch</string>
+    <string name="no_matching_contacts">Vo vašich kontaktoch sa nikto nezhoduje</string>
+    <string name="suggestions_empty_result_part_1">Neexistujú žiadni používatelia, ktorí by sa zhodovali menom</string>
+    <string name="suggestions_empty_result_part_2">vo vašich kontaktoch</string>
+    <string name="save_changes">Uložiť zmeny</string>
+    <string name="save_profile_reminder_text">Chcete uložiť zmeny, ktoré ste vykonali vo svojom profile\?</string>
+    <string name="invitation_notification_text">Pozvite svojich priateľov a rodinu, aby sa pripojili k sieti Dash.</string>
+    <string name="dashpay_min_balance_disclaimer">Na začiatok potrebujete aspoň <b>%s</b></string>
+    <string name="dashpay_insuffient_credits">Nedostatok kreditov na vykonanie tejto akcie.</string>
+
+    <string name="about_developer_mode">Aktivovaný režim vývojára: všetky funkcie sú povolené!</string>
+    <string name="about_developer_mode_disabled">Režim vývojára je deaktivovaný.</string>
+    <string name="invite_history_create_new_invite">Vytvoriť novú pozvánku</string>
+    <string name="invitations_history_header">História pozvánok</string>
+    <string name="invitations_filter_title">Filtrovať pozvánky</string>
+    <string name="invite_history_empty">Neboli vytvorené žiadne pozvánky.</string>
+    <string name="invite_history_empty_claimed">Žiadne nárokované pozvánky.</string>
+    <string name="invite_history_empty_pending">Žiadne čakajúce pozvánky.</string>
+    <string name="invitation_details_invite_used_by">Pozvanie použité používateľom</string>
+    <string name="invitation_details_invite_without_username">Pozvánka bola nárokovaná. Čaká sa na registráciu používateľského mena.</string>
+    <string-array name="invite_filter">
+        <item>Všetko</item>
+        <item>Čakajúce</item>
+        <item>Vyžiadať</item>
+    </string-array>
+
+    <!-- Private memo -->
+    <string name="private_memo">Súkromná poznámka</string>
+    <string name="add_note">Pridať poznámku</string>
+    <string name="edit_note">Upraviť poznámku</string>
+    <string name="note">Poznámka</string>
+
+    <string name="select_privacy_preferences">Vyberte predvoľby ochrany osobných údajov svojho používateľského mena</string>
+    <string name="please_note_cant_change_this_later">Upozorňujeme, že neskôr to už nebudete môcť zmeniť</string>
+    <string name="Intermediate_level_WIFI_Warning">Stredná úroveň ochrany osobných údajov vyžaduje spoľahlivé internetové pripojenie</string>
+    <string name="Advanced_level_WIFI_Warning">Pokročilá úroveň ochrany osobných údajov vyžaduje spoľahlivé internetové pripojenie</string>
+    <string name="privcay_level_WIFI_warning_desc">Aby ste sa vyhli ďalším poplatkom za miešanie, odporúča sa byť v pripojený naWi-Fi</string>
+    <string name="continue_anyway">Napriek tomu pokračovať</string>
+    <string name="welcome_to_dash_pay">Vitajte v Dash Pay</string>
+    <string name="pay_to_usernames">Plaťte na používateľské mená. Už žiadne alfanumerické adresy.</string>
+    <string name="create_a_username">Vytvoriť používateľské meno</string>
+    <string name="add_your_friends_family">Pridajte svojich priateľov a rodinu</string>
+    <string name="invite_your_family">Pozvite svoju rodinu, nájdite svojich priateľov vyhľadaním ich používateľských mien.</string>
+    <string name="personalise_profile">Prispôsobiť profil</string>
+    <string name="upload_your_picture">Nahrajte svoj obrázok, prispôsobte si svoju identitu.</string>
+    <string name="in_case_lose_your_passphrase">V prípade, že stratíte svoju prístupovú frázu, stratíte právo na požadované používateľské meno.</string>
+    <string name="keep_your_passphrase_safe">Udržujte svoju prístupovú frázu v bezpečí</string>
+    <string name="pay_now">Zaplaťte teraz a v prípade neschválenia si môžete vytvoriť iné meno bez toho, aby ste museli platiť znova</string>
+    <string name="case_your_request_is_not_approved">V prípade, že vaša žiadosť nebude schválená</string>
+    <string name="voting_requirement_subtitle">Každé používateľské meno, ktoré má číslo 2–9, prípadne 20 alebo viac znakov, bude automaticky schválené</string>
+    <string name="voting_requirement_title">Hlasovanie je potrebné len v niektorých prípadoch</string>
+    <string name="dash_network_must_vote_to_approve">Sieť Dash musí hlasovať, aby schválila vaše používateľské meno pred jeho vytvorením.</string>
+    <string name="what_is_username_voting">Čo je to hlasovanie o používateľské mená\?</string>
+    <string name="usernames_blocked_title">Niektoré používateľské mená môžu byť zablokované</string>
+    <string name="usernames_blocked_subtitle">Ak dostatočná časť siete zistí, že používateľské meno je nevhodné, môže ho zablokovať</string>
+    <string name="username_voting">Hlasovanie o používateľskom mene</string>
+    <string name="username_voting_subtitle">Ako vlastník Masternode môžete hlasovaním schváliť požadované používateľské mená pred ich vytvorením v sieti.</string>
+    <string name="username_voting_subtitle_two">Môžete zablokovať vytváranie používateľských mien, ktoré považujete za nevhodné.</string>
+    <string name="voting_duplicates_only_title">Predvolené nastavenie filtra</string>
+    <string name="voting_duplicates_only_message">Predvolený filter zobrazuje iba duplicitné používateľské mená, za ktoré ste NEHLASOVALI, ale zmenou filtra môžete zobraziť všetky sporné používateľské mená</string>
+    <string name="all">Všetko</string>
+    <string name="n_usernames">%d používateľských mien</string>
+    <string name="n_requests">%d žiadostí</string>
+    <string name="search_by_username">Hľadať podľa používateľského mena</string>
+    <string name="type">Typ</string>
+    <string name="only_duplicates">Iba duplikáty</string>
+    <string name="only_links">Iba žiadosti s odkazmi</string>
+    <string name="only_links_short">S odkazmi</string>
+    <string name="date">Dátum žiadosti: %s</string>
+    <string name="votes">Hlasy: %s</string>
+    <string name="voting_ends">Hlasovanie končí: %s</string>
+
+    <string-array name="usernames_group_by_options">
+        <item>Žiadne</item>
+        <item>Od prvého</item>
+        <item>Od posledého</item>
+    </string-array>
+
+    <string-array name="usernames_sort_by_options">
+        <item>Od najnovších</item>
+        <item>Od najstarších</item>
+        <item>Od najvyšších</item>
+        <item>Od najmenších</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>Všetko</item>
+        <item>Schválil som</item>
+        <item>Neschválil som</item>
+        <item>Má zablokované hlasy</item>
+    </string-array>
+    <string name="request_your_username">Vytvorte si používateľské meno</string>
+    <string name="request_your_hint">Upozorňujeme, že v budúcnosti ho už nebudete môcť zmeniť</string>
+    <string name="request_username">Požiadať o používateľské meno</string>
+    <string name="request_voting_range">Sieť Dash bude hlasovať o tomto mene. O výsledkoch vás budeme informovať dňa %s.</string>
+    <string name="request_username_available">Používateľské meno je k dispozícii</string>
+    <string name="request_username_unavailable">Používateľské meno je nedostupné alebo zablokované</string>
+    <string name="request_username_taken">Používateľské meno sa už používa</string>
+    <string name="request_username_taken_results">Používateľské meno prevzal iný používateľ</string>
+    <string name="requesting_your_username_title">Vytvorenie vášho používateľského mena</string>
+    <string name="requesting_your_username_message">O vaše používateľské meno %s je požiadané v sieti Dash. Môže to chvíľu trvať.</string>
+    <string name="creating_your_username_message">Vaše používateľské meno %s sa vytvára v sieti Dash. Môže to chvíľu trvať.</string>
+    <string name="requesting_your_username_error_title">Žiadosť o používateľské meno zlyhala</string>
+    <string name="requesting_your_username_error_message">Z nejakého dôvodu zlyhala žiadosť o používateľské meno %s.</string>
+    <string name="voting">Hlasovanie:</string>
+    <string name="this_username_has_already_been_requested">Toto používateľské meno už bolo vyžiadané, ale môžete si ho vyžiadať aj vy a nechať hlasovanie siete, aby rozhodla, či ho môžete mať</string>
+    <string name="request_details">Vyžiadať podrobnosti</string>
+    <string name="request_details_subtitle">Ak chcete overiť vlastníctvo tohto používateľského mena, skontrolujte príspevok uvedený nižšie</string>
+    <string name="vote_to_approve">Hlasovanie za schválenie</string>
+    <string name="vote_to_block">Hlasujte za blokovanie</string>
+    <string name="identity">Identita</string>
+    <string name="results">Výsledky</string>
+    <string name="link">Odkaz</string>
+    <string name="link_not_provided">Nie je poskytnuté</string>
+    <string name="cancel_approval">Zrušiť schválenie</string>
+    <string name="verify_your_identity">Overte svoju identitu, aby ste zvýšili svoje šance na získanie požadovaného používateľského mena</string>
+    <string name="if_somebody">Ak niekto iný požaduje rovnaké používateľské meno ako vy, necháme sieť rozhodnúť, komu toto používateľské meno pridelí</string>
+    <string name="the_link_will_be_visible">Odkaz, ktorý odošlete, bude viditeľný iba pre vlastníkov siete</string>
+    <string name="verify_your_identity_voting">Overte svoju identitu</string>
+    <string name="copy_the_text">Skopírujte text</string>
+    <string name="please_vote_to_approve">Hlasujte, aby ste schválili moje požadované používateľské Dash meno - %s</string>
+    <string name="prove_your_identity">Preukážte svoju identitu</string>
+    <string name="make_a_post_with_the_text">Uverejnite príspevok s vyššie uvedeným textom na dobre známej sociálnej sieti alebo platforme na odosielanie správ,  pre overenie, že ste pôvodným vlastníkom požadovaného používateľského mena, a pridajte odkaz nižšie</string>
+    <string name="paste_the_link">Vložte odkaz</string>
+    <string name="voting_key_title">Zadajte svoj hlasovací kľúč</string>
+    <string name="voting_key_hint">Súkromný kľúč hlasovania Masternode</string>
+    <string name="voting_key_input_error">Zadali ste neplatný kľúč</string>
+    <string name="voting_key_input_not_active_error">Zadali ste kľúč, ktorý nie je priradený k aktívnemu Masternode</string>
+    <string name="voting_key_input_already_present">Tento masternode kľúč ste už zadali</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">Zadali ste kľúč, ktorý je určený pre testovaciu sieť, ale toto je hlavná sieť. Mal by to vyzerať takto: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">Zadali ste kľúč, ktorý je určený pre hlavnú sieť, ale toto je testovacia sieť. Mal by to vyzerať takto: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">Namiesto hlasovacieho súkromného kľúča hlavného uzla ste zadali kľúč adresy. Mal by byť vo formáte WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">Zadali ste kľúč v hexadecimálnom formáte, ale mal by byť vo formáte WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">Zadali ste kľúč v hexadecimálnom formáte, ale mal by byť vo formáte WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">Zadali ste súkromný kľúč, ktorý je príliš krátky. Tu je príklad (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">Zadali ste súkromný kľúč, ktorý obsahuje nesprávne znaky. Tu je príklad (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">Zadaný súkromný kľúč má neplatný znak. Tu je príklad (%s)</string>
+
+    <string name="voting_key_add">Pridajte svoje hlasovacie kľúče</string>
+    <string name="voting_key_add_subtitle">IP adresa(y) nižšie sú spojené s touto peňaženkou</string>
+    <string name="masternode_ip">IP adresa Masternode</string>
+    <string name="multiple_votes_cast">Bude odovzdaných %d hlasov, pretože v peňaženke máte uložených viacero hlasovacích kľúčov</string>
+    <string name="add_masternode_key">Pridať hlasovací kľúč Masternode</string>
+    <string name="dont_ask_again">Znova sa nepýtať</string>
+    <string name="vote_submitting">Odosielanie hlasu pre používateľské meno %s</string>
+    <string name="quick_vote_submitting">Odosielanie hlasov pre všetky používateľské mená</string>
+    <string name="vote_submitted">Hlasovali ste za používateľské meno %s</string>
+    <string name="quick_vote_submitted">Hlasovanie úspešné za všetky používateľské mená</string>
+    <string name="cancel_submitting">Ruší sa váš hlas pre používateľské meno %s</string>
+    <string name="cancel_submitted">Zrušený hlas za používateľské meno %s</string>
+    <string name="block_submitting">Blokuje sa používateľské meno %s</string>
+    <string name="block_submitted">Zablokovali ste používateľské meno %s</string>
+    <string name="vote_submitted_error">Chyba pri hlasovaní o používateľskom mene %s</string>
+    <string name="cancel_submitted_error">Pri zrušení hlasovania pre používateľské meno %s sa vyskytla chyba</string>
+    <string name="block_submitted_error">Chyba pri blokovaní používateľského mena %s</string>
+    <string name="quick_vote">Rýchle hlasovanie</string>
+    <string name="quick_vote_subtitle">Klepnutím na tlačidlo „Hlasovať za všetkých“ budete automaticky hlasovať za všetky filtrované používateľské mená (%d), ktoré boli odoslané ako prvé</string>
+    <string name="vote_for_all">Hlasovať za všetkých</string>
+    <string name="one_vote_left_title">Zostáva jeden hlas</string>
+    <string name="one_vote_left_show_usernames">Zobraziť používateľské mená</string>
+    <string name="one_vote_left_subtitle">Za nasledujúce používateľské mená ste už hlasovali %dkrát. Pre tieto používateľské mená môžete odovzdať už len jeden hlas.</string>
+    <string name="voting_period_active">Obdobie hlasovania o menách je aktívne</string>
+    <string name="there_was_a_network_error">Vyskytla sa chyba siete. Môžete skúsiť znova bez ďalších poplatkov</string>
+    <string name="requested_username_has_been">Používateľské meno bolo vyžiadané.</string>
+    <string name="requested_voting_duration">Výsledky dňa %s.</string>
+    <string name="cancel_request">Zrušiť požiadavku</string>
+    <string name="after_the_voting">Po ukončení hlasovania vás budeme informovať o výsledkoch</string>
+    <string name="none">Žiadne</string>
+    <string name="verify_now">Overiť teraz</string>
+    <string name="if_you_tap_cancel">Ak klepnete na „Zrušiť žiadosť“, stále budete mať možnosť požiadať o ďalšie používateľské meno bez opätovnej platby</string>
+    <string name="do_you_really_want_to_cancel">Naozaj chcete zrušiť žiadosť o používateľské meno\?</string>
+    <string name="if_you_tap_cancel_request">Ak klepnete na „Zrušiť žiadosť“, stále budete mať možnosť požiadať o ďalšie používateľské meno bez opätovnej platby</string>
+    <string name="cant_open">Nedá sa otvoriť</string>
+    <string name="invalid_link">Odkaz je neplatný</string>
+    <string name="welcome_request_username_min_balance_disclaimer_all">Máte %s Dash. Niektoré používateľské mená stoja až %s Dash.</string>
+    <string name="welcome_request_username_min_balance_disclaimer_noncontested">Na vytvorenie používateľského mena musíte mať viac ako %s Dash.</string>
+    <string name="request_username_min_balance_disclaimer">Ak chcete požiadať o používateľské meno v sieti Dash, musíte mať viac ako %s Dash</string>
+
+    <!-- CoinJoin -->
+    <string name="coinjoin">CoinJoin</string>
+    <string name="turned_off">Vypnuté</string>
+    <string name="coinjoin_info_subtitle">Miešanie vašich Dashov spraví vaše transakcie súkromnejšie</string>
+    <string name="coinjoin_description_1">Keď je miešanie zapnuté, budete môcť minúť iba zmiešané Dashe. Toto je možné kedykoľvek vypnúť.</string>
+    <string name="coinjoin_description_2">Novo prijaté Dashe budú automaticky zmiešané pri otvorení peňaženky</string>
+    <string name="coinjoin_description_3">Zapnutie tejto funkcie spôsobí vyššiu spotrebu batérie</string>
+    <string name="coinjoin_mixing_level_title">Zvoliť úroveň miešania</string>
+    <string name="coinjoin_mixing_level_subtitle">Miešanie môžete kedykoľvek zastaviť, alebo zmeniť jeho úroveň</string>
+    <string name="coinjoin_mixing_transactions">Miešacie transakcie</string>
+    <string name="coinjoin_transaction_group">Tieto transakcie majú súvis s miešaním.</string>
+    <string name="intermediate">Stredne pokročilá</string>
+    <string name="advanced">Pokročilá</string>
+    <string name="intermediate_level_card_decs">Pokročilí používatelia, ktorí majú veľmi vysokú úroveň technických znalostí, môžu určiť vašu históriu transakcií</string>
+    <string name="advanced_level_card_decs">Pre pokročilých používateľov s vysokou úrovňou technických znalostí, by bolo veľmi ťažké určiť vašu históriu transakcií</string>
+    <string name="coinjoin_intermediate_time">Do 30 minút</string>
+    <string name="coinjoin_advanced_time">Niekoľko hodín</string>
+    <string name="coinjoin_start">Začať miešanie</string>
+    <string name="coinjoin_stop">Zastaviť miešanie</string>
+    <string name="coinjoin_mixing">Miešanie</string>
+    <string name="coinjoin_paused">Miešanie pozastavené</string>
+    <string name="coinjoin_not_started">Nespustené</string>
+    <string name="coinjoin_progress_balance">%1$s z %2$s</string>
+    <string name="coinjoin_progress_finished">Plne zmiešané</string>
+    <string name="coinjoin_change_level_confirmation">Naozaj chcete zmeniť úroveň ochrany osobných údajov\?</string>
+    <string name="coinjoin_stop_mixing_title">Naozaj chcete prestať s miešaním\?</string>
+    <string name="coinjoin_stop_mixing_message">Všetky prostriedky, ktoré boli zmiešané, sa spoja s vašimi nezmiešanými prostriedkami</string>
+    <string name="coinjoin_mixed_balance">Zmiešaná bilancia:</string>
+
+    <!-- credit balance messages / buttons -->
+    <string name="credit_balance_empty_warning_title">Váš kreditný zostatok je nízky</string>
+    <string name="credit_balance_low_warning_title">Váš kreditný zostatok je úplne vyčerpaný</string>
+    <string name="credit_balance_empty_warning_message">Na platby môžete naďalej používať DashPay, ale nemôžete aktualizovať svoj profil ani pridať ďalšie kontakty, kým nedobijete svoj kredit</string>
+    <string name="credit_balance_low_warning_message">Doplňte si kredit, aby ste mohli pokračovať v zmenách vo svojom profile a pridávaní kontaktov</string>
+    <string name="credit_balance_button_maybe_later">Možno neskôr</string>
+    <string name="credit_balance_button_buy">Kúpiť kredity</string>
+    <string name="credit_balance_insufficient_error_message">Nemáte dostatok prostriedkov na nákup kreditov</string>
+    <string name="buy_credits_estimated_items">%s - %d kontakty / %d aktualizácie profilu</string>
+
+    <string name="request_username_username_voting_message">+ čo je to hlasovanie o používateľskom mene\?</string>
+    <string name="request_username_character_requirement">Iba písmená, čísla a spojovníky</string>
+    <string name="request_username_balance_requirement">Na vytvorenie tohto používateľského mena potrebujete mať 0,25 DASH</string>
+    <string name="request_username_length_requirement">Medzi 3 a 23 znakmi</string>
+    <string name="request_username_confirm">Prijímam</string>
+    <string name="username_vote_one_left_message">Za toto používateľské meno ste už hlasovali %d krát. Pre toto používateľské meno môžete odovzdať už len jeden hlas.</string>
+    <string name="username_vote_one_left">Zostáva jeden hlas</string>
+    <string name="username_vote_none_left_message">Za toto používateľské meno ste už hlasovali %d krát. Pre toto používateľské meno už nemôžete hlasovať.</string>
+    <string name="username_vote_none_left">Nezostávajú žiadne hlasy</string>
+    <string name="request_username_blocked">Požadované používateľské meno bolo zablokované</string>
+    <string name="request_username_lost_vote">Požadované používateľské meno bolo pridelené niekomu inému</string>
+    <string name="request_username_blocked_message">Používateľské meno %s bolo zablokované sieťou Dash Network. Skúste to znova a požiadajte o iné používateľské meno.</string>
+    <string name="request_username_lost_vote_message">Kvôli procesu hlasovania sa Dash Network rozhodla prideliť používateľské meno %s niekomu inému. Skúste to znova a požiadajte o iné používateľské meno.</string>
+    <string name="mix_dash_mix">Miešaný zostatok</string>
+    <string name="mix_dash_title">Namiešajte váš Dash</string>
+    <string name="mix_dash_message">Ak chcete zabrániť tomu, aby ostatní ľudia videli, komu uskutočňujete platby, odporúča sa pred vytvorením používateľského mena zmiešať zostatok.</string>
+    <string name="tools_credits_title">Kredity</string>
+    <string name="tools_credits_buy_button">Kúpiť</string>
+    <string name="dashpay_what_are_credits_title">Čo sú to kredity\?</string>
+    <string name="dashpay_what_are_credits_message">Používatelia platia transakčné poplatky za interakciu so sieťou Dash. To je dôvod, prečo všetky zmeny vo vašom profile vyžadujú zaplatenie malého poplatku, ktorý je možné zaplatiť kreditmi.\n\nVaše kredity môžete použiť na:</string>
+    <string name="credits_send_and_accept_contact_requests">Posielajte a prijímajte žiadosti o kontakt</string>
+    <string name="platform_credits">Platformové kredity</string>
+    <string name="platform_credits_error">Chyba</string>
+    <string name="platform_credits_not_transferred">Čakajúce kredity platformy</string>
+    <string name="voting_period">Obdobie hlasovania</string>
+    <string name="voting_period_ends_in_days">Hlasovanie končí o %d dní</string>
+    <string name="voting_period_ends_today">Hlasovanie končí dnes</string>
+    <string name="voting_period_ends_tomorrow">Hlasovanie končí zajtra</string>
+    <string name="link_included">pridaný odkaz</string>
+    <string name="group_by">Zoskupiť podľa</string>
+</resources>

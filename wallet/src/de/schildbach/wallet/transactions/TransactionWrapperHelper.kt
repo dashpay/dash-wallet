@@ -20,12 +20,15 @@ package de.schildbach.wallet.transactions
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.TransactionWrapperFactory
+import java.time.ZoneId
 
 object TransactionWrapperHelper {
     fun wrapTransactions(
         transactions: Set<Transaction?>,
-        vararg wrappers: TransactionWrapper
+        vararg wrapperFactories: TransactionWrapperFactory
     ): Collection<TransactionWrapper> {
+        wrapperFactories.sortByDescending { it.averageTransactions }
         val wrappedTransactions = ArrayList<TransactionWrapper>()
 
         for (transaction in transactions) {
@@ -33,23 +36,27 @@ object TransactionWrapperHelper {
                 continue
             }
 
-            val anonWrapper: TransactionWrapper = object : TransactionWrapper {
-                override val transactions = setOf(transaction)
-                override fun tryInclude(tx: Transaction) = true
-                override fun getValue(bag: TransactionBag) = transaction.getValue(bag)
+            var added = false
+
+            for (wrapperFactory in wrapperFactories) {
+                val (included, wrapper) = wrapperFactory.tryInclude(transaction)
+                if (included && wrapper != null) {
+                    if (!wrappedTransactions.contains(wrapper)) {
+                        wrappedTransactions.add(wrapper)
+                    }
+                    added = true
+                    break
+                }
             }
 
-            if (wrappers.isNotEmpty()) {
-                for (wrapper in wrappers) {
-                    if (wrapper.tryInclude(transaction)) {
-                        if (!wrappedTransactions.contains(wrapper)) {
-                            wrappedTransactions.add(wrapper)
-                        }
-                        break
-                    }
-                    wrappedTransactions.add(anonWrapper)
+            if (!added) {
+                val anonWrapper: TransactionWrapper = object : TransactionWrapper {
+                    override val id: String = transaction.txId.toStringBase58()
+                    override val transactions = hashMapOf(transaction.txId to transaction)
+                    override val groupDate = transaction.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+                    override fun tryInclude(tx: Transaction) = true
+                    override fun getValue(bag: TransactionBag) = transaction.getValue(bag)
                 }
-            } else {
                 wrappedTransactions.add(anonWrapper)
             }
         }

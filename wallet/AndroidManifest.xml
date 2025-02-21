@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="de.schildbach.wallet_test"
     android:installLocation="internalOnly">
 
     <!-- normal permissions -->
@@ -15,11 +14,13 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- enable when Bluetooth functionality is completely restored -->
+    <!--uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" /-->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- dangerous permissions -->
     <uses-permission android:name="android.permission.CAMERA" /> <!-- group: CAMERA -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -58,6 +59,7 @@
         android:xlargeScreens="true" />
 
     <application
+        android:networkSecurityConfig="@xml/network_security_config"
         android:name="de.schildbach.wallet.WalletApplication"
         android:allowBackup="false"
         android:fullBackupContent="false"
@@ -98,21 +100,21 @@
         <activity
             android:name="de.schildbach.wallet.ui.verify.VerifySeedActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
+            android:theme="@style/My.Theme.ChildActivity"  />
 
         <activity
-            android:name="de.schildbach.wallet.ui.main.WalletActivity"
+            android:name="de.schildbach.wallet.ui.main.MainActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:exported="true"
             android:label="@string/app_name_short"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme"
-            android:windowSoftInputMode="adjustResize"
-            android:launchMode="singleTop" />
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity-alias
-            android:name="de.schildbach.wallet.WalletActivity"
-            android:targetActivity="de.schildbach.wallet.ui.main.WalletActivity"
+            android:name="de.schildbach.wallet.MainActivity"
+            android:targetActivity="de.schildbach.wallet.ui.main.MainActivity"
             android:exported="true">
 
             <intent-filter>
@@ -123,6 +125,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+
         </activity-alias>
 
         <activity
@@ -207,6 +210,35 @@
         </activity>
 
         <activity
+            android:name="de.schildbach.wallet.ui.InviteHandlerActivity"
+            android:label=""
+            android:excludeFromRecents="true"
+            android:theme="@style/My.Theme.Transparent"
+            android:exported="true">
+
+            <intent-filter android:autoVerify="true"
+                tools:targetApi="m">
+
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="invitations.dashpay.io"
+                    android:path="/applink"
+                    android:scheme="http" />
+
+                <data
+                    android:host="invitations.dashpay.io"
+                    android:path="/applink"
+                    android:scheme="https" />
+
+            </intent-filter>
+
+        </activity>
+
+        <activity
             android:name="de.schildbach.wallet.ui.ImportSharedImageActivity"
             android:excludeFromRecents="true"
             android:noHistory="true"
@@ -248,7 +280,7 @@
 
         <activity
             android:name="de.schildbach.wallet.ui.staking.StakingActivity"
-            android:parentActivityName="de.schildbach.wallet.ui.main.WalletActivity"
+            android:parentActivityName="de.schildbach.wallet.ui.main.MainActivity"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/LockScreenActivity.Child.Theme" />
@@ -288,6 +320,61 @@
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Theme" />
 
+        <activity
+            android:name="de.schildbach.wallet.ui.CreateUsernameActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.invite.InviteFriendActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.invite.InvitesHistoryActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.invite.AcceptInviteActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.SearchUserActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.DashPayUserActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.EditProfileActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.dashpay.CropImageActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.invite.OnboardFromInviteActivity"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.coinjoin.CoinJoinActivity"
+            android:theme="@style/LockScreenActivity.Child.Theme"
+            android:screenOrientation="portrait" />
+
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
             android:authorities="${applicationId}.address_book"
@@ -326,10 +413,33 @@
             android:name="de.schildbach.wallet.service.BlockchainServiceImpl"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- WorkManager -->
         <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <!--service
             android:name="de.schildbach.wallet.offline.AcceptBluetoothService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="connectedDevice" /-->
+
+        <!-- WorkManager -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <!-- Prompt Google Play services to install the backported photo picker module -->
+        <!-- required to support Android 7 to 12 -->
+        <service android:name="com.google.android.gms.metadata.ModuleDependencies" android:enabled="false" android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.android.gms.metadata.MODULE_DEPENDENCIES" />
+            </intent-filter>
+
+            <meta-data android:name="photopicker_activity:0:required" android:value="" />
+        </service>
 
         <receiver
             android:name="de.schildbach.wallet.service.BootstrapReceiver"
@@ -346,6 +456,10 @@
         <service
             android:name="de.schildbach.wallet.service.BlockchainSyncJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service
+            android:name="de.schildbach.wallet.ui.dashpay.CreateIdentityService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"/>
 
         <service
             android:name="de.schildbach.wallet.ui.notifications.PushMessagingService"

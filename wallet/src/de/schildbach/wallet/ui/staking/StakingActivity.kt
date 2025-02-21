@@ -26,6 +26,7 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
@@ -75,7 +76,7 @@ class StakingActivity : LockScreenActivity() {
         when (request) {
             NavigationRequest.BackupPassphrase -> checkPinAndBackupPassphrase()
             NavigationRequest.RestoreWallet -> {
-                ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
+                ResetWalletDialog.newInstance(viewModel.analytics).show(supportFragmentManager, "reset_wallet_dialog")
             }
             NavigationRequest.BuyDash -> {
                 // TODO: replace with navController navigation when Staking is integrated into nav_home
@@ -84,14 +85,11 @@ class StakingActivity : LockScreenActivity() {
             }
             NavigationRequest.SendReport -> {
                 log.info("CrowdNode initiated report")
-                alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
-                    this,
-                    packageInfoProvider,
-                    configuration,
-                    walletData.wallet,
-                    walletApplication
-                ).buildAlertDialog()
-                alertDialog.show()
+                ContactSupportDialogFragment.newInstance(
+                    getString(R.string.report_issue_dialog_title_issue),
+                    getString(R.string.report_issue_dialog_message_issue),
+                        contextualData = "CrowdNode initiated report"
+                ).show(this)
             }
             else -> { }
         }

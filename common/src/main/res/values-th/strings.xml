@@ -21,8 +21,9 @@
     <string name="transfer_dash">โอน Dash</string>
     <string name="login_error_title">ไม่สามารถเข้าสู่ระบบบัญชี %s  ของคุณได้</string>
     <string name="login_error_message">เกิดข้อผิดพลาดขณะลงชื่อเข้าใช้บัญชี %s ของคุณ</string>
+    <string name="dash_address">ที่อยู่ Dash </string>
+    <string name="username">ชื่อผู้ใช้</string>
     <string name="balance">ยอดคงเหลือ:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -55,10 +56,12 @@
     <string name="button_understand">ฉันเข้าใจ</string>
     <string name="button_okay">ตกลง</string>
     <string name="button_share">แบ่งปัน</string>
+    <string name="button_skip">ข้าม</string>
     <string name="share_address">แชร์ที่อยู่</string>
     <string name="verify">ตรวจสอบ</string>
     <string name="receive_enter_amount_button">ระบุจำนวน</string>
     <string name="account_create">สร้างบัญชี</string>
+    <string name="try_again">ลองอีกครั้ง</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">ค้นหา</string>
@@ -101,4 +104,4 @@
 
     <string name="chain_syncing">โซ่กำลังซิงค์...</string>
 
-</resources>
+    </resources>

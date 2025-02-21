@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Δημιουργία Νέου Πορτοφολιού</string>
     <string name="onboarding_recover_wallet">Επαναφορά Πορτοφολιού με την φράση ανάκτησης</string>
@@ -25,13 +25,17 @@
     <string name="dialog_confirm_secured_by">Ασφαλισμένo από</string>
     <string name="dialog_confirm_fee">Τέλος δικτύου</string>
     <string name="dialog_confirm_total">Σύνολο</string>
+    <string name="dialog_confirm_accept_contact_request">Αποδοχή αιτήματος επαφής</string>
 
+    <string name="shortcut_action_join_dashpay">Εγγραφείτε στο DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Αντίγραφο ασφαλείας</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Σάρωση</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Αποστολή</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_contact">Στείλτε στην επαφή</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Αγορά &amp; Πώληση</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -75,6 +79,9 @@
     <string name="payments_title">Πληρωμές</string>
     <string name="payments_tab_pay_label">Αποστολή</string>
     <string name="payments_tab_receive_label">Λήψη</string>
+    <string name="payments_pay_to_contact_title">Στείλτε σε μια επαφή</string>
+    <string name="payments_pay_to_contact_sub_title">Ένα άτομο στις επαφές σας</string>
+    <string name="payments_pay_to_contact_button">Επιλογή</string>
     <string name="payments_pay_by_qr_title">Αποστολή με</string>
     <string name="payments_pay_by_qr_sub_title">Σάρωση QR κωδικού</string>
     <string name="payments_pay_to_clipboard_title">Αποστολή στη αντιγραμμένη διεύθυνση</string>
@@ -183,6 +190,8 @@
     <string name="notification_settings_title">Ειδοποιήσεις</string>
     <string name="notification_explainer_title">Το Dash Wallet θα ήθελε να σας στέλνει ειδοποιήσεις</string>
     <string name="notification_explainer_message">Οι ειδοποιήσεις μπορεί να περιλαμβάνουν ειδοποιήσεις, ήχους και διακριτικά εικονιδίων. Αυτές μπορούν να διαμορφωθούν στις Ρυθμίσεις του τηλεφώνου.</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">Κατάσταση των συνεχιζόμενων εργασιών DashPay.</string>
 
     <string name="net_type_indicator" />
 
@@ -236,9 +245,11 @@
     <string name="transaction_close">κλείσιμο</string>
     <string name="transaction_details_amount_received">Ποσοστό Ληφθέντων</string>
     <string name="transaction_details_amount_sent">Ποσοστό Απεσταλμένων</string>
+    <string name="transaction_details_amount_sent_successfully">Εστάλη με επιτυχία</string>
     <string name="transaction_details_sent_from">Αποστολή από</string>
     <string name="transaction_details_sent_to">Αποστόλη στο</string>
     <string name="transaction_details_received_at">Ελήφθησαν στο</string>
+    <string name="transaction_details_received_from">Ελήφθησαν από</string>
     <string name="transaction_details_moved_from">Μετακινήθηκε από</string>
     <string name="transaction_details_moved_internally_to">Μετακινήθηκε εσωτερικά στο</string>
     <string name="transaction_failed_details">Η συναλλαγή απέτυχε</string>
@@ -252,6 +263,8 @@
     <string name="authenticate_switch_to_fingerprint">Χρησιμοποιήστε το δακτυλικό σας αποτύπωμα</string>
     <string name="authenticate_switch_to_pin">Χρησιμοποιήστε το PIN</string>
 
+    <string name="menu_invite_title">Πρόσκληση</string>
+    <string name="menu_invite_subtitle">Βοηθήστε τους φίλους και την οικογένειά σας να συμμετάσχουν στο Dash</string>
     <string name="menu_buy_and_sell_title">Αγορά και Πώληση Dash</string>
     <string name="menu_buy_and_sell_subtitle">Συνδεθείτε με ανταλλακτήρια τρίτων</string>
     <string name="liquid_unavailable">Η ενσωμάτωση της Liquid με το Dash Wallet δεν είναι πλέον διαθέσιμη</string>
@@ -278,9 +291,7 @@
     <string name="about_review_and_rate">Κρίνετε και βαθμολογήστε την εφαρμογή</string>
     <string name="about_contact_support">Επικοινωνήστε με την υποστήριξη</string>
     <string name="about_fork_disclaimer">Πρόκειται για μια εφαρμογή ανοιχτού κώδικα που διαχωρίστηκε από το Bitcoin πορτοφόλι</string>
-    <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
     <string name="about_license">Γενική Άδεια Δημόσιας Χρήσης GNU v3.0</string>
-    <string name="about_version_name">Dash Wallet %s</string>
     <string name="about_last_explore_device_sync">Τελευταίος συγχρονισμός συσκευής εξερεύνησης</string>
     <string name="about_last_explore_server_update">Τελευταία ενημέρωση διακομιστή εξερεύνησης</string>
     <string name="about_firebase_installation_id">ID εγκατάστασης Firebase</string>
@@ -331,6 +342,12 @@
     <string name="welcome_screen_title_3">Περισσότερος Έλεγχος</string>
     <string name="welcome_screen_subtitle_3">Έχετε τον πλήρη έλεγχο να προσαρμόσετε το πορτοφόλι σας ανάλογα με τις ανάγκες σας</string>
 
+    <string-array name="history_filter">
+        <item>Όλα</item>
+        <item>Ελήφθησαν</item>
+        <item>Εστάλη</item>
+    </string-array>
+
     <string name="sync_status_wait">Περιμένετε να ολοκληρωθεί ο συγχρονισμός</string>
     <string name="sync_status_syncing_sub_title">Μεσώ του Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Δεν είναι δυνατή η σύνδεση</string>
@@ -355,6 +372,29 @@
     <string name="import_image_no_private_key_copied">Δεν αντιγράφηκε κανένα ιδιωτικό κλειδί</string>
     <string name="import_image_import_valid_private_key">Αντιγράψτε ένα έγκυρο ιδιωτικό κλειδί για να εισάγετε Dash από αυτό</string>
     <string name="import_image_invalid_private">Μη έγκυρο ιδιωτικό κλειδί</string>
+    <string name="okay">Εντάξει</string>
+
+    <string name="onboard_from_invite_title">Ας ξεκινήσουμε</string>
+    <string name="onboard_from_invite_subtitle">Καλώς ήρθατε στο DashPay</string>
+    <string name="onboard_from_invite_step1">Βήμα 1</string>
+    <string name="onboard_from_invite_step2">Βήμα 2</string>
+    <string name="onboard_from_invite_step3">Βήμα 3</string>
+    <string name="onboard_from_invite_step1_title">Επιλέξτε το όνομα χρήστη σας</string>
+    <string name="onboard_from_invite_step2_title">Ορίστε το PIN σας</string>
+    <string name="onboard_from_invite_step3_title">Ασφαλίστε το πορτοφόλι σας</string>
+
+    <string name="restore_wallet_please_wait">Παρακαλώ περιμένετε</string>
+    <string name="restore_wallet_restoring">Το πορτοφόλι σας αποκαθίσταται</string>
+
+
+
+    <string name="network_unavailable">Μη διαθέσιμο δίκτυο</string>
+    <string name="network_error_contact_details">Αδυναμία λήψης στοιχείων επαφής</string>
+    <string name="network_error_user_search">Αδυναμία αναζήτησης για χρήστη</string>
+    <string name="network_error_contact_suggestions">Αδυναμία παροχής προτάσεων</string>
+    <string name="network_error_unable_to_update_profile">Αδυναμία ενημέρωσης του προφίλ σας</string>
+
+
 
     <string name="today">Σήμερα</string>
     <string name="yesterday">Εχθές</string>
@@ -365,6 +405,8 @@
     <string name="all_transactions">Όλα</string>
     <string name="received_transactions">Ελήφθησαν</string>
     <string name="sent_transactions">Εστάλη</string>
+    <string name="serious_error_title">Σοβαρό σφάλμα</string>
+    <string name="serious_error_unknown">Επικοινωνήστε με την υποστήριξη.</string>
     <string name="set_pin_error_missing_wallet_title">Σφάλμα έλλειψης πορτοφολιού</string>
     <string name="set_pin_error_missing_wallet_message">Το πορτοφόλι λείπει. Παρακαλούμε αναφέρετέ το στο Γραφείο Υποστήριξης.</string>
     <string name="wallet_encryption_error_title">Σφάλμα δημιουργίας πορτοφολιού</string>
@@ -380,6 +422,10 @@
     <string name="launch_reset_wallet_extra_message">Δημιουργήστε αντίγραφα ασφαλείας της φράσης ανάκτησης</string>
     <string name="start_reset_wallet_title">Μπορεί να χάσετε %s</string>
     <string name="reset_wallet_text">Επαναφορά Πορτοφολιού</string>
+
+
+
+    <!-- Tax category -->
     <string name="reclassify_transactions_title">Αναταξινόμηση των συναλλαγών σας</string>
     <string name="reclassify_transactions_title_message">Αυτές οι ταξινομήσεις θα αντικατοπτρίζονται στην εξαγωγή του CSV που μπορεί να χρησιμοποιηθεί για εισαγωγή σε υπηρεσίες υποβολής φορολογικών αναφορών.</string>
     <string name="reclassify_transactions_question">Πού μπορώ να αλλάξω τη φορολογική κατηγορία;</string>
@@ -410,6 +456,8 @@
     <string name="masternode_key_not_used">Δεν χρησιμοποιείται</string>
     <string name="masternode_key_revoked">Ανακλήθηκε</string>
     <string name="masternode_key_private_public_base64">Ιδιωτικά/δημόσια κλειδιά (base64)</string>
+    <string name="timeskew_ahead">μπροστά</string>
+    <string name="timeskew_behind">πίσω </string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Οι τιμές δεν ανακτήθηκαν. Οι Fiat τιμές ενδέχεται να είναι εσφαλμένες.</string>

@@ -17,11 +17,32 @@
 
 package de.schildbach.wallet.util.viewModels
 
+import android.os.Looper
+import android.telephony.TelephonyManager
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.datastore.preferences.core.Preferences
-import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.MutableLiveData
+import androidx.work.WorkManager
+import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.Constants
+import androidx.lifecycle.SavedStateHandle
+import dagger.hilt.android.EntryPointAccessors
+import de.schildbach.wallet.database.AppDatabase
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.transactions.TxFilterType
+import androidx.datastore.preferences.core.Preferences
+import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.database.dao.DashPayContactRequestDao
+import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
@@ -32,6 +53,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.*
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
@@ -42,8 +64,10 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.RateRetrievalState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -68,6 +92,34 @@ class MainCoroutineRule(
 class MainViewModelTest {
     private val configMock = mockk<Configuration>()
     private val exchangeRatesMock = mockk<ExchangeRatesProvider>()
+    private val walletApp = mockk<WalletApplication> {
+        every { applicationContext } returns mockk()
+        every { mainLooper } returns Looper.getMainLooper()
+    }
+    private val platformService = mockk<PlatformService>()
+    private val platformSyncService = mockk<PlatformSyncService>()
+    private val mockIdentityData = BlockchainIdentityBaseData(-1, BlockchainIdentityData.CreationState.NONE, null, null, null, false,null, false)
+    private val blockchainIdentityConfigMock = mockk<BlockchainIdentityConfig> {
+        coEvery { loadBase() } returns mockIdentityData
+        every { observeBase() } returns MutableStateFlow(mockIdentityData)
+    }
+    private val dashPayProfileDaoMock = mockk<DashPayProfileDao> {
+        every { observeByUserId(any()) } returns MutableStateFlow(null)
+    }
+    private val invitationsDaoMock = mockk<InvitationsDao> {
+        coEvery { loadAll() } returns listOf()
+    }
+    private val appDatabaseMock = mockk<AppDatabase> {
+        every { dashPayProfileDao() } returns dashPayProfileDaoMock
+        every { dashPayContactRequestDao() } returns mockk()
+        every { invitationsDao() } returns invitationsDaoMock
+        every { userAlertDao() } returns userAgentDaoMock
+        every { transactionMetadataDocumentDao() } returns mockk()
+        every { transactionMetadataCacheDao() } returns mockk()
+    }
+    private val workManagerMock = mockk<WorkManager> {
+        every { getWorkInfosByTagLiveData(any()) } returns MutableLiveData(listOf())
+    }
     private val savedStateMock = mockk<SavedStateHandle>()
 
     private val analyticsService = mockk<AnalyticsService> {
@@ -85,11 +137,28 @@ class MainViewModelTest {
     private val transactionMetadataMock = mockk<TransactionMetadataProvider> {
         every { observePresentableMetadata() } returns MutableStateFlow(mapOf())
     }
+    private val dashPayContactRequestDao = mockk<DashPayContactRequestDao>()
+    private val mockDashPayConfig = mockk<DashPayConfig> {
+        every { observe<Long>(any()) } returns MutableStateFlow(0L)
+        coEvery { areNotificationsDisabled() } returns false
+    }
 
     private val uiConfigMock = mockk<WalletUIConfig> {
         every { observe(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
         every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns MutableStateFlow("USD")
     }
+
+    private val userAgentDaoMock = mockk<UserAlertDao> {
+        every { observe(any()) } returns flow { }
+    }
+
+    private val platformRepo = mockk<PlatformRepo>()
+
+    private val biometricHelper = mockk<BiometricHelper>()
+    private val telephonyManager = mockk<TelephonyManager>()
+    private val coinJoinConfig = mockk<CoinJoinConfig>()
+    private val coinJoinService = mockk<CoinJoinService>()
+    private val crowdNodeApi = mockk<CrowdNodeApi>()
 
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
@@ -103,6 +172,7 @@ class MainViewModelTest {
         every { configMock.registerOnSharedPreferenceChangeListener(any()) } just runs
 
         every { blockchainStateMock.observeState() } returns flow { BlockchainState() }
+        every { blockchainStateMock.observeSyncStage() } returns MutableStateFlow(PeerGroup.SyncStage.BLOCKS)
         every { exchangeRatesMock.observeExchangeRate(any()) } returns flow { ExchangeRate("USD", "100") }
         every { walletDataMock.observeBalance() } returns flow { Coin.COIN }
         every { walletDataMock.observeMostRecentTransaction() } returns flow {
@@ -123,19 +193,58 @@ class MainViewModelTest {
                 0
             )
         }
+        every { exchangeRatesMock.observeStaleRates(any()) } returns flow { RateRetrievalState(false, false, false) }
+        mockkStatic(WalletApplication::class)
+        every { WalletApplication.getInstance() } returns walletApp
 
+        val mockPlatformRepoEntryPoint = mockk<PlatformRepo.PlatformRepoEntryPoint> {
+            every { provideAppDatabase() } returns appDatabaseMock
+        }
+        mockkStatic(EntryPointAccessors::class)
+        every {
+            EntryPointAccessors.fromApplication(walletApp, PlatformRepo.PlatformRepoEntryPoint::class.java)
+        } returns mockPlatformRepoEntryPoint
+
+        mockkObject(PlatformRepo.Companion)
+        //every { PlatformRepo.Companion.getInstance() } returns mockk {
+        //    every { walletApplication } returns walletApp
+        //}
+
+        mockkStatic(WorkManager::class)
+        every { WorkManager.getInstance(any()) } returns workManagerMock
         every { savedStateMock.get<TxFilterType>(eq("tx_direction")) } returns TxFilterType.ALL
         every { savedStateMock.set<TxFilterType>(any(), any()) } just runs
     }
 
-    @Test
+    @Test(timeout = 1000)
     fun observeBlockchainState_replaying_notSynced() {
         every { blockchainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
+
         val viewModel = spyk(
             MainViewModel(
-                analyticsService, configMock, uiConfigMock,
-                exchangeRatesMock, walletDataMock, savedStateMock, transactionMetadataMock,
-                blockchainStateMock, mockk(), mockk()
+                analyticsService,
+                configMock,
+                uiConfigMock,
+                exchangeRatesMock,
+                walletDataMock,
+                walletApp,
+                platformRepo,
+                platformService,
+                platformSyncService,
+                blockchainIdentityConfigMock,
+                savedStateMock,
+                transactionMetadataMock,
+                blockchainStateMock,
+                biometricHelper,
+                telephonyManager,
+                invitationsDaoMock,
+                userAgentDaoMock,
+                dashPayProfileDaoMock,
+                mockDashPayConfig,
+                dashPayContactRequestDao,
+                coinJoinConfig,
+                coinJoinService,
+                crowdNodeApi
             )
         )
 
@@ -152,9 +261,29 @@ class MainViewModelTest {
         every { blockchainStateMock.observeState() } returns MutableStateFlow(state)
         val viewModel = spyk(
             MainViewModel(
-                analyticsService, configMock, uiConfigMock,
-                exchangeRatesMock, walletDataMock, savedStateMock, transactionMetadataMock,
-                blockchainStateMock, mockk(), mockk()
+                analyticsService,
+                configMock,
+                uiConfigMock,
+                exchangeRatesMock,
+                walletDataMock,
+                walletApp,
+                platformRepo,
+                platformService,
+                platformSyncService,
+                blockchainIdentityConfigMock,
+                savedStateMock,
+                transactionMetadataMock,
+                blockchainStateMock,
+                biometricHelper,
+                telephonyManager,
+                invitationsDaoMock,
+                userAgentDaoMock,
+                dashPayProfileDaoMock,
+                mockDashPayConfig,
+                dashPayContactRequestDao,
+                coinJoinConfig,
+                coinJoinService,
+                crowdNodeApi
             )
         )
 

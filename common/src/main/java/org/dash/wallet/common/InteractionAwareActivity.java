@@ -48,6 +48,10 @@ public class InteractionAwareActivity extends SecureActivity {
         ((AutoLogoutTimerHandler) getApplication()).resetAutoLogoutTimer();
     }
 
+    public void imitateUserInteraction() {
+        onUserInteraction();
+    }
+
     @Override
     protected void onDestroy() {
         try {

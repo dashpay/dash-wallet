@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.crowdnode.utils
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -47,5 +48,7 @@ open class CrowdNodeConfig @Inject constructor(
         val WITHDRAWAL_LIMIT_PER_HOUR = longPreferencesKey("withdrawal_limit_per_hour")
         val WITHDRAWAL_LIMIT_PER_DAY = longPreferencesKey("withdrawal_limit_per_day")
         val LAST_WITHDRAWAL_BLOCK = intPreferencesKey("last_withdrawal_block")
+        val FEE_PERCENTAGE = doublePreferencesKey("fee_double")
+        val LAST_FEE_REQUEST = longPreferencesKey("last_fee_request")
     }
 }

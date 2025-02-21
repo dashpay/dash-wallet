@@ -20,6 +20,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import androidx.appcompat.widget.Toolbar
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.BlockInfo
 import de.schildbach.wallet_test.R
@@ -51,8 +52,9 @@ class BlockInfoActivity : LockScreenActivity() {
 
         binding = ActivityBlockInfoBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.appBar.toolbar.title = getString(R.string.block_info)
-        binding.appBar.toolbar.setNavigationOnClickListener { finish() }
+        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        toolbar.title = getString(R.string.block_info)
+        toolbar.setNavigationOnClickListener { finish() }
 
         val blockInfo = intent.getSerializableExtra(BLOCK_INFO_EXTRA) as BlockInfo
         binding.blockHeight.text = "${blockInfo.height}"

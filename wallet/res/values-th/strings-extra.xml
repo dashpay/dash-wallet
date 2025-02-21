@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">สร้างกระเป๋าสตางค์ใหม่</string>
     <string name="onboarding_recover_wallet">การกู้คืนกระเป๋าสตางค์จากวลีรหัสผ่าน</string>
@@ -25,13 +25,15 @@
     <string name="dialog_confirm_secured_by">รักษาความปลอดภัยโดย</string>
     <string name="dialog_confirm_fee">ค่าธรรมเนียมเครือข่าย</string>
     <string name="dialog_confirm_total">ทั้งหมด</string>
-
+    <string name="shortcut_action_join_dashpay">เข้าร่วม DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">การสำรองข้อมูล</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">สแกน</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">ส่ง</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_contact">ส่งไปยังผู้ติดต่อ</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">ซื้อ &amp; ขาย</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -75,6 +77,9 @@
     <string name="payments_title">การชำระเงิน</string>
     <string name="payments_tab_pay_label">ส่ง</string>
     <string name="payments_tab_receive_label">ได้รับ</string>
+    <string name="payments_pay_to_contact_title">ส่งไปยังผู้ติดต่อ</string>
+    <string name="payments_pay_to_contact_sub_title">บุคคลในรายชื่อผู้ติดต่อของคุณ</string>
+    <string name="payments_pay_to_contact_button">เลือก</string>
     <string name="payments_pay_by_qr_title">ส่งจาก</string>
     <string name="payments_pay_by_qr_sub_title">สแกนโค้ด QR</string>
     <string name="payments_pay_to_clipboard_title">ส่งไปยังที่อยู่ที่คัดลอก</string>
@@ -180,7 +185,6 @@
     <string name="notification_settings_title">การแจ้งเตือน</string>
     <string name="notification_explainer_title">กระเป๋าเงิน Dash ต้องการส่งการแจ้งเตือนถึงคุณ</string>
     <string name="notification_explainer_message">การแจ้งเตือนอาจรวมถึงการแจ้งเตือนเสียงและป้ายไอคอนสิ่งเหล่านี้สามารถกำหนดค่าได้ในการตั้งค่าโทรศัพท์</string>
-
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">ใช้ลายนิ้วมือของคุณเพื่อปลดล็อค</string>
@@ -236,6 +240,7 @@
     <string name="transaction_details_sent_from">ส่งจาก</string>
     <string name="transaction_details_sent_to">ส่งไปยัง</string>
     <string name="transaction_details_received_at">ได้รับที่</string>
+    <string name="transaction_details_received_from">ได้รับจาก</string>
     <string name="transaction_details_moved_from">เคลื่อนย้ายจาก</string>
     <string name="transaction_details_moved_internally_to">ย้ายไปภายแล้ว</string>
     <string name="transaction_failed_details">การทำธุรกรรมล้มเหลว</string>
@@ -249,6 +254,7 @@
     <string name="authenticate_switch_to_fingerprint">ใช้ลายนิ้วมือ</string>
     <string name="authenticate_switch_to_pin">ใช้รหัส PIN</string>
 
+    <string name="menu_invite_title">การเชิญ</string>
     <string name="menu_buy_and_sell_title">ซื้อ &amp; ขาย Dash</string>
     <string name="menu_buy_and_sell_subtitle">เชื่อมต่อกับการแลกเปลี่ยนบุคคลที่สาม</string>
     <string name="liquid_unavailable">ไม่มีการรวม Liquid กับกระเป๋าเงิน Dash อีกต่อไป</string>
@@ -275,9 +281,7 @@
     <string name="about_review_and_rate">ตรวจสอบและให้คะแนนแอพ</string>
     <string name="about_contact_support">ติดต่อฝ่ายสนับสนุน</string>
     <string name="about_fork_disclaimer">นี่คือซอฟต์แวร์โอเพนซอร์ซแอพพลิเคชั่นที่แยกสาขาออกมาจากกระเป๋าสตางค์บิทคอยน์</string>
-    <string name="about_copyright">ลิขสิทธิ์ © 2023 Dash Core Group</string>
     <string name="about_license">สัญญาอนุญาตให้ใช้ซอฟต์แวร์ หรือไลเซนส์ แบบหนึ่ง ซึ่งสงวนลิขสิทธิ์ของซอฟต์แวร์นั้น แต่อนุญาตให้บุคคลใดๆทำซ้ำ เผยแพร่ และ/หรือดัดแปลงซอฟต์แวร์นั้นได้อย่างถูกต้องตามกฎหมาย และโดยเสรี เวอร์ชั่น3.0</string>
-    <string name="about_version_name">กระเป๋าสตางค์ Dash%s</string>
     <string name="about_last_explore_device_sync">การสำรวจการซิงค์อุปกรณ์ล่าสุด</string>
     <string name="about_last_explore_server_update">การอัปเดตเซิร์ฟเวอร์ครั้งล่าสุด</string>
     <string name="about_firebase_installation_id">รหัสการติดตั้ง Firebase</string>
@@ -328,6 +332,12 @@
     <string name="welcome_screen_title_3">ควบคุมมากขึ้น</string>
     <string name="welcome_screen_subtitle_3">มีการควบคุมที่สมบูรณ์และกำหนดกระเป๋าสตางค์ของคุณตามความต้องการของคุณ</string>
 
+    <string-array name="history_filter">
+        <item>ทั้งหมด</item>
+        <item>ได้รับ</item>
+        <item>ส่ง</item>
+    </string-array>
+
     <string name="sync_status_wait">โปรดรอจนกว่าการซิงค์จะเสร็จสมบูรณ์</string>
     <string name="sync_status_syncing_sub_title">กับ Dash Blockchain</string>
     <string name="sync_status_unable_to_connect">ไม่สามารถเชื่อมต่อ</string>
@@ -352,7 +362,18 @@
     <string name="import_image_no_private_key_copied">ไม่มีการคัดลอกคีย์ส่วนตัว</string>
     <string name="import_image_import_valid_private_key">คัดลอกคีย์ส่วนตัวที่ถูกต้องเพื่อนำเข้า Dash</string>
     <string name="import_image_invalid_private">คีย์ส่วนตัวไม่ถูกต้อง</string>
+    <string name="okay">ตกลง</string>
 
+    <string name="onboard_from_invite_subtitle">ยินดีต้อนรับสู่ DashPay</string>
+    <string name="onboard_from_invite_step1_title">เลือกชื่อผู้ใช้ของคุณ</string>
+    <string name="onboard_from_invite_step2_title">ตั้งค่าพินของคุณ</string>
+    <string name="onboard_from_invite_step3_title">รักษาความปลอดภัยให้กระเป๋าเงินของคุณ</string>
+
+    <string name="restore_wallet_please_wait">กรุณารอสักครู่</string>
+    <string name="network_unavailable">เครือข่ายไม่พร้อมใช้งาน</string>
+    <string name="network_error_contact_details">ไม่สามารถดึงรายละเอียดการติดต่อได้</string>
+    <string name="network_error_user_search">ไม่สามารถค้นหาผู้ใช้</string>
+    <string name="network_error_contact_suggestions">ไม่สามารถให้คำแนะนำ</string>
     <string name="today">วันนี้</string>
     <string name="yesterday">เมื่อวาน</string>
 
@@ -377,6 +398,10 @@
     <string name="launch_reset_wallet_extra_message">สำรองวลีการกู้คืนของคุณ</string>
     <string name="start_reset_wallet_title">คุณอาจสูญเสีย %s</string>
     <string name="reset_wallet_text">รีเซ็ตกระเป๋าสตางค์</string>
+
+
+
+    <!-- Tax category -->
     <string name="reclassify_transactions_title">จัดประเภทธุรกรรมของคุณใหม่</string>
     <string name="reclassify_transactions_title_message">การจำแนกประเภทเหล่านี้จะแสดงให้เห็นในการส่งออก CSV ที่สามารถใช้ในการนำเข้าสู่บริการรายงานภาษี</string>
     <string name="reclassify_transactions_question">ฉันจะเปลี่ยนหมวดหมู่ภาษีได้ที่ไหน</string>
@@ -407,5 +432,4 @@
     <string name="masternode_key_not_used">ไม่ได้ใช้</string>
     <string name="masternode_key_revoked">ยกเลิก</string>
     <string name="masternode_key_private_public_base64">Private / Public Keys (base64)</string>
-
     </resources>

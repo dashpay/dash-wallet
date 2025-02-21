@@ -37,6 +37,7 @@ import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
 
+@Suppress("DEPRECATION")
 @SuppressLint("Registered")
 @AndroidEntryPoint
 open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment.WalletProvider {

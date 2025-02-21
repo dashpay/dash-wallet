@@ -9,10 +9,11 @@
     <string name="blockchain_state_progress_days">%1$s, pozadu %2$d dní</string>
     <string name="blockchain_state_progress_weeks">%1$s, pozadu %2$d týždňov</string>
     <string name="blockchain_state_progress_months">%1$s, pozadu %2$d mesiacov</string>
-    <string name="blockchain_state_progress_downloading">Synchronizácia so sieťou</string>
+    <string name="blockchain_state_progress_downloading">Synchronizácia so sieťou (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Synchronizácia pozastavená</string>
     <string name="blockchain_state_progress_problem_storage">Synchronizácia: Problém s dátovým úložiskom</string>
     <string name="blockchain_state_progress_problem_network">Synchronizácia: Problém so sieťou</string>
+    <string name="mixing_state_progress_mixing">Miešanie mincí (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Dash adresa skopírovaná do schránky</string>
     <string name="wallet_address_dialog_fragment_hint">Pre ochranu súkromia sa vaša adresa zmení vždy po prijatí platby.</string>
     <string name="wallet_balance_fragment_too_much">Tato čiastka je pomerne vysoká na nosenie vo vrecku. Presuňte nejakú čiastku na bezpečnejšie miesto.</string>
@@ -42,6 +43,8 @@
     <string name="wallet_low_storage_dialog_button_apps">Spravovať aplikácie</string>
     <string name="wallet_timeskew_dialog_title">Kontrola nastavenia času a dátumu</string>
     <string name="wallet_timeskew_dialog_msg">Čas na vašom zariadené je posunutý o %d minút. Kvôli tomuto problému pravdepodobne nemôžete odosielať alebo prijímať Dash.\n\nMali by ste skontrolovať a v prípade potreby opraviť dátum, čas a časové pásmo.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg">Čas vášho zariadenia je %s po %d sekundách. Kvôli tomuto rozdielu nemôžete používať CoinJoin.\n\nAby ste mohli používať CoinJoin, nastavenia času na vašom zariadení je potrebné zmeniť na „Nastaviť čas automaticky“.</string>
+    <string name="settings_coinjoin_timeskew_dialog_msg">Čas vášho zariadenia je posunutý o viac ako 5 sekúnd. Kvôli tomuto rozdielu nemôžete používať CoinJoin.\n\nPred použitím CoinJoin je potrebné zmeniť nastavenia času na vašom zariadení na „Nastaviť čas automaticky“.</string>
     <string name="send_coins_activity_title">Poslať Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Získavanie podpisu z %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Získavanie podpisu zlyhalo</string>
@@ -145,7 +148,7 @@
     <string name="transaction_row_message_received_dust">Takéto malé množstvo zrejme nebude možné minúť.</string>
     <string name="transaction_row_message_received_pay_to_many">Táto platba je pre viac peňaženiek než len pre Vašu, čo môže spomaliť časom túto aplikáciu. Pokiaľ môžete, pokúste sa prijímať platby, ktoré sú iba pre vás.</string>
     <string name="transaction_row_message_received_rbf">U tejto platby došlo k meškaniu, pretože odosielateľ použil nezabezpečený spôsob platby.</string>
-    <string name="transaction_row_status_received">Prijté</string>
+    <string name="transaction_row_status_received">Prijaté</string>
     <string name="transaction_row_status_sent">Poslané</string>
     <string name="transaction_row_status_sending">Odosielam</string>
     <string name="transaction_row_status_sent_internally">Interná</string>
@@ -171,6 +174,10 @@
     <string name="transaction_row_status_masternode_revoke">Masternód odvolaný</string>
     <string name="transaction_row_status_masternode_reward">Masternód odmena</string>
     <string name="transaction_row_status_mining_reward">Odmena za ťažbu</string>
+    <string name="transaction_row_status_coinjoin_mixing_fee">Poplatok za miešanie CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_make_collateral">Kolaterálne vstupy Coinjoin</string>
+    <string name="transaction_row_status_coinjoin_mixing">Miešanie CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_create_denominations">Vytvorené denominácie CoinJoin</string>
     <string name="network_monitor_activity_title">Stav siete</string>
     <string name="network_monitor_peer_list_title">Uzly</string>
     <string name="network_monitor_block_list_title">Bloky</string>
@@ -289,6 +296,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">Pripojiť dáta peňaženky</string>
     <string name="report_issue_dialog_mail_intent_chooser">Odoslať správu použitím…</string>
     <string name="report_issue_dialog_mail_intent_failed">Odosielanie hlásenia zlyhalo.</string>
+    <string name="report_issue_dialog_generating_report">Generovanie prehľadu</string>
     <string name="report_transaction_history_export">Exportovať</string>
     <string name="report_transaction_history_title">Export CSV</string>
     <string name="report_transaction_history_not_synced_title">Export CSV</string>
@@ -329,6 +337,7 @@
     <string name="notification_inactivity_message">Na tomto zariadení máte stále Dashe! Nezabudnite si pred odinštalovaním Dash peňaženky zapísať svoju frázu pre obnovenie, inak stratíte svoj zostatok %s.</string>
     <string name="notification_inactivity_action_dismiss">Pripomenúť neskôr </string>
     <string name="notification_inactivity_action_dismiss_forever">Nepripomínať</string>
+    <string name="notification_bluetooth_service_listening">Pripravené na prijímanie platieb cez Bluetooth</string>
     <string name="appwidget_wallet_balance_title">Bilancia Dash</string>
 
     <!-- generic buttons -->
@@ -404,4 +413,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">Chcete dostávať platby na pozadí?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Táto aplikácia je nakonfigurovaná tak, aby bola spustená aj vtedy, keď nebude nejaký čas viditeľná.\n\nOdporúčame tejto aplikácii povoliť, aby mala vždy aktuálne informácie o blockchaine, a to aj na pozadí.\n\nNebojte sa, vždy nám bude záležať na spotrebe batérie.</string>
     <string name="battery_optimization_dialog_button_change">Otvoriť nastavenia</string>
+    <string name="credits_profile_change_message">Aktualizujte informácie o profile</string>
+
 </resources>

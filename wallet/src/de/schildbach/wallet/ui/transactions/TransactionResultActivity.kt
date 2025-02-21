@@ -22,35 +22,49 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
+import de.schildbach.wallet.ui.main.MainActivity
+
+import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.ui.DashPayUserActivity
+import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
-import de.schildbach.wallet.ui.main.WalletActivity
+import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySuccessfulTransactionBinding
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
+import kotlinx.coroutines.flow.filterNotNull
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
  */
 @AndroidEntryPoint
 class TransactionResultActivity : LockScreenActivity() {
-
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
 
     companion object {
-        const val EXTRA_TX_ID = "tx_id"
-        const val EXTRA_USER_AUTHORIZED_RESULT_EXTRA = "user_authorized_result_extra"
+        private const val EXTRA_TX_ID = "tx_id"
+        private const val EXTRA_USER_AUTHORIZED_RESULT_EXTRA = "user_authorized_result_extra"
+        private const val EXTRA_USER_AUTHORIZED = "user_authorized"
         private const val EXTRA_PAYMENT_MEMO = "payee_name"
         private const val EXTRA_PAYEE_VERIFIED_BY = "payee_verified_by"
+        private const val EXTRA_USER_DATA = "user_data"
 
         @JvmStatic
         fun createIntent(
@@ -84,15 +98,39 @@ class TransactionResultActivity : LockScreenActivity() {
             return Intent(context, TransactionResultActivity::class.java).apply {
                 setAction(action)
                 putExtra(EXTRA_TX_ID, transaction.txId)
-                putExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, userAuthorized)
+                putExtra(EXTRA_USER_AUTHORIZED, userAuthorized)
                 putExtra(EXTRA_PAYMENT_MEMO, paymentMemo)
                 putExtra(EXTRA_PAYEE_VERIFIED_BY, payeeVerifiedBy)
             }
         }
+
+        @JvmStatic
+        fun createIntent(context: Context, action: String?, transaction: Transaction, userAuthorized: Boolean,
+                         userData: UsernameSearchResult?): Intent {
+            return Intent(context, TransactionResultActivity::class.java).apply {
+                setAction(action)
+                putExtra(EXTRA_TX_ID, transaction.txId)
+                putExtra(EXTRA_USER_AUTHORIZED, userAuthorized)
+                putExtra(EXTRA_USER_DATA, userData)
+            }
+        }
+    }
+
+    private lateinit var transactionResultViewBinder: TransactionResultViewBinder
+
+    private val isUserAuthorised: Boolean by lazy {
+        intent.extras!!.getBoolean(EXTRA_USER_AUTHORIZED)
+    }
+
+    private val userData by lazy {
+        intent.extras!!.getParcelable<UsernameSearchResult>(EXTRA_USER_DATA)
     }
 
     private val viewModel: TransactionResultViewModel by viewModels()
     private lateinit var binding: ActivitySuccessfulTransactionBinding
+    private lateinit var contentBinding: TransactionResultContentBinding
+    @Inject
+    lateinit var dashPayProfileDao: DashPayProfileDao
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -106,20 +144,16 @@ class TransactionResultActivity : LockScreenActivity() {
         binding = ActivitySuccessfulTransactionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val contentBinding = TransactionResultContentBinding.bind(binding.container)
-        val transactionResultViewBinder = TransactionResultViewBinder(
+        contentBinding = TransactionResultContentBinding.bind(binding.container)
+        transactionResultViewBinder = TransactionResultViewBinder(
             walletData.wallet!!,
             configuration.format.noCode(),
             contentBinding
         )
 
         viewModel.init(txId)
-        val tx = viewModel.transaction
 
-        if (tx != null) {
-            val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
-            val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-            transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
+        viewModel.transaction.filterNotNull().observe(this) { tx ->
             transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
             contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
             contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
@@ -134,15 +168,83 @@ class TransactionResultActivity : LockScreenActivity() {
                 transactionResultViewBinder.setTransactionMetadata(it)
             }
             transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
-        } else {
-            log.error("Transaction not found. TxId: {}", txId)
-            finish()
-            return
+
+
+            viewModel.transactionMetadata.observe(this) {
+                transactionResultViewBinder.setTransactionMetadata(it)
+            }
+
+            viewModel.contact.observe(this) { profile ->
+                finishInitialization(tx, profile)
+            }
         }
+
+        viewModel.topUpWork(txId).observe(this) { workData ->
+            log.info("topup work data: {}", workData)
+            try {
+                val txIdString = workData.data?.outputData?.getString(TopupIdentityWorker.KEY_TOPUP_TX)
+                log.info("txId from work matches viewModel: {} ==? {}", txIdString, txId)
+
+                when (workData.status) {
+                    Status.LOADING -> {
+                        log.info("  loading: {}", workData.data?.outputData)
+                    }
+
+                    Status.SUCCESS -> {
+                        log.info("  success: {}", workData.data?.outputData)
+                    }
+
+                    Status.ERROR -> {
+                        log.info("  error: {}", workData.data?.outputData)
+                        viewModel.topUpError = true
+                        transactionResultViewBinder.setSentToReturn(viewModel.topUpError, viewModel.topUpComplete)
+                    }
+
+                    Status.CANCELED -> {
+                        log.info("  cancel: {}", workData.data?.outputData)
+                    }
+                }
+            } catch (e: Exception) {
+                log.error("error processing topup information", e)
+            }
+        }
+
+        viewModel.topUpStatus(txId).observe(this) { topUp ->
+            viewModel.topUpComplete = topUp?.used() == true
+            transactionResultViewBinder.setSentToReturn(viewModel.topUpError, viewModel.topUpComplete)
+        }
+    }
+
+    private fun finishInitialization(tx: Transaction, dashPayProfile: DashPayProfile?) {
+        initiateTransactionBinder(tx, dashPayProfile)
+        val mainThreadExecutor = ContextCompat.getMainExecutor(walletApplication)
+        tx.confidence.addEventListener(mainThreadExecutor, transactionResultViewBinder)
     }
 
     private fun viewOnExplorer(tx: Transaction) {
         WalletUtils.viewOnBlockExplorer(this, tx.purpose, tx.txId.toString())
+    }
+
+    private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
+        val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
+        val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
+        transactionResultViewBinder.bind(tx, dashPayProfile, payeeName, payeeVerifiedBy)
+        binding.transactionCloseBtn.setOnClickListener {
+            onTransactionDetailsDismiss()
+        }
+        contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
+        contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory()}
+        contentBinding.openExplorerCard.setOnClickListener { viewOnExplorer(tx) }
+        contentBinding.addPrivateMemoBtn.setOnClickListener {
+            viewModel.transaction?.value?.txId?.let { hash ->
+                PrivateMemoDialog().apply {
+                    arguments = bundleOf(PrivateMemoDialog.TX_ID_ARG to hash)
+                }.show(supportFragmentManager, "private_memo")
+            }
+        }
+
+        transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
+        transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
     }
 
     private fun viewOnTaxCategory() {
@@ -151,27 +253,41 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private fun showReportIssue() {
-        ReportIssueDialogBuilder.createReportIssueDialog(
-            this,
-            packageInfoProvider,
-            configuration,
-            viewModel.walletData.wallet,
-            walletApplication
-        ).buildAlertDialog().show()
+        ContactSupportDialogFragment.newInstance(
+            getString(R.string.report_issue_dialog_title_issue),
+            getString(R.string.report_issue_dialog_message_issue),
+            contextualData = viewModel.transaction.toString()
+        ).show(this)
     }
 
     private fun onTransactionDetailsDismiss() {
+        if (isFinishing || isDestroyed) {
+            log.warn("Activity is finishing or destroyed. Skipping dismiss actions.")
+            return
+        }
+
         when {
             intent.action == Intent.ACTION_VIEW || intent.action == SendCoinsActivity.ACTION_SEND_FROM_WALLET_URI -> {
                 finish()
             }
+            userData != null -> {
+                finish()
+                startActivity(
+                    DashPayUserActivity.createIntent(this@TransactionResultActivity,
+                    userData!!, userData != null))
+            }
             intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
-                startActivity(WalletActivity.createIntent(this))
+                startActivity(MainActivity.createIntent(this))
             }
             else -> {
-                startActivity(WalletActivity.createIntent(this))
+                startActivity(MainActivity.createIntent(this))
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModel.transaction.value?.confidence?.removeEventListener(transactionResultViewBinder)
     }
 
     private fun rescanBlockchain() {

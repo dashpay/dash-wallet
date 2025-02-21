@@ -8,7 +8,6 @@
     <string name="blockchain_state_progress_days">Còn lại %1$s, %2$d ngày</string>
     <string name="blockchain_state_progress_weeks">Còn lại %1$s, %2$d tuần</string>
     <string name="blockchain_state_progress_months">Còn lại %1$s, %2$d tháng</string>
-    <string name="blockchain_state_progress_downloading">Đồng bộ hóa với mạng lưới</string>
     <string name="blockchain_state_progress_stalled">Tiến trình đồng bộ hóa đã ngưng lại</string>
     <string name="blockchain_state_progress_problem_storage">Đồng bộ hóa: Gặp vấn đề về dung lượng lưu trữ</string>
     <string name="blockchain_state_progress_problem_network">Đồng bộ hóa: Vấn đề về mạng lưới</string>

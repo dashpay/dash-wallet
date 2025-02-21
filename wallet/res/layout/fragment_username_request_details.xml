@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_secondary"
+    tools:context="de.schildbach.wallet.ui.username.UsernameRequestDetailsFragment">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/title_bar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:layout_constraintTop_toTopOf="parent"
+        app:navigationIcon="@drawable/ic_arrow_back" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginHorizontal="15dp"
+        android:orientation="vertical"
+        app:layout_constraintTop_toBottomOf="@+id/title_bar">
+
+        <TextView
+            style="@style/Headline3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/request_details" />
+
+        <TextView
+            style="@style/Body2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="@string/request_details_subtitle" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical"
+            android:paddingHorizontal="15dp"
+            android:paddingVertical="10dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/GrayPanelBackground">
+
+            <TextView
+                style="@style/Overline.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/username" />
+
+            <TextView
+                android:id="@+id/username"
+                style="@style/Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                tools:text="John Doe" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical"
+            android:paddingHorizontal="15dp"
+            android:paddingVertical="10dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/GrayPanelBackground">
+
+            <TextView
+                style="@style/Overline.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/link" />
+
+            <TextView
+                android:id="@+id/link"
+                style="@style/Body2.Blue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:autoLink="web"
+                android:clickable="true"
+                android:focusable="true"
+                android:textColorLink="@color/dash_blue"
+                android:layout_marginTop="2dp"
+                tools:text="https://twitter.com/ProductHunt/status/1625106265482600454?s=20" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical"
+            android:paddingHorizontal="15dp"
+            android:paddingVertical="10dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/GrayPanelBackground">
+
+            <TextView
+                style="@style/Overline.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/identity" />
+
+            <TextView
+                android:id="@+id/identity"
+                style="@style/Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                tools:text="90f95ff7bc2438a748dc8470255b888b2a9ea6837bf518d018dc3d6cddf698" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical"
+            android:paddingHorizontal="15dp"
+            android:paddingVertical="10dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/GrayPanelBackground">
+
+            <TextView
+                style="@style/Overline.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/voting_period" />
+
+            <TextView
+                android:id="@+id/voting_period"
+                style="@style/Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                tools:text="2024 Dec 1 to 2014 Dec 15" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/vote_button"
+        style="@style/Button.Primary.Large.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginBottom="15dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <TextView
+            android:id="@+id/vote_button_text"
+            style="@style/Subtitle2.White"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:textAlignment="gravity"
+            android:textSize="15sp"
+            android:text="@string/vote_to_approve" />
+    </FrameLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
