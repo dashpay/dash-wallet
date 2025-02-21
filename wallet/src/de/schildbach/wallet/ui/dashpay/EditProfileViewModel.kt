@@ -1,34 +1,28 @@
 /*
- * Copyright 2020 Dash Core Group
+ * Copyright 2020 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package de.schildbach.wallet.ui.dashpay
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.net.Uri
 import android.os.Environment
 import android.provider.Settings
-import android.util.Log
-import androidx.core.content.FileProvider
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.http.HttpRequestInitializer
-import com.google.api.services.drive.Drive
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -41,28 +35,23 @@ import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.ImgurService
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileStatusLiveData
-import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.*
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.math.BigInteger
-import java.nio.channels.Channels
 import java.nio.channels.FileChannel
-import java.util.*
+import java.util.UUID
 import javax.inject.Inject
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
