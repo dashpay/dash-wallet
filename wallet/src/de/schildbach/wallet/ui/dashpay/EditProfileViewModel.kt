@@ -190,7 +190,7 @@ class EditProfileViewModel @Inject constructor(
         when (storageService) {
             ProfilePictureStorageService.IMGUR -> uploadToImgur()
             ProfilePictureStorageService.GOOGLE_DRIVE -> {
-                requireNotNull(credential) { "credential must not be null" }
+                requireNotNull(credential) { "Google Drive credential must not be null" }
                 uploadToGoogleDrive(credential)
             }
         }
