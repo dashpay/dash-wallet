@@ -223,7 +223,7 @@ open class LockScreenActivity : SecureActivity() {
 
         val showLockScreen = !keepUnlocked && configuration.autoLogoutEnabled &&
                 (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())
-        log.info("show lock screen $showLockScreen = !$keepUnlocked && ${configuration.autoLogoutEnabled} && (${autoLogout.keepLockedUntilPinEntered} || ${autoLogout.shouldLogout()})")
+        log.info("show lock screen $showLockScreen = ![keepUnlocked=$keepUnlocked] && autologout=${configuration.autoLogoutEnabled} && (keepUnlockedUntilPenEntered=${autoLogout.keepLockedUntilPinEntered} || shouldLogout=${autoLogout.shouldLogout()})")
         if (showLockScreen) {
             setLockState(
                 if (pinRetryController.isLocked) {

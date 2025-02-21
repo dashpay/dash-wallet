@@ -29,6 +29,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityAdvancedSecurityBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -38,6 +39,9 @@ enum class SecurityLevel {
 
 @AndroidEntryPoint
 class AdvancedSecurityActivity : LockScreenActivity() {
+    companion object {
+        private val log = LoggerFactory.getLogger(AdvancedSecurityActivity::class.java)
+    }
     @Inject
     lateinit var analytics: AnalyticsService
     private lateinit var binding: ActivityAdvancedSecurityBinding
@@ -101,6 +105,7 @@ class AdvancedSecurityActivity : LockScreenActivity() {
                 )
             }
             configuration.autoLogoutEnabled = enabled
+            log.info("setting autologout = $enabled")
             updateView()
         }
 
@@ -125,6 +130,7 @@ class AdvancedSecurityActivity : LockScreenActivity() {
         binding.resetToDefaultBtn.setOnClickListener { resetToDefault() }
 
         updateView()
+        log.info("autologout = ${configuration.autoLogoutEnabled}")
     }
 
     private fun getSecurityLevel(): SecurityLevel {
