@@ -307,7 +307,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             transactionMetadataDao.update(transactionMetadata)
             transactionMetadataChangeCacheDao.markGiftCardTx(
                 txId,
-                ServiceName.DashDirect,
+                ServiceName.CTXSpend,
                 TaxCategory.Expense,
                 iconUrl
             )

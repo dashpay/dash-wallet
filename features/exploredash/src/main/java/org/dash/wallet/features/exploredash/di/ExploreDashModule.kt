@@ -37,9 +37,6 @@ import org.dash.wallet.features.exploredash.repository.*
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
-import org.dash.wallet.features.exploredash.repository.*
-import org.dash.wallet.features.exploredash.services.UserLocationState
-import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 
 @Module
 @InstallIn(SingletonComponent::class)

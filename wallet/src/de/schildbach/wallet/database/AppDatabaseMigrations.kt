@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.database
 
-import androidx.room.PrimaryKey
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
@@ -124,14 +123,5 @@ class AppDatabaseMigrations {
                 )
             }
         }
-    }
-
-    val migration15to16 = object : Migration(15, 16) {
-            // Migrations for the DashSpend gift cards integration.
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    "ALTER TABLE gift_cards ADD COLUMN id TEXT"
-                )
-            }
     }
 }
