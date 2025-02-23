@@ -55,10 +55,10 @@ data class Merchant(
 ) : SearchResult() {
 
     // 1% discount is 0.01
-    val savingsAsDouble: Double
+    val savingsFraction: Double
         get() = (savingsPercentage?.toDouble() ?: 0.0) / 10000
 
     // 1% discount is 1.00
     val savingsPercentageAsDouble: Double
-        get() = savingsAsDouble * 100
+        get() = savingsFraction * 100
 }

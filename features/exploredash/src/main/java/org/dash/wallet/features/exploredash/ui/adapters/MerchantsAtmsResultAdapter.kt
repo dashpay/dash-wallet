@@ -114,7 +114,7 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
         binding.subtitle.text = getDistanceText(resources, merchant)
         binding.subtitle.isVisible = merchant?.type != MerchantType.ONLINE && binding.subtitle.text.isNotEmpty()
         if (merchant != null) {
-            if (merchant.savingsAsDouble != 0.00) {
+            if (merchant.savingsFraction != 0.00) {
                 binding.discountValue.isVisible = true
                 binding.discountValue.text = binding.root.context.getString(
                     R.string.explore_discount,
