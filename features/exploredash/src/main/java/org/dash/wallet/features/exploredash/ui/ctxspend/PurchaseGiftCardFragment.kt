@@ -162,9 +162,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     private fun setDiscountHint() {
         val merchant = viewModel.giftCardMerchant
-        val savingsPercentage = merchant.savingsAsDouble
+        val savingsFraction = merchant.savingsAsDouble
 
-        if (savingsPercentage != DEFAULT_DISCOUNT_AS_DOUBLE) {
+        if (savingsFraction != DEFAULT_DISCOUNT_AS_DOUBLE) {
             val purchaseAmount = enterAmountViewModel.amount.value
             if (purchaseAmount != null && purchaseAmount != Coin.ZERO) {
                 val rate = enterAmountViewModel.selectedExchangeRate.value
@@ -175,9 +175,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                         myRate.coinToFiat(purchaseAmount).toFormattedString(),
                         viewModel.getDiscountedAmount(
                             purchaseAmount,
-                            savingsPercentage
+                            savingsFraction
                         )?.toFormattedStringRoundUp() ?: "",
-                        GenericUtils.formatPercent(savingsPercentage)
+                        GenericUtils.formatPercent(savingsFraction)
                     )
                 binding.discountValue.setTextColor(resources.getColor(R.color.content_primary))
                 binding.discountValue.isVisible = true
