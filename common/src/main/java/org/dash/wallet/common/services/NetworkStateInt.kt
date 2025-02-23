@@ -21,4 +21,5 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface NetworkStateInt {
     val isConnected: StateFlow<Boolean>
+    fun isWifiConnected(): Boolean
 }

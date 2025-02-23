@@ -294,4 +294,9 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
             binding.networkStatusStub.isVisible = !hasInternet
         }
     }
+
+    fun setMessage(message: String) {
+        binding.messageText.text = message
+        binding.messageText.isVisible = message.isNotEmpty()
+    }
 }

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Tạo một ví mới</string>
     <string name="onboarding_recover_wallet">Khôi phục ví từ câu phục hồi</string>
@@ -22,7 +22,6 @@
     <string name="dialog_confirm_secured_by">Bảo mật bởi</string>
     <string name="dialog_confirm_fee">Phí giao dịch</string>
     <string name="dialog_confirm_total">Tổng số</string>
-
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Quét</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -199,6 +198,7 @@
     <string name="transaction_details_sent_from">Gửi đến từ</string>
     <string name="transaction_details_sent_to">Gửi đến</string>
     <string name="transaction_details_received_at">Nhận được tại</string>
+    <string name="transaction_details_received_from">Nhận được từ</string>
     <string name="transaction_details_moved_from">Được di chuyển từ</string>
     <string name="transaction_details_moved_internally_to">Được di chuyển nội bộ đến</string>
     <string name="authenticate_fingerprint_title">Xác thực</string>
@@ -228,7 +228,6 @@
     <string name="about_contact_support">Liên hệ hỗ trợ</string>
     <string name="about_fork_disclaimer">Đây là một ứng dụng mã nguồn mở được xây dựng dựa trên ví Bitcoin</string>
     <string name="about_license">Giấy phép GNU General Public v3.0</string>
-    <string name="about_version_name">Dash Wallet %s</string>
     <string name="block">Khối</string>
     <string name="time">Thời gian</string>
     <string name="hash">Băm</string>
@@ -270,6 +269,12 @@
     <string name="welcome_screen_title_3">Kiểm soát nhiều hơn</string>
     <string name="welcome_screen_subtitle_3">Bạn có toàn quyền kiểm soát và tuỳ chỉnh ví dựa trên nhu cầu của mình</string>
 
+    <string-array name="history_filter">
+        <item>Tất cả</item>
+        <item>Đã nhận</item>
+        <item>Đã gửi</item>
+    </string-array>
+
     <string name="sync_status_wait">Vui lòng đợi quá trình đồng bộ hoàn thành</string>
     <string name="sync_status_syncing_sub_title">với blockchain của Dash</string>
     <string name="sync_status_unable_to_connect">Không thể kết nối</string>
@@ -289,12 +294,16 @@
     <string name="payment_request_skip">Bỏ qua</string>
     <string name="payment_request_paid_to">Được trả cho</string>
 
+    <string name="restore_wallet_please_wait">Vui lòng đợi</string>
     <string name="syncing">Đang đồng bộ</string>
     <string name="all_transactions">Tất cả</string>
     <string name="received_transactions">Đã nhận</string>
     <string name="sent_transactions">Đã gửi</string>
     <string name="continue_reset">Tiếp tục</string>
     <string name="reset_wallet_text">Thiết lập lại ví</string>
+
+
+
     <string name="masternode_key_type_owner">Khoá của chủ sở hữu</string>
     <string name="masternode_key_type_voting">Khoá bỏ phiếu</string>
     <string name="masternode_key_type_operator">Chìa khoá của người vận hành</string>

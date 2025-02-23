@@ -196,9 +196,14 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
 
     private fun doReset() {
         viewModel.logEvent(AnalyticsConstants.Security.RESET_WALLET)
-        viewModel.triggerWipe()
-        startActivity(OnboardingActivity.createIntent(requireContext()))
-        requireActivity().finishAffinity()
+        val dialog = AdaptiveDialog.progress(getString(R.string.perm_lock_wipe_wallet))
+        dialog.show(requireActivity())
+        (requireActivity() as AbstractBindServiceActivity).doUnbindService()
+        viewModel.triggerWipe() {
+            dialog.dismissAllowingStateLoss()
+            startActivity(OnboardingActivity.createIntent(requireContext()))
+            requireActivity().finishAffinity()
+        }
     }
 
     private fun showSeed(seed: Array<String>) {

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:animateLayoutChanges="true"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <ViewSwitcher
+            android:id="@+id/view_switcher"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:animateFirstView="false"
+            android:measureAllChildren="true">
+
+            <LinearLayout
+                android:id="@+id/top_pane"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/public_url_icon"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginTop="26dp"
+                    app:srcCompat="@drawable/ic_external_url" />
+
+                <TextView
+                    android:id="@+id/public_url_title"
+                    style="@style/Subtitle1.Secondary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="10dp"
+                    android:text="@string/edit_profile_public_url" />
+
+                <TextView
+                    android:id="@+id/public_url_enter_url"
+                    style="@style/Body2.Secondary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/public_url_enter_url"
+                    android:gravity="center"
+                    android:textAlignment="gravity" />
+
+                <EditText
+                    android:id="@+id/input"
+                    style="@style/Body2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/round_corners_white_bg_borders"
+                    android:elevation="2dp"
+                    android:inputType="textMultiLine"
+                    android:maxLines="8"
+                    android:padding="20dp"
+                    android:gravity="center"
+                    android:textAlignment="gravity"
+                    tools:text="https://images.theconversation.com/files/304864/original/file-20191203-67028-qfiw3k.jpeg?ixlib=rb-1.1.0" />
+
+                <TextView
+                    style="@style/Overline.Secondary"
+                    android:id="@+id/public_url_message"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="19dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/public_url_message"
+                    android:gravity="center"
+                    android:textAlignment="gravity" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="50dp"
+                    android:layout_marginBottom="21dp"
+                    android:gravity="center_horizontal"
+                    app:layout_constraintTop_toBottomOf="@+id/error_code_text">
+
+                    <Button
+                        android:id="@+id/ok"
+                        style="@style/Button.Primary.Large.Blue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/button_ok"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@+id/cancel" />
+
+                    <Button
+                        android:id="@+id/cancel"
+                        style="@style/Button.Tertiary.Large.Blue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="9dp"
+                        android:text="@string/button_cancel" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/pending_work"
+                android:layout_width="match_parent"
+                android:layout_height="304dp"
+                android:layout_gravity="center_horizontal|center_vertical"
+                android:layout_marginTop="50dp"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/orange_circle"
+                    android:layout_width="87dp"
+                    android:layout_height="87dp"
+                    android:background="@drawable/light_orange_circle"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <ImageView
+                    android:id="@+id/pending_work_icon"
+                    android:layout_width="25dp"
+                    android:layout_height="25dp"
+                    android:layout_gravity="center_horizontal"
+                    app:layout_constraintBottom_toBottomOf="@+id/orange_circle"
+                    app:layout_constraintEnd_toEndOf="@+id/orange_circle"
+                    app:layout_constraintStart_toStartOf="@+id/orange_circle"
+                    app:layout_constraintTop_toTopOf="@+id/orange_circle"
+                    app:srcCompat="@drawable/ic_hourglass"
+                    tools:ignore="ContentDescription" />
+
+                <TextView
+                    android:id="@+id/fetching_msg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/public_url_fetching_image"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/orange_circle" />
+
+                <Button
+                    android:id="@+id/cancel_fetching"
+                    style="@style/Button.Tertiary.Large.Blue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="40dp"
+                    android:text="@string/button_cancel"
+                    app:layout_constraintTop_toBottomOf="@+id/fetching_msg"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </ViewSwitcher>
+
+        <LinearLayout
+            android:id="@+id/url_preview_pane"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                style="@style/Body2.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:text="Preview" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/dash_black"
+                android:padding="1px">
+
+                <ImageView
+                    android:id="@+id/url_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="96dp"
+                    android:layout_gravity="center_horizontal"
+                    android:background="@color/background_primary"
+                    android:scaleType="fitCenter" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

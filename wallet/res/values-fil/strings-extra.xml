@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Gumawa ng bagong pitaka</string>
     <string name="onboarding_recover_wallet">Manumbalik sa dating kalagayan ng pitaka mula sa parirala ng muling pagbawi</string>
@@ -25,13 +25,17 @@
     <string name="dialog_confirm_secured_by">Siniguro ni</string>
     <string name="dialog_confirm_fee">Network fee</string>
     <string name="dialog_confirm_total">Kabuuan</string>
+    <string name="dialog_confirm_accept_contact_request">Tanggapin ang kahilingan sa pakikipag-ugnayan</string>
 
+    <string name="shortcut_action_join_dashpay">Sumali sa DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">back-up</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Scan</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Ipadala</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_contact">Ipadala sa Contact</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Bumili ng &amp; Ibenta</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -75,6 +79,9 @@
     <string name="payments_title">Mga bayad</string>
     <string name="payments_tab_pay_label">Ipadala</string>
     <string name="payments_tab_receive_label">Tumanggap</string>
+    <string name="payments_pay_to_contact_title">Ipadala sa isang Contact</string>
+    <string name="payments_pay_to_contact_sub_title">Isang tao sa iyong mga contact</string>
+    <string name="payments_pay_to_contact_button">Pumili</string>
     <string name="payments_pay_by_qr_title">Pinadala ni</string>
     <string name="payments_pay_by_qr_sub_title">Scanning QR code</string>
     <string name="payments_pay_to_clipboard_title">Ipadala sa kinopyang address</string>
@@ -183,6 +190,8 @@
     <string name="notification_settings_title">Mga Notipikasyon</string>
     <string name="notification_explainer_title">Gustong magpadala sa iyo ng mga notification ang Dash Wallet</string>
     <string name="notification_explainer_message">Maaaring kasama sa mga notification ang mga alerto, tunog, at icon na mga badge. Maaaring i-configure ang mga ito sa Mga Setting ng telepono.</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">Status ng patuloy na pagpapatakbo ng DashPay.</string>
 
     <string name="net_type_indicator" />
 
@@ -236,9 +245,11 @@
     <string name="transaction_close">Sarado</string>
     <string name="transaction_details_amount_received">Halagang natanggap</string>
     <string name="transaction_details_amount_sent">Halagang ipinadala</string>
+    <string name="transaction_details_amount_sent_successfully">Matagumpay na Naipadala</string>
     <string name="transaction_details_sent_from">Pinadala mula</string>
     <string name="transaction_details_sent_to">Ipadala kay</string>
     <string name="transaction_details_received_at">Natanggap sa</string>
+    <string name="transaction_details_received_from">Natanggap mula</string>
     <string name="transaction_details_moved_from">Ilipat mula</string>
     <string name="transaction_details_moved_internally_to">Internally ilipat sa</string>
     <string name="transaction_failed_details">Nabigo ang Paglipat</string>
@@ -252,6 +263,8 @@
     <string name="authenticate_switch_to_fingerprint">Gamitin ang Fingerprint</string>
     <string name="authenticate_switch_to_pin">Gamitin ang PIN</string>
 
+    <string name="menu_invite_title">Mag-imbita</string>
+    <string name="menu_invite_subtitle">Tulungan ang iyong mga kaibigan at pamilya na sumali sa Dash</string>
     <string name="menu_buy_and_sell_title">Bumili at magbenta ng Dash</string>
     <string name="menu_buy_and_sell_subtitle">Ikonekta sa mga third party na palitan</string>
     <string name="liquid_unavailable">Hindi na available ang liquid integration sa Dash Wallet</string>
@@ -278,9 +291,9 @@
     <string name="about_review_and_rate">Suriin at i-rate ang app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">Ito ay open source app forked mula sa Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
+    <string name="about_copyright">Copyright © 2024 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
-    <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_version_name">DashPay Wallet %s</string>
     <string name="about_last_explore_device_sync">Pag-sync ng device sa huling Explore</string>
     <string name="about_last_explore_server_update">Huling pag-update ng server ng Explore</string>
     <string name="about_firebase_installation_id">Firebase installation ID</string>
@@ -331,6 +344,12 @@
     <string name="welcome_screen_title_3">Mas marami pang kontrol</string>
     <string name="welcome_screen_subtitle_3">Magkaroon ng kumpletong kontrol at pinasadyang pitaka base sa iyong nais</string>
 
+    <string-array name="history_filter">
+        <item>Lahat</item>
+        <item>Natanggap</item>
+        <item>Ipinadala</item>
+    </string-array>
+
     <string name="sync_status_wait">Pakihintay na mag-sync upang makumpleto</string>
     <string name="sync_status_syncing_sub_title">kasama ang Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Hindi maka-konekta</string>
@@ -355,6 +374,29 @@
     <string name="import_image_no_private_key_copied">Walang nakopya ang private key</string>
     <string name="import_image_import_valid_private_key">Kopyahin ang isang wastong private key upang mai-import ang Dash mula rito</string>
     <string name="import_image_invalid_private">Di-wastong Private Key</string>
+    <string name="okay">Okay</string>
+
+    <string name="onboard_from_invite_title">Magsimula na tayo</string>
+    <string name="onboard_from_invite_subtitle">Maligayang pagdating sa DashPay</string>
+    <string name="onboard_from_invite_step1">Hakbang 1</string>
+    <string name="onboard_from_invite_step2">Hakbang 2</string>
+    <string name="onboard_from_invite_step3">Hakbang 3</string>
+    <string name="onboard_from_invite_step1_title">Piliin ang Iyong Username</string>
+    <string name="onboard_from_invite_step2_title">I-set ang Iyong PIN</string>
+    <string name="onboard_from_invite_step3_title">I-secure ang Iyong Wallet</string>
+
+    <string name="restore_wallet_please_wait">Mangyaring maghintay</string>
+    <string name="restore_wallet_restoring">Ibinabalik ang iyong wallet</string>
+
+
+
+    <string name="network_unavailable">Hindi Magagamit ang Network</string>
+    <string name="network_error_contact_details">Hindi makuha ang mga detalye ng contact</string>
+    <string name="network_error_user_search">Hindi makapaghanap ng user</string>
+    <string name="network_error_contact_suggestions">Hindi makapagbigay ng mga mungkahi</string>
+    <string name="network_error_unable_to_update_profile">Hindi ma-update ang iyong profile</string>
+
+
 
     <string name="today">Ngayon</string>
     <string name="yesterday">Kahapon</string>
@@ -365,6 +407,8 @@
     <string name="all_transactions">Lahat</string>
     <string name="received_transactions">Natanggap</string>
     <string name="sent_transactions">Ipinadala</string>
+    <string name="serious_error_title">Malubhang Pagkakamali</string>
+    <string name="serious_error_unknown">Mangyaring makipag-ugnayan sa suporta.</string>
     <string name="set_pin_error_missing_wallet_title">Nawawalang Wallet Error</string>
     <string name="set_pin_error_missing_wallet_message">Nawawala ang wallet. Mangyaring iulat ito sa Support Desk.</string>
     <string name="wallet_encryption_error_title">Error sa Paggawa ng Wallet</string>
@@ -380,6 +424,10 @@
     <string name="launch_reset_wallet_extra_message">I-back up ang iyong recovery phrase</string>
     <string name="start_reset_wallet_title">Baka matalo ka ng %s</string>
     <string name="reset_wallet_text">I-reset ang pitaka</string>
+
+
+
+    <!-- Tax category -->
     <string name="reclassify_transactions_title">I-reclassify ang Iyong mga Transaksyon</string>
     <string name="reclassify_transactions_title_message">Ang mga klasipikasyong ito ay makikita sa CSV Export na maaaring magamit upang mag-import sa mga serbisyo sa pag-uulat ng buwis.</string>
     <string name="reclassify_transactions_question">Saan ko maaaring baguhin ang kategorya ng buwis?</string>
@@ -410,6 +458,8 @@
     <string name="masternode_key_not_used">hindi ginagamit</string>
     <string name="masternode_key_revoked">Binawi</string>
     <string name="masternode_key_private_public_base64">Pribado / Pampublikong Susi (base64)</string>
+    <string name="timeskew_ahead">sa unahan</string>
+    <string name="timeskew_behind">sa huli</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Hindi nakuha ang mga presyo. Maaaring mali ang mga halaga ng Fiat.</string>

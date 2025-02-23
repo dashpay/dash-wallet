@@ -21,7 +21,11 @@
     <string name="transfer_dash">Trasferisci Dash</string>
     <string name="login_error_title">Impossibile accedere al tuo %s account</string>
     <string name="login_error_message">Si è verificato un errore durante l\'accesso al tuo %s account</string>
+    <string name="dash_address">Indirizzo Dash</string>
+    <string name="username">Carica la tua foto, personalizza la tua identità.
+ </string>
     <string name="balance">Saldo:</string>
+    <string name="nothing_here">Niente qui</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -55,10 +59,13 @@
     <string name="button_understand">Ho capito</string>
     <string name="button_okay">Bene</string>
     <string name="button_share">Condividi</string>
+    <string name="button_skip">Salta</string>
     <string name="share_address">Condividi indirizzo</string>
     <string name="verify">Verifica</string>
     <string name="receive_enter_amount_button">Specifica Importo</string>
     <string name="account_create">Crea un Account</string>
+    <string name="submit">Invia</string>
+    <string name="try_again">Prova Ancora</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Cerca</string>
@@ -76,6 +83,7 @@
     <string name="select_currency">Seleziona Valuta</string>
     <string name="send_coins_error_dusty_send">L\'importo è troppo piccolo per l\'invio</string>
     <string name="send_coins_error_insufficient_money">Fondi insufficenti</string>
+    <string name="send_coins_error_insufficient_mixed_money">Fondi misti insufficienti. Attendi il completamento del mixaggio di CoinJoin o disabilita questa funzione nelle impostazioni per completare questa transazione.</string>
     <string name="syncing">Sincronizzazione</string>
     <string name="no_connection">Nessuna connessione internet</string>
     <string name="rate_not_available">Non disponibile</string>
@@ -101,4 +109,4 @@
 
     <string name="chain_syncing">La catena si sta sincronizzando...</string>
 
-</resources>
+    </resources>

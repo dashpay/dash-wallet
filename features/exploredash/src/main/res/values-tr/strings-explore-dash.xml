@@ -153,6 +153,11 @@
     <string name="buy_gift_card_with_dash_text">Dash ile bir hediye kartı satın alın.</string>
     <string name="redeem_gift_card_text">Hediye kartınızı saniyeler içinde çevrimiçi olarak veya kasiyerde kullanın.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Test Dash\'in gerçek dünyada hiçbir değeri yoktur ancak onu diğer DashPay Alpha kullanıcılarıyla gönderip alabilirsiniz.</string>
+    <string name="explore_test_dash_title">Test Dash\'ı nasıl edinebilirim?</string>
+    <string name="explore_get_test_dash">Test Dash\'ı edinin</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">Senkronizasyon devam ediyor... Sonuçlar tamamlanmayabilir.</string>
     <string name="sync_in_progress_error">Senkronizasyon devam ediyor… Bir hata oluştu.</string>

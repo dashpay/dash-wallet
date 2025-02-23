@@ -202,7 +202,6 @@ class CTXSpendViewModel @Inject constructor(
 
     fun saveGiftCardDummy(txId: Sha256Hash, giftCardId: String) {
         val giftCard = GiftCard(
-            id = giftCardId,
             txId = txId,
             merchantName = giftCardMerchant.name ?: "",
             price = giftCardPaymentValue.toBigDecimal().toDouble(),

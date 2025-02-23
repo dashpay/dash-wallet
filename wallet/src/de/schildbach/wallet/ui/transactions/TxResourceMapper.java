@@ -22,12 +22,16 @@ import android.text.format.DateUtils;
 import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.evolution.AssetLockTransaction;
+import org.bitcoinj.wallet.AuthenticationKeyChainGroup;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.dash.wallet.common.transactions.TransactionUtils;
 
 import de.schildbach.wallet.Constants;
@@ -43,7 +47,7 @@ public class TxResourceMapper {
      */
     @StringRes
     public int getTransactionTypeName(@NonNull Transaction tx, @NonNull TransactionBag wallet) {
-        int typeId;
+        int typeId = 0;
         if(tx.getValue(wallet).signum() <= 0) {
             switch(tx.getType()) {
                 case TRANSACTION_PROVIDER_REGISTER:
@@ -59,12 +63,56 @@ public class TxResourceMapper {
                     typeId = R.string.transaction_row_status_masternode_update_service;
                     break;
                 default:
-                    TransactionConfidence confidence = tx.getConfidence();
-                    if (confidence.hasErrors())
+                    TransactionConfidence confidence = tx.getConfidence(Constants.CONTEXT);
+                    Wallet dashPayWallet = null;
+
+                    if (wallet instanceof Wallet) {
+                        dashPayWallet = (Wallet) wallet;
+                    }
+                    CoinJoinTransactionType coinJoinType = CoinJoinTransactionType.fromTx(tx, wallet);
+
+                    if (dashPayWallet != null && AssetLockTransaction.isAssetLockTransaction(tx)) {
+                        AuthenticationGroupExtension authExtension =
+                                (AuthenticationGroupExtension) dashPayWallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
+                        AssetLockTransaction cftx = authExtension.getAssetLockTransaction(tx);
+
+                        AuthenticationKeyChainGroup group = ((AuthenticationKeyChainGroup)authExtension.getKeyChainGroup());
+                        switch (group.getKeyChainType(cftx.getAssetLockPublicKeyId().getBytes())) {
+                            case INVITATION_FUNDING:
+                                typeId = R.string.dashpay_invite_fee;
+                                break;
+                           case BLOCKCHAIN_IDENTITY_FUNDING:
+                               typeId = R.string.dashpay_upgrade_fee;
+                               break;
+                           case BLOCKCHAIN_IDENTITY_TOPUP:
+                               typeId = R.string.dashpay_topup_fee;
+                               break;
+                           default:
+                               typeId = R.string.transaction_row_status_sent;
+                               break;
+                        }
+                    } else if(coinJoinType == CoinJoinTransactionType.Mixing) {
+                        typeId = R.string.transaction_row_status_coinjoin_mixing;
+                    } else if (confidence.hasErrors())
                         typeId = R.string.transaction_row_status_error_sending;
-                    else if (TransactionUtils.INSTANCE.isEntirelySelf(tx, wallet))
-                        typeId = R.string.transaction_row_status_sent_internally;
-                    else if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING ||
+                    else if (TransactionUtils.INSTANCE.isEntirelySelf(tx, wallet)) {
+                        // internal transactions could be CoinJoin related transactions
+                        switch (coinJoinType) {
+                            case CreateDenomination:
+                                typeId = R.string.transaction_row_status_coinjoin_create_denominations;
+                                break;
+                            case MakeCollateralInputs:
+                                typeId = R.string.transaction_row_status_coinjoin_make_collateral;
+                                break;
+                            case MixingFee:
+                                typeId = R.string.transaction_row_status_coinjoin_mixing_fee;
+                                break;
+                        }
+                        // if not any other type of internal transaction, then mark as "Internal"
+                        if (typeId == 0)
+                            typeId = R.string.transaction_row_status_sent_internally;
+
+                    } else if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING ||
                             (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING &&
                                 (confidence.numBroadcastPeers() >= 1 || confidence.getIXType() == TransactionConfidence.IXType.IX_LOCKED ||
                                         (confidence.getPeerCount() == 1 && confidence.isSent()))))
@@ -124,12 +172,12 @@ public class TxResourceMapper {
      * @return the secondary status or -1 if there is none
      */
     @StringRes
-    public int getReceivedStatusString(Transaction tx, @NonNull Context context) {
-        TransactionConfidence confidence = tx.getConfidence();
+    public int getReceivedStatusString(Transaction tx, @NonNull Context context, int bestChainLockBlockHeight) {
+        TransactionConfidence confidence = tx.getConfidence(context);
         int statusId = -1;
         if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) {
             int confirmations = confidence.getDepthInBlocks();
-            boolean isChainLocked = context.chainLockHandler.getBestChainLockBlockHeight() >= confidence.getDepthInBlocks();
+            boolean isChainLocked = bestChainLockBlockHeight >= confidence.getDepthInBlocks();
 
             // process coinbase transactions (Mining Rewards) before other BUILDING transactions
             if (tx.isCoinBase()) {
@@ -176,9 +224,10 @@ public class TxResourceMapper {
      */
     public boolean isSending(Transaction tx, Wallet wallet) {
         Coin value = tx.getValue(wallet);
-        TransactionConfidence confidence = tx.getConfidence();
-        return (value.isNegative() || value.isZero()) && tx.getType() == Transaction.Type.TRANSACTION_NORMAL &&
-                (confidence.getConfidenceType() != TransactionConfidence.ConfidenceType.BUILDING && (confidence.numBroadcastPeers() == 0 ||
-                        confidence.getIXType() != TransactionConfidence.IXType.IX_LOCKED));
+        TransactionConfidence confidence = tx.getConfidence(wallet.getContext());
+        return !(value.isPositive() ||
+                (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) ||
+                (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING && (
+                        (confidence.numBroadcastPeers() > 0 || confidence.getIXType() != TransactionConfidence.IXType.IX_LOCKED))));
     }
 }

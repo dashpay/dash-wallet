@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
     android:background="@color/background_primary"
-    tools:context="de.schildbach.wallet.ui.main.WalletActivity">
+    tools:context="de.schildbach.wallet.ui.main.MainActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -19,14 +19,13 @@
             android:name="androidx.navigation.fragment.NavHostFragment"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_marginBottom="1dp"
             android:tag="wallet_fragment"
             app:defaultNavHost="true"
             app:navGraph="@navigation/nav_home"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toTopOf="@id/bottom_navigation_panel" />
+            app:layout_constraintBottom_toBottomOf="parent" />
 
         <FrameLayout
             android:id="@+id/bottom_navigation_panel"
@@ -40,7 +39,7 @@
             <com.google.android.material.bottomnavigation.BottomNavigationView
                 android:id="@+id/bottom_navigation"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
+                android:layout_height="@dimen/bottom_nav_bar_height"
                 android:paddingHorizontal="22dp"
                 android:background="@color/background_secondary"
                 app:elevation="0dp"
@@ -52,4 +51,11 @@
                 app:menu="@menu/bottom_navigation_menu" />
         </FrameLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <de.schildbach.wallet.ui.widget.PleaseWaitRestoringWalletView
+        android:id="@+id/restoring_wallet_cover"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background_primary"
+        android:visibility="gone" />
 </androidx.constraintlayout.widget.ConstraintLayout>

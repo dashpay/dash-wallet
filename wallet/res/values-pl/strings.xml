@@ -9,10 +9,11 @@
     <string name="blockchain_state_progress_days">%1$s, przestarzały o %2$d dni</string>
     <string name="blockchain_state_progress_weeks">%1$s, przestarzały o %2$d tygodni</string>
     <string name="blockchain_state_progress_months">%1$s, przestarzały o %2$d miesięcy</string>
-    <string name="blockchain_state_progress_downloading">Synchronizowanie z siecią</string>
+    <string name="blockchain_state_progress_downloading">Synchronizowanie z siecią (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Synchronizacja wstrzymana</string>
     <string name="blockchain_state_progress_problem_storage">Synchronizowanie: Problem z pamięcią</string>
     <string name="blockchain_state_progress_problem_network">Synchronizowanie: Problem z siecią</string>
+    <string name="mixing_state_progress_mixing">Mieszanie funduszy (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Adres Dash został skopiowany do schowka.</string>
     <string name="wallet_address_dialog_fragment_hint">Aby chronić twoją prywatność, twój adres zmieni się, gdy tylko otrzyma płatność.</string>
     <string name="wallet_balance_fragment_too_much">Ta kwota jest chyba zbyt duża by nosić ją w kieszeni. Proszę przenieś część środków w bezpieczniejsze miejsce.</string>
@@ -42,6 +43,8 @@
     <string name="wallet_low_storage_dialog_button_apps">Zarządzaj aplikacjami</string>
     <string name="wallet_timeskew_dialog_title">Sprawdź datę i ustawienia czasu</string>
     <string name="wallet_timeskew_dialog_msg">Czas na twoim urządzeniu jest opóźniony o %d minuty. Z tego powodu prawdopodobnie nie będziesz mógł wysyłać i odbierać Dash.\\n\\nSprawdź i w razie konieczności popraw ustawienia daty, godziny i strefy czasowej.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg">Czas na twoim urządzeniu jest %s na %d sekund. Nie możesz użyć CoinJoin z powodu tej różnicy.\n\nUstawienia czasu na tym urządzeniu muszą zostać zmienione na „Automatycznie ustawiaj czas”, aby użyć CoinJoin.</string>
+    <string name="settings_coinjoin_timeskew_dialog_msg">Czas na twoim urządzeniu jest nieprawidłowy o więcej niż 5 sekund. Nie możesz używać CoinJoin z powodu tej różnicy\n\nUstawienia czasu na urządzeniu muszą zostać zmienione na „Automatycznie ustawiaj czas” przed użyciem CoinJoin.</string>
     <string name="send_coins_activity_title">Wyślij Dashe</string>
     <string name="send_coins_fragment_request_payment_request_progress">Pobieranie podpisu z %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Pobieranie podpisu nie powiodło się</string>
@@ -171,6 +174,10 @@
     <string name="transaction_row_status_masternode_revoke">Odwołanie Masternoda</string>
     <string name="transaction_row_status_masternode_reward">Nagroda Masternoda</string>
     <string name="transaction_row_status_mining_reward">Nagroda Górnictwa</string>
+    <string name="transaction_row_status_coinjoin_mixing_fee">Opłata za mieszanie funduszy za pomocą CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_make_collateral">Zabezpieczenie dla transakcji wejściowych do CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_mixing">Mieszanie CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_create_denominations">Stwórz Denominacje CoinJoin</string>
     <string name="network_monitor_activity_title">Monitor sieci</string>
     <string name="network_monitor_peer_list_title">Połączenia</string>
     <string name="network_monitor_block_list_title">Bloki</string>
@@ -289,6 +296,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">Dołącz zrzut portfela</string>
     <string name="report_issue_dialog_mail_intent_chooser">Wyślij zgłoszenie używając…</string>
     <string name="report_issue_dialog_mail_intent_failed">Wysyłanie raportu nie powiodło się.</string>
+    <string name="report_issue_dialog_generating_report">Generuje raport</string>
     <string name="report_transaction_history_export">Eksportuj</string>
     <string name="report_transaction_history_title">Eksportuj CSV</string>
     <string name="report_transaction_history_not_synced_title">Eksportuj CSV</string>
@@ -329,6 +337,7 @@
     <string name="notification_inactivity_message">Wciąż posiadasz Dash na tym urządzeniu! Upewnij się że masz zapisane hasła odzyskiwania portfela zanim odinstalujesz Dash Wallet w innym wypadku stracisz swój balans %s</string>
     <string name="notification_inactivity_action_dismiss">Przypomnij później</string>
     <string name="notification_inactivity_action_dismiss_forever">Nie przypominaj więcej</string>
+    <string name="notification_bluetooth_service_listening">Gotowy do otrzymania płatności przez Bluetooth</string>
     <string name="appwidget_wallet_balance_title">Saldo Dash</string>
 
     <!-- generic buttons -->
@@ -404,4 +413,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">Chcesz otrzymywać płatności w tle?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Ta aplikacja jest skonfigurowana tak, aby nadal działać, gdy nie będzie widoczna przez pewien czas.\n\nSugerujemy zezwolenie tej aplikacji na ciągłe aktualizowanie łańcucha bloków, nawet w tle.\n\nNie martw się, zawsze będziemy uważali na poziom zużycia baterii.</string>
     <string name="battery_optimization_dialog_button_change">Otwórz Ustawienia</string>
+    <string name="credits_profile_change_message">Aktualizuj informacje profilu</string>
+
 </resources>

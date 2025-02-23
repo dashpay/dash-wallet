@@ -1,0 +1,466 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="choose_your_username">Kies je <b>Dash
+gebruikersnaam</b></string>
+    <string name="identity_min_3_chars">Tussen 3 en 23 tekens</string>
+    <string name="identity_alphanum_only">Alleen letters, cijfers en koppeltekens</string>
+    <string name="identity_hyphen_rule">Moet beginnen en eindigen met een letter of cijfer</string>
+    <string name="identity_username_validating">Gebruikersnaam valideren…</string>
+    <string name="identity_username_available">Gebruikersnaam beschikbaar</string>
+    <string name="identity_username_taken">Gebruikersnaam al in gebruik</string>
+    <string name="platform_communication_error">Communicatiefout met Dash Platform</string>
+    <string name="register">Registreren</string>
+
+    <string name="new_account_confirm_button_text">Bevestig en betaal</string>
+    <string name="invitation_confirm_button_text">Bevestig</string>
+    <string name="new_account_confirm_accept">Ik accepteer</string>
+    <string name="new_account_confirm_upgrade_fee">Upgradevergoeding</string>
+    <string name="new_account_confirm_message">Je hebt%s als je gebruikersnaam gekozen. Let op dat de gebruikersnaam NIET kan worden gewijzigd nadat deze is geregistreerd.</string>
+    <string name="invitation_confirm_title">Vergoeding uitnodiging</string>
+    <string name="invitation_confirm_message">Elke uitnodiging wordt met dit bedrag gefinancierd, zodat de ontvanger snel zijn gebruikersnaam op het Dash Network kan aanmaken</string>
+    <string name="invitation_init_title">Nodig uit</string>
+    <string name="invitation_init_header">Nodig je vrienden en familie uit</string>
+    <string name="invitation_init_message">Help je vrienden en familie om lid te worden van het Dash Netwerk. Nodig ze uit in de wereld van sociaal bankieren.</string>
+    <string name="invitation_init_button_text">Een nieuwe uitnodiging maken</string>
+    <string name="invitation_notifications_hint">Nodig je vrienden en familie uit voor het Dash Netwerk</string>
+    <string name="invitation_notifications_hint1">Nodig iemand uit om lid te worden van het Dash Netwerk</string>
+    <string name="invitation_notifications_hint1_or">of</string>
+    <string name="invitation_created_title">Uitnodiging</string>
+    <string name="invitation_created_successfully">Uitnodiging succesvol aangemaakt</string>
+    <string name="invitation_created_tag_title">Tag voor referentie</string>
+    <string name="invitation_created_tag">bv: Papa</string>
+    <string name="invitation_created_preview">Voorbeeld van de uitnodiging</string>
+    <string name="invitation_created_copy_link">Uitnodiging link kopiëren</string>
+    <string name="invitation_created_send_invitation">Verstuur uitnodiging</string>
+    <string name="invitation_created_send_invitation_again">Verstuur opnieuw</string>
+    <string name="invitation_created_maybe_later">Misschien later</string>
+    <string name="invitation_preview_title">Word nu lid</string>
+    <string name="invitation_preview_message">Je bent uitgenodigd door %s. Begin met het gebruiken van Dash.</string>
+    <string name="invitation_preview_close">Sluit</string>
+    <string name="invitation_cant_afford_title">Onvoldoende saldo</string>
+    <string name="invitation_cant_afford_message">Je hebt minstens%s Dash nodig om een uitnodiging te maken</string>
+    <string name="invitation_creating_error_title">Fout bij met maken van uitnodiging</string>
+    <string name="invitation_creating_error_message">Er was een probleem bij het maken van je uitnodiging. Probeer het opnieuw.</string>
+    <string name="invitation_creating_error_message_not_synced">Wacht tot het synchroniseren is voltooid en probeer het opnieuw.</string>
+    <string name="invitation_creating_progress_title">Uitnodiging wordt aangemaakt</string>
+    <string name="invitation_verifying_progress_title">Uitnodiging controleren</string>
+    <string name="invitation_share_message">Uitnodigingen zijn voor eenmalig gebruik. Deel ze niet met een groep.</string>
+    <string name="invitation_share_title">DayPay uitnodiging</string>
+    <string name="invitation_already_claimed_title">Uitnodiging al geclaimd</string>
+    <string name="invitation_already_claimed_message">Je uitnodiging van %s is al geclaimd</string>
+    <string name="invitation_invalid_invite_title">Ongeldige uitnodiging</string>
+    <string name="invitation_invalid_invite_message">Je uitnodiging van %s is niet geldig</string>
+    <string name="invitation_username_already_found_title">Gebruikersnaam al gevonden</string>
+    <string name="invitation_username_already_found_message">Je kunt deze uitnodiging niet claimen omdat je al een Dash gebruikersnaam hebt</string>
+    <string name="invitation_onboarding_has_began_error_title">Onboarding fout</string>
+    <string name="invitation_onboarding_has_began_error">Onboarding is bezig, claim je uitnodiging nadat je je portemonnee hebt aangemaakt.</string>
+    <string name="invitation_accept_title_1">Verkrijg je gebruikersnaam</string>
+    <string name="invitation_accept_title_2">Voeg vrienden en familie toe</string>
+    <string name="invitation_accept_message_2">Nodig je familie uit, vind je vrienden door hun gebruikersnamen te zoeken</string>
+    <string name="invitation_accept_title_3">Personaliseer</string>
+    <string name="invitation_accept_message_3">Upload je foto, personaliseer je identiteit</string>
+    <string name="invitation_accept_continue">Doorgaan</string>
+    <string name="invitation_contact_request_sent_message">Een contactverzoek is verzonden naar %s omdat zij je hebben uitgenodigd.</string>
+    <string name="topup_confirm_message">Je hebt er voor gekozen om je identiteit op te waarderen. Het volgende bedrag wordt van je saldo afgetrokken.</string>
+
+    <string name="username_being_created">Je gebruikersnaam %s wordt aangemaakt op het Dash Netwerk</string>
+    <string name="username_being_requested">Je gebruikersnaam %s wordt aangevraagd op het Dash Netwerk</string>
+
+    <string name="processing_let_me_know">Laat me weten wanneer het klaar is</string>
+    <string name="processing_home_title">Upgraden naar Evolution</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) Verwerking van betaling</string>
+    <string name="processing_home_step_2">(2/3) ID aanmaken</string>
+    <string name="processing_home_step_2_restoring">(2/3) ID herstellen</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Gebruikersnaam registreren</string>
+    <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Gebruikersnaam aanvragen</string>
+    <string name="processing_home_step_3_restoring">(3/3) Gebruikersnaam herstellen</string>
+    <string name="restore_identity">Identiteit herstellen</string>
+    <string name="processing_done_title">Hallo %s,</string>
+    <string name="processing_done_subtitle">Je account is klaar</string>
+    <string name="processing_voting_subtitle">Het stemmen voor je gebruikersnaam is begonnen</string>
+    <string name="processing_error_title">Fout bij het upgraden</string>
+    <string name="processing_error_title_from_invite">Fout bij het upgraden vanuit uitnodiging</string>
+    <string name="processing_error_retry">Opnieuw</string>
+    <string name="processing_username_unavailable_title">Gebruikersnaam niet beschikbaar</string>
+    <string name="processing_username_unavailable_subtitle">Kies alsjeblieft een andere</string>
+
+    <string name="dashpay_upgrade_fee">Upgradevergoeding</string>
+    <string name="dashpay_invite_fee">Uitnodigingskosten</string>
+    <string name="dashpay_topup_fee">Opwaardeerkosten</string>
+    <string name="search_user_find_a_user">Zoek een gebruiker op het Dash netwerk</string>
+    <string name="search_for_a_user">Zoek naar een gebruiker op het Dash netwerk</string>
+    <string name="search_user_input_placeholder">Zoek gebruikersnaam</string>
+    <string name="add_new_contact">Voeg een nieuw contact toe</string>
+    <string name="send_contact_request">Contactverzoek verzenden</string>
+    <string name="sending_contact_request">Contactverzoek verzenden</string>
+    <string name="sending_contact_request_short">Uitnodigen</string>
+    <string name="accepting_contact_request">Contactverzoek accepteren</string>
+    <string name="accepting_contact_request_short">Accepteren</string>
+    <string name="search_user_no_results">Er zijn geen gebruikers die overeenkomen</string>
+    <string name="search_user_loading">Zoeken naar gebruikersnaam <b>"%"</b> op het Dash Network</string>
+    <string name="contact_request_pending">Contactaanvraag in behandeling</string>
+    <string name="pay">Betaal</string>
+    <string name="contact_request_received_title">%s heeft gevraagd om je vriend te worden</string>
+    <string name="contact_request_accept">Accepteren</string>
+    <string name="contact_request_ignore">Negeer</string>
+
+    <string name="contacts_no_results">Er zijn geen contacten die overeenkomen</string>
+
+    <string name="contacts_title">Contacten</string>
+    <string name="contacts_send_to_contact_title">Stuur naar een contact</string>
+    <string name="contacts_search_for">Zoek een contactpersoon</string>
+    <string name="contact_requests_title">Contactverzoeken</string>
+    <string name="contacts_add_new_contact">Nieuw contact toevoegen</string>
+    <string name="contacts_contact_requests_count">Contactverzoeken (%d)</string>
+    <string name="contacts_contact_requests">Contactverzoeken</string>
+    <string name="contacts_contact_requests_view">alles bekijken</string>
+    <string name="contacts_my_contacts">Mijn contacten</string>
+    <string name="contacts_sort_order">Sorteren op:</string>
+    <string-array name="contacts_sort">
+        <item>Naam</item>
+    </string-array>
+
+    <string name="notifications_title">Notificaties</string>
+    <string name="notifications_title_with_count">Meldingen (%d)</string>
+    <string name="notifications_profile_activity">Activiteit</string>
+    <string name="notifications_new">Nieuw</string>
+    <string name="notifications_earlier">Eerder</string>
+    <string name="notifications_none_new">Er zijn geen nieuwe meldingen</string>
+    <string name="notifications_contact_has_accepted">%s heeft je contactverzoek geaccepteerd.</string>
+    <string name="notifications_you_have_accepted">Je hebt het contactverzoek van %s geaccepteerd</string>
+    <string name="notifications_you_sent">Je hebt een contactverzoek gestuurd naar%s</string>
+    <string name="notifications_you_received">%s heeft je een contactverzoek gestuurd</string>
+
+    <string name="identity_complete_message">Je gebruikersnaam %s is succesvol aangemaakt op het Dash Netwerk</string>
+    <string name="request_complete_message">Je gebruikersnaam %s is succesvol aangevraagd op het Dash Netwerk</string>
+
+    <string name="scan_to_pay_username_dialog_message">Geen geldige Dash Gebruikersnaam of Identiteit\n\n%s</string>
+    <string name="send_coins_to_username">Verzenden naar</string>
+    <string name="contact_history_disclaimer">Voeg % toe als je contact om <b>rechtstreeks naar gebruikersnaam te betalen</b> en <b>Wederzijdse transactiegeschiedenis te behouden
+</b></string>
+    <string name="contact_history_disclaimer_pending">Zodra % je verzoek accepteert, kun je <b>rechtstreeks naar gebruikersnaam betalen</b></string>
+    <string name="stranger_activity_disclaimer_text">Betalingen die rechtstreeks aan adressen worden gedaan, worden niet bewaard in activiteitsoverzicht.</string>
+    <string name="error_loading_identity">Fout bij het laden van identiteit</string>
+
+    <string name="edit_profile">Bewerk profiel</string>
+    <string name="display_name">Weergavenaam</string>
+    <string name="about_me">Over mij</string>
+    <string name="char_count">%1$d/%2$d tekens</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">Opslaan</string>
+    <string name="edit_profile_take_picture">Maak een foto met camera</string>
+    <string name="edit_profile_choose_picture">Kies uit galerij</string>
+    <string name="upgrade_to_evolution_title">Word lid van DashPay</string>
+    <string name="upgrade_to_evolution_message">Maak je gebruikersnaam, vind vrienden en familie via hun gebruikersnamen, en voeg ze toe aan je contacten</string>
+    <string name="image_cropper_title">Verplaats en zoom je foto voor een perfecte pasvorm</string>
+    <string name="select">Selecteer</string>
+    <string name="unable_to_load_image">Kan afbeelding niet laden.</string>
+    <string name="profile_picture_upload_error_title">Upload fout</string>
+    <string name="profile_picture_upload_error_message">Kan je foto niet uploaden.\nProbeer het opnieuw.</string>
+    <string name="profile_picture_upload_try_again">Probeer opnieuw</string>
+    <string name="profile_picture_uploading_title">Even wachten a.u.b.</string>
+    <string name="profile_picture_uploading_message">Foto uploaden naar het netwerk</string>
+    <string name="picture_upload_policy">Beleid voor foto upload</string>
+    <string name="imgur_policy_1">De afbeelding die je selecteert, wordt anoniem naar Imgur geüpload.</string>
+    <string name="imgur_policy_2">De geüploade afbeelding kan door iedereen worden bekeken.</string>
+    <string name="imgur_policy_3">Je kan de geüploade afbeelding altijd verwijderen, zolang je toegang hebt tot deze portemonnee.</string>
+    <string name="profile_picture_delete_title">Weet je het zeker\?</string>
+    <string name="profile_picture_delete_message">Deze afbeelding zal niet langer worden gebruikt op het Dash netwerk</string>
+    <string name="agree">Akkoord</string>
+    <string name="yes">Ja</string>
+    <string name="no">Nee</string>
+
+    <string name="updating_profile">Profiel bijwerken op Dash Network</string>
+    <string name="google_drive_policy_one">Er wordt door het Dash Netwerk en de DashPay portemonnee geen accountinformatie opgeslagen.</string>
+    <string name="google_drive_policy_two">De geüploade afbeelding kan door iedereen worden bekeken.</string>
+    <string name="google_drive_policy_three">Je kunt de afbeelding altijd verwijderen of wijzigen zolang je toegang hebt tot de portemonnee op dit apparaat.</string>
+
+    <string name="upload_image_message">Foto uploaden naar het netwerk</string>
+    <string name="upload_image_please_wait">Even wachten a.u.b.</string>
+    <string name="upload_image_error_message">Kan je foto niet uploaden. Probeer het opnieuw.</string>
+    <string name="upload_image_upload_error">Upload fout</string>
+
+    <string name="edit_profile_google_drive">Google Drive</string>
+    <string name="edit_profile_imgur">Imgur</string>
+    <string name="google_drive_failed_authorization">Google Drive autorisatie mislukt.</string>
+
+
+    <string name="error_updating_profile_try_again">Probeer opnieuw</string>
+    <string name="error_updating_profile_cancel">Annuleer</string>
+    <string name="error_updating_profile_msg">Fout bij het bijwerken van profiel</string>
+    <string name="error_updating_profile_code">Code: %s</string>
+    <string name="edit_profile_public_url">Openbare URL</string>
+    <string name="public_url_enter_url">Plak uw afbeelding URL</string>
+    <string name="public_url_error_message">Kan afbeelding niet ophalen. Voer een geldige afbeelding URL in.</string>
+    <string name="public_url_message">Je kan elke URL opgeven die openbaar beschikbaar is op internet, zodat gebruikers deze kunnen zien op het Dash Netwerk.</string>
+    <string name="public_url_more_info">Meer informatie</string>
+    <string name="public_url_fetching_image">Afbeelding ophalen</string>
+
+    <string name="gravatar">Gravatar</string>
+    <string name="gravatar_email_prompt">Voer je Gravatar e-mail ID in</string>
+    <string name="gravatar_fetching">Je Gravatar ophalen</string>
+    <string name="gravatar_email_sample">voorbeeld\@email.com</string>
+    <string name="gravatar_disclaimer">je e-mail wordt niet opgeslagen in de DashPay portemonnee, en ook niet op servers. Het wordt één keer gebruikt om je Gravatar accountgegevens te krijgen en wordt vervolgens weggegooid.</string>
+    <string name="gravatar_email_error">Kan je Gravatar niet ophalen. Voer een geldig Gravatar email ID in.</string>
+
+    <string name="where_to_store_your_picture">Waar wil je je foto opslaan\?</string>
+    <string name="external_storage_disclaimer">Je afbeelding blijft altijd onder jouw controle. Dash slaat geen van je gegevens op, inclusief je profielfoto.</string>
+    <string name="select_source_sign_in_required">Inloggen vereist</string>
+    <string name="select_source_google_drive">Google Drive</string>
+    <string name="select_source_no_sign_in_required">Geen account nodig</string>
+
+    <string name="join_dashpay_subtitle">Maak een gebruikersnaam aan, voeg je vrienden toe...</string>
+    <string name="join_dashpay_more_subtitle">Maak je gebruikersnaam aan, zoek je vrienden en voeg ze toe aan je contacten</string>
+    <string name="join">Doe mee</string>
+
+    <string name="more_suggestions">Meer suggesties</string>
+    <string name="users_that_matches">Gebruikers die overeenkomen</string>
+    <string name="not_in_your_contacts">die momenteel niet in je contacten staan</string>
+    <string name="no_matching_contacts">Geen overeenkomende gebruikers in je contacten</string>
+    <string name="suggestions_empty_result_part_1">Er zijn geen gebruikers die overeenkomen met de naam</string>
+    <string name="suggestions_empty_result_part_2">in je contacten</string>
+    <string name="save_changes">Wijzigingen opslaan</string>
+    <string name="save_profile_reminder_text">Wil je de wijzigingen die je in je profiel hebt aangebracht bewaren\?</string>
+    <string name="invitation_notification_text">Nodig je vrienden en familie uit om lid te worden van het Dash Netwerk.</string>
+    <string name="dashpay_min_balance_disclaimer">Je hebt minstens <b>%s</b> nodig om te beginnen</string>
+    <string name="dashpay_insuffient_credits">Onvoldoende kredits om deze actie uit te voeren.</string>
+
+    <string name="about_developer_mode">Ontwikkelaarsmodus geactiveerd: alle functies ingeschakeld!</string>
+    <string name="about_developer_mode_disabled">Ontwikkelaarsmodus gedeactiveerd.</string>
+    <string name="invite_history_create_new_invite">Een nieuwe uitnodiging maken</string>
+    <string name="invitations_history_header">Geschiedenis uitnodigingen</string>
+    <string name="invitations_filter_title">Filter uitnodigingen</string>
+    <string name="invite_history_empty">Er zijn geen uitnodigingen aangemaakt.</string>
+    <string name="invite_history_empty_claimed">Er zijn geen geclaimde uitnodigingen.</string>
+    <string name="invite_history_empty_pending">Er zijn geen openstaande uitnodigingen.</string>
+    <string name="invitation_details_invite_used_by">Uitnodiging gebruikt door</string>
+    <string name="invitation_details_invite_without_username">Uitnodiging geclaimd. Gebruikersnaamregistratie in afwachting.</string>
+    <string-array name="invite_filter">
+        <item>Alles</item>
+        <item>Wachtende</item>
+        <item>Geclaimd</item>
+    </string-array>
+
+    <!-- Private memo -->
+    <string name="private_memo">Privé notitie</string>
+    <string name="add_note">Notitie toevoegen</string>
+    <string name="edit_note">Notitie bewerken</string>
+    <string name="note">Notitie</string>
+
+    <string name="select_privacy_preferences">Selecteer je gebruikersnaam privacy instellingen</string>
+    <string name="please_note_cant_change_this_later">Let op dat je dit later niet kunt veranderen</string>
+    <string name="Intermediate_level_WIFI_Warning">Het privacy niveau \'Gemiddeld\' vereist een betrouwbare internetverbinding</string>
+    <string name="Advanced_level_WIFI_Warning">Het privacy niveau \'Geavanceerd\' vereist een betrouwbare internetverbinding</string>
+    <string name="privcay_level_WIFI_warning_desc">Het wordt aanbevolen om op een WiFi netwerk verbonden te zijn om extra mix kosten te vermijden.</string>
+    <string name="continue_anyway">Ga toch door</string>
+    <string name="welcome_to_dash_pay">Welkom bij Dash Pay</string>
+    <string name="pay_to_usernames">Betaal aan gebruikersnamen. Geen alfanumerieke adressen meer.</string>
+    <string name="create_a_username">Maak een gebruikersnaam</string>
+    <string name="add_your_friends_family">Voeg vrienden en familie toe</string>
+    <string name="invite_your_family">Nodig je familie uit, of vind je vrienden door hun gebruikersnamen te zoeken</string>
+    <string name="personalise_profile">Personaliseer profiel</string>
+    <string name="upload_your_picture">Upload je foto, personaliseer je identiteit</string>
+    <string name="in_case_lose_your_passphrase">Als je de wachtwoordzin verliest, verlies je het recht op de door jou aangevraagde gebruikersnaam.</string>
+    <string name="keep_your_passphrase_safe">Bewaar de wachtwoordzin veilig</string>
+    <string name="pay_now">Betaal nu en indien niet goedgekeurd, kun je zonder opnieuw te betalen een andere gebruikersnaam aanmaken </string>
+    <string name="case_your_request_is_not_approved">Indien je aanvraag niet wordt goedgekeurd</string>
+    <string name="voting_requirement_subtitle">Een gebruikersnaam die een cijfer 2–9 bevat of langer is dan 20 tekens, wordt automatisch goedgekeurd.</string>
+    <string name="voting_requirement_title">Stemmen is alleen in sommige gevallen vereist.</string>
+    <string name="dash_network_must_vote_to_approve">Het Dash netwerk moet stemmen om je gebruikersnaam goed te keuren voordat deze wordt aangemaakt.</string>
+    <string name="what_is_username_voting">Wat is stemmen met gebruikersnaam\?</string>
+    <string name="usernames_blocked_title">Sommige gebruikersnamen kunnen worden geblokkeerd.</string>
+    <string name="usernames_blocked_subtitle">Als genoeg mensen op het netwerk bepalen dat een gebruikersnaam ongepast is, kunnen ze deze blokkeren.</string>
+    <string name="username_voting">Stemmen op gebruikersnamen</string>
+    <string name="username_voting_subtitle">Als eigenaar van een masternode kan je stemmen om aangevraagde gebruikersnamen goed te keuren voordat ze op het netwerk worden aangemaakt.</string>
+    <string name="username_voting_subtitle_two">Je kan een gebruikersnaam blokkeren als je die ongepast vindt.</string>
+    <string name="voting_duplicates_only_title">Standaard filterinstelling</string>
+    <string name="voting_duplicates_only_message">Het standaardfilter toont alleen dubbele gebruikersnamen waar je NIET op hebt gestemd, maar je kan alle betwiste gebruikersnamen zien door het filter te wijzigen</string>
+    <string name="all">Alles</string>
+    <string name="n_usernames">%d gebruikersnamen</string>
+    <string name="n_requests">%d verzoeken</string>
+    <string name="search_by_username">Zoek op gebruikersnaam</string>
+    <string name="type">Type</string>
+    <string name="only_duplicates">Alleen duplicaten</string>
+    <string name="only_links">Alleen aanvragen met links</string>
+    <string name="only_links_short">Met links</string>
+    <string name="date">Verzoekdatum: %s</string>
+    <string name="votes">Stemmen: %s</string>
+    <string name="voting_ends">Stemming eindigt: %s</string>
+
+    <string-array name="usernames_group_by_options">
+        <item>Geen</item>
+        <item>Eerste eerst</item>
+        <item>laatste eerst</item>
+    </string-array>
+
+    <string-array name="usernames_sort_by_options">
+        <item>Nieuw naar oud</item>
+        <item>Oud naar nieuw</item>
+        <item>Hoog naar laag</item>
+        <item>Laag naar hoog</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>Alles</item>
+        <item>Ik heb het goedgekeurd</item>
+        <item>Ik heb het niet goedgekeurd</item>
+        <item>Heeft geblokkeerde stemmen </item>
+    </string-array>
+    <string name="request_your_username">Maak je gebruikersnaam aan</string>
+    <string name="request_your_hint">Let op dat je deze in de toekomst niet meer kunt wijzigen</string>
+    <string name="request_username">Vraag gebruikersnaam aan</string>
+    <string name="request_voting_range">Het Dash Netwerk zal over deze gebruikersnaam stemmen. We laten je weten wat de resultaten zijn op %s.</string>
+    <string name="request_username_available">Gebruikersnaam is beschikbaar</string>
+    <string name="request_username_unavailable">Gebruikersnaam is niet beschikbaar of geblokkeerd</string>
+    <string name="request_username_taken">Gebruikersnaam is bezet</string>
+    <string name="request_username_taken_results">Gebruikersnaam bezet door een andere gebruiker</string>
+    <string name="requesting_your_username_title">Je gebruikersnaam aan het maken</string>
+    <string name="requesting_your_username_message">Je gebruikersnaam %s wordt aangevraagd op het Dash Netwerk. Dit kan even duren.</string>
+    <string name="creating_your_username_message">Je gebruikersnaam %s wordt gecreëerd op het Dash Netwerk. Dit kan even duren.</string>
+    <string name="requesting_your_username_error_title">Je verzoek  om gebruikersnaam is mislukt.</string>
+    <string name="requesting_your_username_error_message">De aanvraag voor gebruikersnaam%s is mislukt door onbekende reden.</string>
+    <string name="voting">Stemming:</string>
+    <string name="this_username_has_already_been_requested">Deze gebruikersnaam is al aangevraagd, maar je kan deze alsnog aanvragen en het netwerk laten beslissen of je deze kunt krijgen</string>
+    <string name="request_details">Verkrijg details</string>
+    <string name="request_details_subtitle">Controleer de onderstaande post om het eigendom van deze gebruikersnaam te verifiëren.</string>
+    <string name="vote_to_approve">Stem om goed te keuren</string>
+    <string name="vote_to_block">Stem om goed te keuren</string>
+    <string name="identity">Identiteit</string>
+    <string name="results">Resultaten</string>
+    <string name="link">Link</string>
+    <string name="link_not_provided">Niet verstrekt</string>
+    <string name="cancel_approval">Annuleer goedkeuring</string>
+    <string name="verify_your_identity">Verifieer je identiteit om je kansen op het verkrijgen van de door jouw aangevraagde gebruikersnaam te vergroten</string>
+    <string name="if_somebody">Als iemand anders dezelfde gebruikersnaam aanvraagt ​​als jij, laten we het netwerk beslissen aan wie deze gebruikersnaam wordt gegeven</string>
+    <string name="the_link_will_be_visible">De link die je stuurt, zal alleen zichtbaar zijn voor de netwerkbeheerders.</string>
+    <string name="verify_your_identity_voting">Verifieer je identiteit</string>
+    <string name="copy_the_text">Kopieer de tekst</string>
+    <string name="please_vote_to_approve">Stem alstublieft om mijn verzoek voor deze Dash gebruikersnaam goed te keuren - %s</string>
+    <string name="prove_your_identity">Bewijs je identiteit</string>
+    <string name="make_a_post_with_the_text">Maak een post met de bovenstaande tekst op een bekend sociaal netwerk of berichtenplatform om te verifiëren dat jij de oorspronkelijke eigenaar van de gevraagde gebruikersnaam bent en plak de link hieronder.</string>
+    <string name="paste_the_link">Plak de link</string>
+    <string name="voting_key_title">Voer je stem sleutel in</string>
+    <string name="voting_key_hint">Masternode Voting Private Key</string>
+    <string name="voting_key_input_error">Je hebt een verkeerde sleutel ingevoerd</string>
+    <string name="voting_key_input_not_active_error">je hebt een sleutel ingevoerd die niet is gekoppeld aan een actieve Masternode</string>
+    <string name="voting_key_input_already_present">Je hebt masternode sleutel al ingevoerd</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">Je hebt een sleutel ingevoerd voor testnet, maar dit is mainnet. Het zou er zo uit moeten zien: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">Je hebt een sleutel ingevoerd voor mainnet, maar dit is testnet. Het zou er zo uit moeten zien: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">Je hebt een adressleutel ingevoerd in plaats van de stemsleutel van een masternode . Het moet in WIF formaat zijn (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">Je hebt een sleutel in hex formaat ingevoerd, maar het moet in WIF formaat zijn (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">Je hebt een sleutel in hex formaat ingevoerd, maar het moet in WIF formaat zijn (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">Je hebt een te korte privésleutel ingevoerd. Hier is een voorbeeld (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">Je hebt een privésleutel ingevoerd die enkele onjuiste tekens bevat. Hier is een voorbeeld (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">Je hebt een privésleutel ingevoerd met een ongeldig karakter. Hier is een voorbeeld (%s)</string>
+
+    <string name="voting_key_add">Voeg je stemssleutels toe.</string>
+    <string name="voting_key_add_subtitle">De onderstaande IP-adres(sen) zijn geassocieerd met deze portemonnee.</string>
+    <string name="masternode_ip">Masternode IP adres</string>
+    <string name="multiple_votes_cast">Er zullen %d stemmen worden uitgebracht omdat je meerdere stemsleutels in de portemonnee hebt opgeslagen.</string>
+    <string name="add_masternode_key">Voeg Masternode stemsleutel toe</string>
+    <string name="dont_ask_again">Vraag me niet nog een keer</string>
+    <string name="vote_submitting">Je stem indienen voor gebruikersnaam %s</string>
+    <string name="quick_vote_submitting">Je stemmen indienen voor alle gebruikersnamen</string>
+    <string name="vote_submitted">Gestemd voor gebruikersnaam %s</string>
+    <string name="quick_vote_submitted">Met succes gestemd op alle gebruikersnamen.</string>
+    <string name="cancel_submitting">Je stem voor gebruikersnaam %s annuleren</string>
+    <string name="cancel_submitted">Stemming voor gebruikersnaam %s geannuleerd</string>
+    <string name="block_submitting">Blokkeren van gebruikersnaam %s</string>
+    <string name="block_submitted">Je hebt gebruikersnaam %s geblokkeerd</string>
+    <string name="vote_submitted_error">Fout bij stemmen voor gebruikersnaam %s</string>
+    <string name="cancel_submitted_error">Fout bij annuleren van stemmen voor gebruikersnaam %s</string>
+    <string name="block_submitted_error">Fout bij blokkeren gebruikersnaam %s</string>
+    <string name="quick_vote">Snel stemmen</string>
+    <string name="quick_vote_subtitle">Door op de knop \"Stem op Alles\" te drukken, stem je automatisch voor alle gefilterde gebruikersnamen (%d) die als eerste zijn ingediend.</string>
+    <string name="vote_for_all">Stem voor alle</string>
+    <string name="one_vote_left_title">Nog één stem over</string>
+    <string name="one_vote_left_show_usernames">Toon gebruikersnamen</string>
+    <string name="one_vote_left_subtitle">Je hebt al %d keer gestemd op deze gebruikersnamen. Je kan nog maar één stem uitbrengen voor deze gebruikersnamen.</string>
+    <string name="voting_period_active">Periode voor stemmen op gebruikersnamen actief</string>
+    <string name="there_was_a_network_error">Er is een netwerkfout opgetreden. Je kan het zonder extra kosten opnieuw proberen</string>
+    <string name="requested_username_has_been">Gebruikersnaam is aangevraagd.</string>
+    <string name="requested_voting_duration">Resultaten op %s.</string>
+    <string name="cancel_request">Annuleer verzoek</string>
+    <string name="after_the_voting">Nadat de stemming is afgelopen, zullen wij je op de hoogte stellen van de resultaten</string>
+    <string name="none">Geen</string>
+    <string name="verify_now">Nu verifiëren</string>
+    <string name="if_you_tap_cancel">Als je op “Verzoek annuleren” drukt, heb je nog steeds de mogelijkheid om een ​​andere gebruikersnaam aan te vragen zonder opnieuw te hoeven betalen</string>
+    <string name="do_you_really_want_to_cancel">Wil je het verzoek tot gebruikersnaam echt annuleren\?</string>
+    <string name="if_you_tap_cancel_request">Als je op “Verzoek annuleren” drukt, heb je nog steeds de mogelijkheid om een ​​andere gebruikersnaam aan te vragen zonder opnieuw te hoeven betalen</string>
+    <string name="cant_open">Kan niet openen</string>
+    <string name="invalid_link">De link is ongeldig</string>
+    <string name="welcome_request_username_min_balance_disclaimer_all">Je hebt %s Dash. Sommige gebruikersnamen kosten tot %s Dash.</string>
+    <string name="welcome_request_username_min_balance_disclaimer_noncontested">Je moet meer dan %s Dash hebben om een gebruikersnaam aan te maken.</string>
+    <string name="request_username_min_balance_disclaimer">Om een gebruikersnaam aan te vragen op het Dash Netwerk, moet je meer dan %s Dash hebben.</string>
+
+    <!-- CoinJoin -->
+    <string name="coinjoin">CoinJoin</string>
+    <string name="turned_off">Uitgeschakeld</string>
+    <string name="coinjoin_info_subtitle">Door Dash te mixen, worden je transacties meer privé</string>
+    <string name="coinjoin_description_1">Wanneer dit is ingeschakeld kun je alleen Dash uitgeven wat gemixt is. Dit kan op elk moment worden uitgeschakeld.</string>
+    <string name="coinjoin_description_2">Nieuw ontvangen Dash wordt automatisch gemixt wanneer de portemonnee wordt geopend</string>
+    <string name="coinjoin_description_3">Als je deze functie inschakelt, zal het batterijgebruik toenemen</string>
+    <string name="coinjoin_mixing_level_title">Selecteer mix niveau</string>
+    <string name="coinjoin_mixing_level_subtitle">Je kunt het niveau van mixen op elk moment wijzigen of stoppen.</string>
+    <string name="coinjoin_mixing_transactions">Transacties mixen</string>
+    <string name="coinjoin_transaction_group">Dit zijn mix gerelateerde transacties.</string>
+    <string name="intermediate">Gemiddeld</string>
+    <string name="advanced">Gevanceerd</string>
+    <string name="intermediate_level_card_decs">Gevorderde gebruikers met een zeer hoog niveau van technische expertise kunnen je transactiegeschiedenis achterhalen</string>
+    <string name="advanced_level_card_decs">Het zou voor gevorderde gebruikers met welke technische expertise dan ook erg moeilijk zijn om je transactiegeschiedenis te achterhalen</string>
+    <string name="coinjoin_intermediate_time">tot 30 minuten</string>
+    <string name="coinjoin_advanced_time">Meerdere uren</string>
+    <string name="coinjoin_start">Start met mixen</string>
+    <string name="coinjoin_stop">Stop het mixen</string>
+    <string name="coinjoin_mixing">Aan het mixen</string>
+    <string name="coinjoin_paused">mixen gepauzeerd </string>
+    <string name="coinjoin_not_started">Niet gestart</string>
+    <string name="coinjoin_progress_balance">%1$s van %2$s</string>
+    <string name="coinjoin_progress_finished">Volledig gemixt</string>
+    <string name="coinjoin_change_level_confirmation">Weet je zeker dat je het privacy niveau wilt wijzigen\?</string>
+    <string name="coinjoin_stop_mixing_title">Weet je zeker dat je het mixen wil stoppen\?</string>
+    <string name="coinjoin_stop_mixing_message">Alle het saldo dat is gemixt, worden samengevoegd met je ongemixte saldo</string>
+    <string name="coinjoin_mixed_balance">Gemixt saldo:</string>
+
+    <!-- credit balance messages / buttons -->
+    <string name="credit_balance_empty_warning_title">je krediet saldo is laag</string>
+    <string name="credit_balance_low_warning_title">Uw krediet saldo is leeg</string>
+    <string name="credit_balance_empty_warning_message">Je kan DashPay blijven gebruiken voor betalingen, maar je kunt je profiel niet bijwerken of meer contacten toevoegen totdat je je krediet saldo opwaardeert</string>
+    <string name="credit_balance_low_warning_message">Laad je krediet saldo op om door te gaan met het aanbrengen van wijzigingen aan je profiel en het toevoegen van contacten</string>
+    <string name="credit_balance_button_maybe_later">Misschien later</string>
+    <string name="credit_balance_button_buy">Koop krediet saldo</string>
+    <string name="credit_balance_insufficient_error_message">Je hebt niet genoeg saldo om kredits te kopen</string>
+    <string name="buy_credits_estimated_items">%s -%d contacten / %d profielupdates</string>
+
+    <string name="request_username_username_voting_message">+ wat is stemmen met gebruikersnaam\?</string>
+    <string name="request_username_character_requirement">Alleen letters, cijfers en koppeltekens</string>
+    <string name="request_username_balance_requirement">Je hebt 0,25 DASH nodig om deze gebruikersnaam aan te maken</string>
+    <string name="request_username_length_requirement">Tussen 3 en 23 tekens</string>
+    <string name="request_username_confirm">Ik accepteer</string>
+    <string name="username_vote_one_left_message">Je hebt al %d keer gestemd op deze gebruikersnaam. Je kan nog maar één stem uitbrengen op deze gebruikersnaam.</string>
+    <string name="username_vote_one_left">Eén stem over</string>
+    <string name="username_vote_none_left_message">Je hebt al %d keer gestemd op deze gebruikersnaam. Je kan geen stem meer uitbrengen op deze gebruikersnaam.</string>
+    <string name="username_vote_none_left">Geen stemmen over</string>
+    <string name="request_username_blocked">De aangevraagde gebruikersnaam is geblokkeerd</string>
+    <string name="request_username_lost_vote">De aangevraagde gebruikersnaam is aan iemand anders gegeven</string>
+    <string name="request_username_blocked_message">De gebruikersnaam %s is geblokkeerd door het Dash Netwerk. Probeer het opnieuw door een andere gebruikersnaam aan te vragen.</string>
+    <string name="request_username_lost_vote_message">Vanwege het stemproces heeft het Dash Netwerk besloten om de gebruikersnaam %s aan iemand anders toe te wijzen. Probeer het opnieuw door een andere gebruikersnaam aan te vragen.</string>
+    <string name="mix_dash_mix">Gemixt saldo</string>
+    <string name="mix_dash_title">Mix je Dash</string>
+    <string name="mix_dash_message">Om te voorkomen dat anderen kunnen zien aan wie je betalingen doet, raden wij u aan om je saldo te mixen voordat je je gebruikersnaam aanmaakt.</string>
+    <string name="tools_credits_title">Credits</string>
+    <string name="tools_credits_buy_button">Koop</string>
+    <string name="dashpay_what_are_credits_title">Wat zijn credits\?</string>
+    <string name="dashpay_what_are_credits_message">Gebruikers betalen transactiekosten voor interactie met het Dash netwerk. Daarom vereist elke wijziging aan je profiel het betalen van een kleine vergoeding die met credits kan worden betaald.\n\nJe credits kunnen worden gebruikt om:</string>
+    <string name="credits_send_and_accept_contact_requests">Stuur en accepteer contactverzoeken.</string>
+    <string name="platform_credits">Platform Credits</string>
+    <string name="platform_credits_error">Fout</string>
+    <string name="platform_credits_not_transferred">Platformcredits in afwachting</string>
+    <string name="voting_period">Stemperiode</string>
+    <string name="voting_period_ends_in_days">De stemperiode eindigt over %d dagen.</string>
+    <string name="voting_period_ends_today">De stemperiode eindigt vandaag.</string>
+    <string name="voting_period_ends_tomorrow">De stemperiode eindigt morgen.</string>
+    <string name="link_included">Link inbegrepen.</string>
+    <string name="group_by">groepeer op</string>
+</resources>

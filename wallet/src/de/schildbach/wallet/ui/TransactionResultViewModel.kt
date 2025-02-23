@@ -17,8 +17,15 @@
 package de.schildbach.wallet.ui
 
 import androidx.lifecycle.*
+import androidx.work.WorkInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.dao.TopUpsDao
+import de.schildbach.wallet.database.entity.TopUp
+import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Sha256Hash
@@ -27,6 +34,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
@@ -41,22 +49,25 @@ class TransactionResultViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
     val walletData: WalletDataProvider,
-    private val configuration: Configuration,
+    val configuration: Configuration,
+    private val dashPayProfileDao: DashPayProfileDao,
+    private val topUpsDao: TopUpsDao,
+    private val platformRepo: PlatformRepo,
     private val analytics: AnalyticsService,
     val walletApplication: WalletApplication
 ) : ViewModel() {
-
     val dashFormat: MonetaryFormat = configuration.format.noCode()
 
     val wallet: Wallet?
         get() = walletData.wallet
 
-    var transaction: Transaction? = null
-        private set
+    private val _transaction = MutableStateFlow<Transaction?>(null)
+    val transaction: StateFlow<Transaction?>
+        get() = _transaction
 
     private val _transactionMetadata: MutableStateFlow<TransactionMetadata?> = MutableStateFlow(null)
     val transactionMetadata
-        get() = _transactionMetadata.filterNotNull().asLiveData()
+        get() = _transactionMetadata.filterNotNull()
 
     val transactionIcon = _transactionMetadata
         .filterNotNull()
@@ -73,16 +84,28 @@ class TransactionResultViewModel @Inject constructor(
         .filterNotNull()
         .asLiveData()
 
+    private val _contact = MutableLiveData<DashPayProfile?>()
+    val contact: LiveData<DashPayProfile?>
+        get() = _contact
+
+    var topUpError: Boolean = false
+    var topUpComplete: Boolean = false
     fun init(txId: Sha256Hash?) {
         txId?.let {
-            this.transaction = walletData.wallet!!.getTransaction(txId)
-            this.transaction?.let {
-                monitorTransactionMetadata(it.txId)
+            // should this be viewModelScope.launch(Dispatchers.IO) and not use withContext
+            viewModelScope.launch {
+                val tx = withContext(Dispatchers.IO) { walletData.wallet!!.getTransaction(txId) }
+                tx?.let {
+                    _transaction.value = tx
+                    monitorTransactionMetadata(it.txId)
+                    findContact(it)
+                }
             }
         }
     }
 
     private fun monitorTransactionMetadata(txId: Sha256Hash) {
+        // this might take some time, so let it run asynchronously
         viewModelScope.launch(Dispatchers.IO) {
             transactionMetadataProvider.importTransactionMetadata(txId)
             transactionMetadataProvider.observeTransactionMetadata(txId).collect {
@@ -92,7 +115,7 @@ class TransactionResultViewModel @Inject constructor(
     }
 
     fun toggleTaxCategory() {
-        transaction?.let { tx ->
+        transaction.value?.let { tx ->
             val metadata = _transactionMetadata.value // can be null if there is no metadata in the table
 
             var currentTaxCategory = metadata?.taxCategory // can be null if user never specified a value
@@ -115,6 +138,27 @@ class TransactionResultViewModel @Inject constructor(
         }
     }
 
+    private suspend fun findContact(tx: Transaction) {
+        if (!platformRepo.hasIdentity) {
+            _contact.postValue(null)
+            return
+        }
+
+        val userId = withContext(Dispatchers.IO) {
+            platformRepo.blockchainIdentity.getContactForTransaction(tx)
+        }
+
+        if (userId == null) {
+            _contact.postValue(null)
+            return
+        }
+
+        dashPayProfileDao.observeByUserId(userId)
+            .distinctUntilChanged()
+            .onEach(_contact::postValue)
+            .launchIn(viewModelScope)
+    }
+    
     fun rescanBlockchain() {
         analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, mapOf())
         walletApplication.resetBlockchain()
@@ -124,4 +168,8 @@ class TransactionResultViewModel @Inject constructor(
     fun logEvent(eventName: String) {
         analytics.logEvent(eventName, mapOf())
     }
+
+    fun topUpStatus(txId: Sha256Hash): Flow<TopUp?> = topUpsDao.observe(txId)
+    fun topUpWork(txId: Sha256Hash): LiveData<Resource<WorkInfo>> =
+        TopupIdentityOperation.operationStatus(walletApplication, txId, analytics)
 }

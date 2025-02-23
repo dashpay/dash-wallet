@@ -27,7 +27,6 @@ import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.explore.MerchantAtmDataSource
@@ -43,11 +42,6 @@ import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 @InstallIn(SingletonComponent::class)
 abstract class ExploreDashModule {
     companion object {
-        @Provides
-        fun provideContext(@ApplicationContext context: Context): Context {
-            return context
-        }
-
         @Provides
         fun provideFusedLocationProviderClient(context: Context): FusedLocationProviderClient {
             return LocationServices.getFusedLocationProviderClient(context)

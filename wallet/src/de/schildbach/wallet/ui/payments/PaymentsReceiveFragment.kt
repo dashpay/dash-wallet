@@ -21,11 +21,11 @@ import android.os.Bundle
 import android.view.Gravity.CENTER_VERTICAL
 import android.view.View
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,6 +40,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
     private val binding by viewBinding(FragmentPaymentsReceiveBinding::bind)
+    private val viewModel by viewModels<PaymentsViewModel>()
 
     companion object {
         private const val SHOW_IMPORT_PRIVATE_KEY_ARG = "showImportPrivateKey"
@@ -87,6 +88,10 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
                 this.gravity = CENTER_VERTICAL
                 topMargin = -100
             }
+        }
+
+        viewModel.dashPayProfile.observe(viewLifecycleOwner) {
+            binding.receiveInfo.setProfile(it?.username, it?.displayName, it?.avatarUrl, it?.avatarHash)
         }
     }
 }

@@ -155,6 +155,13 @@
     <string name="buy_gift_card_with_dash_text">Buy a gift card with Dash.</string>
     <string name="redeem_gift_card_text">Redeem your gift card online within seconds or at the cashier.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Test Dash doesn’t have any value in the real world but you can send and receive it with other DashPay Alpha users.</string>
+    <string name="explore_test_dash_title">How do I get Test Dash?</string>
+    <string name="explore_test_dash_text_1">Test Dash is free and can be obtained from what is called a faucet.</string>
+    <string name="explore_test_dash_text_2">Click on the button below to copy a Dash address from this wallet so you can get your test Dash..</string>
+    <string name="explore_get_test_dash">Get Test Dash</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">Sync in progress… Results may not be complete.</string>
     <string name="sync_in_progress_error">Sync in progress… There was an error.</string>

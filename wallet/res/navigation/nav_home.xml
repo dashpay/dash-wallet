@@ -38,6 +38,19 @@
             app:popExitAnim="@anim/slide_out_left" />
 
         <action
+            android:id="@+id/home_to_contacts"
+            app:destination="@id/contactsFragment" />
+
+        <action
+            android:id="@+id/home_to_notifications"
+            app:destination="@id/showNotificationsFragment">
+
+            <argument
+                android:name="mode"
+                android:defaultValue="2" />
+        </action>
+
+        <action
             android:id="@+id/home_to_addressInput"
             app:destination="@id/addressInputFragment"
             app:enterAnim="@anim/slide_in_right"
@@ -58,6 +71,10 @@
         <deepLink app:uri="android-app://hashengineering.darkcoin.wallet/payments/{active_tab}"/>
 
         <action
+            android:id="@+id/payments_to_contacts"
+            app:destination="@id/contactsFragment" />
+
+        <action
             android:id="@+id/payments_to_receive"
             app:destination="@id/receiveFragment"
             app:enterAnim="@anim/slide_in_bottom"
@@ -69,6 +86,43 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/contactsFragment"
+        android:name="de.schildbach.wallet.ui.dashpay.ContactsFragment"
+        android:label="Contacts"
+        tools:layout="@layout/fragment_contacts_root">
+
+        <action
+            android:id="@+id/contacts_to_evoUpgrade"
+            app:popUpTo="@id/contactsFragment"
+            app:popUpToInclusive="true"
+            app:destination="@id/evoUpgradeFragment" />
+
+        <action
+            android:id="@+id/contacts_to_contacts"
+            app:destination="@id/contactsFragment" />
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="true" />
+
+        <argument
+            android:name="mode"
+            app:argType="de.schildbach.wallet.ui.dashpay.ContactsScreenMode"
+            android:defaultValue="SEARCH_CONTACTS" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/evoUpgradeFragment"
+        android:name="de.schildbach.wallet.ui.dashpay.UpgradeToEvolutionFragment"
+        android:label="UpgradeToEvolution"
+        tools:layout="@layout/fragment_upgrade_to_evolution">
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="true" />
     </fragment>
 
     <dialog
@@ -97,6 +151,10 @@
         android:label="Explore"
         tools:layout="@layout/fragment_explore">
 
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="true" />
+
         <action
             android:id="@+id/explore_to_search"
             app:destination="@id/nav_explore"
@@ -116,6 +174,24 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/explore_to_faucet"
+            app:destination="@id/exploreTestNetFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/exploreTestNetFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.ExploreTestNetFragment"
+        android:label="fragment_testnet"
+        tools:layout="@layout/fragment_explore_testnet">
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="true" />
     </fragment>
 
     <fragment
@@ -131,6 +207,13 @@
         <action
             android:id="@+id/more_to_buySell"
             app:destination="@id/buySellFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/more_to_usernameVoting"
+            app:destination="@id/nav_voting"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
@@ -279,6 +362,18 @@
     </fragment>
 
     <fragment
+        android:id="@+id/showNotificationsFragment"
+        android:name="de.schildbach.wallet.ui.dashpay.NotificationsFragment"
+        android:label="ShowSeed"
+        tools:layout="@layout/fragment_notifications">
+
+        <argument
+            android:name="mode"
+            app:argType="integer"
+            android:defaultValue="2" />
+    </fragment>
+
+    <fragment
         android:id="@+id/addressInputFragment"
         android:name="de.schildbach.wallet.ui.send.AddressInputFragment"
         android:label="Address Input"
@@ -286,4 +381,5 @@
 
     <include app:graph="@navigation/nav_explore" />
     <include app:graph="@navigation/nav_coinbase" />
+    <include app:graph="@navigation/nav_voting" />
 </navigation>

@@ -21,7 +21,10 @@
     <string name="transfer_dash">轉賬達世幣</string>
     <string name="login_error_title">無法登錄您的 %s 帳戶</string>
     <string name="login_error_message">登錄您的 %s 帳戶時出錯。</string>
+    <string name="dash_address">達世幣位址</string>
+    <string name="username">用戶名稱</string>
     <string name="balance">結餘:</string>
+    <string name="nothing_here">這裡什麼都沒有</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -55,10 +58,13 @@
     <string name="button_understand">我明白</string>
     <string name="button_okay">好的</string>
     <string name="button_share">分享</string>
+    <string name="button_skip">略過</string>
     <string name="share_address">分享位址</string>
     <string name="verify">檢查</string>
     <string name="receive_enter_amount_button">指定金額</string>
     <string name="account_create">創建帳號</string>
+    <string name="submit">提交</string>
+    <string name="try_again">再試一次</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">搜索</string>
@@ -76,6 +82,7 @@
     <string name="select_currency">選擇貨幣</string>
     <string name="send_coins_error_dusty_send">這個金額太小，無法發送。</string>
     <string name="send_coins_error_insufficient_money">餘額不足</string>
+    <string name="send_coins_error_insufficient_mixed_money">混合資金不足。等待CoinJoin混合完成或在設定中停用此功能來完成此交易。</string>
     <string name="syncing">同步中</string>
     <string name="no_connection">沒有網絡連接</string>
     <string name="rate_not_available">無法使用</string>
@@ -101,4 +108,4 @@
 
     <string name="chain_syncing">區塊鏈正在同步…</string>
 
-</resources>
+    </resources>

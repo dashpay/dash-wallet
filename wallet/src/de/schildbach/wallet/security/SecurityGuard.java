@@ -29,6 +29,8 @@ public class SecurityGuard {
 
     public SecurityGuard() throws GeneralSecurityException, IOException {
         securityPrefs = WalletApplication.getInstance().getSharedPreferences(SECURITY_PREFS_NAME, Context.MODE_PRIVATE);
+        // TODO: this is temporary to help determine why securityPrefs are empty in rare cases
+        log.info("loading security guard with keys: {}", securityPrefs.getAll().keySet());
         encryptionProvider = EncryptionProviderFactory.create(securityPrefs);
     }
 

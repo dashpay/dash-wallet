@@ -39,11 +39,14 @@ open class SendCoinsBaseViewModel @Inject constructor(
     lateinit var basePaymentIntent: PaymentIntent
         private set
 
+    val isInitialized: Boolean
+        get() = ::basePaymentIntent.isInitialized
+
     private val _address = MutableLiveData("")
     val address: LiveData<String>
         get() = _address
 
-    open fun initPaymentIntent(paymentIntent: PaymentIntent) {
+    open suspend fun initPaymentIntent(paymentIntent: PaymentIntent) {
         basePaymentIntent = paymentIntent
 
         if (paymentIntent.hasAddress()) { // avoid the exception for a missing address in a BIP70 payment request

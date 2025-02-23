@@ -161,6 +161,13 @@
     <string name="buy_gift_card_with_dash_text">Купити подарункову картку за допомогою Dash</string>
     <string name="redeem_gift_card_text">Отримайте свою подарункову картку онлайн за лічені секунди або в касі.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Tестові Dash не мають жодної цінності в реальному світі, але ви можете надсилати й отримувати їх разом з іншими користувачами DashPay Alpha.</string>
+    <string name="explore_test_dash_title">Як мені отримати тестові Dash?</string>
+    <string name="explore_test_dash_text_1">Test Dash є безкоштовним і його можна отримати з так званого крана.</string>
+    <string name="explore_test_dash_text_2">Натисніть на кнопку нижче, щоб скопіювати адресу Dash з цього гаманця, щоб ви могли отримати тестовий Dash..</string>
+    <string name="explore_get_test_dash">Отримати тестові Dash</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">Триває синхронізація... Результати можуть бути неповними.</string>
     <string name="sync_in_progress_error">Триває синхронізація... Сталася помилка.</string>

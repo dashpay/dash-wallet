@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.main
 
 import android.app.Activity
+import androidx.fragment.app.activityViewModels
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -26,7 +27,6 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
@@ -35,18 +35,24 @@ import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser
+import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
+import de.schildbach.wallet.ui.dashpay.NotificationsFragment
+import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
-import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HomeContentBinding
+import de.schildbach.wallet_test.databinding.MixingStatusPaneBinding
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
@@ -55,8 +61,10 @@ import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -70,6 +78,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     private val viewModel: MainViewModel by activityViewModels()
     private val binding by viewBinding(HomeContentBinding::bind)
+    private lateinit var mixingBinding: MixingStatusPaneBinding
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var authManager: AuthenticationManager
 
@@ -89,8 +98,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
         reenterTransition = MaterialFadeThrough()
         initShortcutActions()
+        mixingBinding = MixingStatusPaneBinding.bind(binding.mixingStatusPane.root)
 
         val params = binding.appBar.layoutParams as CoordinatorLayout.LayoutParams
+
         if (params.behavior == null) {
             params.behavior = AppBarLayout.Behavior()
         }
@@ -104,6 +115,20 @@ class WalletFragment : Fragment(R.layout.home_content) {
         })
 
         binding.homeToolbar.setOnClickListener { scrollToTop() }
+        binding.notificationBell.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Home.NOTIFICATIONS)
+            findNavController().navigate(
+                R.id.showNotificationsFragment,
+                bundleOf("mode" to NotificationsFragment.MODE_NOTIFICATIONS),
+                NavOptions.Builder()
+                    .setEnterAnim(R.anim.slide_in_right)
+                    .build(),
+            )
+        }
+        binding.dashpayUserAvatar.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Home.AVATAR)
+            startActivity(Intent(requireContext(), EditProfileActivity::class.java))
+        }
 
         viewModel.transactions.observe(viewLifecycleOwner) { refreshShortcutBar() }
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
@@ -124,6 +149,76 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 }
                 configuration.setHasDisplayedTaxCategoryExplainer()
             }
+        }
+
+        viewModel.dashPayProfile.observe(viewLifecycleOwner) { profile ->
+            if (viewModel.hasIdentity) {
+                ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile, true)
+                setNotificationIndicator()
+            }
+        }
+
+        viewModel.blockchainIdentity.observe(viewLifecycleOwner) { identity ->
+            if (identity?.creationComplete == true) {
+                ProfilePictureDisplay.display(binding.dashpayUserAvatar, viewModel.dashPayProfile.value, true)
+                setNotificationIndicator()
+            }
+        }
+
+        viewModel.notificationCountData.observe(viewLifecycleOwner) { setNotificationIndicator() }
+
+        viewModel.coinJoinMode.observe(viewLifecycleOwner) { mode ->
+            mixingBinding.root.isVisible = mode != CoinJoinMode.NONE
+        }
+
+        viewModel.mixingProgress.observe(viewLifecycleOwner) { progress ->
+            mixingBinding.balance.text = getString(
+                R.string.coinjoin_progress_balance,
+                viewModel.mixedBalance,
+                viewModel.walletBalance
+            )
+            mixingBinding.mixingPercent.text = getString(R.string.percent, progress.toInt())
+            mixingBinding.mixingProgress.progress = progress.toInt()
+        }
+
+        viewModel.mixingState.observe(viewLifecycleOwner) { mixingState ->
+            mixingBinding.root.isVisible = when (mixingState) {
+                MixingStatus.NOT_STARTED,
+                MixingStatus.ERROR,
+                MixingStatus.FINISHED -> false
+                else -> true
+            }
+            when (mixingState) {
+                MixingStatus.MIXING -> {
+                    mixingBinding.mixingMode.text = getString(R.string.coinjoin_mixing)
+                    mixingBinding.progressBar.isVisible = true
+                }
+                MixingStatus.PAUSED -> {
+                    mixingBinding.mixingMode.text = getString(R.string.coinjoin_paused)
+                    mixingBinding.progressBar.isVisible = false
+                }
+                else -> {
+                    mixingBinding.mixingMode.text = getString(R.string.error)
+                    mixingBinding.progressBar.isVisible = false
+                }
+            }
+        }
+
+        viewModel.mixingSessions.observe(viewLifecycleOwner) {
+            val activeSessionsText = ".".repeat(it)
+            mixingBinding.mixingSessions.text = activeSessionsText
+        }
+
+        viewModel.balance.observe(viewLifecycleOwner) {
+            mixingBinding.balance.text = getString(
+                R.string.coinjoin_progress_balance,
+                viewModel.mixedBalance,
+                viewModel.walletBalance
+            )
+        }
+
+        viewModel.hasContacts.observe(viewLifecycleOwner) {
+            refreshShortcutBar()
         }
     }
 
@@ -161,6 +256,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 binding.shortcutsPane.payToAddressButton -> {
                     handlePayToAddress()
                 }
+                binding.shortcutsPane.payToContactButton -> {
+                    handleSelectContact()
+                }
                 binding.shortcutsPane.receiveButton -> {
                     viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE)
                     findNavController().navigate(
@@ -189,9 +287,14 @@ class WalletFragment : Fragment(R.layout.home_content) {
         refreshShortcutBar()
     }
 
+    private fun joinDashPay() {
+        startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
+    }
+
     private fun refreshShortcutBar() {
         showHideSecureAction()
         refreshIfUserHasBalance()
+        refreshIfUserHasIdentity()
     }
 
     private fun showHideSecureAction() {
@@ -201,6 +304,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun refreshIfUserHasBalance() {
         val balance: Coin = viewModel.balance.value ?: Coin.ZERO
         binding.shortcutsPane.userHasBalance = balance.isPositive
+    }
+
+    private fun refreshIfUserHasIdentity() {
+        binding.shortcutsPane.userHasContacts = viewModel.hasIdentity && viewModel.hasContacts.value
     }
 
     private fun updateSyncState() {
@@ -240,6 +347,16 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun startVerifySeedActivity(pin: String) {
         val intent: Intent = VerifySeedActivity.createIntent(requireContext(), pin, false)
         startActivity(intent)
+    }
+
+    private fun handleSelectContact() {
+        viewModel.logEvent(AnalyticsConstants.UsersContacts.SHORTCUT_SEND_TO_CONTACT)
+        safeNavigate(
+            WalletFragmentDirections.homeToContacts(
+                ShowNavBar = false,
+                mode = ContactsScreenMode.SELECT_CONTACT
+            )
+        )
     }
 
     private fun handlePayToAddress() {
@@ -285,5 +402,16 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 error(null, cannotClassifyCustomMessageResId, input)
             }
         }.parse()
+    }
+
+    private fun setNotificationIndicator() {
+        binding.notificationBell.isVisible = viewModel.hasIdentity
+        binding.notificationBell.setImageResource(
+            if (viewModel.notificationCount > 0) {
+                R.drawable.ic_new_notifications
+            } else {
+                R.drawable.ic_notification_bell
+            }
+        )
     }
 }

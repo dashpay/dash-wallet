@@ -6,7 +6,7 @@
     android:animateLayoutChanges="true"
     android:background="@android:color/transparent"
     tools:background="@color/dash_deep_blue"
-    tools:context="de.schildbach.wallet.ui.OnboardingActivity">
+    tools:context="de.schildbach.wallet.ui.InviteHandlerActivity">
 
     <ImageView
         android:layout_width="match_parent"

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 the original author or authors.
+ * Copyright 2018 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,6 +39,8 @@ public class KeyboardResponsiveCoordinatorLayout extends CoordinatorLayout {
     private final int idOfViewToHide;
     private @Nullable View viewToHide;
 
+    public boolean forceHideViewToHide;
+
     public KeyboardResponsiveCoordinatorLayout(Context context) {
         this(context, null);
     }
@@ -68,7 +70,9 @@ public class KeyboardResponsiveCoordinatorLayout extends CoordinatorLayout {
             int difference = calculateDifferenceBetweenHeightAndUsableArea();
 
             if (viewToHide != null) {
-                if (difference != 0) {
+                // If difference > 0, keyboard is showing.
+                // If difference =< 0, keyboard is not showing or is in multiview mode.
+                if (difference > 0 || forceHideViewToHide) {
                     viewToHide.setVisibility(View.GONE);
                 } else {
                     viewToHide.setVisibility(View.VISIBLE);

@@ -37,7 +37,12 @@ object DatabaseModule {
     @Provides
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
         return Room.databaseBuilder(context, AppDatabase::class.java, "dash-wallet-database")
-            .addMigrations(AppDatabaseMigrations.migration11To12, AppDatabaseMigrations.migration12to13)
+            .addMigrations(
+                AppDatabaseMigrations.migration11To12,
+                AppDatabaseMigrations.migration12To13,
+                AppDatabaseMigrations.migration13to14,
+                AppDatabaseMigrations.migration14to15
+            )
             // destructive migrations are used from versions 1 to 11
             .fallbackToDestructiveMigration()
             .build()
@@ -71,5 +76,56 @@ object DatabaseModule {
     @Provides
     fun provideGiftCardDao(appDatabase: AppDatabase): GiftCardDao {
         return appDatabase.giftCardDao()
+    }
+
+    // DashPay
+    @Provides
+    fun provideDashPayProfileDao(appDatabase: AppDatabase): DashPayProfileDao {
+        return appDatabase.dashPayProfileDao()
+    }
+
+    @Provides
+    fun provideUserAlertDao(appDatabase: AppDatabase): UserAlertDao {
+        return appDatabase.userAlertDao()
+    }
+
+    @Provides
+    fun provideInvitationsDao(appDatabase: AppDatabase): InvitationsDao {
+        return appDatabase.invitationsDao()
+    }
+
+    @Provides
+    fun provideTransactionMetadataChangeCache(appDatabase: AppDatabase): TransactionMetadataChangeCacheDao {
+        return appDatabase.transactionMetadataCacheDao()
+    }
+
+    @Provides
+    fun provideTransactionMetadataDocumentDao(appDatabase: AppDatabase): TransactionMetadataDocumentDao {
+        return appDatabase.transactionMetadataDocumentDao()
+    }
+
+    @Provides
+    fun provideDashPayContactRequestDao(appDatabase: AppDatabase): DashPayContactRequestDao {
+        return appDatabase.dashPayContactRequestDao()
+    }
+
+    @Provides
+    fun provideUsernameRequestDao(appDatabase: AppDatabase): UsernameRequestDao {
+        return appDatabase.usernameRequestDao()
+    }
+
+    @Provides
+    fun provideUsernameVotesDao(appDatabase: AppDatabase): UsernameVoteDao {
+        return appDatabase.usernameVoteDao()
+    }
+
+    @Provides
+    fun provideImportedMasternodeKeyDao(appDatabase: AppDatabase): ImportedMasternodeKeyDao {
+        return appDatabase.importedMasternodeKeyDao()
+    }
+
+    @Provides
+    fun provideTopUpsDao(appDatabase: AppDatabase): TopUpsDao {
+        return appDatabase.topUpsDao()
     }
 }

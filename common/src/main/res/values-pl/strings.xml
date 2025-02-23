@@ -21,7 +21,10 @@
     <string name="transfer_dash">Przetransferuj Dash</string>
     <string name="login_error_title">Niemożliwe jest zalogowanie się do twojego %s konta</string>
     <string name="login_error_message">Wystąpił błąd podczas próby zalogowania się do twojego %s konta.</string>
+    <string name="dash_address">Adres Dash</string>
+    <string name="username">Nazwa użytkownika</string>
     <string name="balance">Saldo:</string>
+    <string name="nothing_here">Nic tutaj nie ma</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Funt Guernsey</string>
@@ -55,10 +58,13 @@
     <string name="button_understand">Rozumiem</string>
     <string name="button_okay">OK</string>
     <string name="button_share">Udostępnij</string>
+    <string name="button_skip">Pomiń</string>
     <string name="share_address">Udostępnij Adress</string>
     <string name="verify">Zweryfikuj</string>
     <string name="receive_enter_amount_button">Określ Kwotę</string>
     <string name="account_create">Stwórz Konto</string>
+    <string name="submit">Wyślij</string>
+    <string name="try_again">Spróbuj ponownie</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Szukaj</string>
@@ -76,6 +82,7 @@
     <string name="select_currency">Wybierz Walutę</string>
     <string name="send_coins_error_dusty_send">Kwota jest zbyt mała, aby wysłać</string>
     <string name="send_coins_error_insufficient_money">Niewystarczająca ilość funduszy</string>
+    <string name="send_coins_error_insufficient_mixed_money">Nie posiadasz wystarczająco wymieszanych funduszy. Poczekaj, aż mieszanie Coinjoin zakończy się lub wyłącz tę funkcję w ustawieniach, aby dokonać tej transakcji.</string>
     <string name="syncing">Synchronizowanie</string>
     <string name="no_connection">Brak połączenia z Internetem</string>
     <string name="rate_not_available">Niedostępne</string>
@@ -101,4 +108,4 @@
 
     <string name="chain_syncing">Łańcuch synchronizuje się…</string>
 
-</resources>
+    </resources>

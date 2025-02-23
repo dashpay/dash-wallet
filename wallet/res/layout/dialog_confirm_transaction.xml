@@ -57,6 +57,7 @@
         android:background="@drawable/rounded_background">
 
         <LinearLayout
+            android:id="@+id/send_to_address"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="15dp"
@@ -81,6 +82,48 @@
                 android:singleLine="true"
                 tools:text="yZmdmsTnnMMXwfhTCP2bUZ5uo6qU8AsXnu" />
         </LinearLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/send_to_user"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="15dp"
+            android:paddingVertical="12dp"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Caption.Medium.Tertiary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/dialog_confirm_pay_to"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <ImageView
+                android:id="@+id/avatar"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/display_name"/>
+
+            <TextView
+                android:id="@+id/display_name"
+                style="@style/Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="7dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:text="John Doe" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
         <LinearLayout
             android:id="@+id/payee_verified_by_pane"
@@ -182,27 +225,45 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="30dp"
-        android:layout_marginBottom="15dp">
+        android:orientation="vertical" >
 
-        <Button
-            android:id="@+id/dismiss_btn"
-            style="@style/Button.Primary.Large.Grey"
-            android:layout_width="0dp"
+        <de.schildbach.wallet.ui.widget.StyledCheckBox
+            android:id="@+id/confirm_auto_accept"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="15dp"
-            android:layout_weight="1"
-            android:text="@string/cancel" />
+            android:layout_gravity="center_horizontal"
+            android:layout_margin="10dp"
+            android:button="@drawable/round_checkbox"
+            android:padding="6dp"
+            android:text="@string/dialog_confirm_accept_contact_request"
+            android:textSize="16sp" />
 
-        <Button
-            android:id="@+id/confirm_payment"
-            style="@style/Button.Primary.Large.Blue"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:layout_marginEnd="15dp"
-            android:layout_weight="1"
-            android:text="@string/confirm" />
+            android:orientation="horizontal"
+            android:layout_marginTop="30dp"
+            android:layout_marginBottom="15dp">
+
+            <Button
+                android:id="@+id/dismiss_btn"
+                style="@style/Button.Primary.Large.Grey"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                android:layout_weight="1"
+                android:text="@string/cancel" />
+
+            <Button
+                android:id="@+id/confirm_payment"
+                style="@style/Button.Primary.Large.Blue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="15dp"
+                android:layout_weight="1"
+                android:text="@string/confirm" />
+        </LinearLayout>
     </LinearLayout>
+
 </LinearLayout>

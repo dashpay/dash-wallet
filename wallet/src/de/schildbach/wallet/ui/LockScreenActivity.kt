@@ -116,6 +116,7 @@ open class LockScreenActivity : SecureActivity() {
         intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
     }
 
+    protected var isLocked: Boolean = false
     private val shouldShowBackupReminder
         get() = configuration.remindBackupSeed && configuration.lastBackupSeedReminderMoreThan24hAgo()
 
@@ -130,6 +131,7 @@ open class LockScreenActivity : SecureActivity() {
         binding = ActivityLockScreenRootBinding.inflate(layoutInflater)
         super.setContentView(binding.root)
         setupKeyboardBottomMargin()
+        isLocked = autoLogout.shouldLogout()
 
         initView()
         initViewModel()
@@ -147,10 +149,15 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private val onLogoutListener = AutoLogout.OnLogoutListener {
+        isLocked = true
         dismissKeyboard()
         biometricHelper.cancelPending()
         setLockState(State.USE_DEFAULT)
         handleLockScreenActivated()
+    }
+
+    open fun imitateUserInteraction() {
+        onUserInteraction()
     }
 
     override fun onUserInteraction() {
@@ -315,6 +322,9 @@ open class LockScreenActivity : SecureActivity() {
                         onCorrectPin(it.data!!)
                     }
                 }
+                else -> {
+                    // ignore
+                }
             }
         }
     }
@@ -324,6 +334,8 @@ open class LockScreenActivity : SecureActivity() {
         autoLogout.keepLockedUntilPinEntered = false
         autoLogout.deviceWasLocked = false
         autoLogout.maybeStartAutoLogoutTimer()
+        isLocked = false
+        onLockScreenDeactivated()
         if (shouldShowBackupReminder) {
             val intent = VerifySeedActivity.createIntent(this, pin, false)
             configuration.resetBackupSeedReminderTimer()
@@ -333,8 +345,6 @@ open class LockScreenActivity : SecureActivity() {
         } else {
             binding.rootViewSwitcher.displayedChild = 1
         }
-
-        onLockScreenDeactivated()
     }
 
     private fun setLockState(suggestedState: State) {

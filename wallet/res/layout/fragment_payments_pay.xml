@@ -17,9 +17,51 @@
         app:cardCornerRadius="12dp">
 
         <LinearLayout
+            android:id="@+id/contacts_pane"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/contacts_btn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:orientation="vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingTop="15dp"
+                android:paddingHorizontal="15dp"
+                android:paddingBottom="10dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" >
+                    <ImageView
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:padding="9dp"
+                        android:src="@drawable/ic_payments_send_to_contact"
+                        android:background="@drawable/rounded_background"
+                        android:theme="@style/EncircledIconBlueTheme"
+                        app:tint="@android:color/white"
+                        tools:background="@color/dash_blue" />
+
+                    <TextView
+                        style="@style/Body2.Medium"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="15dp"
+                        android:text="@string/payments_pay_to_contact_title"
+                        android:layout_gravity="center_vertical" />
+                </LinearLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/frequent_contacts_rv"
+                        android:layout_width="match_parent"
+                        android:layout_height="84dp" />
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/scan_btn"

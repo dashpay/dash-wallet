@@ -25,8 +25,12 @@ import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.SecurityGuard
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
+import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletEx
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.slf4j.LoggerFactory
+import java.util.EnumSet
 
 class EncryptWalletLiveData(
     private val walletApplication: WalletApplication,
@@ -81,9 +85,7 @@ class EncryptWalletLiveData(
 
         @Deprecated("Deprecated in Java")
         override fun doInBackground(vararg args: Any): Resource<Wallet> {
-            val initialize = args[0] as Boolean
-            val wallet = walletApplication.wallet!!
-
+            val wallet = walletApplication.wallet as WalletEx
             val password = securityGuard.generateRandomPassword()
 
             return try {
@@ -92,10 +94,6 @@ class EncryptWalletLiveData(
                 val keyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
                 val newKey = keyCrypter.deriveKey(password)
                 wallet.encrypt(keyCrypter, newKey)
-
-                if (initialize) {
-                    walletApplication.saveWalletAndFinalizeInitialization()
-                }
 
                 securityGuard.savePassword(password)
 

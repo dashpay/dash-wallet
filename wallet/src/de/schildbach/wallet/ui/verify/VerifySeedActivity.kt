@@ -23,7 +23,7 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.ui.DecryptSeedViewModel
-import de.schildbach.wallet.ui.main.WalletActivity
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.InteractionAwareActivity
@@ -85,7 +85,7 @@ class VerifySeedActivity : InteractionAwareActivity() {
         val launchMainActivity = intent.getBooleanExtra(NAVIGATE_TO_HOME, true)
 
         if (launchMainActivity) {
-            startActivity(Intent(this, WalletActivity::class.java))
+            startActivity(Intent(this, MainActivity::class.java))
         }
 
         super.finish()

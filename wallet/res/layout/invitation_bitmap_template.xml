@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="640px"
+    android:layout_height="768px"
+    tools:ignore="PxUsage">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="16px"
+        android:background="@drawable/round_corners_white_bg"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <de.schildbach.wallet.ui.invite.InvitePreviewEnvelopeView
+            android:id="@+id/bitmap_template_profile_picture_envelope"
+            android:layout_width="320px"
+            android:layout_height="320px"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="32px" />
+
+        <TextView
+            android:id="@+id/bitmap_template_title"
+            style="@style/Headline6"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_horizontal"
+            android:textAlignment="gravity"
+            android:text="@string/invitation_preview_title"
+            android:textColor="@color/dash_blue"
+            android:textSize="42px"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/bitmap_template_message"
+            style="@style/Body1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_horizontal"
+            android:textAlignment="gravity"
+            android:textSize="28px"
+            tools:text="@string/invitation_preview_message" />
+
+    </LinearLayout>
+
+</FrameLayout>

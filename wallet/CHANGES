@@ -1,4 +1,65 @@
 Dash Wallet
+v11.1.1
+* Fix username fee logic
+* Update to dashj 21.1.6 and dpp 1.7.2 (fixes CoinJoin, username creation bugs)
+
+v11.1.0
+* Username Voting Improvements
+* Improve Contact Support dialog and report export
+* Improve Home Screen Transaction List
+* Add Platform Identity Topup Support
+* Add Quick Voting
+
+v11.0.5
+* Fix sync stuck problem (often at 33%)
+* Fix obtaining username voting information
+* Allow rescan blockchain to resume on app start if failing due to ANR
+* Add detector for corrupt blockchain file
+* Fix various crashes related to DashPay functionality
+
+v11.0.4
+* Fix username voting screen (support more than 100 contests)
+* Fix username requests during voting period
+* Fix Crowdnode Signup on Android 14
+* Fix Crowdnode API
+* Fix sync stuck at 31% issue
+
+v11.0.3
+* Improve Username Voting screen
+* UI fixes
+* Update translations
+* Fix Username request and recover bugs
+* Fix CrowdNode signup on Android 14
+
+v11.0.2
+* Fix username requests
+* Add DashPay Event tracking
+
+v11.0.1
+* Fix UI items
+
+v11.0.0
+* DashPay
+* use dashj 21.1.1
+
+v10.3.2
+* Fix ANR when using CoinJoin
+* Fix missing Send button on Home Screen
+* Fix CrowdNode Online Signup Crash on Android 14
+* Update checkpoints
+
+v10.3.1
+* Hot fix: prevent crash in some upgrade scenarios
+
+v10.3.0
+* Add CoinJoin Support
+* Merge and hide DashPay functionality
+
+v10.2.1
+* Target Android 14
+* Fix rare crash when displaying transaction details
+* Fix rare crash when prompting the user for the PIN
+
 v10.2.0
 * Support Core 21
 * Fix syncing stuck at 30% or 31% bug

@@ -21,7 +21,10 @@
     <string name="transfer_dash">Transferir Dash</string>
     <string name="login_error_title">No puedes iniciar sesión en tu %s cuenta</string>
     <string name="login_error_message">Ocurrió un error al iniciar sesión en tu %s cuenta.</string>
+    <string name="dash_address">Dirección de Dash</string>
+    <string name="username">Nombre de usuario</string>
     <string name="balance">Balance:</string>
+    <string name="nothing_here">No hay nada aquí</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Libra de Guernsey</string>
@@ -55,10 +58,13 @@
     <string name="button_understand">Yo entiendo</string>
     <string name="button_okay">¡Listo!</string>
     <string name="button_share">Compartir</string>
+    <string name="button_skip">Salta</string>
     <string name="share_address">Compartir Dirección </string>
     <string name="verify">Verificar</string>
     <string name="receive_enter_amount_button">Especificar Monto</string>
     <string name="account_create">Crear una cuenta</string>
+    <string name="submit">Entregar</string>
+    <string name="try_again">Intentar de nuevo</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Buscar</string>
@@ -76,6 +82,7 @@
     <string name="select_currency">Selecciona el tipo de moneda</string>
     <string name="send_coins_error_dusty_send">La cantidad es demasiado pequeña para ser enviada</string>
     <string name="send_coins_error_insufficient_money">Fondos insuficientes</string>
+    <string name="send_coins_error_insufficient_mixed_money">Fondos mixtos insuficientes. Espera a que finalice la mezcla de CoinJoin o desactiva esta función en la configuración para completar esta transacción.</string>
     <string name="syncing">Sincronizando</string>
     <string name="no_connection">No hay conexión a internet</string>
     <string name="rate_not_available">No disponible</string>
@@ -101,4 +108,4 @@
 
     <string name="chain_syncing">La cadena esta sincronizando...</string>
 
-</resources>
+    </resources>

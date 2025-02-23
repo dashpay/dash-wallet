@@ -21,7 +21,10 @@
     <string name="transfer_dash">Μεταφορά Dash</string>
     <string name="login_error_title">Αδυναμία σύνδεσης στο λογαριασμό σας %s</string>
     <string name="login_error_message">Προέκυψε σφάλμα κατά τη σύνδεση σας στο %s λογαριασμό</string>
+    <string name="dash_address">Διεύθυνση Dash</string>
+    <string name="username">Όνομα Χρήστη:</string>
     <string name="balance">Υπόλοιπο:</string>
+    <string name="nothing_here">Τίποτα εδώ</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Γκέρνσεϊ Λίρα</string>
@@ -55,10 +58,13 @@
     <string name="button_understand">Καταλαβαίνω</string>
     <string name="button_okay">Εντάξει</string>
     <string name="button_share">Μοιραστείτε</string>
+    <string name="button_skip">Παράλειψη</string>
     <string name="share_address">Διαμοιρασμός διεύθυνσης</string>
     <string name="verify">Επιβεβαίωση</string>
     <string name="receive_enter_amount_button">Καθορίστε το ποσό</string>
     <string name="account_create">Δημιουργία λογαριασμού</string>
+    <string name="submit">Υποβολή</string>
+    <string name="try_again">Προσπαθήστε ξανά</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Αναζήτηση</string>
@@ -76,6 +82,7 @@
     <string name="select_currency">Επιλέξτε Νόμισμα</string>
     <string name="send_coins_error_dusty_send">Το ποσό είναι πολύ μικρό για να σταλθεί</string>
     <string name="send_coins_error_insufficient_money">Ανεπαρκή χρήματα</string>
+    <string name="send_coins_error_insufficient_mixed_money">Ανεπαρκή μικτά κεφάλαια. Περιμένετε να ολοκληρωθεί η ανάμειξη του CoinJoin ή απενεργοποιήστε αυτή τη λειτουργία στις ρυθμίσεις για να ολοκληρώσετε αυτή τη συναλλαγή.</string>
     <string name="syncing">Συγχρονισμός</string>
     <string name="no_connection">Χωρίς σύνδεση στο διαδίκτυο</string>
     <string name="rate_not_available">Μη διαθέσιμο</string>
@@ -101,4 +108,4 @@
 
     <string name="chain_syncing">Το blockchain συγχρονίζεται...</string>
 
-</resources>
+    </resources>

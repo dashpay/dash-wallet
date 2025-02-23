@@ -1,0 +1,25 @@
+<!--
+  ~ Copyright 2024 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="17dp"
+    android:height="16dp"
+    android:viewportWidth="17"
+    android:viewportHeight="16">
+  <path
+      android:pathData="M14.123,0.744H3.823C2.813,0.744 1.953,1.434 1.733,2.454L0.763,8.554C0.663,9.164 0.843,9.784 1.243,10.254C1.643,10.724 2.233,10.994 2.853,10.994H6.103V12.464C6.083,13.184 6.293,13.874 6.713,14.464C7.063,14.964 7.623,15.254 8.223,15.254C8.273,15.254 8.313,15.254 8.363,15.254C9.013,15.204 9.583,14.824 9.883,14.244L11.913,10.214C11.974,10.084 12.113,10.004 12.253,10.004H14.144C15.314,10.004 16.264,9.054 16.264,7.884V2.864C16.264,1.694 15.314,0.744 14.144,0.744H14.123ZM10.774,9.644L8.743,13.674C8.603,13.944 8.353,13.994 8.253,14.004C8.143,14.004 7.893,14.004 7.723,13.754C7.463,13.374 7.323,12.934 7.333,12.474L7.353,10.374C7.353,10.204 7.293,10.044 7.173,9.924C7.053,9.804 6.893,9.734 6.733,9.734H2.853C2.593,9.734 2.363,9.624 2.193,9.434C2.033,9.244 1.953,8.984 1.993,8.734L2.953,2.674C3.043,2.274 3.403,1.984 3.813,1.984H11.253V9.074C11.054,9.224 10.884,9.404 10.774,9.634V9.644ZM14.983,7.874C14.983,8.354 14.594,8.744 14.113,8.744H12.503V1.994H14.113C14.594,1.994 14.983,2.384 14.983,2.864V7.884V7.874Z"
+      android:fillColor="#ffffff"/>
+</vector>

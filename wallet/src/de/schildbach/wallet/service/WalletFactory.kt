@@ -36,6 +36,7 @@ import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.KeyChainGroup
 import org.bitcoinj.wallet.UnreadableWalletException
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletEx
 import org.bitcoinj.wallet.WalletExtension
 import org.bitcoinj.wallet.WalletProtobufSerializer
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
@@ -99,7 +100,7 @@ class DashWalletFactory @Inject constructor(
     }
 
     override fun create(params: NetworkParameters): Wallet {
-        val wallet = Wallet.createDeterministic(params, Script.ScriptType.P2PKH)
+        val wallet = WalletEx.createDeterministic(params, Script.ScriptType.P2PKH)
         addMissingExtensions(wallet)
         checkWalletValid(wallet, params)
         return wallet
@@ -167,6 +168,8 @@ class DashWalletFactory @Inject constructor(
 
             // does this work on encrypted backups?
             wallet.addKeyChain(Constants.BIP44_PATH)
+            wallet as WalletEx
+            wallet.initializeCoinJoin(0)
             return wallet
         } finally {
             try {
@@ -270,7 +273,7 @@ class DashWalletFactory @Inject constructor(
                         .build()
                 )
                 .build()
-            val wallet = Wallet(params, group)
+            val wallet = WalletEx(params, group)
             // add extensions
             addMissingExtensions(wallet)
 
@@ -291,7 +294,7 @@ class DashWalletFactory @Inject constructor(
             // create non-HD wallet
             val group = KeyChainGroup.builder(expectedNetworkParameters).build()
             group.importKeys(readKeys(keyReader, expectedNetworkParameters))
-            val wallet = Wallet(expectedNetworkParameters, group)
+            val wallet = WalletEx(expectedNetworkParameters, group)
             // this will result in a different HD seed each time
             wallet.upgradeToDeterministic(Script.ScriptType.P2PKH, null)
             // add the extensions

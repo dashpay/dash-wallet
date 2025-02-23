@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="70dp"
+    android:layout_marginStart="15dp"
+    android:layout_marginEnd="15dp"
+    android:layout_marginBottom="3dp">
+
+    <TextView
+        android:id="@+id/contacts_my_contacts"
+        style="@style/Subtitle1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/contacts_my_contacts"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/center_guideline"
+        app:layout_constraintBottom_toBottomOf="@+id/center_guideline" />
+
+    <TextView
+        android:id="@+id/contacts_sort_order"
+        style="@style/Overline.Medium.White"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/contacts_sort_order"
+        app:layout_constraintEnd_toStartOf="@id/sort_filter"
+        app:layout_constraintTop_toTopOf="@+id/center_guideline"
+        app:layout_constraintBottom_toBottomOf="@+id/center_guideline" />
+
+    <Spinner
+        android:id="@+id/sort_filter"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_weight="1"
+        android:background="@android:color/transparent"
+        android:dropDownWidth="wrap_content"
+        android:entries="@array/contacts_sort"
+        android:gravity="end"
+        android:singleLine="true"
+        android:textAlignment="textEnd"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/center_guideline"
+        app:layout_constraintBottom_toBottomOf="@+id/center_guideline"
+        android:textSize="14sp" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/center_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_end="27dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

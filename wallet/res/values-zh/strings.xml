@@ -9,10 +9,11 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d 天延迟</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d 星期延迟</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d 月延迟</string>
-    <string name="blockchain_state_progress_downloading">与网络同步</string>
+    <string name="blockchain_state_progress_downloading">正在与网络同步 (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">同步已停滞</string>
     <string name="blockchain_state_progress_problem_storage">同步: 存储出现了问题</string>
     <string name="blockchain_state_progress_problem_network">同步: 网络出现了问题</string>
+    <string name="mixing_state_progress_mixing">正在混币 (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Dash地址已复制到剪切板</string>
     <string name="wallet_address_dialog_fragment_hint">为了保护您的隐私, 当您收到一笔交易后您的钱包地址将改变.</string>
     <string name="wallet_balance_fragment_too_much">该金额太庞大了, 随身携带存在安全风险. 请将一部分资金转移到一个安全的地方.</string>
@@ -42,6 +43,8 @@
     <string name="wallet_low_storage_dialog_button_apps">管理应用程序</string>
     <string name="wallet_timeskew_dialog_title">检查日期 &amp; 时间设置</string>
     <string name="wallet_timeskew_dialog_msg">您的设备停止了 %d 分钟. 由于此原因, 您可能无法发送或接收Dash.\\n\\n您应当检查, 并修正您的日期, 时区设置.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg">您的设备时间为 %s %d 秒. 由于此差异, 您无法使用 CoinJoin. \n\n您设备上的时间设置需要变更为“自动设定时间”才能使用CoinJoin.</string>
+    <string name="settings_coinjoin_timeskew_dialog_msg">的设备时间偏差超过 5 秒. 由于此差异, 您无法使用CoinJoin. \n\n使用 CoinJoin 之前, 需要将设备上的时间设定更改为“自动设定时间”.</string>
     <string name="send_coins_activity_title">发送Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">正在从 %s 读取签名…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">获取签名失败</string>
@@ -171,6 +174,10 @@
     <string name="transaction_row_status_masternode_revoke">主节点撤销</string>
     <string name="transaction_row_status_masternode_reward">主节点奖励</string>
     <string name="transaction_row_status_mining_reward">挖矿奖励</string>
+    <string name="transaction_row_status_coinjoin_mixing_fee">CoinJoin 混币费用</string>
+    <string name="transaction_row_status_coinjoin_make_collateral">CoinJoin 抵押输入</string>
+    <string name="transaction_row_status_coinjoin_mixing">CoinJoin 混币</string>
+    <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin 创建面额</string>
     <string name="network_monitor_activity_title">网络监视器</string>
     <string name="network_monitor_peer_list_title">网络节点</string>
     <string name="network_monitor_block_list_title">区块</string>
@@ -329,6 +336,7 @@
     <string name="notification_inactivity_message">您的设备上还存有Dash! 在卸载Dash钱包前, 请确保您已经记下了助记词, 否则您将丢失%s.</string>
     <string name="notification_inactivity_action_dismiss">以后提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不需要提醒</string>
+    <string name="notification_bluetooth_service_listening">准备通过蓝牙接收付款</string>
     <string name="appwidget_wallet_balance_title">Dash余额</string>
 
     <!-- generic buttons -->
@@ -404,4 +412,4 @@
     <string name="battery_optimization_dialog_unrestricted_title">您想要在后台接收支付推送么?</string>
     <string name="battery_optimization_dialog_message_not_optimized">此 app 被设置为在后台运行一段时间后仍继续运行.\n\n我们推荐允许此 app 一直保持更新最新状态, 即便是在后台运行.\n\n无需担心, 我们将经常提醒您电池用量.</string>
     <string name="battery_optimization_dialog_button_change">打开设置</string>
-</resources>
+    </resources>

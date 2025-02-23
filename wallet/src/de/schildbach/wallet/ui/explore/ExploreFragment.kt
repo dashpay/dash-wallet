@@ -26,7 +26,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.findNavController
+import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.staking.StakingActivity
@@ -56,10 +56,7 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        binding.titleBar.setNavigationOnClickListener {
-            findNavController().popBackStack()
-        }
+        enterTransition = MaterialFadeThrough()
 
         binding.merchantsBtn.setOnClickListener {
             safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.Merchants))
@@ -72,6 +69,11 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         binding.stakingBtn.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
             handleStakingNavigation()
+        }
+
+        binding.faucetBtn.isVisible = viewModel.isTestNet()
+        binding.faucetBtn.setOnClickListener {
+            safeNavigate(ExploreFragmentDirections.exploreToFaucet())
         }
 
         viewModel.stakingAPY.observe(viewLifecycleOwner) {

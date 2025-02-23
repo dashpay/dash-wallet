@@ -21,7 +21,6 @@ import android.os.Bundle
 import android.view.View
 import android.view.View.TEXT_ALIGNMENT_CENTER
 import android.widget.TextView
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit

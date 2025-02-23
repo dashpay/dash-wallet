@@ -34,6 +34,9 @@
 
     <dimen name="space_medium">20dp</dimen>
 
+    <dimen name="date_text_big">18sp</dimen>
+    <dimen name="date_text_small">12sp</dimen>
+
     <!-- Design System -->
     <dimen name="offset_dialog_margin_top">20dp</dimen>
     <dimen name="divider_margin_horizontal">15dp</dimen>
@@ -54,4 +57,5 @@
     <dimen name="transaction_row_extended_padding">17dp</dimen>
     <dimen name="transaction_filter_separator_start">57dp</dimen>
     <dimen name="transaction_details_icon_size">52dp</dimen>
+    <dimen name="bottom_nav_bar_height">60dp</dimen>
 </resources>

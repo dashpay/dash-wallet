@@ -153,6 +153,13 @@
     <string name="buy_gift_card_with_dash_text">Αγοράστε μια δωροκάρτα με Dash.</string>
     <string name="redeem_gift_card_text">Εξαργυρώστε τη δωροκάρτα σας online μέσα σε λίγα δευτερόλεπτα ή σε ταμείο.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Τα Test Dash δεν έχουν καμία αξία στον πραγματικό κόσμο, αλλά μπορείτε να στείλετε και να λάβετε με άλλους χρήστες του DashPay Alpha.</string>
+    <string name="explore_test_dash_title">Πώς μπορώ να αποκτήσω Test Dash;</string>
+    <string name="explore_test_dash_text_1">Τα Test Dash είναι δωρεάν και μπορούν να ληφθούν από αυτό που ονομάζεται faucet.</string>
+    <string name="explore_test_dash_text_2">Κάντε κλικ στο παρακάτω κουμπί για να αντιγράψετε μια διεύθυνση Dash από αυτό το πορτοφόλι, ώστε να μπορέσετε να λάβετε τα test Dash σας ..</string>
+    <string name="explore_get_test_dash">Πάρτε Test Dash</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">Συγχρονισμός σε εξέλιξη... Τα αποτελέσματα μπορεί να μην είναι πλήρη.</string>
     <string name="sync_in_progress_error">Συγχρονισμός σε εξέλιξη... Υπήρξε ένα σφάλμα.</string>

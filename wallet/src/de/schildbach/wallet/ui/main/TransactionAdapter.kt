@@ -42,6 +42,7 @@ import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.setRoundedBackground
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.util.GenericUtils
 
 open class HistoryViewHolder(root: View): RecyclerView.ViewHolder(root)
@@ -50,7 +51,7 @@ class TransactionAdapter(
     private val dashFormat: MonetaryFormat,
     private val resources: Resources,
     private val drawBackground: Boolean = false,
-    private val clickListener: (HistoryRowView, Int) -> Unit
+    private val clickListener: (HistoryRowView, Int, Boolean) -> Unit
 ) : ListAdapter<HistoryRowView, HistoryViewHolder>(DiffCallback()) {
     private val contentColor = resources.getColor(R.color.content_primary, null)
     private val colorSecondaryStatus = resources.getColor(R.color.orange, null)
@@ -58,7 +59,7 @@ class TransactionAdapter(
     class DiffCallback : DiffUtil.ItemCallback<HistoryRowView>() {
         override fun areItemsTheSame(oldItem: HistoryRowView, newItem: HistoryRowView): Boolean {
             val sameTransactions = (oldItem is TransactionRowView && newItem is TransactionRowView) &&
-                oldItem.txId == newItem.txId
+                oldItem.id == newItem.id
             return sameTransactions || oldItem == newItem
         }
 
@@ -103,11 +104,11 @@ class TransactionAdapter(
         when (holder) {
             is TransactionViewHolder -> {
                 holder.bind(item as TransactionRowView, position)
-                holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
+                holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
             }
             is TransactionGroupHeaderViewHolder -> {
                 holder.bind((item as HistoryRowView).localDate!!)
-                holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
+                holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
             }
         }
     }
@@ -158,35 +159,42 @@ class TransactionAdapter(
                 )
             )
 
-            txView.title?.let {
-                binding.primaryStatus.text = resources.getString(it.resourceId, *it.args.toTypedArray())
-                binding.primaryStatus.setTextColor(contentColor)
-            }
-
-            if (txView.statusRes < 0) {
-                binding.secondaryStatus.text = null
-            } else {
-                binding.secondaryStatus.text = resources.getString(txView.statusRes)
-                binding.secondaryStatus.setTextColor(colorSecondaryStatus)
-            }
-
             setIcon(txView)
+            setPrimaryStatus(txView)
+            setSecondaryStatus(txView)
             setValue(txView.value, txView.hasErrors)
             setFiatValue(txView.value, txView.exchangeRate)
             setTime(txView.time, resourceMapper.dateTimeFormat)
             setDetails(txView.transactionAmount)
+            setComment(txView.comment)
         }
 
         private fun setIcon(txView: TransactionRowView) {
             val iconBackground = txView.iconBackground
             val icon = txView.icon
+            val contact = txView.contact
 
-            if (txView.iconBitmap != null) {
+            if (contact != null) {
+                binding.primaryIcon.background = null
+                binding.primaryIcon.setPadding(0, 0, 0, 0)
+                binding.primaryIcon.load(contact.avatarUrl) {
+                    transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
+                    placeholder(R.drawable.ic_avatar)
+                    error(R.drawable.ic_avatar)
+                }
+                binding.primaryIcon.setOnClickListener {
+                    clickListener.invoke(txView, 0, true)
+                }
+
+                binding.secondaryIcon.isVisible = true
+                binding.secondaryIcon.setImageResource(icon)
+            } else if (txView.iconBitmap != null) {
                 binding.primaryIcon.updatePadding(0, 0, 0, 0)
                 binding.primaryIcon.background = null
                 binding.primaryIcon.load(txView.iconBitmap) {
                     transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
                 }
+                binding.primaryIcon.setOnClickListener { }
                 binding.secondaryIcon.isVisible = true
                 binding.secondaryIcon.setImageResource(icon)
             } else {
@@ -194,7 +202,31 @@ class TransactionAdapter(
                 binding.primaryIcon.updatePadding(padding, padding, padding, padding)
                 binding.primaryIcon.setRoundedBackground(iconBackground!!)
                 binding.primaryIcon.load(icon)
+                binding.primaryIcon.setOnClickListener { }
                 binding.secondaryIcon.isVisible = false
+            }
+        }
+
+        private fun setPrimaryStatus(txView: TransactionRowView) {
+            if (txView.contact != null) {
+                val name = txView.contact.displayName.ifEmpty { txView.contact.username }
+                binding.primaryStatus.text = name
+            } else if (txView.title != null) {
+                binding.primaryStatus.text = resources.getString(
+                    txView.title!!.resourceId,
+                    *txView.title!!.args.toTypedArray()
+                )
+            }
+
+            binding.primaryStatus.setTextColor(contentColor)
+        }
+
+        private fun setSecondaryStatus(txView: TransactionRowView) {
+            if (txView.statusRes <= 0) {
+                binding.secondaryStatus.text = null
+            } else {
+                binding.secondaryStatus.text = resources.getString(txView.statusRes)
+                binding.secondaryStatus.setTextColor(colorSecondaryStatus)
             }
         }
 
@@ -205,6 +237,11 @@ class TransactionAdapter(
             } else {
                 binding.details.isVisible = false
             }
+        }
+
+        private fun setComment(comment: String) {
+            binding.comment.text = comment
+            binding.comment.isVisible = comment.isNotEmpty()
         }
 
         private fun setTime(time: Long, dateTimeFormat: Int) {

@@ -341,6 +341,63 @@
         </LinearLayout>
     </RelativeLayout>
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/private_memo"
+        style="@style/ViewRaised"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="15dp"
+        android:background="@drawable/rounded_background"
+        android:paddingStart="15dp"
+        android:paddingEnd="4dp"
+        android:paddingVertical="8dp"
+        android:theme="@style/ListViewButtonBackground"
+        app:layout_constraintTop_toBottomOf="@id/open_tax_category_card">
+
+        <TextView
+            android:id="@+id/private_memo_label"
+            style="@style/Caption.Medium.Tertiary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="13sp"
+            android:text="@string/private_memo"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/add_private_memo_btn"
+            app:layout_constraintBottom_toBottomOf="@id/add_private_memo_btn" />
+
+        <Button
+            android:id="@+id/add_private_memo_btn"
+            style="@style/Button.Tertiary.Small.Blue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/add_note"
+            android:drawablePadding="6dp"
+            android:drawableStart="@drawable/ic_pencil"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/private_memo_text"
+            style="@style/Caption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="10dp"
+            android:layout_marginEnd="11dp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textSize="13sp"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/add_private_memo_btn"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:visibility="visible"
+            tools:text="Payment to Anthony" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
     <RelativeLayout
         android:id="@+id/open_explorer_card"
         style="@style/ViewRaised"
@@ -351,7 +408,7 @@
         android:paddingVertical="17dp"
         android:background="@drawable/rounded_ripple_background"
         android:theme="@style/ListViewButtonBackground"
-        app:layout_constraintTop_toBottomOf="@id/open_tax_category_card">
+        app:layout_constraintTop_toBottomOf="@id/private_memo">
 
         <TextView
             android:id="@+id/view_on_explorer"
@@ -387,7 +444,7 @@
 
         <TextView
             android:id="@+id/report_error"
-            style="@style/Caption"
+            style="@style/Caption.Medium.Tertiary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"

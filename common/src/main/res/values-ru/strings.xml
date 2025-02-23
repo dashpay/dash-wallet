@@ -21,7 +21,10 @@
     <string name="transfer_dash">Перевести Dash</string>
     <string name="login_error_title">Невозможно войти в ваш аккаунт %s</string>
     <string name="login_error_message">Во время входа в ваш аккаунт %s произошла ошибка.</string>
+    <string name="dash_address">Адрес Dash</string>
+    <string name="username">Имя пользователя</string>
     <string name="balance">Баланс:</string>
+    <string name="nothing_here">Тут ничего нет</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсийский фунт</string>
@@ -55,10 +58,13 @@
     <string name="button_understand">Я понимаю</string>
     <string name="button_okay">Да</string>
     <string name="button_share">Поделиться</string>
+    <string name="button_skip">Пропустить</string>
     <string name="share_address">Поделиться адресом</string>
     <string name="verify">Подтвердить</string>
     <string name="receive_enter_amount_button">Введите сумму</string>
     <string name="account_create">Создать аккаунт</string>
+    <string name="submit">Отправить</string>
+    <string name="try_again">Попробуйте ещё раз</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Поиск</string>
@@ -76,6 +82,7 @@
     <string name="select_currency">Выберите валюту</string>
     <string name="send_coins_error_dusty_send">Сумма слишком мала для отправки</string>
     <string name="send_coins_error_insufficient_money">Недостаточно средств</string>
+    <string name="send_coins_error_insufficient_mixed_money">Средства недостаточно перемешаны. Для завершения этой транзакции дождитесь, пока CoinJoin завершит перемешивание, или отключите эту функцию в настройках. </string>
     <string name="syncing">Синхронизация</string>
     <string name="no_connection">Отсутствует подключение к Интернету</string>
     <string name="rate_not_available">Недоступно</string>
@@ -101,4 +108,4 @@
 
     <string name="chain_syncing">Блокчейн синхронизируется...</string>
 
-</resources>
+    </resources>

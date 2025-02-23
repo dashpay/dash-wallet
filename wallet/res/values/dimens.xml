@@ -17,4 +17,5 @@
 <resources>
     <dimen name="transaction_icon_padding">8dp</dimen>
     <dimen name="transaction_icon_size">38dp</dimen>
+    <dimen name="username_search_focused_scroll">60dp</dimen>
 </resources>

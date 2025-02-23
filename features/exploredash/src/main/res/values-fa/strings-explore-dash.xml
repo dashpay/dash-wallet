@@ -153,6 +153,13 @@
     <string name="buy_gift_card_with_dash_text">با دش یک کارت هدیه بخرید. </string>
     <string name="redeem_gift_card_text">کارت هدیه را به صورت آنلاین یا در یک فروشگاه، طی چند ثانیه استفاده کنید. </string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">تست دش هیچ ارزشی در دنیای واقعی ندارد، اما می‌توانید آن را برای سایر کاربران دش‌پی الفا بفرستید یا از آنها دریافت کنید. </string>
+    <string name="explore_test_dash_title">چگونه تست دش دریافت کنم؟ </string>
+    <string name="explore_test_dash_text_1">تست دش رایگان است و می‌توانید از چیزی که فاست نام دارد دریافت کنید. </string>
+    <string name="explore_test_dash_text_2">روی دگمه زیر کلیک کنید تا نشانی دش این کیف پول‌تان کپی شود تا بتوانید تست دش دریافت کنید. </string>
+    <string name="explore_get_test_dash">دریافت تست دش</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">فرآیند همزمان‌سازی در جریان است...نتایج شاید کامل نباشد. </string>
     <string name="sync_in_progress_error">فرآیند همزمان‌سازی در جریان است...یک خطا روی داد. </string>

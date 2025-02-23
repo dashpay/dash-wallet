@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">CrowdNode, bu adresi hesap kimliğiniz olarak kullanır. Bu adresle ilişkili parolayı kaybederseniz, bu cüzdandaki ve CrowdNode hesabınızdaki paranıza erişiminizi kaybedersiniz.</string>
     <string name="crowdnode_new_account_warning_2">Bu cüzdan adresinin sahibi olduğunuzu doğrulamak için CrowdNode\'a ve CrowdNode\'dan çok küçük miktarlarda Dash gönderilecektir.</string>
     <string name="crowdnode_link_account_description">Bu cihazdan CrowdNode\'a yapılan tüm gönderiler, aşağıdaki Dash adresi ile gerçekleştirilecektir.</string>
-    <string name="dash_address">Dash Adresi</string>
     <string name="primary_dash_address">Birincil Dash Adresi</string>
     <string name="crowdnode_secure_wallet">CrowdNode hesabı oluşturmak için parolanızı yedekleyin</string>
     <string name="crowdnode_secure_wallet_explainer">Bu cüzdan için parolanızı kaybederseniz ve bu cihazı kaybederseniz veya Dash Cüzdanını kaldırırsanız, CrowdNode\'daki fonlarınıza ve bu cüzdandaki fonlara erişiminizi kaybedersiniz.</string>

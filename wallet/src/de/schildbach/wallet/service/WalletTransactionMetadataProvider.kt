@@ -22,6 +22,9 @@ import com.google.zxing.*
 import de.schildbach.wallet.database.dao.AddressMetadataDao
 import de.schildbach.wallet.database.dao.IconBitmapDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
+import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
+import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
+import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import okhttp3.*
@@ -44,6 +47,7 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.decodeBitmap
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.slf4j.LoggerFactory
+import java.util.*
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -55,7 +59,9 @@ class WalletTransactionMetadataProvider @Inject constructor(
     private val addressMetadataDao: AddressMetadataDao,
     private val iconBitmapDao: IconBitmapDao,
     private val walletData: WalletDataProvider,
-    private val giftCardDao: GiftCardDao
+    private val giftCardDao: GiftCardDao,
+    private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
+    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
 ) : TransactionMetadataProvider {
 
     companion object {
@@ -66,7 +72,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         Executors.newFixedThreadPool(5).asCoroutineDispatcher()
     )
 
-    private suspend fun insertTransactionMetadata(txId: Sha256Hash): TransactionMetadata? {
+    private suspend fun insertTransactionMetadata(txId: Sha256Hash, isSyncingPlatform: Boolean): TransactionMetadata? {
         val walletTx = walletData.wallet!!.getTransaction(txId)
         Context.propagate(walletData.wallet!!.context)
         walletTx?.run {
@@ -78,19 +84,88 @@ class WalletTransactionMetadataProvider @Inject constructor(
             }
             val isInternal = isEntirelySelf(walletData.wallet!!)
 
+            // Search for items from platform
+            var hasChanges = false
+            val platformSentTimestamp = transactionMetadataDocumentDao.getSentTimestamp(txId)
+            val platformMemo = transactionMetadataDocumentDao.getTransactionMemo(txId)
+            val platformService = transactionMetadataDocumentDao.getTransactionService(txId)
+            val platformTaxCategory = transactionMetadataDocumentDao.getTransactionTaxCategory(txId)
+            val platformExchangeRate = transactionMetadataDocumentDao.getTransactionExchangeRate(txId)
+
+            var rate: String? = null
+            var code: String? = null
+
+            if (platformSentTimestamp != null) {
+                updateTime = platformSentTimestamp;
+            } else if (sentTime != null && sentTime < updateTime) {
+                updateTime = sentTime
+                hasChanges = true
+            }
+
+            if (platformExchangeRate != null) {
+                rate = platformExchangeRate.rate.toString()
+                code = platformExchangeRate.currencyCode
+                // if we are pulling from platform, then update the tx object
+                exchangeRate = org.bitcoinj.utils.ExchangeRate(Fiat.parseFiat(code, rate))
+            } else if (exchangeRate != null) {
+                rate = exchangeRate?.fiat?.let { MonetaryFormat.FIAT.noCode().format(it).toString() }
+                code = exchangeRate?.fiat?.currencyCode
+                hasChanges = true
+            }
+
+            val myMemo = when {
+                platformMemo != null -> { memo = platformMemo; platformMemo }
+                memo != null -> { hasChanges = true; memo!! }
+                else -> ""
+            }
+
             val metadata = TransactionMetadata(
                 txId,
                 updateTime,
                 txValue,
                 TransactionCategory.fromTransaction(type, txValue, isInternal),
-                taxCategory = null,
-                exchangeRate?.fiat?.currencyCode,
-                exchangeRate?.fiat?.let {
-                    MonetaryFormat.FIAT.noCode().format(it).toString()
-                }
+                taxCategory = platformTaxCategory?.let { TaxCategory.fromValue(it) },
+                currencyCode = code,
+                rate = rate,
+                memo = myMemo,
+                service = platformService
             )
             transactionMetadataDao.insert(metadata)
+            // only add to the change cache if some metadata exists
+            if (metadata.isNotEmpty() && !isSyncingPlatform && hasChanges) {
+                transactionMetadataChangeCacheDao.insert(TransactionMetadataCacheItem(metadata))
+            }
             log.info("txmetadata: inserting $metadata")
+
+            val platformIconUrl = transactionMetadataDocumentDao.getTransactionIconUrl(txId)
+
+            if (!platformIconUrl.isNullOrEmpty()) {
+                try {
+                    updateIcon(txId, platformIconUrl)
+                } catch (ex: Exception) {
+                    log.error("Failed to make an http call for icon: $platformIconUrl")
+                }
+            }
+
+            val giftCardNumber = transactionMetadataDocumentDao.getGiftCardNumber(txId)
+            val giftCardPin = transactionMetadataDocumentDao.getGiftCardPin(txId)
+            val merchantName = transactionMetadataDocumentDao.getMerchantName(txId)
+            val giftCardPrice = transactionMetadataDocumentDao.getOriginalPrice(txId)
+            val barcodeValue = transactionMetadataDocumentDao.getBarcodeValue(txId)
+            val barcodeFormat = transactionMetadataDocumentDao.getBarcodeFormat(txId)
+            val merchantUrl = transactionMetadataDocumentDao.getMerchantUrl(txId)
+
+            val giftCard = GiftCard(
+                txId,
+                merchantName ?: "",
+                giftCardPrice ?: 0.0,
+                giftCardNumber,
+                giftCardPin,
+                barcodeValue,
+                barcodeFormat?.let { BarcodeFormat.valueOf(it) },
+                merchantUrl
+            )
+            insertOrUpdateGiftCard(giftCard)
 
             return metadata
         }
@@ -98,66 +173,144 @@ class WalletTransactionMetadataProvider @Inject constructor(
         return null
     }
 
-    private suspend fun updateAndInsertIfNotExist(txId: Sha256Hash, update: suspend (TransactionMetadata) -> Unit) {
+    private suspend fun updateAndInsertIfNotExist(
+        txId: Sha256Hash,
+        isSyncingPlatform: Boolean,
+        update: suspend (TransactionMetadata) -> Unit
+    ) {
         val existing = transactionMetadataDao.load(txId)
 
         if (existing != null) {
+            log.info("txmetadata for $txId exists, only do update")
             update(existing)
         } else {
-            insertTransactionMetadata(txId)?.let { update(it) }
+            log.info("txmetadata for $txId does not exist, perform insert, then update")
+            insertTransactionMetadata(txId, isSyncingPlatform)?.let { update(it) }
         }
     }
 
     override suspend fun importTransactionMetadata(txId: Sha256Hash) {
-        updateAndInsertIfNotExist(txId) { }
+        updateAndInsertIfNotExist(txId, false) { }
     }
 
     override suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
         transactionMetadataDao.insert(transactionMetadata)
     }
 
-    override suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory) {
-        updateAndInsertIfNotExist(txId) {
+    override suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, isSyncingPlatform: Boolean) {
+        updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateTaxCategory(txId, taxCategory)
+            if (!isSyncingPlatform) {
+                transactionMetadataChangeCacheDao.insertTaxCategory(txId, taxCategory)
+            }
         }
     }
 
-    override suspend fun setTransactionType(txId: Sha256Hash, type: Int) {
+    override suspend fun setTransactionSentTime(
+        txId: Sha256Hash,
+        timestamp: Long,
+        isSyncingPlatform: Boolean
+    ) {
+        updateAndInsertIfNotExist(txId, isSyncingPlatform) {
+            transactionMetadataDao.updateSentTime(txId, timestamp)
+            if (!isSyncingPlatform) {
+                transactionMetadataChangeCacheDao.insertSentTime(txId, timestamp)
+            }
+        }
+    }
+
+    override suspend fun syncPlatformMetadata(
+        txId: Sha256Hash,
+        metadata: TransactionMetadata,
+        giftCard: GiftCard?,
+        iconUrl: String?
+    ) {
+        updateAndInsertIfNotExist(txId, true) { existing ->
+            val updated = existing.copy(
+                // txId and value are kept the same
+                txId = existing.txId,
+                value = existing.value,
+                // update the rest from platform if not empty, otherwise keep existing
+                type = metadata.type.takeIf { it != TransactionCategory.Invalid } ?: existing.type,
+                taxCategory = metadata.taxCategory ?: existing.taxCategory,
+                currencyCode = metadata.currencyCode ?: existing.currencyCode,
+                rate = metadata.rate ?: existing.rate,
+                memo = metadata.memo.ifEmpty { existing.memo },
+                service = metadata.service ?: existing.service,
+                timestamp = metadata.timestamp.takeIf { it != 0L } ?: existing.timestamp
+            )
+
+            transactionMetadataDao.update(updated)
+        }
+
+        if (giftCard != null) {
+            insertOrUpdateGiftCard(giftCard)
+        }
+
+        if (!iconUrl.isNullOrEmpty()) {
+            try {
+                updateIcon(txId, iconUrl)
+            } catch (ex: Exception) {
+                log.error("Failed to make an http call for icon: $iconUrl")
+            }
+        }
+    }
+
+    override suspend fun setTransactionType(txId: Sha256Hash, type: Int, isSyncingPlatform: Boolean) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate) {
+    override suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean) {
         if (exchangeRate.rate != null) {
-            updateAndInsertIfNotExist(txId) {
+            updateAndInsertIfNotExist(txId, isSyncingPlatform) {
                 transactionMetadataDao.updateExchangeRate(
                     txId,
                     exchangeRate.currencyCode,
                     exchangeRate.rate!!
                 )
+                if (!isSyncingPlatform) {
+                    transactionMetadataChangeCacheDao.insertExchangeRate(
+                        txId,
+                        exchangeRate.currencyCode,
+                        exchangeRate.rate!!
+                    )
+                }
             }
         }
     }
 
-    override suspend fun setTransactionMemo(txId: Sha256Hash, memo: String) {
-        updateAndInsertIfNotExist(txId) {
+    override suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncingPlatform: Boolean) {
+        updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateMemo(txId, memo)
+            if (!isSyncingPlatform) {
+                transactionMetadataChangeCacheDao.insertMemo(txId, memo)
+            }
         }
     }
 
-    override suspend fun setTransactionService(txId: Sha256Hash, service: String) {
-        updateAndInsertIfNotExist(txId) {
+    override suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean) {
+        updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateService(txId, service)
+            if (!isSyncingPlatform) {
+                transactionMetadataChangeCacheDao.insertService(txId, service)
+            }
         }
     }
 
     override suspend fun markGiftCardTransaction(txId: Sha256Hash, iconUrl: String?) {
         var transactionMetadata: TransactionMetadata
-        updateAndInsertIfNotExist(txId) {
+        updateAndInsertIfNotExist(txId, false) {
             transactionMetadata = it.copy(
                 service = ServiceName.CTXSpend,
                 taxCategory = TaxCategory.Expense
             )
             transactionMetadataDao.update(transactionMetadata)
+            transactionMetadataChangeCacheDao.markGiftCardTx(
+                txId,
+                ServiceName.CTXSpend,
+                TaxCategory.Expense,
+                iconUrl
+            )
         }
 
         if (!iconUrl.isNullOrEmpty()) {
@@ -171,10 +324,19 @@ class WalletTransactionMetadataProvider @Inject constructor(
 
     override suspend fun updateGiftCardMetadata(giftCard: GiftCard) {
         giftCardDao.updateGiftCard(giftCard)
+        transactionMetadataChangeCacheDao.insertGiftCardData(
+            giftCard.txId,
+            giftCard.number,
+            giftCard.pin,
+            giftCard.merchantName,
+            giftCard.price,
+            giftCard.merchantUrl
+        )
     }
 
     override suspend fun updateGiftCardBarcode(txId: Sha256Hash, barcodeValue: String, barcodeFormat: BarcodeFormat) {
         giftCardDao.updateBarcode(txId, barcodeValue, barcodeFormat)
+        transactionMetadataChangeCacheDao.insertBarcode(txId, barcodeValue, barcodeFormat.toString())
     }
 
     override fun syncTransactionBlocking(tx: Transaction) {
@@ -204,6 +366,11 @@ class WalletTransactionMetadataProvider @Inject constructor(
                     exchangeRate.fiat.currencyCode,
                     exchangeRate.fiat.value.toString()
                 )
+                transactionMetadataChangeCacheDao.insertExchangeRate(
+                    tx.txId,
+                    exchangeRate.fiat.currencyCode,
+                    exchangeRate.fiat.value.toString()
+                )
             }
 
             // sync transaction memo
@@ -223,14 +390,14 @@ class WalletTransactionMetadataProvider @Inject constructor(
         } else {
             // it does not exist, so import everything from the transaction
             log.info("sync transaction metadata not exists: ${tx.txId}")
-            insertTransactionMetadata(tx.txId)
+            insertTransactionMetadata(tx.txId, false)
         }
     }
 
     override suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata? {
         var transactionMetadata = transactionMetadataDao.load(txId)
         if (transactionMetadata == null) {
-            insertTransactionMetadata(txId)
+            insertTransactionMetadata(txId, false)
         }
 
         transactionMetadata = transactionMetadataDao.load(txId)
@@ -316,7 +483,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
         return metadataList
     }
-
+    
     override fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>> {
         return iconBitmapDao.observeBitmaps()
             .distinctUntilChanged()
@@ -462,11 +629,35 @@ class WalletTransactionMetadataProvider @Inject constructor(
         return outputStream.toByteArray()
     }
 
-    override fun clear() {
-        syncScope.launch {
-            transactionMetadataDao.clear()
-            addressMetadataDao.clear()
-            iconBitmapDao.clear()
+    private suspend fun insertOrUpdateGiftCard(giftCard: GiftCard) {
+        if (giftCard.merchantName.isEmpty() && giftCard.number == null && giftCard.pin == null &&
+            (giftCard.barcodeValue == null || giftCard.barcodeFormat == null)
+        ) {
+            // Empty gift card. Nothing to insert/update
+            return
         }
+
+        val existingGiftCard = giftCardDao.getCardForTransaction(giftCard.txId)
+
+        if (existingGiftCard == null) {
+            giftCardDao.insertGiftCard(giftCard)
+        } else {
+            val updatedGiftCard = existingGiftCard.copy(
+                merchantName = giftCard.merchantName.ifEmpty { existingGiftCard.merchantName },
+                price = giftCard.price.takeIf { it != 0.0 } ?: existingGiftCard.price,
+                number = giftCard.number ?: existingGiftCard.number,
+                pin = giftCard.pin ?: existingGiftCard.pin,
+                barcodeValue = giftCard.barcodeValue ?: existingGiftCard.barcodeValue,
+                barcodeFormat = giftCard.barcodeFormat ?: existingGiftCard.barcodeFormat,
+                merchantUrl = giftCard.merchantUrl ?: existingGiftCard.merchantUrl
+            )
+            giftCardDao.updateGiftCard(updatedGiftCard)
+        }
+    }
+
+    override suspend fun clear() {
+        transactionMetadataDao.clear()
+        addressMetadataDao.clear()
+        iconBitmapDao.clear()
     }
 }

@@ -7,7 +7,7 @@
   <string name="blockchain_state_progress_days">siku %1$s, %2$d mwishoni mwa</string>
   <string name="blockchain_state_progress_weeks">wiki %1$s, %2$d marehemu</string>
   <string name="blockchain_state_progress_months">miezi %1$s, %2$d marehemu</string>
-  <string name="blockchain_state_progress_downloading">Sambamba na mtandao</string>
+  <string name="blockchain_state_progress_downloading">Sambamba na mtandao (%1$s%%)</string>
   <string name="blockchain_state_progress_stalled">Sambamba kusimamishwa</string>
   <string name="blockchain_state_progress_problem_storage">Haitoshi disc nafasi</string>
   <string name="blockchain_state_progress_problem_network">Hakuna signal wa mtandao</string>

@@ -1,1 +1,1 @@
-tcp:electrum.dash.siampm.com
+tcp:electrumx-mainnet.dash.org

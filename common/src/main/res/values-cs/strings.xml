@@ -43,9 +43,11 @@
     <string name="button_understand">Rozumím</string>
     <string name="button_okay">Dobře</string>
     <string name="button_share">Sdílet</string>
+    <string name="button_skip">Přeskočit</string>
     <string name="verify">Ověřit</string>
     <string name="receive_enter_amount_button">Uvést částku</string>
     <string name="account_create">Vytvořit účet</string>
+    <string name="try_again">Zkusit znovu</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Vyhledávání</string>

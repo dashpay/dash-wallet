@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:viewToHideWhenSoftKeyboardIsOpen="@id/header">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background_primary"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <!-- Processing -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/processing_identity"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:background="@color/dash_blue"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/header">
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/horizontal_guideline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                app:layout_constraintGuide_percent="0.3" />
+
+            <ImageView
+                android:id="@+id/processing_identity_loading_image"
+                android:layout_width="128dp"
+                android:layout_height="128dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/horizontal_guideline"
+                app:layout_constraintBottom_toBottomOf="@+id/horizontal_guideline"
+                app:srcCompat="@drawable/identity_processing" />
+
+            <TextView
+                android:id="@+id/processing_identity_message"
+                style="@style/Body1.White"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:gravity="center"
+                android:textAlignment="gravity"
+                android:paddingLeft="15dp"
+                android:paddingRight="15dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/processing_identity_loading_image"
+                tools:text="@string/username_being_created" />
+
+            <Button
+                android:id="@+id/processing_identity_dismiss_btn"
+                style="@style/Button.Tertiary.Blue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
+                android:layout_marginBottom="25dp"
+                android:text="@string/processing_let_me_know"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Complete -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/identity_complete"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:background="@color/background_secondary"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/header"
+            tools:visibility="visible">
+
+            <ImageView
+                android:id="@+id/identity_complete_icon"
+                android:layout_width="125dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="22dp"
+                android:layout_marginLeft="22dp"
+                android:layout_marginTop="14dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/identity_complete_icon" />
+
+            <TextView
+                android:id="@+id/identity_complete_text"
+                android:text="@string/identity_complete_message"
+                style="@style/Body1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="26dp"
+                android:layout_marginEnd="10dp"
+                android:textSize="@dimen/identity_complete_text_size"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="@id/identity_complete_icon"
+                app:layout_constraintTop_toBottomOf="@id/identity_complete_icon" />
+
+            <Button
+                android:id="@+id/identity_complete_button"
+                style="@style/Button.Primary.Blue"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
+                android:layout_marginBottom="25dp"
+                android:text="@string/verify_continue"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!--Header-->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/header"
+            android:layout_width="match_parent"
+            android:layout_height="230dp"
+            android:background="@android:color/white"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <FrameLayout
+                android:id="@+id/orbit_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:translationX="@dimen/create_username_orbits_translation_x"
+                android:translationY="-130dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <include layout="@layout/users_orbit" />
+
+            </FrameLayout>
+
+            <ImageView
+                android:id="@+id/close_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:padding="10dp"
+                android:layout_marginTop="26dp"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_close_blue" />
+
+            <TextView
+                android:id="@+id/choose_username_title"
+                style="@style/Headline6.Regular.Tertiary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginLeft="20dp"
+                android:layout_marginTop="146dp"
+                android:lines="2"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:ignore="RtlHardcoded"
+                tools:text="Choose your Dash\nUsername" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout>

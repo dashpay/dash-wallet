@@ -1,0 +1,438 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="choose_your_username">Оберіть свій <b>Dash Ім\'я користувача</b></string>
+    <string name="identity_min_3_chars">Від 3 до 23 символів</string>
+    <string name="identity_alphanum_only">Лише літери, цифри та дефіси</string>
+    <string name="identity_hyphen_rule">Має починатися і закінчуватися буквою або цифрою</string>
+    <string name="identity_username_validating">Валідація імені користувача</string>
+    <string name="identity_username_available">Доступне ім\'я користувача</string>
+    <string name="identity_username_taken">Ім\'я користувача зайняте</string>
+    <string name="platform_communication_error">Помилка зв’язку з платформою Dash</string>
+    <string name="register">Реєстрація</string>
+
+    <string name="new_account_confirm_button_text">Підтвердити &amp; сплатити</string>
+    <string name="invitation_confirm_button_text">Підтвердити</string>
+    <string name="new_account_confirm_accept">Я приймаю</string>
+    <string name="new_account_confirm_upgrade_fee">Комісія за оновлення</string>
+    <string name="new_account_confirm_message">Ви вибрали %s як своє ім\'я користувача. Ім\'я користувача не можна змінити після реєстрації.</string>
+    <string name="invitation_confirm_title">Комісія за запрошення</string>
+    <string name="invitation_confirm_message">Кожне запрошення фінансуватиметься цією сумою, щоб одержувач міг швидко створити своє ім’я користувача в Dash Network</string>
+    <string name="invitation_init_title">Запросити</string>
+    <string name="invitation_init_header">Запрошуйте своїх друзів і сім\'ю</string>
+    <string name="invitation_init_message">Дозвольте своїм друзям і родині приєднатися до Dash Network. Запросіть їх у світ соціального банкінгу.</string>
+    <string name="invitation_init_button_text">Створити нове запрошення</string>
+    <string name="invitation_notifications_hint">Запросіть своїх друзів і сім\'ю в Dash Network</string>
+    <string name="invitation_notifications_hint1">Запросіть когось приєднатися до Dash Network</string>
+    <string name="invitation_notifications_hint1_or">або</string>
+    <string name="invitation_created_title">Запрошення</string>
+    <string name="invitation_created_successfully">Запрошення успішно створено</string>
+    <string name="invitation_created_tag_title">Тег для довідки</string>
+    <string name="invitation_created_tag">наприклад: Тато</string>
+    <string name="invitation_created_preview">Попередній перегляд запрошення</string>
+    <string name="invitation_created_copy_link">Копіювати посилання на запрошення</string>
+    <string name="invitation_created_send_invitation">Відправити запрошення</string>
+    <string name="invitation_created_send_invitation_again">Відправити ще раз</string>
+    <string name="invitation_created_maybe_later">Можливо пізніше</string>
+    <string name="invitation_preview_title">Приєднатись зараз</string>
+    <string name="invitation_preview_message">Вас запросив %s. Почніть використовувати криптовалюту Dash.</string>
+    <string name="invitation_preview_close">Закрити</string>
+    <string name="invitation_cant_afford_title">Недостатній баланс гаманця</string>
+    <string name="invitation_cant_afford_message">Вам потрібно принаймні %s Dash, щоб створити запрошення</string>
+    <string name="invitation_creating_error_title">Помилка створення запрошення</string>
+    <string name="invitation_creating_error_message">Виникла проблема зі створенням вашого запрошення. Спробуйте ще раз.</string>
+    <string name="invitation_creating_error_message_not_synced">Дочекайтеся завершення синхронізації та повторіть спробу.</string>
+    <string name="invitation_creating_progress_title">Створити запрошення</string>
+    <string name="invitation_verifying_progress_title">Перевірка запрошення</string>
+    <string name="invitation_share_message">Запрошення одноразові. Не діліться з групою.</string>
+    <string name="invitation_share_title">Запрошення DashPay</string>
+    <string name="invitation_already_claimed_title">Запрошення вже отримано</string>
+    <string name="invitation_already_claimed_message">Ваше запрошення від %s уже отримано</string>
+    <string name="invitation_invalid_invite_title">Недійсне запрошення</string>
+    <string name="invitation_invalid_invite_message">Ваше запрошення від %s недійсне</string>
+    <string name="invitation_username_already_found_title">Ім\'я користувача вже існує</string>
+    <string name="invitation_username_already_found_message">Ви не можете отримати це запрошення, оскільки у вас уже є ім’я користувача Dash</string>
+    <string name="invitation_onboarding_has_began_error_title">Помилка процессу оформлення</string>
+    <string name="invitation_onboarding_has_began_error">Процес оформлення триває, будь ласка, заберіть своє запрошення після того, як створите свій гаманець.</string>
+    <string name="invitation_accept_title_1">Отримайте своє ім\'я користувача</string>
+    <string name="invitation_accept_title_2">Додавайте своїх друзів і сім\'ю</string>
+    <string name="invitation_accept_message_2">Запросіть свою родину, знайдіть друзів, ввівши в пошук їхні імена користувачів</string>
+    <string name="invitation_accept_title_3">Персоналізація</string>
+    <string name="invitation_accept_message_3">Завантажте своє зображення, персоналізуйте свою особистість</string>
+    <string name="invitation_accept_continue">Продовжити</string>
+    <string name="invitation_contact_request_sent_message">Запит на контакт було надіслано на адресу %s, оскільки вас запросили.</string>
+    <string name="username_being_created">Ваше ім’я користувача %s створюється в Dash Network</string>
+    <string name="username_being_requested">Ви маєте запит на ім’я користувача %s в Dash Network</string>
+
+    <string name="processing_let_me_know">Повідомити, коли буде готово</string>
+    <string name="processing_home_title">Оновлення до Evolution</string>
+    <string name="processing_home_step_1" tools:ignore="TypographyFractions">(1/3) Обробка платежу</string>
+    <string name="processing_home_step_2">(2/3) Створення ID</string>
+    <string name="processing_home_step_2_restoring">(2/3) Відновлення ID</string>
+    <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Реєстрація імені користувача</string>
+    <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Запит імені користувача</string>
+    <string name="processing_home_step_3_restoring">(3/3) Відновлення імені користувача</string>
+    <string name="processing_done_title">Привіт %s,</string>
+    <string name="processing_done_subtitle">Ваш обліковий запис готовий</string>
+    <string name="processing_voting_subtitle">Голосування за ваш логін розпочато</string>
+    <string name="processing_error_title">Помилка оновлення</string>
+    <string name="processing_error_title_from_invite">Помилка оновлення із запрошення</string>
+    <string name="processing_error_retry">Повторити</string>
+    <string name="processing_username_unavailable_title">Ім\'я користувача недоступне</string>
+    <string name="processing_username_unavailable_subtitle">Виберіть інше</string>
+
+    <string name="dashpay_upgrade_fee">Комісія за оновлення</string>
+    <string name="dashpay_invite_fee">Комісія за запрошення</string>
+    <string name="dashpay_topup_fee">Комісія за поповнення</string>
+    <string name="search_user_find_a_user">Знайдіть користувача в Dash Network</string>
+    <string name="search_for_a_user">Пошук користувача в Dash Network</string>
+    <string name="search_user_input_placeholder">Test Dash є безкоштовним і його можна отримати з так званого крана.</string>
+    <string name="add_new_contact">Додати новий контакт</string>
+    <string name="send_contact_request">Надіслати запит на додавання до контактів</string>
+    <string name="sending_contact_request">Надсилання запиту на додавання до контактів</string>
+    <string name="sending_contact_request_short">Запрошення</string>
+    <string name="accepting_contact_request">Прийняти запит на додавання до контактів</string>
+    <string name="accepting_contact_request_short">Приймаю</string>
+    <string name="search_user_no_results">Немає відповідних користувачів</string>
+    <string name="search_user_loading">Пошук по імені користувача<b>"%"</b> в Dash Network</string>
+    <string name="contact_request_pending">Непідтверджені запити на додавання до контактів</string>
+    <string name="pay">Оплатити</string>
+    <string name="contact_request_received_title">%s надіслав запит на дружбу</string>
+    <string name="contact_request_accept">Прийняти</string>
+    <string name="contact_request_ignore">Ігнорувати</string>
+
+    <string name="contacts_no_results">Немає відповідних контактів</string>
+
+    <string name="contacts_title">Контакти</string>
+    <string name="contacts_send_to_contact_title">Надіслати контакту</string>
+    <string name="contacts_search_for">Пошук контакта</string>
+    <string name="contact_requests_title">Запити на додавання до контактів</string>
+    <string name="contacts_add_new_contact">Додати новий контакт</string>
+    <string name="contacts_contact_requests_count">Запити на додавання до контактів (%d)</string>
+    <string name="contacts_contact_requests">Запити на додавання до контактів</string>
+    <string name="contacts_contact_requests_view">Переглянути все</string>
+    <string name="contacts_my_contacts">Мої контакти</string>
+    <string name="contacts_sort_order">Сортувати зa</string>
+    <string-array name="contacts_sort">
+        <item>Назва</item>
+    </string-array>
+
+    <string name="notifications_title">Сповіщення</string>
+    <string name="notifications_title_with_count">Сповіщення (%d)</string>
+    <string name="notifications_profile_activity">Активність</string>
+    <string name="notifications_new">Нові</string>
+    <string name="notifications_earlier">Раніше</string>
+    <string name="notifications_none_new">Немає нових сповіщень</string>
+    <string name="notifications_contact_has_accepted">%s прийняв ваш запит на додавання в контакти</string>
+    <string name="notifications_you_have_accepted">Ви прийняли запит на додавання в контакти від %s</string>
+    <string name="notifications_you_sent">Ви надіслали запит на контакт %s</string>
+    <string name="notifications_you_received">%s надіслав вам запит на додавання в контакти</string>
+
+    <string name="identity_complete_message">Ваше ім’я користувача %s було успішно створено в Dash Network</string>
+    <string name="request_complete_message">Ви маєте успішний запит на ім’я користувача %s в Dash Network</string>
+
+    <string name="scan_to_pay_username_dialog_message">Недійсне ім’я користувача чи ідентифікатор Dash\n\n%s</string>
+    <string name="send_coins_to_username">Відправка</string>
+    <string name="contact_history_disclaimer">Додайте % до свого списку контактів, щоб <b>переказувати платежі за Ім\'ям користувача</b> та <b>зберігати історію взаємних транзакцій</b></string>
+    <string name="contact_history_disclaimer_pending">Щойно % прийме ваш запит, ви зможете здійснити <b>оплату безпосередньо на ім’я користувача</b></string>
+    <string name="stranger_activity_disclaimer_text">Платежі, здійснені безпосередньо на адреси, не будуть збережені.</string>
+    <string name="error_loading_identity">Помилка завантаження ідентифікатора</string>
+
+    <string name="edit_profile">Редагувати профіль</string>
+    <string name="display_name">Відображуване ім\'я</string>
+    <string name="about_me">Про мене</string>
+    <string name="char_count">%1$d/%2$d символів</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">Зберегти</string>
+    <string name="edit_profile_take_picture">Зробити фото з камери</string>
+    <string name="edit_profile_choose_picture">Вибрати із галереї</string>
+    <string name="upgrade_to_evolution_title">Приєднатись до DashPay</string>
+    <string name="upgrade_to_evolution_message">Створіть своє ім’я користувача, знайдіть друзів і родину з їхніми іменами користувачів і додайте їх до своїх контактів</string>
+    <string name="image_cropper_title">Переміщуйте та масштабуйте свою фотографію, щоб знайти ідеальну форму</string>
+    <string name="select">Вибрати</string>
+    <string name="unable_to_load_image">Не вдалося завантажити зображення.</string>
+    <string name="profile_picture_upload_error_title">Помилка завантаження</string>
+    <string name="profile_picture_upload_error_message">Не вдалося завантажити ваше зображення. \nБудь ласка спробуйте ще раз.</string>
+    <string name="profile_picture_upload_try_again">Спробуйте ще раз</string>
+    <string name="profile_picture_uploading_title">Будь ласка, зачекайте</string>
+    <string name="profile_picture_uploading_message">Завантаження вашого фото в мережу</string>
+    <string name="picture_upload_policy">Політика завантаження зображень</string>
+    <string name="imgur_policy_1">Вибране вами зображення буде анонімно завантажено в Imgur.</string>
+    <string name="imgur_policy_2">Завантажене зображення може переглядати публічно будь-хто.</string>
+    <string name="imgur_policy_3">Ви завжди можете видалити завантажене зображення, якщо у вас є доступ до цього гаманця.</string>
+    <string name="profile_picture_delete_title">Ви впевнені\?</string>
+    <string name="profile_picture_delete_message">Це зображення більше не використовуватиметься в мережі Dash</string>
+    <string name="agree">Погоджуюсь</string>
+    <string name="yes">Так</string>
+    <string name="no">Ні</string>
+
+    <string name="updating_profile">Оновлення профілю в Dash Network</string>
+    <string name="google_drive_policy_one">Жодна інформація облікового запису не зберігається в мережі Dash або в гаманці DashPay.</string>
+    <string name="google_drive_policy_two">Завантажене зображення може переглядати публічно будь-хто.</string>
+    <string name="google_drive_policy_three">Ви завжди можете видалити або змінити зображення, якщо у вас є доступ до гаманця на цьому пристрої.</string>
+
+    <string name="upload_image_message">Завантаження вашого фото в мережу</string>
+    <string name="upload_image_please_wait">Будь ласка, зачекайте</string>
+    <string name="upload_image_error_message">Не вдалося завантажити ваше зображення. Будь ласка спробуйте ще раз.</string>
+    <string name="upload_image_upload_error">Помилка завантаження</string>
+
+    <string name="edit_profile_google_drive">Google Drive</string>
+    <string name="edit_profile_imgur">Imgur</string>
+    <string name="google_drive_failed_authorization">Помилка авторизації Google Drive.</string>
+
+
+    <string name="error_updating_profile_try_again">Спробуйте ще раз</string>
+    <string name="error_updating_profile_cancel">Відміна</string>
+    <string name="error_updating_profile_msg">Помилка оновлення профіля</string>
+    <string name="error_updating_profile_code">Код: %s</string>
+    <string name="edit_profile_public_url">Публічна URL-адреса</string>
+    <string name="public_url_enter_url">Вставте URL-адресу зображення</string>
+    <string name="public_url_error_message">Не вдалося отримати зображення. Введіть дійсну URL-адресу зображення.</string>
+    <string name="public_url_message">Ви можете вказати будь-яку URL-адресу, загальнодоступну в Інтернеті, щоб інші користувачі могли бачити її в мережі Dash.</string>
+    <string name="public_url_more_info">Більше інформації</string>
+    <string name="public_url_fetching_image">Отримання зображення</string>
+
+    <string name="gravatar">Gravatar</string>
+    <string name="gravatar_email_prompt">Введіть свій Gravatar Email ID</string>
+    <string name="gravatar_fetching">Отримання вашого Gravatar</string>
+    <string name="gravatar_email_sample">sample\@email.com</string>
+    <string name="gravatar_disclaimer">Ваша електронна пошта не зберігається ні в гаманці DashPay, ні на будь-яких серверах. Він використовується один раз, щоб отримати дані вашого облікового запису Gravatar, а потім відкидається.</string>
+    <string name="gravatar_email_error">Неможливо отримати ваш Gravatar. Введіть дійсний ідентифікатор електронної пошти Gravatar.</string>
+
+    <string name="where_to_store_your_picture">Де б ви хотіли зберегти свою фотографію\?</string>
+    <string name="external_storage_disclaimer">Ваше зображення завжди буде під вашим контролем. Dash не зберігає жодних ваших даних, включаючи зображення профілю.</string>
+    <string name="select_source_sign_in_required">Необхідно ввійти</string>
+    <string name="select_source_google_drive">Google Drive</string>
+    <string name="select_source_no_sign_in_required">Обліковий запис не потрібен</string>
+
+    <string name="join_dashpay_subtitle">Створіть ім\'я користувача, додайте друзів...</string>
+    <string name="join_dashpay_more_subtitle">Створіть своє ім’я користувача, знайдіть друзів і додайте їх до своїх контактів</string>
+    <string name="join">Приєднатись</string>
+
+    <string name="more_suggestions">Більше порад</string>
+    <string name="users_that_matches">Користувачі, які відповідають</string>
+    <string name="not_in_your_contacts">кого зараз немає у ваших контактах</string>
+    <string name="no_matching_contacts">У ваших контактах немає відповідних користувачів</string>
+    <string name="suggestions_empty_result_part_1">Немає користувачів з ім\'ям</string>
+    <string name="suggestions_empty_result_part_2">в ваших контактах</string>
+    <string name="save_changes">Зберегти зміни</string>
+    <string name="save_profile_reminder_text">Бажаєте зберегти зміни, які ви внесли у свій профіль\?</string>
+    <string name="invitation_notification_text">Запросіть своїх друзів і родину приєднатися до Dash Network.</string>
+    <string name="dashpay_min_balance_disclaimer">Потрібно хоча б <b>%s</b> щоб почати </string>
+    <string name="dashpay_insuffient_credits">Недостатньо кредитів для виконання цієї дії.</string>
+
+    <string name="about_developer_mode">Активовано режим розробника: усі функції ввімкнено!</string>
+    <string name="about_developer_mode_disabled">Режим розробника вимкнено.</string>
+    <string name="invite_history_create_new_invite">Створити нове запрошення</string>
+    <string name="invitations_history_header">Історія запрошень</string>
+    <string name="invitations_filter_title">Фільтрувати запрошення</string>
+    <string name="invite_history_empty">Запрошень не створено.</string>
+    <string name="invite_history_empty_claimed">Немає заявлених запрошень.</string>
+    <string name="invite_history_empty_pending">Немає запрошень, які очікують на розгляд.</string>
+    <string name="invitation_details_invite_used_by">Запрошення використовував</string>
+    <string name="invitation_details_invite_without_username">Запрошення подано. Очікується реєстрація імені користувача.</string>
+    <string-array name="invite_filter">
+        <item>Все</item>
+        <item>Очікує</item>
+        <item>Заявлено</item>
+    </string-array>
+
+    <!-- Private memo -->
+    <string name="private_memo">Приватна примітка</string>
+    <string name="add_note">Додати примітку</string>
+    <string name="edit_note">Редагувати примітку</string>
+    <string name="note">Примітка</string>
+
+    <string name="select_privacy_preferences">Виберіть налаштування конфіденційності свого імені користувача</string>
+    <string name="please_note_cant_change_this_later">Зверніть увагу, що ви не зможете змінити це пізніше</string>
+    <string name="Intermediate_level_WIFI_Warning">Середній рівень конфіденційності вимагає надійного підключення до Інтернету</string>
+    <string name="Advanced_level_WIFI_Warning">Розширений рівень конфіденційності вимагає надійного підключення до Інтернету</string>
+    <string name="continue_anyway">Все одно продовжити</string>
+    <string name="welcome_to_dash_pay">Ласкаво просимо до DashPay</string>
+    <string name="pay_to_usernames">Оплата іменам користувачів. Більше немає буквено-цифрових адрес</string>
+    <string name="create_a_username">Створити ім\'я користувача</string>
+    <string name="add_your_friends_family">Додавайте своїх друзів і сім\'ю</string>
+    <string name="invite_your_family">Запросіть свою родину, знайдіть друзів, ввівши в пошук їхні імена користувачів</string>
+    <string name="personalise_profile">Персоналізуйте профіль</string>
+    <string name="upload_your_picture">Завантажте своє зображення, персоналізуйте свою особистість</string>
+    <string name="in_case_lose_your_passphrase">Якщо ви втратите свою парольну фразу, ви втратите право на запрошене ім’я користувача.</string>
+    <string name="keep_your_passphrase_safe">Зберігайте свою парольну фразу в безпеці</string>
+    <string name="pay_now">Сплатіть зараз, і якщо не буде схвалено, ви зможете створити інше ім’я без повторної оплати</string>
+    <string name="case_your_request_is_not_approved">У випадку, якщо ваш запит не буде схвалено</string>
+    <string name="voting_requirement_subtitle">Будь-яке ім’я користувача з цифрами 2–9 або довжиною понад 20 символів буде автоматично підтверджено</string>
+    <string name="voting_requirement_title">Голосування потрібне лише в деяких випадках</string>
+    <string name="dash_network_must_vote_to_approve">Мережа Dash має проголосувати за схвалення вашого імені користувача перед його створенням.</string>
+    <string name="what_is_username_voting">Що таке голосування за імʼя користувача\?</string>
+    <string name="usernames_blocked_title">Деякі імена користувачів можуть бути заблоковані</string>
+    <string name="usernames_blocked_subtitle">Якщо значна частина мережі визначить, що ім’я користувача є невідповідним, вони можуть заблокувати його</string>
+    <string name="username_voting">Голосування за імʼя користува</string>
+    <string name="username_voting_subtitle">Як власник майстерноди ви можете голосувати за схвалення запитаних імен користувачів до того, як вони будуть створені в мережі.</string>
+    <string name="username_voting_subtitle_two">Ви можете заблокувати створення імен користувачів, які вважаєте неприйнятними.</string>
+    <string name="voting_duplicates_only_title">Налаштування фільтра за замовчуванням</string>
+    <string name="voting_duplicates_only_message">Фільтр за умовчанням показує лише повторювані імена користувачів, за які ви НЕ голосували, але ви можете побачити всі оскаржувані імена користувачів, змінивши фільтр</string>
+    <string name="all">Все</string>
+    <string name="n_usernames">%d імена користувачів</string>
+    <string name="n_requests">%d запитів</string>
+    <string name="search_by_username">Пошук по імені користувача</string>
+    <string name="type">Тип</string>
+    <string name="only_duplicates">Тільки дублікати</string>
+    <string name="only_links">Тільки запити з посиланнями</string>
+    <string name="only_links_short">З посиланням</string>
+    <string name="votes">Голосування: %s</string>
+    <string-array name="usernames_group_by_options">
+        <item>Відсутній</item>
+    </string-array>
+
+    <string-array name="usernames_sort_by_options">
+        <item>Від нового до старого</item>
+        <item>Від старого до нового</item>
+        <item>Від високого до низького</item>
+        <item>Від низького до високого</item>
+    </string-array>
+
+    <string-array name="usernames_type_options">
+        <item>Все</item>
+        <item>Я схвалив</item>
+        <item>Я не схвалив</item>
+        <item>Має заблоковані голоси</item>
+    </string-array>
+    <string name="request_your_username">Створити ім\'я користувача</string>
+    <string name="request_your_hint">Зверніть увагу, що ви не зможете змінити це в майбутньому</string>
+    <string name="request_username">Запит імені користувача</string>
+    <string name="request_voting_range">Мережа Dash голосуватиме за це ім’я користувача. Ми повідомимо вас про результати в %s.</string>
+    <string name="request_username_available">Доступне ім\'я користувача</string>
+    <string name="request_username_unavailable">Ім\'я користувача недоступне або заблоковане</string>
+    <string name="request_username_taken">Ім\'я користувача зайняте</string>
+    <string name="request_username_taken_results">Ім\'я користувача було використано іншим користувачем</string>
+    <string name="requesting_your_username_title">Створити ім\'я користувача</string>
+    <string name="requesting_your_username_message">Ваше ім’я користувача %s запитується в мережі Dash. Це може зайняти деякий час.</string>
+    <string name="creating_your_username_message">Ваше ім’я користувача %s створюється в Dash Network. Це може зайняти деякий час.</string>
+    <string name="requesting_your_username_error_title">Ваш запит імені користувача провалився</string>
+    <string name="requesting_your_username_error_message">З якоїсь причини запит на ім\'я користувача  %s не виконано. </string>
+    <string name="voting">Голосувати: </string>
+    <string name="this_username_has_already_been_requested">Це ім’я користувача вже запитувалося, але ви також можете запросити його та дозволити мережі проголосувати, щоб вирішити, чи можете ви його мати</string>
+    <string name="request_details">Запросити деталі</string>
+    <string name="request_details_subtitle">Перегляньте публікацію нижче, щоб підтвердити право власності на це ім’я користувача</string>
+    <string name="vote_to_approve">Голосувати за схвалення</string>
+    <string name="vote_to_block">Голосуйте за блокування</string>
+    <string name="identity">Ідентично</string>
+    <string name="results">Результати</string>
+    <string name="link">Посилання</string>
+    <string name="link_not_provided">Не надано</string>
+    <string name="cancel_approval">Скасувати схвалення</string>
+    <string name="verify_your_identity">Підтвердьте свою особу, щоб збільшити свої шанси отримати запитане ім’я користувача</string>
+    <string name="if_somebody">Якщо хтось інший запитає таке ж ім’я користувача, як і ви, ми дозволимо мережі вирішити, кому присвоїти це ім’я користувача</string>
+    <string name="the_link_will_be_visible">Посилання, яке ви надішлете, буде видно лише власникам мережі</string>
+    <string name="verify_your_identity_voting">Підтвердьте свою особу</string>
+    <string name="copy_the_text">Скопіювати текст</string>
+    <string name="please_vote_to_approve">Будь ласка, проголосуйте, щоб схвалити мій запит на ім\'я користовуча Dash - %s</string>
+    <string name="prove_your_identity">Підтвердьте свою особу</string>
+    <string name="make_a_post_with_the_text">Опублікуйте публікацію з наведеним вище текстом у відомих соціальних мережах або на платформі обміну повідомленнями, щоб підтвердити, що ви є оригінальним власником потрібного імені користувача, і вставте посилання нижче</string>
+    <string name="paste_the_link">Вставте посилання</string>
+    <string name="voting_key_title">Введіть свій ключ голосування</string>
+    <string name="voting_key_hint">Приватний ключ голосування Masternode</string>
+    <string name="voting_key_input_error">Ви ввели недійсний ключ</string>
+    <string name="voting_key_input_not_active_error">Ви ввели ключ, який не пов’язаний з активним Masternode</string>
+    <string name="voting_key_input_already_present">Ви вже ввели цей ключ Masternode</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_testnet">Ви ввели ключ для testnet, але це mainnet. Це має виглядати так: %s</string>
+    <string name="voting_key_input_invalid_private_key_wrong_network_mainnet">Ви ввели ключ для mainnet, але це testnet. Це має виглядати так: %s</string>
+    <string name="voting_key_input_invalid_private_key_address">Ви ввели ключ адреси замість приватного ключа голосування Masternode. Він має бути у форматі WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_private_key_hex">Ви ввели ключ в форматі hex, але він має бути у форматі WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_public_key_hex">Ви ввели ключ в форматі hex, але він має бути у форматі WIF (%s)</string>
+    <string name="voting_key_input_invalid_private_key_too_short">Ви ввели дуже короткий приватний ключ. Ось приклад (%s)</string>
+    <string name="voting_key_input_invalid_private_key_incorrect">Ви ввели приватний ключ з деякими неправильними символами. Ось приклад (%s)</string>
+    <string name="voting_key_input_invalid_private_key_invalid_char">Приватний ключ містить неправильні символи. Ось приклад (%s)</string>
+
+    <string name="voting_key_add">Додайте свої ключі для голосування</string>
+    <string name="voting_key_add_subtitle">Наведені нижче IP-адреси пов’язані з цим гаманцем</string>
+    <string name="masternode_ip">IP-адреса Мастернод</string>
+    <string name="multiple_votes_cast">%d голоси будуть віддані, оскільки у вас є кілька ключів для голосування, які зберігаються в гаманці</string>
+    <string name="add_masternode_key">Додати ключі голосування Мастернод</string>
+    <string name="dont_ask_again">Не питати мене знову</string>
+    <string name="vote_submitting">Надсилання вашого голосу за ім’я користувача %s</string>
+    <string name="vote_submitted">Проголосовано за ім’я користувача %s</string>
+    <string name="cancel_submitting">Відмінити свій голос за ім’я користувача %s</string>
+    <string name="cancel_submitted">Голос за ім’я користувача %s скасовано</string>
+    <string name="block_submitting">Блокування за ім\'ям користувача %s</string>
+    <string name="block_submitted">Ви заблокували  ім\'я користувача %s</string>
+    <string name="vote_submitted_error">Помилка впродовж голосування за ім’я користувача %s </string>
+    <string name="cancel_submitted_error">Помилка впродовж скасування голосу за ім’я користувача %s</string>
+    <string name="block_submitted_error">Помилка блокування за ім\'ям користувача %s</string>
+    <string name="quick_vote">Швидке голосування</string>
+    <string name="quick_vote_subtitle">Натиснувши кнопку «Голосувати за всіх», ви автоматично проголосуєте за всі відфільтровані імена користувачів (%d), які були подані першими</string>
+    <string name="vote_for_all">Голосувати за всіх</string>
+    <string name="voting_period_active">Голосування за імʼя користува активне</string>
+    <string name="there_was_a_network_error">Сталася помилка мережі. Ви можете спробувати ще раз безкоштовно</string>
+    <string name="requested_username_has_been">Запит на ім\'я користувача надано.</string>
+    <string name="requested_voting_duration">Результати в %s.</string>
+    <string name="cancel_request">Скасувати запит</string>
+    <string name="after_the_voting">Після завершення голосування ми повідомимо вам про його результати</string>
+    <string name="none">Відсутній</string>
+    <string name="verify_now">Підтвердити зараз</string>
+    <string name="if_you_tap_cancel">Якщо ви торкнетеся «Скасувати запит», ви все одно матимете можливість подати запит на інше ім’я користувача без повторної оплати</string>
+    <string name="do_you_really_want_to_cancel">Ви дійсно бажаєте скасувати запит на ім\'я користувача\?</string>
+    <string name="if_you_tap_cancel_request">Якщо ви торкнетеся «Скасувати запит», ви все одно матимете можливість подати запит на інше ім’я користувача без повторної оплати</string>
+    <string name="cant_open">Не можливо відкрити</string>
+    <string name="invalid_link">Посилання не дійсне</string>
+    <string name="welcome_request_username_min_balance_disclaimer_all">У вас є %s Dash. Деякі імена користувачів коштують до %s Dash.</string>
+    <string name="welcome_request_username_min_balance_disclaimer_noncontested">Щоб створити ім’я користувача, вам потрібно мати більше, ніж %s Dash.</string>
+    <string name="request_username_min_balance_disclaimer">Щоб подати запит на ім’я користувача в Dash Network, вам потрібно мати більше ніж %s Dash</string>
+
+    <!-- CoinJoin -->
+    <string name="coinjoin">CoinJoin</string>
+    <string name="turned_off">Вимкнено</string>
+    <string name="coinjoin_info_subtitle">Змішування монет Dash зробить ваші транзакції більш конфіденційними</string>
+    <string name="coinjoin_description_1">Ви зможете витратити лише змішаний Dash, коли це ввімкнено. Це можна будь-коли вимкнути.</string>
+    <string name="coinjoin_description_2">Щойно отриманий Dash буде автоматично змішано під час відкриття гаманця</string>
+    <string name="coinjoin_description_3">Увімкнення цієї функції призведе до більшого використання акумулятора</string>
+    <string name="coinjoin_mixing_level_title">Виберіть рівень змішування</string>
+    <string name="coinjoin_mixing_level_subtitle">Ви можете будь-коли змінити або зупинити рівень змішування</string>
+    <string name="coinjoin_mixing_transactions">Змішування транзакцій</string>
+    <string name="coinjoin_transaction_group">Це сумісні операції.</string>
+    <string name="intermediate">Проміжний</string>
+    <string name="advanced">Продвинуті</string>
+    <string name="intermediate_level_card_decs">Досвідчені користувачі, які мають дуже високий рівень технічних знань, можуть визначити вашу історію транзакцій</string>
+    <string name="advanced_level_card_decs">Досвідченим користувачам із будь-яким рівнем технічних знань буде дуже важко визначити вашу історію транзакцій</string>
+    <string name="coinjoin_intermediate_time">до 30 хвилин</string>
+    <string name="coinjoin_advanced_time">Кілька годин</string>
+    <string name="coinjoin_start">Почати змішування</string>
+    <string name="coinjoin_stop">Зупинити змішування</string>
+    <string name="coinjoin_mixing">Змішування</string>
+    <string name="coinjoin_paused">Змішування на паузі</string>
+    <string name="coinjoin_not_started">Не розпачато</string>
+    <string name="coinjoin_progress_balance">%1$s з %2$s</string>
+    <string name="coinjoin_progress_finished">Повністю змішано</string>
+    <string name="coinjoin_change_level_confirmation">Ви впевнені, що бажаєте змінити рівень конфіденційності\?</string>
+    <string name="coinjoin_stop_mixing_title">Ви впевнені, що хочете припинити змішування\?</string>
+    <string name="coinjoin_stop_mixing_message">Будь-які змішані кошти буде об’єднано з вашими незмішаними коштами</string>
+    <string name="coinjoin_mixed_balance">Змішаний баланс: </string>
+
+    <!-- credit balance messages / buttons -->
+    <string name="credit_balance_empty_warning_title">Ваш кредитний баланс низький</string>
+    <string name="credit_balance_low_warning_title">Ваш кредитний баланс повністю вичерпано</string>
+    <string name="credit_balance_empty_warning_message">Ви можете продовжувати використовувати DashPay для платежів, але ви не можете оновити свій профіль або додати більше контактів, доки не поповните кредитний баланс</string>
+    <string name="credit_balance_low_warning_message">Поповнюйте свої кредити, щоб продовжувати вносити зміни у свій профіль і додавати контакти</string>
+    <string name="credit_balance_button_maybe_later">Можливо пізніше</string>
+    <string name="credit_balance_button_buy">Купити кредити</string>
+    <string name="credit_balance_insufficient_error_message">У вас недостатньо коштів для покупки кредитів</string>
+    <string name="buy_credits_estimated_items">%s - %d контактів / %d оновлень профілю</string>
+
+    <string name="request_username_username_voting_message">+ що таке голосування за імʼя користувача\?</string>
+    <string name="request_username_character_requirement">Лише літери, цифри та дефіси</string>
+    <string name="request_username_balance_requirement">Для створення цього імені користувача потрібно мати 0,25 DASH</string>
+    <string name="request_username_length_requirement">Від 3 до 23 символів</string>
+    <string name="request_username_confirm">Я приймаю</string>
+    <string name="username_vote_one_left_message">Ви вже голосували за %d це ім\'я користувача кілька разів. За це ім’я користувача можна віддати лише ще один голос.</string>
+    <string name="username_vote_one_left">Залишився один голос</string>
+    <string name="username_vote_none_left_message">Ви вже голосували за це ім\'я користувача %d разів. Ви вже не можете голосувати за це ім’я користувача.</string>
+    <string name="username_vote_none_left">Голосів немає</string>
+    <string name="request_username_blocked">Запитане ім\'я користувача заблоковано</string>
+    <string name="request_username_lost_vote">Запитане ім’я користувача надано комусь іншому</string>
+    <string name="request_username_blocked_message">Ім’я користувача %s заблоковано Dash Network. Спробуйте ще раз, попросивши інше ім’я користувача.</string>
+    <string name="request_username_lost_vote_message">В процессі голосування Dash Network вирішила призначити ім’я користувача %s комусь іншому . Спробуйте ще раз, попросивши інше ім’я користувача.</string>
+    <string name="mix_dash_mix">Змішати баланс</string>
+    <string name="mix_dash_title">Змішайте Dash</string>
+    <string name="mix_dash_message">Щоб запобігти тому, щоб інші люди бачили, кому ви здійснюєте платежі, рекомендуємо змішати ваш баланс перед створенням імені користувача.</string>
+    <string name="tools_credits_buy_button">Купити</string>
+    <string name="platform_credits_error">Помилка</string>
+    </resources>
