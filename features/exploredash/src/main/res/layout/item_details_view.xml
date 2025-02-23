@@ -282,6 +282,7 @@
         </androidx.appcompat.widget.LinearLayoutCompat>
 
         <ImageView
+            android:id="@+id/discount_stem"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/triangle_black_70"
