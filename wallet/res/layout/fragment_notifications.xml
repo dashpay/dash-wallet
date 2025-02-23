@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:context="de.schildbach.wallet.ui.dashpay.NotificationsFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/root"
@@ -65,16 +66,27 @@
 
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/contacts_rv"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
+            android:id="@+id/notifications_rv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginStart="15dp"
             android:layout_marginEnd="15dp"
             android:background="@drawable/white_background_rounded"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/search" />
+
+        <TextView
+            android:id="@+id/no_notifications_label"
+            style="@style/Caption.Tertiary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
+            android:layout_marginEnd="15dp"
+            app:layout_constraintTop_toBottomOf="@id/notifications_rv"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:text="@string/notifications_none_new" />
 
         <!--include layout="@layout/user_search_empty_result" />
 
