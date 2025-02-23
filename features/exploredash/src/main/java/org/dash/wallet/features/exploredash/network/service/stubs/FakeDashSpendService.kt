@@ -26,12 +26,12 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.SendPaymentService
 import javax.inject.Inject
 
-class FakeDashDirectSendService @Inject constructor(
+class FakeDashSpendService @Inject constructor(
     private val realService: SendPaymentService,
     private val walletDataProvider: WalletDataProvider
 ) : SendPaymentService {
     internal companion object {
-        const val DASH_DIRECT_SCHEMA = "dashdirect://"
+        const val DASH_SPEND_SCHEMA = "dashspend://"
     }
 
     override suspend fun sendCoins(
@@ -53,7 +53,7 @@ class FakeDashDirectSendService @Inject constructor(
     }
 
     override suspend fun payWithDashUrl(dashUri: String): Transaction {
-        return if (dashUri.startsWith(DASH_DIRECT_SCHEMA)) {
+        return if (dashUri.startsWith(DASH_SPEND_SCHEMA)) {
             val uri = Uri.parse(dashUri)
             val amount = Coin.valueOf(uri.getQueryParameter("amount")?.toLong() ?: 0)
             realService.sendCoins(
