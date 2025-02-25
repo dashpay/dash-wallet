@@ -340,11 +340,6 @@ android {
             buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
             buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
-            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
-            if (dashDirectClientId == null) {
-                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
-            }
-            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
         staging {
             applicationId = "org.dash.dashpay.testnet"
@@ -366,11 +361,6 @@ android {
             buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
             buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
-            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
-            if (dashDirectClientId == null) {
-                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
-            }
-            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
         devnet {
             applicationId = "org.dash.dashpay.schnapps"

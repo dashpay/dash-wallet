@@ -24,7 +24,7 @@ class AppDatabaseMigrations {
     companion object {
         val migration11To12 =
             object : Migration(11, 12) {
-                // Migrations for the DashDirect gift cards integration.
+                // Migrations for the CTX gift cards integration.
                 // We save gift cards and merchant icons into the database.
                 override fun migrate(database: SupportSQLiteDatabase) {
                     database.execSQL(

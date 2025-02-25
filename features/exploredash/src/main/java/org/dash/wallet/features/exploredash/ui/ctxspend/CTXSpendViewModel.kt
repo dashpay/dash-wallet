@@ -75,7 +75,7 @@ class CTXSpendViewModel @Inject constructor(
 
     val balanceWithDiscount: Coin?
         get() = _balance.value?.let {
-            val d = giftCardMerchant.savingsPercentageAsDouble
+            val d = giftCardMerchant.savingsFraction
             return Coin.valueOf((it.value / (1.0 - d)).toLong()).minus(Transaction.DEFAULT_TX_FEE.multiply(20))
         }
 
@@ -185,10 +185,10 @@ class CTXSpendViewModel @Inject constructor(
         }
     }
 
-    fun getDiscountedAmount(fullAmount: Coin, savingsPercentage: Double): Fiat? {
+    fun getDiscountedAmount(fullAmount: Coin, savingsFraction: Double): Fiat? {
         return _exchangeRate.value?.let {
             val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
-            return myRate.coinToFiat(fullAmount).discountBy(savingsPercentage)
+            return myRate.coinToFiat(fullAmount).discountBy(savingsFraction)
         }
     }
 

@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui.main
 
 import android.os.LocaleList
-import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
@@ -66,10 +65,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
@@ -548,7 +545,7 @@ class MainViewModel @Inject constructor(
             viewModelScope.launch {
                 _transactions.value = allTransactionViews
                 this@MainViewModel.txByHash = txByHash
-                updateContacts(contactsToUpdate)
+                getContactsAndMetadataForTransactions(contactsToUpdate)
             }
         }
     }
@@ -658,24 +655,28 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             _transactions.value = items
             this@MainViewModel.txByHash = txByHash
-            updateContacts(contactsToUpdate)
+            getContactsAndMetadataForTransactions(contactsToUpdate)
         }
     }
 
-    private suspend fun updateContacts(txs: List<Transaction>) {
-        if (this.contacts.isEmpty() || txs.isEmpty()) {
+    private suspend fun getContactsAndMetadataForTransactions(txs: List<Transaction>) {
+        if (txs.isEmpty()) {
             return
         }
 
         withContext(Dispatchers.Default) {
-            val contactsMap = txs.filterNot { it.isEntirelySelf(walletData.transactionBag) }
-                .mapNotNull { tx ->
-                    platformRepo.blockchainIdentity.getContactForTransaction(tx)?.let { contactId ->
-                        contacts[contactId]?.let { contact ->
-                            tx.txId to contact
+            val contactsMap = if (this@MainViewModel.contacts.isNotEmpty()) {
+                txs.filterNot { it.isEntirelySelf(walletData.transactionBag) }
+                    .mapNotNull { tx ->
+                        platformRepo.blockchainIdentity.getContactForTransaction(tx)?.let { contactId ->
+                            contacts[contactId]?.let { contact ->
+                                tx.txId to contact
+                            }
                         }
-                    }
-                }.toMap()
+                    }.toMap()
+            } else {
+                mapOf()
+            }
 
             updateContactsAndMetadata(mapOf(), metadata, contactsMap)
         }
