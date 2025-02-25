@@ -807,7 +807,7 @@ class PlatformRepo @Inject constructor(
                 val username = DomainDocument(nameDocuments[0]).label
 
                 val profile = DashPayProfile.fromDocument(profileDocument, username)
-                dashPayProfileDao.insert(profile!!)
+                dashPayProfileDao.insert(profile)
                 return true
             }
             return false
@@ -857,7 +857,7 @@ class PlatformRepo @Inject constructor(
                     DashPayProfile.fromDocument(profile, username)
                 else
                     DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
-                updateDashPayProfile(dashPayProfile!!)
+                updateDashPayProfile(dashPayProfile)
             }
         }
     }
