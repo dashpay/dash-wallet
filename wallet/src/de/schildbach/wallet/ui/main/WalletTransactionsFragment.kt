@@ -230,7 +230,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun showEmptyView() {
-        binding.walletTransactionsEmpty.isVisible = true
+        binding.walletTransactionsEmpty.isVisible = viewModel.transactionsLoaded
         binding.walletTransactionsList.isVisible = false
     }
 

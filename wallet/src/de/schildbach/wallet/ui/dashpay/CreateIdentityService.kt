@@ -319,10 +319,12 @@ class CreateIdentityService : LifecycleService() {
             }
 
             if (blockchainIdentityData.creationState == CreationState.USERNAME_REGISTERING) {
-                if (blockchainIdentityData.creationStateErrorMessage?.contains("preorderDocument was not found with a salted domain hash") == true) {
+                val errorMessage = blockchainIdentityData.creationStateErrorMessage ?: ""
+                if (errorMessage.contains("preorderDocument was not found with a salted domain hash") ||
+                    errorMessage.contains("cannot find preorder document, though it should be somewhere")) {
                     blockchainIdentityData.creationState = CreationState.PREORDER_REGISTERING
                     platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
-                } else if (blockchainIdentityData.creationStateErrorMessage?.contains("missing domain document for") == true) {
+                } else if (errorMessage.contains("missing domain document for")) {
                     blockchainIdentityData.creationState = CreationState.PREORDER_REGISTERING
                     platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (retryWithNewUserName) {
@@ -377,14 +379,13 @@ class CreateIdentityService : LifecycleService() {
             } else {
                 // don't use platformRepo.getIdentityBalance() because platformRepo.blockchainIdentity is not initialized
                 val balanceInfo = blockchainIdentityData.identity?.let { platformRepo.getIdentityBalance(it.id) }
-                    ?: CreditBalanceInfo(0L)
                 val balanceRequirement = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
                     Constants.DASH_PAY_FEE_CONTESTED
                 } else {
                     Constants.DASH_PAY_FEE
                 }
 
-                if (balanceInfo.balance < balanceRequirement.value * 1000) {
+                if (balanceInfo != null && balanceInfo.balance < balanceRequirement.value * 1000) {
                     val topupValue = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
                         Constants.DASH_PAY_FEE_CONTESTED_NAME
                     } else {
