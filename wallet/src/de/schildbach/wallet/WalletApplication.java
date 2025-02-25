@@ -71,6 +71,7 @@ import org.bitcoinj.wallet.WalletEx;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage;
+import org.conscrypt.Conscrypt;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
@@ -111,6 +112,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -334,6 +336,12 @@ public class WalletApplication extends MultiDexApplication
         resetBlockchainSyncProgress();
         anrSupervisor = new AnrSupervisor();
         anrSupervisor.start();
+
+        // enable TLS 1.3 support on Android 9 and lower
+        // Android 10 and above support TLS 1.3 by default
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            Security.insertProviderAt(Conscrypt.newProvider(), 1);
+        }
     }
 
     private void syncExploreData() {
