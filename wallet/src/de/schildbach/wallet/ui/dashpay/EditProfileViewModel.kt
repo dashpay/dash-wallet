@@ -22,6 +22,7 @@ import android.os.Environment
 import android.provider.Settings
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.http.HttpRequestInitializer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
@@ -31,6 +32,7 @@ import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.ImgurService
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
@@ -61,7 +63,8 @@ class EditProfileViewModel @Inject constructor(
     dashPayProfileDao: DashPayProfileDao,
     val platformRepo: PlatformRepo,
     private val imgurService: ImgurService,
-    private val googleDriveService: GoogleDriveService
+    private val googleDriveService: GoogleDriveService,
+    private val dashPayConfig: DashPayConfig
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     enum class ProfilePictureStorageService {
         GOOGLE_DRIVE, IMGUR
@@ -184,6 +187,13 @@ class EditProfileViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    suspend fun createAndSaveGoogleDriveCredential(accessToken: String): HttpRequestInitializer {
+        val credential = GoogleCredential().setAccessToken(accessToken)
+        dashPayConfig.setGoogleDriveAccessToken(accessToken)
+
+        return credential
     }
 
     fun uploadProfilePicture(credential: HttpRequestInitializer? = null) {

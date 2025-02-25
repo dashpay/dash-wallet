@@ -50,7 +50,6 @@ import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIOException
 import com.google.api.services.drive.DriveScopes
 import dagger.hilt.android.AndroidEntryPoint
@@ -58,7 +57,6 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
-import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -77,14 +75,9 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class EditProfileActivity : LockScreenActivity() {
-
-    @Inject
-    lateinit var googleDriveService: GoogleDriveService
-
     companion object {
         private val log = LoggerFactory.getLogger(EditProfileActivity::class.java)
     }
@@ -233,11 +226,14 @@ class EditProfileActivity : LockScreenActivity() {
         }
 
         googleDriveAuthLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result: ActivityResult ->
-            try {
-                val authorizationResult = Identity.getAuthorizationClient(this@EditProfileActivity).getAuthorizationResultFromIntent(result.data)
-                processGoogleAuthorizationResult(authorizationResult)
-            } catch (ex: Exception) {
-                log.error("Failed to get auth result for Google Drive", ex)
+            lifecycleScope.launch {
+                try {
+                    val authorizationResult = Identity.getAuthorizationClient(this@EditProfileActivity)
+                        .getAuthorizationResultFromIntent(result.data)
+                    processGoogleAuthorizationResult(authorizationResult)
+                } catch (ex: Exception) {
+                    log.error("Failed to get auth result for Google Drive", ex)
+                }
             }
         }
     }
@@ -359,8 +355,10 @@ class EditProfileActivity : LockScreenActivity() {
                         showUploadErrorDialog(UpdateProfileError.AUTHENTICATION)
                     }
                 } else {
-                    // Access already granted, continue with user action
-                    processGoogleAuthorizationResult(authorizationResult)
+                    lifecycleScope.launch {
+                        // Access already granted, continue with user action
+                        processGoogleAuthorizationResult(authorizationResult)
+                    }
                 }
             }
             .addOnFailureListener { e ->
@@ -369,11 +367,12 @@ class EditProfileActivity : LockScreenActivity() {
             }
     }
 
-    private fun processGoogleAuthorizationResult(authorizationResult: AuthorizationResult) {
+    private suspend fun processGoogleAuthorizationResult(authorizationResult: AuthorizationResult) {
         try {
-            val credential = authorizationResult.accessToken?.let { GoogleCredential().setAccessToken(it) }
+            val accessToken = authorizationResult.accessToken
 
-            if (credential != null) {
+            if (accessToken != null) {
+                val credential = editProfileViewModel.createAndSaveGoogleDriveCredential(accessToken)
                 editProfileViewModel.uploadProfilePicture(credential)
             } else {
                 showUploadErrorDialog(UpdateProfileError.AUTHENTICATION)

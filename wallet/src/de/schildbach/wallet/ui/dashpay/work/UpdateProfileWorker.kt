@@ -21,6 +21,7 @@ import android.provider.Settings
 import androidx.hilt.work.HiltWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIOException
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -28,6 +29,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
@@ -48,7 +50,8 @@ class UpdateProfileWorker @AssistedInject constructor(
     val analytics: AnalyticsService,
     val platformRepo: PlatformRepo,
     val platformBroadcastService: PlatformBroadcastService,
-    val googleDriveService: GoogleDriveService)
+    val googleDriveService: GoogleDriveService,
+    val dashPayConfig: DashPayConfig)
     : BaseWorker(context, parameters) {
 
     companion object {
@@ -134,16 +137,23 @@ class UpdateProfileWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun saveToGoogleDrive(context: Context, encryptedBackup: ByteArray): String? { // TODO
+    private suspend fun saveToGoogleDrive(context: Context, encryptedBackup: ByteArray): String? {
         return try {
-//            val credential = googleAuthService.getGoogleCredential()
-//                ?: throw AuthenticationException("Failed to get Google credentials")
-//
-//            // Upload the image
-//            val uploadedAvatarFilename = UUID.randomUUID().toString()
-//            val secureId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
-//            return googleDriveService.uploadImage(credential, uploadedAvatarFilename, encryptedBackup, secureId)
-            return "hola" // TODO:
+            log.error("saving to google drive from the worker")
+
+            val uploadedAvatarFilename = UUID.randomUUID().toString()
+            val secureId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+            val accessToken = dashPayConfig.getGoogleDriveAccessToken()
+
+            if (accessToken.isNullOrEmpty()) {
+                log.error("No Google Drive access token available")
+                return null
+            }
+            
+            // Create a credential using the stored access token
+            val credential = GoogleCredential().setAccessToken(accessToken)
+            
+            return googleDriveService.uploadImage(credential, uploadedAvatarFilename, encryptedBackup, secureId)
         } catch (t: Throwable) {
             analytics.logError(t, "Failed to upload to Google Drive")
             if (t is GoogleAuthIOException) {
