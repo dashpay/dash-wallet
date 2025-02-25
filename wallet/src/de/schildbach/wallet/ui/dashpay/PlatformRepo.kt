@@ -115,8 +115,9 @@ class PlatformRepo @Inject constructor(
     val hasIdentity: Boolean
         get() = this::blockchainIdentity.isInitialized
 
-    var authenticationGroupExtension: AuthenticationGroupExtension? = null
-        private set
+    val authenticationGroupExtension: AuthenticationGroupExtension?
+        get() = walletApplication.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as? AuthenticationGroupExtension
+
 
     private val dashPayProfileDao = appDatabase.dashPayProfileDao()
     private val dashPayContactRequestDao = appDatabase.dashPayContactRequestDao()
@@ -125,6 +126,7 @@ class PlatformRepo @Inject constructor(
 
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
     private val backgroundHandler: Handler
+    private var platformSDKLoaded = false
 
     private val analytics: AnalyticsService by lazy {
         walletApplication.analyticsService
@@ -143,17 +145,15 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun init() {
-        if (authenticationGroupExtension == null) {
+        if (!platformSDKLoaded) {
             // load the dash-sdk library
             System.loadLibrary("sdklib")
-            authenticationGroupExtension = walletApplication.wallet?.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as? AuthenticationGroupExtension
+            platformSDKLoaded = true
         }
 
-        if (!hasIdentity) {
-            blockchainIdentityDataStorage.load()?.let {
-                blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet!!)
-                initializeStateRepository()
-            }
+        blockchainIdentityDataStorage.load()?.let {
+            blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet!!)
+            initializeStateRepository()
         }
     }
 
@@ -568,7 +568,6 @@ class PlatformRepo @Inject constructor(
             var authenticationGroupExtension = AuthenticationGroupExtension(wallet)
             authenticationGroupExtension = wallet.addOrGetExistingExtension(authenticationGroupExtension) as AuthenticationGroupExtension
             authenticationGroupExtension.addEncryptedKeyChains(wallet.params, seed, keyParameter, keyChainTypes)
-            this@PlatformRepo.authenticationGroupExtension = authenticationGroupExtension
         }
     }
 
@@ -934,7 +933,6 @@ class PlatformRepo @Inject constructor(
         if (includeInvitations) {
             invitationsDao.clear()
         }
-        authenticationGroupExtension = null // remove references to current wallet
     }
 
     fun getBlockchainIdentityKey(index: Int, keyParameter: KeyParameter?): IDeterministicKey? {

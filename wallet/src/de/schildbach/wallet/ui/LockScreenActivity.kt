@@ -53,6 +53,7 @@ import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityLockScreenRootBinding
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.Configuration
@@ -173,9 +174,11 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun setupBackupSeedReminder() {
-        val hasBalance = walletData.wallet?.getBalance(BalanceType.ESTIMATED)?.isPositive ?: false
-        if (hasBalance && configuration.lastBackupSeedTime == 0L) {
-            configuration.setLastBackupSeedTime()
+        lifecycleScope.launch {
+            val hasBalance = walletApplication.observeTotalBalance().first().isPositive
+            if (hasBalance && configuration.lastBackupSeedTime == 0L) {
+                configuration.setLastBackupSeedTime()
+            }
         }
     }
 
@@ -218,9 +221,10 @@ open class LockScreenActivity : SecureActivity() {
         super.onStart()
         autoLogout.setOnLogoutListener(onLogoutListener)
 
-        if (!keepUnlocked && configuration.autoLogoutEnabled &&
-            (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())
-        ) {
+        val showLockScreen = !keepUnlocked && configuration.autoLogoutEnabled &&
+                (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())
+        log.info("show lock screen $showLockScreen = ![keepUnlocked=$keepUnlocked] && autologout=${configuration.autoLogoutEnabled} && (keepUnlockedUntilPenEntered=${autoLogout.keepLockedUntilPinEntered} || shouldLogout=${autoLogout.shouldLogout()})")
+        if (showLockScreen) {
             setLockState(
                 if (pinRetryController.isLocked) {
                     State.LOCKED
