@@ -22,19 +22,23 @@ import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
+import org.dash.wallet.common.util.security.EncryptionProvider
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 open class DashPayConfig @Inject constructor(
     context: Context,
-    walletDataProvider: WalletDataProvider
+    walletDataProvider: WalletDataProvider,
+    encryptionProvider: EncryptionProvider? = null
 ): BaseConfig(
     context,
     PREFERENCES_NAME,
     walletDataProvider,
+    encryptionProvider,
     migrations = listOf(
         SharedPreferencesMigration(
             context = context,
@@ -59,6 +63,7 @@ open class DashPayConfig @Inject constructor(
         val CREDIT_INFO_SHOWN = booleanPreferencesKey("credit_info_shown")
         val TOPUP_COUNTER = intPreferencesKey("topup_counter")
         val USERNAME_VOTE_COUNTER = intPreferencesKey("username_vote_counter")
+        val GOOGLE_DRIVE_ACCESS_TOKEN = stringPreferencesKey("google_drive_access_token")
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {
@@ -68,7 +73,6 @@ open class DashPayConfig @Inject constructor(
     open suspend fun disableNotifications() {
         set(LAST_SEEN_NOTIFICATION_TIME, DISABLE_NOTIFICATIONS)
     }
-
 
     suspend fun getTopupCounter(): Int {
         val counter = get(TOPUP_COUNTER) ?: 1
@@ -80,5 +84,20 @@ open class DashPayConfig @Inject constructor(
         val counter = (get(USERNAME_VOTE_COUNTER) ?: 0) + 1
         set(USERNAME_VOTE_COUNTER, counter)
         return counter
+    }
+    
+    /**
+     * Securely stores the Google Drive access token
+     */
+    suspend fun setGoogleDriveAccessToken(accessToken: String) {
+        setSecuredData(GOOGLE_DRIVE_ACCESS_TOKEN, accessToken)
+    }
+    
+    /**
+     * Retrieves the securely stored Google Drive access token
+     * @return The access token or null if not found
+     */
+    suspend fun getGoogleDriveAccessToken(): String? {
+        return getSecuredData(GOOGLE_DRIVE_ACCESS_TOKEN)
     }
 }
