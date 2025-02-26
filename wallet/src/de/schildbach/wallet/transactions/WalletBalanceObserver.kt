@@ -60,10 +60,6 @@ class WalletBalanceObserver(
     val mixedBalance: StateFlow<Coin>
         get() = _mixedBalance
 
-    private val _spendableBalance = MutableStateFlow(Coin.ZERO)
-    val spendableBalance: StateFlow<Coin>
-        get() = _spendableBalance
-
     private val walletChangeListener = object : ThrottlingWalletChangeListener() {
         override fun onThrottledWalletChanged() {
             // log.info("emitting balance: wallet changed {}", this@WalletBalanceObserver)
@@ -162,8 +158,8 @@ class WalletBalanceObserver(
         val emitterJob = SupervisorJob()
         val emitterScope = CoroutineScope(Dispatchers.IO + emitterJob)
 
-        suspend fun emitSpendingBalance(isMixing: Boolean) {
-            _spendableBalance.emit(
+        fun emitSpendingBalance(isMixing: Boolean) {
+            trySend(
                 if (isMixing) {
                     _mixedBalance.value
                 } else {
@@ -174,7 +170,6 @@ class WalletBalanceObserver(
 
         fun emitBalance() {
             emitterScope.launch {
-                //org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
                 emitSpendingBalance(coinJoinService.isMixing())
             }
         }
@@ -182,28 +177,12 @@ class WalletBalanceObserver(
         coinJoinService.observeMixing()
             .onEach { isMixing ->
                 emitSpendingBalance(isMixing)
-                val sourceFlow = if (isMixing) _mixedBalance else _totalBalance
-                sourceFlow.onEach {
-                    _spendableBalance.value = it
-                }.launchIn(emitterScope)
             }
             .launchIn(emitterScope)
-
-
-//        val walletChangeListener = object : ThrottlingWalletChangeListener() {
-//            override fun onThrottledWalletChanged() {
-//                // log.info("emitting balance: wallet changed {}", this@WalletBalanceObserver)
-//                emitBalance()
-//            }
-//        }
-
-//        wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
 
         emitBalance()
 
         awaitClose {
-            //wallet.removeChangeEventListener(walletChangeListener)
-            //walletChangeListener.removeCallbacks()
             emitterJob.cancel()
         }
     }

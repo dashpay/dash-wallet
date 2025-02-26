@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui.main
 
 import android.os.LocaleList
-import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
@@ -66,10 +65,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
@@ -83,7 +80,6 @@ import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
-import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -205,9 +201,9 @@ class MainViewModel @Inject constructor(
         get() = _rateStale.value
     var rateStaleDismissed = false
 
-    private val _balance = MutableLiveData<Coin>()
-    val balance: LiveData<Coin>
-        get() = _balance
+    private val _totalBalance = MutableLiveData<Coin>()
+    val totalBalance: LiveData<Coin>
+        get() = _totalBalance
     private val _mixedBalance = MutableLiveData<Coin>()
     val mixedBalance: LiveData<Coin>
         get() = _mixedBalance
@@ -256,7 +252,7 @@ class MainViewModel @Inject constructor(
 
     var decimalFormat: DecimalFormat = DecimalFormat("0.000")
     val walletBalanceString: String
-        get() = decimalFormat.format(balance.value?.toBigDecimal() ?: BigDecimal.ZERO)
+        get() = decimalFormat.format(totalBalance.value?.toBigDecimal() ?: BigDecimal.ZERO)
 
     val mixedBalanceString: String
         get() = decimalFormat.format(mixedBalance.value?.toBigDecimal() ?: BigDecimal.ZERO)
@@ -275,7 +271,7 @@ class MainViewModel @Inject constructor(
         addSource(blockchainIdentity) {
             value = combineLatestData()
         }
-        addSource(_balance) {
+        addSource(_totalBalance) {
             value = combineLatestData()
         }
     }
@@ -353,8 +349,9 @@ class MainViewModel @Inject constructor(
             }
             .launchIn(viewModelWorkerScope)
 
+        // we need the total wallet balance for mixing progress,
         walletData.observeTotalBalance()
-            .onEach(_balance::postValue)
+            .onEach(_totalBalance::postValue)
             .launchIn(viewModelScope)
 
         walletData.observeMixedBalance()

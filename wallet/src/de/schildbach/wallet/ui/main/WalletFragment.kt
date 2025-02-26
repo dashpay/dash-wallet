@@ -205,7 +205,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
             mixingBinding.mixingSessions.text = activeSessionsText
         }
 
-        viewModel.balance.observe(viewLifecycleOwner) {
+        viewModel.totalBalance.observe(viewLifecycleOwner) {
             updateMixedAndTotalBalance()
         }
 
@@ -306,7 +306,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun refreshIfUserHasBalance() {
-        val balance: Coin = viewModel.balance.value ?: Coin.ZERO
+        val balance: Coin = viewModel.totalBalance.value ?: Coin.ZERO
         binding.shortcutsPane.userHasBalance = balance.isPositive
     }
 

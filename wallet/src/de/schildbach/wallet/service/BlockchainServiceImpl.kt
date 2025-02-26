@@ -1135,11 +1135,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
 
+            // we need the total wallet balance for the CoinJoin notification
             application.observeTotalBalance().observe(this@BlockchainServiceImpl) {
                 balance = it
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
 
+            // we need the mixed balance for the CoinJoin notification
             application.observeMixedBalance().observe(this@BlockchainServiceImpl) {
                 mixedBalance = it
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)

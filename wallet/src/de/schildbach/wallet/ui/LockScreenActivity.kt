@@ -175,6 +175,8 @@ open class LockScreenActivity : SecureActivity() {
 
     private fun setupBackupSeedReminder() {
         lifecycleScope.launch {
+            // we need the total wallet balance to trigger showing backup reminder
+            // a better way is to track transaction count > 0
             val hasBalance = walletApplication.observeTotalBalance().first().isPositive
             if (hasBalance && configuration.lastBackupSeedTime == 0L) {
                 configuration.setLastBackupSeedTime()
