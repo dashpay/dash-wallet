@@ -62,6 +62,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
@@ -131,6 +132,7 @@ interface TopUpRepository {
     suspend fun updateInvitations()
     fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long)
     fun validateInvitation(invite: InvitationLinkData): Boolean
+    fun close()
 }
 
 class TopUpRepositoryImpl @Inject constructor(
@@ -572,9 +574,11 @@ class TopUpRepositoryImpl @Inject constructor(
                         }
                     } catch (e: NullPointerException) {
                         // swallow, the identity was not found for this invite
+                        log.error("NullPointerException encountered while updating DashPayProfile", e)
                     } catch (e: MaxRetriesReachedException) {
                         // swallow, the profile could not be retrieved
                         // the invite status update function should be able to try again
+                        log.error("MaxRetriesReachedException encountered while updating DashPayProfile", e)
                     }
                     invitationsDao.insert(invite)
                 }
@@ -644,5 +648,9 @@ class TopUpRepositoryImpl @Inject constructor(
         }
         log.warn("Invitation uses an invalid transaction ${invite.cftx} and took $stopWatch")
         throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.cftx}")
+    }
+
+    override fun close() {
+        workerScope.cancel()
     }
 }

@@ -39,9 +39,13 @@ import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_topup) {
+    companion object {
+        private val log = LoggerFactory.getLogger(ConfirmInviteDialogFragment::class.java)
+    }
     private val binding by viewBinding(DialogConfirmTopupBinding::bind)
 
     private val viewModel by viewModels<ConfirmTopupDialogViewModel>()
@@ -53,11 +57,17 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
         viewModel.amount = Coin.valueOf(args.amount)
         binding.confirmBtn.setOnClickListener {
             lifecycleScope.launch {
-                // requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.TOPUP_CONFIRM)
-                val identityId = invitationFragmentViewModel.sendInviteTransaction(Coin.valueOf(args.amount))
-                findNavController().navigate(
-                    ConfirmInviteDialogFragmentDirections.toInviteCreatedFragment(identityId)
-                )
+                try {
+                    // invitationFragmentViewModel.logEvent(AnalyticsConstants.UsersContacts.TOPUP_CONFIRM)
+                    val identityId = invitationFragmentViewModel.sendInviteTransaction(Coin.valueOf(args.amount))
+                    findNavController().navigate(
+                        ConfirmInviteDialogFragmentDirections.toInviteCreatedFragment(identityId)
+                    )
+                } catch (e: Exception) {
+                    log.info("error sending transaction:", e)
+                    binding.confirmMessage.text = getString(R.string.error_sending_invite_transaction)
+                    binding.confirmMessage.isVisible = true
+                }
             }
         }
         binding.dismissBtn.setOnClickListener { dismiss() }

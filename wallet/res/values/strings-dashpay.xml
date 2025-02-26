@@ -474,4 +474,5 @@
     <string name="invitation_creating_progress_loading">Loading Invite...</string>
     <string name="invitation_creating_progress_wip">Creating Invitation...</string>
     <string name="invitation_fee_confirm_and_pay_button">Confirm and pay</string>
+    <string name="error_sending_invite_transaction">Error sending invite transaction</string>
 </resources>

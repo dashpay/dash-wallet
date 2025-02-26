@@ -91,10 +91,13 @@ open class InvitationFragmentViewModel @Inject constructor(
     suspend fun sendInviteTransaction(value: Coin): String {
         // ensure that the fundingAddress hasn't been used
         withContext(Dispatchers.IO) {
-            val invitation = invitationDao.loadByFundingAddress(fundingAddress)
-            while (invitation?.txid != null) {
-                authExtension.freshKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING)
-            }
+            var currentInvitation: Invitation?
+            do {
+                currentInvitation = invitationDao.loadByFundingAddress(fundingAddress)
+                if (currentInvitation?.txid != null) {
+                    authExtension.freshKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING)
+                }
+            } while (currentInvitation?.txid != null)
         }
         val fundingAddress = this.fundingAddress // save the address locally
         SendInviteOperation(walletApplication)
@@ -173,4 +176,9 @@ open class InvitationFragmentViewModel @Inject constructor(
     }
 
     suspend fun getInvitedUserProfile(): DashPayProfile? = dashPayProfileDao.loadByUserId(identityId.value!!)
+
+    override fun onCleared() {
+        super.onCleared()
+        workerJob.cancel()
+    }
 }
