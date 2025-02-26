@@ -66,14 +66,10 @@ class TopupIdentityWorker @AssistedInject constructor(
             ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
         val identity = inputData.getString(KEY_IDENTITY)
             ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_IDENTITY parameter"))
-//        val value = inputData.getLong(KEY_VALUE, 0)
-//        if (value == 0L) {
-//            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_VALUE parameter"))
-//        }
+
         val topupTxId = inputData.getString(KEY_TOPUP_TX)?.let { Sha256Hash.wrap(it) }
         val authGroupExtension = walletDataProvider.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
         val topupTx = authGroupExtension.topupFundingTransactions.find { it.txId == topupTxId } ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_TOPUP_TX parameter"))
-        //val coinValue = Coin.valueOf(value)
 
         val encryptionKey: KeyParameter
         try {

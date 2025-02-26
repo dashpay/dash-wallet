@@ -124,5 +124,29 @@ class AppDatabaseMigrations {
                 )
             }
         }
+
+        val migration15to16 = object : Migration(15, 16) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // previous versions have no data in invitations table, so do this
+                // we are changing the primary key
+                database.execSQL("DROP TABLE invitation_table")
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `invitation_table` (
+                        `fundingAddress` TEXT NOT NULL,
+                        `userId` TEXT NOT NULL, 
+                        `txid` BLOB, 
+                        `createdAt` INTEGER NOT NULL, 
+                        `memo` TEXT NOT NULL, 
+                        `sentAt` INTEGER NOT NULL, 
+                        `acceptedAt` INTEGER NOT NULL, 
+                        `shortDynamicLink` TEXT, 
+                        `dynamicLink` TEXT, 
+                        PRIMARY KEY(`fundingAddress`)
+                    )
+                    """
+                )
+            }
+        }
     }
 }

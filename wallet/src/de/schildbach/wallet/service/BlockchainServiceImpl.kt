@@ -49,6 +49,7 @@ import de.schildbach.wallet.data.AddressBookProvider
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.OnboardingActivity.Companion.createIntent
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -193,6 +194,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Inject lateinit var platformSyncService: PlatformSyncService
 
     @Inject lateinit var  platformRepo: PlatformRepo
+    @Inject lateinit var topUpRepository: TopUpRepository
 
     @Inject lateinit var  packageInfoProvider: PackageInfoProvider
 
@@ -355,7 +357,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
                     val cftx = authExtension.getAssetLockTransaction(tx)
                     val blockChainHeadTime = blockChain!!.chainHead.header.time.time
-                    platformRepo.handleSentAssetLockTransaction(cftx, blockChainHeadTime)
+                    topUpRepository.handleSentAssetLockTransaction(cftx, blockChainHeadTime)
 
                     // TODO: if we detect a username creation that we haven't processed, should we?
                 }

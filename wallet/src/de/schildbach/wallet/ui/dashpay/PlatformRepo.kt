@@ -18,14 +18,11 @@ package de.schildbach.wallet.ui.dashpay
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
-import android.util.Log
 import com.google.common.base.Preconditions
-import com.google.common.base.Stopwatch
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.Constants.DASH_PAY_FEE_CONTESTED
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.database.AppDatabase
@@ -33,15 +30,14 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
-import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.TopUpRepository
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
@@ -50,13 +46,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
-import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.AssetLockTransaction
-import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
@@ -74,7 +67,6 @@ import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofException
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
-import org.dashj.platform.dpp.toHex
 import org.dashj.platform.dpp.voting.Contenders
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
@@ -989,45 +981,11 @@ class PlatformRepo @Inject constructor(
     //
     // Step 2 is to create the credit funding transaction
     //
-    suspend fun createInviteFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?)
-            : AssetLockTransaction {
-        // dashj Context does not work with coroutines well, so we need to call Context.propogate
-        // in each suspend method that uses the dashj Context
-        Context.propagate(walletApplication.wallet!!.context)
-        val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
-        val fee = DASH_PAY_FEE_CONTESTED
-        val emptyWallet = balance == fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT)
-        val cftx = blockchainIdentity.createInviteFundingTransaction(
-            Constants.DASH_PAY_FEE,
-            keyParameter,
-            useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE,
-            returnChange = true,
-            emptyWallet = emptyWallet
-        )
-        val invitation = Invitation(cftx.identityId.toStringBase58(), cftx.txId,
-                System.currentTimeMillis())
-        // update database
-        updateInvitation(invitation)
-
-        sendTransaction(cftx)
-        //update database
-        invitation.sentAt = System.currentTimeMillis()
-        updateInvitation(invitation)
-        return cftx
-    }
-
-    suspend fun updateInvitation(invitation: Invitation) {
-        invitationsDao.insert(invitation)
-    }
-
-    suspend fun getInvitation(userId: String): Invitation? {
-        return invitationsDao.loadByUserId(userId)
-    }
 
     private suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
         log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
-            cftx.confidence.addEventListener(object : TransactionConfidence.Listener {
+            cftx.getConfidence(walletApplication.wallet!!.context).addEventListener(object : TransactionConfidence.Listener {
                 override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
                     when (reason) {
                         // If this transaction is in a block, then it has been sent successfully
@@ -1080,114 +1038,9 @@ class PlatformRepo @Inject constructor(
         }
     }
 
-    /**
-     * validates an invite
-     *
-     * @return Returns true if it is valid, false if the invite has been used.
-     *
-     * @throws Exception if the invite is invalid
-     */
-
-    fun validateInvitation(invite: InvitationLinkData): Boolean {
-        val stopWatch = Stopwatch.createStarted()
-        var tx = platform.client.getTransaction(invite.cftx)
-        log.info("validateInvitation: obtaining transaction info took $stopWatch")
-        //TODO: remove when iOS uses big endian
-        if (tx == null) {
-            tx =
-                platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
-        }
-        if (tx != null) {
-            val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx)
-            val identity = platform.identities.get(cfTx.identityId.toStringBase58())
-            if (identity == null) {
-                // determine if the invite has enough credits
-                if (cfTx.lockedOutput.value < Constants.DASH_PAY_INVITE_MIN) {
-                    val reason = "Invite does not have enough credits ${cfTx.lockedOutput.value} < ${Constants.DASH_PAY_INVITE_MIN}"
-                    log.warn(reason)
-                    log.info("validateInvitation took $stopWatch")
-                    throw InsufficientMoneyException(cfTx.lockedOutput.value, reason)
-                }
-                return try {
-                    DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, invite.privateKey)
-                    // TODO: when all instantsend locks are deterministic, we don't need the catch block
-                    try {
-                        InstantSendLock(
-                            Constants.NETWORK_PARAMETERS,
-                            Utils.HEX.decode(invite.instantSendLock),
-                            InstantSendLock.ISDLOCK_VERSION
-                        )
-                    } catch (e: Exception) {
-                        InstantSendLock(
-                            Constants.NETWORK_PARAMETERS,
-                            Utils.HEX.decode(invite.instantSendLock),
-                            InstantSendLock.ISLOCK_VERSION
-                        )
-                    }
-                    log.info("Invite is valid and took $stopWatch")
-                    true
-                } catch (e: AddressFormatException.WrongNetwork) {
-                    log.warn("Invite has private key from wrong network: $e and took $stopWatch")
-                    throw e
-                } catch (e: AddressFormatException) {
-                    log.warn("Invite has invalid private key: $e and took $stopWatch")
-                    throw e
-                } catch (e: Exception) {
-                    log.warn("Invite has invalid instantSendLock: $e and took $stopWatch")
-                    throw e
-                }
-            } else {
-                log.warn("Invitation has been used: ${identity.id} and took $stopWatch")
-                return false
-            }
-        }
-        log.warn("Invitation uses an invalid transaction ${invite.cftx} and took $stopWatch")
-        throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.cftx}")
-    }
-
     fun clearBlockchainIdentityData() {
         GlobalScope.launch(Dispatchers.IO) {
             blockchainIdentityDataStorage.clear()
-        }
-    }
-
-    fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long) {
-        val extension = authenticationGroupExtension
-
-        if (this::blockchainIdentity.isInitialized && extension != null) {
-            GlobalScope.launch(Dispatchers.IO) {
-                // Context.getOrCreate(platform.params)
-                val isInvite = extension.invitationFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
-                val isTopup = extension.identityTopupKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
-                val isIdentity = extension.identityFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
-                val identityId = cftx.identityId.toStringBase58()
-                if (isInvite && !isTopup && !isIdentity && invitationsDao.loadByUserId(identityId) == null) {
-                    // this is not in our database
-                    val invite = Invitation(
-                        identityId,
-                        cftx.txId,
-                        blockTimestamp,
-                        "",
-                        blockTimestamp,
-                        0
-                    )
-
-                    // profile information here
-                    try {
-                        if (updateDashPayProfile(identityId)) {
-                            val profile = dashPayProfileDao.loadByUserId(identityId)
-                            invite.acceptedAt = profile?.createdAt
-                                    ?: -1 // it was accepted in the past, use profile creation as the default
-                        }
-                    } catch (e: NullPointerException) {
-                        // swallow, the identity was not found for this invite
-                    } catch (e: MaxRetriesReachedException) {
-                        // swallow, the profile could not be retrieved
-                        // the invite status update function should be able to try again
-                    }
-                    invitationsDao.insert(invite)
-                }
-            }
         }
     }
 
@@ -1244,23 +1097,5 @@ class PlatformRepo @Inject constructor(
         // managed by NotificationsLiveData
         val userAlert = UserAlert(UserAlert.INVITATION_NOTIFICATION_TEXT, UserAlert.INVITATION_NOTIFICATION_ICON)
         userAlertDao.insert(userAlert)
-    }
-}
-
-fun ArrayList<UsernameSearchResult>.orderBy(orderBy: UsernameSortOrderBy) {
-    when (orderBy) {
-        UsernameSortOrderBy.DISPLAY_NAME -> this.sortBy {
-            if (it.dashPayProfile.displayName.isNotEmpty())
-                it.dashPayProfile.displayName.lowercase()
-            else it.dashPayProfile.username.lowercase()
-        }
-        UsernameSortOrderBy.USERNAME -> this.sortBy {
-            it.dashPayProfile.username.lowercase()
-        }
-        UsernameSortOrderBy.DATE_ADDED -> this.sortByDescending {
-            it.date
-        }
-        else -> { /* ignore */ }
-        //TODO: sort by last activity or date added
     }
 }

@@ -33,12 +33,9 @@ import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.notification.NotificationsViewModel
-import de.schildbach.wallet.ui.invite.InviteFriendActivity
-import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentNotificationsBinding
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
@@ -47,6 +44,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import java.util.*
 import javax.inject.Inject
@@ -238,14 +236,12 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
             }
             is NotificationItemUserAlert -> {
                 lifecycleScope.launch {
-                    val inviteHistory = dashPayViewModel.getInviteHistory()
                     userAlertItem = null
                     viewModel.dismissUserAlert(R.string.invitation_notification_text)
-
-                    if (inviteHistory.isEmpty()) {
-                        InviteFriendActivity.startOrError(requireActivity())
+                    if (dashPayViewModel.getInviteCount() == 0) {
+                        safeNavigate(NotificationsFragmentDirections.notificationsToInviteFee())
                     } else {
-                        startActivity(InvitesHistoryActivity.createIntent(requireActivity()))
+                        safeNavigate(NotificationsFragmentDirections.notificationsToInviteHistory("notifications"))
                     }
                 }
             }

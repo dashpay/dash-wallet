@@ -33,10 +33,21 @@ import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -45,6 +56,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import javax.inject.Inject
 
+@ExperimentalCoroutinesApi
 @HiltViewModel
 open class InvitationFragmentViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
@@ -55,14 +67,17 @@ open class InvitationFragmentViewModel @Inject constructor(
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     private val log = LoggerFactory.getLogger(InvitationFragmentViewModel::class.java)
+    private val workerJob = Job()
+    private val workerScope = CoroutineScope(workerJob + Dispatchers.IO)
+    private val authExtension = platformRepo.authenticationGroupExtension!!
 
-    private val pubkeyHash = platformRepo.authenticationGroupExtension!!.currentKey(
-        AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING
-    ).pubKeyHash
+    private val pubkeyHash: ByteArray
+        get() = authExtension.currentKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
 
-    private val inviteId = Address.fromPubKeyHash(walletApplication.wallet!!.params, pubkeyHash).toBase58()
+    private val fundingAddress: String
+        get() = Address.fromPubKeyHash(walletApplication.wallet!!.params, pubkeyHash).toBase58()
 
-    val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, inviteId)
+    val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, fundingAddress)
 
     val dynamicLinkData
         get() = sendInviteStatusLiveData.value!!.data!!.dynamicLink
@@ -70,11 +85,25 @@ open class InvitationFragmentViewModel @Inject constructor(
     val shortDynamicLinkData
         get() = sendInviteStatusLiveData.value!!.data!!.shortDynamicLink
 
-    fun sendInviteTransaction(): String {
+    val walletData
+        get() = walletApplication
+
+    suspend fun sendInviteTransaction(value: Coin): String {
+        // ensure that the fundingAddress hasn't been used
+        withContext(Dispatchers.IO) {
+            var currentInvitation: Invitation?
+            do {
+                currentInvitation = invitationDao.loadByFundingAddress(fundingAddress)
+                if (currentInvitation?.txid != null) {
+                    authExtension.freshKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING)
+                }
+            } while (currentInvitation?.txid != null)
+        }
+        val fundingAddress = this.fundingAddress // save the address locally
         SendInviteOperation(walletApplication)
-                .create(inviteId)
-                .enqueue()
-        return inviteId
+            .create(fundingAddress, value)
+            .enqueue()
+        return fundingAddress
     }
 
     val invitationPreviewImageFile by lazy {
@@ -108,9 +137,10 @@ open class InvitationFragmentViewModel @Inject constructor(
     }
 
     fun saveTag(tag: String) {
-        invitation.memo = tag
-        viewModelScope.launch {
-            invitationDao.insert(invitation)
+        viewModelScope.launch(Dispatchers.IO) {
+            _invitation.value?.let {
+                invitationDao.insert(it.copy(memo = tag))
+            }
         }
     }
 
@@ -118,29 +148,37 @@ open class InvitationFragmentViewModel @Inject constructor(
         analytics.logEvent(event, mapOf())
     }
 
-    val identityIdLiveData = MutableLiveData<String>()
+    val identityId = MutableStateFlow<String?>(null)
 
-    val invitedUserProfile: LiveData<DashPayProfile?>
-        get() = dashPayProfileDao.observeByUserId(identityIdLiveData.value!!).distinctUntilChanged().asLiveData()
+    val invitedUserProfile: Flow<DashPayProfile?>
+        get() = dashPayProfileDao.observeByUserId(identityId.value!!)
 
     fun updateInvitedUserProfile() {
         viewModelScope.launch(Dispatchers.IO) {
-            val data = dashPayProfileDao.loadByUserId(identityIdLiveData.value!!)
+            val data = dashPayProfileDao.loadByUserId(identityId.value!!)
             if (data == null) {
-                platformRepo.updateDashPayProfile(identityIdLiveData.value!!)
+                platformRepo.updateDashPayProfile(identityId.value!!)
             }
         }
     }
 
-    val invitationLiveData = identityIdLiveData.switchMap {
-        liveData(Dispatchers.IO) {
-            emit(invitationDao.loadByUserId(it)!!)
-        }
+    private val _invitation = MutableStateFlow<Invitation?>(null)
+    val invitation: StateFlow<Invitation?>
+        get() = _invitation
+
+    init {
+        identityId
+            .filterNotNull()
+            .flatMapLatest(invitationDao::observeByUserId)
+            .onEach { invitation ->
+                _invitation.value = invitation
+            }.launchIn(workerScope)
     }
 
-    val invitation: Invitation
-        get() = invitationLiveData.value!!
+    suspend fun getInvitedUserProfile(): DashPayProfile? = dashPayProfileDao.loadByUserId(identityId.value!!)
 
-    suspend fun getInvitedUserProfile(): DashPayProfile? =
-        dashPayProfileDao.loadByUserId(identityIdLiveData.value!!)
+    override fun onCleared() {
+        super.onCleared()
+        workerJob.cancel()
+    }
 }

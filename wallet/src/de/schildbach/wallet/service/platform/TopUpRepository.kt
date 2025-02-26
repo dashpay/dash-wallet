@@ -16,11 +16,22 @@
  */
 package de.schildbach.wallet.service.platform
 
+import android.net.Uri
+import com.google.common.base.Stopwatch
+import com.google.firebase.dynamiclinks.DynamicLink
+import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
+import com.google.firebase.dynamiclinks.ShortDynamicLink
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.TopUpsDao
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Coin
@@ -45,11 +56,29 @@ import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
+import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion
+import de.schildbach.wallet.ui.dashpay.work.SendInviteWorker
+import de.schildbach.wallet_test.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.AddressFormatException
+import org.bitcoinj.core.InsufficientMoneyException
+import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.dashj.platform.dapiclient.MaxRetriesReachedException
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import kotlin.coroutines.resume
 
 /**
- * contains topup related functions that are used by [CreateIdentityService] to create
- * an identity and by [TopupIdentityWorker] to topup an identity
+ * contains topup related functions that are used by:
+ * 1. [CreateIdentityService] to create an identity
+ * 2. [TopupIdentityWorker] to topup an identity
+ * 3. [SendInviteWorker] to create Invitations (dynamic link)
  */
 interface TopUpRepository {
     fun createAssetLockTransaction(
@@ -81,18 +110,46 @@ interface TopUpRepository {
     )
 
     suspend fun checkTopUps(aesKeyParameter: KeyParameter)
+
+    // invitation related methods
+    suspend fun createInviteFundingTransaction(
+        blockchainIdentity: BlockchainIdentity,
+        keyParameter: KeyParameter?,
+        topupAmount: Coin
+    ): AssetLockTransaction
+
+    suspend fun updateInvitation(invitation: Invitation)
+    suspend fun getInvitation(userId: String): Invitation?
+    suspend fun createDynamicLink(
+        dashPayProfile: DashPayProfile,
+        assetLockTx: AssetLockTransaction,
+        aesKeyParameter: KeyParameter
+    ): DynamicLink
+
+    suspend fun buildShortDynamicLink(dynamicLink: DynamicLink): ShortDynamicLink
+
+    suspend fun checkInvites(encryptionKey: KeyParameter)
+    suspend fun updateInvitations()
+    fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long)
+    fun validateInvitation(invite: InvitationLinkData): Boolean
+    fun close()
 }
 
 class TopUpRepositoryImpl @Inject constructor(
     private val walletApplication: WalletApplication,
     private val walletDataProvider: WalletDataProvider,
     private val platformRepo: PlatformRepo,
-    private val topUpsDao: TopUpsDao
+    private val topUpsDao: TopUpsDao,
+    private val dashPayProfileDao: DashPayProfileDao,
+    private val invitationsDao: InvitationsDao,
+    private val coinJoinConfig: CoinJoinConfig
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
     }
 
+    private val workerJob = Job()
+    private var workerScope = CoroutineScope(workerJob + Dispatchers.IO)
     private val platform = platformRepo.platform
     private val authExtension by lazy { walletDataProvider.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension }
 
@@ -252,8 +309,8 @@ class TopUpRepositoryImpl @Inject constructor(
         Context.propagate(walletDataProvider.wallet!!.context)
         val confidence = topUpTx.getConfidence(walletDataProvider.wallet!!.context)
         val wasTxSent = confidence.isChainLocked ||
-                confidence.isTransactionLocked ||
-                confidence.numBroadcastPeers() > 0
+            confidence.isTransactionLocked ||
+            confidence.numBroadcastPeers() > 0
         if (!wasTxSent) {
             sendTransaction(topUpTx)
         }
@@ -310,5 +367,290 @@ class TopUpRepositoryImpl @Inject constructor(
             }
             checkedPreviousTopUps = true
         }
+    }
+
+    override suspend fun createInviteFundingTransaction(
+        blockchainIdentity: BlockchainIdentity,
+        keyParameter: KeyParameter?,
+        topupAmount: Coin
+    ): AssetLockTransaction {
+        // dashj Context does not work with coroutines well, so we need to call Context.propogate
+        // in each suspend method that uses the dashj Context
+        Context.propagate(walletApplication.wallet!!.context)
+        log.info("createInviteFundingTransactionAsync prop context")
+        val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
+        val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
+        val fundingAddress = Address.fromKey(
+            Constants.NETWORK_PARAMETERS,
+            authExtension.currentKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING)
+        )
+        val cftx = blockchainIdentity.createInviteFundingTransaction(
+            topupAmount,
+            keyParameter,
+            useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE,
+            returnChange = true,
+            emptyWallet = emptyWallet
+        )
+        val invitation = Invitation(
+            fundingAddress.toBase58(),
+            cftx.identityId.toStringBase58(), cftx.txId,
+            System.currentTimeMillis()
+        )
+        // update database
+        updateInvitation(invitation)
+
+        sendTransaction(cftx)
+        // update database
+        updateInvitation(invitation.copy(sentAt = System.currentTimeMillis()))
+        return cftx
+    }
+
+    override suspend fun updateInvitation(invitation: Invitation) {
+        invitationsDao.insert(invitation)
+    }
+
+    override suspend fun getInvitation(userId: String): Invitation? {
+        return invitationsDao.loadByUserId(userId)
+    }
+
+    override suspend fun createDynamicLink(
+        dashPayProfile: DashPayProfile,
+        assetLockTx: AssetLockTransaction,
+        aesKeyParameter: KeyParameter
+    ): DynamicLink {
+        log.info("creating dynamic link for invitation")
+        // dashj Context does not work with coroutines well, so we need to call Context.propogate
+        // in each suspend method that uses the dashj Context
+        Context.propagate(walletDataProvider.wallet!!.context)
+        val username = dashPayProfile.username
+        val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.displayName())
+        return FirebaseDynamicLinks.getInstance()
+            .createDynamicLink().apply {
+                link = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, assetLockTx, aesKeyParameter).link
+                domainUriPrefix = Constants.Invitation.DOMAIN_URI_PREFIX
+                setAndroidParameters(DynamicLink.AndroidParameters.Builder().build())
+                setIosParameters(
+                    DynamicLink.IosParameters.Builder(
+                    Constants.Invitation.IOS_APP_BUNDLEID
+                ).apply {
+                    appStoreId = Constants.Invitation.IOS_APP_APPSTOREID
+                }.build())
+            }
+            .setSocialMetaTagParameters(DynamicLink.SocialMetaTagParameters.Builder().apply {
+                title = walletApplication.getString(R.string.invitation_preview_title)
+                val nameLabel = dashPayProfile.nameLabel
+                val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.displayName())
+                imageUrl = Uri.parse("https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded")
+                description = walletApplication.getString(R.string.invitation_preview_message, nameLabel)
+            }.build())
+            .setGoogleAnalyticsParameters(
+                DynamicLink.GoogleAnalyticsParameters.Builder(
+                    walletApplication.getString(R.string.app_name_dashpay),
+                    Constants.Invitation.UTM_MEDIUM,
+                    Constants.Invitation.UTM_CAMPAIGN
+                ).build()
+            )
+            .buildDynamicLink()
+    }
+
+    override suspend fun buildShortDynamicLink(dynamicLink: DynamicLink): ShortDynamicLink {
+        return suspendCoroutine { continuation ->
+            FirebaseDynamicLinks.getInstance().createDynamicLink()
+                .setLongLink(dynamicLink.uri)
+                .buildShortDynamicLink()
+                .addOnSuccessListener {
+                    log.debug("dynamic link successfully created")
+                    continuation.resume(it)
+                }
+                .addOnFailureListener {
+                    log.error(it.message, it)
+                    continuation.resumeWithException(it)
+                }
+        }
+    }
+    private var checkedPreviousInvitations = false
+
+    override suspend fun checkInvites(encryptionKey: KeyParameter) {
+        try {
+            if (!checkedPreviousInvitations) {
+                // get a list of all invite funding transactions
+                val fundingTxes = authExtension.invitationFundingTransactions.associateBy { it.txId }.toMutableMap()
+                // get a list of all created invites from the DB
+                val invitations = invitationsDao.loadAll()
+                // x-ref them and finish the ones that are not completed
+                invitations.forEach { invitation ->
+                    if (invitation.dynamicLink != null) {
+                        fundingTxes.remove(invitation.txid)
+                    } else {
+                        // TODO: should we fix the link now or let the user do it
+                        val dashPayProfile = platformRepo.getLocalUserProfile()
+                        val assetLockTx = fundingTxes[invitation.txid]
+                        if (assetLockTx != null) {
+                            val dynamicLink = createDynamicLink(dashPayProfile!!, assetLockTx, encryptionKey)
+                            val shortDynamicLink = buildShortDynamicLink(dynamicLink)
+                            updateInvitation(
+                                invitation.copy(
+                                    shortDynamicLink = shortDynamicLink.shortLink.toString(),
+                                    dynamicLink = dynamicLink.uri.toString()
+                                )
+                            )
+                        }
+                    }
+                }
+                // look at remaining fundingTxes
+                fundingTxes.forEach { (_, assetLockTx) ->
+                    val fundingAddress = Address.fromKey(Constants.NETWORK_PARAMETERS, assetLockTx.assetLockPublicKey)
+                    val invitation = Invitation(
+                        fundingAddress.toBase58(),
+                        assetLockTx.identityId.toStringBase58(),
+                        assetLockTx.txId,
+                        assetLockTx.updateTime.time
+                    )
+                    updateInvitation(invitation)
+                    // TODO: should we recreate the links or have the user do it?
+//            val dynamicLink = createDynamicLink(dashPayProfile!!, assetLockTx, encryptionKey)
+//            val shortDynamicLink = buildShortDynamicLink(dynamicLink)
+//            platformRepo.updateInvitation(
+//                invitation.copy(
+//                    shortDynamicLink = shortDynamicLink.shortLink.toString(),
+//                    dynamicLink = dynamicLink.uri.toString()
+//                )
+//            )
+                }
+            }
+        } finally {
+            checkedPreviousInvitations = true
+        }
+    }
+
+    /**
+     * Updates invitation status
+     */
+    override suspend fun updateInvitations() {
+        val invitations = invitationsDao.loadAll()
+        for (invitation in invitations) {
+            if (invitation.acceptedAt == 0L) {
+                val identity = platform.identities.get(invitation.userId)
+                if (identity != null) {
+                    platformRepo.updateDashPayProfile(identity.id.toString())
+                    updateInvitation(
+                        invitation.copy(
+                            acceptedAt = System.currentTimeMillis()
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    override fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long) {
+        val extension = authExtension
+
+        if (platformRepo.hasIdentity) {
+            workerScope.launch(Dispatchers.IO) {
+                // Context.getOrCreate(platform.params)
+                val inviteKey = extension.invitationFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes)
+                val isInvite = inviteKey != null
+                val isTopup = extension.identityTopupKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
+                val isIdentity = extension.identityFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
+                val identityId = cftx.identityId.toStringBase58()
+                if (isInvite && !isTopup && !isIdentity && invitationsDao.loadByUserId(identityId) == null) {
+                    // this is not in our database
+                    var invite = Invitation(
+                        Address.fromKey(Constants.NETWORK_PARAMETERS, inviteKey).toBase58(),
+                        identityId,
+                        cftx.txId,
+                        blockTimestamp,
+                        "",
+                        blockTimestamp,
+                        0
+                    )
+
+                    // profile information here
+                    try {
+                        if (platformRepo.updateDashPayProfile(identityId)) {
+                            val profile = dashPayProfileDao.loadByUserId(identityId)
+                            invite = invite.copy(acceptedAt = profile?.createdAt ?: -1) // it was accepted in the past, use profile creation as the default
+                        }
+                    } catch (e: NullPointerException) {
+                        // swallow, the identity was not found for this invite
+                        log.error("NullPointerException encountered while updating DashPayProfile", e)
+                    } catch (e: MaxRetriesReachedException) {
+                        // swallow, the profile could not be retrieved
+                        // the invite status update function should be able to try again
+                        log.error("MaxRetriesReachedException encountered while updating DashPayProfile", e)
+                    }
+                    invitationsDao.insert(invite)
+                }
+            }
+        }
+    }
+
+    /**
+     * validates an invite
+     *
+     * @return Returns true if it is valid, false if the invite has been used.
+     *
+     * @throws Exception if the invite is invalid
+     */
+
+    override fun validateInvitation(invite: InvitationLinkData): Boolean {
+        val stopWatch = Stopwatch.createStarted()
+        var tx = platform.client.getTransaction(invite.cftx)
+        log.info("validateInvitation: obtaining transaction info took $stopWatch")
+        //TODO: remove when iOS uses big endian
+        if (tx == null) {
+            tx = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
+        }
+        if (tx != null) {
+            val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx)
+            val identity = platform.identities.get(cfTx.identityId.toStringBase58())
+            if (identity == null) {
+                // determine if the invite has enough credits
+                if (cfTx.lockedOutput.value < Constants.DASH_PAY_INVITE_MIN) {
+                    val reason = "Invite does not have enough credits ${cfTx.lockedOutput.value} < ${Constants.DASH_PAY_INVITE_MIN}"
+                    log.warn(reason)
+                    log.info("validateInvitation took $stopWatch")
+                    throw InsufficientMoneyException(cfTx.lockedOutput.value, reason)
+                }
+                return try {
+                    DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, invite.privateKey)
+                    // TODO: when all instantsend locks are deterministic, we don't need the catch block
+                    try {
+                        InstantSendLock(
+                            Constants.NETWORK_PARAMETERS,
+                            Utils.HEX.decode(invite.instantSendLock),
+                            InstantSendLock.ISDLOCK_VERSION
+                        )
+                    } catch (e: Exception) {
+                        InstantSendLock(
+                            Constants.NETWORK_PARAMETERS,
+                            Utils.HEX.decode(invite.instantSendLock),
+                            InstantSendLock.ISLOCK_VERSION
+                        )
+                    }
+                    log.info("Invite is valid and took $stopWatch")
+                    true
+                } catch (e: AddressFormatException.WrongNetwork) {
+                    log.warn("Invite has private key from wrong network: $e and took $stopWatch")
+                    throw e
+                } catch (e: AddressFormatException) {
+                    log.warn("Invite has invalid private key: $e and took $stopWatch")
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("Invite has invalid instantSendLock: $e and took $stopWatch")
+                    throw e
+                }
+            } else {
+                log.warn("Invitation has been used: ${identity.id} and took $stopWatch")
+                return false
+            }
+        }
+        log.warn("Invitation uses an invalid transaction ${invite.cftx} and took $stopWatch")
+        throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.cftx}")
+    }
+
+    override fun close() {
+        workerScope.cancel()
     }
 }

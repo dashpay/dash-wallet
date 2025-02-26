@@ -355,13 +355,15 @@ class PlatformSynchronizationService @Inject constructor(
                 coroutineScope {
                     awaitAll(
                         // fetch updated invitations
-                        async { updateInvitations() },
+                        async { topUpRepository.updateInvitations() },
                         // fetch updated transaction metadata
                         async { updateTransactionMetadata() },  // TODO: this is skipped in VOTING state, but shouldn't be
                         // fetch updated profiles from the network
                         async { updateContactProfiles(userId, lastContactRequestTime) },
                         // check for unused topups
-                        async { checkTopUps() }
+                        async { checkTopUps() },
+                        // check for unused invites
+                        async { checkInvitations() }
                     )
                 }
 
@@ -498,23 +500,6 @@ class PlatformSynchronizationService @Inject constructor(
             platformRepo.formatExceptionMessage("check and add received requests: error", e)
         }
         return false
-    }
-
-    /**
-     * Updates invitation status
-     */
-    private suspend fun updateInvitations() {
-        val invitations = invitationsDao.loadAll()
-        for (invitation in invitations) {
-            if (invitation.acceptedAt == 0L) {
-                val identity = platform.identities.get(invitation.userId)
-                if (identity != null) {
-                    platformRepo.updateDashPayProfile(identity.id.toString())
-                    invitation.acceptedAt = System.currentTimeMillis()
-                    platformRepo.updateInvitation(invitation)
-                }
-            }
-        }
     }
 
     /**
@@ -1395,6 +1380,12 @@ class PlatformSynchronizationService @Inject constructor(
     private suspend fun checkTopUps() {
         platformRepo.getWalletEncryptionKey()?.let {
             topUpRepository.checkTopUps(it)
+        }
+    }
+
+    private suspend fun checkInvitations() {
+        platformRepo.getWalletEncryptionKey()?.let {
+            topUpRepository.checkInvites(it)
         }
     }
 }

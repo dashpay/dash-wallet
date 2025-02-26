@@ -94,6 +94,7 @@ import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.DashSystemService;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
+import de.schildbach.wallet.service.platform.TopUpRepository;
 import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
@@ -207,6 +208,8 @@ public class WalletApplication extends MultiDexApplication
     PlatformRepo platformRepo;
     @Inject
     PlatformSyncService platformSyncService;
+    @Inject
+    TopUpRepository topUpRepository;
     @Inject
     PackageInfoProvider packageInfoProvider;
     @Inject
@@ -342,6 +345,14 @@ public class WalletApplication extends MultiDexApplication
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
             Security.insertProviderAt(Conscrypt.newProvider(), 1);
         }
+    }
+
+    @Override
+    public void onTerminate() {
+        super.onTerminate();
+        walletBalanceObserver.close();
+        topUpRepository.close();
+        anrSupervisor.stop();
     }
 
     private void syncExploreData() {
