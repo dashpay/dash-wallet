@@ -70,20 +70,10 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        //binding = ActivitySearchDashpayProfileRootBinding.inflate(layoutInflater)
-        //setContentView(binding.root)
-
         val toolbar = binding.appBarLayout.toolbar
-//        requireActivity().setSupportActionBar(toolbar)
-//        val actionBar = supportActionBar
-//        actionBar?.apply {
-//            setDisplayHomeAsUpEnabled(true)
-//            setDisplayShowHomeEnabled(true)
-//        }
         toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
-        //setTitle(R.string.add_new_contact)
         toolbar.title = getString(R.string.add_new_contact)
 
         binding.profile1.apply {
