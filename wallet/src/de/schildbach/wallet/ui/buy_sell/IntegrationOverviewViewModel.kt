@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.buy_sell
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
@@ -42,7 +43,12 @@ class IntegrationOverviewViewModel @Inject constructor(
 
     suspend fun loginToCoinbase(code: String): Boolean {
         return try {
-            coinBaseRepository.completeCoinbaseAuthentication(code)
+            if (coinBaseRepository.completeCoinbaseAuthentication(code)) {
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.NEW_CONNECTION, mapOf())
+                true
+            } else {
+                false
+            }
         } catch (ex: Exception) {
             log.error("Coinbase login error $ex")
             false

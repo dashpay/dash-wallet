@@ -197,7 +197,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
                     }
                 }
                 is ResponseResource.Failure -> {
-                    viewModel.logEvent(AnalyticsConstants.DashDirect.UNSUCCESSFUL_LOGIN)
+                    viewModel.logEvent(AnalyticsConstants.DashSpend.UNSUCCESSFUL_LOGIN)
                     binding.inputWrapper.isErrorEnabled = true
                     binding.inputErrorTv.text =
                         if (response.errorBody.isNullOrEmpty()) getString(R.string.error) else response.errorBody
@@ -213,7 +213,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             when (val response = viewModel.verifyEmail(code)) {
                 is ResponseResource.Success -> {
                     if (response.value) {
-                        viewModel.logEvent(AnalyticsConstants.DashDirect.SUCCESSFUL_LOGIN)
+                        viewModel.logEvent(AnalyticsConstants.DashSpend.SUCCESSFUL_LOGIN)
                         hideKeyboard()
                         safeNavigate(DashDirectUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
                     }

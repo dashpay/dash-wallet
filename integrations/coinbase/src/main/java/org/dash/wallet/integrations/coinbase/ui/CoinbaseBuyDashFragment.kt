@@ -92,6 +92,7 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
                 }
 
                 if (validated) {
+                    viewModel.logContinue(amountViewModel.dashToFiatDirection.value ?: false)
                     safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToOrderReview())
                 }
             }

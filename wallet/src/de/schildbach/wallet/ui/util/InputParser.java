@@ -189,7 +189,7 @@ public abstract class InputParser {
                     assert addressStr != null;
                     final Address address = Address.fromString(Constants.NETWORK_PARAMETERS, addressStr);
                     PaymentIntent intent = PaymentIntent.fromAddress(address, null);
-                    intent.setShouldConfirmAddress(true);
+                    intent.shouldConfirmAddress = true;
 
                     handlePaymentIntent(intent);
                 } catch (final AddressFormatException x) {

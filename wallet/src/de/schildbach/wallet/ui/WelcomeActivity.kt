@@ -18,8 +18,8 @@ package de.schildbach.wallet.ui
 
 import android.app.Activity
 import android.os.Bundle
-import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentPagerAdapter
@@ -28,6 +28,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityWelcomeBinding
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 /**
@@ -35,9 +37,10 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class WelcomeActivity : AppCompatActivity() {
-
     @Inject
     lateinit var configuration: Configuration
+    @Inject
+    lateinit var analyticsService: AnalyticsService
     private lateinit var binding: ActivityWelcomeBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,21 +60,19 @@ class WelcomeActivity : AppCompatActivity() {
             }
 
             override fun onPageSelected(position: Int) {
-                when (position) {
-                    0, 1 -> {
-                        binding.skipButton.visibility = View.VISIBLE
-                        binding.getStartedButton.visibility = View.GONE
-                    }
-                    2 -> {
-                        binding.skipButton.visibility = View.GONE
-                        binding.getStartedButton.visibility = View.VISIBLE
-                    }
-                }
+                binding.skipButton.isVisible = position != 2
+                binding.getStartedButton.isVisible = position == 2
             }
         })
 
-        binding.skipButton.setOnClickListener { finish() }
-        binding.getStartedButton.setOnClickListener { finish() }
+        binding.skipButton.setOnClickListener {
+            analyticsService.logEvent(AnalyticsConstants.Onboarding.SKIP, mapOf())
+            finish()
+        }
+        binding.getStartedButton.setOnClickListener {
+            analyticsService.logEvent(AnalyticsConstants.Onboarding.GET_STARTED, mapOf())
+            finish()
+        }
     }
 
     override fun finish() {

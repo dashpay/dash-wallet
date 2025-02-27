@@ -45,14 +45,14 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
 
     companion object {
         private const val ARG_IDENTITY_ID = "identity_id"
-        private const val ARG_STARTED_FROM_HISTORY = "started_from_history"
+        private const val ARG_SOURCE = "source"
         private const val ARG_INVITE_INDEX = "invite_index"
 
-        fun newInstance(identity: String, inviteIndex: Int, startedFromHistory: Boolean = false): InviteDetailsFragment {
+        fun newInstance(identity: String, inviteIndex: Int, source: String = ""): InviteDetailsFragment {
             val fragment = InviteDetailsFragment()
             fragment.arguments = Bundle().apply {
                 putString(ARG_IDENTITY_ID, identity)
-                putBoolean(ARG_STARTED_FROM_HISTORY, startedFromHistory)
+                putString(ARG_SOURCE, source)
                 putInt(ARG_INVITE_INDEX, inviteIndex)
             }
             return fragment

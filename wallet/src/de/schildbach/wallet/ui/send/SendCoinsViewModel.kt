@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui.send
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.google.common.base.Preconditions.checkState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -48,7 +47,6 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.crypto.IKey
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.SendRequest
@@ -89,6 +87,8 @@ class SendCoinsViewModel @Inject constructor(
         INPUT, // asks for confirmation
         SENDING, SENT, FAILED // sending states
     }
+
+    var isQuickSend: Boolean = false
 
     private val _state = MutableLiveData(State.INPUT)
     val state: LiveData<State>
@@ -296,12 +296,46 @@ class SendCoinsViewModel @Inject constructor(
         _state.value = State.INPUT
     }
 
-    fun logSentEvent(dashToFiat: Boolean) {
-        if (dashToFiat) {
-            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_DASH, mapOf())
+    fun logSendSuccess(dashToFiat: Boolean, source: String) {
+        if (isQuickSend) {
+            analytics.logEvent(AnalyticsConstants.LockScreen.SCAN_TO_SEND_SUCCESS, mapOf())
+        } else if (source == "explore") {
+            analytics.logEvent(AnalyticsConstants.Explore.PAY_WITH_DASH_SUCCESS, mapOf())
         } else {
-            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_FIAT, mapOf())
+            analytics.logEvent(if (contactData.value == null) {
+                AnalyticsConstants.SendReceive.SEND_SUCCESS
+            } else {
+                AnalyticsConstants.SendReceive.SEND_USERNAME_SUCCESS
+            }, mapOf())
+
+            analytics.logEvent(if (dashToFiat) {
+                AnalyticsConstants.SendReceive.ENTER_AMOUNT_DASH
+            } else {
+                AnalyticsConstants.SendReceive.ENTER_AMOUNT_FIAT
+            }, mapOf())
         }
+    }
+
+    fun logSendError(source: String) {
+         if (source == "explore") {
+            analytics.logEvent(AnalyticsConstants.Explore.PAY_WITH_DASH_ERROR, mapOf())
+        } else {
+             analytics.logEvent(
+                 if (contactData.value == null) {
+                     AnalyticsConstants.SendReceive.SEND_ERROR
+                 } else {
+                     AnalyticsConstants.SendReceive.SEND_USERNAME_ERROR
+                 }, mapOf()
+             )
+         }
+    }
+
+    fun logSend() {
+        analytics.logEvent(if (isQuickSend) {
+            AnalyticsConstants.LockScreen.SCAN_TO_SEND_SEND
+        } else {
+            AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND
+        }, mapOf())
     }
 
     fun logEvent(eventName: String) {
