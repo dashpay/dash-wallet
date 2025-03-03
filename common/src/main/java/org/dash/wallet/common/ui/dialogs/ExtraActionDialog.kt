@@ -92,7 +92,7 @@ class ExtraActionDialog(
         show(activity.supportFragmentManager, "extra_action_dialog")
     }
 
-    private fun onExtraMessageAction(){
+    private fun onExtraMessageAction() {
         onExtraMessageListener?.invoke()
         onExtraMessageListener = null
         dismiss()

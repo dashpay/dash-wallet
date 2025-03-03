@@ -38,11 +38,9 @@ class ExploreDashInfoDialog : OffsetDialogFragment(R.layout.explore_dash_main_in
         super.onViewCreated(view, savedInstanceState)
 
         binding.learnMoreLabel.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.Explore.LEARN_MORE, mapOf())
             OffsetDialogFragment(R.layout.buy_gift_card_description).show(requireActivity())
         }
         binding.exploreDashInfoContinueBtn.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.Explore.CONTINUE, mapOf())
             dismissAllowingStateLoss()
         }
     }

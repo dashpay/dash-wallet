@@ -37,6 +37,11 @@
             android:defaultValue="true"
             app:argType="boolean" />
 
+        <argument
+            android:name="fromQuickReceive"
+            android:defaultValue="true"
+            app:argType="boolean" />
+
         <action
             android:id="@+id/payments_to_receive"
             app:destination="@id/receiveFragment"

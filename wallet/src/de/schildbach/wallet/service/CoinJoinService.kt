@@ -69,6 +69,8 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.BlockchainStateProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
@@ -115,7 +117,8 @@ class CoinJoinMixingService @Inject constructor(
     val walletDataProvider: WalletDataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
     private val config: CoinJoinConfig,
-    private val platformRepo: PlatformRepo
+    private val platformRepo: PlatformRepo,
+    private val analyticsService: AnalyticsService
 ) : CoinJoinService {
 
     companion object {
@@ -357,6 +360,14 @@ class CoinJoinMixingService @Inject constructor(
             val previousMixingStatus = _mixingState.value
             _mixingState.value = mixingStatus
             log.info("coinjoin-mixing: $previousMixingStatus -> $mixingStatus")
+
+            if (previousMixingStatus != mixingStatus && !CoinJoinClientOptions.getAmount().isZero) {
+                if (mixingStatus == MixingStatus.FINISHED) {
+                    analyticsService.logEvent(AnalyticsConstants.CoinJoinPrivacy.COINJOIN_MIXING_SUCCESS, mapOf())
+                } else if (mixingStatus == MixingStatus.ERROR) {
+                    analyticsService.logEvent(AnalyticsConstants.CoinJoinPrivacy.COINJOIN_MIXING_FAIL, mapOf())
+                }
+            }
 
             when {
                 mixingStatus == MixingStatus.MIXING && previousMixingStatus != MixingStatus.MIXING -> {
