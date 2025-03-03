@@ -1161,7 +1161,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         val decimalFormat = DecimalFormat("0.000")
         val statusStringId = when (mixingStatus) {
             MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
-            MixingStatus.MIXING, MixingStatus.FINISHING -> R.string.coinjoin_mixing
+            MixingStatus.MIXING -> R.string.coinjoin_mixing
+            MixingStatus.FINISHING -> R.string.coinjoin_mixing_finishing
             MixingStatus.PAUSED -> R.string.coinjoin_paused
             MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
             else -> R.string.error

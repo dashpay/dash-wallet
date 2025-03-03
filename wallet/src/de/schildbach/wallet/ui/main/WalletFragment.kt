@@ -185,8 +185,12 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 else -> true
             }
             when (mixingState) {
-                MixingStatus.MIXING, MixingStatus.FINISHING -> {
+                MixingStatus.MIXING -> {
                     mixingBinding.mixingMode.text = getString(R.string.coinjoin_mixing)
+                    mixingBinding.progressBar.isVisible = true
+                }
+                MixingStatus.FINISHING -> {
+                    mixingBinding.mixingMode.text = getString(R.string.coinjoin_mixing_finishing)
                     mixingBinding.progressBar.isVisible = true
                 }
                 MixingStatus.PAUSED -> {

@@ -29,7 +29,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -162,8 +162,8 @@ class CoinJoinMixingService @Inject constructor(
     override fun isMixing(): Boolean = _isMixing.value
     override fun observeMixing(): Flow<Boolean> = _isMixing
 
-    private val executor = Executors.newFixedThreadPool(2, ContextPropagatingThreadFactory("coinjoin-pool"))
-    private val coroutineScope = CoroutineScope(executor.asCoroutineDispatcher())
+    val coroutineJob = SupervisorJob()
+    val coroutineScope = CoroutineScope(Dispatchers.IO + coroutineJob)
 
     private val uiCoroutineScope = CoroutineScope(Dispatchers.Main)
 
@@ -237,6 +237,8 @@ class CoinJoinMixingService @Inject constructor(
             }
             .launchIn(coroutineScope)
 
+        // we need the total wallet balance to set the total amount to mix
+        // and to trigger mixing, if necessary
         walletDataProvider.observeTotalBalance()
             .distinctUntilChanged()
             .onEach { balance ->
@@ -279,6 +281,7 @@ class CoinJoinMixingService @Inject constructor(
         CoinJoinClientOptions.setAmount(balance)
         // log.info("coinjoin: total balance: ${balance.toFriendlyString()}")
         val walletEx = walletDataProvider.wallet as WalletEx
+        org.bitcoinj.core.Context.propagate(walletEx.context)
         // log.info("coinjoin: mixed balance: ${walletEx.coinJoinBalance.toFriendlyString()}")
         val anonBalance = walletEx.getAnonymizableBalance(false, false)
         // log.info("coinjoin: anonymizable balance {}", anonBalance.toFriendlyString())
@@ -296,7 +299,7 @@ class CoinJoinMixingService @Inject constructor(
 
         val hasBalanceLeftToMix = when {
             hasPartiallyMixedCoins -> true
-            hasAnonymizableBalance -> true
+            hasAnonymizableBalance || canDenominate-> true
             else -> false
         }
 
@@ -374,7 +377,7 @@ class CoinJoinMixingService @Inject constructor(
         try {
             val previousMixingStatus = _mixingState.value
             _mixingState.value = mixingStatus
-            log.info("coinjoin-mixing: $previousMixingStatus -> $mixingStatus")
+            log.info("coinjoin-state-mixing: $previousMixingStatus -> $mixingStatus")
 
             when {
                 mixingStatus == MixingStatus.MIXING && previousMixingStatus != MixingStatus.MIXING -> {
@@ -421,7 +424,6 @@ class CoinJoinMixingService @Inject constructor(
     private suspend fun updateMode(mode: CoinJoinMode) {
         walletApplication.setCoinJoinService(this)
         if (mode != CoinJoinMode.NONE && this.mode == CoinJoinMode.NONE) {
-            CoinJoinClientOptions.setEnabled(true)
             configureMixing()
         }
         updateBalance(walletDataProvider.getWalletBalance())
@@ -498,10 +500,12 @@ class CoinJoinMixingService @Inject constructor(
                 // no options to set
             }
             CoinJoinMode.INTERMEDIATE -> {
+                CoinJoinClientOptions.setEnabled(true)
                 CoinJoinClientOptions.setRounds(DEFAULT_ROUNDS)
                 (walletDataProvider.wallet as WalletEx).coinJoin.setRounds(DEFAULT_ROUNDS)
             }
             CoinJoinMode.ADVANCED -> {
+                CoinJoinClientOptions.setEnabled(true)
                 CoinJoinClientOptions.setRounds(DEFAULT_ROUNDS * 2)
                 (walletDataProvider.wallet as WalletEx).coinJoin.setRounds(DEFAULT_ROUNDS * 2)
             }
@@ -542,10 +546,10 @@ class CoinJoinMixingService @Inject constructor(
             clientManager.setStopOnNothingToDo(true)
             val mixingFinished = clientManager.mixingFinishedFuture
 
-            addMixingCompleteListener(executor, mixingProgressTracker)
-            addSessionStartedListener(executor, mixingProgressTracker)
-            addSessionCompleteListener(executor, mixingProgressTracker)
-            addTransationListener(executor, mixingProgressTracker)
+            addMixingCompleteListener(Threading.USER_THREAD, mixingProgressTracker)
+            addSessionStartedListener(Threading.USER_THREAD, mixingProgressTracker)
+            addSessionCompleteListener(Threading.USER_THREAD, mixingProgressTracker)
+            addTransationListener(Threading.USER_THREAD, mixingProgressTracker)
 
             val mixingCompleteListener =
                 MixingCompleteListener { _, statusList ->
@@ -586,8 +590,8 @@ class CoinJoinMixingService @Inject constructor(
                 }
             }, Threading.USER_THREAD)
 
-            addMixingCompleteListener(executor, mixingCompleteListener)
-            addSessionCompleteListener(executor, sessionCompleteListener)
+            addMixingCompleteListener(Threading.USER_THREAD, mixingCompleteListener)
+            addSessionCompleteListener(Threading.USER_THREAD, sessionCompleteListener)
             log.info("coinjoin: mixing preparation finished")
 
             setRequestKeyParameter(requestKeyParameter)
@@ -690,7 +694,14 @@ class CoinJoinMixingService @Inject constructor(
 
     private fun updateActiveSessions(change: Int) {
         coroutineScope.launch {
-            val currentSessions = this@CoinJoinMixingService.activeSessions.value
+            val currentSessions = if (this@CoinJoinMixingService::clientManager.isInitialized) {
+                clientManager.sessionsStatus?.count { poolStatus ->
+                    poolStatus == PoolStatus.CONNECTING || poolStatus == PoolStatus.CONNECTED ||
+                            poolStatus == PoolStatus.MIXING
+                } ?: 0
+            } else {
+                0
+            }
             val activeSessions = max(0, currentSessions + change)
             log.info("coinjoin-state-activeSessions: {}", activeSessions)
             this@CoinJoinMixingService.activeSessions.emit(activeSessions)

@@ -107,7 +107,7 @@ class SendCoinsTaskRunner @Inject constructor(
     // use CoinJoin mode of Sending if CoinJoin is not OFF [CoinJoinMode.NONE]
     // and is not finishing [MixingStatus.FINISHING]
     private fun updateCoinJoinSend() {
-        coinJoinSend = coinJoinMode != CoinJoinMode.NONE || coinJoinMixingState != MixingStatus.FINISHING
+        coinJoinSend = coinJoinMode != CoinJoinMode.NONE && coinJoinMixingState != MixingStatus.FINISHING
     }
 
     @Throws(LeftoverBalanceException::class)
