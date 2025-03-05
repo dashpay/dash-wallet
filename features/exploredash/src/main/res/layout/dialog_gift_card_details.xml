@@ -149,7 +149,7 @@
                             android:layout_height="wrap_content"
                             android:gravity="center"
                             android:textAlignment="gravity"
-                            android:layout_margin="20.dp"
+                            android:layout_margin="20dp"
                             android:text="@string/barcode_placeholder"/>
                     </FrameLayout>
 
