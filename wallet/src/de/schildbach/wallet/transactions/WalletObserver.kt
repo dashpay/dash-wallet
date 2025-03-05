@@ -165,7 +165,7 @@ class WalletObserver(private val wallet: Wallet) {
                 wallet.removeCoinsReceivedEventListener(coinsReceivedListener)
                 if (observeTxConfidence) {
                     transactions.forEach { (_, tx) ->
-                        tx.confidence.removeEventListener(transactionConfidenceListener)
+                        tx.getConfidence(wallet.context).removeEventListener(transactionConfidenceListener)
                         // log.info("observing transaction: stop listening to {}", tx.txId)
                     }
                     transactions.clear()
