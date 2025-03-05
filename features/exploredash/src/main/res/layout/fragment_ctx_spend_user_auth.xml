@@ -31,7 +31,7 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/Headline3"
+        style="@style/Headline5"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
@@ -42,7 +42,7 @@
 
     <TextView
         android:id="@+id/desc_label"
-        style="@style/Body2"
+        style="@style/Caption"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"

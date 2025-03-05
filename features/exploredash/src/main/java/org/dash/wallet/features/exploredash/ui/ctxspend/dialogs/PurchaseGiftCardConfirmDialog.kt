@@ -22,8 +22,10 @@ import android.view.View
 import androidx.annotation.StyleRes
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.transition.TransitionManager
 import coil.load
 import coil.size.Scale
 import dagger.hilt.android.AndroidEntryPoint
@@ -83,7 +85,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         binding.giftCardYouPayValue.text = discountedValue.toFormattedStringRoundUp()
         binding.purchaseCardValue.text = paymentValue.toFormattedString()
 
-        binding.collapseButton.setOnClickListener { dismiss() }
+        binding.cancelButton.setOnClickListener { dismiss() }
         binding.confirmButton.setOnClickListener { onConfirmButtonClicked() }
     }
 
@@ -181,16 +183,65 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     }
 
     private fun showLoading() {
-        binding.confirmButton.text = ""
-        binding.confirmButtonLoading.isVisible = true
-        binding.confirmButton.isClickable = false
+        binding.cancelButton.animate().cancel()
+
+        // Fade out cancel button
+        binding.cancelButton.animate()
+            .alpha(0f)
+            .setDuration(200)
+            .withEndAction {
+                binding.cancelButton.isVisible = false
+                binding.confirmButton.text = ""
+                binding.confirmButton.isClickable = false
+
+                // Expand confirm button
+                val constraintSet = ConstraintSet()
+                constraintSet.clone(binding.rootLayout)
+
+                constraintSet.clear(R.id.confirm_button, ConstraintSet.START)
+                constraintSet.connect(R.id.confirm_button, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, dpToPx(15))
+                constraintSet.connect(R.id.confirm_button, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END, dpToPx(15))
+
+                TransitionManager.beginDelayedTransition(binding.rootLayout)
+                constraintSet.applyTo(binding.rootLayout)
+
+                binding.confirmButtonLoading.isVisible = true
+            }
+            .start()
     }
 
     private fun hideLoading() {
         if (isAdded) {
+            // Restore Cancel button
+            binding.cancelButton.alpha = 0f
+            binding.cancelButton.isVisible = true
+            binding.cancelButton.animate()
+                .alpha(1f)
+                .setDuration(300)
+                .start()
+
+            // Shrink Confirm button, restore Cancel button position
+            val constraintSet = ConstraintSet()
+            constraintSet.clone(binding.rootLayout)
+
+            constraintSet.clear(R.id.confirm_button, ConstraintSet.START)
+            constraintSet.connect(R.id.confirm_button, ConstraintSet.START, R.id.guideline, ConstraintSet.START, dpToPx(15))
+            constraintSet.connect(R.id.confirm_button, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END, dpToPx(15))
+
+            constraintSet.clear(R.id.cancel_button, ConstraintSet.END)
+            constraintSet.connect(R.id.cancel_button, ConstraintSet.END, R.id.confirm_button, ConstraintSet.START, 8)
+            constraintSet.connect(R.id.cancel_button, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, dpToPx(15))
+
+            TransitionManager.beginDelayedTransition(binding.rootLayout)
+            constraintSet.applyTo(binding.rootLayout)
+
             binding.confirmButton.setText(R.string.purchase_gift_card_confirm)
             binding.confirmButtonLoading.isGone = true
             binding.confirmButton.isClickable = true
         }
+    }
+
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density).toInt()
     }
 }

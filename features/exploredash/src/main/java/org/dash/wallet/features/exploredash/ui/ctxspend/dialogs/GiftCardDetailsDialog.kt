@@ -191,13 +191,13 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             .crossfade(true)
             .listener(
                 onStart = {
-                    binding.barcodeLoadingIndicator.isVisible = true
+                    binding.barcodePlaceholder.isVisible = true
                 },
                 onSuccess = { _, _ ->
-                    binding.barcodeLoadingIndicator.isVisible = false
+                    binding.barcodePlaceholder.isVisible = false
                 },
                 onError = { _, _ ->
-                    binding.barcodeLoadingIndicator.isVisible = false
+                    binding.barcodePlaceholder.isVisible = false
                     binding.barcodeLoadingError.isVisible = true
                 }
             )
