@@ -131,7 +131,7 @@ class CrowdNodeViewModel @Inject constructor(
             (crowdNodeBalance.value?.balance?.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT) ?: true)
 
     init {
-        walletDataProvider.observeBalance()
+        walletDataProvider.observeTotalBalance()
             .distinctUntilChanged()
             .onEach {
                 _dashBalance.postValue(it)
@@ -386,7 +386,6 @@ class CrowdNodeViewModel @Inject constructor(
         val accountAddress = accountAddress.value ?: return
         val amount = CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT
 
-        analytics.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING_SHARE_BUTTON, mapOf())
         val paymentRequestUri = BitcoinURI.convertToBitcoinURI(accountAddress, amount, "", "")
         systemActions.shareText(paymentRequestUri)
     }

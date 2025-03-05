@@ -346,9 +346,4 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
 
         binding.resetFiltersBtn.isEnabled = false
     }
-
-    override fun onDismiss(dialog: DialogInterface) {
-        super.onDismiss(dialog)
-        viewModel.trackDismissEvent()
-    }
 }

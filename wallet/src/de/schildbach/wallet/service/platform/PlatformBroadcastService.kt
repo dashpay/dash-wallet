@@ -186,7 +186,6 @@ class PlatformDocumentBroadcastService @Inject constructor(
         log.info("broadcast profile")
         val blockchainIdentity = platformRepo.blockchainIdentity
 
-
         val displayName = if (dashPayProfile.displayName.isNotEmpty()) dashPayProfile.displayName else null
         val publicMessage = if (dashPayProfile.publicMessage.isNotEmpty()) dashPayProfile.publicMessage else null
         val avatarUrl = if (dashPayProfile.avatarUrl.isNotEmpty()) dashPayProfile.avatarUrl else null
@@ -217,7 +216,7 @@ class PlatformDocumentBroadcastService @Inject constructor(
 
         log.info("updated profile: $createdProfile")
         val updatedDashPayProfile = DashPayProfile.fromDocument(createdProfile, dashPayProfile.username)
-        platformRepo.updateDashPayProfile(updatedDashPayProfile!!) //update the database since the cr was accepted
+        platformRepo.updateDashPayProfile(updatedDashPayProfile) //update the database since the cr was accepted
         return updatedDashPayProfile
     }
 }

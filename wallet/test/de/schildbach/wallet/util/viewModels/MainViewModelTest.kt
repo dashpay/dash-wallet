@@ -174,7 +174,7 @@ class MainViewModelTest {
         every { blockchainStateMock.observeState() } returns flow { BlockchainState() }
         every { blockchainStateMock.observeSyncStage() } returns MutableStateFlow(PeerGroup.SyncStage.BLOCKS)
         every { exchangeRatesMock.observeExchangeRate(any()) } returns flow { ExchangeRate("USD", "100") }
-        every { walletDataMock.observeBalance() } returns flow { Coin.COIN }
+        every { walletDataMock.observeTotalBalance() } returns flow { Coin.COIN }
         every { walletDataMock.observeMostRecentTransaction() } returns flow {
             Transaction(
                 TestNet3Params.get(),

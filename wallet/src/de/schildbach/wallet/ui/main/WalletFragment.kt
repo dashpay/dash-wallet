@@ -172,11 +172,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
 
         viewModel.mixingProgress.observe(viewLifecycleOwner) { progress ->
-            mixingBinding.balance.text = getString(
-                R.string.coinjoin_progress_balance,
-                viewModel.mixedBalance,
-                viewModel.walletBalance
-            )
+            updateMixedAndTotalBalance()
             mixingBinding.mixingPercent.text = getString(R.string.percent, progress.toInt())
             mixingBinding.mixingProgress.progress = progress.toInt()
         }
@@ -210,16 +206,24 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
 
         viewModel.balance.observe(viewLifecycleOwner) {
-            mixingBinding.balance.text = getString(
-                R.string.coinjoin_progress_balance,
-                viewModel.mixedBalance,
-                viewModel.walletBalance
-            )
+            updateMixedAndTotalBalance()
+        }
+
+        viewModel.mixedBalance.observe(viewLifecycleOwner) {
+            updateMixedAndTotalBalance()
         }
 
         viewModel.hasContacts.observe(viewLifecycleOwner) {
             refreshShortcutBar()
         }
+    }
+
+    private fun updateMixedAndTotalBalance() {
+        mixingBinding.balance.text = getString(
+            R.string.coinjoin_progress_balance,
+            viewModel.mixedBalanceString,
+            viewModel.walletBalanceString
+        )
     }
 
     fun scrollToTop() {
@@ -285,10 +289,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
 
         refreshShortcutBar()
-    }
-
-    private fun joinDashPay() {
-        startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
     }
 
     private fun refreshShortcutBar() {
@@ -392,9 +392,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     null
                 )
                 dialog.isMessageSelectable = true
-                dialog.show(requireActivity()) {
-                    viewModel.logEvent(AnalyticsConstants.Home.NO_ADDRESS_COPIED)
-                }
+                dialog.show(requireActivity())
             }
 
             override fun cannotClassify(input: String) {

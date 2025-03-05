@@ -124,7 +124,7 @@ class InvitesHistoryFragment(private val caller: String) :
                     "more" -> AnalyticsConstants.Invites.CREATE_MORE
                     else -> AnalyticsConstants.Invites.CREATE_HISTORY
                 })
-                InviteFriendActivity.startOrError(requireActivity(), startedByHistory = true)
+                InviteFriendActivity.startOrError(requireActivity(), source = "history")
             }
             else -> {
                 log.info("showing invitation for ${invitationItem.invitation!!.userId}")

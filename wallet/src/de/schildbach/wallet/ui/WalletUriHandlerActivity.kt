@@ -28,10 +28,8 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.integration.android.BitcoinIntegration
-import de.schildbach.wallet.ui.buy_sell.IntegrationOverviewFragment
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
-import de.schildbach.wallet.ui.send.SendCoinsActivity.Companion.sendFromWalletUri
 import de.schildbach.wallet.ui.util.InputParser.WalletUriParser
 import de.schildbach.wallet.ui.util.WalletUri
 import de.schildbach.wallet_test.R

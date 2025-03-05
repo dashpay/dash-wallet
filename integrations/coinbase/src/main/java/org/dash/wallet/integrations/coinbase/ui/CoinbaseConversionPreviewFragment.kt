@@ -16,6 +16,8 @@
  */
 package org.dash.wallet.integrations.coinbase.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.View
@@ -23,6 +25,9 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
 import androidx.annotation.ColorRes
 import androidx.annotation.StyleRes
+import androidx.browser.customtabs.CustomTabColorSchemeParams
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -31,13 +36,17 @@ import coil.load
 import coil.size.Scale
 import coil.transform.CircleCropTransformation
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.R
 import org.dash.wallet.integrations.coinbase.databinding.FragmentCoinbaseConversionPreviewBinding
 import org.dash.wallet.integrations.coinbase.model.*
@@ -134,7 +143,19 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_FEE_INFO)
-            safeNavigate(CoinbaseConversionPreviewFragmentDirections.orderReviewToFeeInfo())
+            ExtraActionDialog.create(
+                R.drawable.ic_info_blue,
+                getString(R.string.fees_in_crypto_purchase),
+                getString(R.string.coinbase_fee_info_msg_content),
+                negativeButtonText = getString(android.R.string.ok),
+                extraMessage =  getString(R.string.learn_more)
+            ).show(
+                requireActivity(),
+                onResult = { },
+                onExtraMessageAction = {
+                    requireActivity().openCustomTab(CoinbaseConstants.FEE_INFO_URL)
+                }
+            )
         }
 
         viewModel.swapTradeFailureState.observe(viewLifecycleOwner) {

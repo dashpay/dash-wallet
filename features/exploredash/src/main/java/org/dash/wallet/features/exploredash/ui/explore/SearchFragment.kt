@@ -418,9 +418,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.upButton.setOnClickListener {
             binding.searchResults.scrollToPosition(0)
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_SCROLL_UP)
-            }
         }
 
         binding.resetFiltersBtn.setOnClickListener {
@@ -467,9 +464,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
             }
 
-            deepLinkNavigate(DeepLinkDestination.SendDash)
+            deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
         }
-        binding.itemDetails.setOnReceiveDashClicked { deepLinkNavigate(DeepLinkDestination.ReceiveDash) }
+        binding.itemDetails.setOnReceiveDashClicked { deepLinkNavigate(DeepLinkDestination.ReceiveDash(source = "explore")) }
         binding.itemDetails.setOnBackButtonClicked { viewModel.backFromMerchantLocation() }
         binding.itemDetails.setOnShowAllLocationsClicked {
             viewModel.selectedItem.value?.let { merchant ->
@@ -582,16 +579,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.toolbar.setNavigationOnClickListener {
             hardBackAction.invoke()
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BACK_TOP)
-            }
         }
 
         onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
             hardBackAction.invoke()
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BACK_BOTTOM)
-            }
         }
     }
 
@@ -856,12 +847,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun trackMerchantDetailsEvents(binding: FragmentSearchBinding) {
-        binding.itemDetails.setOnNavigationButtonClicked {
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_NAVIGATION)
-            }
-        }
-
         binding.itemDetails.setOnDialPhoneButtonClicked {
             if (isMerchantTopic) {
                 viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)

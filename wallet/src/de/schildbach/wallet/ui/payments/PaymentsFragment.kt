@@ -42,6 +42,7 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
     companion object {
         private const val PREFS_RECENT_TAB = "recent_tab"
         const val ARG_ACTIVE_TAB = "active_tab"
+        const val ARG_SOURCE = "source"
 
         const val ACTIVE_TAB_RECEIVE = 0
         const val ACTIVE_TAB_PAY = 1
@@ -80,7 +81,7 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
             override fun createFragment(position: Int): Fragment {
                 val fragment = when (position) {
                     ACTIVE_TAB_RECEIVE -> PaymentsReceiveFragment.newInstance()
-                    else -> PaymentsPayFragment.newInstance()
+                    else -> PaymentsPayFragment.newInstance(source = arguments?.getString(ARG_SOURCE) ?: "")
                 }
                 return fragment
             }

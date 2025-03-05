@@ -61,12 +61,10 @@ class ConfirmationDialog : OffsetDialogFragment(R.layout.fragment_confirmation) 
         }
 
         binding.howToBtn.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING_HOW_TO_CONFIRM)
             val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.crowdnode_how_to_verify_url)))
             startActivity(browserIntent)
         }
         binding.showQrBtn.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING_SHOW_QR)
             qrDialog = QRDialog(accountAddress, amount)
             qrDialog?.show(parentFragmentManager, "qr_dialog")
         }
