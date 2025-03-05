@@ -295,10 +295,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
         refreshShortcutBar()
     }
 
-    private fun joinDashPay() {
-        startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
-    }
-
     private fun refreshShortcutBar() {
         showHideSecureAction()
         refreshIfUserHasBalance()
@@ -400,9 +396,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     null
                 )
                 dialog.isMessageSelectable = true
-                dialog.show(requireActivity()) {
-                    viewModel.logEvent(AnalyticsConstants.Home.NO_ADDRESS_COPIED)
-                }
+                dialog.show(requireActivity())
             }
 
             override fun cannotClassify(input: String) {

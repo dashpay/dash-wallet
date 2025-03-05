@@ -450,7 +450,7 @@ class MainViewModel @Inject constructor(
         )
 
         if (direction == TxFilterType.GIFT_CARD) {
-            analytics.logEvent(AnalyticsConstants.DashDirect.FILTER_GIFT_CARD, mapOf())
+            analytics.logEvent(AnalyticsConstants.DashSpend.FILTER_GIFT_CARD, mapOf())
         }
     }
 

@@ -40,6 +40,7 @@ import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.FrequentContactsAdapter
 import de.schildbach.wallet.ui.dashpay.OnContactItemClickListener
+import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
@@ -56,7 +57,13 @@ import javax.inject.Inject
 class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactItemClickListener {
     companion object {
         @JvmStatic
-        fun newInstance() = PaymentsPayFragment()
+        fun newInstance(source: String): PaymentsPayFragment {
+            val fragment = PaymentsPayFragment()
+            val args = Bundle()
+            args.putString(ARG_SOURCE, source)
+            fragment.arguments = args
+            return fragment
+        }
     }
 
     private var frequentContactsAdapter: FrequentContactsAdapter = FrequentContactsAdapter()
@@ -120,7 +127,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
 
         dashPayViewModel.frequentContactsLiveData.observe(viewLifecycleOwner) {
             if (Status.SUCCESS == it.status) {
-                if (it.data == null || it.data.isEmpty()) {
+                if (it.data.isNullOrEmpty()) {
                     binding.frequentContactsRv.visibility = View.GONE
                     // TODO: how do we show an arrow
                     // binding.payByContactSelect.showForwardArrow(false)
@@ -147,7 +154,8 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
         findNavController().navigate(
             PaymentsFragmentDirections.paymentsToContacts(
                 ShowNavBar = false,
-                mode = ContactsScreenMode.SELECT_CONTACT
+                mode = ContactsScreenMode.SELECT_CONTACT,
+                source = arguments?.getString(ARG_SOURCE) ?: ""
             )
         )
     }
@@ -156,6 +164,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
         lifecycleScope.launch {
             try {
                 val paymentIntent = PaymentIntentParser.parse(input, true)
+                paymentIntent.source = arguments?.getString(ARG_SOURCE) ?: ""
                 SendCoinsActivity.start(requireContext(), paymentIntent)
             } catch (ex: PaymentIntentParserException) {
                 AdaptiveDialog.create(
@@ -170,6 +179,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
 
     private fun handleContactId(id: String) {
         val paymentIntent = PaymentIntent.fromUserId(id)
+        paymentIntent.source = arguments?.getString(ARG_SOURCE) ?: ""
         SendCoinsActivity.start(requireContext(), paymentIntent)
     }
 

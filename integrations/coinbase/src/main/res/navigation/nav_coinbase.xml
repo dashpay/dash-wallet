@@ -71,9 +71,6 @@
         tools:layout="@layout/fragment_coinbase_order_review">
 
         <action
-            android:id="@+id/orderReviewToFeeInfo"
-            app:destination="@id/coinbaseFeeInfoDialog" />
-        <action
             android:id="@+id/coinbaseBuyDashOrderReviewToTwoFaCode"
             app:destination="@id/enterTwoFaCodeFragment"
             app:enterAnim="@anim/slide_in_right"
@@ -97,22 +94,12 @@
             app:destination="@id/coinbaseConversionPreviewFragment" />
     </fragment>
 
-    <dialog
-        android:id="@+id/coinbaseFeeInfoDialog"
-        android:name="org.dash.wallet.integrations.coinbase.ui.dialogs.CoinbaseFeeInfoDialog"
-        android:label="coinbase_info_fee"
-        tools:layout="@layout/dialog_coinbase_fee_info"
-        />
-
     <fragment
         android:id="@+id/coinbaseConversionPreviewFragment"
         android:name="org.dash.wallet.integrations.coinbase.ui.CoinbaseConversionPreviewFragment"
         android:label="CoinbaseConversionPreviewFragment"
         tools:layout="@layout/fragment_coinbase_conversion_preview">
 
-        <action
-            android:id="@+id/orderReviewToFeeInfo"
-            app:destination="@id/coinbaseFeeInfoDialog" />
         <argument
             android:name="swapModel"
             app:argType="org.dash.wallet.integrations.coinbase.model.SwapTradeUIModel" />

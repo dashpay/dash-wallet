@@ -33,13 +33,13 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
 
     companion object {
         private const val ARG_IDENTITY_ID = "identity_id"
-        private const val ARG_STARTED_FROM_HISTORY = "started_from_history"
+        private const val ARG_SOURCE = "source"
 
-        fun newInstance(identity: String, startedFromHistory: Boolean = false): InviteCreatedFragment {
+        fun newInstance(identity: String, source: String = ""): InviteCreatedFragment {
             val fragment = InviteCreatedFragment()
             fragment.arguments = Bundle().apply {
                 putString(ARG_IDENTITY_ID, identity)
-                putBoolean(ARG_STARTED_FROM_HISTORY, startedFromHistory)
+                putString(ARG_SOURCE, source)
             }
             return fragment
         }
@@ -81,7 +81,7 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         // was this fragment created indirectly by InvitesHistoryActivity
         // If yes, then Maybe Later will start InvitesHistoryActivity
         // If no, InvitesHistoryActivity started this fragment, so just finish()
-        if (!requireArguments().getBoolean(ARG_STARTED_FROM_HISTORY)) {
+        if (requireArguments().getString(ARG_SOURCE) != "history") {
             startActivity(InvitesHistoryActivity.createIntent(requireContext()))
         }
         requireActivity().finish()

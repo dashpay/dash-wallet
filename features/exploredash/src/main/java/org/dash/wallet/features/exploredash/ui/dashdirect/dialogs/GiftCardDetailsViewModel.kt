@@ -48,7 +48,6 @@ import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.util.*
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
@@ -235,9 +234,9 @@ class GiftCardDetailsViewModel @Inject constructor(
     }
 
     private fun logOnPurchaseEvents(giftCard: GiftCard) {
-        analyticsService.logEvent(AnalyticsConstants.DashDirect.SUCCESSFUL_PURCHASE, mapOf())
+        analyticsService.logEvent(AnalyticsConstants.DashSpend.SUCCESSFUL_PURCHASE, mapOf())
         analyticsService.logEvent(
-            AnalyticsConstants.DashDirect.MERCHANT_NAME,
+            AnalyticsConstants.DashSpend.MERCHANT_NAME,
             mapOf(AnalyticsConstants.Parameter.VALUE to giftCard.merchantName)
         )
 
@@ -246,12 +245,12 @@ class GiftCardDetailsViewModel @Inject constructor(
             val fiatValue = it.coinToFiat(transaction?.getValue(walletData.transactionBag) ?: Coin.ZERO)
 
             analyticsService.logEvent(
-                AnalyticsConstants.DashDirect.PURCHASE_AMOUNT,
+                AnalyticsConstants.DashSpend.PURCHASE_AMOUNT,
                 mapOf(AnalyticsConstants.Parameter.VALUE to giftCard.price)
             )
 
             analyticsService.logEvent(
-                AnalyticsConstants.DashDirect.DISCOUNT_AMOUNT,
+                AnalyticsConstants.DashSpend.DISCOUNT_AMOUNT,
                 mapOf(AnalyticsConstants.Parameter.VALUE to fiatValue.toFriendlyString())
             )
         }
