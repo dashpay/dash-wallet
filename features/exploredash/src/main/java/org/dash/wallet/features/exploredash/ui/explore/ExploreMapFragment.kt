@@ -38,7 +38,6 @@ import com.google.android.gms.maps.model.*
 import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant

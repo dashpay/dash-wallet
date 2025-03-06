@@ -17,7 +17,6 @@
 
 package org.dash.wallet.features.exploredash.ui.explore.dialogs
 
-import android.content.DialogInterface
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible

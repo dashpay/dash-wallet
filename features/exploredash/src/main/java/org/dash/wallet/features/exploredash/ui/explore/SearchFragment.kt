@@ -466,7 +466,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
             deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
         }
-        binding.itemDetails.setOnReceiveDashClicked { deepLinkNavigate(DeepLinkDestination.ReceiveDash(source = "explore")) }
+        binding.itemDetails.setOnReceiveDashClicked {
+            deepLinkNavigate(
+                DeepLinkDestination.ReceiveDash(source = "explore")
+            )
+        }
         binding.itemDetails.setOnBackButtonClicked { viewModel.backFromMerchantLocation() }
         binding.itemDetails.setOnShowAllLocationsClicked {
             viewModel.selectedItem.value?.let { merchant ->
