@@ -312,7 +312,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         lifecycleScope.launch {
             viewModel.getProfile(initInvitationUserId)?.let { profile ->
                 val dialog = InviteSendContactRequestDialog.newInstance(this@MainActivity, profile)
-                dialog.show(supportFragmentManager, null)
+                dialog.show(this@MainActivity) {
+                    // nothing
+                }
             }
         }
     }

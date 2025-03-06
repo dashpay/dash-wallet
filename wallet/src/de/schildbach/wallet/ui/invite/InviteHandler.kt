@@ -158,18 +158,11 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
     }
 
     private fun showInviteAlreadyClaimedDialog(invite: InvitationLinkData) {
-        val inviteAlreadyClaimedDialog = InviteAlreadyClaimedDialog.newInstance(activity, invite)
-        inviteAlreadyClaimedDialog.onFancyAlertButtonsClickListener = object :
-            FancyAlertDialog.FancyAlertButtonsClickListener {
-            override fun onPositiveButtonClick() {
+        InviteAlreadyClaimedDialog
+            .newInstance(activity, invite)
+            .show(activity) {
                 handleDialogButtonClick(activity)
             }
-
-            override fun onNegativeButtonClick() {
-                handleDialogButtonClick(activity)
-            }
-        }
-        inviteAlreadyClaimedDialog.show(activity.supportFragmentManager, null)
         analytics.logEvent(AnalyticsConstants.Invites.ERROR_ALREADY_CLAIMED, mapOf())
     }
 

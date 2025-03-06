@@ -64,6 +64,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import org.bitcoinj.coinjoin.CoinJoin
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.InsufficientMoneyException
@@ -133,6 +134,9 @@ interface TopUpRepository {
     fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long)
     fun validateInvitation(invite: InvitationLinkData): Boolean
     fun close()
+
+    fun getAssetLockTransaction(invite: InvitationLinkData): AssetLockTransaction
+    fun isInvitationMixed(inviteAssetLockTx: AssetLockTransaction): Boolean
 }
 
 class TopUpRepositoryImpl @Inject constructor(
@@ -195,6 +199,41 @@ class TopUpRepositoryImpl @Inject constructor(
         )
     }
 
+    override fun getAssetLockTransaction(invite: InvitationLinkData): AssetLockTransaction {
+        Context.propagate(walletDataProvider.wallet!!.context)
+        var cftxData = platform.client.getTransaction(invite.cftx)
+        //TODO: remove when iOS uses big endian
+        if (cftxData == null)
+            cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
+        val assetLockTx = AssetLockTransaction(platform.params, cftxData!!)
+        val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
+        assetLockTx.addAssetLockPublicKey(privateKey)
+        // TODO: when all instantsend locks are deterministic, we don't need the catch block
+        val instantSendLock = InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISDLOCK_VERSION)
+
+        assetLockTx.confidence.setInstantSendLock(instantSendLock)
+        return assetLockTx
+    }
+
+    override fun isInvitationMixed(inviteAssetLockTx: AssetLockTransaction): Boolean {
+        val inputTxes = hashMapOf<Sha256Hash, Transaction>()
+        return inviteAssetLockTx.inputs.map { input ->
+            val tx = inputTxes[input.outpoint.hash]
+                ?: platformRepo.platform.client.getTransaction(input.outpoint.hash.toString())?.let {
+                    Transaction(Constants.NETWORK_PARAMETERS, it)
+                }
+            log.info("obtaining input tx: {}", input.outpoint.hash)
+            tx?.let {
+                log.info(" --> input tx: {}", tx.txId)
+                input.connect(it.getOutput(input.outpoint.index))
+                log.info(" --> input tx: {}", input.value)
+                input.value
+            } ?: Coin.ZERO
+        }.all { value ->
+            CoinJoin.isDenominatedAmount(value)
+        }
+    }
+
     //
     // Step 2 is to obtain the credit funding transaction for invites
     //
@@ -228,7 +267,7 @@ class TopUpRepositoryImpl @Inject constructor(
     override suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
         log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
-            cftx.confidence.addEventListener(object : TransactionConfidence.Listener {
+            cftx.getConfidence(Constants.CONTEXT).addEventListener(object : TransactionConfidence.Listener {
                 override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
                     when (reason) {
                         // If this transaction is in a block, then it has been sent successfully

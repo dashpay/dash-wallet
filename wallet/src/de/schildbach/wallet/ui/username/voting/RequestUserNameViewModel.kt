@@ -22,6 +22,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CREATION_STATE
@@ -32,9 +33,11 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
+import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,6 +54,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
+import org.bitcoinj.evolution.AssetLockTransaction
+import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -76,6 +81,8 @@ data class RequestUserNameUIState(
     val usernameExists: Boolean = false,
     val usernameBlocked: Boolean = false,
     val enoughBalance: Boolean = false,
+    val usernameNonContestedChars: Boolean = false,
+    val usernameNonContestedLength: Boolean = false,
     val votingPeriodStart: Long = System.currentTimeMillis()
 )
 
@@ -88,7 +95,8 @@ class RequestUserNameViewModel @Inject constructor(
     val platformRepo: PlatformRepo,
     val usernameRequestDao: UsernameRequestDao,
     val coinJoinConfig: CoinJoinConfig,
-    val analytics: AnalyticsService
+    val analytics: AnalyticsService,
+    val topUpRepository: TopUpRepository
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
@@ -115,6 +123,22 @@ class RequestUserNameViewModel @Inject constructor(
     val walletBalance: StateFlow<Coin>
         get() = _walletBalance
 
+    private var createUsernameArgs: CreateUsernameArgs? = null
+    private val inviteAssetLockTx = MutableStateFlow<AssetLockTransaction?>(null)
+    private var inviteBalance = Coin.ZERO
+    private val _isInviteMixed = MutableStateFlow(false)
+    val isInviteMixed: StateFlow<Boolean>
+        get() = _isInviteMixed
+    var invitationNextStep: (() -> Unit)? = null
+    fun setCreateUsernameArgs(createUsernameArgs: CreateUsernameArgs?) {
+        createUsernameArgs?.let {
+            this.createUsernameArgs = it
+            viewModelScope.launch {
+                getInviteAssetLockTransaction()
+            }
+        }
+    }
+
     suspend fun isUserNameRequested(): Boolean {
         val hasRequestedName = identityConfig.get(USERNAME).isNullOrEmpty().not()
         val creationState = BlockchainIdentityData.CreationState.valueOf(
@@ -137,13 +161,22 @@ class RequestUserNameViewModel @Inject constructor(
         identityConfig.get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK) ?: false
 
     fun canAffordNonContestedUsername(): Boolean {
-        return if (identity?.userId != null) {
-            val credits = _identityBalance.value
-            credits > Constants.DASH_PAY_FEE.value/10 * 1000
-        } else {
-            _walletBalance.value >= Constants.DASH_PAY_FEE
+        return when {
+            isUsingInvite() -> {
+                false
+            }
+
+            identity?.userId != null -> {
+                val credits = _identityBalance.value
+                credits > Constants.DASH_PAY_FEE.value / 10 * 1000
+            }
+
+            else -> {
+                _walletBalance.value >= Constants.DASH_PAY_FEE
+            }
         }
     }
+
     fun canAffordContestedUsername(): Boolean {
         return if (identity?.userId != null) {
             val credits = _identityBalance.value
@@ -218,14 +251,66 @@ class RequestUserNameViewModel @Inject constructor(
                 _walletBalance.value = it
             }
             .launchIn(viewModelScope)
+
+        inviteAssetLockTx.onEach {
+            inviteBalance = getInvitationAmount()
+        }.launchIn(viewModelWorkerScope)
     }
 
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
         val username = requestedUserName!!
+        val isUsingInvite = isUsingInvite()
+        when {
+            isUsingInvite && reuseTransaction -> {
+                walletApplication.startService(
+                    CreateIdentityService.createIntentFromInviteForNewUsername(
+                        walletApplication,
+                        username
+                    )
+                )
+            }
+            isUsingInvite -> {
+                walletApplication.startService(
+                    CreateIdentityService.createIntentFromInvite(
+                        walletApplication,
+                        username,
+                        createUsernameArgs!!.invite!!
+                    )
+                )
+            }
+            reuseTransaction -> {
+                walletApplication.startService(
+                    CreateIdentityService.createIntentForNewUsername(
+                        walletApplication,
+                        username
+                    )
+                )
+            }
+            else -> {
+                walletApplication.startService(
+                    CreateIdentityService.createIntent(
+                        walletApplication,
+                        username
+                    )
+                )
+            }
+        }
+    }
+
+    fun triggerIdentityCreationFromInvite(
+        reuseTransaction: Boolean,
+        fromOnboarding: Boolean,
+        inviteLinkData: InvitationLinkData
+    ) {
         if (reuseTransaction) {
-            walletApplication.startService(CreateIdentityService.createIntentForNewUsername(walletApplication, username))
+            walletApplication.startService(CreateIdentityService.createIntentFromInviteForNewUsername(walletApplication, requestedUserName!!))
         } else {
-            walletApplication.startService(CreateIdentityService.createIntent(walletApplication, username))
+            if (fromOnboarding) {
+                walletApplication.configuration.onboardingInviteUsername = requestedUserName
+                return
+            } else {
+                walletApplication.startService(CreateIdentityService.createIntentFromInvite(walletApplication, requestedUserName!!, inviteLinkData))
+            }
         }
     }
 
@@ -369,10 +454,18 @@ class RequestUserNameViewModel @Inject constructor(
         return uname.length in Constants.USERNAME_MIN_LENGTH..Constants.USERNAME_MAX_LENGTH
     }
 
+    private fun validateNonContestedUsernameSize(uname: String): Boolean {
+        return uname.length in Constants.USERNAME_NON_CONTESTED_MIN_LENGTH..Constants.USERNAME_MAX_LENGTH
+    }
+
     private fun validateUsernameCharacters(uname: String): Pair<Boolean, Boolean> {
         val alphaNumHyphenValid = !Regex("[^a-zA-Z0-9\\-]").containsMatchIn(uname)
         val startOrEndWithHyphen = uname.startsWith("-") || uname.endsWith("-")
         return Pair(alphaNumHyphenValid, startOrEndWithHyphen)
+    }
+
+    private fun validateNonContestedUsernameCharacters(uname: String): Boolean {
+        return Regex("[2-9]").containsMatchIn(uname)
     }
 
     fun checkUsernameValid(username: String): Boolean {
@@ -380,20 +473,12 @@ class RequestUserNameViewModel @Inject constructor(
         val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
         val contestable = Names.isUsernameContestable(username)
 
-        // if we have an identity, then we must use our identity balance
-//        val enoughIdentityBalance = if (contestable) {
-//            _identityBalance.value >= CONTEST_DOCUMENT_FEE
-//        } else {
-//            _identityBalance.value >= Constants.DASH_PAY_FEE.value / 3 * 1000
-//        }
-//        val enoughBalance = if (contestable) {
-//            _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
-//        } else {
-//            _walletBalance.value >= Constants.DASH_PAY_FEE
-//        }
         val identityBalance = _identityBalance.value
         val walletBalance = _walletBalance.value
+        val inviteBalance = this.inviteBalance
         val enoughBalance = when {
+            isUsingInvite() && contestable -> inviteBalance >= Constants.DASH_PAY_FEE_CONTESTED
+            isUsingInvite() && !contestable -> inviteBalance >= Constants.DASH_PAY_FEE
             identityBalance > 0L && contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000)
             identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000)
             identityBalance == 0L && contestable -> walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
@@ -409,6 +494,8 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameCheckSuccess = false,
+                usernameNonContestedLength = validateNonContestedUsernameSize(username),
+                usernameNonContestedChars = validateNonContestedUsernameCharacters(username)
             )
         }
         return validCharacters && validLength
@@ -436,5 +523,41 @@ class RequestUserNameViewModel @Inject constructor(
         return usernameRequestDao.getRequestsByNormalizedLabel(normalizedLabel).minOf {
             it.createdAt
         }
+    }
+
+    fun isUsingInvite(): Boolean = createUsernameArgs?.invite != null
+
+    suspend fun getInviteAssetLockTransaction(): AssetLockTransaction? = withContext(Dispatchers.IO) {
+        if (isUsingInvite()) {
+            inviteAssetLockTx.value = try {
+                topUpRepository.getAssetLockTransaction(createUsernameArgs?.invite!!)
+            } catch (e: Exception) {
+                null
+            }
+            isInviteMixed()
+        }
+        inviteAssetLockTx.value
+    }
+
+    fun getInvitationAmount(): Coin {
+        return inviteAssetLockTx.value?.let {
+            it.assetLockPayload.creditOutputs?.find { transactionOutput ->
+                if (ScriptPattern.isP2PKH(transactionOutput.scriptPubKey)) {
+                    it.assetLockPublicKey.pubKeyHash.contentEquals(
+                        ScriptPattern.extractHashFromP2PKH(transactionOutput.scriptPubKey)
+                    )
+                } else {
+                    false
+                }
+            }?.value ?: Coin.ZERO
+        } ?: Coin.ZERO
+    }
+
+    fun isInviteForContestedNames(): Boolean = getInvitationAmount() >= Constants.DASH_PAY_FEE_CONTESTED
+
+    private suspend fun isInviteMixed(): Unit = withContext(Dispatchers.IO) {
+        _isInviteMixed.value = inviteAssetLockTx.value?.let {
+            topUpRepository.isInvitationMixed(it)
+        } ?: false
     }
 }

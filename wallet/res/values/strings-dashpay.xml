@@ -435,8 +435,12 @@
 
     <string name="request_username_username_voting_message">+ what is username voting?</string>
     <string name="request_username_character_requirement">Letters, numbers and hyphens only</string>
+    <string name="request_username_character_requirement_invite_noncontested">Numbers 2-9</string>
     <string name="request_username_balance_requirement">You need to have 0.25 DASH to create this username</string>
+    <string name="request_username_requirements_message_invite_noncontested">The username must meet one of these criteria</string>
+    <string name="request_username_requirements_message">The username must meet these criteria</string>
     <string name="request_username_length_requirement">Between 3 and 23 characters</string>
+    <string name="request_username_length_requirement_noncontested">Between 20 and 23 characters</string>
     <string name="request_username_confirm">I accept</string>
     <string name="username_vote_one_left_message">You have already voted for this username %d times. You can only cast one more vote for this username.</string>
     <string name="username_vote_one_left">One vote left</string>
@@ -475,4 +479,6 @@
     <string name="invitation_creating_progress_wip">Creating Invitation...</string>
     <string name="invitation_fee_confirm_and_pay_button">Confirm and pay</string>
     <string name="error_sending_invite_transaction">Error sending invite transaction</string>
+    <string name="request_username_invitation_not_mixed_message">The invitation was created with unmixed funds</string>
+    <string name="request_username_invitation_only_noncontested_message">You can only create a non-contested username using this invitation</string>
 </resources>
