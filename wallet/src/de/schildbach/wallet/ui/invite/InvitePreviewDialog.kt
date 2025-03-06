@@ -19,39 +19,70 @@ package de.schildbach.wallet.ui.invite
 import android.content.Context
 import android.os.Bundle
 import android.view.View
+import android.widget.Button
+import android.widget.TextView
+import androidx.annotation.DrawableRes
+import androidx.core.text.HtmlCompat
+import androidx.core.view.isVisible
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.InvitationPreviewViewBinding
-import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
-open class InvitePreviewDialog : FancyAlertDialog() {
-
+open class InvitePreviewDialog : AdaptiveDialog(R.layout.invitation_preview_view) {
     companion object {
-        fun newInstance(context: Context, profile: DashPayProfile): FancyAlertDialog {
+        private const val EXTRA_PROFILE = "profile"
+        fun newInstance(context: Context, profile: DashPayProfile): InvitePreviewDialog {
             return newInstance(context, profile.nameLabel).apply {
-                arguments!!.putParcelable("profile", profile)
+                arguments!!.putParcelable(EXTRA_PROFILE, profile)
             }
         }
 
-        fun newInstance(context: Context, nameLabel: String): FancyAlertDialog {
+        fun newInstance(context: Context, nameLabel: String): InvitePreviewDialog {
             val messageHtml = context.getString(R.string.invitation_preview_message, "<b>${nameLabel}</b>")
+            return create(null, "", messageHtml, context.getString(R.string.button_ok))
+        }
+
+        @JvmStatic
+        fun create(
+            @DrawableRes icon: Int?,
+            title: String,
+            message: String,
+            negativeButtonText: String
+        ): InvitePreviewDialog {
+            return custom(
+                icon, title, message, negativeButtonText
+            )
+        }
+
+        @JvmStatic
+        fun custom(
+            @DrawableRes icon: Int?,
+            title: String?,
+            message: String,
+            negativeButtonText: String
+        ): InvitePreviewDialog {
+            val args = Bundle().apply {
+                icon?.let { putInt(ICON_RES_ARG, icon) }
+                putString(TITLE_ARG, title)
+                putString(MESSAGE_ARG, message)
+                putString(NEG_BUTTON_ARG, negativeButtonText)
+                putBoolean(CUSTOM_DIALOG_ARG, true)
+            }
             return InvitePreviewDialog().apply {
-                arguments = createBaseArguments(Type.INFO, 0, 0, R.string.invitation_preview_close)
-                        .apply {
-                            putString("message", messageHtml)
-                        }
+                arguments = args
             }
         }
     }
 
-    override val customContentViewResId: Int
-        get() = R.layout.invitation_preview_view
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val binding = InvitationPreviewViewBinding.bind(view)
-
+        val profilePictureEnvelope: InvitePreviewEnvelopeView = view.findViewById(R.id.profile_picture_envelope)!!
         val profile = requireArguments().getParcelable<DashPayProfile>("profile")
-        binding.profilePictureEnvelope.avatarProfile = profile
+        profilePictureEnvelope.avatarProfile = profile
+        val messageObj = requireArguments().getString(MESSAGE_ARG)!!
+        val message: TextView = view.findViewById(R.id.dialog_message)!!
+        message.text = HtmlCompat.fromHtml(messageObj, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        view.findViewById<Button>(R.id.dialog_positive_button)!!.isVisible = false
+        view.findViewById<Button>(R.id.dialog_title)!!.isVisible = false
     }
 }

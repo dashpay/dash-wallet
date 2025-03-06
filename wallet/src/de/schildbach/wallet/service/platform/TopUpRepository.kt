@@ -56,7 +56,6 @@ import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
-import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion
 import de.schildbach.wallet.ui.dashpay.work.SendInviteWorker
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CoroutineScope

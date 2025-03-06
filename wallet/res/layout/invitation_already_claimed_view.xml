@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp"
+    tools:context="org.dash.wallet.common.ui.dialogs.AdaptiveDialog">
 
     <de.schildbach.wallet.ui.invite.InviteErrorEnvelopeView
         android:id="@+id/profile_picture_envelope"
@@ -9,4 +15,52 @@
         android:layout_height="140dp"
         android:layout_gravity="center_horizontal" />
 
-</FrameLayout>
+    <ImageView
+        android:id="@+id/dialog_icon"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_gravity="center_horizontal"
+        android:visibility="gone"
+        tools:src="@drawable/ic_error" />
+
+    <TextView
+        android:id="@+id/dialog_title"
+        style="@style/Subtitle1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="10dp"
+        android:gravity="center"
+        android:textAlignment="gravity"
+        android:visibility="gone"
+        tools:text="Not a valid QR Code" />
+
+    <TextView
+        android:id="@+id/dialog_message"
+        style="@style/Body2.Secondary"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginBottom="25dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:textAlignment="gravity"
+        app:layout_constraintTop_toTopOf="@id/title"
+        tools:text="Please use a valid Dash QR code" />
+
+    <Button
+        android:id="@+id/dialog_positive_button"
+        style="@style/Button.Primary.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        tools:text="Okay" />
+
+    <Button
+        android:id="@+id/dialog_negative_button"
+        style="@style/Button.Tertiary.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        tools:text="Cancel" />
+</LinearLayout>
+

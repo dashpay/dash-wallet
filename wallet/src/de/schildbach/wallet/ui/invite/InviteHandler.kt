@@ -33,7 +33,6 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dashj.platform.dpp.errors.ConcensusErrorMetadata
 import org.dashj.platform.dpp.errors.concensus.ConcensusException
@@ -45,7 +44,7 @@ import javax.inject.Inject
 
 class InviteHandler(val activity: FragmentActivity, private val analytics: AnalyticsService) {
 
-    private lateinit var inviteLoadingDialog: FancyAlertDialog
+    private lateinit var inviteLoadingDialog: AdaptiveDialog
     @Inject lateinit var platformRepo: PlatformRepo
 
     companion object {
@@ -150,7 +149,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
             R.drawable.ic_invalid_invite,
             activity.getString(R.string.invitation_username_already_found_title),
             activity.getString(R.string.invitation_username_already_found_message),
-            activity.getString(R.string.okay)
+            activity.getString(R.string.button_ok)
         ).show(activity) {
             handleDialogButtonClick(activity)
         }
@@ -181,12 +180,17 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
         if (::inviteLoadingDialog.isInitialized && inviteLoadingDialog.isAdded) {
             inviteLoadingDialog.dismissAllowingStateLoss()
         }
-        inviteLoadingDialog = FancyAlertDialog.newProgress(R.string.invitation_verifying_progress_title, 0)
+        inviteLoadingDialog = AdaptiveDialog.progress(activity.getString(R.string.invitation_verifying_progress_title))
         inviteLoadingDialog.show(activity.supportFragmentManager, null)
     }
 
     private fun showInsufficientFundsDialog() {
-        val dialog = FancyAlertDialog.newProgress(R.string.invitation_invalid_invite_title, R.string.dashpay_insuffient_credits)
+        val dialog = AdaptiveDialog.create(
+            R.drawable.ic_error,
+            activity.getString(R.string.invitation_invalid_invite_title),
+            activity.getString(R.string.dashpay_insuffient_credits),
+            activity.getString(R.string.button_ok)
+        )
         dialog.show(activity.supportFragmentManager, null)
         analytics.logEvent(AnalyticsConstants.Invites.ERROR_INSUFFICIENT_FUNDS, mapOf())
     }

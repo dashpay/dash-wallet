@@ -78,7 +78,6 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.components.ComposeHostFrameLayout
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.observe
@@ -295,11 +294,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                             R.string.serious_error_unknown
                         }
                     }
-                    val dialog = FancyAlertDialog.newInstance(
-                        R.string.serious_error_title,
-                        messageId, R.drawable.ic_error,
-                        R.string.button_ok,
-                        R.string.button_cancel
+                    val dialog = AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.serious_error_title),
+                        getString(messageId),
+                        getString(R.string.button_ok),
+                        getString(R.string.button_cancel)
                     )
                     dialog.show(supportFragmentManager, "serious_error_dialog")
                     viewModel.processingSeriousError = true
