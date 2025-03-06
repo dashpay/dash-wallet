@@ -83,7 +83,8 @@ class RestoreWalletFromFileViewModel @Inject constructor(
                     R.string.set_pin_restore_wallet,
                     false,
                     password,
-                    onboarding = true
+                    onboarding = true,
+                    onboardingPath = OnboardingPath.RestoreFile
                 )
             )
         }

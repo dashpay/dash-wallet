@@ -74,7 +74,7 @@ jobs:
       run: bash .deploy/checksum.sh checksum.txt
       
     - name: Gem caching
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       continue-on-error: true
       with:
         path: vendor/bundle
@@ -90,7 +90,7 @@ jobs:
         bundle install --jobs 4 --retry 3
         
     - name: Cache Gradle packages
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       continue-on-error: true
       with:
         path: |

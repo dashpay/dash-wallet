@@ -29,12 +29,15 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.common.util.toFormattedString
+import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.R
 import org.dash.wallet.integrations.coinbase.databinding.FragmentCoinbaseOrderReviewBinding
 import org.dash.wallet.integrations.coinbase.model.*
@@ -58,17 +61,14 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
         super.onViewCreated(view, savedInstanceState)
 
         onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_ANDROID_BACK)
             findNavController().popBackStack()
         }
 
         binding.toolbar.setNavigationOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_TOP_BACK)
             findNavController().popBackStack()
         }
 
         binding.cancelBtn.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_CANCEL)
             val dialog = AdaptiveDialog.simple(
                 getString(R.string.cancel_transaction),
                 getString(R.string.no_keep_it),
@@ -77,10 +77,7 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
             dialog.isCancelable = false
             dialog.show(requireActivity()) { result ->
                 if (result == true) {
-                    viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_CANCEL_YES)
                     findNavController().popBackStack()
-                } else {
-                    viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_CANCEL_NO)
                 }
             }
         }
@@ -97,7 +94,19 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_FEE_INFO)
-            safeNavigate(CoinbaseOrderReviewFragmentDirections.orderReviewToFeeInfo())
+            ExtraActionDialog.create(
+                R.drawable.ic_info_blue,
+                getString(R.string.fees_in_crypto_purchase),
+                getString(R.string.coinbase_fee_info_msg_content),
+                negativeButtonText = getString(android.R.string.ok),
+                extraMessage =  getString(R.string.learn_more)
+            ).show(
+                requireActivity(),
+                onResult = { },
+                onExtraMessageAction = {
+                    requireActivity().openCustomTab(CoinbaseConstants.FEE_INFO_URL)
+                }
+            )
         }
 
         sharedViewModel.uiState.observe(viewLifecycleOwner) { state ->
@@ -157,9 +166,10 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
     private suspend fun tryBuyDash(): Boolean {
         try {
             AdaptiveDialog.withProgress(getString(R.string.loading), requireActivity()) {
-                viewModel.buyDash(true)
+                viewModel.buyDash()
             }
         } catch (ex: Exception) {
+            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ERROR)
             showBuyOrderDialog(ex.message ?: getString(R.string.retry_later_message))
             return false
         }

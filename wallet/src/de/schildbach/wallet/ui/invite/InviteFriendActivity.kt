@@ -37,20 +37,20 @@ class InviteFriendActivity : LockScreenActivity() {
     companion object {
         private val log = LoggerFactory.getLogger(InviteFriendActivity::class.java)
         private const val ARG_IDENTITY_ID = "identity_id"
-        private const val ARG_STARTED_BY_HISTORY = "started_by_history"
+        private const val ARG_SOURCE = "source"
         private const val ARG_INVITE_INDEX = "invite_index"
 
         @JvmStatic
-        fun createIntent(context: Context, startedByHistory: Boolean): Intent {
+        fun createIntent(context: Context, source: String): Intent {
             val intent = Intent(context, InviteFriendActivity::class.java)
             intent.putExtra(ARG_IDENTITY_ID, "")
-            intent.putExtra(ARG_STARTED_BY_HISTORY, startedByHistory)
+            intent.putExtra(ARG_SOURCE, source)
             return intent
         }
 
-        fun startOrError(activity: FragmentActivity, startedByHistory: Boolean = false) {
+        fun startOrError(activity: FragmentActivity, source: String = "") {
             if (WalletApplication.getInstance().canAffordIdentityCreation()) {
-                activity.startActivity(createIntent(activity, startedByHistory))
+                activity.startActivity(createIntent(activity, source))
             } else {
                 val title = activity.getString(R.string.invitation_cant_afford_title)
                 val message = activity.getString(R.string.invitation_cant_afford_message, Constants.DASH_PAY_FEE.toPlainString())
@@ -65,10 +65,10 @@ class InviteFriendActivity : LockScreenActivity() {
             }
         }
 
-        fun createIntentExistingInvite(context: Context, userId: String, inviteIndex: Int, startedByHistory: Boolean = true): Intent {
+        fun createIntentExistingInvite(context: Context, userId: String, inviteIndex: Int, source: String = ""): Intent {
             val intent = Intent(context, InviteFriendActivity::class.java)
             intent.putExtra(ARG_IDENTITY_ID, userId)
-            intent.putExtra(ARG_STARTED_BY_HISTORY, startedByHistory)
+            intent.putExtra(ARG_SOURCE, source)
             intent.putExtra(ARG_INVITE_INDEX, inviteIndex)
             return intent
         }
@@ -79,7 +79,7 @@ class InviteFriendActivity : LockScreenActivity() {
         setContentView(R.layout.activity_invite_friends)
 
         val userId = intent.extras?.getString(ARG_IDENTITY_ID, "") ?: ""
-        val startedByHistory = intent.extras?.getBoolean(ARG_STARTED_BY_HISTORY, false) ?: false
+        val source = intent.extras?.getString(ARG_SOURCE, "") ?: ""
 
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_invite_friends) as NavHostFragment
         val graphInflater = navHostFragment.navController.navInflater
@@ -87,7 +87,7 @@ class InviteFriendActivity : LockScreenActivity() {
         val navController = navHostFragment.navController
 
         val bundle = Bundle()
-        bundle.putBoolean(ARG_STARTED_BY_HISTORY, startedByHistory)
+        bundle.putString(ARG_SOURCE, source)
 
         val destination = if (userId.isEmpty()) {
             R.id.inviteFriendFragment

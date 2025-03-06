@@ -62,17 +62,4 @@ class CTXSpendTermsDialog : OffsetDialogFragment(R.layout.dialog_dashspend_terms
         onResultListener = onResult
         show(activity)
     }
-
-    override fun onResume() {
-        super.onResume()
-        reloadDialogMessage()
-    }
-
-    private fun reloadDialogMessage() {
-        binding.dialogMessage.text = if (viewModel.openedCTXSpendTermsAndConditions) {
-            getString(R.string.accept_to_proceed)
-        } else {
-            getString(R.string.tap_link_to_proceed)
-        }
-    }
 }

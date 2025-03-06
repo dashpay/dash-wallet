@@ -1,24 +1,23 @@
 /*
- * Copyright 2020 Dash Core Group
+ * Copyright 2020 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package de.schildbach.wallet.ui
 
 import android.Manifest
-import android.Manifest.permission.READ_EXTERNAL_STORAGE
-import android.Manifest.permission.READ_MEDIA_IMAGES
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -27,16 +26,14 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.RectF
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -44,35 +41,29 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.ObjectKey
-import com.google.android.gms.auth.GoogleAuthException
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.AuthorizationResult
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.common.api.Scope
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIOException
-import com.google.api.services.drive.Drive
+import com.google.api.services.drive.DriveScopes
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
-import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityEditProfileBinding
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.script.ScriptBuilder
-import org.bitcoinj.wallet.AuthenticationKeyChain
-import org.bitcoinj.wallet.AuthenticationKeyChainGroup
-import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
@@ -85,10 +76,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
 
-
 @AndroidEntryPoint
 class EditProfileActivity : LockScreenActivity() {
-
     companion object {
         private val log = LoggerFactory.getLogger(EditProfileActivity::class.java)
     }
@@ -107,9 +96,8 @@ class EditProfileActivity : LockScreenActivity() {
     private lateinit var takePictureLauncher: ActivityResultLauncher<Uri>
     private lateinit var chooseImageLauncher: ActivityResultLauncher<PickVisualMediaRequest>
     private lateinit var cropImageLauncher: ActivityResultLauncher<Intent>
-    private lateinit var googleDriveSignInLauncher: ActivityResultLauncher<Intent>
+    private lateinit var googleDriveAuthLauncher: ActivityResultLauncher<IntentSenderRequest>
 
-    private var mDrive: Drive? = null
     private var showSaveReminderDialog = false
     private var initialDisplayName = ""
     private var initialAboutMe = ""
@@ -130,57 +118,36 @@ class EditProfileActivity : LockScreenActivity() {
         }
         val redTextColor = ContextCompat.getColor(this, R.color.dash_red)
         val mediumGrayTextColor = ContextCompat.getColor(this, R.color.dash_medium_gray)
-        binding.displayName.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) {
-                showSaveReminderDialog = initialDisplayName != s?.toString()
-                setEditingState(true)
-                imitateUserInteraction()
-                val charCount = s?.trim()?.length ?: 0
-                binding.displayNameCharCount.text = getString(R.string.char_count, charCount,
-                    Constants.DISPLAY_NAME_MAX_LENGTH)
-                if (charCount > Constants.DISPLAY_NAME_MAX_LENGTH) {
-                    binding.displayNameCharCount.setTextColor(redTextColor)
-                } else {
-                    binding.displayNameCharCount.setTextColor(mediumGrayTextColor)
-                }
-                updateSaveBtnState()
+        binding.displayName.doAfterTextChanged { s ->
+            showSaveReminderDialog = initialDisplayName != s?.toString()
+            setEditingState(true)
+            imitateUserInteraction()
+            val charCount = s?.trim()?.length ?: 0
+            binding.displayNameCharCount.text = getString(R.string.char_count, charCount,
+                Constants.DISPLAY_NAME_MAX_LENGTH)
+            if (charCount > Constants.DISPLAY_NAME_MAX_LENGTH) {
+                binding.displayNameCharCount.setTextColor(redTextColor)
+            } else {
+                binding.displayNameCharCount.setTextColor(mediumGrayTextColor)
             }
+            updateSaveBtnState()
+        }
 
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-
+        binding.aboutMe.doAfterTextChanged { s ->
+            showSaveReminderDialog = initialAboutMe != s?.toString()
+            setEditingState(true)
+            imitateUserInteraction()
+            binding.aboutMeCharCount.visibility = View.VISIBLE
+            val charCount = s?.trim()?.length ?: 0
+            binding.aboutMeCharCount.text = getString(R.string.char_count, charCount,
+                Constants.ABOUT_ME_MAX_LENGTH)
+            if (charCount > Constants.ABOUT_ME_MAX_LENGTH) {
+                binding.aboutMeCharCount.setTextColor(redTextColor)
+            } else {
+                binding.aboutMeCharCount.setTextColor(mediumGrayTextColor)
             }
-
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-
-            }
-        })
-
-        binding.aboutMe.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) {
-                showSaveReminderDialog = initialAboutMe != s?.toString()
-                setEditingState(true)
-                imitateUserInteraction()
-                binding.aboutMeCharCount.visibility = View.VISIBLE
-                val charCount = s?.trim()?.length ?: 0
-                binding.aboutMeCharCount.text = getString(R.string.char_count, charCount,
-                    Constants.ABOUT_ME_MAX_LENGTH)
-                if (charCount > Constants.ABOUT_ME_MAX_LENGTH) {
-                    binding.aboutMeCharCount.setTextColor(redTextColor)
-                } else {
-                    binding.aboutMeCharCount.setTextColor(mediumGrayTextColor)
-                }
-                updateSaveBtnState()
-            }
-
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-
-            }
-
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-
-            }
-
-        })
+            updateSaveBtnState()
+        }
         binding.save.setOnClickListener {
             saveButton()
         }
@@ -220,7 +187,7 @@ class EditProfileActivity : LockScreenActivity() {
             cropProfilePicture()
         }
 
-        takePicturePermissionLauncher =  registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+        takePicturePermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
                 takePicture()
             } else {
@@ -235,29 +202,10 @@ class EditProfileActivity : LockScreenActivity() {
             turnOnAutoLogout()
         }
 
-        // Initialize the launchers
         chooseImageLauncher = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { selectedImage: Uri? ->
-            // Handle the picked image
             if (selectedImage != null) {
-                // your code to handle the image
                 turnOnAutoLogout()
-
-                @Suppress("DEPRECATION")
-                val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
-                val cursor: Cursor? = contentResolver.query(
-                    selectedImage,
-                    filePathColumn, null, null, null
-                )
-                if (cursor != null) {
-                    cursor.moveToFirst()
-                    val columnIndex: Int = cursor.getColumnIndex(filePathColumn[0])
-                    val picturePath: String? = cursor.getString(columnIndex)
-                    if (picturePath != null) {
-                        editProfileViewModel.saveAsProfilePictureTmp(picturePath)
-                    } else {
-                        saveImageWithAuthority(selectedImage)
-                    }
-                }
+                handleSelectedImage(selectedImage)
             }
         }
 
@@ -269,22 +217,23 @@ class EditProfileActivity : LockScreenActivity() {
                     showProfilePictureServiceDialog()
                 }
             } else if (result.resultCode == Activity.RESULT_CANCELED) {
-                // if crop was canceled, then return the externalUrl to its original state
                 if (externalUrlSharedViewModel.externalUrl != null) {
+                    val avatarUrl = editProfileViewModel.dashPayProfile.value!!.avatarUrl
                     externalUrlSharedViewModel.externalUrl =
-                        if (editProfileViewModel.dashPayProfile.value!!.avatarUrl == "") {
-                            null
-                        } else {
-                            Uri.parse(editProfileViewModel.dashPayProfile.value!!.avatarUrl)
-                        }
+                        if (avatarUrl.isEmpty()) null else Uri.parse(avatarUrl)
                 }
             }
         }
 
-        googleDriveSignInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                // Handle Google Drive Sign In Result
-                handleGdriveSigninResult(result.data!!)
+        googleDriveAuthLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result: ActivityResult ->
+            lifecycleScope.launch {
+                try {
+                    val authorizationResult = Identity.getAuthorizationClient(this@EditProfileActivity)
+                        .getAuthorizationResultFromIntent(result.data)
+                    processGoogleAuthorizationResult(authorizationResult)
+                } catch (ex: Exception) {
+                    log.error("Failed to get auth result for Google Drive", ex)
+                }
             }
         }
     }
@@ -349,7 +298,7 @@ class EditProfileActivity : LockScreenActivity() {
                     showUploadedProfilePicture(it.data)
                 }
                 Status.ERROR -> {
-                    val error = if (it.exception is GoogleAuthException || it.exception is GoogleAuthIOException) {
+                    val error = if (it.exception is GoogleAuthIOException) {
                         UpdateProfileError.AUTHENTICATION
                     } else {
                         UpdateProfileError.UPLOAD
@@ -364,7 +313,7 @@ class EditProfileActivity : LockScreenActivity() {
         editProfileViewModel.uploadDialogAcceptLiveData.observe(this) { accepted ->
             imitateUserInteraction()
             if (accepted) {
-                walletApplication.configuration.setAcceptedUploadPolicy(editProfileViewModel.storageService.name, true)
+                configuration.setAcceptedUploadPolicy(editProfileViewModel.storageService.name, true)
                 startUploadProcess()
             }
         }
@@ -378,8 +327,59 @@ class EditProfileActivity : LockScreenActivity() {
 
     private fun startUploadProcess() {
         when (editProfileViewModel.storageService) {
-            EditProfileViewModel.ProfilePictureStorageService.IMGUR -> editProfileViewModel.uploadProfilePicture()
-            EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE -> requestGDriveAccess()
+            EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE -> {
+                authorizeGoogleDrive()
+            }
+            EditProfileViewModel.ProfilePictureStorageService.IMGUR -> {
+                editProfileViewModel.uploadProfilePicture()
+            }
+        }
+    }
+
+    private fun authorizeGoogleDrive() {
+        val authorizationRequest = AuthorizationRequest
+            .builder()
+            .setRequestedScopes(
+                listOf(Scope(DriveScopes.DRIVE))
+            ).build()
+
+        Identity.getAuthorizationClient(this@EditProfileActivity)
+            .authorize(authorizationRequest)
+            .addOnSuccessListener { authorizationResult ->
+                if (authorizationResult.hasResolution()) {
+                    try {
+                        val intentSenderRequest = IntentSenderRequest.Builder(authorizationResult.pendingIntent!!.intentSender).build()
+                        googleDriveAuthLauncher.launch(intentSenderRequest)
+                    } catch (e: Exception) {
+                        log.error("Failed to start Google Drive auth", e)
+                        showUploadErrorDialog(UpdateProfileError.AUTHENTICATION)
+                    }
+                } else {
+                    lifecycleScope.launch {
+                        // Access already granted, continue with user action
+                        processGoogleAuthorizationResult(authorizationResult)
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                log.error("Failed to authorize Google Drive", e)
+                showUploadErrorDialog(UpdateProfileError.AUTHENTICATION)
+            }
+    }
+
+    private suspend fun processGoogleAuthorizationResult(authorizationResult: AuthorizationResult) {
+        try {
+            val accessToken = authorizationResult.accessToken
+
+            if (accessToken != null) {
+                val credential = editProfileViewModel.createAndSaveGoogleDriveCredential(accessToken)
+                editProfileViewModel.uploadProfilePicture(credential)
+            } else {
+                showUploadErrorDialog(UpdateProfileError.AUTHENTICATION)
+            }
+        } catch (e: Exception) {
+            log.error("Failed to get Google credentials", e)
+            showUploadErrorDialog(UpdateProfileError.AUTHENTICATION)
         }
     }
 
@@ -396,7 +396,7 @@ class EditProfileActivity : LockScreenActivity() {
         if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
             uploadProfilePictureStateDialog!!.dismiss()
         }
-        Glide.with(this).load(url).circleCrop().into(binding.dashpayUserAvatar)
+        Glide.with(this).load(url).circleCrop().timeout(20000).into(binding.dashpayUserAvatar)
         showSaveReminderDialog = true
     }
 
@@ -516,6 +516,25 @@ class EditProfileActivity : LockScreenActivity() {
         takePictureLauncher.launch(tmpFileUri)
     }
 
+    private fun handleSelectedImage(selectedImage: Uri) {
+        val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
+        val cursor: Cursor? = contentResolver.query(
+            selectedImage,
+            filePathColumn, null, null, null
+        )
+        if (cursor != null) {
+            cursor.moveToFirst()
+            val columnIndex: Int = cursor.getColumnIndex(filePathColumn[0])
+            val picturePath: String? = cursor.getString(columnIndex)
+            cursor.close()
+            if (picturePath != null) {
+                editProfileViewModel.saveAsProfilePictureTmp(picturePath)
+            } else {
+                saveImageWithAuthority(selectedImage)
+            }
+        }
+    }
+
     private fun saveImageWithAuthority(uri: Uri) {
         var inputStream: InputStream? = null
         if (uri.authority != null) {
@@ -537,13 +556,13 @@ class EditProfileActivity : LockScreenActivity() {
     }
 
     private fun showProfilePictureServiceDialog(showDeleteDialog: Boolean = true) {
-        if (walletApplication.configuration.imgurDeleteHash.isNotEmpty() && showDeleteDialog) {
+        if (configuration.imgurDeleteHash.isNotEmpty() && showDeleteDialog) {
             DeleteProfilePictureConfirmationDialog().show(supportFragmentManager, null)
             return
         }
         selectProfilePictureSharedViewModel.onChooseStorageService.observe(this) {
             editProfileViewModel.storageService = it
-            if (walletApplication.configuration.getAcceptedUploadPolicy(editProfileViewModel.storageService.name)) {
+            if (configuration.getAcceptedUploadPolicy(editProfileViewModel.storageService.name)) {
                 startUploadProcess()
             } else {
                 UploadPolicyDialog().show(supportFragmentManager, null)
@@ -565,6 +584,7 @@ class EditProfileActivity : LockScreenActivity() {
                 .signature(ObjectKey(file.lastModified()))
                 .placeholder(defaultAvatar)
                 .transform(ProfilePictureTransformation.create(zoomedRect))
+                .timeout(20000)
                 .into(binding.dashpayUserAvatar)
             showSaveReminderDialog = true
         }
@@ -589,63 +609,6 @@ class EditProfileActivity : LockScreenActivity() {
         return FileProvider.getUriForFile(walletApplication, "${walletApplication.packageName}.file_attachment", file)
     }
 
-    //TODO: leave this for now, we might need it later
-//if the signed in do we need to do it again?
-    // TODO (ashikhmin): might be better to move GDrive related code to a separate service
-    // and inject it here or into the viewModel
-    private fun checkGDriveAccess() {
-        object : Thread() {
-            override fun run() {
-                val signInAccount: GoogleSignInAccount? = GoogleDriveService.getSigninAccount(applicationContext)
-                if (signInAccount != null) {
-                    runOnUiThread { applyGdriveAccessGranted(signInAccount) }
-                } else {
-                    runOnUiThread { applyGdriveAccessDenied() }
-                }
-            }
-        }.start()
-    }
-
-    private fun requestGDriveAccess() {
-        val signInAccount = GoogleDriveService.getSigninAccount(applicationContext)
-        val googleSignInClient = GoogleSignIn.getClient(this, GoogleDriveService.getGoogleSigninOptions())
-        if (signInAccount == null) {
-            googleDriveSignInLauncher.launch(googleSignInClient.signInIntent)
-        } else {
-            googleSignInClient.revokeAccess()
-                .addOnSuccessListener { googleDriveSignInLauncher.launch(googleSignInClient.signInIntent) }
-                .addOnFailureListener { e: java.lang.Exception? ->
-                    log.error("could not revoke access to drive: ", e)
-                    applyGdriveAccessDenied()
-                }
-        }
-    }
-
-    private fun applyGdriveAccessDenied() {
-        showUploadErrorDialog(UpdateProfileError.AUTHENTICATION)
-    }
-
-    private fun handleGdriveSigninResult(data: Intent) {
-        try {
-            log.info("gdrive: attempting to sign in to a google account")
-            val account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
-                ?: throw RuntimeException("empty account")
-            applyGdriveAccessGranted(account)
-        } catch (e: Exception) {
-            log.error("Google Drive sign-in failed, could not get account: ", e)
-            applyGdriveAccessDenied()
-        }
-    }
-
-    private fun applyGdriveAccessGranted(signInAccount: GoogleSignInAccount) {
-        log.info("gdrive: access granted to ${signInAccount.email} with: ${signInAccount.grantedScopes}")
-        mDrive = GoogleDriveService.getDriveServiceFromAccount(applicationContext, signInAccount)
-        log.info("gdrive: drive $mDrive")
-
-        editProfileViewModel.googleDrive = mDrive
-        editProfileViewModel.uploadProfilePicture()
-    }
-
     override fun finish() {
         if (showSaveReminderDialog) {
             AdaptiveDialog.create(
@@ -667,3 +630,4 @@ class EditProfileActivity : LockScreenActivity() {
         super.finish()
     }
 }
+

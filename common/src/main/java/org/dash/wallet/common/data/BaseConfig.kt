@@ -33,7 +33,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -41,7 +40,6 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.util.security.EncryptionProvider
 import java.io.IOException
 
-@OptIn(ExperimentalSerializationApi::class)
 abstract class BaseConfig(
     private val context: Context,
     private val name: String,

@@ -16,12 +16,10 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
-import android.os.PowerManager
 import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
@@ -31,7 +29,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
@@ -45,6 +42,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.data.OnboardingState
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import javax.inject.Inject
@@ -94,11 +92,11 @@ class SetPinActivity : InteractionAwareActivity() {
     private var state = State.SET_PIN
 
     companion object {
-
         private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
         private const val EXTRA_PASSWORD = "extra_password"
         private const val CHANGE_PIN = "change_pin"
         private const val EXTRA_ONBOARDING = "onboarding"
+        private const val EXTRA_ONBOARDING_PATH = "onboarding_path"
         private const val EXTRA_ONBOARDING_INVITE = "onboarding_invite"
         private const val UPGRADING_WALLET = "upgrading_wallet"
 
@@ -108,6 +106,7 @@ class SetPinActivity : InteractionAwareActivity() {
             context: Context, titleResId: Int,
             changePin: Boolean = false, pin: String? = null,
             onboarding: Boolean = false,
+            onboardingPath: OnboardingPath = OnboardingPath.Create,
             onboardingInvite: Boolean = false,
             upgradingWallet: Boolean = false
         ): Intent {
@@ -116,6 +115,7 @@ class SetPinActivity : InteractionAwareActivity() {
             intent.putExtra(CHANGE_PIN, changePin)
             intent.putExtra(EXTRA_PASSWORD, pin)
             intent.putExtra(EXTRA_ONBOARDING, onboarding || onboardingInvite)
+            intent.putExtra(EXTRA_ONBOARDING_PATH, onboardingPath)
             intent.putExtra(EXTRA_ONBOARDING_INVITE, onboardingInvite)
             intent.putExtra(UPGRADING_WALLET, upgradingWallet)
             return intent
@@ -546,8 +546,14 @@ class SetPinActivity : InteractionAwareActivity() {
 
     private fun startVerifySeedActivity() {
         val onboardingInvite = intent.getBooleanExtra(EXTRA_ONBOARDING_INVITE, false)
-        val onboarding = onboardingInvite || intent.getBooleanExtra(EXTRA_ONBOARDING, false)
         val verifySeedActivityIntent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
+        val onboarding = onboardingInvite || intent.getBooleanExtra(EXTRA_ONBOARDING, false)
+
+        if (onboarding) {
+            val path = intent.getSerializableExtra(EXTRA_ONBOARDING_PATH) as OnboardingPath
+            logSuccess(path)
+        }
+
         if (onboardingInvite) {
             startActivity(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_3, verifySeedActivityIntent))
         } else {
@@ -558,7 +564,10 @@ class SetPinActivity : InteractionAwareActivity() {
 
     private fun goHome() {
         startActivity(MainActivity.createIntent(this))
+
         if (intent.getBooleanExtra(EXTRA_ONBOARDING, false)) {
+            val path = intent.getSerializableExtra(EXTRA_ONBOARDING_PATH) as OnboardingPath
+            logSuccess(path)
             finishAffinity()
         } else {
             finish()
@@ -573,5 +582,13 @@ class SetPinActivity : InteractionAwareActivity() {
         }
 
         super.onPause()
+    }
+
+    private fun logSuccess(path: OnboardingPath) {
+        viewModel.logEvent(when (path) {
+            OnboardingPath.Create -> AnalyticsConstants.Onboarding.NEW_WALLET_SUCCESS
+            OnboardingPath.RestoreSeed -> AnalyticsConstants.Onboarding.RECOVERY_SUCCESS
+            OnboardingPath.RestoreFile -> AnalyticsConstants.Onboarding.RESTORE_FROM_FILE_SUCCESS
+        })
     }
 }

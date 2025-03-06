@@ -113,15 +113,28 @@ object WalletActivityExt {
                             .setPopUpTo(navController.graph.startDestinationId, true)
                             .build()
                     )
+                    return@setOnItemSelectedListener true
                 }
-                R.id.paymentsFragment -> viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
-                R.id.moreFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_MORE)
-                R.id.contactsFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_CONTACTS)
-                R.id.exploreFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_EXPLORE)
-                else -> { }
+                R.id.paymentsFragment -> {
+                    viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
+                    return@setOnItemSelectedListener onNavDestinationSelected(item, navController)
+                }
+                R.id.moreFragment -> {
+                    viewModel.logEvent(AnalyticsConstants.Home.NAV_MORE)
+                    return@setOnItemSelectedListener onNavDestinationSelected(item, navController)
+                }
+                R.id.contactsFragment -> {
+                    viewModel.logEvent(AnalyticsConstants.Home.NAV_CONTACTS)
+                    return@setOnItemSelectedListener onNavDestinationSelected(item, navController)
+                }
+                R.id.exploreFragment -> {
+                    viewModel.logEvent(AnalyticsConstants.Home.NAV_EXPLORE)
+                    return@setOnItemSelectedListener onNavDestinationSelected(item, navController)
+                }
+                else -> {
+                    return@setOnItemSelectedListener false
+                }
             }
-            onNavDestinationSelected(item, navController)
-            true
         }
         navView.setOnItemReselectedListener { item: MenuItem ->
             if (item.itemId == R.id.paymentsFragment) {

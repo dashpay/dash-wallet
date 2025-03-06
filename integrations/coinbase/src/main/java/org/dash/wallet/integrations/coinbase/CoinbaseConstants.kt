@@ -51,6 +51,7 @@ object CoinbaseConstants {
             "&meta[send_limit_currency]=USD" +
             "&meta[send_limit_period]=month" +
             "&account=all"
+    val FEE_INFO_URL = "https://help.coinbase.com/en/coinbase/trading-and-funding/pricing-and-fees/fees"
 
     fun getCacheDir(context: Context): File {
         return File(context.cacheDir, "coinbase")

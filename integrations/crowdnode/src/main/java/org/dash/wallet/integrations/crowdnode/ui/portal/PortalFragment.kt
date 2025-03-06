@@ -344,8 +344,6 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun showInfoDialog() {
-        viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_INFO_BUTTON)
-
         if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
             OnlineAccountDetailsDialog().show(parentFragmentManager, "online_account_details")
         } else {

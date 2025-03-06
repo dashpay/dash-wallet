@@ -61,7 +61,7 @@ data class DashPayProfile(@PrimaryKey val userId: String,
             return value ?: ""
         }
 
-        fun fromDocument(profile: Profile, username: String): DashPayProfile? {
+        fun fromDocument(profile: Profile, username: String): DashPayProfile {
             return DashPayProfile(profile.ownerId.toString(),
                     username,
                     getString(profile.displayName),
@@ -71,7 +71,7 @@ data class DashPayProfile(@PrimaryKey val userId: String,
                     profile.avatarFingerprint)
         }
 
-        fun fromDocument(document: Document, username: String): DashPayProfile? {
+        fun fromDocument(document: Document, username: String): DashPayProfile {
 
             val displayName = getField(document, "displayName")
             val publicMessage = getField(document, "publicMessage")

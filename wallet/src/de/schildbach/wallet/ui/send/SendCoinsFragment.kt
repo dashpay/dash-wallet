@@ -88,6 +88,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        viewModel.isQuickSend = args.isQuickScan
         binding.titleBar.setNavigationOnClickListener {
             requireActivity().finish()
         }
@@ -243,14 +244,13 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it) }
 
             try {
-                viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND)
+                viewModel.logSend()
 
                 if (enterAmountFragment?.maxSelected == true) {
                     viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
                 }
 
                 val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate, checkBalance)
-
                 onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
             } catch (ex: LeftoverBalanceException) {
                 val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
@@ -258,14 +258,14 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 if (shouldContinue == true) {
                     handleGo(false, autoAcceptContactRequest)
                 }
-            } catch (ex: InsufficientMoneyException) {
-                showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
-            } catch (ex: KeyCrypterException) {
-                showFailureDialog(ex)
-            } catch (ex: Wallet.CouldNotAdjustDownwards) {
-                showEmptyWalletFailedDialog()
             } catch (ex: Exception) {
-                showFailureDialog(ex)
+                viewModel.logSendError(args.paymentIntent.source)
+                when (ex) {
+                    is InsufficientMoneyException -> showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
+                    is KeyCrypterException -> showFailureDialog(ex)
+                    is Wallet.CouldNotAdjustDownwards -> showEmptyWalletFailedDialog()
+                    else -> showFailureDialog(ex)
+                }
             }
 
             viewModel.resetState()
@@ -327,7 +327,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     private fun onSignAndSendPaymentSuccess(transaction: Transaction, autoAcceptContactRequest: Boolean) {
-        viewModel.logSentEvent(enterAmountViewModel.dashToFiatDirection.value ?: true)
+        viewModel.logSendSuccess(enterAmountViewModel.dashToFiatDirection.value ?: true, args.paymentIntent.source)
         val callingActivity = requireActivity().callingActivity
 
         if (callingActivity != null) {

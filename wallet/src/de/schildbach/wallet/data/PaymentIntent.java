@@ -178,9 +178,7 @@ public final class PaymentIntent implements Parcelable {
 
     public boolean shouldConfirmAddress = false;
 
-    public void setShouldConfirmAddress(boolean confirm) {
-        shouldConfirmAddress = confirm;
-    }
+    public String source = "";
 
     private static final Logger log = LoggerFactory.getLogger(PaymentIntent.class);
 
@@ -521,6 +519,8 @@ public final class PaymentIntent implements Parcelable {
         }
         dest.writeString(payeeUserId);
         dest.writeString(payeeUsername);
+        dest.writeInt(shouldConfirmAddress ? 1 : 0);
+        dest.writeString(source);
     }
 
     public static final Parcelable.Creator<PaymentIntent> CREATOR = new Parcelable.Creator<PaymentIntent>() {
@@ -575,6 +575,8 @@ public final class PaymentIntent implements Parcelable {
 
         payeeUserId = in.readString();
         payeeUsername = in.readString();
+        shouldConfirmAddress = in.readInt() == 1;
+        source = in.readString();
     }
 
     public boolean getExpired() {

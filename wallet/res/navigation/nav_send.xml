@@ -29,6 +29,10 @@
         <argument
             android:name="paymentIntent"
             app:argType="de.schildbach.wallet.data.PaymentIntent" />
+
+        <argument
+            android:name="isQuickScan"
+            app:argType="boolean" />
     </fragment>
 
     <fragment

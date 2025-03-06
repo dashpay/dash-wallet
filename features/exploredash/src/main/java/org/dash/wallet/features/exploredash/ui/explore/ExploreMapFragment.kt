@@ -38,7 +38,6 @@ import com.google.android.gms.maps.model.*
 import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
@@ -92,9 +91,6 @@ class ExploreMapFragment : SupportMapFragment() {
             googleMap?.let { map ->
                 map.setOnCameraIdleListener {
                     viewModel.searchBounds = getGeoBounds(map)
-                    if (cameraMovementReason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
-                        viewModel.triggerPanAndZoomEvents(map.cameraPosition.zoom, getGeoBounds(map))
-                    }
                     viewModel.previousZoomLevel = map.cameraPosition.zoom
                     viewModel.previousCameraGeoBounds = getGeoBounds(map)
                 }
@@ -226,11 +222,6 @@ class ExploreMapFragment : SupportMapFragment() {
         if (isGooglePlayServicesAvailable()) {
             markerCollection = MarkerManager(googleMap).newCollection()
             markerCollection?.setOnMarkerClickListener { marker ->
-                if (viewModel.exploreTopic == ExploreTopic.Merchants) {
-                    viewModel.logEvent(AnalyticsConstants.Explore.SELECT_MERCHANT_MARKER)
-                } else {
-                    viewModel.logEvent(AnalyticsConstants.Explore.SELECT_ATM_MARKER)
-                }
                 viewModel.onMapMarkerSelected(marker.tag as Int)
                 true
             }

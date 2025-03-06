@@ -21,6 +21,7 @@ import android.net.Uri
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.navigation.NavDirections
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.DialogFragmentNavigator
 import androidx.navigation.fragment.FragmentNavigator
 import androidx.navigation.fragment.findNavController
@@ -51,8 +52,8 @@ fun DialogFragment.dialogSafeNavigate(directions: NavDirections) {
 }
 
 sealed class DeepLinkDestination(val deepLink: Uri) {
-    object ReceiveDash : DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/0"))
-    object SendDash : DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/1"))
+    data class ReceiveDash(val source: String) : DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/0/$source"))
+    data class SendDash(val source: String) : DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/1/$source"))
     data class Transaction(val txId: String) :
         DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/$txId"))
 }

@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_host_invite_friends"
     app:startDestination="@+id/inviteFriendFragment">
+
     <fragment
         android:id="@+id/inviteFriendFragment"
         android:name="de.schildbach.wallet.ui.invite.InviteFriendFragment"
@@ -22,9 +23,9 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
         <argument
-            android:name="started_from_history"
-            android:defaultValue="false"
-            app:argType="boolean" />
+            android:name="source"
+            android:defaultValue=""
+            app:argType="string" />
     </fragment>
 
     <fragment
@@ -33,9 +34,9 @@
         tools:layout="@layout/fragment_invite_created">
 
         <argument
-            android:name="started_from_history"
-            android:defaultValue="false"
-            app:argType="boolean" />
+            android:name="source"
+            android:defaultValue=""
+            app:argType="string" />
 
         <argument
             android:name="identity_id"
@@ -48,9 +49,9 @@
         tools:layout="@layout/fragment_invite_details">
 
         <argument
-            android:name="started_from_history"
-            android:defaultValue="false"
-            app:argType="boolean" />
+            android:name="source"
+            android:defaultValue=""
+            app:argType="string" />
         <argument
             android:name="invite_index"
             app:argType="integer" />
