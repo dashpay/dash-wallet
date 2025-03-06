@@ -159,8 +159,8 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             }
             updateView()
         }
-        viewModel.coinJoinMode.observe(viewLifecycleOwner) { mode ->
-            if (mode != CoinJoinMode.NONE) {
+        viewModel.coinJoinActive.observe(viewLifecycleOwner) { isActive ->
+            if (isActive) {
                 binding.paymentHeader.setBalanceTitle(getString(R.string.coinjoin_mixed_balance))
             }
         }

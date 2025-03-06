@@ -33,6 +33,7 @@ import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,7 +77,8 @@ class SendCoinsViewModel @Inject constructor(
     private val notificationService: NotificationService,
     private val platformRepo: PlatformRepo,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
-    coinJoinConfig: CoinJoinConfig
+    coinJoinConfig: CoinJoinConfig,
+    coinJoinService: CoinJoinService
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
@@ -131,9 +133,9 @@ class SendCoinsViewModel @Inject constructor(
     val contactData: LiveData<UsernameSearchResult>
         get() = _contactData
 
-    private var _coinJoinMode = MutableStateFlow(CoinJoinMode.NONE)
-    val coinJoinMode: Flow<CoinJoinMode>
-        get() = _coinJoinMode
+    private var _coinJoinActive = MutableStateFlow(false)
+    val coinJoinActive: Flow<Boolean>
+        get() = _coinJoinActive
     /** the resulting transaction is an asset lock transaction (default = false) */
     var isAssetLock = false
 
@@ -145,10 +147,10 @@ class SendCoinsViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        coinJoinConfig.observeMode()
-            .map { mode ->
-                _coinJoinMode.value = mode
-                if (mode == CoinJoinMode.NONE) {
+        coinJoinService.observeMixing()
+            .map { isMixing ->
+                _coinJoinActive.value = isMixing
+                if (!isMixing) {
                     MaxOutputAmountCoinSelector()
                 } else {
                     MaxOutputAmountCoinJoinCoinSelector(wallet)
@@ -406,7 +408,7 @@ class SendCoinsViewModel @Inject constructor(
             dryrunSendRequest = sendRequest
             _dryRunSuccessful.value = true
         } catch (ex: Exception) {
-            dryRunException = if (ex is InsufficientMoneyException && _coinJoinMode.value != CoinJoinMode.NONE && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
+            dryRunException = if (ex is InsufficientMoneyException && _coinJoinActive.value && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
                  InsufficientCoinJoinMoneyException(ex)
             } else {
                 ex

@@ -95,7 +95,7 @@ class WalletObserver(private val wallet: Wallet) {
                         // log.info("observing transaction sent: {} [=====] {}", tx.txId, this@WalletObserver)
                         if (tx.updateTime.time > oneHourAgo && observeTxConfidence) {
                             transactions[tx.txId] = tx
-                            tx.confidence.addEventListener(Threading.USER_THREAD, transactionConfidenceListener)
+                            tx.getConfidence(wallet.context).addEventListener(Threading.USER_THREAD, transactionConfidenceListener)
                             // log.info("observing transaction: start listening to {}", tx.txId)
                         }
                         trySend(tx).onFailure {
@@ -115,7 +115,7 @@ class WalletObserver(private val wallet: Wallet) {
                         val oneHourAgo = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1)
                         if (tx.updateTime.time > oneHourAgo && observeTxConfidence) {
                             transactions[tx.txId] = tx
-                            tx.confidence.addEventListener(Threading.USER_THREAD, transactionConfidenceListener)
+                            tx.getConfidence(wallet.context).addEventListener(Threading.USER_THREAD, transactionConfidenceListener)
                             // log.info("observing transaction: start listening to {}", tx.txId)
                         }
                         trySend(tx).onFailure {
@@ -165,7 +165,7 @@ class WalletObserver(private val wallet: Wallet) {
                 wallet.removeCoinsReceivedEventListener(coinsReceivedListener)
                 if (observeTxConfidence) {
                     transactions.forEach { (_, tx) ->
-                        tx.confidence.removeEventListener(transactionConfidenceListener)
+                        tx.getConfidence(wallet.context).removeEventListener(transactionConfidenceListener)
                         // log.info("observing transaction: stop listening to {}", tx.txId)
                     }
                     transactions.clear()

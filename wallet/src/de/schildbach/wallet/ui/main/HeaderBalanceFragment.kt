@@ -48,7 +48,7 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         requireView().setOnClickListener { viewModel.triggerHideBalance() }
 
         viewModel.exchangeRate.observe(viewLifecycleOwner) { updateBalance() }
-        viewModel.balance.observe(viewLifecycleOwner) { updateBalance() }
+        viewModel.totalBalance.observe(viewLifecycleOwner) { updateBalance() }
 
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { isSynced ->
             if (isSynced) {
@@ -71,7 +71,7 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
     }
 
     private fun updateBalance() {
-        val balance = viewModel.balance.value ?: Coin.ZERO
+        val balance = viewModel.totalBalance.value ?: Coin.ZERO
         binding.walletBalanceDash.setAmount(balance)
         viewModel.exchangeRate.value?.let { exchangeRate ->
             val rate = org.bitcoinj.utils.ExchangeRate(

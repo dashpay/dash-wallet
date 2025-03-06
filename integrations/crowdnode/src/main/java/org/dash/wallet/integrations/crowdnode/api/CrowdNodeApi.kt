@@ -243,7 +243,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
             notifyIfNeeded(appContext.getString(R.string.crowdnode_account_ready), "crowdnode_ready")
         } catch (ex: Exception) {
-            log.error("CrowdNode error: $ex")
+            log.error("CrowdNode error", ex)
             analyticsService.logError(ex, "status: ${signUpStatus.value}")
 
             apiError.value = ex
