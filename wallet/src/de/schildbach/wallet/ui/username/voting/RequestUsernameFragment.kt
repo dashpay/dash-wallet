@@ -290,6 +290,9 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             }
         }
         requestUserNameViewModel.invitationNextStep = { handleInvite() }
+        binding.nonContestedNameInfoButton.setOnClickListener {
+            UsernameTypesDialog().show(requireActivity())
+        }
     }
 
     private fun getCheckMarkImage(check: Boolean, empty: Boolean = false): Int {

@@ -296,6 +296,7 @@
                     android:layout_height="match_parent"
                     android:text="@string/request_username_invitation_only_noncontested_message" />
                 <ImageView
+                    android:id="@+id/non_contested_name_info_button"
                     android:layout_marginHorizontal="8dp"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
