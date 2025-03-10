@@ -20,12 +20,12 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentPagerAdapter
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.CreateUsernameActivity
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityAcceptInviteBinding
 import org.dash.wallet.common.InteractionAwareActivity

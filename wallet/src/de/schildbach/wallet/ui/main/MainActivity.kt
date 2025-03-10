@@ -160,7 +160,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         this.setupBottomNavigation(viewModel)
 
         initViewModel()
-        handleCreateFromInvite()
 
         if (savedInstanceState == null) {
             checkAlerts()
@@ -192,6 +191,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         viewModel.rateStale.observe(this) { state ->
             log.info("updateTrigger => rateStale: {}", state)
             showStaleRatesToast()
+        }
+        viewModel.isBlockchainSynced.observe(this) {
+            handleCreateFromInvite()
         }
     }
 
@@ -231,6 +233,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             if (it != null) {
                 if (retryCreationIfInProgress && it.creationInProgress) {
                     retryCreationIfInProgress = false
+                    // should this be executed after syncing is finished?
                     if (it.usingInvite) {
                         startService(CreateIdentityService.createIntentForRetryFromInvite(this, false))
                     } else {

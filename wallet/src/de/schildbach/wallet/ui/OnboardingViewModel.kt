@@ -28,7 +28,9 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.WalletFactory
 import de.schildbach.wallet.ui.util.SingleLiveEvent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.WalletEx
@@ -57,17 +59,22 @@ class OnboardingViewModel @Inject constructor(
     internal val startActivityAction = SingleLiveEvent<Intent>()
 
     fun createNewWallet(onboardingInvite: InvitationLinkData?) {
-        walletApplication.initEnvironmentIfNeeded()
-        val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS)
-        log.info("successfully created new wallet")
-        walletApplication.setWallet(wallet)
-        configuration.armBackupSeedReminder()
-
-        if (onboardingInvite != null) {
-            analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
-            startActivityAction.call(AcceptInviteActivity.createIntent(walletApplication, onboardingInvite, true))
-        } else {
-            finishCreateNewWalletAction.call(Unit)
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                walletApplication.initEnvironmentIfNeeded()
+                val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS)
+                log.info("successfully created new wallet")
+                walletApplication.setWallet(wallet)
+                configuration.armBackupSeedReminder()
+            }
+            if (onboardingInvite != null) {
+                analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
+                startActivityAction.call(
+                    AcceptInviteActivity.createIntent(walletApplication, onboardingInvite, true)
+                )
+            } else {
+                finishCreateNewWalletAction.call(Unit)
+            }
         }
     }
 

@@ -54,6 +54,7 @@ import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityLockScreenRootBinding
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.Configuration
@@ -73,6 +74,7 @@ open class LockScreenActivity : SecureActivity() {
 
     companion object {
         const val INTENT_EXTRA_KEEP_UNLOCKED = "LockScreenActivity.keep_unlocked"
+        const val INTENT_EXTRA_NO_BLOCKCHAIN_SERVICE = "LockScreenActivity.no_blockchain_service"
         private val log = LoggerFactory.getLogger(LockScreenActivity::class.java)
     }
 
@@ -175,7 +177,7 @@ open class LockScreenActivity : SecureActivity() {
 
     private fun setupBackupSeedReminder() {
         lifecycleScope.launch {
-            val hasBalance = walletApplication.observeTotalBalance().first().isPositive
+            val hasBalance = walletApplication.observeTotalBalance().firstOrNull()?.isPositive ?: false
             if (hasBalance && configuration.lastBackupSeedTime == 0L) {
                 configuration.setLastBackupSeedTime()
             }
@@ -248,7 +250,9 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun startBlockchainService() {
-        walletApplication.startBlockchainService(false)
+        if (intent.extras?.getBoolean(INTENT_EXTRA_NO_BLOCKCHAIN_SERVICE) != true) {
+            walletApplication.startBlockchainService(false)
+        }
     }
 
     private fun initView() {

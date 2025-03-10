@@ -474,11 +474,13 @@
     <string name="invitation_fee_noncontested">Non-contested</string>
     <string name="invitation_fee_contested">Contested</string>
     <string name="invitation_fee_contested_message">The person that you send this invitation to can request any username they want and the network will vote to approve it.</string>
-    <string name="invitation_fee_noncontested_message">The person that you send this invitation to can  request a username that has a number 2-9, is more than 20 characters or that has a hyphen.</string>
+    <string name="invitation_fee_noncontested_message">The person that you send this invitation to can request a username that has a number 2-9, is more than 20 characters.</string>
     <string name="invitation_creating_progress_loading">Loading Invite...</string>
     <string name="invitation_creating_progress_wip">Creating Invitation...</string>
     <string name="invitation_fee_confirm_and_pay_button">Confirm and pay</string>
     <string name="error_sending_invite_transaction">Error sending invite transaction</string>
     <string name="request_username_invitation_not_mixed_message">The invitation was created with unmixed funds</string>
     <string name="request_username_invitation_only_noncontested_message">You can only create a non-contested username using this invitation</string>
+    <string name="username_types_title">What are contested and non-contested usernames?</string>
+    <string name="username_types_message">There are two types of usernames: contested and non-contested.\n\nNon-contested usernames have at least one number (2-9) or are longer than 20 characters and will be automatically approved.\n\nIf you want to create a contested username which is shorter and without numbers, you need to register with DashPay without an invitation, pay the required fee and wait for approval upon completion of the voting period.</string>
 </resources>

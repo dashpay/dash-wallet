@@ -11,19 +11,17 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.SetPinActivity
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
+import de.schildbach.wallet.ui.username.request.UsernameTypesDialog
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.InteractionAwareActivity
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
@@ -31,7 +29,6 @@ import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import java.util.Date
-import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
@@ -54,19 +51,12 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             val username = text.toString()
             binding.inputWrapper.isEndIconVisible = username.isNotEmpty()
 
-            if (username.isNotEmpty()) {
-                val usernameIsValid = requestUserNameViewModel.checkUsernameValid(username)
-
-                if (usernameIsValid) { // ensure username meets basic rules before making a Platform query
-                    checkUsername(username)
-                } else {
-                    if (this::checkUsernameNotExistRunnable.isInitialized) {
-                        handler.removeCallbacks(checkUsernameNotExistRunnable)
-                        dashPayViewModel.searchUsername(null)
-                    }
-                }
-            }
+            processUsername(username)
             (requireActivity() as? InteractionAwareActivity)?.imitateUserInteraction()
+        }
+
+        requestUserNameViewModel.inviteBalance.observe(viewLifecycleOwner) {
+            processUsername(binding.usernameInput.text.toString())
         }
 
         binding.inputWrapper.endIconMode = TextInputLayout.END_ICON_CUSTOM
@@ -128,7 +118,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 showErrorDialog()
             }
 
-            if (!requestUserNameViewModel.isUsingInvite()) {
+            if (!requestUserNameViewModel.isUsingInvite() || requestUserNameViewModel.isInviteForContestedNames()) {
                 binding.checkLetters.setImageResource(
                     getCheckMarkImage(
                         it.usernameCharactersValid,
@@ -239,7 +229,6 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                     hideKeyboard()
                     checkViewConfirmDialog()
                 }
-
             } else {
                 binding.votingPeriodContainer.isVisible = false
                 binding.walletBalanceContainer.isVisible = false
@@ -255,24 +244,27 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         } else {
             binding.inviteWithUnmixedFunds.isVisible = false
         }
-        binding.inviteOnlyNoncontested.isVisible = requestUserNameViewModel.isUsingInvite() &&
-            !requestUserNameViewModel.isInviteForContestedNames()
-        binding.usernameRequirements.isVisible = requestUserNameViewModel.isUsingInvite()
-        val isInviteContested = requestUserNameViewModel.isUsingInvite() && requestUserNameViewModel.isInviteForContestedNames()
-        binding.charLengthRequirement.text = getString(
-            if (isInviteContested) {
-                R.string.request_username_length_requirement
-            } else {
-                R.string.request_username_length_requirement_noncontested
-            }
-        )
-        binding.allowedCharsRule.text = getString(
-            if (isInviteContested) {
-                R.string.request_username_character_requirement
-            } else {
-                R.string.request_username_character_requirement_invite_noncontested
-            }
-        )
+        requestUserNameViewModel.inviteBalance.observe(viewLifecycleOwner) {
+            val isInviteForContestedNames = requestUserNameViewModel.isInviteForContestedNames()
+            val isInviteContested = requestUserNameViewModel.isUsingInvite() && requestUserNameViewModel.isInviteForContestedNames()
+            binding.charLengthRequirement.text = getString(
+                if (isInviteContested) {
+                    R.string.request_username_length_requirement
+                } else {
+                    R.string.request_username_length_requirement_noncontested
+                }
+            )
+            binding.allowedCharsRule.text = getString(
+                if (isInviteContested) {
+                    R.string.request_username_character_requirement
+                } else {
+                    R.string.request_username_character_requirement_invite_noncontested
+                }
+            )
+            binding.inviteOnlyNoncontested.isVisible = requestUserNameViewModel.isUsingInvite() &&
+                    !isInviteForContestedNames
+            binding.usernameRequirements.isVisible = requestUserNameViewModel.isUsingInvite() && !isInviteForContestedNames
+        }
 
         dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
             if (it?.usernameRequested == UsernameRequestStatus.LOST_VOTE || it?.usernameRequested == UsernameRequestStatus.LOCKED) {
@@ -292,6 +284,21 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         requestUserNameViewModel.invitationNextStep = { handleInvite() }
         binding.nonContestedNameInfoButton.setOnClickListener {
             UsernameTypesDialog().show(requireActivity())
+        }
+    }
+
+    private fun processUsername(username: String) {
+        if (username.isNotEmpty()) {
+            val usernameIsValid = requestUserNameViewModel.checkUsernameValid(username)
+
+            if (usernameIsValid) { // ensure username meets basic rules before making a Platform query
+                checkUsername(username)
+            } else {
+                if (this::checkUsernameNotExistRunnable.isInitialized) {
+                    handler.removeCallbacks(checkUsernameNotExistRunnable)
+                    dashPayViewModel.searchUsername(null)
+                }
+            }
         }
     }
 

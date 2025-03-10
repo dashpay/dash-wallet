@@ -1132,7 +1132,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<Coin> observeTotalBalance() {
-        if (wallet == null) {
+        if (wallet == null || walletBalanceObserver == null) {
             return FlowKt.emptyFlow();
         }
 
@@ -1142,7 +1142,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<Coin> observeMixedBalance() {
-        if (wallet == null) {
+        if (wallet == null || walletBalanceObserver == null) {
             return FlowKt.emptyFlow();
         }
 
@@ -1155,7 +1155,7 @@ public class WalletApplication extends MultiDexApplication
         @NonNull Wallet.BalanceType balanceType,
         @Nullable CoinSelector coinSelector
     ) {
-        if (wallet == null) {
+        if (wallet == null || walletBalanceObserver == null) {
             return FlowKt.emptyFlow();
         }
 

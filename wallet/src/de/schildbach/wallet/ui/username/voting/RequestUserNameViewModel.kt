@@ -22,7 +22,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
-import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CREATION_STATE
@@ -125,7 +124,9 @@ class RequestUserNameViewModel @Inject constructor(
 
     private var createUsernameArgs: CreateUsernameArgs? = null
     private val inviteAssetLockTx = MutableStateFlow<AssetLockTransaction?>(null)
-    private var inviteBalance = Coin.ZERO
+    private val _inviteBalance = MutableStateFlow(Coin.ZERO)
+    val inviteBalance: StateFlow<Coin>
+        get() = _inviteBalance
     private val _isInviteMixed = MutableStateFlow(false)
     val isInviteMixed: StateFlow<Boolean>
         get() = _isInviteMixed
@@ -253,14 +254,19 @@ class RequestUserNameViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         inviteAssetLockTx.onEach {
-            inviteBalance = getInvitationAmount()
+            _inviteBalance.value = getInvitationAmount()
         }.launchIn(viewModelWorkerScope)
     }
 
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
         val username = requestedUserName!!
         val isUsingInvite = isUsingInvite()
+        val fromOnboarding = createUsernameArgs?.fromOnboardng ?: false
         when {
+            fromOnboarding -> {
+                // postpone username creation till later
+                walletApplication.configuration.onboardingInviteUsername = requestedUserName
+            }
             isUsingInvite && reuseTransaction -> {
                 walletApplication.startService(
                     CreateIdentityService.createIntentFromInviteForNewUsername(
@@ -297,22 +303,22 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    fun triggerIdentityCreationFromInvite(
-        reuseTransaction: Boolean,
-        fromOnboarding: Boolean,
-        inviteLinkData: InvitationLinkData
-    ) {
-        if (reuseTransaction) {
-            walletApplication.startService(CreateIdentityService.createIntentFromInviteForNewUsername(walletApplication, requestedUserName!!))
-        } else {
-            if (fromOnboarding) {
-                walletApplication.configuration.onboardingInviteUsername = requestedUserName
-                return
-            } else {
-                walletApplication.startService(CreateIdentityService.createIntentFromInvite(walletApplication, requestedUserName!!, inviteLinkData))
-            }
-        }
-    }
+//    fun triggerIdentityCreationFromInvite(
+//        reuseTransaction: Boolean,
+//        fromOnboarding: Boolean,
+//        inviteLinkData: InvitationLinkData
+//    ) {
+//        if (reuseTransaction) {
+//            walletApplication.startService(CreateIdentityService.createIntentFromInviteForNewUsername(walletApplication, requestedUserName!!))
+//        } else {
+//            if (fromOnboarding) {
+//                walletApplication.configuration.onboardingInviteUsername = requestedUserName
+//                return
+//            } else {
+//                walletApplication.startService(CreateIdentityService.createIntentFromInvite(walletApplication, requestedUserName!!, inviteLinkData))
+//            }
+//        }
+//    }
 
     fun submit() {
         // Reset ui state for retry if needed
@@ -353,24 +359,24 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    private fun updateUiForApiSuccess() {
-        _uiState.update {
-            it.copy(
-                usernameCheckSuccess = true,
-                usernameRequestSubmitting = false,
-                usernameRequestSubmitted = true,
-                usernameSubmittedError = false
-            )
-        }
-    }
-    private fun updateUiForApiError() {
-        _uiState.update { it ->
-            it.copy(
-                usernameCheckSuccess = false,
-                usernameSubmittedError = true
-            )
-        }
-    }
+//    private fun updateUiForApiSuccess() {
+//        _uiState.update {
+//            it.copy(
+//                usernameCheckSuccess = true,
+//                usernameRequestSubmitting = false,
+//                usernameRequestSubmitted = true,
+//                usernameSubmittedError = false
+//            )
+//        }
+//    }
+//    private fun updateUiForApiError() {
+//        _uiState.update { it ->
+//            it.copy(
+//                usernameCheckSuccess = false,
+//                usernameSubmittedError = true
+//            )
+//        }
+//    }
 
     fun checkUsername(requestedUserName: String?) {
         viewModelScope.launch {
@@ -475,7 +481,7 @@ class RequestUserNameViewModel @Inject constructor(
 
         val identityBalance = _identityBalance.value
         val walletBalance = _walletBalance.value
-        val inviteBalance = this.inviteBalance
+        val inviteBalance = _inviteBalance.value
         val enoughBalance = when {
             isUsingInvite() && contestable -> inviteBalance >= Constants.DASH_PAY_FEE_CONTESTED
             isUsingInvite() && !contestable -> inviteBalance >= Constants.DASH_PAY_FEE

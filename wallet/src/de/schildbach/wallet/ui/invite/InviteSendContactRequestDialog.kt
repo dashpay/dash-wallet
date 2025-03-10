@@ -19,10 +19,12 @@ package de.schildbach.wallet.ui.invite
 import android.content.Context
 import android.os.Bundle
 import android.view.View
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.core.text.HtmlCompat
+import androidx.core.view.isVisible
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet_test.R
@@ -75,6 +77,8 @@ open class InviteSendContactRequestDialog : AdaptiveDialog(R.layout.invite_send_
         super.onViewCreated(view, savedInstanceState)
         val avatar: ImageView = view.findViewById(R.id.avatar)
         val icon: ImageView = view.findViewById(R.id.icon)
+        view.findViewById<TextView>(R.id.dialog_title).isVisible = false
+        view.findViewById<Button>(R.id.dialog_positive_button)!!.isVisible = false
         requireArguments().apply {
             val messageObj = getString("message")!!
             val message: TextView = view.findViewById(R.id.dialog_message)!!
