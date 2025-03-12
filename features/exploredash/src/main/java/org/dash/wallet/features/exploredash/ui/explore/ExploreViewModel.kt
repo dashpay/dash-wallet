@@ -445,7 +445,7 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun openAllMerchantLocations(merchantId: Long, source: String) {
+    fun openAllMerchantLocations(merchantId: String?, source: String) {
         _screenState.postValue(ScreenState.MerchantLocations)
         this.allMerchantLocationsJob?.cancel()
         this.allMerchantLocationsJob =

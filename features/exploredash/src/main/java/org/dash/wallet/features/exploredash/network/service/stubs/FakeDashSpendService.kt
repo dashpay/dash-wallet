@@ -46,7 +46,15 @@ class FakeDashSpendService @Inject constructor(
         beforeSending: Consumer<Transaction>?,
         canSendLockedOutput: Predicate<TransactionOutput>?
     ): Transaction {
-        return realService.sendCoins(address, amount, coinSelector, emptyWallet, checkBalanceConditions, beforeSending, canSendLockedOutput)
+        return realService.sendCoins(
+            address,
+            amount,
+            coinSelector,
+            emptyWallet,
+            checkBalanceConditions,
+            beforeSending,
+            canSendLockedOutput
+        )
     }
 
     override suspend fun estimateNetworkFee(

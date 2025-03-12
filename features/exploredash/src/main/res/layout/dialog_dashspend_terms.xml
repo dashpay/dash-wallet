@@ -38,22 +38,11 @@
         style="@style/Headline5"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
+        android:layout_marginHorizontal="60dp"
         android:layout_marginTop="22dp"
         android:gravity="center"
         android:textAlignment="gravity"
         android:text="@string/dashspend_terms_conditions" />
-
-    <TextView
-        android:id="@+id/dialog_message"
-        style="@style/Body2"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginTop="4dp"
-        android:gravity="center"
-        android:textAlignment="gravity"
-        android:text="@string/tap_link_to_proceed" />
 
     <Button
         android:id="@+id/terms_link"
