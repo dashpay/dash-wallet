@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.send
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -56,12 +55,13 @@ open class SendCoinsActivity : LockScreenActivity() {
         const val ACTION_SEND_FROM_WALLET_URI = "de.schildbach.wallet.action.SEND_FROM_WALLET_URI"
         const val INTENT_EXTRA_PAYMENT_INTENT = "paymentIntent"
         const val INTENT_EXTRA_BUY_CREDITS = "buyCredits"
+        const val INTENT_EXTRA_IS_QUICK_SCAN = "isQuickScan"
 
         fun start(context: Context, paymentIntent: PaymentIntent?) {
             start(context, null, paymentIntent, false)
         }
 
-        fun start(context: Context, action: String?, paymentIntent: PaymentIntent?, keepUnlocked: Boolean) {
+        fun start(context: Context, action: String?, paymentIntent: PaymentIntent?, keepUnlocked: Boolean, isQuickScan: Boolean = false) {
             val intent = Intent(context, SendCoinsActivity::class.java)
 
             if (action != null) {
@@ -70,6 +70,7 @@ open class SendCoinsActivity : LockScreenActivity() {
 
             intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent)
             intent.putExtra(INTENT_EXTRA_KEEP_UNLOCKED, keepUnlocked)
+            intent.putExtra(INTENT_EXTRA_IS_QUICK_SCAN, isQuickScan)
             context.startActivity(intent)
         }
 
@@ -88,13 +89,6 @@ open class SendCoinsActivity : LockScreenActivity() {
             intent.putExtra(INTENT_EXTRA_BUY_CREDITS, true)
             intent.putExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
             context.startActivity(intent)
-        }
-
-        fun sendFromWalletUri(callingActivity: Activity, requestCode: Int, paymentIntent: PaymentIntent?) {
-            val intent = Intent(callingActivity, SendCoinsActivity::class.java)
-            intent.action = ACTION_SEND_FROM_WALLET_URI
-            intent.putExtra(INTENT_EXTRA_PAYMENT_INTENT, paymentIntent)
-            callingActivity.startActivityForResult(intent, requestCode)
         }
     }
 
@@ -232,12 +226,13 @@ open class SendCoinsActivity : LockScreenActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.nav_send)
-        val buyCredits = intent.extras?.get(INTENT_EXTRA_BUY_CREDITS) ?: false
+        val buyCredits = intent.extras?.getBoolean(INTENT_EXTRA_BUY_CREDITS) ?: false
+        val isQuickScan = intent.extras?.getBoolean(INTENT_EXTRA_IS_QUICK_SCAN) ?: false
 
         navGraph.setStartDestination(
             if (paymentIntent.hasPaymentRequestUrl()) {
                 R.id.paymentProtocolFragment
-            } else if (buyCredits == true) {
+            } else if (buyCredits) {
                 R.id.buyCreditsFragment
             } else {
                 R.id.sendCoinsFragment
@@ -248,7 +243,8 @@ open class SendCoinsActivity : LockScreenActivity() {
             navGraph,
             bundleOf(
                 INTENT_EXTRA_PAYMENT_INTENT to paymentIntent,
-                INTENT_EXTRA_BUY_CREDITS to buyCredits
+                INTENT_EXTRA_BUY_CREDITS to buyCredits,
+                INTENT_EXTRA_IS_QUICK_SCAN to isQuickScan
             )
         )
     }

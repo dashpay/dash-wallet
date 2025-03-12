@@ -164,6 +164,7 @@ class SettingsActivity : LockScreenActivity() {
                     @StringRes val statusId = when(viewModel.coinJoinMixingStatus) {
                         MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
                         MixingStatus.MIXING -> R.string.coinjoin_mixing
+                        MixingStatus.FINISHING -> R.string.coinjoin_mixing_finishing
                         MixingStatus.PAUSED -> R.string.coinjoin_paused
                         MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
                         else -> R.string.error

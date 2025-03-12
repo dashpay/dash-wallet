@@ -76,6 +76,7 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
     @Override
     public void onActivityResult(final int requestCode, final int resultCode, final Intent intent) {
         super.onActivityResult(requestCode, resultCode, intent);
+
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
             final String input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT);
 
@@ -84,7 +85,7 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
                     boolean quickScan = isQuickScan();
                     // if this is a quick scan, keepUnlock = true for SendCoinsActivity
-                    SendCoinsActivity.Companion.start(SendCoinsQrActivity.this, getIntent().getAction(), paymentIntent, quickScan);
+                    SendCoinsActivity.Companion.start(SendCoinsQrActivity.this, getIntent().getAction(), paymentIntent, quickScan, quickScan);
 
                     if (quickScan) {
                         SendCoinsQrActivity.this.finish();

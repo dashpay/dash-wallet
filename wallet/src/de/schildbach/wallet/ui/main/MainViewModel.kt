@@ -80,7 +80,6 @@ import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
-import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -105,6 +104,7 @@ import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
 import java.text.DecimalFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -158,6 +158,8 @@ class MainViewModel @Inject constructor(
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
+    var transactionsLoaded = false
+        private set
     private val _transactions = MutableLiveData<Map<LocalDate, List<TransactionRowView>>>()
     val transactions: LiveData<Map<LocalDate, List<TransactionRowView>>>
         get() = _transactions
@@ -199,9 +201,12 @@ class MainViewModel @Inject constructor(
         get() = _rateStale.value
     var rateStaleDismissed = false
 
-    private val _balance = MutableLiveData<Coin>()
-    val balance: LiveData<Coin>
-        get() = _balance
+    private val _totalBalance = MutableLiveData<Coin>()
+    val totalBalance: LiveData<Coin>
+        get() = _totalBalance
+    private val _mixedBalance = MutableLiveData<Coin>()
+    val mixedBalance: LiveData<Coin>
+        get() = _mixedBalance
 
     private var txByHash: Map<String, TransactionRowView> = mapOf()
     private var metadata: Map<Sha256Hash, PresentableTxMetadata> = mapOf()
@@ -246,11 +251,11 @@ class MainViewModel @Inject constructor(
         get() = coinJoinService.observeActiveSessions()
 
     var decimalFormat: DecimalFormat = DecimalFormat("0.000")
-    val walletBalance: String
-        get() = decimalFormat.format(walletData.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED).toBigDecimal())
+    val walletBalanceString: String
+        get() = decimalFormat.format(totalBalance.value?.toBigDecimal() ?: BigDecimal.ZERO)
 
-    val mixedBalance: String
-        get() = decimalFormat.format((walletData.wallet as WalletEx).coinJoinBalance.toBigDecimal())
+    val mixedBalanceString: String
+        get() = decimalFormat.format(mixedBalance.value?.toBigDecimal() ?: BigDecimal.ZERO)
 
     // DashPay
     private val isPlatformAvailable = MutableStateFlow(false)
@@ -266,7 +271,7 @@ class MainViewModel @Inject constructor(
         addSource(blockchainIdentity) {
             value = combineLatestData()
         }
-        addSource(_balance) {
+        addSource(_totalBalance) {
             value = combineLatestData()
         }
     }
@@ -344,8 +349,13 @@ class MainViewModel @Inject constructor(
             }
             .launchIn(viewModelWorkerScope)
 
-        walletData.observeBalance()
-            .onEach(_balance::postValue)
+        // we need the total wallet balance for mixing progress,
+        walletData.observeTotalBalance()
+            .onEach(_totalBalance::postValue)
+            .launchIn(viewModelScope)
+
+        walletData.observeMixedBalance()
+            .onEach(_mixedBalance::postValue)
             .launchIn(viewModelScope)
 
         walletData.observeMostRecentTransaction()
@@ -543,6 +553,7 @@ class MainViewModel @Inject constructor(
                 }
 
             viewModelScope.launch {
+                transactionsLoaded = true
                 _transactions.value = allTransactionViews
                 this@MainViewModel.txByHash = txByHash
                 getContactsAndMetadataForTransactions(contactsToUpdate)

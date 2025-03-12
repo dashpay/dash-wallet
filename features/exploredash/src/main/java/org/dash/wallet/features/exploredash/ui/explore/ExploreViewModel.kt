@@ -402,7 +402,6 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
-        analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_MERCHANT_LOCATION, mapOf())
         _selectedItem.postValue(merchant)
 
         if (isGrouped) {
@@ -446,8 +445,7 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun openAllMerchantLocations(merchantId: String?, source: String) {
-        logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_SHOW_ALL_LOCATIONS)
+    fun openAllMerchantLocations(merchantId: Long, source: String) {
         _screenState.postValue(ScreenState.MerchantLocations)
         this.allMerchantLocationsJob?.cancel()
         this.allMerchantLocationsJob =
@@ -504,7 +502,6 @@ class ExploreViewModel @Inject constructor(
         val openedLocation = nearestLocation
 
         if (screenState.value == ScreenState.MerchantLocations && openedLocation is Merchant) {
-            logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BACK_FROM_ALL_LOCATIONS)
             openMerchantDetails(openedLocation, true)
         }
     }
@@ -712,24 +709,6 @@ class ExploreViewModel @Inject constructor(
         viewModelScope.launch { syncStatusService.setObservedLastError() }
     }
 
-    fun triggerPanAndZoomEvents(currentZoomLevel: Float, currentGeoBounds: GeoBounds) {
-        when {
-            hasZoomLevelChanged(currentZoomLevel) -> {
-                if (exploreTopic == ExploreTopic.Merchants) {
-                    logEvent(AnalyticsConstants.Explore.ZOOM_MERCHANT_MAP)
-                } else {
-                    logEvent(AnalyticsConstants.Explore.ZOOM_ATM_MAP)
-                }
-            }
-            hasCameraCenterChanged(currentGeoBounds) -> {
-                if (exploreTopic == ExploreTopic.Merchants) {
-                    logEvent(AnalyticsConstants.Explore.PAN_MERCHANT_MAP)
-                } else {
-                    logEvent(AnalyticsConstants.Explore.PAN_ATM_MAP)
-                }
-            }
-        }
-    }
     private fun hasZoomLevelChanged(currentZoomLevel: Float): Boolean = previousZoomLevel != currentZoomLevel
 
     private fun hasCameraCenterChanged(currentCenterPosition: GeoBounds): Boolean =
@@ -828,22 +807,6 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun trackDismissEvent() {
-        if (isDialogDismissedOnCancel) {
-            if (exploreTopic == ExploreTopic.Merchants) {
-                logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_CANCEL_ACTION)
-            } else {
-                logEvent(AnalyticsConstants.Explore.FILTER_ATM_CANCEL_ACTION)
-            }
-        } else {
-            if (exploreTopic == ExploreTopic.Merchants) {
-                logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_SWIPE_ACTION)
-            } else {
-                logEvent(AnalyticsConstants.Explore.FILTER_ATM_SWIPE_ACTION)
-            }
-        }
-    }
-
     private fun logFilterChange(mode: FilterMode) {
         if (exploreTopic == ExploreTopic.Merchants) {
             when (mode) {
@@ -869,12 +832,6 @@ class ExploreViewModel @Inject constructor(
                 analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_TOP, mapOf())
             } else {
                 analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_TOP, mapOf())
-            }
-        } else {
-            if (exploreTopic == ExploreTopic.Merchants) {
-                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_BOTTOM, mapOf())
-            } else {
-                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_BOTTOM, mapOf())
             }
         }
     }

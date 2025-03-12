@@ -5,7 +5,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="false"
-    android:background="@drawable/splash_activity_background">
+    android:background="@drawable/splash_activity_background"
+    tools:context="de.schildbach.wallet.ui.LockScreenActivity">
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/logo_guideline"

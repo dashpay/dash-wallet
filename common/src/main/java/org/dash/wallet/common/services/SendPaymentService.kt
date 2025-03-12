@@ -21,7 +21,10 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
+import java.util.function.Consumer
+import java.util.function.Predicate
 
 class LeftoverBalanceException(missing: Coin, message: String) : InsufficientMoneyException(missing, message)
 class DirectPayException(message: String) : Exception(message)
@@ -33,7 +36,9 @@ interface SendPaymentService {
         amount: Coin,
         coinSelector: CoinSelector? = null,
         emptyWallet: Boolean = false,
-        checkBalanceConditions: Boolean = true
+        checkBalanceConditions: Boolean = true,
+        beforeSending: Consumer<Transaction>? = null,
+        canSendLockedOutput: Predicate<TransactionOutput>? = null
     ): Transaction
 
     suspend fun estimateNetworkFee(

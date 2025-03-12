@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui.send
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.google.common.base.Preconditions.checkState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -34,6 +33,7 @@ import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,7 +48,6 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.crypto.IKey
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.SendRequest
@@ -78,7 +77,8 @@ class SendCoinsViewModel @Inject constructor(
     private val notificationService: NotificationService,
     private val platformRepo: PlatformRepo,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
-    coinJoinConfig: CoinJoinConfig
+    coinJoinConfig: CoinJoinConfig,
+    coinJoinService: CoinJoinService
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
@@ -89,6 +89,8 @@ class SendCoinsViewModel @Inject constructor(
         INPUT, // asks for confirmation
         SENDING, SENT, FAILED // sending states
     }
+
+    var isQuickSend: Boolean = false
 
     private val _state = MutableLiveData(State.INPUT)
     val state: LiveData<State>
@@ -131,9 +133,9 @@ class SendCoinsViewModel @Inject constructor(
     val contactData: LiveData<UsernameSearchResult>
         get() = _contactData
 
-    private var _coinJoinMode = MutableStateFlow(CoinJoinMode.NONE)
-    val coinJoinMode: Flow<CoinJoinMode>
-        get() = _coinJoinMode
+    private var _coinJoinActive = MutableStateFlow(false)
+    val coinJoinActive: Flow<Boolean>
+        get() = _coinJoinActive
     /** the resulting transaction is an asset lock transaction (default = false) */
     var isAssetLock = false
 
@@ -145,10 +147,10 @@ class SendCoinsViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        coinJoinConfig.observeMode()
-            .map { mode ->
-                _coinJoinMode.value = mode
-                if (mode == CoinJoinMode.NONE) {
+        coinJoinService.observeMixing()
+            .map { isMixing ->
+                _coinJoinActive.value = isMixing
+                if (!isMixing) {
                     MaxOutputAmountCoinSelector()
                 } else {
                     MaxOutputAmountCoinJoinCoinSelector(wallet)
@@ -296,12 +298,46 @@ class SendCoinsViewModel @Inject constructor(
         _state.value = State.INPUT
     }
 
-    fun logSentEvent(dashToFiat: Boolean) {
-        if (dashToFiat) {
-            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_DASH, mapOf())
+    fun logSendSuccess(dashToFiat: Boolean, source: String) {
+        if (isQuickSend) {
+            analytics.logEvent(AnalyticsConstants.LockScreen.SCAN_TO_SEND_SUCCESS, mapOf())
+        } else if (source == "explore") {
+            analytics.logEvent(AnalyticsConstants.Explore.PAY_WITH_DASH_SUCCESS, mapOf())
         } else {
-            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_FIAT, mapOf())
+            analytics.logEvent(if (contactData.value == null) {
+                AnalyticsConstants.SendReceive.SEND_SUCCESS
+            } else {
+                AnalyticsConstants.SendReceive.SEND_USERNAME_SUCCESS
+            }, mapOf())
+
+            analytics.logEvent(if (dashToFiat) {
+                AnalyticsConstants.SendReceive.ENTER_AMOUNT_DASH
+            } else {
+                AnalyticsConstants.SendReceive.ENTER_AMOUNT_FIAT
+            }, mapOf())
         }
+    }
+
+    fun logSendError(source: String) {
+         if (source == "explore") {
+            analytics.logEvent(AnalyticsConstants.Explore.PAY_WITH_DASH_ERROR, mapOf())
+        } else {
+             analytics.logEvent(
+                 if (contactData.value == null) {
+                     AnalyticsConstants.SendReceive.SEND_ERROR
+                 } else {
+                     AnalyticsConstants.SendReceive.SEND_USERNAME_ERROR
+                 }, mapOf()
+             )
+         }
+    }
+
+    fun logSend() {
+        analytics.logEvent(if (isQuickSend) {
+            AnalyticsConstants.LockScreen.SCAN_TO_SEND_SEND
+        } else {
+            AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND
+        }, mapOf())
     }
 
     fun logEvent(eventName: String) {
@@ -372,7 +408,7 @@ class SendCoinsViewModel @Inject constructor(
             dryrunSendRequest = sendRequest
             _dryRunSuccessful.value = true
         } catch (ex: Exception) {
-            dryRunException = if (ex is InsufficientMoneyException && _coinJoinMode.value != CoinJoinMode.NONE && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
+            dryRunException = if (ex is InsufficientMoneyException && _coinJoinActive.value && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
                  InsufficientCoinJoinMoneyException(ex)
             } else {
                 ex
