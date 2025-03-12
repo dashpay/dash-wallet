@@ -42,6 +42,7 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.main.MainViewModel
+import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet_test.R
@@ -161,11 +162,12 @@ class ContactsFragment : Fragment(),
             // Hide the invite UI
             emptyStatePane.inviteHintLayout.root.isVisible = de.schildbach.wallet.Constants.SUPPORTS_INVITES
             emptyStatePane.inviteHintLayout.inviteFriendHint.setOnClickListener {
+                dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.INVITE_CONTACTS)
+
                 lifecycleScope.launch {
                     if (dashPayViewModel.getInviteCount() == 0) {
                         safeNavigate(ContactsFragmentDirections.contactsToInviteFee())
                     } else {
-                        dashPayViewModel.logEvent(AnalyticsConstants.Invites.INVITE_CONTACTS)
                         safeNavigate(ContactsFragmentDirections.contactsToInviteHistory("contacts"))
                     }
                 }
@@ -400,6 +402,7 @@ class ContactsFragment : Fragment(),
 
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 if (fireAction) {
+                    paymentIntent.source = arguments?.getString(ARG_SOURCE) ?: ""
                     SendCoinsActivity.start(requireContext(), null, paymentIntent, true)
                 } else {
 

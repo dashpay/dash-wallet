@@ -62,6 +62,7 @@ import org.bitcoinj.wallet.WalletTransaction;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.ExchangeRatesProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
+import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.slf4j.Logger;
@@ -586,6 +587,7 @@ public class SweepWalletFragment extends Fragment {
 
                 setState(State.SENDING);
                 application.processDirectTransaction(sentTransaction);
+                viewModel.logEvent(AnalyticsConstants.SendReceive.IMPORT_PRIVATE_KEY_SUCCESS);
                 showTransactionResult(sentTransaction);
             }
 

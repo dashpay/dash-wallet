@@ -189,6 +189,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     mixingBinding.mixingMode.text = getString(R.string.coinjoin_mixing)
                     mixingBinding.progressBar.isVisible = true
                 }
+                MixingStatus.FINISHING -> {
+                    mixingBinding.mixingMode.text = getString(R.string.coinjoin_mixing_finishing)
+                    mixingBinding.progressBar.isVisible = true
+                }
                 MixingStatus.PAUSED -> {
                     mixingBinding.mixingMode.text = getString(R.string.coinjoin_paused)
                     mixingBinding.progressBar.isVisible = false
@@ -205,7 +209,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
             mixingBinding.mixingSessions.text = activeSessionsText
         }
 
-        viewModel.balance.observe(viewLifecycleOwner) {
+        viewModel.totalBalance.observe(viewLifecycleOwner) {
             updateMixedAndTotalBalance()
         }
 
@@ -291,10 +295,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
         refreshShortcutBar()
     }
 
-    private fun joinDashPay() {
-        startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
-    }
-
     private fun refreshShortcutBar() {
         showHideSecureAction()
         refreshIfUserHasBalance()
@@ -306,7 +306,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun refreshIfUserHasBalance() {
-        val balance: Coin = viewModel.balance.value ?: Coin.ZERO
+        val balance: Coin = viewModel.totalBalance.value ?: Coin.ZERO
         binding.shortcutsPane.userHasBalance = balance.isPositive
     }
 
@@ -396,9 +396,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     null
                 )
                 dialog.isMessageSelectable = true
-                dialog.show(requireActivity()) {
-                    viewModel.logEvent(AnalyticsConstants.Home.NO_ADDRESS_COPIED)
-                }
+                dialog.show(requireActivity())
             }
 
             override fun cannotClassify(input: String) {

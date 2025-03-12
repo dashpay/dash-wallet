@@ -61,7 +61,7 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                     // invitationFragmentViewModel.logEvent(AnalyticsConstants.UsersContacts.TOPUP_CONFIRM)
                     val identityId = invitationFragmentViewModel.sendInviteTransaction(Coin.valueOf(args.amount))
                     findNavController().navigate(
-                        ConfirmInviteDialogFragmentDirections.toInviteCreatedFragment(identityId)
+                        ConfirmInviteDialogFragmentDirections.toInviteCreatedFragment(identityId, args.source)
                     )
                 } catch (e: Exception) {
                     log.info("error sending transaction:", e)

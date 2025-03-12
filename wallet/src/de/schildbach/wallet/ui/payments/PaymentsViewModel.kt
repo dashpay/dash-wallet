@@ -22,13 +22,32 @@ import androidx.lifecycle.asLiveData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.flow.flowOf
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 @HiltViewModel
-class PaymentsViewModel @Inject constructor(platformRepo: PlatformRepo): ViewModel() {
+class PaymentsViewModel @Inject constructor(
+    platformRepo: PlatformRepo,
+    private val analytics: AnalyticsService
+): ViewModel() {
+    var fromQuickReceive: Boolean = false
+
     val dashPayProfile = if (platformRepo.hasIdentity && platformRepo.blockchainIdentity.currentUsername != null) {
         platformRepo.observeProfileByUserId(platformRepo.blockchainIdentity.uniqueIdString)
     } else {
         flowOf()
     }.asLiveData()
+
+    fun logSpecifyAmount() {
+        if (fromQuickReceive) {
+            analytics.logEvent(AnalyticsConstants.LockScreen.QUICK_RECEIVE_AMOUNT, mapOf())
+        } else {
+            analytics.logEvent(AnalyticsConstants.SendReceive.SPECIFY_AMOUNT, mapOf())
+        }
+    }
+
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, mapOf())
+    }
 }

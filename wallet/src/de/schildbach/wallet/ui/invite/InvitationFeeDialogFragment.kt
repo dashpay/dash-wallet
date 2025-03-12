@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.CheckPinDialog
@@ -35,6 +36,7 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
     private val binding by viewBinding(DialogInvitationFeeBinding::bind)
     private var selectedFee = Constants.DASH_PAY_FEE_CONTESTED
     private val viewModel by viewModels<InvitationFragmentViewModel>()
+    private val args by navArgs<InvitationFeeDialogFragmentArgs>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -43,7 +45,7 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
             CheckPinDialog.show(requireActivity()) { pin ->
                 if (pin != null) {
                     findNavController().navigate(
-                        InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value)
+                        InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value, args.source)
                     )
                     // TODO: why doesn't safeNavigate work
                     // safeNavigate(InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value))

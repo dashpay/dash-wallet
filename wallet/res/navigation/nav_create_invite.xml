@@ -28,6 +28,9 @@
         <argument
             android:name="identity_id"
             app:argType="string" />
+        <argument
+            android:name="source"
+            app:argType="string" />
     </fragment>
 
     <fragment
@@ -45,6 +48,9 @@
         <argument
             android:name="identity_id"
             app:argType="string" />
+        <argument
+            android:name="source"
+            app:argType="string" />
     </fragment>
 
     <dialog
@@ -56,6 +62,10 @@
         <argument
             android:name="amount"
             app:argType="long" />
+
+        <argument
+            android:name="source"
+            app:argType="string" />
 
         <action
             android:id="@+id/toInviteCreatedFragment"
@@ -70,6 +80,10 @@
         android:name="de.schildbach.wallet.ui.invite.InvitationFeeDialogFragment"
         android:layout="@layout/dialog_invitation_fee"
         android:label="CustomDialogFragment">
+
+        <argument
+            android:name="source"
+            app:argType="string" />
 
         <action
             android:id="@+id/toConfirmInviteDialog"

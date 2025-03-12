@@ -48,8 +48,6 @@ class OnboardingViewModel @Inject constructor(
     val analytics: AnalyticsService,
     val platformRepo: PlatformRepo
 ) : ViewModel() {
-
-
     private val log = LoggerFactory.getLogger(OnboardingViewModel::class.java)
 
     internal val showToastAction = SingleLiveEvent<String>()
@@ -59,6 +57,7 @@ class OnboardingViewModel @Inject constructor(
     internal val startActivityAction = SingleLiveEvent<Intent>()
 
     fun createNewWallet(onboardingInvite: InvitationLinkData?) {
+        analytics.logEvent(AnalyticsConstants.Onboarding.NEW_WALLET, mapOf())
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 walletApplication.initEnvironmentIfNeeded()
@@ -90,5 +89,9 @@ class OnboardingViewModel @Inject constructor(
 
             finishUnecryptedWalletUpgradeAction.call(Unit)
         }
+    }
+
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, mapOf())
     }
 }

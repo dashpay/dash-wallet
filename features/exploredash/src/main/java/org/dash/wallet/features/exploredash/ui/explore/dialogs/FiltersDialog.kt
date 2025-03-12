@@ -17,7 +17,6 @@
 
 package org.dash.wallet.features.exploredash.ui.explore.dialogs
 
-import android.content.DialogInterface
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
@@ -345,10 +344,5 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         sortByOptionsAdapter?.selectedIndex = if (sortByDistance) 1 else 0
 
         binding.resetFiltersBtn.isEnabled = false
-    }
-
-    override fun onDismiss(dialog: DialogInterface) {
-        super.onDismiss(dialog)
-        viewModel.trackDismissEvent()
     }
 }

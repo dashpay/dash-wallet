@@ -76,6 +76,11 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
                 findNavController().popBackStack()
             }
         }
+        if (args.source == "contacts") {
+            viewModel.logEvent(AnalyticsConstants.UsersContacts.INVITE_CONTACTS_CREATE)
+        } else {
+            viewModel.logEvent(AnalyticsConstants.Invites.INVITE_FRIEND)
+        }
     }
 
     private fun initViewModel() {

@@ -60,19 +60,10 @@ data class FeeInfo(
         ]"""
         val default = FeeInfo(KEY_FEELADDER, DEFAULT_FEE_LADDER)
     }
-    val value: List<FeeLadder> by lazy {
-        Gson().fromJson(rawValue, object : TypeToken<List<FeeLadder>>() {}.type)
+    fun getList(): List<FeeLadder> {
+        val fixedJson: String = rawValue.replace("\\\"", "\"").replace("\\n", "").trim()
+        return Gson().fromJson(fixedJson, object : TypeToken<List<FeeLadder>>() {}.type)
     }
 
-    fun getNormal() = value.find { it.type == TYPE_NORMAL }
-}
-
-@Parcelize
-data class FeeInfoResponse(
-    @SerializedName("FeeInfo") val feeInfoList: List<FeeInfo>
-) : Parcelable {
-    companion object {
-        val default = FeeInfoResponse(listOf(FeeInfo.default))
-    }
-    fun getNormal() = feeInfoList.first().value.find { it.type == FeeInfo.TYPE_NORMAL }
+    fun getNormal() = getList().find { it.type == TYPE_NORMAL }
 }
