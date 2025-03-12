@@ -153,6 +153,7 @@ class ExploreSyncWorker @AssistedInject constructor(
             return@withContext Result.failure()
         }
 
+        databasePrefs = exploreConfig.exploreDatabasePrefs.first()
         exploreConfig.saveExploreDatabasePrefs(databasePrefs.copy(failedSyncAttempts = 0))
         return@withContext Result.success()
     }
