@@ -21,9 +21,12 @@ import android.net.Uri
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.SendPaymentService
+import java.util.function.Consumer
+import java.util.function.Predicate
 import javax.inject.Inject
 
 class FakeDashSpendService @Inject constructor(
@@ -39,9 +42,11 @@ class FakeDashSpendService @Inject constructor(
         amount: Coin,
         coinSelector: CoinSelector?,
         emptyWallet: Boolean,
-        checkBalanceConditions: Boolean
+        checkBalanceConditions: Boolean,
+        beforeSending: Consumer<Transaction>?,
+        canSendLockedOutput: Predicate<TransactionOutput>?
     ): Transaction {
-        return realService.sendCoins(address, amount, coinSelector, emptyWallet, checkBalanceConditions)
+        return realService.sendCoins(address, amount, coinSelector, emptyWallet, checkBalanceConditions, beforeSending, canSendLockedOutput)
     }
 
     override suspend fun estimateNetworkFee(

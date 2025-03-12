@@ -18,6 +18,9 @@
 package de.schildbach.wallet.transactions
 
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +30,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Threading
@@ -144,6 +149,40 @@ class WalletBalanceObserver(
             wallet.removeCoinsSentEventListener(walletChangeListener)
             wallet.removeCoinsReceivedEventListener(walletChangeListener)
             walletChangeListener.removeCallbacks()
+            emitterJob.cancel()
+        }
+    }
+
+    /** the emitted balance depends on the current [CoinJoinMode] and if mixing is ongoing */
+    fun observeSpendable(coinJoinService: CoinJoinService): Flow<Coin> = callbackFlow {
+        val emitterJob = SupervisorJob()
+        val emitterScope = CoroutineScope(Dispatchers.IO + emitterJob)
+
+        fun emitSpendingBalance(isMixing: Boolean) {
+            trySend(
+                if (isMixing) {
+                    _mixedBalance.value
+                } else {
+                    _totalBalance.value
+                }
+            )
+        }
+
+        fun emitBalance() {
+            emitterScope.launch {
+                emitSpendingBalance(coinJoinService.isMixing())
+            }
+        }
+
+        coinJoinService.observeMixing()
+            .onEach { isMixing ->
+                emitSpendingBalance(isMixing)
+            }
+            .launchIn(emitterScope)
+
+        emitBalance()
+
+        awaitClose {
             emitterJob.cancel()
         }
     }

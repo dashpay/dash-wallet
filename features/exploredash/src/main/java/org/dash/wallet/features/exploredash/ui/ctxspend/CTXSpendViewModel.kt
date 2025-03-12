@@ -104,7 +104,7 @@ class CTXSpendViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         walletDataProvider
-            .observeTotalBalance()
+            .observeSpendableBalance()
             .distinctUntilChanged()
             .onEach(_balance::postValue)
             .launchIn(viewModelScope)

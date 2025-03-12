@@ -91,6 +91,7 @@ import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
 import de.schildbach.wallet.data.CoinJoinConfig;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
+import de.schildbach.wallet.service.CoinJoinService;
 import de.schildbach.wallet.service.DashSystemService;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
@@ -216,6 +217,7 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     WalletUIConfig walletUIConfig;
     private WalletBalanceObserver walletBalanceObserver;
+    private CoinJoinService coinJoinService;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -1153,6 +1155,16 @@ public class WalletApplication extends MultiDexApplication
 
     @NonNull
     @Override
+    public Flow<Coin> observeSpendableBalance() {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        return walletBalanceObserver.observeSpendable(coinJoinService);
+    }
+
+    @NonNull
+    @Override
     public Flow<Transaction> observeTransactions(
         boolean withConfidence,
         @NonNull TransactionFilter... filters
@@ -1283,5 +1295,9 @@ public class WalletApplication extends MultiDexApplication
     @Override
     public boolean canAffordIdentityCreation() {
         return !getWalletBalance().isLessThan(Constants.DASH_PAY_FEE);
+    }
+
+    public void setCoinJoinService(CoinJoinService coinJoinService) {
+        this.coinJoinService = coinJoinService;
     }
 }
