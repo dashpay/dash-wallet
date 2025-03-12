@@ -20,9 +20,9 @@ package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
 import android.os.Bundle
 import android.view.View
 import androidx.annotation.StyleRes
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
-import androidx.constraintlayout.widget.ConstraintSet
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.transition.TransitionManager
@@ -199,8 +199,20 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 constraintSet.clone(binding.rootLayout)
 
                 constraintSet.clear(R.id.confirm_button, ConstraintSet.START)
-                constraintSet.connect(R.id.confirm_button, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, dpToPx(15))
-                constraintSet.connect(R.id.confirm_button, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END, dpToPx(15))
+                constraintSet.connect(
+                    R.id.confirm_button,
+                    ConstraintSet.START,
+                    ConstraintSet.PARENT_ID,
+                    ConstraintSet.START,
+                    dpToPx(15)
+                )
+                constraintSet.connect(
+                    R.id.confirm_button,
+                    ConstraintSet.END,
+                    ConstraintSet.PARENT_ID,
+                    ConstraintSet.END,
+                    dpToPx(15)
+                )
 
                 TransitionManager.beginDelayedTransition(binding.rootLayout)
                 constraintSet.applyTo(binding.rootLayout)
@@ -225,12 +237,30 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             constraintSet.clone(binding.rootLayout)
 
             constraintSet.clear(R.id.confirm_button, ConstraintSet.START)
-            constraintSet.connect(R.id.confirm_button, ConstraintSet.START, R.id.guideline, ConstraintSet.START, dpToPx(15))
-            constraintSet.connect(R.id.confirm_button, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END, dpToPx(15))
+            constraintSet.connect(
+                R.id.confirm_button,
+                ConstraintSet.START,
+                R.id.guideline,
+                ConstraintSet.START,
+                dpToPx(15)
+            )
+            constraintSet.connect(
+                R.id.confirm_button,
+                ConstraintSet.END,
+                ConstraintSet.PARENT_ID,
+                ConstraintSet.END,
+                dpToPx(15)
+            )
 
             constraintSet.clear(R.id.cancel_button, ConstraintSet.END)
             constraintSet.connect(R.id.cancel_button, ConstraintSet.END, R.id.confirm_button, ConstraintSet.START, 8)
-            constraintSet.connect(R.id.cancel_button, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, dpToPx(15))
+            constraintSet.connect(
+                R.id.cancel_button,
+                ConstraintSet.START,
+                ConstraintSet.PARENT_ID,
+                ConstraintSet.START,
+                dpToPx(15)
+            )
 
             TransitionManager.beginDelayedTransition(binding.rootLayout)
             constraintSet.applyTo(binding.rootLayout)
