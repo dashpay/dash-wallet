@@ -256,6 +256,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
         binding.restoreWallet.setOnClickListener {
             restoreWalletFromFile()
         }
+        viewModel.startActivityAction.observe(this) {
+            startActivityForResult(it, SET_PIN_REQUEST_CODE)
+        }
     }
 
     @SuppressLint("StringFormatInvalid")

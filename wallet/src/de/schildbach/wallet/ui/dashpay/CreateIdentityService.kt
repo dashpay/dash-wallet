@@ -498,6 +498,8 @@ class CreateIdentityService : LifecycleService() {
                 throw IllegalStateException()
             }
         }
+        blockchainIdentityData.usingInvite = true
+        platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
 
         var isRetry = false
         if (blockchainIdentityData.creationState != CreationState.NONE || blockchainIdentityData.creationStateErrorMessage != null) {

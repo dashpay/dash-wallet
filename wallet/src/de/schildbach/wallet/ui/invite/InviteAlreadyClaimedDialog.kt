@@ -19,59 +19,89 @@ package de.schildbach.wallet.ui.invite
 import android.content.Context
 import android.os.Bundle
 import android.view.View
+import android.widget.Button
+import android.widget.TextView
+import androidx.annotation.DrawableRes
+import androidx.core.text.HtmlCompat
+import androidx.core.view.isVisible
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.InvitationAlreadyClaimedViewBinding
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
-open class InviteAlreadyClaimedDialog : FancyAlertDialog() {
-
+open class InviteAlreadyClaimedDialog : AdaptiveDialog(R.layout.invitation_already_claimed_view) {
     companion object {
-
         private const val EXTRA_PROFILE = "profile"
         private const val EXTRA_INVITE = "invite"
 
-        fun newInstance(context: Context, profile: DashPayProfile): FancyAlertDialog {
+        fun newInstance(context: Context, profile: DashPayProfile): AdaptiveDialog {
             return newInstance(context, profile.nameLabel).apply {
                 arguments!!.putParcelable(EXTRA_PROFILE, profile)
             }
         }
 
         @JvmStatic
-        fun newInstance(context: Context, invite: InvitationLinkData): FancyAlertDialog {
+        fun newInstance(context: Context, invite: InvitationLinkData): AdaptiveDialog {
             return newInstance(context, invite.displayName).apply {
                 requireArguments().putParcelable(EXTRA_INVITE, invite)
             }
         }
 
-        fun newInstance(context: Context, nameLabel: String): FancyAlertDialog {
+        fun newInstance(context: Context, nameLabel: String): AdaptiveDialog {
             val messageHtml = context.getString(R.string.invitation_already_claimed_message, "<b>$nameLabel</b>")
+            return create(null, "", messageHtml, context.getString(R.string.button_ok))
+        }
+
+        @JvmStatic
+        fun create(
+            @DrawableRes icon: Int?,
+            title: String,
+            message: String,
+            negativeButtonText: String
+        ): InviteAlreadyClaimedDialog {
+            return custom(
+                icon, title, message, negativeButtonText
+            )
+        }
+
+        @JvmStatic
+        fun custom(
+            @DrawableRes icon: Int?,
+            title: String?,
+            message: String,
+            negativeButtonText: String
+        ): InviteAlreadyClaimedDialog {
+            val args = Bundle().apply {
+                icon?.let { putInt(ICON_RES_ARG, icon) }
+                putString(TITLE_ARG, title)
+                putString(MESSAGE_ARG, message)
+                putString(NEG_BUTTON_ARG, negativeButtonText)
+                putBoolean(CUSTOM_DIALOG_ARG, true)
+            }
             return InviteAlreadyClaimedDialog().apply {
-                arguments = createBaseArguments(Type.INFO, 0, R.string.okay, 0)
-                    .apply {
-                        putString("message", messageHtml)
-                    }
+                arguments = args
             }
         }
     }
-
-    override val customContentViewResId: Int
-        get() = R.layout.invitation_already_claimed_view
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val args = requireArguments()
-        val binding = InvitationAlreadyClaimedViewBinding.bind(view)
+        val messageObj = args.getString("message")!!
+        val message: TextView = view.findViewById(R.id.dialog_message)!!
+        message.text = HtmlCompat.fromHtml(messageObj, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        view.findViewById<Button>(R.id.dialog_positive_button)!!.isVisible = false
+        view.findViewById<Button>(R.id.dialog_title)!!.isVisible = false
+        val profilePictureEnvelope: InviteErrorEnvelopeView = view.findViewById(R.id.profile_picture_envelope)!!
         if (args.containsKey(EXTRA_PROFILE)) {
             val profile = args.getParcelable<DashPayProfile>(EXTRA_PROFILE)
-            binding.profilePictureEnvelope.avatarProfile = profile
+            profilePictureEnvelope.avatarProfile = profile
         } else {
             val invite = args.getParcelable<InvitationLinkData>(EXTRA_INVITE)!!
             ProfilePictureDisplay.display(
-                binding.profilePictureEnvelope.avatarView,
+                profilePictureEnvelope.avatarView,
                 invite.avatarUrl,
                 null,
                 invite.displayName

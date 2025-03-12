@@ -72,13 +72,13 @@ import de.schildbach.wallet_test.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.bitcoinj.core.PeerGroup.SyncStage
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.wallet.DerivationPathFactory
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.components.ComposeHostFrameLayout
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.observe
@@ -133,7 +133,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private var isRestoringBackup = false
     private var showBackupWalletDialog = false
     private var retryCreationIfInProgress = true
-    private var pendingInvite: InvitationLinkData? = null
     var composeHostFrameLayout: ComposeHostFrameLayout? = null
 
     val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
@@ -161,7 +160,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         this.setupBottomNavigation(viewModel)
 
         initViewModel()
-        handleCreateFromInvite()
 
         if (savedInstanceState == null) {
             checkAlerts()
@@ -204,13 +202,20 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    private fun handleCreateFromInvite() {
-//        if (!config.hasBeenUsed() && config.onboardingInviteProcessing) { // TODO
+    private fun handleCreateFromInvite(isSynced: Boolean, restoringBackup: Boolean) {
         if (config.onboardingInviteProcessing) {
-            if (config.isRestoringBackup) {
-                binding.restoringWalletCover.isVisible = true
-            } else {
-                handleOnboardingInvite(true)
+            when {
+                restoringBackup && !isSynced -> binding.restoringWalletCover.isVisible = true
+                restoringBackup && isSynced -> {
+                    binding.restoringWalletCover.isVisible = false
+                    // activate UI to accept invite
+                    handleOnboardingInvite(false)
+                }
+                isSynced -> {
+                    binding.restoringWalletCover.isVisible = false
+                    // activate invite silently because user has entered a username
+                    handleOnboardingInvite(true)
+                }
             }
         }
     }
@@ -232,6 +237,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             if (it != null) {
                 if (retryCreationIfInProgress && it.creationInProgress) {
                     retryCreationIfInProgress = false
+                    // should this be executed after syncing is finished?
                     if (it.usingInvite) {
                         startService(CreateIdentityService.createIntentForRetryFromInvite(this, false))
                     } else {
@@ -279,9 +285,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
 
         viewModel.isBlockchainSynced.observe(this) { isSynced ->
-            if (isSynced && config.onboardingInviteProcessing) {
-                binding.restoringWalletCover.isVisible = false
-                handleOnboardingInvite(false)
+            handleCreateFromInvite(isSynced, viewModel.restoringBackup)
+        }
+        viewModel.syncStage.observe(this) { syncStage ->
+            if (viewModel.pendingInvite != null) {
+                handleInvite(viewModel.pendingInvite!!, isLocked, syncStage == SyncStage.BLOCKS)
             }
         }
         viewModel.seriousErrorLiveData.observe(this) {
@@ -295,11 +303,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                             R.string.serious_error_unknown
                         }
                     }
-                    val dialog = FancyAlertDialog.newInstance(
-                        R.string.serious_error_title,
-                        messageId, R.drawable.ic_error,
-                        R.string.button_ok,
-                        R.string.button_cancel
+                    val dialog = AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.serious_error_title),
+                        getString(messageId),
+                        getString(R.string.button_ok),
+                        getString(R.string.button_cancel)
                     )
                     dialog.show(supportFragmentManager, "serious_error_dialog")
                     viewModel.processingSeriousError = true
@@ -312,7 +321,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         lifecycleScope.launch {
             viewModel.getProfile(initInvitationUserId)?.let { profile ->
                 val dialog = InviteSendContactRequestDialog.newInstance(this@MainActivity, profile)
-                dialog.show(supportFragmentManager, null)
+                dialog.show(this@MainActivity) {
+                    // nothing
+                }
             }
         }
     }
@@ -332,7 +343,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         handleIntent(intent!!)
     }
 
-    //BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
+    // BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
     override fun onUpgradeConfirmed() {
         if (isRestoringBackup) {
             checkRestoredWalletEncryptionDialog()
@@ -379,9 +390,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         upgradeWalletCoinJoin(true)
     }
 
-    private fun handleInvite(invite: InvitationLinkData) {
-        val acceptInviteIntent = AcceptInviteActivity.createIntent(this, invite, false)
-        startActivity(acceptInviteIntent)
+    private fun handleInvite(invite: InvitationLinkData, isLocked: Boolean, isSynced: Boolean) {
+        if (isLocked || !isSynced) {
+            viewModel.pendingInvite = invite
+        } else {
+            val acceptInviteIntent = AcceptInviteActivity.createIntent(this, invite, false)
+            startActivity(acceptInviteIntent)
+        }
     }
 
     private fun handleIntent(intent: Intent) {
@@ -392,11 +407,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         if (intent.hasExtra(EXTRA_INVITE)) {
             val invite = intent.extras!!.getParcelable<InvitationLinkData>(EXTRA_INVITE)!!
-            if (!isLocked) {
-                handleInvite(invite)
-            } else {
-                pendingInvite = invite
-            }
+            handleInvite(invite, isLocked, viewModel.syncStage.value == SyncStage.BLOCKS)
         }
         if (intent.hasExtra(EXTRA_NAVIGATION_DESTINATION)) {
             try {
@@ -590,9 +601,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     override fun onLockScreenDeactivated() {
+        val pendingInvite = viewModel.pendingInvite
         if (pendingInvite != null) {
-            handleInvite(pendingInvite!!)
-            pendingInvite = null // clear the invite
+            handleInvite(pendingInvite, isLocked, viewModel.syncStage.value == SyncStage.BLOCKS)
+            viewModel.pendingInvite = null // clear the invite
         } else if (config.showNotificationsExplainer) {
             explainPushNotifications()
         }
