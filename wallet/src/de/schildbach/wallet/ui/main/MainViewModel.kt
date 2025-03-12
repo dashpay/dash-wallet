@@ -31,6 +31,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
@@ -66,6 +67,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -80,6 +82,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.PeerGroup
+import org.bitcoinj.core.PeerGroup.SyncStage
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
@@ -154,6 +157,7 @@ class MainViewModel @Inject constructor(
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
+    var restoringBackup: Boolean = false
     private val workerJob = SupervisorJob()
 
     @VisibleForTesting
@@ -187,6 +191,9 @@ class MainViewModel @Inject constructor(
     val blockchainSyncPercentage: LiveData<Int>
         get() = _blockchainSyncPercentage
     private var chainLockBlockHeight: Int = 0
+    private val _syncStage = MutableStateFlow(SyncStage.OFFLINE)
+    val syncStage: StateFlow<SyncStage>
+        get() = _syncStage
 
     private val _exchangeRate = MutableLiveData<ExchangeRate>()
     val exchangeRate: LiveData<ExchangeRate>
@@ -263,7 +270,7 @@ class MainViewModel @Inject constructor(
 
     // DashPay
     private val isPlatformAvailable = MutableStateFlow(false)
-
+    var pendingInvite: InvitationLinkData? = null
 
     val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
         addSource(isPlatformAvailable.asLiveData()) {
@@ -413,8 +420,10 @@ class MainViewModel @Inject constructor(
                         false
                     }
                 }
+                _syncStage.value = syncStage ?: SyncStage.OFFLINE
             }
             .launchIn(viewModelScope)
+        restoringBackup = config.isRestoringBackup
     }
 
     fun logEvent(event: String) {

@@ -50,9 +50,9 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
     companion object {
         private val log = LoggerFactory.getLogger(InviteHandler::class.java)
 
-        private fun getMainTask(activity: FragmentActivity): ActivityManager.AppTask {
+        private fun getMainTask(activity: FragmentActivity): ActivityManager.AppTask? {
             val activityManager = activity.getSystemService(FragmentActivity.ACTIVITY_SERVICE) as ActivityManager
-            return activityManager.appTasks.last()
+            return activityManager.appTasks.lastOrNull()
         }
 
         private fun handleDialogButtonClick(activity: FragmentActivity) {
@@ -61,9 +61,13 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
             val mainTask = getMainTask(activity)
             if (walletApplication.wallet != null) {
                 // if wallet exists, go to the Home Screen
-                mainTask.startActivity(activity.applicationContext, MainActivity.createIntent(activity), null)
+                val intent = MainActivity.createIntent(activity)
+                mainTask?.startActivity(activity.applicationContext, intent, null)
+                    ?: activity.startActivity(intent)
             } else {
-                mainTask.startActivity(activity.applicationContext, OnboardingActivity.createIntent(activity), null)
+                val intent = OnboardingActivity.createIntent(activity)
+                mainTask?.startActivity(activity.applicationContext, intent, null)
+                    ?: activity.startActivity(intent)
             }
             activity.finish()
         }
@@ -71,7 +75,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
         private fun handleMoveToFront(activity: FragmentActivity) {
             activity.setResult(Activity.RESULT_CANCELED)
             val mainTask = getMainTask(activity)
-            mainTask.moveToFront()
+            mainTask?.moveToFront()
             activity.finish()
         }
     }
@@ -107,28 +111,35 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
                         }
                         walletApplication.wallet != null -> {
                             log.info("the invite is valid, starting MainActivity with invite: ${invite.link}")
-                            mainTask.startActivity(activity.applicationContext, MainActivity.createIntent(activity, invite), null)
+                            val intent = MainActivity.createIntent(activity, invite)
+                            mainTask?.startActivity(activity.applicationContext, intent, null)
+                                ?: activity.startActivity(intent)
                         }
                         else -> {
                             if (invite.isValid) {
                                 log.info("the invite is valid, starting Onboarding with invite: ${invite.link}")
                                 walletApplication.configuration.onboardingInvite = invite.link
-                                mainTask.startActivity(activity.applicationContext, OnboardingActivity.createIntent(activity, invite), null)
+                                val intent = OnboardingActivity.createIntent(activity, invite)
+                                mainTask?.startActivity(activity.applicationContext, intent, null)
+                                    ?: activity.startActivity(intent)
                             } else {
-                                log.info("the invite is valid, starting Onboarding without invite")
-                                mainTask.startActivity(activity.applicationContext, OnboardingActivity.createIntent(activity), null)
+                                log.info("the invite is not valid, starting Onboarding without invite")
+                                val intent = OnboardingActivity.createIntent(activity)
+                                mainTask?.startActivity(activity.applicationContext, intent, null)
+                                    ?: activity.startActivity(intent)
                             }
                         }
                     }
                     activity.finish()
                 } else {
+                    log.info("the invite has already been claimed")
                     showInviteAlreadyClaimedDialog(invite)
                 }
             }
         }
     }
 
-    private fun getMainTask(): ActivityManager.AppTask {
+    private fun getMainTask(): ActivityManager.AppTask? {
         return getMainTask(activity)
     }
 
