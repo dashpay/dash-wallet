@@ -60,6 +60,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.LockScreenBroadcaster
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.LockScreenAware
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
@@ -175,6 +176,8 @@ open class LockScreenActivity : SecureActivity() {
 
     private fun setupBackupSeedReminder() {
         lifecycleScope.launch {
+            // we need the total wallet balance to trigger showing backup reminder
+            // a better way is to track transaction count > 0
             val hasBalance = walletApplication.observeTotalBalance().first().isPositive
             if (hasBalance && configuration.lastBackupSeedTime == 0L) {
                 configuration.setLastBackupSeedTime()
@@ -260,10 +263,12 @@ open class LockScreenActivity : SecureActivity() {
                 setLockState(State.USE_FINGERPRINT)
             }
             actionReceive.setOnClickListener {
+                checkPinViewModel.logEvent(AnalyticsConstants.LockScreen.QUICK_RECEIVE)
                 startActivity(QuickReceiveActivity.createIntent(this@LockScreenActivity))
                 autoLogout.keepLockedUntilPinEntered = true
             }
             actionScanToPay.setOnClickListener {
+                checkPinViewModel.logEvent(AnalyticsConstants.LockScreen.SCAN_TO_SEND)
                 startActivity(SendCoinsQrActivity.createIntent(this@LockScreenActivity, true))
                 autoLogout.keepLockedUntilPinEntered = true
             }

@@ -1137,11 +1137,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
 
+            // we need the total wallet balance for the CoinJoin notification
             application.observeTotalBalance().observe(this@BlockchainServiceImpl) {
                 balance = it
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
 
+            // we need the mixed balance for the CoinJoin notification
             application.observeMixedBalance().observe(this@BlockchainServiceImpl) {
                 mixedBalance = it
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
@@ -1162,6 +1164,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         val statusStringId = when (mixingStatus) {
             MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
             MixingStatus.MIXING -> R.string.coinjoin_mixing
+            MixingStatus.FINISHING -> R.string.coinjoin_mixing_finishing
             MixingStatus.PAUSED -> R.string.coinjoin_paused
             MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
             else -> R.string.error
@@ -1465,7 +1468,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             //Handle Ongoing notification state
             val syncing =
                 blockchainState.bestChainDate!!.time < Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS //1 hour
-            if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver && mixingStatus != MixingStatus.MIXING) {
+            if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver && mixingStatus != MixingStatus.MIXING && mixingStatus == MixingStatus.FINISHING) {
                 //Remove ongoing notification if blockchain sync finished
                 stopForeground(true)
                 foregroundService = ForegroundService.NONE
@@ -1474,7 +1477,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 //Shows ongoing notification when synchronizing the blockchain
                 val notification = createNetworkSyncNotification(blockchainState)
                 nm!!.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
-            } else if (mixingStatus == MixingStatus.MIXING || mixingStatus == MixingStatus.PAUSED) {
+            } else if (mixingStatus == MixingStatus.MIXING || mixingStatus == MixingStatus.PAUSED || mixingStatus == MixingStatus.FINISHING) {
                 log.info("foreground service: {}", foregroundService)
                 if (foregroundService == ForegroundService.NONE) {
                     log.info("foreground service not active, create notification")

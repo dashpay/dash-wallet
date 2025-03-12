@@ -24,6 +24,7 @@ import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.PinRetryController
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
@@ -81,5 +82,9 @@ open class CheckPinViewModel @Inject constructor(
 
     fun logError(error: Throwable, message: String? = null) {
         analytics.logError(error, message)
+    }
+
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, mapOf())
     }
 }

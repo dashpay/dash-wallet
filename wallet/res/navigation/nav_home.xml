@@ -75,7 +75,7 @@
             android:name="active_tab"
             app:argType="integer" />
 
-        <deepLink app:uri="android-app://hashengineering.darkcoin.wallet/payments/{active_tab}"/>
+        <deepLink app:uri="android-app://hashengineering.darkcoin.wallet/payments/{active_tab}/{source}"/>
 
         <action
             android:id="@+id/payments_to_contacts"
@@ -141,6 +141,11 @@
             android:name="mode"
             app:argType="de.schildbach.wallet.ui.dashpay.ContactsScreenMode"
             android:defaultValue="SEARCH_CONTACTS" />
+
+        <argument
+            android:name="source"
+            app:argType="string"
+            android:defaultValue="" />
     </fragment>
 
     <fragment
