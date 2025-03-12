@@ -26,6 +26,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.invite.InviteHandler
+import de.schildbach.wallet_test.databinding.ActivityTransparentBinding
 import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -33,10 +34,8 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class InviteHandlerActivity : AppCompatActivity() {
-
-    private val log = LoggerFactory.getLogger(InviteHandlerActivity::class.java)
-
     companion object {
+        private val log = LoggerFactory.getLogger(InviteHandlerActivity::class.java)
 
         private const val EXTRA_INVITE = "extra_invite"
         private const val EXTRA_SILENT_MODE = "extra_silent_mode"
@@ -50,6 +49,7 @@ class InviteHandlerActivity : AppCompatActivity() {
         }
     }
 
+    private lateinit var binding: ActivityTransparentBinding
     private val viewModel: InviteHandlerViewModel by viewModels()
     @Inject
     lateinit var analytics: AnalyticsService
@@ -68,6 +68,8 @@ class InviteHandlerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        binding = ActivityTransparentBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         if (onboardingInProgress()) {
             log.info("ignoring invite since onboarding is in progress")

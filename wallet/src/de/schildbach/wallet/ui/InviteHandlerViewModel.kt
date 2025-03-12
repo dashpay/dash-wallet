@@ -39,8 +39,9 @@ class InviteHandlerViewModel @Inject constructor(
     dashPayProfileDao: DashPayProfileDao,
     private val topUpRepository: TopUpRepository
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
-
-    private val log = LoggerFactory.getLogger(InviteHandlerViewModel::class.java)
+    companion object {
+        private val log = LoggerFactory.getLogger(InviteHandlerViewModel::class.java)
+    }
 
     val inviteData = MutableLiveData<Resource<InvitationLinkData>>()
 
@@ -51,11 +52,11 @@ class InviteHandlerViewModel @Inject constructor(
         FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
             val link = it?.link
             if (link != null && InvitationLinkData.isValid(link)) {
-                log.debug("received invite $link")
+                log.info("received invite $link")
                 val invite = InvitationLinkData(link, false)
                 handleInvite(invite)
             } else {
-                log.debug("invalid invite ignored")
+                log.info("invalid invite ignored")
             }
         }
     }
