@@ -14,83 +14,76 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package de.schildbach.wallet.ui
 
-package de.schildbach.wallet.ui;
-
-import javax.annotation.Nullable;
-
-import de.schildbach.wallet.service.BlockchainService;
-import de.schildbach.wallet.service.BlockchainServiceImpl;
-
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
-import android.os.IBinder;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import android.content.ComponentName
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import de.schildbach.wallet.service.BlockchainService
+import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.service.BlockchainServiceImpl.LocalBinder
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractBindServiceActivity extends LockScreenActivity {
+abstract class AbstractBindServiceActivity : LockScreenActivity() {
+    var blockchainService: BlockchainService? = null
+        private set
 
-    private static final Logger log = LoggerFactory.getLogger(AbstractBindServiceActivity.class);
+    private var shouldUnbind = false
 
-    @Nullable
-    private BlockchainService blockchainService;
-
-    private boolean shouldUnbind;
-
-    private final ServiceConnection serviceConnection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(final ComponentName name, final IBinder binder) {
-            blockchainService = ((BlockchainServiceImpl.LocalBinder) binder).getService();
+    private val serviceConnection: ServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+            blockchainService = (binder as LocalBinder).service
         }
 
-        @Override
-        public void onServiceDisconnected(final ComponentName name) {
-            blockchainService = null;
+        override fun onServiceDisconnected(name: ComponentName) {
+            blockchainService = null
         }
-    };
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        doBindService();
     }
 
-    private void doBindService() {
-        if (bindService(new Intent(this, BlockchainServiceImpl.class), serviceConnection, Context.BIND_AUTO_CREATE)) {
-            shouldUnbind = true;
+    override fun onResume() {
+        super.onResume()
+
+        doBindService()
+    }
+
+    private fun doBindService() {
+        if (bindService(
+                Intent(this, BlockchainServiceImpl::class.java),
+                serviceConnection,
+                BIND_AUTO_CREATE
+            )
+        ) {
+            shouldUnbind = true
         } else {
-            log.error("error: the requested service doesn't exist, or this client isn't allowed access to it.");
+            log.error("error: the requested service doesn't exist, or this client isn't allowed access to it.")
         }
     }
 
-    @Override
-    protected void onPause() {
-        doUnbindService();
+    override fun onPause() {
+        doUnbindService()
 
-        super.onPause();
+        super.onPause()
     }
 
-    public void doUnbindService() {
+    fun doUnbindService() {
         if (shouldUnbind) {
-            unbindService(serviceConnection);
-            shouldUnbind = false;
+            unbindService(serviceConnection)
+            shouldUnbind = false
         }
     }
 
-    protected void unbindServiceServiceConnection(){
-        doUnbindService();
+    fun unbindServiceServiceConnection() {
+        doUnbindService()
     }
 
-    @Nullable
-    public BlockchainService getBlockchainService() {
-        return blockchainService;
+    companion object {
+        private val log: Logger = LoggerFactory.getLogger(
+            AbstractBindServiceActivity::class.java
+        )
     }
 }
