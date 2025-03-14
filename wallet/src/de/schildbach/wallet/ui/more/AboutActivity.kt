@@ -18,17 +18,11 @@
 package de.schildbach.wallet.ui.more
 
 import android.annotation.SuppressLint
-import android.content.*
+import android.content.Intent
 import android.content.Intent.ACTION_VIEW
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateUtils
-import android.widget.Toast
-import android.widget.Toast.LENGTH_LONG
 import androidx.activity.viewModels
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
@@ -44,19 +38,10 @@ import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.features.exploredash.ExploreSyncWorker
 import org.slf4j.LoggerFactory
-import kotlin.math.pow
-import kotlin.math.sqrt
 
 
 @AndroidEntryPoint
-class AboutActivity : LockScreenActivity(), SensorEventListener {
-    // variables for shake detection
-    private val SHAKE_THRESHOLD = 1.50f // m/S**2
-
-    private val MIN_TIME_BETWEEN_SHAKES_MILLISECS = 1000
-    private var mLastShakeTime: Long = 0
-    private lateinit var mSensorMgr: SensorManager
-
+class AboutActivity : LockScreenActivity() {
     companion object {
         private val log = LoggerFactory.getLogger(AboutActivity::class.java)
     }
@@ -104,9 +89,6 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
         }
 
         showExploreDashSyncStatus()
-
-        // Get a sensor manager to listen for shakes
-        mSensorMgr = getSystemService(SENSOR_SERVICE) as SensorManager
         showFirebaseIds()
 
         setContentView(binding.root)
@@ -163,24 +145,6 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        // Listen for shakes
-        val accelerometer = mSensorMgr.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        if (accelerometer != null) {
-            mSensorMgr.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL)
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        // stop listening for shakes
-        val accelerometer = mSensorMgr.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        if (accelerometer != null) {
-            mSensorMgr.unregisterListener(this)
-        }
-    }
-
     override fun finish() {
         super.finish()
         overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left)
@@ -193,35 +157,5 @@ class AboutActivity : LockScreenActivity(), SensorEventListener {
                 getString(R.string.report_issue_dialog_message_issue),
             ).show(this)
         }
-    }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event != null && event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-            val curTime = System.currentTimeMillis()
-            if (curTime - mLastShakeTime > MIN_TIME_BETWEEN_SHAKES_MILLISECS) {
-                val x = event.values[0]
-                val y = event.values[1]
-                val z = event.values[2]
-                val acceleration = sqrt(x.toDouble().pow(2.0) +
-                        y.toDouble().pow(2.0) +
-                        z.toDouble().pow(2.0)) - SensorManager.GRAVITY_EARTH
-
-                if (acceleration > SHAKE_THRESHOLD) {
-                    mLastShakeTime = curTime
-                    log.info("Shake detected: developer mode changing to ${!configuration.developerMode}")
-                    configuration.developerMode = if (!configuration.developerMode) {
-                        Toast.makeText(this, R.string.about_developer_mode, LENGTH_LONG).show()
-                        true
-                    } else {
-                        Toast.makeText(this, R.string.about_developer_mode_disabled, LENGTH_LONG).show()
-                        false
-                    }
-                }
-            }
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // Ignore
     }
 }
