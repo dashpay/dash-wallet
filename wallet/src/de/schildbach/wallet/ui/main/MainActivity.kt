@@ -222,7 +222,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         val inviteHandler = InviteHandler(this, viewModel.analytics)
         // startActivity(InviteHandlerActivity.createIntent(this@MainActivity, invite, silentMode))
         inviteHandlerViewModel.inviteData.observe(this) {
-            inviteHandler.handle(Resource.success(invite), silentMode) {
+            inviteHandler.handle(it, silentMode) {
                 log.info("the invite is valid, starting silently: ${invite.link}")
                 startService(
                     CreateIdentityService.createIntentFromInvite(

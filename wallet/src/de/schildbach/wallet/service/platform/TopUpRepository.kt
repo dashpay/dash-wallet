@@ -648,7 +648,7 @@ class TopUpRepositoryImpl @Inject constructor(
         val stopWatch = Stopwatch.createStarted()
         var tx = getAssetLockTransaction(invite.cftx)
         log.info("validateInvitation: obtaining transaction info took $stopWatch")
-        //TODO: remove when iOS uses big endian
+        // TODO: remove when iOS uses big endian
         if (tx == null) {
             tx = getAssetLockTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
         }
