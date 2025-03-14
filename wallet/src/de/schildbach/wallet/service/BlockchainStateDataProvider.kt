@@ -193,6 +193,10 @@ class BlockchainStateDataProvider @Inject constructor(
         return syncStageFlow
     }
 
+    override fun getSyncStage(): PeerGroup.SyncStage {
+        return syncStageFlow.value ?: PeerGroup.SyncStage.OFFLINE
+    }
+
     override fun getMasternodeAPY(): Double {
         val masternodeListManager = dashSystemService.system.masternodeListManager
         val blockChain = dashSystemService.system.blockChain
