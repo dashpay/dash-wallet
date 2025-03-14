@@ -27,8 +27,6 @@ import android.nfc.NdefMessage
 import android.nfc.NfcAdapter
 import android.os.Build
 import android.os.Bundle
-import android.os.PowerManager
-import android.provider.Settings
 import android.view.MenuItem
 import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts
@@ -45,6 +43,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
@@ -85,15 +84,12 @@ import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.lang.IllegalStateException
-import java.util.*
 import javax.inject.Inject
-
 
 @AndroidEntryPoint
 class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPermissionsResultCallback,
     UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
     EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
-
     companion object {
         private val log = LoggerFactory.getLogger(MainActivity::class.java)
 
@@ -127,6 +123,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     val viewModel: MainViewModel by viewModels()
     private val createIdentityViewModel: CreateIdentityViewModel by viewModels()
     private val coinJoinViewModel: CoinJoinLevelViewModel by viewModels()
+    private val inviteHandlerViewModel: InviteHandlerViewModel by viewModels()
     @Inject
     lateinit var config: Configuration
     private lateinit var binding: ActivityMainBinding
@@ -222,7 +219,21 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun handleOnboardingInvite(silentMode: Boolean) {
         val invite = InvitationLinkData(config.onboardingInvite, false)
-        startActivity(InviteHandlerActivity.createIntent(this@MainActivity, invite, silentMode))
+        val inviteHandler = InviteHandler(this, viewModel.analytics)
+        // startActivity(InviteHandlerActivity.createIntent(this@MainActivity, invite, silentMode))
+        inviteHandlerViewModel.inviteData.observe(this) {
+            inviteHandler.handle(Resource.success(invite), silentMode) {
+                log.info("the invite is valid, starting silently: ${invite.link}")
+                startService(
+                    CreateIdentityService.createIntentFromInvite(
+                        this,
+                        configuration.onboardingInviteUsername,
+                        invite
+                    )
+                )
+            }
+        }
+        inviteHandlerViewModel.handleInvite(invite)
         config.setOnboardingInviteProcessingDone()
     }
 
@@ -289,7 +300,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         viewModel.syncStage.observe(this) { syncStage ->
             if (viewModel.pendingInvite != null) {
-                handleInvite(viewModel.pendingInvite!!, isLocked, syncStage == SyncStage.BLOCKS)
+                handleInvite(viewModel.pendingInvite!!, lockScreenDisplayed || isLocked, syncStage == SyncStage.BLOCKS)
             }
         }
         viewModel.seriousErrorLiveData.observe(this) {
@@ -392,10 +403,18 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun handleInvite(invite: InvitationLinkData, isLocked: Boolean, isSynced: Boolean) {
         if (isLocked || !isSynced) {
+            log.info("handling invite: wait for sync ($isSynced) or unlock ($isLocked)")
             viewModel.pendingInvite = invite
         } else {
-            val acceptInviteIntent = AcceptInviteActivity.createIntent(this, invite, false)
-            startActivity(acceptInviteIntent)
+            log.info("handling invite: ${invite.link}")
+            val inviteHandler = InviteHandler(this, viewModel.analytics)
+            inviteHandlerViewModel.inviteData.observe(this) {
+                inviteHandler.handle(it, false) {
+                    val acceptInviteIntent = AcceptInviteActivity.createIntent(this, invite, false)
+                    startActivity(acceptInviteIntent)
+                }
+            }
+            inviteHandlerViewModel.handleInvite(invite)
         }
     }
 
@@ -407,7 +426,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         if (intent.hasExtra(EXTRA_INVITE)) {
             val invite = intent.extras!!.getParcelable<InvitationLinkData>(EXTRA_INVITE)!!
-            handleInvite(invite, isLocked, viewModel.syncStage.value == SyncStage.BLOCKS)
+            if (viewModel.pendingInvite == null) {
+                handleInvite(invite, lockScreenDisplayed || isLocked, viewModel.syncStage.value == SyncStage.BLOCKS)
+            } else {
+                // TODO: this is not the correct message, we are not onboarding
+                InviteHandler(this, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
+            }
         }
         if (intent.hasExtra(EXTRA_NAVIGATION_DESTINATION)) {
             try {
@@ -603,7 +627,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onLockScreenDeactivated() {
         val pendingInvite = viewModel.pendingInvite
         if (pendingInvite != null) {
-            handleInvite(pendingInvite, isLocked, viewModel.syncStage.value == SyncStage.BLOCKS)
+            handleInvite(pendingInvite, false, viewModel.syncStage.value == SyncStage.BLOCKS)
             viewModel.pendingInvite = null // clear the invite
         } else if (config.showNotificationsExplainer) {
             explainPushNotifications()

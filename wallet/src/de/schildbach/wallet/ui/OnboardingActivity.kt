@@ -37,6 +37,7 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardingBinding
 import de.schildbach.wallet_test.databinding.ActivityOnboardingPermLockBinding
@@ -104,6 +105,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private val viewModel by viewModels<OnboardingViewModel>()
+    private val inviteHandlerViewModel by viewModels<InviteHandlerViewModel>()
     private lateinit var binding: ActivityOnboardingBinding
 
     @Inject
@@ -115,7 +117,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        //viewModel.onboardingInvite = intent.getParcelableExtra(EXTRA_INVITE)
         if (pinRetryController.isLockedForever) {
             val binding = ActivityOnboardingPermLockBinding.inflate(layoutInflater)
             setContentView(binding.root)
@@ -173,6 +175,41 @@ class OnboardingActivity : RestoreFromFileActivity() {
         if (intent.extras?.getBoolean(EXTRA_UPGRADE) == true) {
             removePreviousTask(this)
         }
+        val invite: InvitationLinkData? = intent?.getParcelableExtra(EXTRA_INVITE)
+        log.info("handling invite: ${invite?.link}")
+        if (invite != null) {
+            val inviteHandler = InviteHandler(this, viewModel.analytics)
+            inviteHandlerViewModel.inviteData.observe(this) {
+                inviteHandler.handle(it, false) {
+                    //viewModel.onboardingInvite = invite
+                }
+            }
+            inviteHandlerViewModel.handleInvite(invite)
+        }
+        updateView()
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        val invite: InvitationLinkData? = intent?.getParcelableExtra(EXTRA_INVITE)
+        if (invite != null && inviteHandlerViewModel.invite != null) {
+            // TODO: wrong message
+            log.info("handling invite: already processing invite")
+            InviteHandler(this, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
+        } else if (invite != null) {
+            log.info("handling invite: ${invite.link}")
+            val inviteHandler = InviteHandler(this, viewModel.analytics)
+            inviteHandlerViewModel.inviteData.observe(this) {
+                inviteHandler.handle(it, false) {
+                    updateView()
+                }
+            }
+            inviteHandlerViewModel.handleInvite(invite)
+        }
+    }
+
+    private fun updateView() {
+        binding.restoreWallet.isVisible = !inviteHandlerViewModel.isUsingInvite || BuildConfig.DEBUG
     }
 
     // This is due to a wallet being created in an invalid way
@@ -245,8 +282,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private fun initView() {
         binding.createNewWallet.setOnClickListener {
-            val onboardingInvite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
-            viewModel.createNewWallet(onboardingInvite)
+            viewModel.createNewWallet(inviteHandlerViewModel.invite)
         }
         binding.recoveryWallet.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Onboarding.RECOVERY)
@@ -255,7 +291,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
         // hide restore wallet from file if an invite is being used
         // remove this line after backup file recovery supports invites
-        binding.restoreWallet.isVisible = !intent.hasExtra(EXTRA_INVITE) || BuildConfig.DEBUG
         binding.restoreWallet.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Onboarding.RESTORE_FROM_FILE)
             restoreWalletFromFile()

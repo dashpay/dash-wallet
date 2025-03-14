@@ -624,6 +624,18 @@ class TopUpRepositoryImpl @Inject constructor(
         }
     }
 
+    private fun getAssetLockTransaction(txId: String): ByteArray? {
+        for (attempt in 0..10) {
+            val txByteArray = platform.client.getTransaction(txId.toString())
+            if (txByteArray != null) {
+                return txByteArray
+            }
+        }
+        log.info("cannot find asset lock transaction: $txId")
+        return null
+    }
+
+
     /**
      * validates an invite
      *
@@ -634,11 +646,11 @@ class TopUpRepositoryImpl @Inject constructor(
 
     override fun validateInvitation(invite: InvitationLinkData): Boolean {
         val stopWatch = Stopwatch.createStarted()
-        var tx = platform.client.getTransaction(invite.cftx)
+        var tx = getAssetLockTransaction(invite.cftx)
         log.info("validateInvitation: obtaining transaction info took $stopWatch")
         //TODO: remove when iOS uses big endian
         if (tx == null) {
-            tx = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
+            tx = getAssetLockTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
         }
         if (tx != null) {
             val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx)

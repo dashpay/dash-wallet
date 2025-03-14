@@ -56,18 +56,28 @@ class CreateIdentityViewModel @Inject constructor(
             val isRestoring = withContext(Dispatchers.IO) { blockchainIdentityDataDao.get(BlockchainIdentityConfig.RESTORING) ?: false }
 
             if (isRestoring) {
-                val identityId = withContext(Dispatchers.IO) {blockchainIdentityDataDao.get(BlockchainIdentityConfig.IDENTITY_ID) }
+                val identityId = withContext(Dispatchers.IO) { blockchainIdentityDataDao.get(BlockchainIdentityConfig.IDENTITY_ID) }
                 identityId?.let {
                     RestoreIdentityOperation(walletApplication)
                         .create(identityId, true)
                         .enqueue()
                 }
             } else {
-                walletApplication.startService(
-                    CreateIdentityService.createIntentForRetry(
-                        walletApplication
+                val usingInvite = withContext(Dispatchers.IO) { blockchainIdentityDataDao.get(BlockchainIdentityConfig.USING_INVITE) ?: false }
+                if (usingInvite) {
+                    walletApplication.startService(
+                        CreateIdentityService.createIntentForRetryFromInvite(
+                            walletApplication,
+                            true
+                        )
                     )
-                )
+                } else {
+                    walletApplication.startService(
+                        CreateIdentityService.createIntentForRetry(
+                            walletApplication
+                        )
+                    )
+                }
             }
         }
     }

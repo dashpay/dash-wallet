@@ -54,6 +54,7 @@
     <string name="invitation_username_already_found_message">You cannot claim this invite since you already have a Dash username</string>
     <string name="invitation_onboarding_has_began_error_title">Onboarding Error</string>
     <string name="invitation_onboarding_has_began_error">Onboarding is in process, please claim your invite after you have created your wallet.</string>
+    <string name="invitation_accept_invite_has_began_error">DashPay is currencly processing an invite.</string>
     <string name="invitation_accept_title_1">Get your Username</string>
     <string name="invitation_accept_title_2">Add your Friends &amp; Family</string>
     <string name="invitation_accept_message_2">Invite your family, find your friends by searching their usernames</string>

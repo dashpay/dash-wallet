@@ -80,7 +80,7 @@ open class InviteSendContactRequestDialog : AdaptiveDialog(R.layout.invite_send_
         view.findViewById<TextView>(R.id.dialog_title).isVisible = false
         view.findViewById<Button>(R.id.dialog_positive_button)!!.isVisible = false
         requireArguments().apply {
-            val messageObj = getString("message")!!
+            val messageObj = getString(MESSAGE_ARG)!!
             val message: TextView = view.findViewById(R.id.dialog_message)!!
             message.text = HtmlCompat.fromHtml(messageObj, HtmlCompat.FROM_HTML_MODE_COMPACT)
             val profile = getParcelable<DashPayProfile>(EXTRA_PROFILE)
