@@ -28,6 +28,9 @@ import org.bitcoinj.core.TransactionBag
 import org.bitcoinj.wallet.WalletEx
 
 class CoinJoinTxResourceMapper: TxResourceMapper() {
+    override val dateTimeFormat: Int
+        get() = DateUtils.FORMAT_SHOW_TIME
+
     @StringRes
     override fun getTransactionTypeName(tx: Transaction, bag: TransactionBag): Int {
         if ((tx.type != Transaction.Type.TRANSACTION_NORMAL &&
@@ -43,11 +46,8 @@ class CoinJoinTxResourceMapper: TxResourceMapper() {
             CoinJoinTransactionType.Mixing -> R.string.transaction_row_status_coinjoin_mixing
             CoinJoinTransactionType.MixingFee -> R.string.transaction_row_status_coinjoin_mixing_fee
             CoinJoinTransactionType.MakeCollateralInputs -> R.string.transaction_row_status_coinjoin_make_collateral
+            CoinJoinTransactionType.CombineDust -> R.string.transaction_row_status_coinjoin_combine_dust
             else -> super.getTransactionTypeName(tx, bag)
         }
-    }
-
-    override fun getDateTimeFormat(): Int {
-        return DateUtils.FORMAT_SHOW_TIME
     }
 }

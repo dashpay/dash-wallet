@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.transactions.coinjoin
 
-import android.util.Log
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.WalletEx

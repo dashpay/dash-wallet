@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">CoinJoin Collateral Inputs</string>
     <string name="transaction_row_status_coinjoin_mixing">CoinJoin Mixing</string>
     <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin Create Denominations</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">CoinJoin Combine Dust</string>
     <string name="network_monitor_activity_title">Network monitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blocks</string>
