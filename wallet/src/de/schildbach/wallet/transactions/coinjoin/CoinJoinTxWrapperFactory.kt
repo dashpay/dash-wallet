@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.transactions.coinjoin
 
-import android.util.Log
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.WalletEx
@@ -49,5 +48,11 @@ class CoinJoinTxWrapperFactory(val params: NetworkParameters, val wallet: Wallet
                 Pair(false, null)
             }
         }
+    }
+
+    fun forceInclude(tx: Transaction) {
+        val localDate = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+        val wrapper = wrapperMap[localDate]
+        wrapper?.transactions?.set(tx.txId, tx)
     }
 }
