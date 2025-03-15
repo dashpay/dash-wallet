@@ -65,11 +65,6 @@ open class TxResourceMapper {
                         dashPayWallet = bag
                     }
 
-                    if (tx.txId.toString() == "60f7d2cdff5c7f12d8876e46d71353748c16778ac6a47b5e94ccec35fa23b1ad") {
-                        Log.i("Break", "break")
-                    }
-
-
                     val coinJoinType = CoinJoinTransactionType.fromTx(tx, bag)
 
                     if (dashPayWallet != null && AssetLockTransaction.isAssetLockTransaction(tx)) {
