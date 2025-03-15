@@ -49,10 +49,4 @@ class CoinJoinTxWrapperFactory(val params: NetworkParameters, val wallet: Wallet
             }
         }
     }
-
-    fun forceInclude(tx: Transaction) {
-        val localDate = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-        val wrapper = wrapperMap[localDate]
-        wrapper?.transactions?.set(tx.txId, tx)
-    }
 }
