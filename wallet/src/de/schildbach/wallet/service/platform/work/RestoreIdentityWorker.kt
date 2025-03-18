@@ -293,18 +293,31 @@ class RestoreIdentityWorker @AssistedInject constructor(
                     }
                 }
 
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKED)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                if (blockchainIdentity.currentUsername != null) {
 
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKING)
+                    platformRepo.updateIdentityCreationState(
+                        blockchainIdentityData,
+                        BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKED
+                    )
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                    platformRepo.updateIdentityCreationState(
+                        blockchainIdentityData,
+                        BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKING
+                    )
 
-                // recover the verification link
-
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKED)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, BlockchainIdentityData.CreationState.VOTING)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                    // recover the verification link
+                    platformRepo.updateIdentityCreationState(
+                        blockchainIdentityData,
+                        BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKED
+                    )
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                    // set voting state
+                    platformRepo.updateIdentityCreationState(
+                        blockchainIdentityData,
+                        BlockchainIdentityData.CreationState.VOTING
+                    )
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                }
             }
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_3_restoring), 5, 5)
 
@@ -313,6 +326,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
             if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
                 blockchainIdentityData.creationState = BlockchainIdentityData.CreationState.USERNAME_REGISTERING
                 blockchainIdentityData.restoring = false
+                platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                 error("missing domain document for ${blockchainIdentity.uniqueId}")
             }
 
