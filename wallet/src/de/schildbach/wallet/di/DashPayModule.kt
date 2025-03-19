@@ -17,9 +17,12 @@
 
 package de.schildbach.wallet.di
 
+import android.content.Context
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.service.CoinJoinMixingService
 import de.schildbach.wallet.service.CoinJoinService
@@ -31,13 +34,26 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.PlatformSynchronizationService
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.platform.TopUpRepositoryImpl
+import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
+import de.schildbach.wallet.ui.dashpay.utils.ImgurService
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class DashPayModule {
     companion object {
+        @Provides
+        fun provideGoogleDrive(
+            @ApplicationContext context: Context
+        ): GoogleDriveService = GoogleDriveService(context)
 
+        @Provides
+        fun provideImgurService(
+            analyticsService: AnalyticsService,
+            config: Configuration
+        ): ImgurService = ImgurService(analyticsService, config)
     }
 
     @Singleton // only want one of PlatformSyncService created

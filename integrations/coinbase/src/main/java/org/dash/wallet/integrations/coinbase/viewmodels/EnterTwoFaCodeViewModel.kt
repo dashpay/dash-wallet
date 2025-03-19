@@ -133,6 +133,10 @@ class EnterTwoFaCodeViewModel @Inject constructor(
             else -> {}
         }
     }
+
+    fun logEvent(eventName: String) {
+        analyticsService.logEvent(eventName, mapOf())
+    }
 }
 
 data class TransactionState(

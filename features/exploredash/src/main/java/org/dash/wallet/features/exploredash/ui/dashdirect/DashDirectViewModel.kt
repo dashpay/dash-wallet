@@ -99,7 +99,7 @@ class DashDirectViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         walletDataProvider
-            .observeBalance()
+            .observeSpendableBalance()
             .distinctUntilChanged()
             .onEach(_balance::postValue)
             .launchIn(viewModelScope)

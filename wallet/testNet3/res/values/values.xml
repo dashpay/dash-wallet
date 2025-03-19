@@ -20,7 +20,7 @@
 		<item>µtDASH, no decimal places</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_values">
-		<item>http://insight.testnet.networks.dash.org:3001/insight/</item>
+		<item>http://insight.testnet.networks.dash.org/insight/</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_labels">
 		<item>Insight TestNet Block Explorer</item>

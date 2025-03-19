@@ -26,10 +26,13 @@ import de.schildbach.wallet.payments.parsers.PaymentIntentParser
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import okhttp3.CacheControl
@@ -60,6 +63,8 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.call
 import org.dash.wallet.common.util.ensureSuccessful
 import org.slf4j.LoggerFactory
+import java.util.function.Consumer
+import java.util.function.Predicate
 import javax.inject.Inject
 
 class SendCoinsTaskRunner @Inject constructor(
@@ -70,6 +75,7 @@ class SendCoinsTaskRunner @Inject constructor(
     private val analyticsService: AnalyticsService,
     private val identityConfig: BlockchainIdentityConfig,
     coinJoinConfig: CoinJoinConfig,
+    coinJoinService: CoinJoinService,
     private val platformRepo: PlatformRepo
 ) : SendPaymentService {
     companion object {
@@ -77,15 +83,31 @@ class SendCoinsTaskRunner @Inject constructor(
         private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
     }
     private var coinJoinSend = false
+    private var coinJoinMode = CoinJoinMode.NONE
+    private var coinJoinMixingState = MixingStatus.NOT_STARTED
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
     init {
         coinJoinConfig
             .observeMode()
             .filterNotNull()
             .onEach { mode ->
-                coinJoinSend = mode != CoinJoinMode.NONE
+                coinJoinMode = mode
+                updateCoinJoinSend()
             }
             .launchIn(coroutineScope)
+        coinJoinService
+            .observeMixingState()
+            .onEach { mixingState ->
+                coinJoinMixingState = mixingState
+                updateCoinJoinSend()
+            }
+            .launchIn(coroutineScope)
+    }
+
+    // use CoinJoin mode of Sending if CoinJoin is not OFF [CoinJoinMode.NONE]
+    // and is not finishing [MixingStatus.FINISHING]
+    private fun updateCoinJoinSend() {
+        coinJoinSend = coinJoinMode != CoinJoinMode.NONE && coinJoinMixingState != MixingStatus.FINISHING
     }
 
     @Throws(LeftoverBalanceException::class)
@@ -94,7 +116,9 @@ class SendCoinsTaskRunner @Inject constructor(
         amount: Coin,
         coinSelector: CoinSelector?,
         emptyWallet: Boolean,
-        checkBalanceConditions: Boolean
+        checkBalanceConditions: Boolean,
+        beforeSending: Consumer<Transaction>?,
+        canSendLockedOutput: Predicate<TransactionOutput>?
     ): Transaction {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
@@ -104,8 +128,12 @@ class SendCoinsTaskRunner @Inject constructor(
             walletData.checkSendingConditions(address, amount)
         }
 
-        val sendRequest = createSendRequest(address, amount, coinSelector, emptyWallet)
-        return sendCoins(sendRequest, checkBalanceConditions = false)
+        val sendRequest = createSendRequest(address, amount, coinSelector, emptyWallet, canSendLockedOutput = canSendLockedOutput)
+        return sendCoins(
+            sendRequest,
+            checkBalanceConditions = false,
+            beforeSending = beforeSending
+        )
     }
 
     override suspend fun estimateNetworkFee(
@@ -299,7 +327,8 @@ class SendCoinsTaskRunner @Inject constructor(
         amount: Coin,
         coinSelector: CoinSelector? = null,
         emptyWallet: Boolean = false,
-        forceMinFee: Boolean = true
+        forceMinFee: Boolean = true,
+        canSendLockedOutput: Predicate<TransactionOutput>? = null
     ): SendRequest {
         return SendRequest.to(address, amount).apply {
             this.feePerKb = Constants.ECONOMIC_FEE
@@ -307,6 +336,7 @@ class SendCoinsTaskRunner @Inject constructor(
             this.emptyWallet = emptyWallet
 
             val selector = coinSelector ?: getCoinSelector()
+            this.canUseLockedOutputPredicate = canSendLockedOutput
             this.coinSelector = selector
 
             if (selector is ByAddressCoinSelector) {
@@ -335,7 +365,8 @@ class SendCoinsTaskRunner @Inject constructor(
     suspend fun sendCoins(
         sendRequest: SendRequest,
         txCompleted: Boolean = false,
-        checkBalanceConditions: Boolean = true
+        checkBalanceConditions: Boolean = true,
+        beforeSending: Consumer<Transaction>? = null
     ): Transaction = withContext(Dispatchers.IO) {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
@@ -355,6 +386,7 @@ class SendCoinsTaskRunner @Inject constructor(
             }
 
             val transaction = sendRequest.tx
+            beforeSending?.accept(transaction)
             log.info("send successful, transaction committed: {}", transaction.txId.toString())
             walletApplication.broadcastTransaction(transaction)
             logSendTxEvent(transaction, wallet)

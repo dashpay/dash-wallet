@@ -172,11 +172,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
 
         viewModel.mixingProgress.observe(viewLifecycleOwner) { progress ->
-            mixingBinding.balance.text = getString(
-                R.string.coinjoin_progress_balance,
-                viewModel.mixedBalance,
-                viewModel.walletBalance
-            )
+            updateMixedAndTotalBalance()
             mixingBinding.mixingPercent.text = getString(R.string.percent, progress.toInt())
             mixingBinding.mixingProgress.progress = progress.toInt()
         }
@@ -191,6 +187,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
             when (mixingState) {
                 MixingStatus.MIXING -> {
                     mixingBinding.mixingMode.text = getString(R.string.coinjoin_mixing)
+                    mixingBinding.progressBar.isVisible = true
+                }
+                MixingStatus.FINISHING -> {
+                    mixingBinding.mixingMode.text = getString(R.string.coinjoin_mixing_finishing)
                     mixingBinding.progressBar.isVisible = true
                 }
                 MixingStatus.PAUSED -> {
@@ -209,17 +209,25 @@ class WalletFragment : Fragment(R.layout.home_content) {
             mixingBinding.mixingSessions.text = activeSessionsText
         }
 
-        viewModel.balance.observe(viewLifecycleOwner) {
-            mixingBinding.balance.text = getString(
-                R.string.coinjoin_progress_balance,
-                viewModel.mixedBalance,
-                viewModel.walletBalance
-            )
+        viewModel.totalBalance.observe(viewLifecycleOwner) {
+            updateMixedAndTotalBalance()
+        }
+
+        viewModel.mixedBalance.observe(viewLifecycleOwner) {
+            updateMixedAndTotalBalance()
         }
 
         viewModel.hasContacts.observe(viewLifecycleOwner) {
             refreshShortcutBar()
         }
+    }
+
+    private fun updateMixedAndTotalBalance() {
+        mixingBinding.balance.text = getString(
+            R.string.coinjoin_progress_balance,
+            viewModel.mixedBalanceString,
+            viewModel.walletBalanceString
+        )
     }
 
     fun scrollToTop() {
@@ -287,10 +295,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
         refreshShortcutBar()
     }
 
-    private fun joinDashPay() {
-        startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
-    }
-
     private fun refreshShortcutBar() {
         showHideSecureAction()
         refreshIfUserHasBalance()
@@ -302,7 +306,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun refreshIfUserHasBalance() {
-        val balance: Coin = viewModel.balance.value ?: Coin.ZERO
+        val balance: Coin = viewModel.totalBalance.value ?: Coin.ZERO
         binding.shortcutsPane.userHasBalance = balance.isPositive
     }
 
@@ -392,9 +396,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     null
                 )
                 dialog.isMessageSelectable = true
-                dialog.show(requireActivity()) {
-                    viewModel.logEvent(AnalyticsConstants.Home.NO_ADDRESS_COPIED)
-                }
+                dialog.show(requireActivity())
             }
 
             override fun cannotClassify(input: String) {

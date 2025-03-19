@@ -33,6 +33,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.LockScreenAware
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
@@ -107,9 +108,15 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
            }
        } else {
            when(transactionType) {
-               TransactionType.BuyDash -> showTransactionStateDialog(CoinBaseResultDialog.Type.DEPOSIT_ERROR, state.responseMessage)
+               TransactionType.BuyDash -> {
+                   viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ERROR)
+                   showTransactionStateDialog(CoinBaseResultDialog.Type.DEPOSIT_ERROR, state.responseMessage)
+               }
                TransactionType.BuySwap -> showTransactionStateDialog(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, state.responseMessage)
-               TransactionType.TransferDash -> showTransactionStateDialog(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, state.responseMessage)
+               TransactionType.TransferDash -> {
+                   viewModel.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR)
+                   showTransactionStateDialog(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, state.responseMessage)
+               }
                else -> {}
            }
        }
@@ -182,6 +189,10 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment), Lo
     }
 
     private fun showTransactionStateDialog(type: CoinBaseResultDialog.Type, responseMessage: String? = null) {
+        if (type == CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS) {
+            viewModel.logEvent(AnalyticsConstants.Coinbase.TRANSFER_SUCCESS)
+        }
+
         val params = arguments?.let { EnterTwoFaCodeFragmentArgs.fromBundle(it).transactionParams }
         val transactionStateDialog = CoinBaseResultDialog.newInstance(type, responseMessage,params?.coinbaseWalletName, dashToCoinbase = false).apply {
             this.onCoinBaseResultDialogButtonsClickListener =

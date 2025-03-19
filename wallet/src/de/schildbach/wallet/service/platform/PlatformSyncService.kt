@@ -591,7 +591,7 @@ class PlatformSynchronizationService @Inject constructor(
                             DashPayProfile(identityId.toString(), username)
                         }
 
-                        dashPayProfileDao.insert(profile!!)
+                        dashPayProfileDao.insert(profile)
                         if (checkingIntegrity) {
                             log.info("check database integrity: adding missing profile $username:$id")
                         }

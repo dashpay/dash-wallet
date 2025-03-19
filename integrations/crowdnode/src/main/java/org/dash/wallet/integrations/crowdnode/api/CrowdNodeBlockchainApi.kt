@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.first
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.script.ScriptPattern
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
@@ -51,16 +52,36 @@ open class CrowdNodeBlockchainApi @Inject constructor(
     private val params = walletData.networkParameters
 
     suspend fun topUpAddress(accountAddress: Address, amount: Coin, emptyWallet: Boolean = false): Transaction {
-        val topUpTx = paymentService.sendCoins(accountAddress, amount, null, emptyWallet)
+        val topUpTx = paymentService.sendCoins(accountAddress, amount, null, emptyWallet, beforeSending = {
+            lockAccountAddressOutput(it, accountAddress)
+        })
         topUpTx.waitToMatchFilters(LockedTransaction())
         return topUpTx
+    }
+
+    /** lock funds in outputs to accountAddress to prevent other send operations from using these funds */
+    private fun lockAccountAddressOutput(
+        it: Transaction,
+        accountAddress: Address
+    ) {
+        it.outputs.filter { output ->
+            ScriptPattern.isP2PKH(output.scriptPubKey) &&
+                Address.fromPubKeyHash(
+                walletData.wallet!!.params,
+                ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
+            ) == accountAddress
+        }.forEach { output ->
+            walletData.wallet!!.lockOutput(output.outPointFor)
+        }
     }
 
     suspend fun makeSignUpRequest(accountAddress: Address): Transaction {
         val requestValue = CrowdNodeSignUpTx.SIGNUP_REQUEST_CODE
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
         val selector = ByAddressCoinSelector(accountAddress)
-        val signUpTx = paymentService.sendCoins(crowdNodeAddress, requestValue, selector)
+        val signUpTx = paymentService.sendCoins(crowdNodeAddress, requestValue, selector, canSendLockedOutput = {
+            it.scriptPubKey.getToAddress(params) == accountAddress
+        })
         log.info("signUpTx id: ${signUpTx.txId}")
         val errorResponse = CrowdNodeErrorResponse(params, requestValue)
         val tx = walletData.observeTransactions(
@@ -69,7 +90,7 @@ open class CrowdNodeBlockchainApi @Inject constructor(
             PossibleAcceptTermsResponse(walletData.transactionBag, accountAddress),
             errorResponse
         ).first()
-
+        lockAccountAddressOutput(tx, accountAddress)
         if (errorResponse.matches(tx)) {
             throw CrowdNodeException("SignUp request returned an error")
         }
@@ -81,7 +102,9 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         val requestValue = CrowdNodeAcceptTermsTx.ACCEPT_TERMS_REQUEST_CODE
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
         val selector = ByAddressCoinSelector(accountAddress)
-        val acceptTx = paymentService.sendCoins(crowdNodeAddress, requestValue, selector)
+        val acceptTx = paymentService.sendCoins(crowdNodeAddress, requestValue, selector, canSendLockedOutput = {
+            it.scriptPubKey.getToAddress(params) == accountAddress
+        })
         log.info("acceptTx id: ${acceptTx.txId}")
         val errorResponse = CrowdNodeErrorResponse(params, requestValue)
         val tx = walletData.observeTransactions(
@@ -108,7 +131,16 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
         val selector = ByAddressCoinSelector(accountAddress)
 
-        return paymentService.sendCoins(crowdNodeAddress, amount, selector, emptyWallet, checkBalanceConditions)
+        return paymentService.sendCoins(
+            crowdNodeAddress,
+            amount,
+            selector,
+            emptyWallet,
+            checkBalanceConditions,
+            canSendLockedOutput = {
+                it.scriptPubKey.getToAddress(params) == accountAddress
+            }
+        )
     }
 
     suspend fun waitForDepositResponse(amount: Coin): Transaction {
@@ -126,6 +158,7 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         return tx
     }
 
+    // not currently used
     suspend fun requestWithdrawal(accountAddress: Address, requestValue: Coin): Transaction {
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
         val selector = ByAddressCoinSelector(accountAddress)
@@ -135,7 +168,10 @@ open class CrowdNodeBlockchainApi @Inject constructor(
             requestValue,
             selector,
             emptyWallet = false,
-            checkBalanceConditions = false
+            checkBalanceConditions = false,
+            canSendLockedOutput = {
+                it.scriptPubKey.getToAddress(params) == accountAddress
+            }
         )
     }
 
@@ -225,7 +261,9 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         return wrappedTransactions.firstOrNull { it is FullCrowdNodeSignUpTxSet } as? FullCrowdNodeSignUpTxSet
     }
 
-    suspend fun resendConfirmationTx(confirmationTx: Transaction) {
+    suspend fun resendConfirmationTx(confirmationTx: Transaction, accountAddress: Address) {
+        // lock the outputs
+        lockAccountAddressOutput(confirmationTx, accountAddress)
         val selector = ExactOutputsSelector(
             listOf(confirmationTx.outputs.first { it.value == CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT })
         )
@@ -234,7 +272,10 @@ open class CrowdNodeBlockchainApi @Inject constructor(
             CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT,
             selector,
             emptyWallet = true,
-            checkBalanceConditions = false
+            checkBalanceConditions = false,
+            canSendLockedOutput = {
+                it.scriptPubKey.getToAddress(params) == accountAddress
+            }
         )
         log.info("Re-sent the confirmation tx: ${resentTx.txId}")
 

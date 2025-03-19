@@ -44,6 +44,7 @@ import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.main.MainViewModel
+import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet_test.R
@@ -57,7 +58,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
@@ -164,13 +164,14 @@ class ContactsFragment : Fragment(),
             // Hide the invite UI
             emptyStatePane.inviteHintLayout.root.isVisible = de.schildbach.wallet.Constants.SUPPORTS_INVITES
             emptyStatePane.inviteHintLayout.inviteFriendHint.setOnClickListener {
+                dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.INVITE_CONTACTS)
+
                 lifecycleScope.launch {
                     val inviteHistory = dashPayViewModel.getInviteHistory()
 
                     if (inviteHistory.isEmpty()) {
-                        InviteFriendActivity.startOrError(requireActivity())
+                        InviteFriendActivity.startOrError(requireActivity(), source = "contacts")
                     } else {
-                        dashPayViewModel.logEvent(AnalyticsConstants.Invites.INVITE_CONTACTS)
                         startActivity(InvitesHistoryActivity.createIntent(requireContext()))
                     }
                 }
@@ -404,6 +405,7 @@ class ContactsFragment : Fragment(),
 
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 if (fireAction) {
+                    paymentIntent.source = arguments?.getString(ARG_SOURCE) ?: ""
                     SendCoinsActivity.start(requireContext(), null, paymentIntent, true)
                 } else {
 

@@ -52,8 +52,6 @@ import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
-import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
-import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApiAggregator
 import org.dash.wallet.integrations.uphold.api.UpholdClient
 import org.dash.wallet.features.exploredash.network.service.stubs.FakeDashDirectSendService
 import javax.inject.Singleton
@@ -110,9 +108,10 @@ abstract class AppModule {
             analyticsService: AnalyticsService,
             identityConfig: BlockchainIdentityConfig,
             coinJoinConfig: CoinJoinConfig,
+            coinJoinService: CoinJoinService,
             platformRepo: PlatformRepo
         ): SendPaymentService {
-            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, coinJoinConfig, platformRepo)
+            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, coinJoinConfig, coinJoinService, platformRepo)
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
                 realService
