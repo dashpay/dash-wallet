@@ -466,4 +466,6 @@
     <string name="voting_period_ends_tomorrow">Voting ends tomorrow</string>
     <string name="link_included">link included</string>
     <string name="group_by">Group by</string>
+    <string name="transaction_metadata_title">Transaction metadata</string>
+    <string name="transaction_metadata_data_being_saved">Saved on network</string>
 </resources>

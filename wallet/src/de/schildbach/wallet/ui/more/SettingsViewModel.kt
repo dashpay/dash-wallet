@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -44,7 +45,8 @@ class SettingsViewModel @Inject constructor(
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService,
     private val walletDataProvider: WalletDataProvider,
-    private val analytics: AnalyticsService
+    private val analytics: AnalyticsService,
+    private val configuration: Configuration
 ) : ViewModel() {
     private val powerManager: PowerManager = walletApplication.getSystemService(PowerManager::class.java)
 
@@ -82,4 +84,10 @@ class SettingsViewModel @Inject constructor(
     fun logEvent(event: String) {
         analytics.logEvent(event, mapOf())
     }
+
+    fun updateLastBlockchainResetTime() {
+        configuration.updateLastBlockchainResetTime()
+    }
+
+    fun getTotalWalletBalance() = walletDataProvider.getWalletBalance()
 }

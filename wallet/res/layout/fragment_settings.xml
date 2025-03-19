@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright (c) 2019 Dash Core Group
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
+    android:background="@color/background_primary"
+    android:orientation="vertical"
+    tools:context="de.schildbach.wallet.ui.more.SettingsFragment">
+
+    <include
+        android:id="@+id/app_bar"
+        layout="@layout/app_bar_general"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/local_currency"
+        style="@style/MenuRow"
+        android:layout_marginTop="20dp">
+
+        <TextView
+            style="@style/MenuRowTitle.Internal"
+            android:text="@string/menu_local_currency"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/imageView2"
+            style="@style/MenuRowArrow"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_menu_row_arrow" />
+
+        <TextView
+            android:id="@+id/local_currency_symbol"
+            style="@style/MenuRowTitle.Internal"
+            android:layout_marginEnd="16dp"
+            android:layout_marginRight="16dp"
+            android:textColor="@color/dash_blue"
+            android:textSize="15sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/imageView2"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="COP" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/rescan_blockchain"
+        style="@style/MenuRow.Internal">
+
+        <TextView
+            style="@style/MenuRowTitle.Internal"
+            android:text="@string/menu_rescan_blockchain"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/about"
+        style="@style/MenuRow.Internal">
+
+        <TextView
+            android:id="@+id/about_title"
+            style="@style/MenuRowTitle.Internal"
+            android:text="@string/about_title"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            style="@style/MenuRowArrow"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_menu_row_arrow" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/notifications"
+        style="@style/MenuRow.Internal">
+
+        <TextView
+            android:id="@+id/notifications_title"
+            style="@style/MenuRowTitle.Internal"
+            android:text="@string/notification_settings_title"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            style="@style/MenuRowArrow"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_menu_row_arrow" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/coinjoin"
+        style="@style/MenuRow.Internal">
+
+        <ImageView
+            android:id="@+id/coinjoin_icon"
+            android:layout_gravity="center_vertical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="17dp"
+            app:srcCompat="@drawable/ic_coinjoin"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/coinjoin_title"
+            style="@style/MenuRowTitle.Internal"
+            android:layout_width="wrap_content"
+            android:layout_height="27dp"
+            android:layout_marginStart="22dp"
+            android:text="@string/coinjoin"
+            app:layout_constraintBottom_toTopOf="@id/coinjoin_subtitle"
+            app:layout_constraintStart_toEndOf="@id/coinjoin_icon"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_chainStyle="packed" />
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:paddingEnd="5dp"
+            style="@style/Widget.AppCompat.ProgressBar"
+            app:layout_constraintStart_toStartOf="@id/coinjoin_title"
+            app:layout_constraintTop_toTopOf="@id/coinjoin_subtitle"
+            app:layout_constraintBottom_toBottomOf="@id/coinjoin_subtitle"
+            android:indeterminate="true"
+            android:indeterminateDrawable="@drawable/animated_circular_progress_indictator"/>
+
+        <TextView
+            android:id="@+id/coinjoin_subtitle"
+            style="@style/Overline.Tertiary"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            android:text="@string/turned_off"
+            app:layout_constraintStart_toEndOf="@id/progress_bar"
+            app:layout_constraintTop_toBottomOf="@id/coinjoin_title"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <TextView
+            android:id="@+id/coinjoin_progress"
+            style="@style/Overline.Tertiary"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            app:layout_constraintStart_toEndOf="@id/coinjoin_subtitle"
+            app:layout_constraintEnd_toStartOf="@id/balance"
+            app:layout_constraintBottom_toBottomOf="@id/coinjoin_subtitle"
+            tools:text="(10%)"/>
+
+        <TextView
+            android:id="@+id/balance"
+            style="@style/Overline.Tertiary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="3dp"
+            app:layout_constraintEnd_toStartOf="@id/coinjoin_subtitle_icon"
+            app:layout_constraintTop_toBottomOf="@id/coinjoin_title"
+            app:layout_constraintBottom_toBottomOf="@id/coinjoin_subtitle"
+            tools:text="0.012 of 0.028" />
+
+        <ImageView
+            android:id="@+id/coinjoin_subtitle_icon"
+            android:layout_gravity="center_vertical"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="15dp"
+            app:srcCompat="@drawable/ic_dash"
+            app:tint="@color/content_tertiary"
+            app:layout_constraintTop_toTopOf="@id/coinjoin_subtitle"
+            app:layout_constraintBottom_toBottomOf="@id/coinjoin_subtitle"
+            app:layout_constraintEnd_toEndOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/transaction_metadata"
+        style="@style/MenuRow.Internal">
+
+        <ImageView
+            android:id="@+id/transaction_metadata_icon"
+            android:layout_gravity="center_vertical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="17dp"
+            app:srcCompat="@drawable/ic_file"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toEndOf="@id/transaction_metadata_icon"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/transaction_metadata_title"
+                style="@style/MenuRowTitle.Internal"
+                android:text="@string/transaction_metadata_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/transaction_metadata_subtitle"
+                style="@style/Overline.Medium.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="@id/transaction_metadata_title"
+                app:layout_constraintTop_toBottomOf="@id/transaction_metadata_title"
+                android:text="@string/transaction_metadata_data_being_saved" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <ImageView
+            style="@style/MenuRowArrow"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_menu_row_arrow" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/battery_optimization"
+        style="@style/MenuRow.Internal">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/battery_settings_title"
+            style="@style/MenuRowTitle.Internal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:text="@string/battery_optimization_title" />
+
+        <TextView
+            android:id="@+id/battery_settings_subtitle"
+            style="@style/Overline.Medium.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="@id/battery_settings_title"
+            app:layout_constraintTop_toBottomOf="@id/battery_settings_title"
+            android:text="@string/battery_optimization_subtitle_unrestricted" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+        <ImageView
+            style="@style/MenuRowArrow"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_menu_row_arrow" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</LinearLayout>
