@@ -1432,7 +1432,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     override fun getRecentBlocks(maxBlocks: Int): List<StoredBlock> {
         val blocks: MutableList<StoredBlock> = ArrayList(maxBlocks)
         try {
-            var block = blockChain!!.chainHead
+            var block = blockChain?.chainHead
             while (block != null) {
                 blocks.add(block)
                 if (blocks.size >= maxBlocks) break

@@ -230,11 +230,12 @@
 
                         <TextView
                             android:id="@+id/requested_username_subtitle"
-                            style="@style/MenuRowSubTitle"
+                            style="@style/MenuRowSubTitleWithoutLines"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:maxLines="3"
-                            android:text="@string/requested_username_has_been" />
+                            android:text="@string/requested_username_has_been"
+                            tools:text="For some reason, the request for the username has failed"/>
 
                         <TextView
                             android:id="@+id/requested_username_subtitle_two"
