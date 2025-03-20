@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Dash Core Group
+ * Copyright (c) 2025 Dash Core Group
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,20 +18,22 @@
 package de.schildbach.wallet.ui.more
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
-class MixDashFirstViewModel @Inject constructor(
-    private val dashPayConfig: DashPayConfig,
+class TransactionMetadataSettingsViewModel @Inject constructor(
+    private val dashPayConfig: DashPayConfig
 ) : ViewModel() {
-    fun setMixDashShown() {
-        viewModelScope.launch(Dispatchers.IO) {
-            dashPayConfig.set(DashPayConfig.MIX_DASH_SHOWN, true)
-        }
+    suspend fun saveDataToNetwork(saveToNetwork: Boolean) = withContext(Dispatchers.IO) {
+        dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_SAVE_TO_NETWORK, saveToNetwork)
     }
+    suspend fun setTransactionMetadataInfoShown() = withContext(Dispatchers.IO) {
+        dashPayConfig.setTransactionMetadataInfoShown()
+    }
+
+    val saveToNetwork = dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_TO_NETWORK)
 }

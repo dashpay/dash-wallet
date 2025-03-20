@@ -238,7 +238,7 @@
             app:popExitAnim="@anim/slide_out_left" />
         <action
             android:id="@+id/more_to_settings"
-            app:destination="@id/settingsFragment"
+            app:destination="@id/nav_settings"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
@@ -260,13 +260,28 @@
 
     </fragment>
 
-    <fragment
-        android:id="@+id/settingsFragment"
-        android:name="de.schildbach.wallet.ui.more.SettingsFragment"
-        android:label="Settings"
-        tools:layout="@layout/fragment_more">
+<!--    <fragment-->
+<!--        android:id="@+id/settingsFragment"-->
+<!--        android:name="de.schildbach.wallet.ui.more.SettingsFragment"-->
+<!--        android:label="Settings"-->
+<!--        tools:layout="@layout/fragment_more">-->
 
-    </fragment>
+<!--        <action-->
+<!--            android:id="@+id/settings_to_transaction_metadata"-->
+<!--            app:destination="@id/transaction_metadata_settings_fragment"-->
+<!--            app:enterAnim="@anim/slide_in_right"-->
+<!--            app:exitAnim="@anim/activity_stay"-->
+<!--            app:popExitAnim="@anim/slide_out_left" />-->
+
+<!--    </fragment>-->
+
+<!--    <fragment-->
+<!--        android:id="@+id/transaction_metadata_settings_fragment"-->
+<!--        android:name="de.schildbach.wallet.ui.more.TransactionMetadataSettingsFragment"-->
+<!--        android:label="Transaction Metadata Settings"-->
+<!--        tools:layout="@layout/fragment_transaction_metadata_settings">-->
+
+<!--    </fragment>-->
 
     <fragment
         android:id="@+id/masternodeKeyTypeFragment"
@@ -402,4 +417,5 @@
     <include app:graph="@navigation/nav_explore" />
     <include app:graph="@navigation/nav_coinbase" />
     <include app:graph="@navigation/nav_voting" />
+    <include app:graph="@navigation/nav_settings" />
 </navigation>

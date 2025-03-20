@@ -468,4 +468,16 @@
     <string name="group_by">Group by</string>
     <string name="transaction_metadata_title">Transaction metadata</string>
     <string name="transaction_metadata_data_being_saved">Saved on network</string>
+    <string name="transaction_metadata_payment_category_description">Indicates if a transaction is associated with Coinbase, Uphold, Topper or CrowdNode</string>
+    <string name="transaction_metadata_fiat_price_description">The historical price at the time of the transaction</string>
+    <string name="transaction_metadata_description">Your data is stored on your device but will be lost if you reset or restore your wallet. Below are examples of the information that will be saved when saved on the network.</string>
+    <string name="transaction_metadata_cost">How much does it cost?</string>
+    <string name="transaction_metadata_payment_category">Payment Categories</string>
+    <string name="transaction_metadata_save_data">Save data</string>
+    <string name="transaction_metadata_tax_category">Tax Categories</string>
+    <string name="transaction_metadata_fiat_prices">Fiat Prices</string>
+    <string name="transaction_metadata_private_memo_description">Short memos that describe the purpose of the transaction</string>
+    <string name="transaction_metadata_tax_category_description">Indicates if a transaction is a transfer, income or expense</string>
+    <string name="transaction_metadata_costs_title">Costs associated with saving data to the network</string>
+    <string name="transaction_metadata_costs_description">As part of creating a username, you receive credits that are used for various activities on the network; saving transaction metadata on the network will consume these credits faster.  Once all credits are used, you can purchase more.\nIt costs approximately 1 US cent per upload of data to the network so it is recommended to upload multiple transactions at a time</string>
 </resources>

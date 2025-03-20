@@ -26,6 +26,8 @@ import android.provider.Settings
 import android.view.View
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -52,6 +54,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -193,7 +196,19 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         }
 
         binding.transactionMetadata.setOnClickListener {
-
+            lifecycleScope.launch {
+                if (viewModel.isTransactionMetadataInfoShown()) {
+                    safeNavigate(SettingsFragmentDirections.settingsToTransactionMetadata(false))
+                } else {
+                    findNavController().navigate(
+                        R.id.transaction_metadata_info_dialog,
+                        bundleOf(
+                            "first_time" to true
+                        )
+                    )
+                    // safeNavigate(SettingsFragmentDirections.settingsToTransactionMetadata())
+                }
+            }
         }
     }
 
@@ -207,9 +222,16 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         )
     }
 
+    private fun setTransactionMetadataText() {
+        lifecycleScope.launch {
+            binding.transactionMetadataSubtitle.isGone = !viewModel.isSavingTransactionMetadata()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         setBatteryOptimizationText()
+        setTransactionMetadataText()
     }
 
     private fun resetBlockchain() {

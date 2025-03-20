@@ -25,9 +25,12 @@ import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.MixingStatus
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.withContext
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
@@ -46,7 +49,8 @@ class SettingsViewModel @Inject constructor(
     private val coinJoinService: CoinJoinService,
     private val walletDataProvider: WalletDataProvider,
     private val analytics: AnalyticsService,
-    private val configuration: Configuration
+    private val configuration: Configuration,
+    private val dashPayConfig: DashPayConfig
 ) : ViewModel() {
     private val powerManager: PowerManager = walletApplication.getSystemService(PowerManager::class.java)
 
@@ -90,4 +94,12 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun getTotalWalletBalance() = walletDataProvider.getWalletBalance()
+
+    suspend fun isTransactionMetadataInfoShown() = withContext(Dispatchers.IO) {
+        dashPayConfig.isTransactionMetadataInfoShown()
+    }
+
+    suspend fun isSavingTransactionMetadata() = withContext(Dispatchers.IO) {
+        dashPayConfig.isSavingTransactionMetadata()
+    }
 }

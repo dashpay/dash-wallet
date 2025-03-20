@@ -64,6 +64,14 @@ open class DashPayConfig @Inject constructor(
         val TOPUP_COUNTER = intPreferencesKey("topup_counter")
         val USERNAME_VOTE_COUNTER = intPreferencesKey("username_vote_counter")
         val GOOGLE_DRIVE_ACCESS_TOKEN = stringPreferencesKey("google_drive_access_token")
+        // transaction metadata settings
+        val TRANSACTION_METADATA_INFO_SHOWN = booleanPreferencesKey("transaction_metadata_info_shown")
+        val TRANSACTION_METADATA_SAVE_TO_NETWORK = booleanPreferencesKey("transaction_metadata_save_to_network")
+        val TRANSACTION_METADATA_SAVE_FREQUENCY = stringPreferencesKey("transaction_metadata_save_frequency")
+        val TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY = booleanPreferencesKey("transaction_metadata_save_payment_category")
+        val TRANSACTION_METADATA_SAVE_TAX_CATEGORY = booleanPreferencesKey("transaction_metadata_save_tax_category")
+        val TRANSACTION_METADATA_SAVE_EXCHANGE = booleanPreferencesKey("transaction_metadata_save_exchange_rates")
+        val TRANSACTION_METADATA_SAVE_MEMOS = booleanPreferencesKey("transaction_metadata_save_memos")
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {
@@ -99,5 +107,17 @@ open class DashPayConfig @Inject constructor(
      */
     suspend fun getGoogleDriveAccessToken(): String? {
         return getSecuredData(GOOGLE_DRIVE_ACCESS_TOKEN)
+    }
+
+    suspend fun isTransactionMetadataInfoShown(): Boolean {
+        return get(TRANSACTION_METADATA_INFO_SHOWN) ?: false
+    }
+
+    suspend fun setTransactionMetadataInfoShown() {
+        return set(TRANSACTION_METADATA_INFO_SHOWN, true)
+    }
+
+    suspend fun isSavingTransactionMetadata(): Boolean {
+        return get(TRANSACTION_METADATA_SAVE_TO_NETWORK) ?: false
     }
 }

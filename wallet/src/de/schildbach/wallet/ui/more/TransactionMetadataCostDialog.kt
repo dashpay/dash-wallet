@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Dash Core Group
+ * Copyright (c) 2025 Dash Core Group
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,24 +14,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 package de.schildbach.wallet.ui.more
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import javax.inject.Inject
+import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 
-@HiltViewModel
-class MixDashFirstViewModel @Inject constructor(
-    private val dashPayConfig: DashPayConfig,
-) : ViewModel() {
-    fun setMixDashShown() {
-        viewModelScope.launch(Dispatchers.IO) {
-            dashPayConfig.set(DashPayConfig.MIX_DASH_SHOWN, true)
-        }
-    }
+class TransactionMetadataCostDialog : OffsetDialogFragment(R.layout.dialog_transaction_metadata_costs) {
+
 }

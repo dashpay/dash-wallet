@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2025 Dash Core Group
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    app:startDestination="@id/settingsFragment"
+    android:id="@+id/nav_settings">
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="de.schildbach.wallet.ui.more.SettingsFragment"
+        android:label="Settings"
+        tools:layout="@layout/fragment_more">
+
+        <action
+            android:id="@+id/settings_to_transaction_metadata"
+            app:destination="@id/transaction_metadata_settings_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/transaction_metadata_settings_fragment"
+        android:name="de.schildbach.wallet.ui.more.TransactionMetadataSettingsFragment"
+        android:label="Transaction Metadata Settings"
+        tools:layout="@layout/fragment_transaction_metadata_settings">
+
+        <action
+            android:id="@+id/to_info_dialog"
+            app:destination="@id/transaction_metadata_info_dialog"
+            app:enterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/slide_out_right"/>
+
+        <argument
+            android:name="turn_on_save_data"
+            app:argType="boolean"
+            app:defaultValue="false" />
+    </fragment>
+
+    <dialog
+        android:id="@+id/transaction_metadata_info_dialog"
+        android:name="de.schildbach.wallet.ui.more.TransactionMetadataDialog"
+        android:label="Transaction Metadata Info"
+        tools:layout="@layout/dialog_transaction_metadata"
+        android:theme="@style/My.Theme.Dialog"
+        >
+        <action
+            android:id="@+id/to_cost_dialog"
+            app:destination="@id/transaction_metadata_cost_dialog"
+            app:enterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/slide_out_right"/>
+
+        <action
+            android:id="@+id/to_settings_fragment"
+            app:destination="@id/transaction_metadata_settings_fragment"
+            app:enterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/slide_out_right"/>
+        <argument
+            android:name="first_time"
+            app:argType="boolean"
+            app:defaultValue="false" />
+    </dialog>
+
+    <dialog
+        android:id="@+id/transaction_metadata_cost_dialog"
+        android:name="de.schildbach.wallet.ui.more.TransactionMetadataCostDialog"
+        android:label="Transaction Metadata Cost Info"
+        tools:layout="@layout/dialog_transaction_metadata_costs"
+        />
+</navigation>
