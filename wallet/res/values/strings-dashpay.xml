@@ -480,4 +480,9 @@
     <string name="transaction_metadata_tax_category_description">Indicates if a transaction is a transfer, income or expense</string>
     <string name="transaction_metadata_costs_title">Costs associated with saving data to the network</string>
     <string name="transaction_metadata_costs_description">As part of creating a username, you receive credits that are used for various activities on the network; saving transaction metadata on the network will consume these credits faster.  Once all credits are used, you can purchase more.\nIt costs approximately 1 US cent per upload of data to the network so it is recommended to upload multiple transactions at a time</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>After 10 transactions</item>
+        <item>Once a week</item>
+        <item>After every transaction</item>
+    </string-array>
 </resources>

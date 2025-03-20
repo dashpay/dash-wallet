@@ -20,14 +20,51 @@ package de.schildbach.wallet.ui.dashpay.utils
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.ASSET_LOCK_TXID
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.BALANCE
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CANCELED_REQUESTED_USERNAME_LINK
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_ID
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_REGISTRATION_STATUS
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.INVITE_LINK
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.PRIVACY_MODE
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.REQUESTED_USERNAME_LINK
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.RESTORING
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME_REGISTRATION_STATUS
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME_REQUESTED
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USING_INVITE
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.VOTING_PERIOD_START
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import org.dash.wallet.common.util.security.EncryptionProvider
+import org.dashj.platform.dpp.toHex
 import javax.inject.Inject
 import javax.inject.Singleton
+
+data class TransactionMetadataSettings(
+    val saveToNetwork: Boolean = false,
+    val saveFrequency: TxMetadataSaveFrequency = TxMetadataSaveFrequency.defaultOption,
+    val savePaymentCategory: Boolean = false,
+    val saveTaxCategory: Boolean = false,
+    val saveExchangeRates: Boolean = false,
+    val savePrivateMemos: Boolean = false
+) {
+    fun shouldSavePaymentCategory() = saveToNetwork && savePaymentCategory
+    fun shouldSaveTaxCategory() = saveToNetwork && saveTaxCategory
+    fun shouldSaveExchangeRates() = saveToNetwork && saveExchangeRates
+    fun shouldSavePrivateMemos() = saveToNetwork && savePrivateMemos
+}
 
 @Singleton
 open class DashPayConfig @Inject constructor(
@@ -119,5 +156,39 @@ open class DashPayConfig @Inject constructor(
 
     suspend fun isSavingTransactionMetadata(): Boolean {
         return get(TRANSACTION_METADATA_SAVE_TO_NETWORK) ?: false
+    }
+
+    private val transactionMetadataSettings: Flow<TransactionMetadataSettings> = data
+        .map { prefs ->
+            TransactionMetadataSettings(
+                saveToNetwork = prefs[TRANSACTION_METADATA_SAVE_TO_NETWORK] ?: false,
+                saveFrequency = TxMetadataSaveFrequency.valueOf(prefs[TRANSACTION_METADATA_SAVE_FREQUENCY] ?: TxMetadataSaveFrequency.defaultOption.name),
+                savePaymentCategory = prefs[TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY] ?: false,
+                saveTaxCategory = prefs[TRANSACTION_METADATA_SAVE_TAX_CATEGORY] ?: false,
+                saveExchangeRates = prefs[TRANSACTION_METADATA_SAVE_EXCHANGE] ?: false,
+                savePrivateMemos = prefs[TRANSACTION_METADATA_SAVE_MEMOS] ?: false
+            )
+        }
+
+    fun observeTransactionMetadataSettings() = transactionMetadataSettings
+
+    suspend fun getTransactionMetadataSettings(): TransactionMetadataSettings = withContext(Dispatchers.IO) {
+        TransactionMetadataSettings(
+            saveToNetwork = get(TRANSACTION_METADATA_SAVE_TO_NETWORK) ?: false,
+            saveFrequency = TxMetadataSaveFrequency.valueOf(get(TRANSACTION_METADATA_SAVE_FREQUENCY) ?: TxMetadataSaveFrequency.defaultOption.name),
+            savePaymentCategory = get(TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY) ?: false,
+            saveTaxCategory = get(TRANSACTION_METADATA_SAVE_TAX_CATEGORY) ?: false,
+            saveExchangeRates = get(TRANSACTION_METADATA_SAVE_EXCHANGE) ?: false,
+            savePrivateMemos = get(TRANSACTION_METADATA_SAVE_MEMOS) ?: false
+        )
+    }
+
+    suspend fun setTransactionMetadataSettings(settings: TransactionMetadataSettings) {
+        set(TRANSACTION_METADATA_SAVE_TO_NETWORK, settings.saveToNetwork)
+        set(TRANSACTION_METADATA_SAVE_FREQUENCY, settings.saveFrequency.name)
+        set(TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY, settings.savePaymentCategory)
+        set(TRANSACTION_METADATA_SAVE_TAX_CATEGORY, settings.saveTaxCategory)
+        set(TRANSACTION_METADATA_SAVE_EXCHANGE, settings.saveExchangeRates)
+        set(TRANSACTION_METADATA_SAVE_MEMOS, settings.savePrivateMemos)
     }
 }
