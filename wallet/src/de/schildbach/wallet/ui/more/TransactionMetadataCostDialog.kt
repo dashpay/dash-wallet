@@ -16,9 +16,28 @@
  */
 package de.schildbach.wallet.ui.more
 
+import android.os.Bundle
+import android.view.View
+import androidx.fragment.app.viewModels
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.DialogTransactionMetadataCostsBinding
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
+import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 
+@AndroidEntryPoint
 class TransactionMetadataCostDialog : OffsetDialogFragment(R.layout.dialog_transaction_metadata_costs) {
+    private val binding by viewBinding(DialogTransactionMetadataCostsBinding::bind)
+    private val viewModel: TransactionMetadataSettingsViewModel by viewModels()
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        viewModel.selectedExchangeRate.observe(viewLifecycleOwner) {
+            binding.costInfo.text = getString(
+                R.string.transaction_metadata_costs_description,
+                viewModel.getBalanceInLocalFormat()
+            )
+        }
+    }
 }
