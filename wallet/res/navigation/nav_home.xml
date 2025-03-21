@@ -236,6 +236,13 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+        <action
+            android:id="@+id/more_to_settings"
+            app:destination="@id/nav_settings"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
     </fragment>
 
     <fragment
@@ -252,6 +259,29 @@
             app:popExitAnim="@anim/slide_out_left" />
 
     </fragment>
+
+<!--    <fragment-->
+<!--        android:id="@+id/settingsFragment"-->
+<!--        android:name="de.schildbach.wallet.ui.more.SettingsFragment"-->
+<!--        android:label="Settings"-->
+<!--        tools:layout="@layout/fragment_more">-->
+
+<!--        <action-->
+<!--            android:id="@+id/settings_to_transaction_metadata"-->
+<!--            app:destination="@id/transaction_metadata_settings_fragment"-->
+<!--            app:enterAnim="@anim/slide_in_right"-->
+<!--            app:exitAnim="@anim/activity_stay"-->
+<!--            app:popExitAnim="@anim/slide_out_left" />-->
+
+<!--    </fragment>-->
+
+<!--    <fragment-->
+<!--        android:id="@+id/transaction_metadata_settings_fragment"-->
+<!--        android:name="de.schildbach.wallet.ui.more.TransactionMetadataSettingsFragment"-->
+<!--        android:label="Transaction Metadata Settings"-->
+<!--        tools:layout="@layout/fragment_transaction_metadata_settings">-->
+
+<!--    </fragment>-->
 
     <fragment
         android:id="@+id/masternodeKeyTypeFragment"
@@ -346,6 +376,13 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/security_to_transaction_metadata"
+            app:destination="@id/transaction_metadata_settings_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -387,4 +424,5 @@
     <include app:graph="@navigation/nav_explore" />
     <include app:graph="@navigation/nav_coinbase" />
     <include app:graph="@navigation/nav_voting" />
+    <include app:graph="@navigation/nav_settings" />
 </navigation>

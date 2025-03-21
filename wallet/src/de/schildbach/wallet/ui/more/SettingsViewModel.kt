@@ -22,14 +22,21 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.MixingStatus
+import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.withContext
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -44,8 +51,15 @@ class SettingsViewModel @Inject constructor(
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService,
     private val walletDataProvider: WalletDataProvider,
-    private val analytics: AnalyticsService
-) : ViewModel() {
+    private val analytics: AnalyticsService,
+    private val configuration: Configuration,
+    private val dashPayConfig: DashPayConfig,
+    blockchainIdentityConfig: BlockchainIdentityConfig,
+    dashPayProfileDao: DashPayProfileDao
+) : BaseProfileViewModel(
+    blockchainIdentityConfig,
+    dashPayProfileDao
+) {
     private val powerManager: PowerManager = walletApplication.getSystemService(PowerManager::class.java)
 
     val isIgnoringBatteryOptimizations: Boolean
@@ -81,5 +95,19 @@ class SettingsViewModel @Inject constructor(
 
     fun logEvent(event: String) {
         analytics.logEvent(event, mapOf())
+    }
+
+    fun updateLastBlockchainResetTime() {
+        configuration.updateLastBlockchainResetTime()
+    }
+
+    fun getTotalWalletBalance() = walletDataProvider.getWalletBalance()
+
+    suspend fun isTransactionMetadataInfoShown() = withContext(Dispatchers.IO) {
+        dashPayConfig.isTransactionMetadataInfoShown()
+    }
+
+    suspend fun isSavingTransactionMetadata() = withContext(Dispatchers.IO) {
+        dashPayConfig.isSavingTransactionMetadata()
     }
 }

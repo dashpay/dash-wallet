@@ -165,7 +165,8 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                         )
                         startResetWalletDialog.show(requireActivity()) { confirmed ->
                             if (confirmed == true) {
-                                doReset()
+//                                doReset()
+                                checkUsernameThenReset()
                             }
                         }
                     }
@@ -190,6 +191,26 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                 if (it == true) {
                     doReset()
                 }
+            }
+        }
+    }
+
+    private fun checkUsernameThenReset() {
+        lifecycleScope.launch {
+            if (viewModel.hasIdentity && viewModel.hasPendingTxMetadataToSave()) {
+                TransactionMetadataDialog.newInstance().show(requireActivity()) {
+                    lifecycleScope.launch {
+                        if (it == true) {
+                            viewModel.setSaveOnReset()
+                            //safeNavigate(SecurityFragmentDirections.securityToTransactionMetadata())
+                            doReset()
+                        } else {
+                            doReset()
+                        }
+                    }
+                }
+            } else {
+                doReset()
             }
         }
     }
