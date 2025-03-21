@@ -31,7 +31,7 @@
         app:layout_collapseMode="pin"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIcon="@drawable/ic_chevron"
         app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
         <LinearLayout
@@ -47,7 +47,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
-                android:layout_marginEnd="6dp"
                 android:src="@drawable/ic_info" />
         </LinearLayout>
     </androidx.appcompat.widget.Toolbar>
@@ -83,7 +82,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
-            android:layout_gravity="center_vertical"
+            android:layout_centerVertical="true"
             android:text="Save data on network" />
 
         <androidx.appcompat.widget.SwitchCompat
@@ -91,7 +90,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
-            android:layout_gravity="center_vertical"
+            android:layout_centerVertical="true"
             android:theme="@style/SwitchCompat" />
     </RelativeLayout>
 
@@ -111,7 +110,6 @@
                 style="@style/Caption.Medium.Secondary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
                 android:layout_marginHorizontal="16dp"
                 android:text="How often to save?" />
 

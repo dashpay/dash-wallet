@@ -16,9 +16,11 @@
  */
 package de.schildbach.wallet.ui.more
 
+import android.content.DialogInterface
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
+import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -33,25 +35,52 @@ import org.dash.wallet.common.util.dialogSafeNavigate
 
 @AndroidEntryPoint
 class TransactionMetadataDialog : OffsetDialogFragment(R.layout.dialog_transaction_metadata) {
+    companion object {
+        fun newInstance(): TransactionMetadataDialog {
+            return TransactionMetadataDialog().apply {
+                arguments = TransactionMetadataDialogArgs(firstTime = false, useNavigation = false).toBundle()
+            }
+        }
+    }
     private val binding by viewBinding(DialogTransactionMetadataBinding::bind)
     private val viewModel: TransactionMetadataSettingsViewModel by viewModels()
     private val args by navArgs<TransactionMetadataDialogArgs>()
+    private var onButtonClickListener: ((Boolean?) -> Unit)? = null
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.transactionMetadataCost.setOnClickListener {
             dialogSafeNavigate(TransactionMetadataDialogDirections.toCostDialog())
         }
-        binding.saveDataButton.isVisible = args.firstTime
+        binding.saveDataButton.isVisible = args.firstTime || !args.useNavigation
         binding.saveDataButton.setOnClickListener {
-            dialogSafeNavigate(TransactionMetadataDialogDirections.toSettingsFragment(true))
+            if (args.useNavigation) {
+                dialogSafeNavigate(TransactionMetadataDialogDirections.toSettingsFragment(true))
+            } else {
+                onButtonClickListener?.invoke(true)
+            }
             dismiss()
         }
-        binding.maybeLaterButton.isVisible = args.firstTime
+        binding.maybeLaterButton.isVisible = args.firstTime || !args.useNavigation
         binding.maybeLaterButton.setOnClickListener {
-            findNavController().popBackStack()
+            if (args.useNavigation) {
+                findNavController().popBackStack()
+            } else {
+                onButtonClickListener?.invoke(false)
+                dismiss()
+            }
         }
         lifecycleScope.launch {
             viewModel.setTransactionMetadataInfoShown()
         }
+    }
+
+    override fun onCancel(dialog: DialogInterface) {
+        super.onCancel(dialog)
+        onButtonClickListener?.invoke(null)
+    }
+
+    fun show(activity: FragmentActivity, function: (Boolean?) -> Unit) {
+        onButtonClickListener = function
+        show(activity)
     }
 }

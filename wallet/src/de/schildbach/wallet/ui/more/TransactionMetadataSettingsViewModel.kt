@@ -105,7 +105,11 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
 
     suspend fun saveDataToNetwork(saveToNetwork: Boolean) = withContext(Dispatchers.IO) {
         dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_SAVE_TO_NETWORK, saveToNetwork)
+        if (dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER) == null) {
+            dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER, System.currentTimeMillis())
+        }
     }
+
     suspend fun setTransactionMetadataInfoShown() = withContext(Dispatchers.IO) {
         dashPayConfig.setTransactionMetadataInfoShown()
     }

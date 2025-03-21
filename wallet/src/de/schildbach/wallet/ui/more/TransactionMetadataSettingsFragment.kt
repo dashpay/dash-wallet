@@ -55,7 +55,7 @@ class TransactionMetadataSettingsFragment : Fragment(R.layout.fragment_transacti
         setupSaveFrequencyOptions()
 
         binding.quickVoteButton.setOnClickListener {
-            safeNavigate(TransactionMetadataSettingsFragmentDirections.toInfoDialog(false))
+            safeNavigate(TransactionMetadataSettingsFragmentDirections.toInfoDialog(false, true))
         }
         binding.saveDataSwitch.setOnClickListener {
             lifecycleScope.launch {

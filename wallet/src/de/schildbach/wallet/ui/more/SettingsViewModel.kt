@@ -22,9 +22,12 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.MixingStatus
+import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -50,8 +53,13 @@ class SettingsViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val analytics: AnalyticsService,
     private val configuration: Configuration,
-    private val dashPayConfig: DashPayConfig
-) : ViewModel() {
+    private val dashPayConfig: DashPayConfig,
+    blockchainIdentityConfig: BlockchainIdentityConfig,
+    dashPayProfileDao: DashPayProfileDao
+) : BaseProfileViewModel(
+    blockchainIdentityConfig,
+    dashPayProfileDao
+) {
     private val powerManager: PowerManager = walletApplication.getSystemService(PowerManager::class.java)
 
     val isIgnoringBatteryOptimizations: Boolean

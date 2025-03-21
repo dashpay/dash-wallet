@@ -194,7 +194,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                 }
             }
         }
-
+        viewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+            binding.transactionMetadata.isVisible = it?.creationComplete ?: false
+        }
         binding.transactionMetadata.setOnClickListener {
             lifecycleScope.launch {
                 if (viewModel.isTransactionMetadataInfoShown()) {
@@ -206,7 +208,6 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                             "first_time" to true
                         )
                     )
-                    // safeNavigate(SettingsFragmentDirections.settingsToTransactionMetadata())
                 }
             }
         }

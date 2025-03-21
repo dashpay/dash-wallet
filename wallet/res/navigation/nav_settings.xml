@@ -75,6 +75,10 @@
             android:name="first_time"
             app:argType="boolean"
             app:defaultValue="false" />
+        <argument
+            android:name="use_navigation"
+            app:argType="boolean"
+            app:defaultValue="false" />
     </dialog>
 
     <dialog
