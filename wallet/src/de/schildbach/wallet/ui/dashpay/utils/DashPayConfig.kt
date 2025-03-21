@@ -20,26 +20,9 @@ package de.schildbach.wallet.ui.dashpay.utils
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.ASSET_LOCK_TXID
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.BALANCE
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CANCELED_REQUESTED_USERNAME_LINK
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_ID
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_REGISTRATION_STATUS
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.INVITE_LINK
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.PRIVACY_MODE
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.REQUESTED_USERNAME_LINK
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.RESTORING
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME_REGISTRATION_STATUS
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME_REQUESTED
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USING_INVITE
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.VOTING_PERIOD_START
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -48,7 +31,6 @@ import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import org.dash.wallet.common.util.security.EncryptionProvider
-import org.dashj.platform.dpp.toHex
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -58,7 +40,8 @@ data class TransactionMetadataSettings(
     val savePaymentCategory: Boolean = false,
     val saveTaxCategory: Boolean = false,
     val saveExchangeRates: Boolean = false,
-    val savePrivateMemos: Boolean = false
+    val savePrivateMemos: Boolean = false,
+    val saveAfterTimestamp: Long = System.currentTimeMillis()
 ) {
     fun shouldSavePaymentCategory() = saveToNetwork && savePaymentCategory
     fun shouldSaveTaxCategory() = saveToNetwork && saveTaxCategory
@@ -109,6 +92,8 @@ open class DashPayConfig @Inject constructor(
         val TRANSACTION_METADATA_SAVE_TAX_CATEGORY = booleanPreferencesKey("transaction_metadata_save_tax_category")
         val TRANSACTION_METADATA_SAVE_EXCHANGE = booleanPreferencesKey("transaction_metadata_save_exchange_rates")
         val TRANSACTION_METADATA_SAVE_MEMOS = booleanPreferencesKey("transaction_metadata_save_memos")
+        val TRANSACTION_METADATA_SAVE_AFTER = longPreferencesKey("transaction_metadata_save_after")
+        val TRANSACTION_METADATA_SAVE_ON_RESET = booleanPreferencesKey("transaction_metadata_save_on_reset")
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {
@@ -124,20 +109,20 @@ open class DashPayConfig @Inject constructor(
         set(TOPUP_COUNTER, counter + 1)
         return counter
     }
-    
+
     suspend fun getUsernameVoteCounter(): Int {
         val counter = (get(USERNAME_VOTE_COUNTER) ?: 0) + 1
         set(USERNAME_VOTE_COUNTER, counter)
         return counter
     }
-    
+
     /**
      * Securely stores the Google Drive access token
      */
     suspend fun setGoogleDriveAccessToken(accessToken: String) {
         setSecuredData(GOOGLE_DRIVE_ACCESS_TOKEN, accessToken)
     }
-    
+
     /**
      * Retrieves the securely stored Google Drive access token
      * @return The access token or null if not found
@@ -175,11 +160,14 @@ open class DashPayConfig @Inject constructor(
     suspend fun getTransactionMetadataSettings(): TransactionMetadataSettings = withContext(Dispatchers.IO) {
         TransactionMetadataSettings(
             saveToNetwork = get(TRANSACTION_METADATA_SAVE_TO_NETWORK) ?: false,
-            saveFrequency = TxMetadataSaveFrequency.valueOf(get(TRANSACTION_METADATA_SAVE_FREQUENCY) ?: TxMetadataSaveFrequency.defaultOption.name),
+            saveFrequency = TxMetadataSaveFrequency.valueOf(
+                get(TRANSACTION_METADATA_SAVE_FREQUENCY) ?: TxMetadataSaveFrequency.defaultOption.name
+            ),
             savePaymentCategory = get(TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY) ?: false,
             saveTaxCategory = get(TRANSACTION_METADATA_SAVE_TAX_CATEGORY) ?: false,
             saveExchangeRates = get(TRANSACTION_METADATA_SAVE_EXCHANGE) ?: false,
-            savePrivateMemos = get(TRANSACTION_METADATA_SAVE_MEMOS) ?: false
+            savePrivateMemos = get(TRANSACTION_METADATA_SAVE_MEMOS) ?: false,
+            saveAfterTimestamp = get(TRANSACTION_METADATA_SAVE_AFTER) ?: Long.MAX_VALUE
         )
     }
 
@@ -191,4 +179,10 @@ open class DashPayConfig @Inject constructor(
         set(TRANSACTION_METADATA_SAVE_EXCHANGE, settings.saveExchangeRates)
         set(TRANSACTION_METADATA_SAVE_MEMOS, settings.savePrivateMemos)
     }
+
+    suspend fun shouldSaveOnReset(): Boolean = get(TRANSACTION_METADATA_SAVE_ON_RESET) == true
+
+    suspend fun isSavingToNetwork(): Boolean = get(TRANSACTION_METADATA_SAVE_TO_NETWORK) ?: false
+
+    suspend fun getSaveAfterTimestamp(): Long = get(TRANSACTION_METADATA_SAVE_AFTER) ?: Long.MAX_VALUE
 }

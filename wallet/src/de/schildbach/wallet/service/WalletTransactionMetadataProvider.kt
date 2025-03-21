@@ -25,6 +25,7 @@ import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import okhttp3.*
@@ -62,9 +63,9 @@ class WalletTransactionMetadataProvider @Inject constructor(
     private val walletData: WalletDataProvider,
     private val giftCardDao: GiftCardDao,
     private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
-    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
+    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
+    private val dashPayConfig: DashPayConfig
 ) : TransactionMetadataProvider {
-
     companion object {
         private val log = LoggerFactory.getLogger(WalletTransactionMetadataProvider::class.java)
     }
@@ -137,7 +138,10 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 CoinJoinTransactionType.None, CoinJoinTransactionType.Send -> false
                 else -> true
             }
-            if (!isCoinJoinTx && metadata.isNotEmpty() && !isSyncingPlatform && hasChanges) {
+
+            // only save Transaction metadata to
+            val shouldSaveToCache = dashPayConfig.isSavingToNetwork() && updateTime < dashPayConfig.getSaveAfterTimestamp()
+            if (!isCoinJoinTx && metadata.isNotEmpty() && !isSyncingPlatform && hasChanges && shouldSaveToCache) {
                 transactionMetadataChangeCacheDao.insert(TransactionMetadataCacheItem(metadata))
             }
             log.info("txmetadata: inserting $metadata")
