@@ -83,6 +83,6 @@ open class InvitePreviewDialog : AdaptiveDialog(R.layout.invitation_preview_view
         val message: TextView = view.findViewById(R.id.dialog_message)!!
         message.text = HtmlCompat.fromHtml(messageObj, HtmlCompat.FROM_HTML_MODE_COMPACT)
         view.findViewById<Button>(R.id.dialog_positive_button)!!.isVisible = false
-        view.findViewById<Button>(R.id.dialog_title)!!.isVisible = false
+        view.findViewById<TextView>(R.id.dialog_title)!!.isVisible = false
     }
 }
