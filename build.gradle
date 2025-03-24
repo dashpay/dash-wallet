@@ -18,7 +18,6 @@ buildscript {
         lifecycleVersion = '2.5.1'
         navigationVersion = '2.6.0'
         datastoreVersion = "1.0.0"
-        hiltWorkVersion = '1.0.0'
         serializationVersion = '1.0.1'
         preferenceVersion = '1.2.0'
 
