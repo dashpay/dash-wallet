@@ -93,7 +93,7 @@ open class InviteAlreadyClaimedDialog : AdaptiveDialog(R.layout.invitation_alrea
         val message: TextView = view.findViewById(R.id.dialog_message)!!
         message.text = HtmlCompat.fromHtml(messageObj, HtmlCompat.FROM_HTML_MODE_COMPACT)
         view.findViewById<Button>(R.id.dialog_positive_button)!!.isVisible = false
-        view.findViewById<Button>(R.id.dialog_title)!!.isVisible = false
+        view.findViewById<TextView>(R.id.dialog_title)!!.isVisible = false
         val profilePictureEnvelope: InviteErrorEnvelopeView = view.findViewById(R.id.profile_picture_envelope)!!
         if (args.containsKey(EXTRA_PROFILE)) {
             val profile = args.getParcelable<DashPayProfile>(EXTRA_PROFILE)

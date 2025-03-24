@@ -538,6 +538,7 @@ class RequestUserNameViewModel @Inject constructor(
             inviteAssetLockTx.value = try {
                 topUpRepository.getAssetLockTransaction(createUsernameArgs?.invite!!)
             } catch (e: Exception) {
+                log.error("error getting asset lock tx", e)
                 null
             }
             isInviteMixed()
