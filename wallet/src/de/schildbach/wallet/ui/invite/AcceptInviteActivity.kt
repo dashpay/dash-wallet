@@ -28,7 +28,6 @@ import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityAcceptInviteBinding
-import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.data.OnboardingState
 
 class AcceptInviteActivity : LockScreenActivity() {
