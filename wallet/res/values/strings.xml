@@ -43,7 +43,7 @@
     <string name="wallet_low_storage_dialog_button_apps">Manage apps</string>
     <string name="wallet_timeskew_dialog_title">Check date &amp; time settings</string>
     <string name="wallet_timeskew_dialog_msg">Your device time is off by %d minutes. You probably cannot send or receive Dash due to this problem.\n\nYou should check and if necessary correct your date, time and timezone settings.</string>
-    <string name="wallet_coinjoin_timeskew_dialog_msg">Your device time is %s by %d seconds. You cannot use CoinJoin due to this difference.\n\nThe time settings on your device needs to be changed to “Set time automatically” to use CoinJoin.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg" formatted="false">Your device time is %s by %d seconds. You cannot use CoinJoin due to this difference.\n\nThe time settings on your device needs to be changed to “Set time automatically” to use CoinJoin.</string>
     <string name="settings_coinjoin_timeskew_dialog_msg">Your device time is off by more than 5 seconds. You cannot use CoinJoin due to this difference.\n\nThe time settings on your device needs to be changed to “Set time automatically” before using CoinJoin.</string>
     <string name="send_coins_activity_title">Send Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Fetching signature from %s…</string>
