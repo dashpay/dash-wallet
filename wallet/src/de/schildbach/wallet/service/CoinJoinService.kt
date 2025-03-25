@@ -282,12 +282,12 @@ class CoinJoinMixingService @Inject constructor(
 
     private suspend fun updateBalance(balance: Coin) {
         CoinJoinClientOptions.setAmount(balance)
-        // log.info("coinjoin: total balance: ${balance.toFriendlyString()}")
         val walletEx = walletDataProvider.wallet as WalletEx
         org.bitcoinj.core.Context.propagate(walletEx.context)
-        // log.info("coinjoin: mixed balance: ${walletEx.coinJoinBalance.toFriendlyString()}")
         val anonBalance = walletEx.getAnonymizableBalance(false, false)
-        // log.info("coinjoin: anonymizable balance {}", anonBalance.toFriendlyString())
+
+        // IMPORTANT: walletEx.denominatedBalance in the log.info is needed, otherwise the second call will return an incorrect value.
+        log.info("coinjoin: anonymizable balance {}, denominatedBalance: {}", anonBalance.toFriendlyString(), walletEx.denominatedBalance.toFriendlyString())
         val hasPartiallyMixedCoins = (walletEx.denominatedBalance - walletEx.coinJoinBalance).isGreaterThan(Coin.ZERO)
         val hasAnonymizableBalance = anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())
 
