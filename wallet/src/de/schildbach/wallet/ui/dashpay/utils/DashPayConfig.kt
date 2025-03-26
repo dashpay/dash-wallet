@@ -41,12 +41,14 @@ data class TransactionMetadataSettings(
     val saveTaxCategory: Boolean = false,
     val saveExchangeRates: Boolean = false,
     val savePrivateMemos: Boolean = false,
+    val saveGiftcardInfo: Boolean = true,
     val saveAfterTimestamp: Long = System.currentTimeMillis()
 ) {
     fun shouldSavePaymentCategory() = saveToNetwork && savePaymentCategory
     fun shouldSaveTaxCategory() = saveToNetwork && saveTaxCategory
     fun shouldSaveExchangeRates() = saveToNetwork && saveExchangeRates
     fun shouldSavePrivateMemos() = saveToNetwork && savePrivateMemos
+    fun shouldSaveGiftcardInfo() = saveToNetwork && saveGiftcardInfo
 }
 
 @Singleton

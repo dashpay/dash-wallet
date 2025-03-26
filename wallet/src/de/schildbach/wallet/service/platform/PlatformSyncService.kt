@@ -1052,29 +1052,31 @@ class PlatformSynchronizationService @Inject constructor(
                         item.service = service
                     }
                 }
-                changedItem.customIconUrl?.let { customIconUrl ->
-                    item.customIconUrl = customIconUrl
-                }
-                changedItem.giftCardNumber?.let { giftCardNumber ->
-                    item.giftCardNumber = giftCardNumber
-                }
-                changedItem.giftCardPin?.let { giftCardPin ->
-                    item.giftCardPin = giftCardPin
-                }
-                changedItem.merchantName?.let { merchantName ->
-                    item.merchantName = merchantName
-                }
-                changedItem.originalPrice?.let { originalPrice ->
-                    item.originalPrice = originalPrice
-                }
-                changedItem.barcodeValue?.let { barcodeValue ->
-                    item.barcodeValue = barcodeValue
-                }
-                changedItem.barcodeFormat?.let { barcodeFormat ->
-                    item.barcodeFormat = barcodeFormat
-                }
-                changedItem.merchantUrl?.let { merchantUrl ->
-                    item.merchantUrl = merchantUrl
+                if (saveSettings.shouldSaveGiftcardInfo()) {
+                    changedItem.customIconUrl?.let { customIconUrl ->
+                        item.customIconUrl = customIconUrl
+                    }
+                    changedItem.giftCardNumber?.let { giftCardNumber ->
+                        item.giftCardNumber = giftCardNumber
+                    }
+                    changedItem.giftCardPin?.let { giftCardPin ->
+                        item.giftCardPin = giftCardPin
+                    }
+                    changedItem.merchantName?.let { merchantName ->
+                        item.merchantName = merchantName
+                    }
+                    changedItem.originalPrice?.let { originalPrice ->
+                        item.originalPrice = originalPrice
+                    }
+                    changedItem.barcodeValue?.let { barcodeValue ->
+                        item.barcodeValue = barcodeValue
+                    }
+                    changedItem.barcodeFormat?.let { barcodeFormat ->
+                        item.barcodeFormat = barcodeFormat
+                    }
+                    changedItem.merchantUrl?.let { merchantUrl ->
+                        item.merchantUrl = merchantUrl
+                    }
                 }
             } else {
                 itemsToPublish[changedItem.txId] = changedItem
