@@ -156,7 +156,7 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
     private fun startInviteFlow() {
         lifecycleScope.launch {
             if (dashPayViewModel.getInviteCount() == 0) {
-                safeNavigate(SearchUserFragmentDirections.searchUserToInviteFee())
+                safeNavigate(SearchUserFragmentDirections.searchUserToInviteFee("search_user"))
             } else {
                 safeNavigate(SearchUserFragmentDirections.searchUserToInviteHistory("search_user"))
             }

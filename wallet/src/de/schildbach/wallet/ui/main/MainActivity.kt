@@ -27,8 +27,6 @@ import android.nfc.NdefMessage
 import android.nfc.NfcAdapter
 import android.os.Build
 import android.os.Bundle
-import android.os.PowerManager
-import android.provider.Settings
 import android.view.MenuItem
 import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts
@@ -45,6 +43,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
@@ -72,28 +71,25 @@ import de.schildbach.wallet_test.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.bitcoinj.core.PeerGroup.SyncStage
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.wallet.DerivationPathFactory
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.components.ComposeHostFrameLayout
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.lang.IllegalStateException
-import java.util.*
 import javax.inject.Inject
-
 
 @AndroidEntryPoint
 class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPermissionsResultCallback,
     UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
     EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
-
     companion object {
         private val log = LoggerFactory.getLogger(MainActivity::class.java)
 
@@ -127,13 +123,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     val viewModel: MainViewModel by viewModels()
     private val createIdentityViewModel: CreateIdentityViewModel by viewModels()
     private val coinJoinViewModel: CoinJoinLevelViewModel by viewModels()
+    private val inviteHandlerViewModel: InviteHandlerViewModel by viewModels()
     @Inject
     lateinit var config: Configuration
     private lateinit var binding: ActivityMainBinding
     private var isRestoringBackup = false
     private var showBackupWalletDialog = false
     private var retryCreationIfInProgress = true
-    private var pendingInvite: InvitationLinkData? = null
     var composeHostFrameLayout: ComposeHostFrameLayout? = null
 
     val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
@@ -161,7 +157,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         this.setupBottomNavigation(viewModel)
 
         initViewModel()
-        handleCreateFromInvite()
 
         if (savedInstanceState == null) {
             checkAlerts()
@@ -204,20 +199,41 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    private fun handleCreateFromInvite() {
-//        if (!config.hasBeenUsed() && config.onboardingInviteProcessing) { // TODO
+    private fun handleCreateFromInvite(isSynced: Boolean, restoringBackup: Boolean) {
         if (config.onboardingInviteProcessing) {
-            if (config.isRestoringBackup) {
-                binding.restoringWalletCover.isVisible = true
-            } else {
-                handleOnboardingInvite(true)
+            when {
+                restoringBackup && !isSynced -> binding.restoringWalletCover.isVisible = true
+                restoringBackup && isSynced -> {
+                    binding.restoringWalletCover.isVisible = false
+                    // activate UI to accept invite
+                    handleOnboardingInvite(false)
+                }
+                isSynced -> {
+                    binding.restoringWalletCover.isVisible = false
+                    // activate invite silently because user has entered a username
+                    handleOnboardingInvite(true)
+                }
             }
         }
     }
 
     private fun handleOnboardingInvite(silentMode: Boolean) {
         val invite = InvitationLinkData(config.onboardingInvite, false)
-        startActivity(InviteHandlerActivity.createIntent(this@MainActivity, invite, silentMode))
+        val inviteHandler = InviteHandler(this, viewModel.analytics)
+        // startActivity(InviteHandlerActivity.createIntent(this@MainActivity, invite, silentMode))
+        inviteHandlerViewModel.inviteData.observe(this) {
+            inviteHandler.handle(it, silentMode) {
+                log.info("the invite is valid, starting silently: ${invite.link}")
+                startService(
+                    CreateIdentityService.createIntentFromInvite(
+                        this,
+                        configuration.onboardingInviteUsername,
+                        invite
+                    )
+                )
+            }
+        }
+        inviteHandlerViewModel.handleInvite(invite)
         config.setOnboardingInviteProcessingDone()
     }
 
@@ -232,6 +248,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             if (it != null) {
                 if (retryCreationIfInProgress && it.creationInProgress) {
                     retryCreationIfInProgress = false
+                    // should this be executed after syncing is finished?
                     if (it.usingInvite) {
                         startService(CreateIdentityService.createIntentForRetryFromInvite(this, false))
                     } else {
@@ -279,9 +296,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
 
         viewModel.isBlockchainSynced.observe(this) { isSynced ->
-            if (isSynced && config.onboardingInviteProcessing) {
-                binding.restoringWalletCover.isVisible = false
-                handleOnboardingInvite(false)
+            handleCreateFromInvite(isSynced, viewModel.restoringBackup)
+        }
+        viewModel.syncStage.observe(this) { syncStage ->
+            if (viewModel.pendingInvite != null) {
+                handleInvite(viewModel.pendingInvite!!, lockScreenDisplayed || isLocked, syncStage == SyncStage.BLOCKS)
             }
         }
         viewModel.seriousErrorLiveData.observe(this) {
@@ -295,11 +314,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                             R.string.serious_error_unknown
                         }
                     }
-                    val dialog = FancyAlertDialog.newInstance(
-                        R.string.serious_error_title,
-                        messageId, R.drawable.ic_error,
-                        R.string.button_ok,
-                        R.string.button_cancel
+                    val dialog = AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.serious_error_title),
+                        getString(messageId),
+                        getString(R.string.button_ok),
+                        getString(R.string.button_cancel)
                     )
                     dialog.show(supportFragmentManager, "serious_error_dialog")
                     viewModel.processingSeriousError = true
@@ -312,7 +332,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         lifecycleScope.launch {
             viewModel.getProfile(initInvitationUserId)?.let { profile ->
                 val dialog = InviteSendContactRequestDialog.newInstance(this@MainActivity, profile)
-                dialog.show(supportFragmentManager, null)
+                dialog.show(this@MainActivity) {
+                    // nothing
+                }
             }
         }
     }
@@ -332,7 +354,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         handleIntent(intent!!)
     }
 
-    //BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
+    // BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
     override fun onUpgradeConfirmed() {
         if (isRestoringBackup) {
             checkRestoredWalletEncryptionDialog()
@@ -379,9 +401,21 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         upgradeWalletCoinJoin(true)
     }
 
-    private fun handleInvite(invite: InvitationLinkData) {
-        val acceptInviteIntent = AcceptInviteActivity.createIntent(this, invite, false)
-        startActivity(acceptInviteIntent)
+    private fun handleInvite(invite: InvitationLinkData, isLocked: Boolean, isSynced: Boolean) {
+        if (isLocked || !isSynced) {
+            log.info("handling invite: wait for sync ($isSynced) or unlock ($isLocked)")
+            viewModel.pendingInvite = invite
+        } else {
+            log.info("handling invite: ${invite.link}")
+            val inviteHandler = InviteHandler(this, viewModel.analytics)
+            inviteHandlerViewModel.inviteData.observe(this) {
+                inviteHandler.handle(it, false) {
+                    val acceptInviteIntent = AcceptInviteActivity.createIntent(this, invite, false)
+                    startActivity(acceptInviteIntent)
+                }
+            }
+            inviteHandlerViewModel.handleInvite(invite)
+        }
     }
 
     private fun handleIntent(intent: Intent) {
@@ -392,10 +426,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         if (intent.hasExtra(EXTRA_INVITE)) {
             val invite = intent.extras!!.getParcelable<InvitationLinkData>(EXTRA_INVITE)!!
-            if (!isLocked) {
-                handleInvite(invite)
+            if (viewModel.pendingInvite == null) {
+                handleInvite(invite, lockScreenDisplayed || isLocked, viewModel.syncStage.value == SyncStage.BLOCKS)
             } else {
-                pendingInvite = invite
+                // TODO: this is not the correct message, we are not onboarding
+                InviteHandler(this, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
             }
         }
         if (intent.hasExtra(EXTRA_NAVIGATION_DESTINATION)) {
@@ -590,9 +625,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     override fun onLockScreenDeactivated() {
+        val pendingInvite = viewModel.pendingInvite
         if (pendingInvite != null) {
-            handleInvite(pendingInvite!!)
-            pendingInvite = null // clear the invite
+            handleInvite(pendingInvite, false, viewModel.syncStage.value == SyncStage.BLOCKS)
+            viewModel.pendingInvite = null // clear the invite
         } else if (config.showNotificationsExplainer) {
             explainPushNotifications()
         }

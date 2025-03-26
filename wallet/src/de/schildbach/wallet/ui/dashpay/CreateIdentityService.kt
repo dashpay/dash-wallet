@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.PowerManager
 import androidx.lifecycle.LifecycleService
+import com.google.android.gms.common.internal.Preconditions.checkState
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -295,6 +296,7 @@ class CreateIdentityService : LifecycleService() {
         }
 
         var isRetry = false
+        checkState(!blockchainIdentityData.usingInvite, "use createIdentityFromInvite instead")
         if (blockchainIdentityData.creationState != CreationState.NONE || blockchainIdentityData.creationStateErrorMessage != null) {
             log.info("resuming identity creation process [${blockchainIdentityData.creationState}(${blockchainIdentityData.creationStateErrorMessage})]")
 
@@ -498,6 +500,8 @@ class CreateIdentityService : LifecycleService() {
                 throw IllegalStateException()
             }
         }
+        blockchainIdentityData.usingInvite = true
+        platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
 
         var isRetry = false
         if (blockchainIdentityData.creationState != CreationState.NONE || blockchainIdentityData.creationStateErrorMessage != null) {

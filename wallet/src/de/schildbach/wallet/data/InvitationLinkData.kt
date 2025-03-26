@@ -19,13 +19,16 @@ package de.schildbach.wallet.data
 import android.net.Uri
 import android.os.Parcelable
 import de.schildbach.wallet.Constants
-import kotlinx.android.parcel.IgnoredOnParcel
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.IgnoredOnParcel
+import kotlinx.parcelize.Parcelize
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bouncycastle.crypto.params.KeyParameter
 
 @Parcelize
-data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcelable {
+data class InvitationLinkData(
+    val link: Uri,
+    var isValid: Boolean?
+) : Parcelable {
 
     companion object {
         private const val PARAM_USER = "du"
@@ -41,10 +44,10 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
         fun create(username: String, displayName: String, avatarUrl: String, cftx: AssetLockTransaction, aesKeyParameter: KeyParameter): InvitationLinkData {
             val privateKey = cftx.assetLockPublicKey.decrypt(aesKeyParameter)
             val linkBuilder = Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
-                    .appendQueryParameter(PARAM_USER, username)
-                    .appendQueryParameter(PARAM_CFTX, cftx.txId.toString())
-                    .appendQueryParameter(PARAM_PRIVATE_KEY, privateKey.getPrivateKeyAsWiF(Constants.NETWORK_PARAMETERS))
-                    .appendQueryParameter(PARAM_IS_LOCK, cftx.confidence.instantSendlock?.toStringHex())
+                .appendQueryParameter(PARAM_USER, username)
+                .appendQueryParameter(PARAM_CFTX, cftx.txId.toString())
+                .appendQueryParameter(PARAM_PRIVATE_KEY, privateKey.getPrivateKeyAsWiF(Constants.NETWORK_PARAMETERS))
+                .appendQueryParameter(PARAM_IS_LOCK, cftx.confidence.instantSendlock?.toStringHex())
 
             if (displayName.isNotEmpty()) {
                 linkBuilder.appendQueryParameter(PARAM_DISPLAY_NAME, displayName)
@@ -96,17 +99,15 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
         (link.getQueryParameter(PARAM_IS_LOCK) ?: link.getQueryParameter(PARAM_IS_LOCK_2)!!).lowercase()
     }
 
-    val isValid: Boolean
-        get() = validation == true
+//    val isValid: Boolean
+//        get() = validation == true
 
-    fun getUri() : Uri {
-        return Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
-                .appendQueryParameter(PARAM_USER, user)
-                .appendQueryParameter(PARAM_DISPLAY_NAME, displayName)
-                .appendQueryParameter(PARAM_AVATAR_URL, avatarUrl)
-                .appendQueryParameter(PARAM_CFTX, cftx)
-                .appendQueryParameter(PARAM_PRIVATE_KEY, privateKey)
-                .appendQueryParameter(PARAM_IS_LOCK, instantSendLock)
-                .build()
-    }
+    fun getUri(): Uri = Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
+        .appendQueryParameter(PARAM_USER, user)
+        .appendQueryParameter(PARAM_DISPLAY_NAME, displayName)
+        .appendQueryParameter(PARAM_AVATAR_URL, avatarUrl)
+        .appendQueryParameter(PARAM_CFTX, cftx)
+        .appendQueryParameter(PARAM_PRIVATE_KEY, privateKey)
+        .appendQueryParameter(PARAM_IS_LOCK, instantSendLock)
+        .build()
 }

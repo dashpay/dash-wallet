@@ -68,6 +68,8 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
             viewModel.logEvent(AnalyticsConstants.Invites.CREATED_LATER)
             findNavController().popBackStack()
         }
+        binding.copyInvitationLink.isEnabled = false
+        binding.sendButton.isEnabled = false
 
         initViewModel()
 
@@ -103,6 +105,8 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
                         binding.inviteCreationProgressTitle.text = getString(R.string.invitation_created_successfully)
                         binding.sendButton.isEnabled = true
                         binding.progress.isGone = true
+                        binding.copyInvitationLink.isEnabled = true
+                        binding.sendButton.isEnabled = true
                     }
                 }
                 Status.LOADING -> {
@@ -114,15 +118,6 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
                 else -> {
                     binding.inviteCreationProgressTitle.text = getString(R.string.invitation_creating_error_title)
                     binding.progress.isGone = true
-//                    // there was an error sending
-//                    val errorDialog = FancyAlertDialog.newInstance(
-//                        R.string.invitation_creating_error_title,
-//                        R.string.invitation_creating_error_message,
-//                        R.drawable.ic_error_creating_invitation,
-//                        R.string.okay,
-//                        0,
-//                    )
-//                    errorDialog.show(childFragmentManager, null)
                     viewModel.logEvent(AnalyticsConstants.Invites.ERROR_CREATE)
                 }
             }

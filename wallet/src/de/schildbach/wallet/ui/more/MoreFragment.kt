@@ -150,11 +150,11 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 if (inviteHistory.isEmpty()) {
                     val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
                     if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
-                        safeNavigate(MoreFragmentDirections.moreToInviteFee())
+                        safeNavigate(MoreFragmentDirections.moreToInviteFee("more"))
                     } else {
                         MixDashFirstDialogFragment()
                             .show(requireActivity()) {
-                                safeNavigate(MoreFragmentDirections.moreToInviteFee())
+                                safeNavigate(MoreFragmentDirections.moreToInviteFee("more"))
                             }
                     }
                 } else {

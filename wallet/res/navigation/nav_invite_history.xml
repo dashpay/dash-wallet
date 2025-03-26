@@ -29,7 +29,10 @@
             app:destination="@id/nav_host_create_invite"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left" />
+            app:popExitAnim="@anim/slide_out_left">
+            <argument android:name="source"
+                app:argType="string"/>
+        </action>
 
         <action android:id="@+id/toInviteDetails"
             app:destination="@id/inviteDetailsFragment"
@@ -38,7 +41,7 @@
             app:popExitAnim="@anim/slide_out_left" />
 
         <argument
-            android:name="caller"
+            android:name="source"
             app:argType="string" />
 
     </fragment>
@@ -53,6 +56,9 @@
             app:argType="integer" />
         <argument
             android:name="identity_id"
+            app:argType="string" />
+        <argument
+            android:name="source"
             app:argType="string" />
     </fragment>
     <include app:graph="@navigation/nav_create_invite" />

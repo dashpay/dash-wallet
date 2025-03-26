@@ -64,7 +64,6 @@ import org.dash.wallet.common.services.ExchangeRatesProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.ui.CurrencyTextView;
-import org.dash.wallet.common.ui.FancyAlertDialog;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
