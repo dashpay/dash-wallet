@@ -134,7 +134,7 @@ interface TransactionMetadataChangeCacheDao {
     @Query("SELECT COUNT(*) FROM transaction_metadata_cache")
     suspend fun count(): Int
 
-    @Query("SELECT COUNT(DISTINCT txId) FROM transaction_metadata_cache where cacheTimestamp > :beforeTimestamp")
+    @Query("SELECT COUNT(DISTINCT txId) FROM transaction_metadata_cache where cacheTimestamp < :beforeTimestamp")
     suspend fun countTransactions(beforeTimestamp: Long): Int
 
     @Query("DELETE FROM transaction_metadata_cache")

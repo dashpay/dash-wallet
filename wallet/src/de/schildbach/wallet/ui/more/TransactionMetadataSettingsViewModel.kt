@@ -26,6 +26,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.TransactionMetadataSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +35,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.WalletUIConfig
@@ -55,22 +55,7 @@ enum class TxMetadataSaveFrequency {
     }
 }
 
-//data class TxMetadataSaveUIState(
-//    val saveToNetwork: Boolean = false,
-//    val sortByOption: TxMetadataSaveFrequency = TxMetadataSaveFrequency.defaultOption,
-//    val paymentCategories: Boolean = false,
-//    val taxCatagories: Boolean = false,
-//    val exchangeRates: Boolean = false,
-//    val memos: Boolean = false,
-//) {
-////    fun isDefault(): Boolean {
-////        // typeOption isn't included because we show it in the header
-////        return sortByOption == UsernameSortOption.DateDescending &&
-////                !onlyDuplicates &&
-////                !onlyLinks
-////    }
-//}
-
+@ExperimentalCoroutinesApi
 @HiltViewModel
 class TransactionMetadataSettingsViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
@@ -103,20 +88,16 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    suspend fun saveDataToNetwork(saveToNetwork: Boolean) = withContext(Dispatchers.IO) {
+    suspend fun saveDataToNetwork(saveToNetwork: Boolean) {
         dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_SAVE_TO_NETWORK, saveToNetwork)
         if (dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER) == null) {
             dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER, System.currentTimeMillis())
         }
     }
 
-    suspend fun setTransactionMetadataInfoShown() = withContext(Dispatchers.IO) {
-        dashPayConfig.setTransactionMetadataInfoShown()
-    }
+    suspend fun setTransactionMetadataInfoShown() = dashPayConfig.setTransactionMetadataInfoShown()
 
-    suspend fun savePreferences(settings: TransactionMetadataSettings) = withContext(Dispatchers.IO) {
-        dashPayConfig.setTransactionMetadataSettings(settings)
-    }
+    suspend fun savePreferences(settings: TransactionMetadataSettings) = dashPayConfig.setTransactionMetadataSettings(settings)
 
     val saveToNetwork = dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_TO_NETWORK)
 

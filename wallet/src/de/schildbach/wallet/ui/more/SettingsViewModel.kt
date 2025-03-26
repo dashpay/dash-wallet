@@ -103,11 +103,11 @@ class SettingsViewModel @Inject constructor(
 
     fun getTotalWalletBalance() = walletDataProvider.getWalletBalance()
 
-    suspend fun isTransactionMetadataInfoShown() = withContext(Dispatchers.IO) {
+    suspend fun isTransactionMetadataInfoShown() {
         dashPayConfig.isTransactionMetadataInfoShown()
     }
 
-    suspend fun isSavingTransactionMetadata() = withContext(Dispatchers.IO) {
+    suspend fun isSavingTransactionMetadata() {
         dashPayConfig.isSavingTransactionMetadata()
     }
 }

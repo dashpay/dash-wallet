@@ -140,7 +140,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             }
 
             // only save Transaction metadata to
-            val shouldSaveToCache = dashPayConfig.isSavingToNetwork() && updateTime < dashPayConfig.getSaveAfterTimestamp()
+            val shouldSaveToCache = dashPayConfig.isSavingToNetwork() && updateTime > dashPayConfig.getSaveAfterTimestamp()
             if (!isCoinJoinTx && metadata.isNotEmpty() && !isSyncingPlatform && hasChanges && shouldSaveToCache) {
                 transactionMetadataChangeCacheDao.insert(TransactionMetadataCacheItem(metadata))
             }
