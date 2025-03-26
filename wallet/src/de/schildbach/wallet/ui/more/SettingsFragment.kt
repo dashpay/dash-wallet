@@ -43,9 +43,6 @@ import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentSettingsBinding
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.SystemActionsService
@@ -156,10 +153,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             }
         }
 
-        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
-            .filterNotNull()
-            .onEach { binding.localCurrencySymbol.text = it }
-            .launchIn(lifecycleScope)
+        viewModel.localCurrencySymbol.observe(viewLifecycleOwner) {
+            binding.localCurrencySymbol.text = it
+        }
 
         viewModel.coinJoinMixingMode.observe(this) { mode ->
             if (mode == CoinJoinMode.NONE) {

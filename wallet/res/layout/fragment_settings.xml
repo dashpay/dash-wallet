@@ -243,6 +243,8 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="@id/transaction_metadata_title"
                 app:layout_constraintTop_toBottomOf="@id/transaction_metadata_title"
+                android:visibility="invisible"
+                tools:visibility="visible"
                 android:text="@string/transaction_metadata_data_being_saved" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
