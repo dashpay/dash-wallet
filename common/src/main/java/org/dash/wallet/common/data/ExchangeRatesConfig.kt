@@ -5,7 +5,9 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import org.dash.wallet.common.WalletDataProvider
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class ExchangeRatesConfig
     @Inject
     constructor(

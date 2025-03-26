@@ -17,22 +17,30 @@
 package de.schildbach.wallet.ui.more
 
 import android.os.PowerManager
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.MixingStatus
+import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toBigDecimal
 import java.text.DecimalFormat
 import javax.inject.Inject
@@ -44,8 +52,15 @@ class SettingsViewModel @Inject constructor(
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService,
     private val walletDataProvider: WalletDataProvider,
-    private val analytics: AnalyticsService
-) : ViewModel() {
+    private val analytics: AnalyticsService,
+    private val configuration: Configuration,
+    private val dashPayConfig: DashPayConfig,
+    blockchainIdentityConfig: BlockchainIdentityConfig,
+    dashPayProfileDao: DashPayProfileDao
+) : BaseProfileViewModel(
+    blockchainIdentityConfig,
+    dashPayProfileDao
+) {
     private val powerManager: PowerManager = walletApplication.getSystemService(PowerManager::class.java)
 
     val isIgnoringBatteryOptimizations: Boolean
@@ -53,6 +68,8 @@ class SettingsViewModel @Inject constructor(
     val coinJoinMixingMode: Flow<CoinJoinMode>
         get() = coinJoinConfig.observeMode()
     var mixingProgress: Double = 0.0
+    private var _localCurrencySymbol = MutableStateFlow(Constants.USD_CURRENCY)
+    val localCurrencySymbol: Flow<String> = _localCurrencySymbol.asStateFlow()
 
     var coinJoinMixingStatus: MixingStatus = MixingStatus.NOT_STARTED
     init {
@@ -61,6 +78,10 @@ class SettingsViewModel @Inject constructor(
             .launchIn(viewModelScope)
         coinJoinService.observeMixingProgress()
             .onEach { mixingProgress = it }
+            .launchIn(viewModelScope)
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .onEach { _localCurrencySymbol.value = it }
             .launchIn(viewModelScope)
     }
 
@@ -82,4 +103,14 @@ class SettingsViewModel @Inject constructor(
     fun logEvent(event: String) {
         analytics.logEvent(event, mapOf())
     }
+
+    fun updateLastBlockchainResetTime() {
+        configuration.updateLastBlockchainResetTime()
+    }
+
+    fun getTotalWalletBalance() = walletDataProvider.getWalletBalance()
+
+    suspend fun isTransactionMetadataInfoShown() = dashPayConfig.isTransactionMetadataInfoShown()
+
+    suspend fun isSavingTransactionMetadata() = dashPayConfig.isSavingTransactionMetadata()
 }
