@@ -95,10 +95,10 @@ class TransactionMetadataSettingsFragment : Fragment(R.layout.fragment_transacti
     }
 
     private fun setupSaveFrequencyOptions() {
-
-        val sortByOptionNames = binding.root.resources.getStringArray(R.array.transaction_metadata_save_frequency).mapIndexed { i, it ->
-            IconifiedViewItem(it, iconSelectMode = IconSelectMode.None)
-        }
+        val sortByOptionNames = binding.root.resources.getStringArray(R.array.transaction_metadata_save_frequency)
+            .mapIndexed { _, it ->
+                IconifiedViewItem(it, iconSelectMode = IconSelectMode.None)
+            }
 
         val saveFrequency = viewModel.filterState.value.saveFrequency
         val initialIndex = TxMetadataSaveFrequency.entries.indexOf(saveFrequency)

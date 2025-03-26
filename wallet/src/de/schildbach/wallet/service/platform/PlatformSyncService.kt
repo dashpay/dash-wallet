@@ -204,7 +204,6 @@ class PlatformSynchronizationService @Inject constructor(
         // publish no more frequently than every 3 hours
         val shouldPushToNetwork = (lastPush < now - PUSH_PERIOD.inWholeMilliseconds)
         if (shouldPushToNetwork && meetsSaveFrequency) {
-
             publishChangeCache(everythingBeforeTimestamp)
         } else {
             log.info("last platform push was less than 3 hours ago, skipping")
