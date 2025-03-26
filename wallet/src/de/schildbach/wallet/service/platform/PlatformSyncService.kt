@@ -150,6 +150,7 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private var platformSyncJob: Job? = null
+    private var txMetadataJob: Job? = null
     private val updatingContacts = AtomicBoolean(false)
     private val preDownloadBlocks = AtomicBoolean(false)
     private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
@@ -179,14 +180,18 @@ class PlatformSynchronizationService @Inject constructor(
             .onEach { updateContactRequests() }
             .launchIn(syncScope)
 
-        syncScope.launch {
-            maybePublishChangeCache()
-        }
+        txMetadataJob = TickerFlow(PUSH_PERIOD)
+            .onEach {
+                maybePublishChangeCache()
+            }
+            .launchIn(syncScope)
     }
 
-    private suspend fun PlatformSynchronizationService.maybePublishChangeCache() {
+    private suspend fun maybePublishChangeCache() {
         val saveSettings = dashPayConfig.getTransactionMetadataSettings()
         val lastPush = config.get(DashPayConfig.LAST_METADATA_PUSH) ?: 0
+        // maybe we don't need this
+        // val lastTransactionTime = transactionMetadataChangeCacheDao.lastTransactionTime()
         val now = System.currentTimeMillis()
         val everythingBeforeTimestamp = random.nextLong(
             now - CUTOFF_MAX.inWholeMilliseconds,
@@ -217,6 +222,14 @@ class PlatformSynchronizationService @Inject constructor(
             syncScope.coroutineContext.cancelChildren(CancellationException("shutdown the platform sync"))
             platformSyncJob!!.cancel(null)
             platformSyncJob = null
+        }
+        if (txMetadataJob != null && platformRepo.hasIdentity) {
+            if (txMetadataJob!!.isActive) {
+                log.info("Shutting down the txmetdata publish job")
+                syncScope.coroutineContext.cancelChildren(CancellationException("shutdown the platform sync"))
+                txMetadataJob!!.cancel(null)
+            }
+            txMetadataJob = null
         }
     }
 
@@ -1035,12 +1048,14 @@ class PlatformSynchronizationService @Inject constructor(
                         item.memo = memo
                     }
                 }
-                if (saveSettings.shouldSaveExchangeRates() && changedItem.rate != null && changedItem.currencyCode != null) {
-                    item.rate = changedItem.rate
-                    item.currencyCode = changedItem.currencyCode
-                }
-                changedItem.sentTimestamp?.let { timestamp ->
-                    item.sentTimestamp = timestamp
+                if (saveSettings.shouldSaveExchangeRates()) {
+                    if (changedItem.rate != null && changedItem.currencyCode != null) {
+                        item.rate = changedItem.rate
+                        item.currencyCode = changedItem.currencyCode
+                    }
+                    changedItem.sentTimestamp?.let { timestamp ->
+                        item.sentTimestamp = timestamp
+                    }
                 }
                 if (saveSettings.shouldSaveTaxCategory()) {
                     changedItem.taxCategory?.let { taxCategory ->
