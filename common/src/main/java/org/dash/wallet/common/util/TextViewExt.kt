@@ -44,8 +44,8 @@ fun TextView.makeLinks(vararg links: Pair<String, View.OnClickListener>, @ColorR
             }
         }
 
-        startIndexOfLink = this.text.toString().toLowerCase(Locale.getDefault()).indexOf(
-            link.first.toLowerCase(
+        startIndexOfLink = this.text.toString().lowercase(Locale.getDefault()).indexOf(
+            link.first.lowercase(
                 Locale.getDefault()
             ),
             startIndexOfLink + 1
