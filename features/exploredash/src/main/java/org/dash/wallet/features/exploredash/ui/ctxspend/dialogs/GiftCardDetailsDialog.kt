@@ -53,10 +53,14 @@ import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
 import java.util.Currency
+import androidx.core.net.toUri
+import org.dash.wallet.features.exploredash.ExploreDatabase
+import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_details) {
     companion object {
+        private val log = LoggerFactory.getLogger(GiftCardDetailsDialog::class.java)
         private const val ARG_TRANSACTION_ID = "transactionId"
 
         fun newInstance(transactionId: Sha256Hash) =
@@ -91,11 +95,10 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             binding.howToUseInfo.isVisible = true
         }
 
-        viewModel.giftCard.observe(viewLifecycleOwner) {
-            it?.let { bindGiftCardDetails(binding, it) }
-        }
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            state.giftCard?.let { bindGiftCardDetails(binding, it) }
 
-        viewModel.icon.observe(viewLifecycleOwner) { bitmap ->
+            val bitmap = state.icon
             val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
 
             if (bitmap != null) {
@@ -113,43 +116,38 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.secondaryIcon.isVisible = false
                 binding.merchantLogo.setImageResource(R.drawable.ic_gift_card_tx)
             }
-        }
 
-        viewModel.date.observe(viewLifecycleOwner) {
-            val formatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy, hh:mm a")
-            binding.purchaseDate.text = it.format(formatter)
-        }
+            state.date?.let {
+                val formatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy, hh:mm a")
+                binding.purchaseDate.text = it.format(formatter)
+            }
 
-        viewModel.barcode.observe(viewLifecycleOwner) { barcode ->
-            if (viewModel.barcodeUrl.value.isNullOrEmpty() && barcode != null) {
+            val barcode = state.barcode
+
+            if (barcode != null) {
                 decodeBarcode(barcode)
-            }
-        }
-
-        viewModel.barcodeUrl.observe(viewLifecycleOwner) { barcodeUrl ->
-            if (!barcodeUrl.isNullOrEmpty()) {
-                loadBarcodeUrl(barcodeUrl)
-            }
-        }
-
-        viewModel.error.observe(viewLifecycleOwner) {
-            binding.infoLoadingIndicator.isVisible = false
-
-            val message = if (it is CTXSpendException && it.resourceString != null) {
-                getString(it.resourceString!!.resourceId, *it.resourceString!!.args.toTypedArray())
             } else {
-                null // This message is not localized so don't display it.  It will be in the logs
+                binding.purchaseCardBarcode.isVisible = false
+                binding.barcodePlaceholder.isVisible = true
+                binding.barcodeLoadingError.isVisible = false
             }
 
-            // TODO: remove this after we decide how to handle errors: put them in this OffsetDialog
-            // or use an adaptive dialog.  Currently, this dialog will popup many times.
-//            AdaptiveDialog.create(
-//                R.drawable.ic_error,
-//                getString(R.string.error),
-//                message ?: getString(R.string.gift_card_details_error),
-//                getString(R.string.button_close)
-//            ).show(requireActivity())
-            binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
+            val error = state.error
+
+            if (error != null) {
+                binding.infoLoadingIndicator.isVisible = false
+
+                val message = if (error is CTXSpendException && error.resourceString != null) {
+                    getString(error.resourceString!!.resourceId, *error.resourceString!!.args.toTypedArray())
+                } else {
+                    null // This message is not localized so don't display it.  It will be in the logs
+                }
+
+                binding.cardError.isVisible = true
+                binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
+            } else {
+                binding.cardError.isVisible = false
+            }
         }
 
         (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let { transactionId ->
@@ -176,58 +174,55 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.checkCurrentBalance.isVisible = giftCard.merchantUrl?.isNotEmpty() == true
         binding.checkCurrentBalance.setOnClickListener {
             giftCard.merchantUrl?.let {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
+                val intent = Intent(Intent.ACTION_VIEW, it.toUri())
                 requireContext().startActivity(intent)
             }
         }
     }
 
-    private fun loadBarcodeUrl(barcodeImg: String) {
-        binding.purchaseCardBarcode.isVisible = true
-        val imageRequest = ImageRequest.Builder(requireContext())
-            .data(barcodeImg)
-            .target(binding.purchaseCardBarcode)
-            .scale(Scale.FILL)
-            .crossfade(true)
-            .listener(
-                onStart = {
-                    binding.barcodePlaceholder.isVisible = true
-                },
-                onSuccess = { _, _ ->
-                    binding.barcodePlaceholder.isVisible = false
-                },
-                onError = { _, _ ->
-                    binding.barcodePlaceholder.isVisible = false
-                    binding.barcodeLoadingError.isVisible = true
-                }
-            )
-            .build()
-        requireContext().imageLoader.enqueue(imageRequest)
-    }
-
     private fun decodeBarcode(barcode: Barcode) {
         binding.purchaseCardInfo.doOnLayout {
             lifecycleScope.launch {
-                binding.purchaseCardBarcode.isVisible = true
-
-                if (barcode.barcodeFormat == BarcodeFormat.QR_CODE) {
-                    binding.purchaseCardBarcode.updateLayoutParams<ViewGroup.LayoutParams> {
-                        height = resources.getDimensionPixelSize(R.dimen.barcode_qr_size)
-                    }
-                }
-
                 val margin = resources.getDimensionPixelOffset(R.dimen.details_horizontal_margin)
-                val bitmap = withContext(Dispatchers.Default) {
-                    val size = Size(
-                        binding.purchaseCardInfo.measuredWidth - margin * 2,
-                        binding.purchaseCardBarcode.layoutParams.height
-                    )
-                    Qr.bitmap(barcode.value, barcode.barcodeFormat, size)
+                val bitmap = try {
+                    withContext(Dispatchers.Default) {
+                        val size = Size(
+                            binding.purchaseCardInfo.measuredWidth - margin * 2,
+                            binding.purchaseCardBarcode.layoutParams.height
+                        )
+                        Qr.bitmap(barcode.value, barcode.barcodeFormat, size)
+                    }
+                } catch (ex: Exception) {
+                    log.error("Failed to decode barcode", ex)
+                    null
                 }
 
-                binding.purchaseCardBarcode.load(bitmap) {
-                    crossfade(true)
-                    scale(Scale.FILL)
+                if (bitmap != null) {
+                    binding.barcodeLoadingError.isVisible = false
+                    binding.barcodePlaceholder.isVisible = false
+                    binding.purchaseCardBarcode.isVisible = true
+
+                    if (barcode.barcodeFormat == BarcodeFormat.QR_CODE) {
+                        binding.purchaseCardBarcode.updateLayoutParams<ViewGroup.LayoutParams> {
+                            height = resources.getDimensionPixelSize(R.dimen.barcode_qr_size)
+                        }
+                    }
+
+                    binding.purchaseCardBarcode.load(bitmap) {
+                        crossfade(true)
+                        scale(Scale.FILL)
+                        listener(
+                            onError = { _, _ ->
+                                binding.barcodePlaceholder.isVisible = false
+                                binding.purchaseCardBarcode.isVisible = false
+                                binding.barcodeLoadingError.isVisible = true
+                            }
+                        )
+                    }
+                } else {
+                    binding.purchaseCardBarcode.isVisible = false
+                    binding.barcodePlaceholder.isVisible = false
+                    binding.barcodeLoadingError.isVisible = true
                 }
             }
         }

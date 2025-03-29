@@ -141,8 +141,7 @@
                         android:layout_marginEnd="5dp"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:visibility="gone"
-                        tools:visibility="visible"
+                        android:visibility="visible"
                         tools:background="@color/gray_50">
 
                         <TextView
@@ -179,7 +178,7 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    tools:visibility="visible" />
+                    tools:visibility="gone" />
 
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/original_purchase_label"
@@ -323,10 +322,10 @@
                     android:layout_marginVertical="22dp"
                     android:layout_marginHorizontal="22dp"
                     android:layout_marginStart="15dp"
+                    android:visibility="gone"
                     app:layout_constraintTop_toBottomOf="@+id/copy_card_pin"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    />
+                    app:layout_constraintStart_toStartOf="parent" />
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <androidx.constraintlayout.widget.ConstraintLayout
