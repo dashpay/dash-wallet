@@ -16,7 +16,6 @@
  */
 package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
 
-import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
@@ -34,6 +33,8 @@ import androidx.lifecycle.lifecycleScope
 import coil.load
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.zxing.BarcodeFormat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -79,6 +80,16 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
     private val binding by viewBinding(DialogGiftCardDetailsBinding::bind)
     private val viewModel by viewModels<GiftCardDetailsViewModel>()
     private var originalBrightness: Float = -1f
+
+    private val bottomSheetCallback = object : BottomSheetBehavior.BottomSheetCallback() {
+        override fun onStateChanged(bottomSheet: View, newState: Int) { }
+
+        override fun onSlide(bottomSheet: View, slideOffset: Float) {
+            if (slideOffset < -0.5) {
+                setMaxBrightness(false)
+            }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -161,6 +172,8 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.viewTransactionDetailsCard.setOnClickListener {
             deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
         }
+
+        subscribeToBottomSheetCallback()
     }
 
     private fun bindGiftCardDetails(binding: DialogGiftCardDetailsBinding, giftCard: GiftCard) {
@@ -256,7 +269,25 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         window.attributes = params
     }
 
+    private fun subscribeToBottomSheetCallback() {
+        val bottomSheet = (dialog as BottomSheetDialog)
+            .findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        bottomSheet?.let {
+            val behavior = BottomSheetBehavior.from(bottomSheet)
+            behavior.addBottomSheetCallback(bottomSheetCallback)
+        }
+    }
+
+    override fun dismiss() {
+        setMaxBrightness(false)
+        super.dismiss()
+    }
+
     override fun onDestroyView() {
+        val bottomSheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        bottomSheet?.let {
+            BottomSheetBehavior.from(it).removeBottomSheetCallback(bottomSheetCallback)
+        }
         setMaxBrightness(false)
         super.onDestroyView()
     }
