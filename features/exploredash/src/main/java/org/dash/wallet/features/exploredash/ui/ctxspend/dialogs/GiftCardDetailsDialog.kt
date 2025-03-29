@@ -16,22 +16,22 @@
  */
 package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
 
+import android.content.DialogInterface
 import android.content.Intent
-import android.net.Uri
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Size
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StyleRes
+import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import coil.imageLoader
 import coil.load
-import coil.request.ImageRequest
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
 import com.google.zxing.BarcodeFormat
@@ -44,18 +44,21 @@ import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.*
+import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.DeepLinkDestination
+import org.dash.wallet.common.util.Qr
+import org.dash.wallet.common.util.copy
+import org.dash.wallet.common.util.deepLinkNavigate
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.ctxspend.model.Barcode
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
+import org.slf4j.LoggerFactory
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
 import java.util.Currency
-import androidx.core.net.toUri
-import org.dash.wallet.features.exploredash.ExploreDatabase
-import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_details) {
@@ -75,6 +78,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
     override val forceExpand = true
     private val binding by viewBinding(DialogGiftCardDetailsBinding::bind)
     private val viewModel by viewModels<GiftCardDetailsViewModel>()
+    private var originalBrightness: Float = -1f
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -208,17 +212,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                         }
                     }
 
-                    binding.purchaseCardBarcode.load(bitmap) {
-                        crossfade(true)
-                        scale(Scale.FILL)
-                        listener(
-                            onError = { _, _ ->
-                                binding.barcodePlaceholder.isVisible = false
-                                binding.purchaseCardBarcode.isVisible = false
-                                binding.barcodeLoadingError.isVisible = true
-                            }
-                        )
-                    }
+                    showBarcode(bitmap)
                 } else {
                     binding.purchaseCardBarcode.isVisible = false
                     binding.barcodePlaceholder.isVisible = false
@@ -226,5 +220,44 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 }
             }
         }
+    }
+
+    private fun showBarcode(bitmap: Bitmap) {
+        binding.purchaseCardBarcode.load(bitmap) {
+            crossfade(true)
+            scale(Scale.FILL)
+            listener(
+                onSuccess = { _, _ ->
+                    setMaxBrightness(true)
+                },
+                onError = { _, _ ->
+                    binding.barcodePlaceholder.isVisible = false
+                    binding.purchaseCardBarcode.isVisible = false
+                    binding.barcodeLoadingError.isVisible = true
+                    setMaxBrightness(false)
+                }
+            )
+        }
+    }
+
+    private fun setMaxBrightness(enable: Boolean) {
+        val window = dialog?.window ?: return
+        val params = window.attributes
+        
+        if (enable) {
+            if (originalBrightness < 0) {
+                originalBrightness = params.screenBrightness
+            }
+            params.screenBrightness = 1.0f
+        } else {
+            params.screenBrightness = originalBrightness
+        }
+        
+        window.attributes = params
+    }
+
+    override fun onDestroyView() {
+        setMaxBrightness(false)
+        super.onDestroyView()
     }
 }
