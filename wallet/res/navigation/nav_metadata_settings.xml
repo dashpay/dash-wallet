@@ -18,29 +18,8 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    app:startDestination="@id/settingsFragment"
+    app:startDestination="@id/transaction_metadata_settings_fragment"
     android:id="@+id/nav_settings">
-    <fragment
-        android:id="@+id/settingsFragment"
-        android:name="de.schildbach.wallet.ui.more.SettingsFragment"
-        android:label="Settings"
-        tools:layout="@layout/fragment_settings">
-
-        <action
-            android:id="@+id/settings_to_transaction_metadata"
-            app:destination="@id/transaction_metadata_settings_fragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left" />
-
-        <action
-            android:id="@+id/settings_to_transaction_metadata_info"
-            app:destination="@id/transaction_metadata_info_dialog"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left" />
-
-    </fragment>
 
     <fragment
         android:id="@+id/transaction_metadata_settings_fragment"

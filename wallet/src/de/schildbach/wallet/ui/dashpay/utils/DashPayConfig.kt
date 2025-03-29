@@ -87,6 +87,7 @@ open class DashPayConfig @Inject constructor(
         val USERNAME_VOTE_COUNTER = intPreferencesKey("username_vote_counter")
         val GOOGLE_DRIVE_ACCESS_TOKEN = stringPreferencesKey("google_drive_access_token")
         // transaction metadata settings
+        val TRANSACTION_METADATA_FEATURE_INSTALLED = longPreferencesKey("transaction_metadata_feature_installed")
         val TRANSACTION_METADATA_INFO_SHOWN = booleanPreferencesKey("transaction_metadata_info_shown")
         val TRANSACTION_METADATA_SAVE_TO_NETWORK = booleanPreferencesKey("transaction_metadata_save_to_network")
         val TRANSACTION_METADATA_SAVE_FREQUENCY = stringPreferencesKey("transaction_metadata_save_frequency")
@@ -187,4 +188,12 @@ open class DashPayConfig @Inject constructor(
     suspend fun isSavingToNetwork(): Boolean = get(TRANSACTION_METADATA_SAVE_TO_NETWORK) ?: false
 
     suspend fun getSaveAfterTimestamp(): Long = get(TRANSACTION_METADATA_SAVE_AFTER) ?: Long.MAX_VALUE
+
+    suspend fun getMetadataFeatureInstalled(): Long {
+        val installedDate = get(TRANSACTION_METADATA_FEATURE_INSTALLED) ?: 0
+        if (installedDate == 0L) {
+            set(TRANSACTION_METADATA_FEATURE_INSTALLED, System.currentTimeMillis())
+        }
+        return installedDate
+    }
 }

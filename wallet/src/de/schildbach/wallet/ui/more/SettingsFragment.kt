@@ -201,7 +201,8 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                     findNavController().navigate(
                         R.id.transaction_metadata_info_dialog,
                         bundleOf(
-                            "first_time" to true
+                            "first_time" to true,
+                            "use_navigation" to true
                         )
                     )
                 }

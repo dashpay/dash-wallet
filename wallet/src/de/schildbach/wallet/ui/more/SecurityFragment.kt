@@ -198,16 +198,28 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
     private fun checkUsernameThenReset() {
         lifecycleScope.launch {
             if (viewModel.hasIdentity && viewModel.hasPendingTxMetadataToSave()) {
-                TransactionMetadataDialog.newInstance().show(requireActivity()) {
-                    lifecycleScope.launch {
-                        if (it == true) {
-                            viewModel.setSaveOnReset()
-                            //safeNavigate(SecurityFragmentDirections.securityToTransactionMetadata())
-                            doReset()
-                        } else {
-                            doReset()
-                        }
+                when (AdaptiveDialog.create(
+                        R.drawable.ic_warning,
+                        getString(R.string.reset_wallet_metadata_title),
+                        getString(R.string.reset_wallet_metadata_message),
+                        getString(R.string.reset_wallet_metadata_button_without),
+                        getString(R.string.reset_wallet_metadata_button_with)
+                    ).showAsync(requireActivity()) == true
+                ) {
+                    true -> {
+                        //TransactionMetadataDialog.newInstance().show(requireActivity()) {
+                        //    lifecycleScope.launch {
+                        //        if (it == true) {
+                        viewModel.setSaveOnReset()
+                        //safeNavigate(SecurityFragmentDirections.securityToTransactionMetadata())
+                        doReset()
+                        //        } else {
+                        //            doReset()
+                        //        }
+                        //    }
                     }
+                    false -> doReset()
+                    else -> {}
                 }
             } else {
                 doReset()

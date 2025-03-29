@@ -485,4 +485,9 @@
         <item>Once a week</item>
         <item>After every transaction</item>
     </string-array>
+    <string name="reset_wallet_metadata_title">Do you want to reset wallet without saving your metadata to the network?</string>
+    <string name="reset_wallet_metadata_message">Resetting your wallet without saving data to the network will result in the loss of some transaction metadata.</string>
+    <string name="reset_wallet_metadata_button_without">Reset wallet without saving</string>
+    <string name="reset_wallet_metadata_button_with">Save data and reset wallet</string>
+
 </resources>
