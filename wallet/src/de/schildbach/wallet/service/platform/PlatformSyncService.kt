@@ -52,6 +52,7 @@ import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.launchIn
@@ -84,6 +85,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -127,6 +129,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val dashPayProfileDao: DashPayProfileDao,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
+    private val dashPayConfig: DashPayConfig,
     private val invitationsDao: InvitationsDao,
     private val usernameRequestDao: UsernameRequestDao,
     private val usernameVoteDao: UsernameVoteDao,
@@ -139,14 +142,15 @@ class PlatformSynchronizationService @Inject constructor(
 
         val UPDATE_TIMER_DELAY = 15.seconds
         val PUSH_PERIOD = if (BuildConfig.DEBUG) 3.minutes else 3.hours
+        val WEEKLY_PUSH_PERIOD = 7.days
         val CUTOFF_MIN = if (BuildConfig.DEBUG) 3.minutes else 3.hours
         val CUTOFF_MAX = if (BuildConfig.DEBUG) 6.minutes else 6.hours
         const val MIN_TXMETADATA_BATCHSIZE = 2
         const val MAX_TXMETADATA_BATCHSIZE = 35
-        val MIN_TXMETADATA_DURATION = 168.hours
     }
 
     private var platformSyncJob: Job? = null
+    private var txMetadataJob: Job? = null
     private val updatingContacts = AtomicBoolean(false)
     private val preDownloadBlocks = AtomicBoolean(false)
     private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
@@ -176,20 +180,35 @@ class PlatformSynchronizationService @Inject constructor(
             .onEach { updateContactRequests() }
             .launchIn(syncScope)
 
-        syncScope.launch {
-            maybePublishChangeCache()
-        }
+        txMetadataJob = TickerFlow(PUSH_PERIOD)
+            .onEach {
+                maybePublishChangeCache()
+            }
+            .launchIn(syncScope)
     }
 
-    private suspend fun PlatformSynchronizationService.maybePublishChangeCache() {
+    private suspend fun maybePublishChangeCache() {
+        val saveSettings = dashPayConfig.getTransactionMetadataSettings()
         val lastPush = config.get(DashPayConfig.LAST_METADATA_PUSH) ?: 0
+        // maybe we don't need this
+        // val lastTransactionTime = transactionMetadataChangeCacheDao.lastTransactionTime()
         val now = System.currentTimeMillis()
+        val everythingBeforeTimestamp = random.nextLong(
+            now - CUTOFF_MAX.inWholeMilliseconds,
+            now - CUTOFF_MIN.inWholeMilliseconds
+        ) // Choose cutoff time between 3 and 6 hours ago
 
-        if (lastPush < now - PUSH_PERIOD.inWholeMilliseconds) {
-            val everythingBeforeTimestamp = random.nextLong(
-                now - CUTOFF_MAX.inWholeMilliseconds,
-                now - CUTOFF_MIN.inWholeMilliseconds
-            ) // Choose cutoff time between 3 and 6 hours ago
+        // determine how many transactions meet the cut off time
+        val newDataItems = transactionMetadataChangeCacheDao.countTransactions(everythingBeforeTimestamp)
+
+        val meetsSaveFrequency = when (saveSettings.saveFrequency) {
+            TxMetadataSaveFrequency.afterTenTransactions -> newDataItems >= 10
+            TxMetadataSaveFrequency.afterEveryTransaction -> newDataItems >= 1
+            TxMetadataSaveFrequency.oncePerWeek -> lastPush < now - WEEKLY_PUSH_PERIOD.inWholeMilliseconds && newDataItems >= 1
+        }
+        // publish no more frequently than every 3 hours
+        val shouldPushToNetwork = (lastPush < now - PUSH_PERIOD.inWholeMilliseconds)
+        if (shouldPushToNetwork && meetsSaveFrequency) {
             publishChangeCache(everythingBeforeTimestamp)
         } else {
             log.info("last platform push was less than 3 hours ago, skipping")
@@ -203,6 +222,14 @@ class PlatformSynchronizationService @Inject constructor(
             syncScope.coroutineContext.cancelChildren(CancellationException("shutdown the platform sync"))
             platformSyncJob!!.cancel(null)
             platformSyncJob = null
+        }
+        if (txMetadataJob != null && platformRepo.hasIdentity) {
+            if (txMetadataJob!!.isActive) {
+                log.info("Shutting down the txmetdata publish job")
+                syncScope.coroutineContext.cancelChildren(CancellationException("shutdown the platform sync"))
+                txMetadataJob!!.cancel(null)
+            }
+            txMetadataJob = null
         }
     }
 
@@ -1008,11 +1035,7 @@ class PlatformSynchronizationService @Inject constructor(
             log.info("no tx metadata changes before this time")
             return
         }
-
-//        if (changedItems.size < MIN_TXMETADATA_BATCHSIZE) {
-//            log.info("not enough tx metadata changes before this time")
-//            return
-//        }
+        val saveSettings = dashPayConfig.getTransactionMetadataSettings()
 
         log.info("preparing to publish ${changedItems.size} tx metadata changes to platform")
 
@@ -1020,42 +1043,55 @@ class PlatformSynchronizationService @Inject constructor(
             if (itemsToPublish.containsKey(changedItem.txId)) {
                 val item = itemsToPublish[changedItem.txId]!!
 
-                changedItem.memo?.let { memo ->
-                    item.memo = memo
+                if (saveSettings.shouldSavePrivateMemos()) {
+                    changedItem.memo?.let { memo ->
+                        item.memo = memo
+                    }
                 }
-                if (changedItem.rate != null && changedItem.currencyCode != null) {
-                    item.rate = changedItem.rate
-                    item.currencyCode = changedItem.currencyCode
+                if (saveSettings.shouldSaveExchangeRates()) {
+                    if (changedItem.rate != null && changedItem.currencyCode != null) {
+                        item.rate = changedItem.rate
+                        item.currencyCode = changedItem.currencyCode
+                    }
+                    changedItem.sentTimestamp?.let { timestamp ->
+                        item.sentTimestamp = timestamp
+                    }
                 }
-                changedItem.sentTimestamp?.let { timestamp ->
-                    item.sentTimestamp = timestamp
+                if (saveSettings.shouldSaveTaxCategory()) {
+                    changedItem.taxCategory?.let { taxCategory ->
+                        item.taxCategory = taxCategory
+                    }
                 }
-                changedItem.service?.let { service ->
-                    item.service = service
+                if (saveSettings.shouldSavePaymentCategory()) {
+                    changedItem.service?.let { service ->
+                        item.service = service
+                    }
                 }
-                changedItem.customIconUrl?.let { customIconUrl ->
-                    item.customIconUrl = customIconUrl
-                }
-                changedItem.giftCardNumber?.let { giftCardNumber ->
-                    item.giftCardNumber = giftCardNumber
-                }
-                changedItem.giftCardPin?.let { giftCardPin ->
-                    item.giftCardPin = giftCardPin
-                }
-                changedItem.merchantName?.let { merchantName ->
-                    item.merchantName = merchantName
-                }
-                changedItem.originalPrice?.let { originalPrice ->
-                    item.originalPrice = originalPrice
-                }
-                changedItem.barcodeValue?.let { barcodeValue ->
-                    item.barcodeValue = barcodeValue
-                }
-                changedItem.barcodeFormat?.let { barcodeFormat ->
-                    item.barcodeFormat = barcodeFormat
-                }
-                changedItem.merchantUrl?.let { merchantUrl ->
-                    item.merchantUrl = merchantUrl
+                if (saveSettings.shouldSaveGiftcardInfo()) {
+                    changedItem.customIconUrl?.let { customIconUrl ->
+                        item.customIconUrl = customIconUrl
+                    }
+                    changedItem.giftCardNumber?.let { giftCardNumber ->
+                        item.giftCardNumber = giftCardNumber
+                    }
+                    changedItem.giftCardPin?.let { giftCardPin ->
+                        item.giftCardPin = giftCardPin
+                    }
+                    changedItem.merchantName?.let { merchantName ->
+                        item.merchantName = merchantName
+                    }
+                    changedItem.originalPrice?.let { originalPrice ->
+                        item.originalPrice = originalPrice
+                    }
+                    changedItem.barcodeValue?.let { barcodeValue ->
+                        item.barcodeValue = barcodeValue
+                    }
+                    changedItem.barcodeFormat?.let { barcodeFormat ->
+                        item.barcodeFormat = barcodeFormat
+                    }
+                    changedItem.merchantUrl?.let { merchantUrl ->
+                        item.merchantUrl = merchantUrl
+                    }
                 }
             } else {
                 itemsToPublish[changedItem.txId] = changedItem
@@ -1392,7 +1428,7 @@ class PlatformSynchronizationService @Inject constructor(
 
     override suspend fun clearDatabases() {
         // push all changes to platform before clearing the database tables
-        if (Constants.SUPPORTS_PLATFORM) {
+        if (Constants.SUPPORTS_PLATFORM && dashPayConfig.shouldSaveOnReset()) {
             publishChangeCache(System.currentTimeMillis()) // Before now - push everything
         }
         transactionMetadataChangeCacheDao.clear()
