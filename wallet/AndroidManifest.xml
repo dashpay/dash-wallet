@@ -425,12 +425,6 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice" /-->
 
-        <!-- WorkManager -->
-        <service
-            android:name="androidx.work.impl.foreground.SystemForegroundService"
-            android:foregroundServiceType="dataSync"
-            android:exported="false" />
-
         <!-- Prompt Google Play services to install the backported photo picker module -->
         <!-- required to support Android 7 to 12 -->
         <service android:name="com.google.android.gms.metadata.ModuleDependencies" android:enabled="false" android:exported="false">
