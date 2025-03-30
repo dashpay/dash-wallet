@@ -54,7 +54,6 @@ data class TransactionRowView(
     val txWrapper: TransactionWrapper?
 ): HistoryRowView() {
     companion object {
-        private val log = LoggerFactory.getLogger(TransactionRowView::class.java)
         fun fromTransactionWrapper(
             txWrapper: TransactionWrapper,
             bag: TransactionBag,
