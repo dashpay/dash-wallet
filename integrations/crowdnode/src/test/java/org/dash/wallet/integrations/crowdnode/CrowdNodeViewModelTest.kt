@@ -88,7 +88,7 @@ class CrowdNodeViewModelTest {
     }
 
     private val blockchainStateMock = mock<BlockchainStateProvider> {
-        on { getMasternodeAPY() } doReturn 5.9
+        onBlocking { getMasternodeAPY() } doReturn 5.9
     }
 
     @Test
