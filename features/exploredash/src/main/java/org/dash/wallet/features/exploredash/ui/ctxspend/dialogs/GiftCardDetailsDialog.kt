@@ -85,6 +85,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         override fun onStateChanged(bottomSheet: View, newState: Int) { }
 
         override fun onSlide(bottomSheet: View, slideOffset: Float) {
+            // Tracking bottom sheet position to turn off brightness produces a slightly better effect
             if (slideOffset < -0.5) {
                 setMaxBrightness(false)
             }
