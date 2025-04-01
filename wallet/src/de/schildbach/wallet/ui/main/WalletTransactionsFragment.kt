@@ -54,6 +54,7 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.GiftCardDetailsDialog
 import org.slf4j.LoggerFactory
 
@@ -61,7 +62,6 @@ import org.slf4j.LoggerFactory
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
     companion object {
         private const val HEADER_ITEM_TAG = "header"
-        private val log = LoggerFactory.getLogger(WalletTransactionsFragment::class.java)
     }
 
     private val viewModel by activityViewModels<MainViewModel>()

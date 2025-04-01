@@ -43,6 +43,9 @@ import de.schildbach.wallet.ui.more.tools.ZenLedgerApi
 import de.schildbach.wallet.ui.more.tools.ZenLedgerClient
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
 import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.*
@@ -118,6 +121,12 @@ abstract class AppModule {
             } else {
                 FakeDashSpendService(realService, walletData)
             }
+        }
+
+        @Provides
+        @Singleton
+        fun providesApplicationScope(): CoroutineScope {
+            return CoroutineScope(SupervisorJob() + Dispatchers.Default)
         }
     }
 

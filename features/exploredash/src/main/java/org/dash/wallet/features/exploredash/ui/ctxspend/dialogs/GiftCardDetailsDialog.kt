@@ -17,23 +17,24 @@
 package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
 
 import android.content.Intent
-import android.net.Uri
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Size
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StyleRes
+import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import coil.imageLoader
 import coil.load
-import coil.request.ImageRequest
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.zxing.BarcodeFormat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -44,11 +45,17 @@ import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.*
+import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.DeepLinkDestination
+import org.dash.wallet.common.util.Qr
+import org.dash.wallet.common.util.copy
+import org.dash.wallet.common.util.deepLinkNavigate
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.ctxspend.model.Barcode
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
+import org.slf4j.LoggerFactory
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
@@ -57,6 +64,7 @@ import java.util.Currency
 @AndroidEntryPoint
 class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_details) {
     companion object {
+        private val log = LoggerFactory.getLogger(GiftCardDetailsDialog::class.java)
         private const val ARG_TRANSACTION_ID = "transactionId"
 
         fun newInstance(transactionId: Sha256Hash) =
@@ -71,6 +79,18 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
     override val forceExpand = true
     private val binding by viewBinding(DialogGiftCardDetailsBinding::bind)
     private val viewModel by viewModels<GiftCardDetailsViewModel>()
+    private var originalBrightness: Float = -1f
+
+    private val bottomSheetCallback = object : BottomSheetBehavior.BottomSheetCallback() {
+        override fun onStateChanged(bottomSheet: View, newState: Int) { }
+
+        override fun onSlide(bottomSheet: View, slideOffset: Float) {
+            // Tracking bottom sheet position to turn off brightness produces a slightly better effect
+            if (slideOffset < -0.5) {
+                setMaxBrightness(false)
+            }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -91,11 +111,10 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             binding.howToUseInfo.isVisible = true
         }
 
-        viewModel.giftCard.observe(viewLifecycleOwner) {
-            it?.let { bindGiftCardDetails(binding, it) }
-        }
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            state.giftCard?.let { bindGiftCardDetails(binding, it) }
 
-        viewModel.icon.observe(viewLifecycleOwner) { bitmap ->
+            val bitmap = state.icon
             val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
 
             if (bitmap != null) {
@@ -113,43 +132,38 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.secondaryIcon.isVisible = false
                 binding.merchantLogo.setImageResource(R.drawable.ic_gift_card_tx)
             }
-        }
 
-        viewModel.date.observe(viewLifecycleOwner) {
-            val formatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy, hh:mm a")
-            binding.purchaseDate.text = it.format(formatter)
-        }
+            state.date?.let {
+                val formatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy, hh:mm a")
+                binding.purchaseDate.text = it.format(formatter)
+            }
 
-        viewModel.barcode.observe(viewLifecycleOwner) { barcode ->
-            if (viewModel.barcodeUrl.value.isNullOrEmpty() && barcode != null) {
+            val barcode = state.barcode
+
+            if (barcode != null) {
                 decodeBarcode(barcode)
-            }
-        }
-
-        viewModel.barcodeUrl.observe(viewLifecycleOwner) { barcodeUrl ->
-            if (!barcodeUrl.isNullOrEmpty()) {
-                loadBarcodeUrl(barcodeUrl)
-            }
-        }
-
-        viewModel.error.observe(viewLifecycleOwner) {
-            binding.infoLoadingIndicator.isVisible = false
-
-            val message = if (it is CTXSpendException && it.resourceString != null) {
-                getString(it.resourceString!!.resourceId, *it.resourceString!!.args.toTypedArray())
             } else {
-                null // This message is not localized so don't display it.  It will be in the logs
+                binding.purchaseCardBarcode.isVisible = false
+                binding.barcodePlaceholder.isVisible = true
+                binding.barcodeLoadingError.isVisible = false
             }
 
-            // TODO: remove this after we decide how to handle errors: put them in this OffsetDialog
-            // or use an adaptive dialog.  Currently, this dialog will popup many times.
-//            AdaptiveDialog.create(
-//                R.drawable.ic_error,
-//                getString(R.string.error),
-//                message ?: getString(R.string.gift_card_details_error),
-//                getString(R.string.button_close)
-//            ).show(requireActivity())
-            binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
+            val error = state.error
+
+            if (error != null) {
+                binding.infoLoadingIndicator.isVisible = false
+
+                val message = if (error is CTXSpendException && error.resourceString != null) {
+                    getString(error.resourceString!!.resourceId, *error.resourceString!!.args.toTypedArray())
+                } else {
+                    null // This message is not localized so don't display it.  It will be in the logs
+                }
+
+                binding.cardError.isVisible = true
+                binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
+            } else {
+                binding.cardError.isVisible = false
+            }
         }
 
         (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let { transactionId ->
@@ -159,6 +173,8 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.viewTransactionDetailsCard.setOnClickListener {
             deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
         }
+
+        subscribeToBottomSheetCallback()
     }
 
     private fun bindGiftCardDetails(binding: DialogGiftCardDetailsBinding, giftCard: GiftCard) {
@@ -176,60 +192,104 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.checkCurrentBalance.isVisible = giftCard.merchantUrl?.isNotEmpty() == true
         binding.checkCurrentBalance.setOnClickListener {
             giftCard.merchantUrl?.let {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
+                val intent = Intent(Intent.ACTION_VIEW, it.toUri())
                 requireContext().startActivity(intent)
             }
         }
     }
 
-    private fun loadBarcodeUrl(barcodeImg: String) {
-        binding.purchaseCardBarcode.isVisible = true
-        val imageRequest = ImageRequest.Builder(requireContext())
-            .data(barcodeImg)
-            .target(binding.purchaseCardBarcode)
-            .scale(Scale.FILL)
-            .crossfade(true)
-            .listener(
-                onStart = {
-                    binding.barcodePlaceholder.isVisible = true
-                },
-                onSuccess = { _, _ ->
-                    binding.barcodePlaceholder.isVisible = false
-                },
-                onError = { _, _ ->
-                    binding.barcodePlaceholder.isVisible = false
-                    binding.barcodeLoadingError.isVisible = true
-                }
-            )
-            .build()
-        requireContext().imageLoader.enqueue(imageRequest)
-    }
-
     private fun decodeBarcode(barcode: Barcode) {
         binding.purchaseCardInfo.doOnLayout {
             lifecycleScope.launch {
-                binding.purchaseCardBarcode.isVisible = true
-
-                if (barcode.barcodeFormat == BarcodeFormat.QR_CODE) {
-                    binding.purchaseCardBarcode.updateLayoutParams<ViewGroup.LayoutParams> {
-                        height = resources.getDimensionPixelSize(R.dimen.barcode_qr_size)
-                    }
-                }
-
                 val margin = resources.getDimensionPixelOffset(R.dimen.details_horizontal_margin)
-                val bitmap = withContext(Dispatchers.Default) {
-                    val size = Size(
-                        binding.purchaseCardInfo.measuredWidth - margin * 2,
-                        binding.purchaseCardBarcode.layoutParams.height
-                    )
-                    Qr.bitmap(barcode.value, barcode.barcodeFormat, size)
+                val bitmap = try {
+                    withContext(Dispatchers.Default) {
+                        val size = Size(
+                            binding.purchaseCardInfo.measuredWidth - margin * 2,
+                            binding.purchaseCardBarcode.layoutParams.height
+                        )
+                        Qr.bitmap(barcode.value, barcode.barcodeFormat, size)
+                    }
+                } catch (ex: Exception) {
+                    log.error("Failed to decode barcode", ex)
+                    null
                 }
 
-                binding.purchaseCardBarcode.load(bitmap) {
-                    crossfade(true)
-                    scale(Scale.FILL)
+                if (bitmap != null) {
+                    binding.barcodeLoadingError.isVisible = false
+                    binding.barcodePlaceholder.isVisible = false
+                    binding.purchaseCardBarcode.isVisible = true
+
+                    if (barcode.barcodeFormat == BarcodeFormat.QR_CODE) {
+                        binding.purchaseCardBarcode.updateLayoutParams<ViewGroup.LayoutParams> {
+                            height = resources.getDimensionPixelSize(R.dimen.barcode_qr_size)
+                        }
+                    }
+
+                    showBarcode(bitmap)
+                } else {
+                    binding.purchaseCardBarcode.isVisible = false
+                    binding.barcodePlaceholder.isVisible = false
+                    binding.barcodeLoadingError.isVisible = true
                 }
             }
         }
+    }
+
+    private fun showBarcode(bitmap: Bitmap) {
+        binding.purchaseCardBarcode.load(bitmap) {
+            crossfade(true)
+            scale(Scale.FILL)
+            listener(
+                onSuccess = { _, _ ->
+                    setMaxBrightness(true)
+                },
+                onError = { _, _ ->
+                    binding.barcodePlaceholder.isVisible = false
+                    binding.purchaseCardBarcode.isVisible = false
+                    binding.barcodeLoadingError.isVisible = true
+                    setMaxBrightness(false)
+                }
+            )
+        }
+    }
+
+    private fun setMaxBrightness(enable: Boolean) {
+        val window = dialog?.window ?: return
+        val params = window.attributes
+
+        if (enable) {
+            if (originalBrightness < 0) {
+                originalBrightness = params.screenBrightness
+            }
+            params.screenBrightness = 1.0f
+        } else {
+            params.screenBrightness = originalBrightness
+        }
+
+        window.attributes = params
+    }
+
+    private fun subscribeToBottomSheetCallback() {
+        val bottomSheet = (dialog as BottomSheetDialog)
+            .findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        bottomSheet?.let {
+            val behavior = BottomSheetBehavior.from(bottomSheet)
+            behavior.addBottomSheetCallback(bottomSheetCallback)
+        }
+    }
+
+    override fun dismiss() {
+        setMaxBrightness(false)
+        super.dismiss()
+    }
+
+    override fun onDestroyView() {
+        val bottomSheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        bottomSheet?.let {
+            BottomSheetBehavior.from(it).removeBottomSheetCallback(bottomSheetCallback)
+        }
+        setMaxBrightness(false)
+        super.onDestroyView()
     }
 }

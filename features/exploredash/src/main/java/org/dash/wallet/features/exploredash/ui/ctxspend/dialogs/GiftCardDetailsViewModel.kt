@@ -18,8 +18,6 @@
 package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
 
 import android.graphics.Bitmap
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,7 +29,6 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -50,8 +47,17 @@ import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
+data class GiftCardUIState(
+    val giftCard: GiftCard? = null,
+    val icon: Bitmap? = null,
+    val barcode: Barcode? = null,
+    val date: LocalDateTime? = null,
+    val error: Exception? = null
+)
+
 @HiltViewModel
 class GiftCardDetailsViewModel @Inject constructor(
+    private val applicationScope: CoroutineScope,
     private val giftCardDao: GiftCardDao,
     private val metadataProvider: TransactionMetadataProvider,
     private val analyticsService: AnalyticsService,
@@ -69,27 +75,8 @@ class GiftCardDetailsViewModel @Inject constructor(
     private var exchangeRate: ExchangeRate? = null
     private var retries = 3
 
-    private val _giftCard: MutableLiveData<GiftCard?> = MutableLiveData()
-    val giftCard: LiveData<GiftCard?>
-        get() = _giftCard
-
-    private val _icon: MutableLiveData<Bitmap?> = MutableLiveData()
-    val icon: LiveData<Bitmap?>
-        get() = _icon
-
-    private val _barcode: MutableLiveData<Barcode?> = MutableLiveData()
-    val barcode: LiveData<Barcode?>
-        get() = _barcode
-
-    private val _barcodeUrl: MutableLiveData<String?> = MutableLiveData()
-    val barcodeUrl: LiveData<String?>
-        get() = _barcodeUrl
-
-    private val _date: MutableLiveData<LocalDateTime> = MutableLiveData()
-    val date: LiveData<LocalDateTime>
-        get() = _date
-
-    val error: SingleLiveEvent<Exception?> = SingleLiveEvent()
+    private val _uiState = MutableStateFlow(GiftCardUIState())
+    val uiState: StateFlow<GiftCardUIState> = _uiState.asStateFlow()
 
     fun init(transactionId: Sha256Hash) {
         this.transactionId = transactionId
@@ -101,11 +88,15 @@ class GiftCardDetailsViewModel @Inject constructor(
                     exchangeRate = ExchangeRate(Fiat.parseFiat(metadata.currencyCode, metadata.rate))
                 }
 
-                _date.value = LocalDateTime.ofInstant(
-                    Instant.ofEpochMilli(metadata.timestamp),
-                    ZoneId.systemDefault()
-                )
-                _icon.value = metadata.customIconId?.let { metadataProvider.getIcon(it) }
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        date = LocalDateTime.ofInstant(
+                            Instant.ofEpochMilli(metadata.timestamp),
+                            ZoneId.systemDefault()
+                        ),
+                        icon = metadata.customIconId?.let { metadataProvider.getIcon(it) }
+                    )
+                }
             }
             .launchIn(viewModelScope)
 
@@ -113,12 +104,18 @@ class GiftCardDetailsViewModel @Inject constructor(
             .filterNotNull()
             .distinctUntilChanged()
             .onEach { giftCard ->
-                _giftCard.value = giftCard
-
-                giftCard.barcodeValue?.let { value ->
-                    if (_barcode.value?.value != value) {
-                        _barcode.value = Barcode(value, giftCard.barcodeFormat!!)
-                    }
+                _uiState.update { currentState ->
+                    val barcodeValue = giftCard.barcodeValue
+                    currentState.copy(
+                        giftCard = giftCard,
+                        barcode = barcodeValue?.let { value ->
+                            if (currentState.barcode?.value != value) {
+                                Barcode(value, giftCard.barcodeFormat!!)
+                            } else {
+                                currentState.barcode
+                            }
+                        }
+                    )
                 }
 
                 if (giftCard.number == null && giftCard.note != null) {
@@ -136,9 +133,11 @@ class GiftCardDetailsViewModel @Inject constructor(
     private suspend fun fetchGiftCardInfo(txid: String) {
         val email = repository.getCTXSpendEmail()
 
+        _uiState.update { it.copy(error = null) }
+
         if (!repository.isUserSignedIn() || email.isNullOrEmpty()) {
             log.error("not logged in to DashSpend while attempting to fetch gift card info")
-            error.postValue(CTXSpendException(ResourceString(R.string.log_in_to_ctxspend_account)))
+            _uiState.update { it.copy(error = CTXSpendException(ResourceString(R.string.log_in_to_ctxspend_account))) }
             cancelTicker()
             return
         }
@@ -161,29 +160,33 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 if (!giftCard.barcodeUrl.isNullOrEmpty()) {
                                     saveBarcode(giftCard.barcodeUrl)
                                 }
-                            } else if (!giftCard.redeemUrl.isNullOrEmpty()) {
+                            } else if (giftCard.redeemUrl.isNotEmpty()) {
                                 log.error("CTXSpend returned a redeem url card: not supported")
-                                error.postValue(
-                                    CTXSpendException(
-                                        ResourceString(
-                                            R.string.gift_card_redeem_url_not_supported,
-                                            listOf(giftCard.id, giftCard.paymentId, txid)
+                                _uiState.update {
+                                    it.copy(
+                                        error = CTXSpendException(
+                                            ResourceString(
+                                                R.string.gift_card_redeem_url_not_supported,
+                                                listOf(giftCard.id, giftCard.paymentId, txid)
+                                            )
                                         )
                                     )
-                                )
+                                }
                             }
                         }
                         "rejected" -> {
                             // TODO: handle
                             log.error("CTXSpend returned error: rejected")
-                            error.postValue(
-                                CTXSpendException(
-                                    ResourceString(
-                                        R.string.gift_card_rejected,
-                                        listOf(giftCard.id, giftCard.paymentId, txid)
+                            _uiState.update {
+                                it.copy(
+                                    error = CTXSpendException(
+                                        ResourceString(
+                                            R.string.gift_card_rejected,
+                                            listOf(giftCard.id, giftCard.paymentId, txid)
+                                        )
                                     )
                                 )
-                            )
+                            }
                         }
                     }
                 }
@@ -196,13 +199,17 @@ class GiftCardDetailsViewModel @Inject constructor(
                     cancelTicker()
                     val message = response.errorBody
                     log.error("CTXSpend returned error: $message")
-                    error.postValue(CTXSpendException(ResourceString(R.string.gift_card_unknown_error, listOf(txid))))
+                    _uiState.update {
+                        it.copy(
+                            error = CTXSpendException(ResourceString(R.string.gift_card_unknown_error, listOf(txid)))
+                        )
+                    }
                 }
             }
         } catch (ex: Exception) {
             cancelTicker()
             log.error("Failed to fetch gift card info", ex)
-            error.postValue(ex)
+            _uiState.update { it.copy(error = ex) }
         }
     }
 
@@ -211,7 +218,7 @@ class GiftCardDetailsViewModel @Inject constructor(
     }
 
     private fun updateGiftCard(number: String, pinCode: String?) {
-        val giftCard = giftCard.value ?: return
+        val giftCard = uiState.value.giftCard ?: return
 
         viewModelScope.launch {
             metadataProvider.updateGiftCardMetadata(
@@ -226,12 +233,8 @@ class GiftCardDetailsViewModel @Inject constructor(
         logOnPurchaseEvents(giftCard)
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun saveBarcode(barcodeUrl: String) {
-        _barcodeUrl.value = barcodeUrl
-
-        // We don't want this cancelled when the viewModel is destroyed
-        GlobalScope.launch {
+        applicationScope.launch {
             try {
                 val result = Constants.HTTP_CLIENT.get(barcodeUrl)
                 require(result.isSuccessful && result.body != null) { "call is not successful" }
