@@ -29,7 +29,6 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -138,9 +137,7 @@ class GiftCardDetailsViewModel @Inject constructor(
 
         if (!repository.isUserSignedIn() || email.isNullOrEmpty()) {
             log.error("not logged in to DashSpend while attempting to fetch gift card info")
-            _uiState.update { 
-                it.copy(error = CTXSpendException(ResourceString(R.string.log_in_to_ctxspend_account))) 
-            }
+            _uiState.update { it.copy(error = CTXSpendException(ResourceString(R.string.log_in_to_ctxspend_account))) }
             cancelTicker()
             return
         }
@@ -165,26 +162,30 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 }
                             } else if (giftCard.redeemUrl.isNotEmpty()) {
                                 log.error("CTXSpend returned a redeem url card: not supported")
-                                _uiState.update { 
-                                    it.copy(error = CTXSpendException(
-                                        ResourceString(
-                                            R.string.gift_card_redeem_url_not_supported,
-                                            listOf(giftCard.id, giftCard.paymentId, txid)
+                                _uiState.update {
+                                    it.copy(
+                                        error = CTXSpendException(
+                                            ResourceString(
+                                                R.string.gift_card_redeem_url_not_supported,
+                                                listOf(giftCard.id, giftCard.paymentId, txid)
+                                            )
                                         )
-                                    )) 
+                                    )
                                 }
                             }
                         }
                         "rejected" -> {
                             // TODO: handle
                             log.error("CTXSpend returned error: rejected")
-                            _uiState.update { 
-                                it.copy(error = CTXSpendException(
-                                    ResourceString(
-                                        R.string.gift_card_rejected,
-                                        listOf(giftCard.id, giftCard.paymentId, txid)
+                            _uiState.update {
+                                it.copy(
+                                    error = CTXSpendException(
+                                        ResourceString(
+                                            R.string.gift_card_rejected,
+                                            listOf(giftCard.id, giftCard.paymentId, txid)
+                                        )
                                     )
-                                )) 
+                                )
                             }
                         }
                     }
@@ -199,7 +200,9 @@ class GiftCardDetailsViewModel @Inject constructor(
                     val message = response.errorBody
                     log.error("CTXSpend returned error: $message")
                     _uiState.update {
-                        it.copy(error = CTXSpendException(ResourceString(R.string.gift_card_unknown_error, listOf(txid))))
+                        it.copy(
+                            error = CTXSpendException(ResourceString(R.string.gift_card_unknown_error, listOf(txid)))
+                        )
                     }
                 }
             }

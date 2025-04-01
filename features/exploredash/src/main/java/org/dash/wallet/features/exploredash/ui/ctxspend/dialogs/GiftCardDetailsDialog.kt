@@ -257,7 +257,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
     private fun setMaxBrightness(enable: Boolean) {
         val window = dialog?.window ?: return
         val params = window.attributes
-        
+
         if (enable) {
             if (originalBrightness < 0) {
                 originalBrightness = params.screenBrightness
@@ -266,7 +266,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         } else {
             params.screenBrightness = originalBrightness
         }
-        
+
         window.attributes = params
     }
 
