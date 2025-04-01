@@ -166,7 +166,7 @@ class ContactsFragment : Fragment(),
 
                 lifecycleScope.launch {
                     if (dashPayViewModel.getInviteCount() == 0) {
-                        safeNavigate(ContactsFragmentDirections.contactsToInviteFee())
+                        safeNavigate(ContactsFragmentDirections.contactsToInviteFee("contacts"))
                     } else {
                         safeNavigate(ContactsFragmentDirections.contactsToInviteHistory("contacts"))
                     }

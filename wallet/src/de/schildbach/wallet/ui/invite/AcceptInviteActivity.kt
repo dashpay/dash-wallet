@@ -20,18 +20,17 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentPagerAdapter
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.CreateUsernameActivity
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityAcceptInviteBinding
-import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.data.OnboardingState
 
-class AcceptInviteActivity : InteractionAwareActivity() {
+class AcceptInviteActivity : LockScreenActivity() {
 
     companion object {
         private const val EXTRA_INVITE = "extra_invite"
@@ -41,6 +40,10 @@ class AcceptInviteActivity : InteractionAwareActivity() {
             return Intent(context, AcceptInviteActivity::class.java).apply {
                 putExtra(EXTRA_INVITE, invite)
                 putExtra(EXTRA_FROM_ONBOARDING, fromOnboarding)
+                if (fromOnboarding) {
+                    putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true)
+                    putExtra(INTENT_EXTRA_NO_BLOCKCHAIN_SERVICE, true)
+                }
             }
         }
     }

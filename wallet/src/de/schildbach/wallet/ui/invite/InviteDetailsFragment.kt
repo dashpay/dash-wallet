@@ -17,8 +17,10 @@
 
 package de.schildbach.wallet.ui.invite
 
+import android.app.Activity
 import android.os.Bundle
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
@@ -112,6 +114,12 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         binding.claimedView.isVisible = false
 
         initViewModel()
+
+        sendInviteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (it.resultCode == Activity.RESULT_OK) {
+                findNavController().popBackStack()
+            }
+        }
     }
 
     private fun initViewModel() {

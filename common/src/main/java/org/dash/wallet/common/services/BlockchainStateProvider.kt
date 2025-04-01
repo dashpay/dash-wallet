@@ -46,4 +46,5 @@ interface BlockchainStateProvider {
     fun observeBlockChain(): Flow<AbstractBlockChain?>
 
     fun observeSyncStage(): Flow<PeerGroup.SyncStage?>
+    fun getSyncStage(): PeerGroup.SyncStage
 }

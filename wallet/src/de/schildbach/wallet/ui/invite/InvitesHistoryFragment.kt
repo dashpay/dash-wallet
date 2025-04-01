@@ -43,7 +43,7 @@ class InvitesHistoryFragment :
 
     private val binding by viewBinding(FragmentInvitesHistoryBinding::bind)
     private val args by navArgs<InvitesHistoryFragmentArgs>()
-    private val caller by lazy { args.caller }
+    private val source by lazy { args.source }
     private val invitesHistoryViewModel: InvitesHistoryViewModel by viewModels()
     private val filterViewModel: InvitesHistoryFilterViewModel by viewModels()
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
@@ -102,20 +102,15 @@ class InvitesHistoryFragment :
                 // no action
             }
             InvitesAdapter.INVITE_CREATE -> {
-                createInviteViewModel.logEvent(
-                    when (caller) {
-                        "more" -> AnalyticsConstants.Invites.CREATE_MORE
-                        else -> AnalyticsConstants.Invites.CREATE_HISTORY
-                    }
-                )
-                safeNavigate(InvitesHistoryFragmentDirections.toCreateInvite())
+                safeNavigate(InvitesHistoryFragmentDirections.toCreateInvite("history"))
             }
             else -> {
                 log.info("showing invitation for ${invitationItem.invitation!!.userId}")
                 safeNavigate(
                     InvitesHistoryFragmentDirections.toInviteDetails(
                         invitationItem.uniqueIndex,
-                        invitationItem.invitation.userId
+                        invitationItem.invitation.userId,
+                        "history"
                     )
                 )
             }

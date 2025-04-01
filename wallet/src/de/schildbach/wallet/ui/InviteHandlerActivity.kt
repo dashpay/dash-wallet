@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -25,7 +26,15 @@ import androidx.appcompat.app.AppCompatActivity
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.BlockchainStateDataProvider
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.invite.InviteHandler
+import de.schildbach.wallet.ui.invite.InviteHandler.Companion
+import de.schildbach.wallet.ui.main.MainActivity
+import de.schildbach.wallet_test.databinding.ActivityTransparentBinding
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -33,15 +42,14 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class InviteHandlerActivity : AppCompatActivity() {
-
-    private val log = LoggerFactory.getLogger(InviteHandlerActivity::class.java)
-
     companion object {
+        private val log = LoggerFactory.getLogger(InviteHandlerActivity::class.java)
 
         private const val EXTRA_INVITE = "extra_invite"
         private const val EXTRA_SILENT_MODE = "extra_silent_mode"
 
         @JvmStatic
+        @Deprecated("only the android OS should create this activity")
         fun createIntent(context: Context, invite: InvitationLinkData, silentMode: Boolean): Intent {
             return Intent(context, InviteHandlerActivity::class.java).apply {
                 putExtra(EXTRA_INVITE, invite)
@@ -50,9 +58,14 @@ class InviteHandlerActivity : AppCompatActivity() {
         }
     }
 
+    private lateinit var binding: ActivityTransparentBinding
     private val viewModel: InviteHandlerViewModel by viewModels()
     @Inject
     lateinit var analytics: AnalyticsService
+    @Inject
+    lateinit var walletDataProvider: WalletDataProvider
+    @Inject
+    lateinit var configuration: Configuration
 
     private val inviteHandler by lazy {
         InviteHandler(this, analytics)
@@ -68,6 +81,8 @@ class InviteHandlerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        binding = ActivityTransparentBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         if (onboardingInProgress()) {
             log.info("ignoring invite since onboarding is in progress")
@@ -86,9 +101,8 @@ class InviteHandlerActivity : AppCompatActivity() {
     }
 
     private fun onboardingInProgress(): Boolean {
-        val walletApplication = application as WalletApplication
-        OnboardingState.init(walletApplication.configuration)
-        return walletApplication.wallet != null && OnboardingState.isOnboarding()
+        OnboardingState.init(configuration)
+        return /*walletDataProvider.wallet != null &&*/ OnboardingState.isOnboarding()
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -102,7 +116,39 @@ class InviteHandlerActivity : AppCompatActivity() {
             // dummy observer, just to force viewModel.blockchainIdentityData to be loaded
         }
         viewModel.inviteData.observe(this) {
-            inviteHandler.handle(it, externalSilentMode)
+            when (it.status) {
+                Status.LOADING -> {
+                    inviteHandler.showInviteLoadingProgress()
+                }
+                Status.ERROR -> {
+                    val displayName = it.data!!.displayName
+                    inviteHandler.showInvalidInviteDialog(displayName)
+                }
+                Status.CANCELED -> {
+                    inviteHandler.showUsernameAlreadyDialog()
+                }
+                Status.SUCCESS -> {
+                    val invite = it.data!!
+                    val mainTask = inviteHandler.getMainTask()
+                    setResult(Activity.RESULT_OK)
+                    when {
+                        walletDataProvider.wallet != null -> {
+                            log.info("the invite will be forwarded, starting MainActivity with invite: ${invite.link}")
+                            val intent = MainActivity.createIntent(this, invite)
+                            mainTask?.startActivity(applicationContext, intent, null)
+                                ?: startActivity(intent)
+                        }
+                        else -> {
+                            log.info("the invite will be forwarded, starting Onboarding with invite: ${invite.link}")
+                            configuration.onboardingInvite = invite.link
+                            val intent = OnboardingActivity.createIntent(this, invite)
+                            mainTask?.startActivity(applicationContext, intent, null)
+                                ?: startActivity(intent)
+                        }
+                    }
+                    finish()
+                }
+            }
         }
     }
 }

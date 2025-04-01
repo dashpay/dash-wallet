@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.username.voting
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.navArgs
@@ -43,6 +44,8 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
         viewModel.hasIdentity = requestUserNameViewModel.identity != null
         binding.confirmBtn.setOnClickListener {
             requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_CONFIRM)
+            // go to the next screen, if using an invite
+            requestUserNameViewModel.invitationNextStep?.invoke()
             requestUserNameViewModel.submit()
             dismiss()
         }
@@ -58,6 +61,13 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
             binding.dashAmountView.text = it.amountStr
             binding.fiatSymbolView.text = it.fiatSymbol
             binding.fiatAmountView.text = it.fiatAmountStr
+        }
+
+        if (requestUserNameViewModel.isUsingInvite()) {
+            binding.dashAmountView.isVisible = false
+            binding.dashSymbolView.isVisible = false
+            binding.fiatAmountView.isVisible = false
+            binding.fiatSymbolView.isVisible = false
         }
     }
 }

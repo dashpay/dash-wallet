@@ -239,7 +239,7 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
                     userAlertItem = null
                     viewModel.dismissUserAlert(R.string.invitation_notification_text)
                     if (dashPayViewModel.getInviteCount() == 0) {
-                        safeNavigate(NotificationsFragmentDirections.notificationsToInviteFee())
+                        safeNavigate(NotificationsFragmentDirections.notificationsToInviteFee("notifications"))
                     } else {
                         safeNavigate(NotificationsFragmentDirections.notificationsToInviteHistory("notifications"))
                     }
