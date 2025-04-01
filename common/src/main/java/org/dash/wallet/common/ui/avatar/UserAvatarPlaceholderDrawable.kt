@@ -31,7 +31,7 @@ class UserAvatarPlaceholderDrawable {
             val hsv = FloatArray(3)
             //Ascii codes for A: 65 - Z: 90, 0: 48 - 9: 57
             //Ascii codes for A: 65 - Z: 90, 0: 48 - 9: 57
-            val firstChar: Float = usernameFirstChar.toUpperCase().toFloat()
+            val firstChar: Float = usernameFirstChar.uppercaseChar().toFloat()
             val charIndex: Float
             charIndex = if (firstChar <= 57) { //57 == '9' in Ascii table
                 (firstChar - 48f) / 36f // 48 == '0', 36 == total count of supported
@@ -45,7 +45,7 @@ class UserAvatarPlaceholderDrawable {
             return TextDrawable.builder().beginConfig().textColor(Color.WHITE)
                     .useFont(ResourcesCompat.getFont(context, R.font.inter_regular))
                     .fontSize(fontSize)
-                    .endConfig().buildRound(usernameFirstChar.toString().toUpperCase(), bgColor)
+                    .endConfig().buildRound(usernameFirstChar.toString().uppercase(), bgColor)
         }
     }
 }

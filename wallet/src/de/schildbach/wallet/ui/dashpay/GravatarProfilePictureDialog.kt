@@ -50,7 +50,7 @@ class GravatarProfilePictureDialog : ExternalUrlProfilePictureDialog() {
         val md: MessageDigest = MessageDigest.getInstance("MD5")
         md.update(email.encodeToByteArray())
         val digest: ByteArray = md.digest()
-        return digest.toHexString().toLowerCase()
+        return digest.toHexString().lowercase()
     }
 
     override fun loadFromString(text: String) {

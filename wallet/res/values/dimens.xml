@@ -18,4 +18,6 @@
     <dimen name="transaction_icon_padding">8dp</dimen>
     <dimen name="transaction_icon_size">38dp</dimen>
     <dimen name="username_search_focused_scroll">60dp</dimen>
+    <dimen name="create_username_shift">-45dp</dimen>
+    <dimen name="zero_dp">0dp</dimen>
 </resources>

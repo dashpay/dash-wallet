@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_secondary">
+    android:background="@color/background_secondary"
+    tools:context="de.schildbach.wallet.ui.username.voting.RequestUsernameFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/title_bar"
@@ -14,6 +15,7 @@
         app:navigationIcon="@drawable/ic_arrow_back" />
 
     <LinearLayout
+        android:id="@+id/top_stack"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
@@ -23,6 +25,7 @@
 
         <TextView
             style="@style/Headline4"
+            android:background="@color/background_secondary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/request_your_username"
@@ -37,7 +40,6 @@
             android:textAlignment="gravity" />
 
         <LinearLayout
-
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
@@ -79,6 +81,7 @@
             app:endIconDrawable="@drawable/ic_clear_input"
             android:layout_height="wrap_content"
             android:layout_marginTop="15dp"
+            android:minHeight="72dp"
             android:background="@drawable/rounded_background"
             android:theme="@style/SecondaryBackground"
             android:hint="@string/username">
@@ -93,8 +96,6 @@
                 android:layout_height="wrap_content"
                 android:imeOptions="actionNext" />
         </org.dash.wallet.common.ui.text.InputWrapper>
-
-
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -196,41 +197,53 @@
 <!--                />-->
 <!--        </LinearLayout>-->
 
-        <LinearLayout
-            android:id="@+id/voting_period_container"
+
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp">
 
-            <ImageView
-                android:id="@+id/check_voting_period"
+            <ProgressBar
+                android:id="@+id/voting_period_progress"
                 android:layout_width="22dp"
                 android:layout_height="22dp"
-                android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_warning_triangle"
-                />
+                android:visibility="gone" />
+
             <LinearLayout
+                android:id="@+id/voting_period_container"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                >
-            <TextView
-                style="@style/Overline.Medium"
-                android:id="@+id/voting_period"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                tools:text="The Dash network will vote on this username. We will notify you of the results on March 14, 2024."
-                />
-            <TextView
-                style="@style/Overline.Medium.Blue"
-                android:id="@+id/username_voting_info_btn"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/request_username_username_voting_message"
-                />
+                android:layout_height="wrap_content">
+
+                <ImageView
+                    android:id="@+id/check_voting_period"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginEnd="12dp"
+                    android:src="@drawable/ic_warning_triangle"
+                    />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    >
+                <TextView
+                    style="@style/Overline.Medium"
+                    android:id="@+id/voting_period"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    tools:text="The Dash network will vote on this username. We will notify you of the results on March 14, 2024."
+                    />
+                <TextView
+                    style="@style/Overline.Medium.Blue"
+                    android:id="@+id/username_voting_info_btn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/request_username_username_voting_message"
+                    />
+                </LinearLayout>
             </LinearLayout>
-        </LinearLayout>
+        </FrameLayout>
 
 <!--        <TextView-->
 <!--            android:id="@+id/username_requested"-->

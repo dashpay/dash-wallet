@@ -156,6 +156,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
+            val currentLifecycle = viewLifecycleOwner.lifecycle
             if (viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                 binding.loading.isVisible = false
 
@@ -170,8 +171,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                             outList.apply { addAll(it.value) }
                         }.reduce { acc, list -> acc.apply { addAll(list) } }
 
-                    adapter.submitList(groupedByDate)
-                    showTransactionList()
+                    adapter.submitList(groupedByDate) {
+                        // Check again if the view is still in a valid state before any post-update operations
+                        if (isAdded && currentLifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                            showTransactionList()
+                        }
+                    }
                 }
             }
         }
