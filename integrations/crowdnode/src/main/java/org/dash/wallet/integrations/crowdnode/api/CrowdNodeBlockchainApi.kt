@@ -66,10 +66,10 @@ open class CrowdNodeBlockchainApi @Inject constructor(
     ) {
         it.outputs.filter { output ->
             ScriptPattern.isP2PKH(output.scriptPubKey) &&
-                    Address.fromPubKeyHash(
-                        walletData.wallet!!.params,
-                        ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
-                    ) == accountAddress
+                Address.fromPubKeyHash(
+                walletData.wallet!!.params,
+                ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
+            ) == accountAddress
         }.forEach { output ->
             walletData.wallet!!.lockOutput(output.outPointFor)
         }
@@ -131,7 +131,12 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
         val selector = ByAddressCoinSelector(accountAddress)
 
-        return paymentService.sendCoins(crowdNodeAddress, amount, selector, emptyWallet, checkBalanceConditions,
+        return paymentService.sendCoins(
+            crowdNodeAddress,
+            amount,
+            selector,
+            emptyWallet,
+            checkBalanceConditions,
             canSendLockedOutput = {
                 it.scriptPubKey.getToAddress(params) == accountAddress
             }

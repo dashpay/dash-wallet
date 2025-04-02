@@ -216,7 +216,7 @@ class PlatformSynchronizationService @Inject constructor(
 
         // only allow this method to execute once at a time
         if (updatingContacts.get()) {
-            log.info("updateContactRequests is already running")
+            log.info("updateContactRequests is already running: {}", lastPreBlockStage)
             return
         }
 
@@ -231,7 +231,8 @@ class PlatformSynchronizationService @Inject constructor(
                 // Is the Voting Period complete?
                 if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
                     val timeWindow = UsernameRequest.VOTING_PERIOD_MILLIS
-                    if (System.currentTimeMillis() - blockchainIdentityData.votingPeriodStart!! >= timeWindow) {
+                    val votingPeriodStart = blockchainIdentityData.votingPeriodStart ?: 0L
+                    if (System.currentTimeMillis() - votingPeriodStart >= timeWindow) {
                         val resource = platformRepo.getUsername(blockchainIdentityData.username!!)
                         if (resource.status == Status.SUCCESS && resource.data != null) {
                             val domainDocument = DomainDocument(resource.data)

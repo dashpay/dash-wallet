@@ -79,7 +79,6 @@ public class Configuration {
     public static final String PREFS_PIN_LENGTH = "pin_length";
     private static final String PREFS_IMGUR_DELETE_HASH = "imgur_delete_hash";
     private static final String PREFS_UPLOAD_POLICY = "upload_policy_accepted_";
-    private static final String PREFS_DEV_MODE = "developer_mode";
     private static final String PREFS_INVITER = "inviter";
     private static final String PREFS_INVITER_CONTACT_REQUEST_SENT_INFO = "inviter_contact_request_sent_info";
     private static final String PREFS_ONBOARDING_STAGE = "onboarding_state";
@@ -390,14 +389,6 @@ public class Configuration {
 
     public void setAcceptedUploadPolicy(String service, Boolean accepted) {
         prefs.edit().putBoolean(PREFS_UPLOAD_POLICY + service, accepted).apply();
-    }
-
-    public Boolean getDeveloperMode() {
-        return BuildConfig.DEBUG || prefs.getBoolean(PREFS_DEV_MODE, false);
-    }
-
-    public void setDeveloperMode(boolean activate) {
-        prefs.edit().putBoolean(PREFS_DEV_MODE, activate).apply();
     }
 
     public String getInviter() {

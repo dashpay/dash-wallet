@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.text.format.DateFormat
 import android.view.View
+import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
@@ -39,6 +41,8 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
 
     private var handler: Handler = Handler()
     private lateinit var checkUsernameNotExistRunnable: Runnable
+    private lateinit var keyboardUtil: KeyboardUtil
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         requestUserNameViewModel.setCreateUsernameArgs(dashPayViewModel.createUsernameArgs)
@@ -55,6 +59,14 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             (requireActivity() as? InteractionAwareActivity)?.imitateUserInteraction()
         }
 
+        binding.usernameInput.setOnEditorActionListener { _, _, _ ->
+            if (binding.requestUsernameButton.isEnabled) {
+                onContinue()
+            }
+
+            true
+        }
+
         requestUserNameViewModel.inviteBalance.observe(viewLifecycleOwner) {
             processUsername(binding.usernameInput.text.toString())
         }
@@ -65,39 +77,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         }
 
         binding.requestUsernameButton.setOnClickListener {
-            if (requestUserNameViewModel.uiState.value.usernameContestable) {
-                AdaptiveDialog.create(
-                    R.drawable.ic_verify_identity,
-                    getString(R.string.verify_your_identity),
-                    getString(
-                        R.string.if_somebody
-                    ),
-                    getString(
-                        R.string.skip
-                    ),
-                    getString(
-                        R.string.verify
-                    )
-                ).show(requireActivity()) {
-                    requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
-                    if (it == true) {
-                        safeNavigate(
-                            RequestUsernameFragmentDirections.requestUsernameFragmentToVerifyIdentityFragment(
-                                binding.usernameInput.text.toString()
-                            )
-                        )
-                    } else {
-                        lifecycleScope.launch {
-                            checkViewConfirmDialog()
-                        }
-                    }
-                }
-            } else {
-                lifecycleScope.launch {
-                    requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
-                    checkViewConfirmDialog()
-                }
-            }
+            onContinue()
         }
 
         binding.usernameVotingInfoBtn.setOnClickListener {
@@ -117,6 +97,12 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             if (it.usernameSubmittedError) {
                 showErrorDialog()
             }
+
+            binding.votingPeriodProgress.isVisible = it.checkingUsername
+            binding.votingPeriodContainer.isVisible = !it.checkingUsername
+
+            binding.checkLetters.setImageResource(getCheckMarkImage(it.usernameCharactersValid, it.usernameTooShort))
+            binding.checkLength.setImageResource(getCheckMarkImage(it.usernameLengthValid, it.usernameTooShort))
 
             if (!requestUserNameViewModel.isUsingInvite() || requestUserNameViewModel.isInviteForContestedNames()) {
                 binding.checkLetters.setImageResource(
@@ -153,6 +139,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 // binding.walletBalanceContainer.isVisible = !it.enoughBalance
                 if (!requestUserNameViewModel.isUsingInvite() || isInviteContested) {
                     binding.walletBalanceContainer.isVisible = !it.enoughBalance
+
                     if (it.usernameContestable || it.usernameContested) {
                         val startDate = Date(it.votingPeriodStart)
                         val endDate = Date(startDate.time + UsernameRequest.VOTING_PERIOD_MILLIS)
@@ -237,6 +224,18 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             }
         }
 
+        keyboardUtil = KeyboardUtil(requireActivity().window, binding.root)
+        val binding = this.binding
+        keyboardUtil.setOnKeyboardShownChanged { isShown ->
+            val params = binding.topStack.layoutParams as ViewGroup.MarginLayoutParams
+            params.topMargin = resources.getDimensionPixelSize(if (isShown) {
+                R.dimen.create_username_shift
+            } else {
+                R.dimen.zero_dp
+            })
+            binding.topStack.layoutParams = params
+        }
+
         if (dashPayViewModel.createUsernameArgs?.invite != null) {
             requestUserNameViewModel.isInviteMixed.observe(viewLifecycleOwner) {
                 binding.inviteWithUnmixedFunds.isVisible = !it
@@ -299,6 +298,8 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                     dashPayViewModel.searchUsername(null)
                 }
             }
+        } else {
+            requestUserNameViewModel.reset()
         }
     }
 
@@ -356,6 +357,42 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             requestUserNameViewModel.checkUsername(username)
         }
         handler.postDelayed(checkUsernameNotExistRunnable, 600)
+    }
+
+    private fun onContinue() {
+        if (requestUserNameViewModel.uiState.value.usernameContestable) {
+            AdaptiveDialog.create(
+                R.drawable.ic_verify_identity,
+                getString(R.string.verify_your_identity),
+                getString(
+                    R.string.if_somebody
+                ),
+                getString(
+                    R.string.skip
+                ),
+                getString(
+                    R.string.verify
+                )
+            ).show(requireActivity()) {
+                requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
+                if (it == true) {
+                    safeNavigate(
+                        RequestUsernameFragmentDirections.requestUsernameFragmentToVerifyIdentityFragment(
+                            binding.usernameInput.text.toString()
+                        )
+                    )
+                } else {
+                    lifecycleScope.launch {
+                        checkViewConfirmDialog()
+                    }
+                }
+            }
+        } else {
+            lifecycleScope.launch {
+                requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
+                checkViewConfirmDialog()
+            }
+        }
     }
 
     private fun handleInvite() {

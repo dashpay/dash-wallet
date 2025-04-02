@@ -738,7 +738,7 @@ class CreateIdentityService : LifecycleService() {
 
 
             if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_CHECKED) {
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKED)
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_LINK_SAVING)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                 blockchainIdentityData.verificationLink?.let { verificationLink ->
@@ -754,7 +754,7 @@ class CreateIdentityService : LifecycleService() {
             }
 
             if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_LINK_SAVING) {
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKING)
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_LINK_SAVED)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                 // save the verification link
@@ -794,15 +794,6 @@ class CreateIdentityService : LifecycleService() {
         // managed by NotificationsLiveData
         val userAlert = UserAlert(INVITATION_NOTIFICATION_TEXT, INVITATION_NOTIFICATION_ICON)
         userAlertDao.insert(userAlert)
-    }
-
-    private fun handleRestoreIdentityAction(identity: ByteArray) {
-        workInProgress = true
-        serviceScope.launch(createIdentityExceptionHandler) {
-            restoreIdentity(identity)
-            workInProgress = false
-            stopSelf()
-        }
     }
 
     /**
