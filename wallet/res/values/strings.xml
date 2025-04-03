@@ -419,4 +419,5 @@
     <string name="battery_optimization_dialog_button_change">Open Settings</string>
     <string name="credits_profile_change_message">Update profile information</string>
 
+    <string name="block_explorer_selection_title">Select block explorer</string>
 </resources>
