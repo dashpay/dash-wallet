@@ -236,7 +236,7 @@ public class WalletApplication extends MultiDexApplication
         FirebaseApp.initializeApp(this);
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
-        config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
+        config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
@@ -945,8 +945,7 @@ public class WalletApplication extends MultiDexApplication
 
     @SuppressLint("NewApi")
     public static void scheduleStartBlockchainService(final Context context, Boolean cancelOnly) {
-        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
-                context.getResources());
+        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context));
         final long lastUsedAgo = config.getLastUsedAgo();
 
         // apply some backoff

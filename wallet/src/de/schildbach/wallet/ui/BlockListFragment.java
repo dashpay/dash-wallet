@@ -36,6 +36,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockInfo;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
+import de.schildbach.wallet.ui.util.BlockExplorerExtensionsKt;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
@@ -45,7 +46,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import androidx.annotation.NonNull;
@@ -59,11 +59,9 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.PopupMenu;
-import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.ViewAnimator;
 
 /**
@@ -173,19 +171,13 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 		final PopupMenu popupMenu = new PopupMenu(wrapper, view);
 		popupMenu.inflate(R.menu.blocks_context);
 
-        popupMenu.setOnMenuItemClickListener(new OnMenuItemClickListener() {
-			@Override
-            public boolean onMenuItemClick(final MenuItem item) {
-                switch (item.getItemId()) {
-					case R.id.blocks_context_browse:
-                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.withAppendedPath(
-                    		config.getBlockExplorer(R.array.preferences_block_explorer_values),
-                            "block/" + block.getHeader().getHashAsString())));
-						return true;
-				}
-				return false;
-			}
-		});
+        popupMenu.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.blocks_context_browse) {
+                BlockExplorerExtensionsKt.showBlockExplorerSelectionSheet(requireActivity(), "block/" + block.getHeader().getHashAsString());
+                return true;
+            }
+            return false;
+        });
 		popupMenu.show();
 	}
 

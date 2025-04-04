@@ -9,6 +9,7 @@ local.properties.osx
 .project
 .settings/
 .idea/
+.kotlin/
 *.iml
 bin/
 gen/

@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -98,9 +99,9 @@ fun BlockExplorerSelectionView(
                             }
 
                             Spacer(modifier = Modifier.width(16.dp))
-
+                            val resources = LocalContext.current.resources
                             Text(
-                                text = explorer.displayName,
+                                text = resources.getStringArray(R.array.preferences_block_explorer_labels)[explorer.index],
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
                                 color = Colors.textPrimary
@@ -113,9 +114,10 @@ fun BlockExplorerSelectionView(
     }
 }
 
-enum class BlockExplorer(val displayName: String, val url: String) {
-    BLOCKCHAIR("Blockchair", "https://blockchair.com/dash"),
-    INSIGHT("Insight", "https://insight.dash.org")
+// Index must be kept in sync with preferences_block_explorer_values
+enum class BlockExplorer(val index: Int) {
+    INSIGHT(0),
+    BLOCKCHAIR(1)
 }
 
 @Preview

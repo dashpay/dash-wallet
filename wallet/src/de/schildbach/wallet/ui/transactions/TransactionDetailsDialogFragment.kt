@@ -199,7 +199,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         if (tx != null) {
             ComposeBottomSheet(R.style.PrimaryBackground) { dialog ->
                 BlockExplorerSelectionView { explorer ->
-                    WalletUtils.viewOnBlockExplorer(requireActivity(), tx.purpose, tx.txId.toString())// TODO:, explorer.url)
+                    WalletUtils.viewOnBlockExplorer(requireActivity(), tx.purpose, tx.txId.toString(), explorer)
                     dialog.dismiss()
                 }
             }.show(requireActivity())

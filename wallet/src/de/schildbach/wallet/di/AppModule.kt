@@ -97,7 +97,7 @@ abstract class AppModule {
         @Singleton
         @Provides
         fun provideConfiguration(@ApplicationContext context: Context): Configuration =
-            Configuration(PreferenceManager.getDefaultSharedPreferences(context), context.resources)
+            Configuration(PreferenceManager.getDefaultSharedPreferences(context))
 
         @Provides
         fun provideSendPaymentService(

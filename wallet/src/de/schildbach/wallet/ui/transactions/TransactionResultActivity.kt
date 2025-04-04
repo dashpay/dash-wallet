@@ -225,7 +225,7 @@ class TransactionResultActivity : LockScreenActivity() {
     private fun viewOnExplorer(tx: Transaction) {
         ComposeBottomSheet(R.style.PrimaryBackground) { dialog ->
             BlockExplorerSelectionView { explorer ->
-                WalletUtils.viewOnBlockExplorer(this, tx.purpose, tx.txId.toString())// TODO:, explorer.url)
+                WalletUtils.viewOnBlockExplorer(this, tx.purpose, tx.txId.toString(), explorer)
                 dialog.dismiss()
             }
         }.show(this)

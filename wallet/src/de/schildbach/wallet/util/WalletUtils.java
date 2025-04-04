@@ -48,6 +48,7 @@ import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.ui.transactions.BlockExplorer;
 import de.schildbach.wallet_test.R;
 
 import android.annotation.SuppressLint;
@@ -175,10 +176,8 @@ public class WalletUtils {
     }
 
     public static void viewOnBlockExplorer(Context context, Transaction.Purpose txPurpose,
-                                           String txHash) {
-        Uri blockExplorer = WalletApplication.getInstance()
-                .getConfiguration()
-                .getBlockExplorer(R.array.preferences_block_explorer_values);
+                                           String txHash, BlockExplorer explorer) {
+        Uri blockExplorer = Uri.parse(context.getResources().getStringArray(R.array.preferences_block_explorer_values)[explorer.getIndex()]);
         Uri keyRotationUri = Uri.parse("https://bitcoin.org/en/alert/2013-08-11-android");
         boolean txRotation = txPurpose == Transaction.Purpose.KEY_ROTATION;
         if (!txRotation) {

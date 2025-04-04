@@ -36,6 +36,7 @@ import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.ui.util.BlockExplorerExtensionsKt;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.Toast;
 import de.schildbach.wallet.util.WalletUtils;
@@ -47,9 +48,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.Intent;
 import android.database.ContentObserver;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.ActionMode;
@@ -179,10 +178,7 @@ public final class WalletAddressesFragment extends FancyListFragment {
                     return true;
 
                 case R.id.wallet_addresses_context_browse:
-                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.withAppendedPath(
-                            config.getBlockExplorer(R.array.preferences_block_explorer_values),
-                            "address/" + getAddress(position).toString())));
-
+                    BlockExplorerExtensionsKt.showBlockExplorerSelectionSheet(requireActivity(), "address/" + getAddress(position));
                     mode.finish();
                     return true;
                 }
