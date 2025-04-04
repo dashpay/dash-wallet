@@ -26,6 +26,7 @@ import de.schildbach.wallet.ui.util.showBlockExplorerSelectionSheet
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityBlockInfoBinding
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -46,6 +47,8 @@ class BlockInfoActivity : LockScreenActivity() {
     private lateinit var binding: ActivityBlockInfoBinding
     @Inject
     lateinit var config: Configuration
+    @Inject
+    lateinit var analytics: AnalyticsService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,7 +65,7 @@ class BlockInfoActivity : LockScreenActivity() {
         binding.blockHash.text = blockInfo.hash
 
         binding.viewOnExplorer.setOnClickListener {
-            showBlockExplorerSelectionSheet("block/" + blockInfo.hash)
+            showBlockExplorerSelectionSheet(analytics, "block/" + blockInfo.hash)
         }
     }
 }

@@ -22,9 +22,18 @@ import androidx.compose.ui.unit.dp
 import de.schildbach.wallet.ui.compose_views.Colors
 import de.schildbach.wallet.ui.compose_views.Shadows.softShadow
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
+
+// Index must be kept in sync with preferences_block_explorer_values
+enum class BlockExplorer(val index: Int) {
+    INSIGHT(0),
+    BLOCKCHAIR(1)
+}
 
 @Composable
 fun BlockExplorerSelectionView(
+    analytics: AnalyticsService,
     onExplorerSelected: (BlockExplorer) -> Unit
 ) {
     val explorers = remember {
@@ -72,7 +81,14 @@ fun BlockExplorerSelectionView(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = rememberRipple(color = Colors.textPrimary),
-                            onClick = { onExplorerSelected(explorer) }
+                            onClick = {
+                                analytics.logEvent(when(explorer) {
+                                    BlockExplorer.BLOCKCHAIR -> AnalyticsConstants.BlockchainExplorer.BLOCKCHAIR_PICKED
+                                    BlockExplorer.INSIGHT -> AnalyticsConstants.BlockchainExplorer.INSIGHT_PICKED
+                                }, mapOf())
+
+                                onExplorerSelected(explorer)
+                            }
                         )
                     ) {
                         Row(
@@ -114,16 +130,13 @@ fun BlockExplorerSelectionView(
     }
 }
 
-// Index must be kept in sync with preferences_block_explorer_values
-enum class BlockExplorer(val index: Int) {
-    INSIGHT(0),
-    BLOCKCHAIR(1)
-}
-
 @Preview
 @Composable
 fun BlockExplorerSelectionViewPreview() {
     Box(Modifier.background(Colors.backgroundPrimary)) {
-        BlockExplorerSelectionView { }
+        BlockExplorerSelectionView(object: AnalyticsService {
+            override fun logEvent(event: String, params: Map<AnalyticsConstants.Parameter, Any>) {}
+            override fun logError(error: Throwable, details: String?) {}
+        }) { }
     }
 }

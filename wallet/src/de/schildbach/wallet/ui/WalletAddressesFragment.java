@@ -28,11 +28,14 @@ import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
+import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.util.Qr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.dash.wallet.common.Configuration;
+
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
@@ -60,9 +63,12 @@ import android.widget.BaseAdapter;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 
+import javax.inject.Inject;
+
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public final class WalletAddressesFragment extends FancyListFragment {
     private AddressBookActivity activity;
     private WalletApplication application;
@@ -74,6 +80,9 @@ public final class WalletAddressesFragment extends FancyListFragment {
     private WalletAddressesAdapter adapter;
 
     private static final Logger log = LoggerFactory.getLogger(WalletAddressesFragment.class);
+
+    @Inject
+    AnalyticsService analytics;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -178,7 +187,7 @@ public final class WalletAddressesFragment extends FancyListFragment {
                     return true;
 
                 case R.id.wallet_addresses_context_browse:
-                    BlockExplorerExtensionsKt.showBlockExplorerSelectionSheet(requireActivity(), "address/" + getAddress(position));
+                    BlockExplorerExtensionsKt.showBlockExplorerSelectionSheet(requireActivity(),  analytics,"address/" + getAddress(position));
                     mode.finish();
                     return true;
                 }

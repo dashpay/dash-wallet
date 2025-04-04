@@ -198,7 +198,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         val tx = viewModel.transaction.value
         if (tx != null) {
             ComposeBottomSheet(R.style.PrimaryBackground) { dialog ->
-                BlockExplorerSelectionView { explorer ->
+                BlockExplorerSelectionView(viewModel.analytics) { explorer ->
                     WalletUtils.viewOnBlockExplorer(requireActivity(), tx.purpose, tx.txId.toString(), explorer)
                     dialog.dismiss()
                 }

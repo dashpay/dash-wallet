@@ -27,10 +27,13 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.dash.wallet.common.Configuration;
+
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockInfo;
@@ -64,9 +67,12 @@ import android.view.ViewGroup;
 import android.widget.PopupMenu;
 import android.widget.ViewAnimator;
 
+import javax.inject.Inject;
+
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public final class BlockListFragment extends Fragment implements BlockListAdapter.OnClickListener {
 	private LockScreenActivity activity;
 	private WalletApplication application;
@@ -86,6 +92,9 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 	private static final int MAX_BLOCKS = 64;
 
 	private static final Logger log = LoggerFactory.getLogger(BlockListFragment.class);
+
+	@Inject
+	AnalyticsService analytics;
 
 	@Override
     public void onAttach(final Activity activity) {
@@ -173,7 +182,7 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 
         popupMenu.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.blocks_context_browse) {
-                BlockExplorerExtensionsKt.showBlockExplorerSelectionSheet(requireActivity(), "block/" + block.getHeader().getHashAsString());
+                BlockExplorerExtensionsKt.showBlockExplorerSelectionSheet(requireActivity(), analytics, "block/" + block.getHeader().getHashAsString());
                 return true;
             }
             return false;

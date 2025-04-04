@@ -7,10 +7,11 @@ import androidx.fragment.app.FragmentActivity
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
 import de.schildbach.wallet.ui.transactions.BlockExplorerSelectionView
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.services.analytics.AnalyticsService
 
-fun FragmentActivity.showBlockExplorerSelectionSheet(appendPath: String) {
+fun FragmentActivity.showBlockExplorerSelectionSheet(analytics: AnalyticsService, appendPath: String) {
     ComposeBottomSheet(R.style.PrimaryBackground) { dialog ->
-        BlockExplorerSelectionView { explorer ->
+        BlockExplorerSelectionView(analytics) { explorer ->
             startActivity(
                 Intent(
                     Intent.ACTION_VIEW,
