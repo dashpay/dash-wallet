@@ -22,7 +22,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:background="@color/background_primary"
-    tools:context="org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.GiftCardDetailsDialog">
+    tools:context="org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.GiftCardDetailsDialog">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/header"
@@ -120,38 +120,51 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:background="@drawable/rounded_background"
-                android:paddingTop="15dp"
                 android:paddingBottom="8dp"
-                android:paddingStart="15dp"
+                android:paddingStart="5dp"
                 android:theme="@style/SecondaryBackground">
 
-                <ImageView
-                    android:id="@+id/purchase_card_barcode"
-                    android:layout_width="0dp"
-                    android:layout_height="108dp"
-                    android:layout_marginStart="5dp"
-                    android:layout_marginEnd="20dp"
-                    android:visibility="gone"
+                <FrameLayout
+                    android:id="@+id/barcode_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
                     app:layout_constraintBottom_toTopOf="@+id/original_purchase_label"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    tools:src="@drawable/ic_dash_pay"
-                    tools:visibility="visible" />
+                    app:layout_constraintTop_toTopOf="parent">
+                    
+                    <FrameLayout
+                        android:id="@+id/barcode_placeholder"
+                        android:background="@drawable/rounded_background"
+                        android:theme="@style/Gray50Background"
+                        android:layout_marginEnd="5dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:visibility="visible"
+                        tools:background="@color/gray_50">
 
-                <ProgressBar
-                    android:id="@+id/barcode_loading_indicator"
-                    style="?android:attr/progressBarStyle"
-                    android:indeterminateTint="@color/colorPrimary"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="15dp"
-                    android:visibility="gone"
-                    app:layout_constraintBottom_toTopOf="@+id/original_purchase_label"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    tools:visibility="visible" />
+                        <TextView
+                            style="@style/Caption"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:textAlignment="gravity"
+                            android:layout_margin="20dp"
+                            android:text="@string/barcode_placeholder"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/purchase_card_barcode"
+                        android:layout_width="match_parent"
+                        android:layout_height="108dp"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginStart="15dp"
+                        android:layout_marginEnd="20dp"
+                        android:visibility="gone"
+                        tools:src="@drawable/ic_dash_pay"
+                        tools:visibility="gone" />
+                </FrameLayout>
 
                 <TextView
                     android:id="@+id/barcode_loading_error"
@@ -165,7 +178,7 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    tools:visibility="visible" />
+                    tools:visibility="gone" />
 
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/original_purchase_label"
@@ -174,12 +187,13 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
+                    android:layout_marginStart="15dp"
                     android:layout_marginTop="20dp"
                     android:layout_marginBottom="12dp"
                     android:text="@string/purchase_original_purchase"
                     app:layout_constraintBottom_toTopOf="@id/check_current_balance"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/purchase_card_barcode" />
+                    app:layout_constraintTop_toBottomOf="@id/barcode_container" />
 
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/original_purchase_value"
@@ -207,6 +221,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="22dp"
+                    android:layout_marginStart="15dp"
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="@string/purchase_card_number"
@@ -249,6 +264,7 @@
                     style="@style/Caption.Medium.Tertiary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="15dp"
                     android:layout_marginTop="22dp"
                     android:ellipsize="end"
                     android:maxLines="1"
@@ -298,6 +314,18 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent" />
+
+                <TextView
+                    android:id="@+id/card_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="22dp"
+                    android:layout_marginHorizontal="22dp"
+                    android:layout_marginStart="15dp"
+                    android:visibility="gone"
+                    app:layout_constraintTop_toBottomOf="@+id/copy_card_pin"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -486,11 +514,11 @@
 
             <androidx.appcompat.widget.AppCompatImageView
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="18dp"
                 android:layout_gravity="center"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="40dp"
-                android:src="@drawable/logo_dashdirect" />
+                android:src="@drawable/ic_ctx_logo_blue" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

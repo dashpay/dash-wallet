@@ -41,14 +41,14 @@
 
         <action
             android:id="@+id/search_to_purchaseGiftCardFragment"
-            app:destination="@id/purchaseGiftCardFragment"
+            app:destination="@id/purchaseCTXSpendGiftCardFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
 
         <action
-            android:id="@+id/search_to_dashDirectUserAuthFragment"
-            app:destination="@id/dashDirectUserAuthFragment"
+            android:id="@+id/search_to_ctxSpendUserAuthFragment"
+            app:destination="@id/ctxSpendUserAuthFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
@@ -56,14 +56,14 @@
     </fragment>
 
     <fragment
-        android:id="@+id/dashDirectUserAuthFragment"
-        android:name="org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment"
-        android:label="fragment_dashDirectUserAuthFragment"
-        tools:layout="@layout/fragment_dash_direct_user_auth">
+        android:id="@+id/ctxSpendUserAuthFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment"
+        android:label="fragment_ctxSpendUserAuthFragment"
+        tools:layout="@layout/fragment_ctx_spend_user_auth">
 
         <action
-            android:id="@+id/auth_to_dashDirectUserAuthFragment"
-            app:destination="@id/dashDirectUserAuthFragment"
+            android:id="@+id/auth_to_ctxSpendUserAuthFragment"
+            app:destination="@id/ctxSpendUserAuthFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
@@ -71,21 +71,21 @@
         <action
             android:id="@+id/auth_to_purchaseGiftCardFragment"
             app:popUpTo="@id/searchFragment"
-            app:destination="@id/purchaseGiftCardFragment"
+            app:destination="@id/purchaseCTXSpendGiftCardFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
 
         <argument
-            android:name="dashDirectUserAuthType"
-            app:argType="org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment$DashDirectUserAuthType" />
+            android:name="ctxSpendUserAuthType"
+            app:argType="org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment$CTXSpendUserAuthType" />
     </fragment>
 
     <fragment
-        android:id="@+id/purchaseGiftCardFragment"
-        android:name="org.dash.wallet.features.exploredash.ui.dashdirect.PurchaseGiftCardFragment"
-        android:label="fragment_purchase_gift_card"
-        tools:layout="@layout/fragment_purchase_gift_card"/>
+        android:id="@+id/purchaseCTXSpendGiftCardFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.ctxspend.PurchaseGiftCardFragment"
+        android:label="fragment_purchase_ctxspend_gift_card"
+        tools:layout="@layout/fragment_purchase_ctxspend_gift_card"/>
 
     <dialog
         android:id="@+id/infoDialog"

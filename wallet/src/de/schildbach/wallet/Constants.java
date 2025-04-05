@@ -91,7 +91,7 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "";
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "dash";
-                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore.db");
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v2.db");
                 SUPPORTS_PLATFORM = !is32Bit;
                 SUPPORTS_INVITES = false;
                 SUPPORTS_TXMETADATA = false;
@@ -111,6 +111,7 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "tdash";
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v2-testnet.db");
                 SUPPORTS_PLATFORM = !is32Bit;
                 SUPPORTS_INVITES = false;
                 SUPPORTS_TXMETADATA = false;
@@ -133,7 +134,7 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "-" + devNetName;
                 FEE_NETWORK_SUFFIX = "-testnet"; // use the same fee file as testnet
                 WALLET_NAME_CURRENCY_CODE = "tdash";
-                org.dash.wallet.common.util.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-devnet.db";
+                org.dash.wallet.common.util.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-v2-devnet.db";
                 SUPPORTS_PLATFORM = !is32Bit;
                 SUPPORTS_INVITES = false;
                 SUPPORTS_TXMETADATA = false;

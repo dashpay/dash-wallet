@@ -84,7 +84,7 @@ import org.dash.wallet.common.transactions.TransactionWrapperFactory;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants;
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants;
 import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
@@ -472,7 +472,7 @@ public class WalletApplication extends MultiDexApplication
         }
         initUphold();
         initCoinbase();
-        initDashDirect();
+        initDashSpend();
     }
 
     private void initUphold() {
@@ -498,8 +498,8 @@ public class WalletApplication extends MultiDexApplication
         CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
     }
 
-    private void initDashDirect() {
-        DashDirectConstants.CLIENT_ID = BuildConfig.DASHDIRECT_CLIENT_ID;
+    private void initDashSpend() {
+        CTXSpendConstants.CLIENT_ID = BuildConfig.CTXSPEND_CLIENT_ID;
     }
 
     @TargetApi(Build.VERSION_CODES.O)

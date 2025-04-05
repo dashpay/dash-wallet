@@ -235,7 +235,7 @@
         </LinearLayout>
 
         <TextView
-            android:id="@+id/login_dash_direct_user"
+            android:id="@+id/login_explore_user"
             style="@style/Overline.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -249,6 +249,7 @@
             app:layout_constraintEnd_toEndOf="parent" />
 
 
+
         <androidx.appcompat.widget.LinearLayoutCompat
             android:layout_width="match_parent"
             android:id="@+id/pay_btn"
@@ -257,7 +258,7 @@
             android:layout_marginTop="28dp"
             android:orientation="horizontal"
             android:layout_marginBottom="10dp"
-            app:layout_constraintBottom_toTopOf="@+id/login_dash_direct_user"
+            app:layout_constraintBottom_toTopOf="@+id/login_explore_user"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             android:layout_height="wrap_content">
@@ -279,6 +280,29 @@
                 android:includeFontPadding="false"
                 android:layout_height="wrap_content" />
         </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <ImageView
+            android:id="@+id/discount_stem"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/triangle_black_70"
+            app:layout_constraintEnd_toStartOf="@+id/discount_value"
+            app:layout_constraintBottom_toTopOf="@id/pay_btn"
+            />
+        <TextView
+            android:id="@+id/discount_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="Save 3.75%"
+            android:textColor="@color/white"
+            android:background="@drawable/dark_gray_button_background"
+            android:paddingHorizontal="5dp"
+            android:paddingVertical="1dp"
+            app:layout_constraintTop_toTopOf="@+id/pay_btn"
+            app:layout_constraintBottom_toTopOf="@+id/pay_btn"
+            app:layout_constraintEnd_toEndOf="@id/pay_btn"
+            android:layout_marginEnd="30dp"
+            />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </merge>

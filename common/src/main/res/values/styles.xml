@@ -1303,6 +1303,12 @@
         <item name="cornerRadius">12dp</item>
     </style>
 
+    <style name="Gray50Background">
+        <item name="backgroundColor">@color/gray_50</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
     <style name="BuyDashCircle">
         <item name="cornerRadius">17dp</item>
         <item name="strokeColor">@android:color/transparent</item>
