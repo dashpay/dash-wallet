@@ -409,7 +409,7 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.reset()
     }
 
-    fun getMasternodeAPY(): Double {
+    suspend fun getMasternodeAPY(): Double {
         val apy = blockchainStateProvider.getMasternodeAPY()
         return if (apy != 0.0) {
             apy
@@ -418,7 +418,7 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
-    fun getCrowdNodeAPY(): Double {
+    suspend fun getCrowdNodeAPY(): Double {
         val withoutFees = (100.0 - crowdNodeFee) / 100
         return withoutFees * getMasternodeAPY()
     }

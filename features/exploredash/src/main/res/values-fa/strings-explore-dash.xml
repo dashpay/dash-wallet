@@ -46,7 +46,6 @@
     <string name="explore_no_atms">هیچ خودپردازی یافت نشد</string>
     <string name="distance_miles">%s مایل</string>
     <string name="distance_kilometers">%sکیلومتر</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%dفروشنده</item>
         <item quantity="other">%dفروشنده</item>
@@ -141,7 +140,7 @@
     <string name="explore_atm_location_explainer_message">از موقعیت شما برای نشان دادن مکان‌تان در نقشه، فروشندگان در شعاع مورد نظر و نیز بهبود نتیجه جستجو استفاده می‌شود. </string>
 
     <!-- Info screens -->
-    <string name="explore_info_header_text">ما دو نوع فروشنده داریم</string>
+    <string name="explore_info_header_text">ما ۲ نوع فروشنده داریم</string>
     <string name="accept_dash_text">دش را به صورت مستقیم می‌پذیرند</string>
     <string name="pay_with_dash_text">پرداخت با کیف پول دش</string>
     <string name="buy_gift_card_text">خرید کارت هدیه با دش</string>
@@ -169,4 +168,62 @@
     <string name="sync_in_progress_network_error">اخلال در فرآیند همزمان‌سازی...شبکه آفلاین است یا در دسترس نیست. </string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">در</string>
+    <string name="purchase_gift_card_min">حداقل: %s</string>
+    <string name="purchase_gift_card_max">حداکثر: %s</string>
+    <string name="purchase_gift_card_discount_hint">شما در حال خرید یک کارت هدیه %s به قیمت %s (با %s تخفیف) هستند. </string>
+    <string name="button_next">بعدی</string>
+    <string name="purchase_gift_card_from">از</string>
+    <string name="purchase_gift_card_to">به</string>
+    <string name="purchase_confirm_transaction">تائید</string>
+    <string name="purchase_gift_card_total_label">جمع کارت هدیه</string>
+    <string name="purchase_gift_card_discount">تخفیف</string>
+    <string name="purchase_gift_card_you_pay">مبلغی که پرداخت می‌کنید</string>
+    <string name="purchase_gift_card_confirm">تائید</string>
+    <string name="purchase_gift_card_details">جزئيات کارت هدیه</string>
+    <string name="purchase_original_purchase">خرید اصلی</string>
+    <string name="purchase_check_current_balance">مشاهده موجودی فعلی</string>
+    <string name="purchase_card_number">شماره کارت</string>
+    <string name="purchase_card_pin">رمز کارت</string>
+    <string name="purchase_view_transaction">مشاهده جزئیات تراکنش</string>
+    <string name="purchase_see_how_to_use_gift_card">دیدن اینکه کارت هدیه چطور کار میکند </string>
+    <string name="purchase_how_to_use_gift_card">چطور از کارت هدیه استفاده کنیم</string>
+    <string name="purchase_self_checkout">خرید نهایی خودکار</string>
+    <string name="purchase_Request_assistance">درخواست کمک از یکی از کارکنان برای استفاده از کارت هدیه دیجیتال </string>
+    <string name="purchase_in_store">در فروشگاه</string>
+    <string name="purchase_tell_the_cashier">به صندوقدار بگویید که با یک کارت هدیه دیجیتال پرداخت می‌کنید. رقم کل را وارد کنید و سپس شماره کارت هدیه را در بخش شماره حساب وارد کنید و سپس دگمه انتر را بزنید. </string>
+    <string name="purchase_in_the_payment_section">در بخش پرداخت، شماره کارت هدیه دیجیتال را در بخش کارت هدیه وارد کنید. </string>
+    <string name="purchase_powered_by">قدرت گرفته از</string>
+    <string name="insufficient_money_title">موجودی کافی نیست</string>
+    <string name="insufficient_money_msg">موجودی ناکافی</string>
+    <string name="send_coins_error_msg">مشکل در ارسال مبلغ مورد نظر!</string>
+    <string name="gift_card_barcode_failed">بارکد بارگذاری نشد</string>
+    <string name="gift_card_tx_title">کارت هدیه. %s</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">شماره تائید را وارد کنید</string>
+    <string name="verification_check_email">ایمیل‌تان را چک کنید و کد تائید را وارد کنید</string>
+    <string name="buy_gift_card">با حساب دش‌اسپند خود کارت هدیه بخرید</string>
+    <string name="create_new_account">ایجاد حساب جدید</string>
+    <string name="password">گذرواژه</string>
+    <string name="logged_in_as">ورود به عنوان %s</string>
+    <string name="log_out">خروج</string>
+    <string name="invaild_code">کد نادرستی وارد کردید. لطفا ایمیل‌تان را چک کنید و دوباره تلاش کنید. </string>
+    <string name="something_wrong_title">مشکلی به وجود آمد! </string>
+    <string name="retry">تلاش دوباره</string>
+    <string name="gift_card_purchase_failed">خرید کارت هدیه ناموفق بود</string>
+    <string name="try_again">دوباره امتحان کنید</string>
+    <string name="cancel">لغو</string>
+    <string name="gift_card_error">بنا به دلایلی، نمی‌توانیم کارت هدیه بخریم. لطفا دوباره تلاش کنید. </string>
+    <string name="gift_card_details_error">بنا به دلایلی، نمی‌توانیم کارت هدیه بخریم. لطفا با پشتیبانی تماس بگیرید. </string>
+    <string name="gift_card_unknown_error">بنا به دلایلی، نمی‌توانیم کارت هدیه بخریم. لطفا با شناسه %s با پشتیبانی تماس بگیرید. </string>
+    <string name="gift_card_rejected">پرداخت رد شد. لطفا با کارت هدیه با شناسه %s و شناسه پرداخت %s و شناسه تراکنش %s با سی‌تی‌اکس تماس بگیرید. </string>
+    <string name="gift_card_redeem_url_not_supported">پرداخت برای فروشنده‌ای که نشانی اینترنتی برداشت از کارت هدیه را ارائه می‌کند صورت گرفت، اما در حال حاضر، از آن پشتیبانی نمی‌شود. لطفا با کارت هدیه با شناسه %s و شناسه پرداخت %s و شناسه تراکنش %s با سی‌تی‌اکس تماس بگیرید. </string>
+    <string name="accept_terms_conditions">شرایط و مقررات دش‌اسپند را می‌پذیرم. </string>
+    <string name="tap_link_to_proceed">برای ایجاد حساب در دش‌اسنپد باید روی لینک زیر کلیک کنید</string>
+    <string name="accept_to_proceed">برای ایجاد حساب در دش‌اسپند باید شرایط و مقررات دش‌اسپند را بپذیرید. </string>
+    <string name="log_in_to_ctxspend_account_desc">ایمیل‌تان فقط برای ارسال گذرواژه یک‌بارمصرف استفاده می‌شود. </string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">با حساب دش‌اسپند خود کارت هدیه بخرید.</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">یک حساب دش‌اسپند ایجاد کنید یا به حساب فعلی‌تان وارد شوید. </string>
     </resources>

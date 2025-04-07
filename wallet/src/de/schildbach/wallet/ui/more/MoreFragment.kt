@@ -184,11 +184,12 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         binding.requestedUsernameContainer.setOnClickListener {
+            val errorMessage = createIdentityViewModel.creationException.value
             if (createIdentityViewModel.creationState.value.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal &&
-                createIdentityViewModel.creationException.value != null) {
+                errorMessage != null) {
                 // Perform Retry
                 mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
-                createIdentityViewModel.retryCreateIdentity()
+                retry(errorMessage)
             } else {
                 startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
             }
@@ -283,13 +284,26 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         binding.retryRequestButton.setOnClickListener {
             mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
-            createIdentityViewModel.retryCreateIdentity()
+            val errorMessage = createIdentityViewModel.creationException.value ?: ""
+            retry(errorMessage)
         }
 
         initViewModel()
 
         if (!Constants.SUPPORTS_PLATFORM) {
             binding.usernameVoting.isVisible = false
+        }
+    }
+
+    private fun retry(errorMessage: String) {
+        val needsNewName = errorMessage.contains("Document transitions with duplicate unique properties") ||
+                errorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll") ||
+                errorMessage.contains(Regex("does not have .* as a contender")) ||
+                errorMessage.contains("missing domain document for ")
+        if (!needsNewName) {
+            createIdentityViewModel.retryCreateIdentity()
+        } else {
+            startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
         }
     }
 

@@ -47,7 +47,7 @@ import kotlin.coroutines.resumeWithException
         Atm::class,
         AtmFTS::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class)
@@ -124,7 +124,7 @@ abstract class ExploreDatabase : RoomDatabase() {
                             log.info("onOpenPrepackagedDatabase")
                         }
                     }
-                )
+                ).addMigrations(ExploreDatabaseMigrations.migration1To2)
 
                 val onOpenCallback = object : Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
@@ -160,7 +160,7 @@ abstract class ExploreDatabase : RoomDatabase() {
 
                 database = dbBuilder
                     .setJournalMode(JournalMode.TRUNCATE)
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(ExploreDatabaseMigrations.migration1To2)
                     .addCallback(onOpenCallback)
                     .build()
 

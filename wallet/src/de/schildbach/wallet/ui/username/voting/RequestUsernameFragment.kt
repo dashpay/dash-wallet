@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.text.format.DateFormat
 import android.view.View
+import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
@@ -11,7 +13,6 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -19,9 +20,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.InteractionAwareActivity
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
@@ -29,7 +28,6 @@ import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import java.util.Date
-import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
@@ -40,6 +38,8 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
 
     private var handler: Handler = Handler()
     private lateinit var checkUsernameNotExistRunnable: Runnable
+    private lateinit var keyboardUtil: KeyboardUtil
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -62,8 +62,19 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                         dashPayViewModel.searchUsername(null)
                     }
                 }
+            } else {
+                requestUserNameViewModel.reset()
             }
+
             (requireActivity() as? InteractionAwareActivity)?.imitateUserInteraction()
+        }
+
+        binding.usernameInput.setOnEditorActionListener { _, _, _ ->
+            if (binding.requestUsernameButton.isEnabled) {
+                onContinue()
+            }
+
+            true
         }
 
         binding.inputWrapper.endIconMode = TextInputLayout.END_ICON_CUSTOM
@@ -72,39 +83,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         }
 
         binding.requestUsernameButton.setOnClickListener {
-            if (requestUserNameViewModel.uiState.value.usernameContestable) {
-                AdaptiveDialog.create(
-                    R.drawable.ic_verify_identity,
-                    getString(R.string.verify_your_identity),
-                    getString(
-                        R.string.if_somebody
-                    ),
-                    getString(
-                        R.string.skip
-                    ),
-                    getString(
-                        R.string.verify
-                    )
-                ).show(requireActivity()) {
-                    requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
-                    if (it == true) {
-                        safeNavigate(
-                            RequestUsernameFragmentDirections.requestUsernameFragmentToVerifyIdentityFragment(
-                                binding.usernameInput.text.toString()
-                            )
-                        )
-                    } else {
-                        lifecycleScope.launch {
-                            checkViewConfirmDialog()
-                        }
-                    }
-                }
-            } else {
-                lifecycleScope.launch {
-                    requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
-                    checkViewConfirmDialog()
-                }
-            }
+            onContinue()
         }
 
         binding.usernameVotingInfoBtn.setOnClickListener {
@@ -125,12 +104,17 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 showErrorDialog()
             }
 
+            binding.votingPeriodProgress.isVisible = it.checkingUsername
+            binding.votingPeriodContainer.isVisible = !it.checkingUsername
+
             binding.checkLetters.setImageResource(getCheckMarkImage(it.usernameCharactersValid, it.usernameTooShort))
             binding.checkLength.setImageResource(getCheckMarkImage(it.usernameLengthValid, it.usernameTooShort))
+
             if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameCheckSuccess) {
                 binding.checkAvailable.setImageResource(getCheckMarkImage(!it.usernameExists))
                 binding.checkBalance.setImageResource(getCheckMarkImage(it.enoughBalance))
                 binding.walletBalanceContainer.isVisible = !it.enoughBalance
+
                 if (it.usernameContestable || it.usernameContested) {
                     val startDate = Date(it.votingPeriodStart)
                     val endDate = Date(startDate.time + UsernameRequest.VOTING_PERIOD_MILLIS)
@@ -196,6 +180,18 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 binding.usernameAvailableContainer.isVisible = false
                 binding.requestUsernameButton.isEnabled = false
             }
+        }
+
+        keyboardUtil = KeyboardUtil(requireActivity().window, binding.root)
+        val binding = this.binding
+        keyboardUtil.setOnKeyboardShownChanged { isShown ->
+            val params = binding.topStack.layoutParams as ViewGroup.MarginLayoutParams
+            params.topMargin = resources.getDimensionPixelSize(if (isShown) {
+                R.dimen.create_username_shift
+            } else {
+                R.dimen.zero_dp
+            })
+            binding.topStack.layoutParams = params
         }
 
         dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
@@ -270,5 +266,41 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             requestUserNameViewModel.checkUsername(username)
         }
         handler.postDelayed(checkUsernameNotExistRunnable, 600)
+    }
+
+    private fun onContinue() {
+        if (requestUserNameViewModel.uiState.value.usernameContestable) {
+            AdaptiveDialog.create(
+                R.drawable.ic_verify_identity,
+                getString(R.string.verify_your_identity),
+                getString(
+                    R.string.if_somebody
+                ),
+                getString(
+                    R.string.skip
+                ),
+                getString(
+                    R.string.verify
+                )
+            ).show(requireActivity()) {
+                requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
+                if (it == true) {
+                    safeNavigate(
+                        RequestUsernameFragmentDirections.requestUsernameFragmentToVerifyIdentityFragment(
+                            binding.usernameInput.text.toString()
+                        )
+                    )
+                } else {
+                    lifecycleScope.launch {
+                        checkViewConfirmDialog()
+                    }
+                }
+            }
+        } else {
+            lifecycleScope.launch {
+                requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
+                checkViewConfirmDialog()
+            }
+        }
     }
 }

@@ -24,11 +24,13 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.AbstractBlockChain
 import org.bitcoinj.core.Block
 import org.bitcoinj.core.BlockChain
@@ -152,12 +154,14 @@ class BlockchainStateDataProvider @Inject constructor(
         }
     }
 
-    override fun getLastMasternodeAPY(): Double {
+    override suspend fun getLastMasternodeAPY(): Double {
         val apy = configuration.prefsKeyCrowdNodeStakingApy.toDouble()
         return if (apy != 0.0) {
             apy
         } else {
-            getEstimatedMasternodeAPY()
+            withContext(Dispatchers.Default) {
+                getEstimatedMasternodeAPY()
+            }
         }
     }
 
@@ -193,45 +197,47 @@ class BlockchainStateDataProvider @Inject constructor(
         return syncStageFlow
     }
 
-    override fun getMasternodeAPY(): Double {
-        val masternodeListManager = dashSystemService.system.masternodeListManager
-        val blockChain = dashSystemService.system.blockChain
-        if (masternodeListManager != null && blockChain != null) {
-            val mnlist = masternodeListManager.listAtChainTip
-            if (mnlist.height != 0L) {
-                var prevBlock = try {
-                    blockChain.blockStore.get(mnlist.height.toInt() - 1)
-                } catch (e: BlockStoreException) {
-                    null
-                }
-                // if we cannot retrieve the previous block, use the chain tip
-                if (prevBlock == null) {
-                    prevBlock = blockChain.chainHead
-                }
-
-                val validMNsCount = if (mnlist.size() != 0) {
-                    var virtualMNCount = 0
-                    mnlist.forEachMN(true) { entry ->
-                        virtualMNCount += if (entry.isHPMN) 4 else 1
+    override suspend fun getMasternodeAPY(): Double {
+        return withContext(Dispatchers.Default) {
+            val masternodeListManager = dashSystemService.system.masternodeListManager
+            val blockChain = dashSystemService.system.blockChain
+            if (masternodeListManager != null && blockChain != null) {
+                val mnlist = masternodeListManager.listAtChainTip
+                if (mnlist.height != 0L) {
+                    var prevBlock = try {
+                        blockChain.blockStore.get(mnlist.height.toInt() - 1)
+                    } catch (e: BlockStoreException) {
+                        null
                     }
-                    virtualMNCount
-                } else {
-                    MASTERNODE_COUNT
-                }
+                    // if we cannot retrieve the previous block, use the chain tip
+                    if (prevBlock == null) {
+                        prevBlock = blockChain.chainHead
+                    }
 
-                if (prevBlock != null) {
-                    val apy = getMasternodeAPY(
-                        walletDataProvider.wallet!!.params,
-                        mnlist.height.toInt(),
-                        prevBlock.header.difficultyTarget,
-                        validMNsCount
-                    )
-                    configuration.prefsKeyCrowdNodeStakingApy = apy.toFloat()
-                    return apy
+                    val validMNsCount = if (mnlist.size() != 0) {
+                        var virtualMNCount = 0
+                        mnlist.forEachMN(true) { entry ->
+                            virtualMNCount += if (entry.isHPMN) 4 else 1
+                        }
+                        virtualMNCount
+                    } else {
+                        MASTERNODE_COUNT
+                    }
+
+                    if (prevBlock != null) {
+                        val apy = getMasternodeAPY(
+                            walletDataProvider.wallet!!.params,
+                            mnlist.height.toInt(),
+                            prevBlock.header.difficultyTarget,
+                            validMNsCount
+                        )
+                        configuration.prefsKeyCrowdNodeStakingApy = apy.toFloat()
+                        return@withContext apy
+                    }
                 }
             }
+            return@withContext configuration.prefsKeyCrowdNodeStakingApy.toDouble()
         }
-        return configuration.prefsKeyCrowdNodeStakingApy.toDouble()
     }
 
     private val periods = arrayListOf(

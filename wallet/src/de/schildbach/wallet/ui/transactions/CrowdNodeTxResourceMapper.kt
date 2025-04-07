@@ -22,11 +22,13 @@ import androidx.annotation.StringRes
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
-import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.integrations.crowdnode.transactions.*
 
 class CrowdNodeTxResourceMapper: TxResourceMapper() {
+    override val dateTimeFormat: Int
+        get() = DateUtils.FORMAT_SHOW_TIME
+
     @StringRes
     override fun getTransactionTypeName(tx: Transaction, bag: TransactionBag): Int {
         if ((tx.type != Transaction.Type.TRANSACTION_NORMAL &&
@@ -50,9 +52,5 @@ class CrowdNodeTxResourceMapper: TxResourceMapper() {
         } else {
             super.getTransactionTypeName(tx, bag)
         }
-    }
-
-    override fun getDateTimeFormat(): Int {
-        return DateUtils.FORMAT_SHOW_TIME
     }
 }

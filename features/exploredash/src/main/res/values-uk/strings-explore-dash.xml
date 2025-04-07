@@ -46,7 +46,6 @@
     <string name="explore_no_atms">Немає банкоматів</string>
     <string name="distance_miles">%s миль</string>
     <string name="distance_kilometers">%s кілометрів</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d продавець</item>
         <item quantity="few">%d продавців</item>
@@ -177,4 +176,62 @@
     <string name="sync_in_progress_network_error">Синхронізацію перервано... Мережа офлайн або недоступна</string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">в</string>
+    <string name="purchase_gift_card_min">Мін: %s</string>
+    <string name="purchase_gift_card_max">Макс:%s</string>
+    <string name="purchase_gift_card_discount_hint">Ви купуєте %sподарункову картку за %s(%sзнижка)</string>
+    <string name="button_next">Далі</string>
+    <string name="purchase_gift_card_from">З</string>
+    <string name="purchase_gift_card_to">До</string>
+    <string name="purchase_confirm_transaction">Підтвердити</string>
+    <string name="purchase_gift_card_total_label">Загальна сума подарункової картки</string>
+    <string name="purchase_gift_card_discount">Знижка</string>
+    <string name="purchase_gift_card_you_pay">Ви платите</string>
+    <string name="purchase_gift_card_confirm">Підтвердити</string>
+    <string name="purchase_gift_card_details">Реквізити подарункової картки</string>
+    <string name="purchase_original_purchase">Початкова покупка</string>
+    <string name="purchase_check_current_balance">Перевірити поточний баланс</string>
+    <string name="purchase_card_number">Номер картки</string>
+    <string name="purchase_card_pin">PIN-код картки</string>
+    <string name="purchase_view_transaction">Переглянути деталі транзакції</string>
+    <string name="purchase_see_how_to_use_gift_card">Подивіться, як користуватися подарунковою карткою</string>
+    <string name="purchase_how_to_use_gift_card">Як використовувати подарункову карту</string>
+    <string name="purchase_self_checkout">Самообслуговування</string>
+    <string name="purchase_Request_assistance">Щоб активувати цифрову подарункову картку, зверніться по допомогу до співробітника, </string>
+    <string name="purchase_in_store">В магазині</string>
+    <string name="purchase_tell_the_cashier">Скажіть касиру, що ви платите цифровою подарунковою карткою. Касир: введіть загальну суму в поле Банківська картка, потім введіть номер подарункової картки в поле Обліковий запис і натисніть Прийняти.</string>
+    <string name="purchase_in_the_payment_section">У розділі оплати введіть номер цифрової подарункової картки в поле подарункової картки.</string>
+    <string name="purchase_powered_by">На базі</string>
+    <string name="insufficient_money_title">Недостньо монет</string>
+    <string name="insufficient_money_msg">Недостатньо коштів</string>
+    <string name="send_coins_error_msg">Проблема з відправкою монет!</string>
+    <string name="gift_card_barcode_failed">Не вдалося завантажити штрих-код</string>
+    <string name="gift_card_tx_title">Подарункова картка · %s</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">Введіть код підтвердження</string>
+    <string name="verification_check_email">Перевірте свою електронну пошту та введіть код підтвердження</string>
+    <string name="buy_gift_card">Придбайте подарункову картку за допомогою свого облікового запису DashSpend</string>
+    <string name="create_new_account">Створити новий обліковий запис</string>
+    <string name="password">Пароль</string>
+    <string name="logged_in_as">Ви увійшли як %s</string>
+    <string name="log_out">Вийти</string>
+    <string name="invaild_code">Ви ввели неправильний код. Перевірте свою електронну пошту та повторіть спробу.</string>
+    <string name="something_wrong_title">Щось пішло не так!</string>
+    <string name="retry">Повторити</string>
+    <string name="gift_card_purchase_failed">Помилка покупки подарункової картки</string>
+    <string name="try_again">Спробуйте ще раз</string>
+    <string name="cancel">Відміна</string>
+    <string name="gift_card_error">Чомусь ми не змогли купити подарункову картку. Будь ласка спробуйте ще раз.</string>
+    <string name="gift_card_details_error">Чомусь ми не змогли купити подарункову картку. Будь ласка зв\'яжіться зі службою піддтримки.</string>
+    <string name="gift_card_unknown_error">Чомусь ми не змогли купити подарункову картку. Будь ласка зв\'яжіться зі службою піддтримки з txid %s.</string>
+    <string name="gift_card_rejected">Платіж відхилено. Будь ласка, зв’яжіться з CTX, надавши ідентифікатор подарункової картки %s, ідентифікатор платежу %s та ідентифікатор транзакції %s.</string>
+    <string name="gift_card_redeem_url_not_supported">Платіж було здійснено для продавця, який надає URL-адресу активації, але наразі це не підтримується. Будь ласка, зв’яжіться з CTX, надавши ідентифікатор подарункової картки %s, ідентифікатор платежу %s та ідентифікатор транзакції %s.</string>
+    <string name="accept_terms_conditions">Я приймаю правила та умови використання DashSpend</string>
+    <string name="tap_link_to_proceed">Натисніть на посилання нижче щоб продовжити створення облікового запису на DashSpend</string>
+    <string name="accept_to_proceed">Прийміть правила та умови DashSpend, щоб створити обліковий запис DashSpend</string>
+    <string name="log_in_to_ctxspend_account_desc">Ваша електронна адреса використовується лише для надсилання одноразового пароля.</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">Придбайте подарункову картку за допомогою свого облікового запису DashSpend</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Створіть обліковий запис на DashSpend або увійдіть у вже існуючий</string>
     </resources>
