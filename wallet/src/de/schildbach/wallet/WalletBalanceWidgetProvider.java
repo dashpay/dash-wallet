@@ -125,8 +125,7 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
             return;
         }
 
-        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
-                context.getResources());
+        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context));
         final MonetaryFormat btcFormat = config.getFormat();
 
         final Spannable balanceStr = new MonetarySpannable(btcFormat.noCode(), balance).applyMarkup(null,
