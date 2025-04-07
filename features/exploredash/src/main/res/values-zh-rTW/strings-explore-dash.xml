@@ -46,7 +46,6 @@
     <string name="explore_no_atms">沒有自動提款機</string>
     <string name="distance_miles">%s 英里</string>
     <string name="distance_kilometers">%s 公里</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="other">%d 商戶</item>
     </plurals>
@@ -165,4 +164,62 @@
     <string name="sync_in_progress_network_error">同步中斷... 網絡離線或無法訪問</string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">在</string>
+    <string name="purchase_gift_card_min">最少: %s</string>
+    <string name="purchase_gift_card_max">最多: %s</string>
+    <string name="purchase_gift_card_discount_hint">您正在以 %s 購買 %s 禮品卡(%s 折扣)</string>
+    <string name="button_next">下一個</string>
+    <string name="purchase_gift_card_from">由</string>
+    <string name="purchase_gift_card_to">到</string>
+    <string name="purchase_confirm_transaction">確認:</string>
+    <string name="purchase_gift_card_total_label">禮品卡總計</string>
+    <string name="purchase_gift_card_discount">折扣</string>
+    <string name="purchase_gift_card_you_pay">你支付</string>
+    <string name="purchase_gift_card_confirm">確認:</string>
+    <string name="purchase_gift_card_details">禮品卡詳細信息</string>
+    <string name="purchase_original_purchase">原先購買</string>
+    <string name="purchase_check_current_balance">檢查當前餘額</string>
+    <string name="purchase_card_number">卡號</string>
+    <string name="purchase_card_pin">卡密碼</string>
+    <string name="purchase_view_transaction">查看交易詳情</string>
+    <string name="purchase_see_how_to_use_gift_card">了解如何使用禮品卡</string>
+    <string name="purchase_how_to_use_gift_card">如何使用禮品卡</string>
+    <string name="purchase_self_checkout">自助結帳</string>
+    <string name="purchase_Request_assistance">要求員工協助兌換數位禮品卡。</string>
+    <string name="purchase_in_store">有存貨</string>
+    <string name="purchase_tell_the_cashier">告訴收銀員您正在使用數位禮品卡付款。收銀員：在「銀行卡」欄位中輸​​入總金額，然後在「帳戶」欄位中輸​​入禮品卡號碼並按 Enter 鍵。</string>
+    <string name="purchase_in_the_payment_section">在付款部分，在禮品卡欄位中輸入您的數位禮品卡號碼。</string>
+    <string name="purchase_powered_by">提供方</string>
+    <string name="insufficient_money_title">餘額不足</string>
+    <string name="insufficient_money_msg">餘額不足</string>
+    <string name="send_coins_error_msg">付款出現問題!</string>
+    <string name="gift_card_barcode_failed">條碼載入失敗</string>
+    <string name="gift_card_tx_title">禮物卡 · %s</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">輸入驗證碼</string>
+    <string name="verification_check_email">檢查您的電子郵件並輸入驗證碼</string>
+    <string name="buy_gift_card">使用您的 DashSpend 帳戶購買禮品卡</string>
+    <string name="create_new_account">建立新帳戶</string>
+    <string name="password">密碼</string>
+    <string name="logged_in_as">登入為 %s</string>
+    <string name="log_out">登出</string>
+    <string name="invaild_code">您輸入了錯誤的代碼。請檢查您的電子郵件並重試。</string>
+    <string name="something_wrong_title">出了些問題!</string>
+    <string name="retry">重試</string>
+    <string name="gift_card_purchase_failed">禮品卡購買失敗</string>
+    <string name="try_again">再試一次</string>
+    <string name="cancel">取消</string>
+    <string name="gift_card_error">由於某些原因，我們無法購買禮品卡。請再試一次。</string>
+    <string name="gift_card_details_error">由於某些原因，我們無法購買禮品卡。請聯絡支援人員。</string>
+    <string name="gift_card_unknown_error">由於某些原因，我們無法購買禮品卡。請透過 txid %s聯繫支援人員。</string>
+    <string name="gift_card_rejected">付款已被拒絕。請聯絡 CTX，並提供禮品卡 ID %s 、付款 ID %s and 和交易 ID %s。</string>
+    <string name="gift_card_redeem_url_not_supported">已向提供兌換 URL 的商家進行付款，但目前不支援。請聯絡 CTX，並提供禮品卡 ID %s 、付款 ID %s 和交易 ID %s。</string>
+    <string name="accept_terms_conditions">我接受 DashSpend 條款和條件</string>
+    <string name="tap_link_to_proceed">要在 DashSpend 建立帳戶，您必須點擊下面的連結才能繼續</string>
+    <string name="accept_to_proceed">要在 DashSpend 建立帳戶，您必須接受 DashSpend 條款和條件</string>
+    <string name="log_in_to_ctxspend_account_desc">您的電子郵件僅用於發送一次性密碼。</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">使用您的 DashSpend 帳戶購買禮品卡</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">建立 DashSpend 帳戶或登入現有帳戶</string>
     </resources>

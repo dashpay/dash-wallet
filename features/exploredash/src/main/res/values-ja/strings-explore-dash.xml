@@ -46,7 +46,6 @@
     <string name="explore_no_atms">ATMがありません</string>
     <string name="distance_miles">%sマイル</string>
     <string name="distance_kilometers">%skm</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="other">%d店舗</item>
     </plurals>
@@ -165,4 +164,62 @@
     <string name="sync_in_progress_network_error">同期が中断されました... ネットワークがオフラインまたはアクセス不可能です。</string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">で</string>
+    <string name="purchase_gift_card_min">最低金額: %s</string>
+    <string name="purchase_gift_card_max">最高金額: %s</string>
+    <string name="purchase_gift_card_discount_hint">%sのギフトカードを%sで購入します (%s割引)</string>
+    <string name="button_next">次へ</string>
+    <string name="purchase_gift_card_from">から</string>
+    <string name="purchase_gift_card_to">へ</string>
+    <string name="purchase_confirm_transaction">確認する</string>
+    <string name="purchase_gift_card_total_label">ギフトカードの合計</string>
+    <string name="purchase_gift_card_discount">割引</string>
+    <string name="purchase_gift_card_you_pay">お客様の支払額</string>
+    <string name="purchase_gift_card_confirm">確認する</string>
+    <string name="purchase_gift_card_details">ギフトカードの詳細</string>
+    <string name="purchase_original_purchase">当初の購入額</string>
+    <string name="purchase_check_current_balance">現在の残高を確認</string>
+    <string name="purchase_card_number">カード番号</string>
+    <string name="purchase_card_pin">カードの暗証番号</string>
+    <string name="purchase_view_transaction">取引明細を見る</string>
+    <string name="purchase_see_how_to_use_gift_card">ギフトカードの使い方を確認する</string>
+    <string name="purchase_how_to_use_gift_card">ギフトカードの使い方</string>
+    <string name="purchase_self_checkout">セルフレジの場合</string>
+    <string name="purchase_Request_assistance">従業員にアシストを依頼し、デジタルギフトカードと引き換えましょう。</string>
+    <string name="purchase_in_store">店舗の場合</string>
+    <string name="purchase_tell_the_cashier">キャッシャーにデジタルギフトカードで支払うことを伝えます。キャッシャーは、銀行カードの欄に合計金額を入力し、アカウントの欄にギフトカードの番号を入力してエンターを押すことになります。</string>
+    <string name="purchase_in_the_payment_section">決済セクションでは、お客様のデジタルギフトカードの番号をギフトカードの欄に入力します。</string>
+    <string name="purchase_powered_by">提供元</string>
+    <string name="insufficient_money_title">充分なコインがありません</string>
+    <string name="insufficient_money_msg">資金不足</string>
+    <string name="send_coins_error_msg">送金に問題が発生しました！</string>
+    <string name="gift_card_barcode_failed">バーコードのロードに失敗しました</string>
+    <string name="gift_card_tx_title">ギフトカード · %s</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">認証コードを入力</string>
+    <string name="verification_check_email">メールを確認して認証コードを入力する</string>
+    <string name="buy_gift_card">DashSpendアカウントでギフトカードを購入する</string>
+    <string name="create_new_account">新しいアカウントを作成</string>
+    <string name="password">パスワード</string>
+    <string name="logged_in_as">%sとしてログインしました</string>
+    <string name="log_out">ログアウト</string>
+    <string name="invaild_code">間違ったコードが入力されました。メールを確認してもう一度行ってください。</string>
+    <string name="something_wrong_title">問題が発生しました!</string>
+    <string name="retry">リトライ</string>
+    <string name="gift_card_purchase_failed">ギフトカードの購入に失敗しました</string>
+    <string name="try_again">再試行する</string>
+    <string name="cancel">キャンセル</string>
+    <string name="gift_card_error">何らかの理由でギフトカードを購入できませんでした。もう一度お試しください。</string>
+    <string name="gift_card_details_error">何らかの理由でギフトカードを購入できませんでした。サポートまでご連絡ください。</string>
+    <string name="gift_card_unknown_error">何らかの理由でギフトカードを購入できませんでした。タックスID%sを添えてサポートまでご連絡ください。 </string>
+    <string name="gift_card_rejected">支払いが拒否されました。ギフトカードID%s、決済ID%s、取引ID%sをCTXまでご連絡ください。</string>
+    <string name="gift_card_redeem_url_not_supported">決済は引き換えURLを提供する加盟店に対して行われましたが、そのURLは現在サポートされていません。ギフトカードID%s、決済ID%s、取引ID%sをCTXまでご連絡ください。</string>
+    <string name="accept_terms_conditions">私はDashSpendの利用規約に同意します</string>
+    <string name="tap_link_to_proceed">DashSpendでアカウントを作成するにあたって、以下のリンクをタップして作成の手続きを進めることになります</string>
+    <string name="accept_to_proceed">DashSpendでアカウントを作成するにあたって、お客様はDashSpendの利用規約に同意する必要があります</string>
+    <string name="log_in_to_ctxspend_account_desc">お客様のメールはワンタイムパスワードを送る時にのみ使用されます。</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">DashSpendアカウントでギフトカードを購入する</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">DashSpendのアカウントを作成するか既存のアカウントにログインする</string>
     </resources>

@@ -46,7 +46,6 @@
     <string name="explore_no_atms">Tidak ada ATM</string>
     <string name="distance_miles">%smil</string>
     <string name="distance_kilometers">%s kilometer</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="other">%dtoko</item>
     </plurals>
@@ -165,4 +164,62 @@
     <string name="sync_in_progress_network_error">Sinkronisasi terputus... Jaringan sedang offline atau tidak dapat dijangkau</string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">pada</string>
+    <string name="purchase_gift_card_min">Min: %s</string>
+    <string name="purchase_gift_card_max">Max: %s</string>
+    <string name="purchase_gift_card_discount_hint">Anda membeli %s kartu hadiah untuk %s (%s diskon)</string>
+    <string name="button_next">Lanjut</string>
+    <string name="purchase_gift_card_from">Dari</string>
+    <string name="purchase_gift_card_to">Ke</string>
+    <string name="purchase_confirm_transaction">Memastikan</string>
+    <string name="purchase_gift_card_total_label">Total kartu hadiah</string>
+    <string name="purchase_gift_card_discount">Diskon</string>
+    <string name="purchase_gift_card_you_pay">Anda membayar</string>
+    <string name="purchase_gift_card_confirm">Memastikan</string>
+    <string name="purchase_gift_card_details">Detail kartu hadiah</string>
+    <string name="purchase_original_purchase">Pembelian asli</string>
+    <string name="purchase_check_current_balance">Periksa saldo saat ini</string>
+    <string name="purchase_card_number">Nomor Kartu</string>
+    <string name="purchase_card_pin">PIN kartu</string>
+    <string name="purchase_view_transaction">Lihat Detail Transaksi</string>
+    <string name="purchase_see_how_to_use_gift_card">Lihat cara menggunakan kartu hadiah</string>
+    <string name="purchase_how_to_use_gift_card">Cara menggunakan kartu hadiah</string>
+    <string name="purchase_self_checkout">Pembayaran mandiri</string>
+    <string name="purchase_Request_assistance">Minta bantuan dari karyawan untuk menukarkan kartu hadiah digital.</string>
+    <string name="purchase_in_store">Di toko</string>
+    <string name="purchase_tell_the_cashier">Beri tahu kasir bahwa Anda membayar dengan kartu hadiah digital. Kasir: ketik jumlah total pada kolom Bankcard, lalu ketik nomor kartu hadiah di kolom Rekening dan tekan Enter.</string>
+    <string name="purchase_in_the_payment_section">Di bagian pembayaran, masukkan nomor kartu hadiah digital Anda ke bidang kartu hadiah.</string>
+    <string name="purchase_powered_by">Didukung Oleh</string>
+    <string name="insufficient_money_title">Koin tidak cukup</string>
+    <string name="insufficient_money_msg">Dana tidak mencukupi</string>
+    <string name="send_coins_error_msg">Gagal mengirim koin!</string>
+    <string name="gift_card_barcode_failed">Gagal memuat barcode</string>
+    <string name="gift_card_tx_title">Kartu hadiah · %s</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">Masukkan Kode verifikasi</string>
+    <string name="verification_check_email">Periksa email anda dan masukkan kode verifikasi</string>
+    <string name="buy_gift_card">Beli kartu hadiah dengan akun DashSpend anda</string>
+    <string name="create_new_account">Buat Akun Baru</string>
+    <string name="password">Kata sandi</string>
+    <string name="logged_in_as">Masuk sebagai %s</string>
+    <string name="log_out">Keluar</string>
+    <string name="invaild_code">Kode yang anda masukkan salah. Silahkan periksa email anda dan coba lagi.</string>
+    <string name="something_wrong_title">Ada yang salah!</string>
+    <string name="retry">Coba lagi</string>
+    <string name="gift_card_purchase_failed">Gagal membeli kartu hadiah</string>
+    <string name="try_again">Coba lagi</string>
+    <string name="cancel">Batal</string>
+    <string name="gift_card_error">Untuk beberapa alasan kami tidak dapat membeli kartu hadian. Silahkan, cobal lagi.</string>
+    <string name="gift_card_details_error">Untuk beberapa alasan kami tidak dapat membeli kartu hadian. Silahkan hubungi pusat dukungan.</string>
+    <string name="gift_card_unknown_error">Untuk beberapa alasan kami tidak dapat membeli kartu hadian. Silahkan hubungi dukungan dengan txid %s.</string>
+    <string name="gift_card_rejected">Pembayaran telah ditolak. Silahkan hubungi CTX dengan id kartu hadiah %s dan id pembayaran %s dan id transaksi %s.</string>
+    <string name="gift_card_redeem_url_not_supported">Pembayaran telah dibuat untuk pedagang yang menyediakan URL penebusan, tapi saat ini belum didukung. Silahkan hubungi CTX dengan id kartu hadiah %s dan id pembayaran %s dan id transaksi %s.</string>
+    <string name="accept_terms_conditions">Say menerima syarat dan ketentuan DashSpend</string>
+    <string name="tap_link_to_proceed">Untuk membuat akun di DashSpend Anda harus mengetuk tautan di bawah untuk melanjutkan</string>
+    <string name="accept_to_proceed">Untuk membuat akun di DashSpend Anda harus menerima syarat dan ketentuan DashSpend</string>
+    <string name="log_in_to_ctxspend_account_desc">Email anda hanya digunakan untuk mengirim one-time password.</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">Beli kartu hadiah dengan akun DashSpend anda</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Buat akun DashSpend atau masuk dengan akun yang sudah ada</string>
     </resources>

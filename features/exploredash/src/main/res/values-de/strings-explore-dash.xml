@@ -46,7 +46,6 @@
     <string name="explore_no_atms">Keine ATMs</string>
     <string name="distance_miles">%s Meilen</string>
     <string name="distance_kilometers">%s Kilometer</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d Händler</item>
         <item quantity="other">%d Händler</item>
@@ -169,4 +168,62 @@
     <string name="sync_in_progress_network_error">Synchronisierung unterbrochen... Das Netzwerk ist offline oder nicht erreichbar.</string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">bei</string>
+    <string name="purchase_gift_card_min">Minimum: %s</string>
+    <string name="purchase_gift_card_max">Maximum: %s</string>
+    <string name="purchase_gift_card_discount_hint">Du kaufst eine %s Geschenkkarte für %s (%s Rabatt).</string>
+    <string name="button_next">Nächste</string>
+    <string name="purchase_gift_card_from">Von</string>
+    <string name="purchase_gift_card_to">Bis</string>
+    <string name="purchase_confirm_transaction">Bestätigen</string>
+    <string name="purchase_gift_card_total_label">Preis der Geschenkkarte</string>
+    <string name="purchase_gift_card_discount">Rabatt</string>
+    <string name="purchase_gift_card_you_pay">Du bezahlst</string>
+    <string name="purchase_gift_card_confirm">Bestätigen</string>
+    <string name="purchase_gift_card_details">Details zur Geschenkkarte</string>
+    <string name="purchase_original_purchase">Anschaffungswert</string>
+    <string name="purchase_check_current_balance">Aktuellen Kontostand prüfen</string>
+    <string name="purchase_card_number">Kartennummer</string>
+    <string name="purchase_card_pin">Karten-PIN</string>
+    <string name="purchase_view_transaction">Transaktionsdetails anschauen.</string>
+    <string name="purchase_see_how_to_use_gift_card">Schaue dir an, wie man eine Geschenkkarte verwendet.</string>
+    <string name="purchase_how_to_use_gift_card">Wie man eine Geschenkkarte verwendet.</string>
+    <string name="purchase_self_checkout">Self-Checkout</string>
+    <string name="purchase_Request_assistance">Bitte einen Mitarbeiter, um die digitale Geschenkkarte einzulösen.</string>
+    <string name="purchase_in_store">Im Laden</string>
+    <string name="purchase_tell_the_cashier">Sag der Kassiererin, dass du mit einer digitalen Geschenkkarte bezahlen möchtest. Kassierer: Geben Sie den Gesamtbetrag in das Feld \"Bankkarte\" ein, geben Sie dann die Geschenkkartennummer in das Feld \"Konto\" ein und drücken Sie die Eingabetaste.</string>
+    <string name="purchase_in_the_payment_section">Gib im Bereich \"Zahlung\" die Nummer deiner digitalen Geschenkkarte in das Feld \"Geschenkkarte\" ein.</string>
+    <string name="purchase_powered_by">Powered by</string>
+    <string name="insufficient_money_title">Nicht genug Dash</string>
+    <string name="insufficient_money_msg">Guthaben nicht ausreichend</string>
+    <string name="send_coins_error_msg">Problem beim Versenden der Dash!</string>
+    <string name="gift_card_barcode_failed">Der Strichcode konnte nicht geladen werden.</string>
+    <string name="gift_card_tx_title">Geschenkkarte · %s</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">Verifizierungscode eingeben</string>
+    <string name="verification_check_email">Kontrolliere deine E-Mail und deinen Verifizierungscode</string>
+    <string name="buy_gift_card">Kaufe eine Geschenkkarte mit deinem DashSpend Konto</string>
+    <string name="create_new_account">Ein neues Konto erstellen</string>
+    <string name="password">Passwort</string>
+    <string name="logged_in_as">Eingeloggt als %s</string>
+    <string name="log_out">Abmelden</string>
+    <string name="invaild_code">Du hast den falschen Code eingegeben. Bitte kontrolliere deine E-Mail und versuche es erneut.</string>
+    <string name="something_wrong_title">Etwas ist schiefgelaufen!</string>
+    <string name="retry">Wiederholen</string>
+    <string name="gift_card_purchase_failed">Der Kauf der Geschenkkarte ist fehlgeschlagen.</string>
+    <string name="try_again">Erneut versuchen</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="gift_card_error">Aus einem unerfindlichen Grund konnten wir deine Geschenkkarte nicht kaufen. Bitte versuche es später noch einmal.</string>
+    <string name="gift_card_details_error">Aus einem unerfindlichen Grund konnten wir deine Geschenkkarte nicht kaufen. Bitte kontaktiere den Support.</string>
+    <string name="gift_card_unknown_error">Aus einem unerfindlichen Grund war es uns nicht möglich, eine Geschenkkarte zu kaufen. Bitte kontaktiere den Support mit der Transaktions-ID %s.</string>
+    <string name="gift_card_rejected">Die Zahlung wurde abgewiesen. Bitte kontaktiere CTX mit der Geschenkkarten-ID %s , der Zahlungs-ID %s und der Transaktions-ID %s.</string>
+    <string name="gift_card_redeem_url_not_supported">Die Zahlung wurde für einen Händler getätigt, der eine Einlöse-URL angibt. Dies wird aber derzeit nicht unterstützt. Bitte kontaktiere CTX mit der Geschenkkarten-ID %s , der Zahlungs-ID %s und der Transaktions-ID %s.</string>
+    <string name="accept_terms_conditions">I akzeptiere die AGB von DashSpend.</string>
+    <string name="tap_link_to_proceed">Um Konto bei DashSpend zu erstellen, musst du auf den Link tippen, um fortzufahren.</string>
+    <string name="accept_to_proceed">Um Konto bei DashSpend zu erstellen, musst du die AGB von DashSpend akzeptieren.</string>
+    <string name="log_in_to_ctxspend_account_desc">Deine E-Mail wird nur benötigt, um dir ein einmaliges Password zu senden.</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">Kaufe eine Geschenkkarte mit deinem DashSpend Konto.</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Erstelle ein DashSpend Konto oder logge dich ein bestehendes Konto ein.</string>
     </resources>

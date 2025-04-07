@@ -43,7 +43,6 @@
     <string name="explore_no_atms">Žádné bankomaty</string>
     <string name="distance_miles">%s mil</string>
     <string name="distance_kilometers">%s kilometrů</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d obchodník</item>
         <item quantity="few">%d obchodníci</item>
@@ -158,4 +157,13 @@
     <string name="redeem_gift_card_text">Uplatněte dárkový poukaz online během několika sekund nebo u pokladny.</string>
 
     <string name="sync_in_progress_file_not_found">Chyba sestavení: Databáze nenalezena!</string>
+    <string name="purchase_confirm_transaction">Potvrdit</string>
+    <string name="purchase_gift_card_confirm">Potvrdit</string>
+    <string name="insufficient_money_title">Nemáte dostatečný zůstatek</string>
+    <string name="insufficient_money_msg">Nedostatečný zůstatek</string>
+    <string name="send_coins_error_msg">Problém při zasílání!</string>
+    <string name="password">Heslo</string>
+    <string name="retry">Opakovat</string>
+    <string name="try_again">Zkusit znovu</string>
+    <string name="cancel">Zrušit</string>
     </resources>

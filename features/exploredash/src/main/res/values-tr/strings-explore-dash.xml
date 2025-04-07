@@ -46,7 +46,6 @@
     <string name="explore_no_atms">ATMler Yok</string>
     <string name="distance_miles">%s mil</string>
     <string name="distance_kilometers">%s kilometre</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d tüccarlar</item>
         <item quantity="other">%d tüccarlar</item>
@@ -167,4 +166,62 @@
     <string name="sync_in_progress_network_error">Senkronizasyon kesintiye uğradı… Ağ çevrimdışı veya ulaşılamıyor</string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">de</string>
+    <string name="purchase_gift_card_min">Min: %s</string>
+    <string name="purchase_gift_card_max">Max: %s</string>
+    <string name="purchase_gift_card_discount_hint">%s (%s indirim) karşılığında %s hediye kartı satın alıyorsunuz</string>
+    <string name="button_next">Sonraki</string>
+    <string name="purchase_gift_card_from">Gönderen</string>
+    <string name="purchase_gift_card_to">Alıcı</string>
+    <string name="purchase_confirm_transaction">Onayla</string>
+    <string name="purchase_gift_card_total_label">Hediye kartı toplamı</string>
+    <string name="purchase_gift_card_discount">İndirim</string>
+    <string name="purchase_gift_card_you_pay">Ödeyeceğiniz</string>
+    <string name="purchase_gift_card_confirm">Onayla</string>
+    <string name="purchase_gift_card_details">Hediye kartı ayrıntıları</string>
+    <string name="purchase_original_purchase">Orijinal satın alma</string>
+    <string name="purchase_check_current_balance">Mevcut bakiyeyi kontrol edin</string>
+    <string name="purchase_card_number">Kart Numarası</string>
+    <string name="purchase_card_pin">Kart PIN\'i</string>
+    <string name="purchase_view_transaction">İşlem Detaylarını Görüntüle</string>
+    <string name="purchase_see_how_to_use_gift_card">Hediye kartının nasıl kullanılacağını görün</string>
+    <string name="purchase_how_to_use_gift_card">Hediye kartı nasıl kullanılır?</string>
+    <string name="purchase_self_checkout">Otomatik ödeme</string>
+    <string name="purchase_Request_assistance">Dijital hediye kartını kullanmak için bir çalışandan yardım isteyin.</string>
+    <string name="purchase_in_store">Mağazada</string>
+    <string name="purchase_tell_the_cashier">Kasiyere dijital hediye kartıyla ödeme yaptığınızı söyleyin. Kasiyer: Banka Kartı alanına toplam tutarı yazın, ardından Hesap alanına hediye kartı numarasını yazın ve Enter tuşuna basın.</string>
+    <string name="purchase_in_the_payment_section">Ödeme bölümünde hediye kartı alanına dijital hediye kartı numaranızı girin.</string>
+    <string name="purchase_powered_by">Tarafından desteklenmektedir</string>
+    <string name="insufficient_money_title">Bakiye yetersiz</string>
+    <string name="insufficient_money_msg">Yetersiz bakiye</string>
+    <string name="send_coins_error_msg">Dash gönderim problemi!</string>
+    <string name="gift_card_barcode_failed">Barkod yüklenemedi</string>
+    <string name="gift_card_tx_title">Hediye Kartı · %s</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">dogrulama kodunu giriniz</string>
+    <string name="verification_check_email">E-postanızı kontrol edin ve doğrulama kodunu girin</string>
+    <string name="buy_gift_card">DashSpend hesabınızla bir hediye kartı satın alın</string>
+    <string name="create_new_account">Yeni hesap oluştur</string>
+    <string name="password">Şifre</string>
+    <string name="logged_in_as">%s olarak oturum açıldı</string>
+    <string name="log_out">Çıkış Yap</string>
+    <string name="invaild_code">Yanlış kodu girdiniz. Lütfen e-postanızı kontrol edip tekrar deneyin.</string>
+    <string name="something_wrong_title">Bir şeyler yanlış gitti!</string>
+    <string name="retry">Tekrar dene</string>
+    <string name="gift_card_purchase_failed">Hediye kartı satın alma işlemi başarısız oldu</string>
+    <string name="try_again">Tekrar Dene</string>
+    <string name="cancel">İptal et</string>
+    <string name="gift_card_error">Bazı nedenlerden dolayı hediye kartı alamadık. Lütfen tekrar deneyin.</string>
+    <string name="gift_card_details_error">Bazı nedenlerden dolayı hediye kartı alamadık. Lütfen desteğe başvurun.</string>
+    <string name="gift_card_unknown_error">Bazı nedenlerden dolayı hediye kartı alamadık. Lütfen %s txid\'si ile destek ekibiyle iletişime geçin.</string>
+    <string name="gift_card_rejected">Ödeme reddedildi. Lütfen hediye kartı kimliği %s, ödeme kimliği %s ve işlem kimliği %s ile CTX ile iletişime geçin.</string>
+    <string name="gift_card_redeem_url_not_supported">The payment has was made for merchant that supplies a redeem URL, but that is not currently supported. Please contact CTX with gift card id %s and payment id %s and transaction id %s.</string>
+    <string name="accept_terms_conditions">DashSpend şartlar ve koşullarını kabul ediyorum</string>
+    <string name="tap_link_to_proceed">DashSpend\'de bir hesap oluşturmak için devam etmek üzere aşağıdaki bağlantıya dokunmalısınız</string>
+    <string name="accept_to_proceed">DashSpend\'de bir hesap oluşturmak için DashSpend hüküm ve koşullarını kabul etmeniz gerekir</string>
+    <string name="log_in_to_ctxspend_account_desc">E-postanız yalnızca tek kullanımlık şifre göndermek için kullanılır.</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">DashSpend hesabınızla bir hediye kartı satın alın</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Bir DashSpend hesabı oluşturun veya mevcut hesaba giriş yapın</string>
     </resources>
