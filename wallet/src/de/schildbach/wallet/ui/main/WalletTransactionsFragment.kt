@@ -100,7 +100,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
         adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                if (positionStart == 0) {
+                if (positionStart == 0 && isAdded && viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                     binding.walletTransactionsList.scrollToPosition(0)
                 }
             }
