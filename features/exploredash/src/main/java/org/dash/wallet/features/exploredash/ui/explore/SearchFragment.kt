@@ -60,10 +60,10 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderA
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
-import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment
-import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
-import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.DashDirectLoginInfoDialog
-import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.DashDirectTermsDialog
+import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment
+import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
+import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendLoginInfoDialog
+import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendTermsDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
@@ -75,7 +75,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel by exploreViewModels<ExploreViewModel>()
-    private val dashDirectViewModel by exploreViewModels<DashDirectViewModel>()
+    private val ctxSpendViewModel by exploreViewModels<CTXSpendViewModel>()
     private val args by navArgs<SearchFragmentArgs>()
 
     private var bottomSheetWasExpanded: Boolean = false
@@ -357,29 +357,29 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun showLoginDialog() {
-        DashDirectLoginInfoDialog().show(
+        CTXSpendLoginInfoDialog().show(
             requireActivity(),
             onResult = {
                 if (it == true) {
-                    DashDirectTermsDialog().show(requireActivity()) {
+                    CTXSpendTermsDialog().show(requireActivity()) {
                         viewModel.logEvent(AnalyticsConstants.DashSpend.CREATE_ACCOUNT)
                         safeNavigate(
-                            SearchFragmentDirections.searchToDashDirectUserAuthFragment(
-                                DashDirectUserAuthFragment.DashDirectUserAuthType.CREATE_ACCOUNT
+                            SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
+                                CTXSpendUserAuthFragment.CTXSpendUserAuthType.CREATE_ACCOUNT
                             )
                         )
                     }
                 } else {
                     viewModel.logEvent(AnalyticsConstants.DashSpend.LOGIN)
                     safeNavigate(
-                        SearchFragmentDirections.searchToDashDirectUserAuthFragment(
-                            DashDirectUserAuthFragment.DashDirectUserAuthType.SIGN_IN
+                        SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
+                            CTXSpendUserAuthFragment.CTXSpendUserAuthType.SIGN_IN
                         )
                     )
                 }
             },
             onExtraMessageAction = {
-                requireActivity().openCustomTab(getString(R.string.dash_direct_url))
+                requireActivity().openCustomTab(getString(R.string.ctx_terms_url))
             }
         )
     }
@@ -489,6 +489,30 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
+        binding.itemDetails.setOnBuyGiftCardButtonClicked {
+            lifecycleScope.launch {
+                if (!ctxSpendViewModel.isUserSignedInCTXSpend()) {
+                    showLoginDialog()
+                } else {
+                    openPurchaseGiftCardFragment()
+                }
+            }
+        }
+
+        binding.itemDetails.setOnCTXSpendLogOutClicked {
+            lifecycleScope.launch {
+                if (ctxSpendViewModel.isUserSignedInCTXSpend()) {
+                    ctxSpendViewModel.logout()
+                }
+            }
+        }
+
+        ctxSpendViewModel.userEmail.observe(viewLifecycleOwner) { email ->
+            lifecycleScope.launch {
+                binding.itemDetails.setCTXSpendLogInUser(email, ctxSpendViewModel.isUserSignedInCTXSpend())
+            }
+        }
+
         trackMerchantDetailsEvents(binding)
     }
 
@@ -523,7 +547,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
                         if (viewModel.selectedItem.value is Merchant) {
                             launch {
-                                dashDirectViewModel.updateMerchantDetails(viewModel.selectedItem.value as Merchant)
+                                ctxSpendViewModel.updateMerchantDetails(viewModel.selectedItem.value as Merchant)
                             }
                         }
                         transitToDetails()

@@ -46,7 +46,6 @@
     <string name="explore_no_atms">ATM 없음</string>
     <string name="distance_miles">%s 마일</string>
     <string name="distance_kilometers">%s 킬로미터</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="other">%d 상점</item>
     </plurals>
@@ -165,4 +164,62 @@
     <string name="sync_in_progress_network_error">동기화 중단됨... 네트워크가 오프라인이거나 도달할 수 없습니다</string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">이곳에서</string>
+    <string name="purchase_gift_card_min">최소: %s</string>
+    <string name="purchase_gift_card_max">최대: %s</string>
+    <string name="purchase_gift_card_discount_hint">%s 기프트 카드를 %s에 구매합니다 (%s 할인)</string>
+    <string name="button_next">다음</string>
+    <string name="purchase_gift_card_from">다음으로부터</string>
+    <string name="purchase_gift_card_to">다음으로</string>
+    <string name="purchase_confirm_transaction">승인</string>
+    <string name="purchase_gift_card_total_label">총 기프트 카드</string>
+    <string name="purchase_gift_card_discount">할인</string>
+    <string name="purchase_gift_card_you_pay">금액</string>
+    <string name="purchase_gift_card_confirm">승인</string>
+    <string name="purchase_gift_card_details">기프트 카드 상세 정보</string>
+    <string name="purchase_original_purchase">초기 구매</string>
+    <string name="purchase_check_current_balance">현재 잔액을 확인하세요</string>
+    <string name="purchase_card_number">카드 번호</string>
+    <string name="purchase_card_pin">카드 PIN</string>
+    <string name="purchase_view_transaction">거래 상세 정보 확인하기</string>
+    <string name="purchase_see_how_to_use_gift_card">기프트 카드 사용 방법 확인하기</string>
+    <string name="purchase_how_to_use_gift_card">기프트 카드 사용 방법</string>
+    <string name="purchase_self_checkout">셀프 계산</string>
+    <string name="purchase_Request_assistance">디지털 기프트 카드를 사용하시려면 직원에게 도움을 요청하세요.</string>
+    <string name="purchase_in_store">매장</string>
+    <string name="purchase_tell_the_cashier">캐셔에게 디지털 기프트 카드로 결제한다고 말씀하세요. 캐셔: 은행카드 란에 총 금액을 입력하고, 어카운트 란에 기프트 카드 번호를 입력한 후 확인을 누르세요.</string>
+    <string name="purchase_in_the_payment_section">지불란에서, 당신의 디지털 기프트 카드 번호를 기프트 카드란에 입력하세요.</string>
+    <string name="purchase_powered_by">제작</string>
+    <string name="insufficient_money_title">보유 금액 부족</string>
+    <string name="insufficient_money_msg">잔액 부족</string>
+    <string name="send_coins_error_msg">송금 중 알 수 없는 문제가 발생했습니다!</string>
+    <string name="gift_card_barcode_failed">바코드 로딩 실패</string>
+    <string name="gift_card_tx_title">기프트 카드 · %s</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">인증 코드 입력</string>
+    <string name="verification_check_email">이메일을 확인하셔서 인증 코드를 입력하세요</string>
+    <string name="buy_gift_card">DashSpend 계정으로 기프트 카드를 구매하세요</string>
+    <string name="create_new_account">새로운 계정 생성하기</string>
+    <string name="password">비밀번호</string>
+    <string name="logged_in_as">%s로 로그인하기</string>
+    <string name="log_out">로그아웃</string>
+    <string name="invaild_code">잘못된 코드를 입력하였습니다. 이메일을 확인하고 다시 시도해주세요.</string>
+    <string name="something_wrong_title">무언가 잘못되었습니다!</string>
+    <string name="retry">재시도</string>
+    <string name="gift_card_purchase_failed">기프트 카드 구매 실패</string>
+    <string name="try_again">다시 시도하세요</string>
+    <string name="cancel">취소</string>
+    <string name="gift_card_error">알 수 없는 이유로 기프트 카드 구매에 실패했습니다. 다시 시도해주십시오.</string>
+    <string name="gift_card_details_error">알 수 없는 이유로 기프트 카드 구매에 실패했습니다. 지원 센터에 연락하십시오.</string>
+    <string name="gift_card_unknown_error">알 수 없는 이유로 기프트 카드 구매에 실패하였습니다. txid %s 로 지원 센터에 연락하십시오.  </string>
+    <string name="gift_card_rejected">결제가 거절되었습니다. 기프트 카드 id%s 와 지불 id %s 및 결제 id %s 로 CTX에 연락하십시오.</string>
+    <string name="gift_card_redeem_url_not_supported">이 지불은 교환 URL을 공급하는 판매자를 위해 만들어졌으나, 이 기능은 현재 지원되지 않습니다. 기프트 카드 id %s, 지불 id %s 및 결제 id %s를 가지고  CTX에 연락하십시오.</string>
+    <string name="accept_terms_conditions">DashSpend 이용 약관에 동의합니다.</string>
+    <string name="tap_link_to_proceed">DashSpend에 계정을 생성하기 위해서는 아래의 링크를 탭하여 진행해야 합니다</string>
+    <string name="accept_to_proceed">DashSpend에 계정을 생성하기 위해서는 DashSpend 이용 약관에 동의해야 합니다</string>
+    <string name="log_in_to_ctxspend_account_desc">귀하의 이메일은 일회용 비밀번호를 전달하기 위해서만 사용됩니다.</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">DashSpend 계정으로 기프트 카드를 구매하세요</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">DashSpend 계정을 생성하시거나 기존 계정에 로그인하세요</string>
     </resources>

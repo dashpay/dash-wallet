@@ -66,6 +66,7 @@ data class RequestUserNameUIState(
     val usernameVerified: Boolean = false,
     val usernameRequestSubmitting: Boolean = false,
     val usernameRequestSubmitted: Boolean = false,
+    val checkingUsername: Boolean = false,
     val usernameCheckSuccess: Boolean = false,
     val usernameSubmittedError: Boolean = false,
     val usernameLengthValid: Boolean = false,
@@ -246,6 +247,10 @@ class RequestUserNameViewModel @Inject constructor(
         // updateUiForApiError()
     }
 
+    fun reset() {
+        _uiState.update { RequestUserNameUIState() }
+    }
+
     private fun resetUiForRetrySubmit() {
         _uiState.update {
             it.copy(
@@ -290,6 +295,7 @@ class RequestUserNameViewModel @Inject constructor(
     fun checkUsername(requestedUserName: String?) {
         viewModelScope.launch {
             requestedUserName?.let { username ->
+                _uiState.update { it.copy(checkingUsername = true) }
                 val usernameSearchResult = withContext(Dispatchers.IO) { platformRepo.getUsername(username) }
                 val usernameExists = when (usernameSearchResult.status) {
                     Status.SUCCESS -> {
@@ -320,6 +326,7 @@ class RequestUserNameViewModel @Inject constructor(
                 }
                 _uiState.update {
                     it.copy(
+                        checkingUsername = false,
                         usernameCheckSuccess = true,
                         usernameSubmittedError = false,
                         usernameContested = usernameContested, usernameExists = usernameExists,

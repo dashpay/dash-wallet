@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.ui.transactions
 
+import de.schildbach.wallet.Constants
+import org.bitcoinj.core.Context
 import org.bitcoinj.core.RejectMessage
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
@@ -35,6 +37,7 @@ enum class TxError {
 
     companion object {
         fun fromTransaction(tx: Transaction): TxError {
+            Context.propagate(Constants.CONTEXT)
             val confidence = tx.confidence
 
             if (confidence != null) {

@@ -21,7 +21,6 @@ import androidx.room.*
 import de.schildbach.wallet.database.entity.TransactionMetadataDocument
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.entity.ExchangeRate
-import org.dash.wallet.common.data.entity.GiftCard
 
 /**
  * @author Eric Britten

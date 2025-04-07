@@ -46,7 +46,6 @@
     <string name="explore_no_atms">Geen geldautomaten</string>
     <string name="distance_miles">%s miles</string>
     <string name="distance_kilometers">%s kilometers</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d acceptant</item>
         <item quantity="other">%d acceptanten</item>
@@ -169,4 +168,62 @@
     <string name="sync_in_progress_network_error">Synchronisatie onderbroken... Netwerk is offline of onbereikbaar</string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">ter hoogte van</string>
+    <string name="purchase_gift_card_min">Min: %s</string>
+    <string name="purchase_gift_card_max">Max: %s</string>
+    <string name="purchase_gift_card_discount_hint">Je koopt een %s cadeaukaart voor %s (%s korting)</string>
+    <string name="button_next">Volgende</string>
+    <string name="purchase_gift_card_from">Van</string>
+    <string name="purchase_gift_card_to">Naar</string>
+    <string name="purchase_confirm_transaction">Bevestig</string>
+    <string name="purchase_gift_card_total_label">Cadeaukaart totaal</string>
+    <string name="purchase_gift_card_discount">Korting</string>
+    <string name="purchase_gift_card_you_pay">Je betaalt</string>
+    <string name="purchase_gift_card_confirm">Bevestig</string>
+    <string name="purchase_gift_card_details">Gegevens cadeaukaart</string>
+    <string name="purchase_original_purchase">Originele aankoop</string>
+    <string name="purchase_check_current_balance">Controleer het huidige saldo</string>
+    <string name="purchase_card_number">Kaartnummer</string>
+    <string name="purchase_card_pin">Pincode kaart</string>
+    <string name="purchase_view_transaction">Transactiedetails bekijken</string>
+    <string name="purchase_see_how_to_use_gift_card">Lees hoe je een cadeaubon gebruikt</string>
+    <string name="purchase_how_to_use_gift_card">Hoe een cadeaukaart te gebruiken</string>
+    <string name="purchase_self_checkout">Zelf afrekenen</string>
+    <string name="purchase_Request_assistance">Vraag hulp aan een medewerker bij het inwisselen van een cadeaukaart.</string>
+    <string name="purchase_in_store">Aanwezig</string>
+    <string name="purchase_tell_the_cashier">Vertel de kassamedewerker dat je met een digitale cadeaukaart betaalt. Medewerker: typ het totaalbedrag in het veld Bankcard , typ vervolgens het nummer van de cadeaukaart in het veld Account en druk op Enter.</string>
+    <string name="purchase_in_the_payment_section">Voer het nummer van de digitale cadeaukaart in.</string>
+    <string name="purchase_powered_by">Aangedreven door</string>
+    <string name="insufficient_money_title">Onvoldoende munten</string>
+    <string name="insufficient_money_msg">Ontoereikende fondsen</string>
+    <string name="send_coins_error_msg">Er is een probleem opgetreden bij het versturen van munten!</string>
+    <string name="gift_card_barcode_failed">Kan de streepjescode niet laden</string>
+    <string name="gift_card_tx_title">Cadeaukaart · %s</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">Voer verificatiecode in</string>
+    <string name="verification_check_email">Controleer je e-mail en voer de verificatiecode in</string>
+    <string name="buy_gift_card">Koop een cadeaukaart met je DashSpend account</string>
+    <string name="create_new_account">Creëer een nieuw account</string>
+    <string name="password">Wachtwoord</string>
+    <string name="logged_in_as">Ingelogd als %s</string>
+    <string name="log_out">Uitloggen</string>
+    <string name="invaild_code">Je hebt een verkeerde code ingevoerd. Controleer de e-mail en probeer het opnieuw.</string>
+    <string name="something_wrong_title">Er is iets verkeerd gegaan</string>
+    <string name="retry">Opnieuw</string>
+    <string name="gift_card_purchase_failed">Aankoop van cadeaukaart mislukt</string>
+    <string name="try_again">Probeer opnieuw</string>
+    <string name="cancel">Annuleer</string>
+    <string name="gift_card_error">Vanwege een onbekende reden is de aankoop van de cadeaukaart mislukt. Probeer het opnieuw.</string>
+    <string name="gift_card_details_error">Vanwege een onbekende reden is de aankoop van de cadeaukaart mislukt. Neem contact op met de ondersteuning.</string>
+    <string name="gift_card_unknown_error">Vanwege een onbekende reden is de aankoop van de cadeaukaart mislukt. Neem contact op met de ondersteuning met txid %s.</string>
+    <string name="gift_card_rejected">De betaling is afgewezen. Neem contact op met CTX. Cadeaukaart ID %s. Betaling ID %s. Transactie ID%s.</string>
+    <string name="gift_card_redeem_url_not_supported">De betaling is gedaan voor een winkelier die een inwissel-URL levert, maar die wordt momenteel niet ondersteund. Neem contact op met CTX. Cadeaukaart ID %s. Betaling ID %s. Transactie %s.</string>
+    <string name="accept_terms_conditions">Ik accepteer de algemene voorwaarden van DashSpend</string>
+    <string name="tap_link_to_proceed">Om een ​​account bij DashSpend aan te maken, tik dan op de onderstaande link om verder te gaan</string>
+    <string name="accept_to_proceed">Om een ​​account aan te maken bij DashSpend, accepteer de algemene voorwaarden van DashSpend</string>
+    <string name="log_in_to_ctxspend_account_desc">Het e-mailadres wordt alleen gebruikt om een ​​eenmalig wachtwoord te verzenden.</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">Koop een cadeaukaart met je DashSpend account</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Maak een DashSpend account aan of log in op een bestaand account</string>
     </resources>

@@ -54,14 +54,14 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.GiftCardDetailsDialog
+import org.dash.wallet.common.util.observe
+import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.GiftCardDetailsDialog
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
     companion object {
         private const val HEADER_ITEM_TAG = "header"
-        private val log = LoggerFactory.getLogger(WalletTransactionsFragment::class.java)
     }
 
     private val viewModel by activityViewModels<MainViewModel>()
@@ -85,7 +85,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     val fragment = if (rowView.txWrapper != null) {
                         viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
                         TransactionGroupDetailsFragment(rowView.txWrapper)
-                    } else if (rowView.service == ServiceName.DashDirect) {
+                    } else if (rowView.service == ServiceName.CTXSpend) {
                         viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
                         GiftCardDetailsDialog.newInstance(Sha256Hash.wrap(rowView.id))
                     } else {
@@ -156,6 +156,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
+            val currentLifecycle = viewLifecycleOwner.lifecycle
             if (viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                 binding.loading.isVisible = false
 
@@ -170,8 +171,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                             outList.apply { addAll(it.value) }
                         }.reduce { acc, list -> acc.apply { addAll(list) } }
 
-                    adapter.submitList(groupedByDate)
-                    showTransactionList()
+                    adapter.submitList(groupedByDate) {
+                        // Check again if the view is still in a valid state before any post-update operations
+                        if (isAdded && currentLifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                            showTransactionList()
+                        }
+                    }
                 }
             }
         }

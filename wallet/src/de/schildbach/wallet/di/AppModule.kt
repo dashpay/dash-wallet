@@ -43,6 +43,9 @@ import de.schildbach.wallet.ui.more.tools.ZenLedgerApi
 import de.schildbach.wallet.ui.more.tools.ZenLedgerClient
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
 import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.*
@@ -53,7 +56,7 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.integrations.uphold.api.UpholdClient
-import org.dash.wallet.features.exploredash.network.service.stubs.FakeDashDirectSendService
+import org.dash.wallet.features.exploredash.network.service.stubs.FakeDashSpendService
 import javax.inject.Singleton
 
 @Module
@@ -116,8 +119,14 @@ abstract class AppModule {
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
                 realService
             } else {
-                FakeDashDirectSendService(realService, walletData)
+                FakeDashSpendService(realService, walletData)
             }
+        }
+
+        @Provides
+        @Singleton
+        fun providesApplicationScope(): CoroutineScope {
+            return CoroutineScope(SupervisorJob() + Dispatchers.Default)
         }
     }
 
