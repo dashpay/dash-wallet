@@ -63,6 +63,7 @@
     <string name="explore_back_to_nearest">Retour à l\'endroit le plus proche</string>
     <string name="explore_select_location">Choisir un endroit</string>
     <string name="explore_pay_with_dash">Payer avec Dash</string>
+    <string name="explore_pay_with_dash_save">Économisez %.2f%%</string>
     <string name="explore_buy_gift_card">Acheter une carte-cadeau</string>
     <string name="explore_buy_dash">Acheter Dash</string>
     <string name="explore_sell_dash">Vendre des dashs</string>
@@ -209,7 +210,9 @@
     <string name="enter_verification_code">Entrez le code de vérification</string>
     <string name="verification_check_email">Consultez votre e-mail et entrez le code de vérification</string>
     <string name="buy_gift_card">Acheter une carte-cadeau avec votre compte DashSpend</string>
+    <string name="dashspend_create_account">Créez un compte ou connectez-vous à celui déjà existant</string>
     <string name="create_new_account">Créer un nouveau compte</string>
+    <string name="login">Se connecter</string>
     <string name="password">Mot de passe</string>
     <string name="logged_in_as">Connecté en tant que %s</string>
     <string name="log_out">Se déconnecter</string>
@@ -224,9 +227,16 @@
     <string name="gift_card_unknown_error">Pour quelque raison, nous n\'avons pas pu acheter une carte-cadeau. Veuillez contacter le support avec l\'identifiant de transaction %s.</string>
     <string name="gift_card_rejected">Le paiement a été rejeté.  Veuillez contacter CTX avec les identifiants de carte-cadeau %s, de paiement %s et de transaction %s.</string>
     <string name="gift_card_redeem_url_not_supported">Le paiement a été effectué pour le vendeur qui fournit une adresse d\'utilisation, mais ce n\'est pas supporté actuellement. Veuillez contacter CTX avec les identifiants de carte-cadeau %s, de paiement %s et de transaction %s.</string>
+    <string name="dashspend_terms_conditions">Accepter termes et conditions</string>
     <string name="accept_terms_conditions">J\'accepte les termes et conditions de DashSpend</string>
     <string name="tap_link_to_proceed">Pour créer un compte DashSpend, vous devez toucher le lien ci-dessous pour continuer</string>
     <string name="accept_to_proceed">Pour créer un compte DashSpend, vous devez accepter les termes et conditions</string>
+    <string name="view_terms_conditions">Termes &amp; conditions</string>
+    <string name="barcode_placeholder">Dès que votre code sera généré, il sera affiché ici.</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">Créer le compte</string>
+    <string name="log_in_to_ctxspend_account">Se connecter à votre compte</string>
     <string name="log_in_to_ctxspend_account_desc">Votre adresse e-mail n\'est utilisée que pour vous envoyer un mot de passe temporaire.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Acheter une carte-cadeau avec votre compte DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Créer un compte DashSpend ou se connecter à votre compte existant</string>
