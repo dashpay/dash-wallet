@@ -50,6 +50,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 import androidx.work.WorkManager;
 
+import com.google.api.client.util.Lists;
 import com.google.common.base.Stopwatch;
 import com.google.firebase.FirebaseApp;
 
@@ -1218,6 +1219,9 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Collection<Transaction> getTransactions(@NonNull TransactionFilter... filters) {
+        if (wallet == null) {
+            return Lists.newArrayList();
+        }
         Set<Transaction> transactions = wallet.getTransactions(true);
 
         if (filters.length == 0) {
