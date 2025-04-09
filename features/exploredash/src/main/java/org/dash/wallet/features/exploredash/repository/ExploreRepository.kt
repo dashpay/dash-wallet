@@ -197,7 +197,7 @@ class GCExploreDatabase @Inject constructor(
         configScope.launch {
             val prefs = exploreConfig.exploreDatabasePrefs.first()
             exploreConfig.saveExploreDatabasePrefs(
-                prefs.copy(localDbTimestamp = max(prefs.localDbTimestamp, updateTimestampCache))
+                prefs.copy(localDbTimestamp = updateTimestampCache)
             )
         }
     }
