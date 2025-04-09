@@ -102,7 +102,7 @@ class TransactionGroupViewModel @Inject constructor(
             TransactionRowView.fromTransaction(
                 it, walletData.wallet!!, walletData.wallet!!.context, txMetadata, null, resourceMapper, chainLockBlockHeight
             )
-        }.sortedBy { row -> row.time }
+        }.sortedByDescending { row -> row.time }
         _dashValue.value = transactionWrapper.getValue(walletData.transactionBag)
     }
 }
