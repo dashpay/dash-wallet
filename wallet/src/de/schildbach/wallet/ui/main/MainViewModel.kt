@@ -637,7 +637,11 @@ class MainViewModel @Inject constructor(
                 // update the current item by replacing the current item
                 items[dateKey]?.toMutableList()?.let { list ->
                     val itemIndex = list.indexOfFirst { it.id == rowView.id }
-                    list[itemIndex] = transactionRow
+                    if (itemIndex == -1) {
+                        log.info("cannot find {} in list of {} items", rowView.id, list.size)
+                    } else {
+                        list[itemIndex] = transactionRow
+                    }
                     items[dateKey] = list
                 }
             } else {
