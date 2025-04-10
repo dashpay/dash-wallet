@@ -289,6 +289,7 @@
     <string name="about_contact_support">Hubungi Dukungan</string>
     <string name="about_fork_disclaimer">Ini adalah aplikasi open source yang bercabang dari Bitcoin Wallet</string>
     <string name="about_license">GNU General Public License v3.0</string>
+    <string name="about_version_name">Dompet DashPay %s</string>
     <string name="about_last_explore_device_sync">Sinkronisasi perangkat Explore Terakhir</string>
     <string name="about_last_explore_server_update">Pembaruan server Explore terakhir</string>
     <string name="about_firebase_installation_id">ID penginstalan Firebase</string>

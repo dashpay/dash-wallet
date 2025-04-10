@@ -62,6 +62,8 @@
     <string name="invitation_accept_message_3">사진을 업로드하고 아이덴티티를 개인화하세요</string>
     <string name="invitation_accept_continue">계속</string>
     <string name="invitation_contact_request_sent_message">초대장을 받았으므로 %s에게 연락처 요청이 발송되었습니다.</string>
+    <string name="topup_confirm_message">당신의 아이덴티티 충전을 선택하셨습니다. 다음의 금액이 잔고에서 차감됩니다.</string>
+
     <string name="username_being_created">당신의 상숑자 이름인 %s 가 대시 네트워크에 생성되는 중입니다</string>
     <string name="username_being_requested">당신의 상요자 이름인 %s가 대시 네트워크에 요청되었습니다</string>
 
@@ -73,6 +75,7 @@
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) 사용자 이름을 등록하는 중</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) 사용자 이름을 요청하는 중</string>
     <string name="processing_home_step_3_restoring">(3/3) 사용자 이름 복원 중</string>
+    <string name="restore_identity">아이덴티티 복구</string>
     <string name="processing_done_title">%s님 안녕하세요,</string>
     <string name="processing_done_subtitle">당신의 계정이 준비되었습니다</string>
     <string name="processing_voting_subtitle">당신의 사용자 이름에 대한 투표가 시작되었습니다</string>
@@ -248,6 +251,7 @@
     <string name="please_note_cant_change_this_later">다시 변경할 수 없음에 주의하세요</string>
     <string name="Intermediate_level_WIFI_Warning">중간 프라이버시 레벨은 신뢰할 수 있는 인터넷 연결이 필요합니다</string>
     <string name="Advanced_level_WIFI_Warning">향상된 프라이버시 레벨은 신뢰할 수 있는 인터넷 연결이 필요합니다</string>
+    <string name="privcay_level_WIFI_warning_desc">추가적인 믹싱 수수료 발생을 방지하기 위하여는 Wi-Fi 네트워크에 접속할 것을 권장합니다</string>
     <string name="continue_anyway">그래도 계속하기</string>
     <string name="welcome_to_dash_pay">대시페이에 오신 것을 환영합니다</string>
     <string name="pay_to_usernames">사용자 이름으로 지불하세요. 더 이상 알파벳과 숫자로 이루어진 주소는 필요하지 않습니다.</string>
@@ -279,9 +283,14 @@
     <string name="only_duplicates">복사만</string>
     <string name="only_links">링크를 가진 요청만</string>
     <string name="only_links_short">링크와 함께</string>
+    <string name="date">요청 일자: %s</string>
     <string name="votes">투표: %s</string>
+    <string name="voting_ends">투표 종료: %s</string>
+
     <string-array name="usernames_group_by_options">
         <item>없음</item>
+        <item>이른 순으로</item>
+        <item>최신 순으로</item>
     </string-array>
 
     <string-array name="usernames_sort_by_options">
@@ -351,7 +360,9 @@
     <string name="add_masternode_key">마스터노드 투표 키를 추가하세요</string>
     <string name="dont_ask_again">다시 묻지 않기</string>
     <string name="vote_submitting">사용자이름 %s 를 위한 투표 제출하기</string>
+    <string name="quick_vote_submitting">모든 사용자 이름에 대한 투표 제출</string>
     <string name="vote_submitted">사용자 이름 %s에 대한 투표 완료</string>
+    <string name="quick_vote_submitted">모든 사용자 이름에 대해 성공적으로 투표하였습니다</string>
     <string name="cancel_submitting">사용자 이름 %s에 대한 투표 취소중 </string>
     <string name="cancel_submitted">사용자 이름 %s에 대한 투표 취소 완료</string>
     <string name="block_submitting">사용자 이름 %s 차단중</string>
@@ -362,6 +373,9 @@
     <string name="quick_vote">빠른 투표</string>
     <string name="quick_vote_subtitle">\"모두 투표하기\" 버튼을 선택하면, 먼저 제출된 필터를 거친 모든 사용자 이름 (%d) 에 대해 자동으로 투표하게 됩니다</string>
     <string name="vote_for_all">모두 투표하기</string>
+    <string name="one_vote_left_title">한 번의 투표만 남음</string>
+    <string name="one_vote_left_show_usernames">사용자 이름 보기</string>
+    <string name="one_vote_left_subtitle">이미 다음의 사용자 이름에 대해 %d회 투표하였습니다. 이들 사용자 이름에 대하여 한 번의 투표만 남았습니다.</string>
     <string name="voting_period_active">사용자 이름 투표 기간 활성화</string>
     <string name="there_was_a_network_error">네트워크에 에러가 발생하여, 추가 요금 없이 다시 시도할 수 있습니다</string>
     <string name="requested_username_has_been">사용자 이름이 요청되었습니다.</string>
@@ -434,6 +448,18 @@
     <string name="mix_dash_mix">믹스 잔고</string>
     <string name="mix_dash_title">당신의 대시를 믹스하세요</string>
     <string name="mix_dash_message">당신이 누구에게 송금하는 지를 아무도 알 수 없게 하기 위해서는, 사용자 이름을 만들기 전에 잔고를 믹싱할 것을 권장합니다.</string>
+    <string name="tools_credits_title">크레딧</string>
     <string name="tools_credits_buy_button">구매</string>
+    <string name="dashpay_what_are_credits_title">크레딧은 무엇인가요\?</string>
+    <string name="dashpay_what_are_credits_message">사용자들은 대시 네트워크와 상호작용하기 위해 거래 수수료를 지불합니다. 당신의 프로필 변경을 위해 크레딧의 형식으로 소정의 수수료가 부과되는 것은 이 때문입니다.\n\n당신의 크레딧은 다음에 사용될 수 있습니다:</string>
+    <string name="credits_send_and_accept_contact_requests">연락처 요청 보내고 수락하기</string>
+    <string name="platform_credits">플랫폼 크레딧</string>
     <string name="platform_credits_error">오류</string>
-    </resources>
+    <string name="platform_credits_not_transferred">대기 중인 플랫폼 크레딧</string>
+    <string name="voting_period">투표 기간</string>
+    <string name="voting_period_ends_in_days">투표는 %d일 후 종료됩니다</string>
+    <string name="voting_period_ends_today">투표는 오늘 종료됩니다</string>
+    <string name="voting_period_ends_tomorrow">투표는 내일 종료됩니다</string>
+    <string name="link_included">포함된 링크</string>
+    <string name="group_by">다음으로 그룹화</string>
+</resources>

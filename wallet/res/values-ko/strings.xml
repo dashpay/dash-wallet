@@ -296,6 +296,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">지갑 덤프 파일 첨부</string>
     <string name="report_issue_dialog_mail_intent_chooser">오류 보고서 전송 방식을 선택하세요...</string>
     <string name="report_issue_dialog_mail_intent_failed">오류 보고서 전송에 실패했습니다.</string>
+    <string name="report_issue_dialog_generating_report">보고서 생성중</string>
     <string name="report_transaction_history_export">내보내기</string>
     <string name="report_transaction_history_title">CSV 내보내기</string>
     <string name="report_transaction_history_not_synced_title">CSV 내보내기</string>
@@ -412,4 +413,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">백그라운드에서 지불을 받으시겠습니까?</string>
     <string name="battery_optimization_dialog_message_not_optimized">이 어플은 일정 시간동안 화면에 보이지 않은 경우에도 게속 실행되도록 설정되었습니다.\n\n우리는 백그라운드에서도 이 어플이 언제나 블록체인의 최신 상태에 맞도록 유지할 것을 권장합니다\n\n걱정마세요, 언제나 당신의 배터리 사용량을 신경쓸게요.</string>
     <string name="battery_optimization_dialog_button_change">설정 열기</string>
+    <string name="credits_profile_change_message">프로필 정보 업데이트</string>
+
     </resources>

@@ -62,6 +62,8 @@ Dash</b> anda</string>
     <string name="invitation_accept_message_3">Unggah gambar Anda, sesuaikan identitas Anda</string>
     <string name="invitation_accept_continue">Teruskan</string>
     <string name="invitation_contact_request_sent_message">Permintaan kontak telah dikirim ke %s karena mereka mengundang Anda.</string>
+    <string name="topup_confirm_message">Anda telah memilih untuk mengisi ke identitas Anda. Jumlah berikut akan dipotong dari saldo Anda.</string>
+
     <string name="username_being_created">Nama pengguna anda %s sendag dibuat di jaringan Dash</string>
     <string name="username_being_requested">Nama pengguna anda %s sedang diminta di jaringan Dash</string>
 
@@ -73,6 +75,7 @@ Dash</b> anda</string>
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Mendaftarkan Nama Pengguna</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Meminta Nama Pengguna</string>
     <string name="processing_home_step_3_restoring">(3/3) Memulihkan Nama Pengguna</string>
+    <string name="restore_identity">Pulihkan identitas</string>
     <string name="processing_done_title">Halo %s,</string>
     <string name="processing_done_subtitle">Akun anda telah siap</string>
     <string name="processing_voting_subtitle">Pemungutan suara untuk nama pengguna Anda telah dimulai</string>
@@ -248,6 +251,7 @@ Dash</b> anda</string>
     <string name="please_note_cant_change_this_later">Harap dicatat bahwa Anda tidak akan dapat mengubahnya nanti</string>
     <string name="Intermediate_level_WIFI_Warning">Tingkat privasi menengah memerlukan koneksi internet yang andal</string>
     <string name="Advanced_level_WIFI_Warning">Tingkat privasi tingkat lanjut memerlukan koneksi internet yang andal</string>
+    <string name="privcay_level_WIFI_warning_desc">Disarankan untuk menggunakan jaringan Wi-Fi untuk menghindari biaya mixing tambahan</string>
     <string name="continue_anyway">Lanjutkan</string>
     <string name="welcome_to_dash_pay">Selamat Datang ke Dash Pay</string>
     <string name="pay_to_usernames">Bayar ke nama pengguna. Tidak ada lagi alamat alfanumerik.</string>
@@ -279,9 +283,14 @@ Dash</b> anda</string>
     <string name="only_duplicates">Hanya duplikat</string>
     <string name="only_links">Hanya permintaan dengan tautan</string>
     <string name="only_links_short">dengan tautan</string>
+    <string name="date">Tanggal Permintaan: %s</string>
     <string name="votes">Suara: %s</string>
+    <string name="voting_ends">Pemungutan suara berakhir pada: %s</string>
+
     <string-array name="usernames_group_by_options">
         <item>Tidak ada</item>
+        <item>Secepatnya dulu</item>
+        <item>Terbaru dahulu</item>
     </string-array>
 
     <string-array name="usernames_sort_by_options">
@@ -351,7 +360,9 @@ Dash</b> anda</string>
     <string name="add_masternode_key">Tambahkan Kunci Pemungutan Suara Masternode</string>
     <string name="dont_ask_again">Jangan tanya saya lagi</string>
     <string name="vote_submitting">Mengirimkan suara untuk %s nama pengguna</string>
+    <string name="quick_vote_submitting">Mengirimkan suara anda untuk semua nama pengguna</string>
     <string name="vote_submitted">Memilih untuk %s nama pengguna</string>
+    <string name="quick_vote_submitted">Berhasil memilih semua nama pengguna</string>
     <string name="cancel_submitting">Membatalkan suara anda untuk %s nama pengguna</string>
     <string name="cancel_submitted">Suara dibatalkan untuk %s nama pengguna</string>
     <string name="block_submitting">Memblokir untuk %s nama pengguna</string>
@@ -362,6 +373,9 @@ Dash</b> anda</string>
     <string name="quick_vote">Voting Cepat</string>
     <string name="quick_vote_subtitle">Dengan mengetuk tombol \"Pilih Semua\", Anda akan secara otomatis memilih semua nama pengguna yang difilter (%d) yang dikirimkan terlebih dahulu</string>
     <string name="vote_for_all">Pilih untuk semua</string>
+    <string name="one_vote_left_title">Satu Suara Tersisa</string>
+    <string name="one_vote_left_show_usernames">Tampilkan nama pengguna</string>
+    <string name="one_vote_left_subtitle">Anda telah memilih untuk nama pengguna berikut %d kali. Anda hanya dapat memberikan satu suara lagi untuk nama pengguna ini.</string>
     <string name="voting_period_active">Username Masa Voting Aktif</string>
     <string name="there_was_a_network_error">Ada kendala jaringan, anda dapat mencoba kembali tanpa biaya tambahan</string>
     <string name="requested_username_has_been">Nama pengguna telah diminta.</string>
@@ -434,6 +448,18 @@ Dash</b> anda</string>
     <string name="mix_dash_mix">Campur Saldo</string>
     <string name="mix_dash_title">Campur Dash anda</string>
     <string name="mix_dash_message">Untuk membantu mencegah orang lain melihat kepada siapa Anda melakukan pembayaran, disarankan untuk mencampur saldo Anda sebelum Anda membuat nama pengguna.</string>
+    <string name="tools_credits_title">Kredit</string>
     <string name="tools_credits_buy_button">Beli</string>
+    <string name="dashpay_what_are_credits_title">Apa itu kredit\?</string>
+    <string name="dashpay_what_are_credits_message">Pengguna membayar biaya transaksi untuk berinteraksi dengan jaringan Dash. Inilah sebabnya mengapa semua perubahan pada profil Anda memerlukan pembayaran biaya kecil yang dapat dibayarkan dengan kredit.\n\nKredit Anda dapat digunakan untuk:</string>
+    <string name="credits_send_and_accept_contact_requests">Kirim dan terima permintaan kontak</string>
+    <string name="platform_credits">Kredit Platform</string>
     <string name="platform_credits_error">Kesalahan</string>
-    </resources>
+    <string name="platform_credits_not_transferred">Kredit Platform tertunda</string>
+    <string name="voting_period">Waktu Pemilihan</string>
+    <string name="voting_period_ends_in_days">Pemilihan berakhir pada %d hari</string>
+    <string name="voting_period_ends_today">Pemilihan berakhir hari ini</string>
+    <string name="voting_period_ends_tomorrow">Pemilihan berakhir besok</string>
+    <string name="link_included">tautan disertakan</string>
+    <string name="group_by">Kelompokkan berdasarkan</string>
+</resources>

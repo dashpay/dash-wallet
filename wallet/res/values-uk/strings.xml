@@ -300,6 +300,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">Додати дамп пам\'яті гаманця</string>
     <string name="report_issue_dialog_mail_intent_chooser">Відправити звіт використовуючи…</string>
     <string name="report_issue_dialog_mail_intent_failed">Помилка при відправці звіту.</string>
+    <string name="report_issue_dialog_generating_report">Формування звіту</string>
     <string name="report_transaction_history_export">Експорт</string>
     <string name="report_transaction_history_title">Експорт CSV</string>
     <string name="report_transaction_history_not_synced_title">Експорт CSV</string>
@@ -416,4 +417,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">Ви хочете отримувати платежі у фоновому режимі?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Ця програма налаштована на продовження роботи після того, як деякий час її не видно.\n\nМи радимо дозволити цій програмі завжди оновлюватися з блокчейном, навіть у фоновому режимі.\n\nНе хвилюйтеся, ми будемо завжди звертати увагу на використання акумулятора.</string>
     <string name="battery_optimization_dialog_button_change">Відкрити налаштування</string>
+    <string name="credits_profile_change_message">Оновіть інформацію профілю</string>
+
     </resources>

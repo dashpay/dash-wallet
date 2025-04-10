@@ -296,6 +296,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">Επισύναψη αρχείου ένδειξης σφαλμάτων πορτοφολιού</string>
     <string name="report_issue_dialog_mail_intent_chooser">Αποστολή αναφοράς χρησιμοποιώντας…</string>
     <string name="report_issue_dialog_mail_intent_failed">Αποτυχία αποστολής της αναφοράς.</string>
+    <string name="report_issue_dialog_generating_report">Δημιουργία αναφοράς</string>
     <string name="report_transaction_history_export">Εξαγωγή</string>
     <string name="report_transaction_history_title">Εξαγωγή CSV</string>
     <string name="report_transaction_history_not_synced_title">Εξαγωγή CSV</string>
@@ -412,4 +413,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">Θέλετε να λαμβάνετε πληρωμές στο παρασκήνιο;</string>
     <string name="battery_optimization_dialog_message_not_optimized">Αυτή η εφαρμογή έχει ρυθμιστεί ώστε να συνεχίζει να εκτελείται ακόμη και όταν δεν είναι ορατή για κάποιο χρονικό διάστημα.\n\nΠροτείνουμε να επιτρέψετε σε αυτή την εφαρμογή να παραμένει πάντα ενημερωμένη με TO blockchain, ακόμη και στο παρασκήνιο.\n\nΜην ανησυχείτε, θα προσέχουμε πάντα τη χρήση της μπαταρίας σας.</string>
     <string name="battery_optimization_dialog_button_change">Άνοιγμα Ρυθμίσεων</string>
+    <string name="credits_profile_change_message">Ενημέρωση πληροφοριών προφίλ</string>
+
     </resources>

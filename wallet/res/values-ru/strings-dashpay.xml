@@ -310,7 +310,7 @@ Dash</b></string>
     <string name="request_your_hint">Обратите внимание, что в будущем вы не сможете его изменить</string>
     <string name="request_username">Запросить имя пользователя</string>
     <string name="request_voting_range">Сеть Dash проведёт голосование за это имя пользователя. Мы пришлём уведомление о результатах по %s.</string>
-    <string name="request_username_available">Имя пользователя недоступно</string>
+    <string name="request_username_available">Имя пользователя доступно</string>
     <string name="request_username_unavailable">Имя пользователя недоступно или заблокировано</string>
     <string name="request_username_taken">Имя пользователя уже занято</string>
     <string name="request_username_taken_results">Имя пользователя уже занято</string>
