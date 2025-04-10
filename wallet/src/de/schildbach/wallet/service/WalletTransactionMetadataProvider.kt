@@ -25,6 +25,7 @@ import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import okhttp3.*
@@ -62,9 +63,9 @@ class WalletTransactionMetadataProvider @Inject constructor(
     private val walletData: WalletDataProvider,
     private val giftCardDao: GiftCardDao,
     private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
-    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
+    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
+    private val dashPayConfig: DashPayConfig
 ) : TransactionMetadataProvider {
-
     companion object {
         private val log = LoggerFactory.getLogger(WalletTransactionMetadataProvider::class.java)
     }
@@ -137,7 +138,9 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 CoinJoinTransactionType.None, CoinJoinTransactionType.Send -> false
                 else -> true
             }
-            if (!isCoinJoinTx && metadata.isNotEmpty() && !isSyncingPlatform && hasChanges) {
+
+            // only save Transaction metadata to
+            if (!isCoinJoinTx && metadata.isNotEmpty() && !isSyncingPlatform && hasChanges && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insert(TransactionMetadataCacheItem(metadata))
             }
             log.info("txmetadata: inserting $metadata")
@@ -178,6 +181,19 @@ class WalletTransactionMetadataProvider @Inject constructor(
         return null
     }
 
+    private suspend fun shouldSaveToCache(): Boolean {
+        val currentTime = System.currentTimeMillis()
+        val shouldSaveToCache = dashPayConfig.isSavingToNetwork() && currentTime > dashPayConfig.getSaveAfterTimestamp()
+        log.info(
+            "saving to cache: {} = saving: {} && current: {} > safe after: {}",
+            shouldSaveToCache,
+            dashPayConfig.isSavingToNetwork(),
+            Date(currentTime),
+            Date(dashPayConfig.getSaveAfterTimestamp())
+        )
+        return shouldSaveToCache
+    }
+
     private suspend fun updateAndInsertIfNotExist(
         txId: Sha256Hash,
         isSyncingPlatform: Boolean,
@@ -205,7 +221,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, isSyncingPlatform: Boolean) {
         updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateTaxCategory(txId, taxCategory)
-            if (!isSyncingPlatform) {
+            if (!isSyncingPlatform && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insertTaxCategory(txId, taxCategory)
             }
         }
@@ -218,7 +234,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     ) {
         updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateSentTime(txId, timestamp)
-            if (!isSyncingPlatform) {
+            if (!isSyncingPlatform && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insertSentTime(txId, timestamp)
             }
         }
@@ -273,7 +289,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                     exchangeRate.currencyCode,
                     exchangeRate.rate!!
                 )
-                if (!isSyncingPlatform) {
+                if (!isSyncingPlatform && shouldSaveToCache()) {
                     transactionMetadataChangeCacheDao.insertExchangeRate(
                         txId,
                         exchangeRate.currencyCode,
@@ -287,7 +303,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncingPlatform: Boolean) {
         updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateMemo(txId, memo)
-            if (!isSyncingPlatform) {
+            if (!isSyncingPlatform && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insertMemo(txId, memo)
             }
         }
@@ -296,7 +312,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean) {
         updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateService(txId, service)
-            if (!isSyncingPlatform) {
+            if (!isSyncingPlatform && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insertService(txId, service)
             }
         }

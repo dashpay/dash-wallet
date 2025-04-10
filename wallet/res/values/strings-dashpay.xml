@@ -466,4 +466,28 @@
     <string name="voting_period_ends_tomorrow">Voting ends tomorrow</string>
     <string name="link_included">link included</string>
     <string name="group_by">Group by</string>
+    <string name="transaction_metadata_title">Transaction metadata</string>
+    <string name="transaction_metadata_data_being_saved">Saved on network</string>
+    <string name="transaction_metadata_payment_category_description">Indicates if a transaction is associated with Coinbase, Uphold, Topper or CrowdNode</string>
+    <string name="transaction_metadata_fiat_price_description">The historical price at the time of the transaction</string>
+    <string name="transaction_metadata_description">Your data is stored on your device but will be lost if you reset or restore your wallet. Below are examples of the information that will be saved when saved on the network.</string>
+    <string name="transaction_metadata_cost">How much does it cost?</string>
+    <string name="transaction_metadata_payment_category">Payment Categories</string>
+    <string name="transaction_metadata_save_data">Save data</string>
+    <string name="transaction_metadata_tax_category">Tax Categories</string>
+    <string name="transaction_metadata_fiat_prices">Fiat Prices</string>
+    <string name="transaction_metadata_private_memo_description">Short memos that describe the purpose of the transaction</string>
+    <string name="transaction_metadata_tax_category_description">Indicates if a transaction is a transfer, income or expense</string>
+    <string name="transaction_metadata_costs_title">Costs associated with saving data to the network</string>
+    <string name="transaction_metadata_costs_description">As part of creating a username, you receive credits that are used for various activities on the network; saving transaction metadata on the network will consume these credits faster.  Once all credits are used, you can purchase more.\n\nIt costs approximately %s per upload of data to the network so it is recommended to upload multiple transactions at a time.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>After 10 transactions</item>
+        <item>Once a week</item>
+        <item>After every transaction</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">Do you want to reset wallet without saving your metadata to the network?</string>
+    <string name="reset_wallet_metadata_message">Resetting your wallet without saving data to the network will result in the loss of some transaction metadata.</string>
+    <string name="reset_wallet_metadata_button_without">Reset wallet without saving</string>
+    <string name="reset_wallet_metadata_button_with">Save data and reset wallet</string>
+
 </resources>

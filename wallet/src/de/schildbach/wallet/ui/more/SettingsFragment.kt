@@ -1,20 +1,21 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright (c) 2019-2025 Dash Core Group
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.more
 
 import android.Manifest
 import android.content.Intent
@@ -22,55 +23,65 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import androidx.activity.viewModels
+import android.view.View
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
-import de.schildbach.wallet.ui.more.AboutActivity
-import de.schildbach.wallet.ui.more.SettingsViewModel
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.ActivitySettingsBinding
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import de.schildbach.wallet_test.databinding.FragmentSettingsBinding
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
+import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SettingsActivity : LockScreenActivity() {
-    private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
-    private lateinit var binding: ActivitySettingsBinding
+class SettingsFragment : Fragment(R.layout.fragment_settings) {
+    companion object {
+        private val log = LoggerFactory.getLogger(SettingsFragment::class.java)
+    }
+    private val binding by viewBinding(FragmentSettingsBinding::bind)
     private val viewModel: SettingsViewModel by viewModels()
     @Inject
     lateinit var systemActions: SystemActionsService
     @Inject
     lateinit var walletUIConfig: WalletUIConfig
+    @Inject
+    lateinit var walletApplication: WalletApplication
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        enterTransition = MaterialFadeThrough()
+        reenterTransition = MaterialFadeThrough()
 
-        binding = ActivitySettingsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
         binding.appBar.toolbar.title = getString(R.string.settings_title)
-        binding.appBar.toolbar.setNavigationOnClickListener { finish() }
+        binding.appBar.toolbar.setNavigationOnClickListener {
+            findNavController().popBackStack()
+        }
 
         binding.about.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Settings.ABOUT)
-            startActivity(Intent(this, AboutActivity::class.java))
+            requireActivity().startActivity(Intent(requireContext(), AboutActivity::class.java))
         }
         binding.localCurrency.setOnClickListener {
             lifecycleScope.launch {
@@ -79,7 +90,7 @@ class SettingsActivity : LockScreenActivity() {
                 ExchangeRatesDialog(currentOption) { rate, _, dialog ->
                     setSelectedCurrency(rate.currencyCode)
                     dialog.dismiss()
-                }.show(this@SettingsActivity)
+                }.show(requireActivity())
             }
         }
 
@@ -87,7 +98,7 @@ class SettingsActivity : LockScreenActivity() {
         binding.notifications.setOnClickListener { systemActions.openNotificationSettings() }
         binding.batteryOptimization.setOnClickListener {
             if (ContextCompat.checkSelfPermission(
-                    walletApplication,
+                    requireContext(),
                     Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
                 ) == PackageManager.PERMISSION_GRANTED &&
                 !viewModel.isIgnoringBatteryOptimizations
@@ -98,12 +109,12 @@ class SettingsActivity : LockScreenActivity() {
                     getString(R.string.battery_optimization_dialog_message_optimized),
                     getString(R.string.permission_deny),
                     getString(R.string.permission_allow)
-                ).show(this) { allow ->
+                ).show(requireActivity()) { allow ->
                     if (allow == true) {
                         startActivity(
                             Intent(
                                 Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                                Uri.parse("package:$packageName")
+                                Uri.parse("package:${requireContext().packageName}")
                             )
                         )
                     }
@@ -115,11 +126,11 @@ class SettingsActivity : LockScreenActivity() {
                     getString(R.string.battery_optimization_dialog_message_not_optimized),
                     getString(R.string.close),
                     getString(R.string.battery_optimization_dialog_button_change)
-                ).show(this) { allow ->
+                ).show(requireActivity()) { allow ->
                     if (allow == true) {
                         // Show the list of non-optimized apps
                         val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                        if (intent.resolveActivity(packageManager) != null) {
+                        if (intent.resolveActivity(requireContext().packageManager) != null) {
                             startActivity(intent)
                         }
                     }
@@ -135,17 +146,16 @@ class SettingsActivity : LockScreenActivity() {
                     viewModel.setCoinJoinInfoShown()
                 }
 
-                val intent = Intent(this@SettingsActivity, CoinJoinActivity::class.java)
+                val intent = Intent(requireContext(), CoinJoinActivity::class.java)
                 intent.putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, shouldShowFirstTimeInfo)
                 viewModel.logEvent(AnalyticsConstants.Settings.COINJOIN)
                 startActivity(intent)
             }
         }
 
-        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
-            .filterNotNull()
-            .onEach { binding.localCurrencySymbol.text = it }
-            .launchIn(lifecycleScope)
+        viewModel.localCurrencySymbol.observe(viewLifecycleOwner) {
+            binding.localCurrencySymbol.text = it
+        }
 
         viewModel.coinJoinMixingMode.observe(this) { mode ->
             if (mode == CoinJoinMode.NONE) {
@@ -180,6 +190,24 @@ class SettingsActivity : LockScreenActivity() {
                 }
             }
         }
+        viewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+            binding.transactionMetadata.isVisible = it?.creationComplete ?: false
+        }
+        binding.transactionMetadata.setOnClickListener {
+            lifecycleScope.launch {
+                if (viewModel.isTransactionMetadataInfoShown()) {
+                    safeNavigate(SettingsFragmentDirections.settingsToTransactionMetadata(false))
+                } else {
+                    findNavController().navigate(
+                        R.id.transaction_metadata_info_dialog,
+                        bundleOf(
+                            "first_time" to true,
+                            "use_navigation" to true
+                        )
+                    )
+                }
+            }
+        }
     }
 
     private fun setBatteryOptimizationText() {
@@ -192,9 +220,16 @@ class SettingsActivity : LockScreenActivity() {
         )
     }
 
+    private fun setTransactionMetadataText() {
+        lifecycleScope.launch {
+            binding.transactionMetadataSubtitle.isGone = !viewModel.isSavingTransactionMetadata()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         setBatteryOptimizationText()
+        setTransactionMetadataText()
     }
 
     private fun resetBlockchain() {
@@ -204,14 +239,14 @@ class SettingsActivity : LockScreenActivity() {
             getString(R.string.preferences_initiate_reset_dialog_message),
             getString(R.string.button_cancel),
             getString(R.string.preferences_initiate_reset_dialog_positive)
-        ).show(this) {
+        ).show(requireActivity()) {
             if (it == true) {
                 log.info("manually initiated blockchain reset")
                 viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET)
 
                 walletApplication.resetBlockchain()
-                configuration.updateLastBlockchainResetTime()
-                startActivity(MainActivity.createIntent(this@SettingsActivity))
+                viewModel.updateLastBlockchainResetTime()
+                startActivity(MainActivity.createIntent(requireContext()))
             } else {
                 viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS)
             }
@@ -221,8 +256,8 @@ class SettingsActivity : LockScreenActivity() {
     private fun setSelectedCurrency(code: String) {
         lifecycleScope.launch {
             walletUIConfig.set(WalletUIConfig.SELECTED_CURRENCY, code)
-            val balance = walletData.getWalletBalance()
-            WalletBalanceWidgetProvider.updateWidgets(this@SettingsActivity, balance)
+            val balance = viewModel.getTotalWalletBalance()
+            WalletBalanceWidgetProvider.updateWidgets(requireActivity(), balance)
         }
     }
 }
