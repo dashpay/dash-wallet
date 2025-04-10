@@ -37,7 +37,6 @@ import java.lang.System.currentTimeMillis
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlin.math.max
 
 interface ExploreRepository {
     suspend fun getRemoteTimestamp(): Long

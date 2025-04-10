@@ -92,9 +92,13 @@ class ExploreSyncWorker @AssistedInject constructor(
                     preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
                     log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
 
+                    val forceLoad = (
+                        databasePrefs.localDbTimestamp != remoteDataTimestamp &&
+                            databasePrefs.localDbTimestamp != preloadedDbTimestamp
+                        )
                     if (databasePrefs.localDbTimestamp == 0L ||
                         databasePrefs.localDbTimestamp < preloadedDbTimestamp ||
-                        (databasePrefs.localDbTimestamp != remoteDataTimestamp && databasePrefs.localDbTimestamp != preloadedDbTimestamp)
+                        forceLoad
                     ) {
                         // force data preloading for fresh installs
                         // and a newer preloaded DB
