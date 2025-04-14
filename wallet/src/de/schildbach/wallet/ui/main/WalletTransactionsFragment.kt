@@ -51,6 +51,7 @@ import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
@@ -103,23 +104,22 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         lifecycleScope.launch {
             // these observers had exceptions after the view was destroyed
             viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+                val observer = object : RecyclerView.AdapterDataObserver() {
                     override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
                         if (positionStart == 0) {
                             binding.walletTransactionsList.scrollToPosition(0)
                         }
                     }
-                })
+                }
+
+                adapter.registerAdapterDataObserver(observer)
+                try {
+                    awaitCancellation() // Keeps the block alive
+                } finally {
+                    adapter.unregisterAdapterDataObserver(observer)
+                }
             }
         }
-
-//        adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-//            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-//                if (positionStart == 0 && isAdded && viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-//                    binding.walletTransactionsList.scrollToPosition(0)
-//                }
-//            }
-//        })
 
         binding.transactionFilterBtn.setOnClickListener {
             val dialogFragment = TransactionsFilterDialog(viewModel.transactionsDirection) { direction, _ ->
