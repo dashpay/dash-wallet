@@ -385,11 +385,18 @@ android {
 
     packagingOptions {
         jniLibs {
-            excludes += ['lib/x86_64/freebsd/libscrypt.so', 'lib/x86_64/linux/libscrypt.so']
+            excludes += [
+                // android libscrypt.so is in dashj-x11-android
+                'lib/x86_64/freebsd/libscrypt.so',
+                'lib/x86_64/linux/libscrypt.so',
+                'lib/x86_64/darwin/libscrypt.dylib',
+                // 32-bit Platform SDK is not supported
+                'lib/x86/libsdklib.so',
+                'lib/armeabi-v7a/libsdklib.so'
+            ]
         }
         resources {
             excludes += [
-                    'lib/x86_64/darwin/libscrypt.dylib',
                     'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml',
                     'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml',
                     'org/bitcoinj/crypto/mnemonic/wordlist/english.txt',
