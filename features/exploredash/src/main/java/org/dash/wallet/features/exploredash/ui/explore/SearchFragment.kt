@@ -110,14 +110,20 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         hideKeyboard()
 
         if (item is Merchant) {
-            viewModel.openMerchantDetails(item, true)
+            lifecycleScope.launch {
+                ctxSpendViewModel.updateMerchantDetails(item)
+                viewModel.openMerchantDetails(item, true)
+            }
         } else if (item is Atm) {
             viewModel.openAtmDetails(item)
         }
     }
 
     private val merchantLocationsAdapter = MerchantsLocationsAdapter { merchant, _ ->
-        viewModel.openMerchantDetails(merchant)
+        lifecycleScope.launch {
+            ctxSpendViewModel.updateMerchantDetails(merchant)
+            viewModel.openMerchantDetails(merchant)
+        }
     }
 
     private val searchResultsDecorator: ListDividerDecorator by lazy {

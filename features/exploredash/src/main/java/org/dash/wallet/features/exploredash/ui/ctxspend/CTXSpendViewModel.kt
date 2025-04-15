@@ -143,10 +143,9 @@ class CTXSpendViewModel @Inject constructor(
     }
 
     suspend fun updateMerchantDetails(merchant: Merchant) {
-        if (merchant.minCardPurchase != null && merchant.maxCardPurchase != null) {
-            return
-        }
-
+        // previously this API call would only be made if we didn't have the min and max card values,
+        // but now we need to call this every time to get an updated savings percentage and to see if
+        // the merchant is enabled
         val response = getMerchant(merchant.merchantId!!)
 
         if (response is ResponseResource.Success) {
@@ -155,6 +154,7 @@ class CTXSpendViewModel @Inject constructor(
                     merchant.savingsPercentage = it.savingsPercentage
                     merchant.minCardPurchase = it.minimumCardPurchase
                     merchant.maxCardPurchase = it.maximumCardPurchase
+                    merchant.active = it.enabled
                 }
             } catch (e: Exception) {
                 log.warn("updated merchant details contains unexpected data:", e)

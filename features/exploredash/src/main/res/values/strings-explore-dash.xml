@@ -239,4 +239,5 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Buy a gift card with your DashSpend account</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Create a DashSpend account or log in to the existing one</string>
     <string name="ctx_terms_url" translatable="false">https://ctx.com/gift-card-agreement/</string>
+    <string name="temporarily_unavailable">Temporarily unavailable</string>
 </resources>
