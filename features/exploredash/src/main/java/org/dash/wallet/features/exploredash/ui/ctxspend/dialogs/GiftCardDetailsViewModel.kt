@@ -242,7 +242,11 @@ class GiftCardDetailsViewModel @Inject constructor(
                 val decodeResult = Qr.scanBarcode(bitmap)
 
                 if (decodeResult != null) {
-                    metadataProvider.updateGiftCardBarcode(transactionId, decodeResult.first, decodeResult.second)
+                    metadataProvider.updateGiftCardBarcode(
+                        transactionId,
+                        decodeResult.first.replace(" ", ""),
+                        decodeResult.second
+                    )
                 } else {
                     log.error("ScanBarcode returned null: $barcodeUrl")
                 }
