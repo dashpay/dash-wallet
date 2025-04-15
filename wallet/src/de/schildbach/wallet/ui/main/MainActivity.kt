@@ -53,13 +53,13 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
-import de.schildbach.wallet.ui.main.WalletActivityExt.checkLowStorageAlert
-import de.schildbach.wallet.ui.main.WalletActivityExt.checkTimeSkew
-import de.schildbach.wallet.ui.main.WalletActivityExt.handleFirebaseAction
-import de.schildbach.wallet.ui.main.WalletActivityExt.requestDisableBatteryOptimisation
-import de.schildbach.wallet.ui.main.WalletActivityExt.setupBottomNavigation
-import de.schildbach.wallet.ui.main.WalletActivityExt.showFiatCurrencyChangeDetectedDialog
-import de.schildbach.wallet.ui.main.WalletActivityExt.showStaleRatesToast
+import de.schildbach.wallet.ui.main.MainActivityExt.checkLowStorageAlert
+import de.schildbach.wallet.ui.main.MainActivityExt.checkTimeSkew
+import de.schildbach.wallet.ui.main.MainActivityExt.handleFirebaseAction
+import de.schildbach.wallet.ui.main.MainActivityExt.requestDisableBatteryOptimisation
+import de.schildbach.wallet.ui.main.MainActivityExt.setupBottomNavigation
+import de.schildbach.wallet.ui.main.MainActivityExt.showFiatCurrencyChangeDetectedDialog
+import de.schildbach.wallet.ui.main.MainActivityExt.showStaleRatesToast
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.more.MixDashFirstDialogFragment
 import de.schildbach.wallet.ui.util.InputParser
@@ -463,7 +463,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                     alertDialog.show()
                 }
             }.parse()
-        } else if (extras != null && extras.containsKey(WalletActivityExt.NOTIFICATION_ACTION_KEY)) {
+        } else if (extras != null && extras.containsKey(MainActivityExt.NOTIFICATION_ACTION_KEY)) {
             handleFirebaseAction(extras)
         }
     }

@@ -46,7 +46,6 @@
     <string name="explore_no_atms">没有自动提款机</string>
     <string name="distance_miles">%s 英里</string>
     <string name="distance_kilometers">%s 公里</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="other">%d 商户</item>
     </plurals>
@@ -165,4 +164,62 @@
     <string name="sync_in_progress_network_error">同步中断... 网络未连接或无法访问</string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">在</string>
+    <string name="purchase_gift_card_min">最少: %s</string>
+    <string name="purchase_gift_card_max">最多: %s</string>
+    <string name="purchase_gift_card_discount_hint">您正在以 %s 购买 %s 礼品卡 (%s 折扣)</string>
+    <string name="button_next">下一个</string>
+    <string name="purchase_gift_card_from">来自</string>
+    <string name="purchase_gift_card_to">到</string>
+    <string name="purchase_confirm_transaction">确认</string>
+    <string name="purchase_gift_card_total_label">礼品卡总计</string>
+    <string name="purchase_gift_card_discount">折扣</string>
+    <string name="purchase_gift_card_you_pay">您支付</string>
+    <string name="purchase_gift_card_confirm">确认</string>
+    <string name="purchase_gift_card_details">礼品卡详情</string>
+    <string name="purchase_original_purchase">原始购买</string>
+    <string name="purchase_check_current_balance">查看当前余额</string>
+    <string name="purchase_card_number">卡号</string>
+    <string name="purchase_card_pin">卡密码</string>
+    <string name="purchase_view_transaction">查看交易详情</string>
+    <string name="purchase_see_how_to_use_gift_card">查看如何使用礼品卡</string>
+    <string name="purchase_how_to_use_gift_card">如何使用礼品卡</string>
+    <string name="purchase_self_checkout">自助结账</string>
+    <string name="purchase_Request_assistance">需要员工协助兑换数字礼品卡.</string>
+    <string name="purchase_in_store">有库存</string>
+    <string name="purchase_tell_the_cashier">告诉收银员您正在使用数字礼品卡付款. 收银员: 在银行卡信息栏中输入总金额, 然后在账户信息栏中输入礼品卡号码并按 Enter 键.</string>
+    <string name="purchase_in_the_payment_section">在付款环节, 在礼品卡信息栏中输入您的数字礼品卡号码.</string>
+    <string name="purchase_powered_by">提供方</string>
+    <string name="insufficient_money_title">Dash不足</string>
+    <string name="insufficient_money_msg">资金不足</string>
+    <string name="send_coins_error_msg">支付Dash时出现了问题!</string>
+    <string name="gift_card_barcode_failed">条形码加载失败</string>
+    <string name="gift_card_tx_title">礼品卡 · %s</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">输入验证码</string>
+    <string name="verification_check_email">检查您的电子邮箱并输入验证码</string>
+    <string name="buy_gift_card">使用您的 DashSpend 账户购买礼品卡</string>
+    <string name="create_new_account">创建新账户</string>
+    <string name="password">密码</string>
+    <string name="logged_in_as">已登录为 %s</string>
+    <string name="log_out">退出</string>
+    <string name="invaild_code">您输入了错误的代码. 请检查您的电子邮箱并重试.</string>
+    <string name="something_wrong_title">出错了!</string>
+    <string name="retry">重试</string>
+    <string name="gift_card_purchase_failed">礼品卡购买失败</string>
+    <string name="try_again">再试一次</string>
+    <string name="cancel">取消</string>
+    <string name="gift_card_error">由于某些原因, 我们无法购买礼品卡. 请再试一次.</string>
+    <string name="gift_card_details_error">由于某些原因, 我们无法购买礼品卡. 请联系客服.</string>
+    <string name="gift_card_unknown_error">由于某些原因, 我们无法购买礼品卡. 请通过 txid %s与客服联系.</string>
+    <string name="gift_card_rejected">付款已被拒绝. 请联系 CTX, 并提供礼品卡 ID %s和付款 ID %s, 以及交易 ID %s. </string>
+    <string name="gift_card_redeem_url_not_supported">已向提供兑换链接的商家进行付款, 但目前尚不受支持. 请联系 CTX, 并提供礼品卡 ID %s和付款 ID %s, 以及交易 ID %s. </string>
+    <string name="accept_terms_conditions">我接受 DashSpend 条款和条件</string>
+    <string name="tap_link_to_proceed">要在 DashSpend 创建账户, 您必须点击下面的链接才能继续</string>
+    <string name="accept_to_proceed">要在 DashSpend 创建账户, 您必须接受 DashSpend 条款和条件</string>
+    <string name="log_in_to_ctxspend_account_desc">您的电子邮箱仅用于发送一次性密码.</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">使用您的 DashSpend 账户购买礼品卡</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">创建 DashSpend 账户或登录现有账户</string>
     </resources>

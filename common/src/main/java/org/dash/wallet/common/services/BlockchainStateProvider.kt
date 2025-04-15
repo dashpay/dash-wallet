@@ -36,8 +36,8 @@ import org.dash.wallet.common.data.NetworkStatus
 interface BlockchainStateProvider {
     suspend fun getState(): BlockchainState?
     fun observeState() : Flow<BlockchainState?>
-    fun getMasternodeAPY(): Double
-    fun getLastMasternodeAPY(): Double
+    suspend fun getMasternodeAPY(): Double
+    suspend fun getLastMasternodeAPY(): Double
 
     fun getNetworkStatus(): NetworkStatus
     fun observeNetworkStatus(): Flow<NetworkStatus>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <View
+        android:id="@+id/drag_indicator"
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center|top"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/DragIndicatorBackground"
+        android:layout_marginTop="8dp"
+        tools:background="@color/light_gray" />
+
+    <ImageButton
+        android:id="@+id/collapse_button"
+        android:layout_marginTop="18dp"
+        style="@style/DialogCloseButton" />
+
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/compose_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</FrameLayout>

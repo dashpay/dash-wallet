@@ -28,6 +28,7 @@ import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.TransactionResultViewModel
+import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
 import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import org.dash.wallet.common.UserInteractionAwareCallback
@@ -196,7 +197,12 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         imitateUserInteraction()
         val tx = viewModel.transaction.value
         if (tx != null) {
-            WalletUtils.viewOnBlockExplorer(activity, tx.purpose, tx.txId.toString())
+            ComposeBottomSheet(R.style.PrimaryBackground) { dialog ->
+                BlockExplorerSelectionView(viewModel.analytics) { explorer ->
+                    WalletUtils.viewOnBlockExplorer(requireActivity(), tx.purpose, tx.txId.toString(), explorer)
+                    dialog.dismiss()
+                }
+            }.show(requireActivity())
         }
     }
 

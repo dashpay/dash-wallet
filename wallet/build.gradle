@@ -212,8 +212,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 34
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11010207
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.1.2"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11020002
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.2.0-rc1"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -228,7 +228,7 @@ android {
         buildConfigField("String", "COINBASE_CLIENT_ID", "\"COINBASE_CLIENT_ID\"")
         buildConfigField("String", "COINBASE_CLIENT_SECRET", "\"COINBASE_CLIENT_SECRET\"")
 
-        buildConfigField("String", "DASHDIRECT_CLIENT_ID", "\"DASHDIRECT_CLIENT_ID\"")
+        buildConfigField("String", "CTXSPEND_CLIENT_ID", "\"CTXSPEND_CLIENT_ID\"")
 
         def supportEmail = localProps.getProperty("SUPPORT_EMAIL")
         if (supportEmail != null) {
@@ -304,8 +304,8 @@ android {
             buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
             buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
 
-            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID", "\"DASHDIRECT_CLIENT_ID\"")
-            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
+            def ctxSpendClientId = props.getProperty("CTXSPEND_CLIENT_ID", "\"CTXSPEND_CLIENT_ID\"")
+            buildConfigField("String", "CTXSPEND_CLIENT_ID", ctxSpendClientId)
         }
         prod {
             applicationId = "hashengineering.darkcoin.wallet"
@@ -343,11 +343,6 @@ android {
             buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
             buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
-            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
-            if (dashDirectClientId == null) {
-                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
-            }
-            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
         staging {
             applicationId = "org.dash.dashpay.testnet"
@@ -369,11 +364,6 @@ android {
             buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
             buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
-            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
-            if (dashDirectClientId == null) {
-                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
-            }
-            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
         devnet {
             applicationId = "org.dash.dashpay.schnapps"

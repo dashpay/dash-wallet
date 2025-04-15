@@ -36,7 +36,7 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.IconBitmap
 import org.dash.wallet.common.data.entity.TransactionMetadata
-import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
+import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.features.exploredash.utils.RoomConverters
 

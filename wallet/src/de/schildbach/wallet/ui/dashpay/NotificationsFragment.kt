@@ -19,9 +19,9 @@ package de.schildbach.wallet.ui.dashpay
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
-import android.text.format.DateUtils
 import android.view.View
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -29,7 +29,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.data.*
+import de.schildbach.wallet.data.NotificationItem
+import de.schildbach.wallet.data.NotificationItemContact
+import de.schildbach.wallet.data.NotificationItemPayment
+import de.schildbach.wallet.data.NotificationItemUserAlert
+import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.notification.NotificationsViewModel
@@ -37,8 +41,6 @@ import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentNotificationsBinding
 import kotlinx.coroutines.launch
-import org.bitcoinj.wallet.AuthenticationKeyChain
-import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -46,9 +48,8 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
-import java.util.*
+import java.util.Date
 import javax.inject.Inject
-import kotlin.collections.ArrayList
 import kotlin.math.max
 
 @AndroidEntryPoint
@@ -60,7 +61,6 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
         private const val EXTRA_MODE = "extra_mode"
 
         const val MODE_NOTIFICATIONS = 0x02
-        const val MODE_NOTIFICATIONS_GLOBAL_FOOTER = 0x04
         const val MODE_NOTIFICATIONS_SEARCH = 0x01
     }
 
@@ -71,7 +71,6 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
     private lateinit var searchContactsRunnable: Runnable
     private lateinit var notificationsAdapter: NotificationsAdapter
     private var query = ""
-    private var direction = UsernameSortOrderBy.DATE_ADDED
     private var mode = MODE_NOTIFICATIONS
     private var lastSeenNotificationTime = 0L
     private var isBlockchainSynced = true
@@ -105,8 +104,8 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
         }
 
         binding.apply {
-            contactsRv.layoutManager = LinearLayoutManager(requireContext())
-            contactsRv.adapter = notificationsAdapter
+            notificationsRv.layoutManager = LinearLayoutManager(requireContext())
+            notificationsRv.adapter = notificationsAdapter
 
             initViewModel()
 
@@ -192,6 +191,7 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
         earlierItems.forEach { r -> results.add(NotificationsAdapter.NotificationViewItem(r)) }
 
         notificationsAdapter.results = results
+        binding.noNotificationsLabel.isVisible = results.isEmpty()
         lastSeenNotificationTime = lastNotificationTime
     }
 

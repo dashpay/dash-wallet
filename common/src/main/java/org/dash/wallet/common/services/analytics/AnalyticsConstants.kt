@@ -403,4 +403,9 @@ object AnalyticsConstants {
         const val SCAN_TO_SEND_SEND = "locked_screen_btn_scan_to_send_btn_send"
         const val SCAN_TO_SEND_SUCCESS = "locked_screen_btn_scan_to_send_success"
     }
+
+    object BlockchainExplorer {
+        const val INSIGHT_PICKED = "blockchain_explorer_insight_picked"
+        const val BLOCKCHAIR_PICKED = "blockchain_explorer_blockchair_picked"
+    }
 }
