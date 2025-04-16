@@ -250,6 +250,7 @@
 
         <TextView
             android:id="@+id/temporary_unavailable_text"
+            style="@style/Overline.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/temporarily_unavailable"
