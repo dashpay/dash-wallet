@@ -62,27 +62,50 @@ interface PlatformService {
     fun setMasternodeListManager(masternodeListManager: SimplifiedMasternodeListManager)
 }
 
+fun <T> platformLazy(initializer: () -> T): Lazy<T?> {
+    return object : Lazy<T?> {
+        private var _value: Any? = UNINITIALIZED
+        override val value: T?
+            get() {
+                if (_value === UNINITIALIZED) {
+                    if (Constants.SUPPORTS_PLATFORM) {
+                        initializer.invoke()
+                    } else {
+                        null
+                    }
+                }
+                @Suppress("UNCHECKED_CAST")
+                return _value as T?
+            }
+
+        override fun isInitialized() = _value !== UNINITIALIZED
+    }
+}
+
+private object UNINITIALIZED
+
 class PlatformServiceImplementation @Inject constructor(
     val walletDataProvider: WalletDataProvider
 ) : PlatformService {
-    private val _platform by lazy {
-        if (Constants.SUPPORTS_PLATFORM) {
-            Platform(Constants.NETWORK_PARAMETERS)
-        } else {
-            null
-        }
-    }
+    // none of the following should be initialized if platform is not supported
+    private val _platform by platformLazy { Platform(Constants.NETWORK_PARAMETERS) }
     override val platform: Platform
         get() = _platform!!
-    override val profiles = Profiles(platform)
-    override val contactRequests = ContactRequests(platform)
-    override val identityVerify = IdentityVerify(platform)
-    override val dpp: DashPlatformProtocol = platform.dpp
-    override val stateRepository: PlatformStateRepository = platform.stateRepository
-    override val identities: Identities = platform.identities
-    override val names: Names = platform.names
-    override val client: DapiClient = platform.client
-    override val params: NetworkParameters = platform.params
+    private val _profiles by platformLazy { Profiles(platform) }
+    private val _contactRequests by platformLazy {  ContactRequests(platform) }
+    private val _identityVerify by platformLazy {  IdentityVerify(platform) }
+    override val profiles
+        get() = _profiles!!
+    override val contactRequests
+        get() = _contactRequests!!
+    override val identityVerify
+        get() = _identityVerify!!
+    override val dpp: DashPlatformProtocol by lazy { platform.dpp }
+    override val stateRepository: PlatformStateRepository by lazy { platform.stateRepository }
+    override val identities: Identities by lazy { platform.identities }
+    override val names: Names by lazy { platform.names }
+    override val client: DapiClient by lazy { platform.client }
+    override val params: NetworkParameters = Constants.NETWORK_PARAMETERS
     private lateinit var masternodeListManager: SimplifiedMasternodeListManager
     companion object {
         private val log = LoggerFactory.getLogger(PlatformServiceImplementation::class.java)
@@ -115,7 +138,7 @@ class PlatformServiceImplementation @Inject constructor(
                 TODO("Not yet implemented")
             }
         }
-        platform.client.contextProvider = contextProvider
+        _platform?.client?.contextProvider = contextProvider
     }
 
     override fun hasApp(app: String): Boolean {
