@@ -321,12 +321,13 @@ class MainViewModel @Inject constructor(
             UsernameSortOrderBy.LAST_ACTIVITY,
             false
         ).distinctUntilChanged()
-         .onEach { contacts ->
+        .onEach { contacts ->
             this.minContactCreatedDate = contacts.minOfOrNull { it.dashPayProfile.createdAt }?.let {
-                Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+               Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
             } ?: LocalDate.now()
             val contactsByIdentity = contacts.associate { it.dashPayProfile.userId to it.dashPayProfile }
             this.contacts = contactsByIdentity
+            refreshContactsForAllTransactions()
         }.launchIn(viewModelWorkerScope)
 
         walletData.observeWalletReset()
@@ -636,7 +637,11 @@ class MainViewModel @Inject constructor(
                 // update the current item by replacing the current item
                 items[dateKey]?.toMutableList()?.let { list ->
                     val itemIndex = list.indexOfFirst { it.id == rowView.id }
-                    list[itemIndex] = transactionRow
+                    if (itemIndex == -1) {
+                        log.info("cannot find {} in list of {} items", rowView.id, list.size)
+                    } else {
+                        list[itemIndex] = transactionRow
+                    }
                     items[dateKey] = list
                 }
             } else {
@@ -665,6 +670,21 @@ class MainViewModel @Inject constructor(
 
         _transactions.value = items
         this@MainViewModel.txByHash = txByHash
+        getContactsAndMetadataForTransactions(contactsToUpdate)
+    }
+
+    private fun refreshContactsForAllTransactions() {
+        val transactions = walletData.getTransactions()
+        val contactsToUpdate = mutableListOf<Transaction>()
+
+        for (tx in transactions) {
+            val dateKey = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+
+            if (dateKey >= minContactCreatedDate) {
+                contactsToUpdate.add(tx)
+            }
+        }
+
         getContactsAndMetadataForTransactions(contactsToUpdate)
     }
 
