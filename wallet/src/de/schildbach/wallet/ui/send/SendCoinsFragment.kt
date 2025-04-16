@@ -167,7 +167,6 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             }
         }
 
-//        enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.currentAmount = it }
         enterAmountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) { viewModel.isDashToFiatPreferred = it }
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             lifecycleScope.launch { authenticateOrConfirm() }
