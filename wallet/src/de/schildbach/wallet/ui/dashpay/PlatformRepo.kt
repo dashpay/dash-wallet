@@ -126,7 +126,6 @@ class PlatformRepo @Inject constructor(
 
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
     private val backgroundHandler: Handler
-    private var platformSDKLoaded = false
 
     private val analytics: AnalyticsService by lazy {
         walletApplication.analyticsService
@@ -145,12 +144,6 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun init() {
-        if (!platformSDKLoaded) {
-            // load the dash-sdk library
-            System.loadLibrary("sdklib")
-            platformSDKLoaded = true
-        }
-
         blockchainIdentityDataStorage.load()?.let {
             blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet!!)
             initializeStateRepository()

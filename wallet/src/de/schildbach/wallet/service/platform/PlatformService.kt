@@ -65,7 +65,15 @@ interface PlatformService {
 class PlatformServiceImplementation @Inject constructor(
     val walletDataProvider: WalletDataProvider
 ) : PlatformService {
-    override val platform = Platform(Constants.NETWORK_PARAMETERS)
+    private val _platform = try {
+        Platform(Constants.NETWORK_PARAMETERS)
+    } catch (e: Exception) {
+        if (Constants.SUPPORTS_PLATFORM)  {
+            throw e
+        }
+        null
+    }
+    override val platform = _platform!!
     override val profiles = Profiles(platform)
     override val contactRequests = ContactRequests(platform)
     override val identityVerify = IdentityVerify(platform)
