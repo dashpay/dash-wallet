@@ -244,7 +244,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 if (decodeResult != null) {
                     metadataProvider.updateGiftCardBarcode(
                         transactionId,
-                        decodeResult.first.replace(" ", ""),
+                        decodeResult.first,
                         decodeResult.second
                     )
                 } else {
