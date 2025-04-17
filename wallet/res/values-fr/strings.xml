@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">Entrées de caution CoinJoin</string>
     <string name="transaction_row_status_coinjoin_mixing">Mélange CoinJoin en cours</string>
     <string name="transaction_row_status_coinjoin_create_denominations">Création de coupures CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">CoinJoin combiner la petite monnaie</string>
     <string name="network_monitor_activity_title">Surveillance du réseau</string>
     <string name="network_monitor_peer_list_title">Pairs</string>
     <string name="network_monitor_block_list_title">Blocs</string>
@@ -415,4 +416,5 @@
     <string name="battery_optimization_dialog_button_change">Ouvrir les Réglages</string>
     <string name="credits_profile_change_message">Mise à jour des infos du profil</string>
 
-    </resources>
+    <string name="block_explorer_selection_title">Choisir l’explorateur de blocs</string>
+</resources>

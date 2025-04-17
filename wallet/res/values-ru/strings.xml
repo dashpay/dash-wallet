@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">Залоговое обеспечение CoinJoin</string>
     <string name="transaction_row_status_coinjoin_mixing">Перемешивание CoinJoin</string>
     <string name="transaction_row_status_coinjoin_create_denominations">Создать деноминации CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">Объединение мелких сумм через CoinJoin</string>
     <string name="network_monitor_activity_title">Сетевой монитор</string>
     <string name="network_monitor_peer_list_title">Узлы</string>
     <string name="network_monitor_block_list_title">Блоки</string>
@@ -415,4 +416,5 @@
     <string name="battery_optimization_dialog_button_change">Открыть настройки</string>
     <string name="credits_profile_change_message">Обновить информацию в профиле</string>
 
-    </resources>
+    <string name="block_explorer_selection_title">Выбрать обозреватель блоков</string>
+</resources>
