@@ -68,7 +68,7 @@ fun <T> platformLazy(initializer: () -> T): Lazy<T?> {
         override val value: T?
             get() {
                 if (_value === UNINITIALIZED) {
-                    if (Constants.SUPPORTS_PLATFORM) {
+                    _value = if (Constants.SUPPORTS_PLATFORM) {
                         initializer.invoke()
                     } else {
                         null
