@@ -297,7 +297,6 @@
     <string name="about_review_and_rate">Напишіть відгук і оцініть додаток</string>
     <string name="about_contact_support">Служба підтримки</string>
     <string name="about_fork_disclaimer">Це додаток з відкритим кодом, заснований на Bitcoin Wallet</string>
-    <string name="about_copyright">Всі права захищено © 2024 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Гаманець Dash %s</string>
     <string name="about_last_explore_device_sync">Останнє дослідження синхронізації пристрою</string>
