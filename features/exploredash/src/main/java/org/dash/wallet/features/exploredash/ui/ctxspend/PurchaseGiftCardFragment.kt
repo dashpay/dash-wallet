@@ -97,6 +97,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
                 lifecycleScope.launch {
                     viewModel.updateMerchantDetails(merchant)
+                    setMerchantEnabled()
                     setCardPurchaseLimits()
                     setDiscountHint()
                 }
@@ -120,6 +121,13 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         viewModel.isNetworkAvailable.observe(viewLifecycleOwner) { isConnected ->
             enterAmountFragment?.handleNetworkState(isConnected)
+        }
+    }
+
+    /** if the merchant is not active, then close this fragment */
+    private fun setMerchantEnabled() {
+        if (viewModel.giftCardMerchant.active == false) {
+            findNavController().popBackStack()
         }
     }
 

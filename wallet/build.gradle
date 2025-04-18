@@ -228,8 +228,6 @@ android {
         buildConfigField("String", "COINBASE_CLIENT_ID", "\"COINBASE_CLIENT_ID\"")
         buildConfigField("String", "COINBASE_CLIENT_SECRET", "\"COINBASE_CLIENT_SECRET\"")
 
-        buildConfigField("String", "CTXSPEND_CLIENT_ID", "\"CTXSPEND_CLIENT_ID\"")
-
         def supportEmail = localProps.getProperty("SUPPORT_EMAIL")
         if (supportEmail != null) {
             buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
@@ -303,9 +301,6 @@ android {
             def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET", "\"COINBASE_CLIENT_SECRET\"")
             buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
             buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
-
-            def ctxSpendClientId = props.getProperty("CTXSPEND_CLIENT_ID", "\"CTXSPEND_CLIENT_ID\"")
-            buildConfigField("String", "CTXSPEND_CLIENT_ID", ctxSpendClientId)
         }
         prod {
             applicationId = "hashengineering.darkcoin.wallet"

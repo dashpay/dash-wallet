@@ -500,7 +500,8 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void initDashSpend() {
-        CTXSpendConstants.CLIENT_ID = BuildConfig.CTXSPEND_CLIENT_ID;
+        // there is nothing to set for now. No client id or client secret.
+        // X-Client-Id will be set as "dcg_android"
     }
 
     @TargetApi(Build.VERSION_CODES.O)

@@ -24,7 +24,8 @@ data class GetMerchantResponse(
     val denominations: List<String>,
     val denominationsType: String,
     val savingsPercentage: Int = 0,
-    val redeemType: String = ""
+    val redeemType: String = "",
+    val enabled: Boolean = true
 ) {
     val minimumCardPurchase: Double
         get() {
