@@ -212,8 +212,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 34
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11020001
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.2.0-rc1"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11020102
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.2.1"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true

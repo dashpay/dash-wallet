@@ -1,4 +1,10 @@
 Dash Wallet
+v11.2.1
+* Add Blockchair block explorer
+* Fix various crashes and bugs related to home screen
+* Improve DashSpend feature
+* Reduce APK size
+
 v11.2.0
 * DashSpend beta
 * Fix some CoinJoin start up failures
