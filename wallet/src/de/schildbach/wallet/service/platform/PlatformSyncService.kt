@@ -20,7 +20,6 @@ package de.schildbach.wallet.service.platform
 import android.app.ActivityManager
 import android.content.Intent
 import android.text.format.DateUtils
-import android.util.Log
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
@@ -80,6 +79,8 @@ import org.dashj.platform.wallet.IdentityVerify
 import org.dashj.platform.wallet.TxMetadataItem
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.slf4j.MarkerFactory
+import java.util.Date
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -147,6 +148,7 @@ class PlatformSynchronizationService @Inject constructor(
         val CUTOFF_MAX = if (BuildConfig.DEBUG) 6.minutes else 6.hours
         const val MIN_TXMETADATA_BATCHSIZE = 2
         const val MAX_TXMETADATA_BATCHSIZE = 35
+        private val PUBLISH = MarkerFactory.getMarker("PUBLISH")
     }
 
     private var platformSyncJob: Job? = null
@@ -192,14 +194,32 @@ class PlatformSynchronizationService @Inject constructor(
         val lastPush = config.get(DashPayConfig.LAST_METADATA_PUSH) ?: 0
         // maybe we don't need this
         // val lastTransactionTime = transactionMetadataChangeCacheDao.lastTransactionTime()
+        val txIds = transactionMetadataChangeCacheDao.getAllTransactionIds()
         val now = System.currentTimeMillis()
         val everythingBeforeTimestamp = random.nextLong(
             now - CUTOFF_MAX.inWholeMilliseconds,
             now - CUTOFF_MIN.inWholeMilliseconds
         ) // Choose cutoff time between 3 and 6 hours ago
 
+        // ensure that CUTOFF_MIN has elapsed since one or more tx timestamps with new metadata
+        val timeStamps = txIds.map {
+            transactionMetadataProvider.getTransactionMetadata(it)?.timestamp ?: Long.MAX_VALUE
+        }.sortedByDescending { it }
+
+        var newDataItems = txIds.size
+        var newEverythingBeforeTimestamp = everythingBeforeTimestamp
+        for (timestamp in timeStamps) {
+            if (timestamp < everythingBeforeTimestamp) {
+                newEverythingBeforeTimestamp = timestamp + 1
+                break
+            } else {
+                newDataItems--
+            }
+        }
+        log.info("maybe publish $newDataItems of ${txIds.size} with timestamps ${timeStamps.map { Date(it) } } < ${Date(newEverythingBeforeTimestamp)}")
+
         // determine how many transactions meet the cut off time
-        val newDataItems = transactionMetadataChangeCacheDao.countTransactions(everythingBeforeTimestamp)
+        // val newDataItems = transactionMetadataChangeCacheDao.countTransactions(newEverythingBeforeTimestamp)
 
         val meetsSaveFrequency = when (saveSettings.saveFrequency) {
             TxMetadataSaveFrequency.afterTenTransactions -> newDataItems >= 10
@@ -209,7 +229,8 @@ class PlatformSynchronizationService @Inject constructor(
         // publish no more frequently than every 3 hours
         val shouldPushToNetwork = (lastPush < now - PUSH_PERIOD.inWholeMilliseconds)
         if (shouldPushToNetwork && meetsSaveFrequency) {
-            publishChangeCache(everythingBeforeTimestamp)
+            log.info("maybe publish meets requirements")
+            publishChangeCache(newEverythingBeforeTimestamp)
         } else {
             log.info("last platform push was less than 3 hours ago, skipping")
         }
@@ -995,11 +1016,12 @@ class PlatformSynchronizationService @Inject constructor(
         log.info("fetching ${items.size} tx metadata items in $watch")
     }
 
+
     private suspend fun publishTransactionMetadata(txMetadataItems: List<TransactionMetadataCacheItem>) {
         if (!platformRepo.hasIdentity) {
             return
         }
-        Log.i("PUBLISH", txMetadataItems.joinToString("\n") { it.toString() })
+        log.info(PUBLISH, txMetadataItems.joinToString("\n") { it.toString() })
         val metadataList = txMetadataItems.map {
             TxMetadataItem(
                 it.txId.bytes,
@@ -1030,7 +1052,7 @@ class PlatformSynchronizationService @Inject constructor(
         }
         log.info("publishing updates to tx metadata items before $before")
         val itemsToPublish = hashMapOf<Sha256Hash, TransactionMetadataCacheItem>()
-        val changedItems = transactionMetadataChangeCacheDao.findAllBefore(before)
+        val changedItems = transactionMetadataChangeCacheDao.getCachedItemsBefore(before)
 
         if (changedItems.isEmpty()) {
             log.info("no tx metadata changes before this time")
