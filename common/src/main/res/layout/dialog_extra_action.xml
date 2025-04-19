@@ -49,17 +49,20 @@
         android:gravity="center"
         android:textAlignment="gravity"
         android:layout_weight="1"
-        android:layout_marginHorizontal="16dp"
         app:layout_constraintTop_toTopOf="@id/title"
         tools:text="If you reset your wallet you will lose all your funds if you have not backed up your recovery phrase." />
 
     <Button
         android:id="@+id/dialog_extra_message"
         style="@style/Button.Tertiary.Small.Blue"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="4dp"
         android:layout_marginBottom="25dp"
+        android:layout_gravity="center_horizontal"
+        android:paddingHorizontal="20dp"
+        android:drawableEnd="@drawable/ic_open_link"
+        android:drawablePadding="8dp"
         app:layout_constraintTop_toTopOf="@id/title"
         tools:text="Back up recovery phase" />
 

@@ -106,19 +106,10 @@ class CoinbaseBuyDashViewModel @Inject constructor(
         return CoinbaseErrorType.NONE
     }
 
-    suspend fun buyDash(dashToFiat: Boolean) {
+    suspend fun buyDash() {
         val amount = uiState.value.order ?: return
 
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_CONTINUE, mapOf())
-        analyticsService.logEvent(
-            if (dashToFiat) {
-                AnalyticsConstants.Coinbase.BUY_ENTER_DASH
-            } else {
-                AnalyticsConstants.Coinbase.BUY_ENTER_FIAT
-            },
-            mapOf()
-        )
-
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.QUOTE_CONFIRM, mapOf())
         val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode().roundingMode(RoundingMode.UP)
         val amountStr = format.format(amount).toString()
 
@@ -153,6 +144,18 @@ class CoinbaseBuyDashViewModel @Inject constructor(
 
     fun logEvent(eventName: String) {
         analyticsService.logEvent(eventName, mapOf())
+    }
+
+    fun logContinue(dashToFiat: Boolean) {
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_CONTINUE, mapOf())
+        analyticsService.logEvent(
+            if (dashToFiat) {
+                AnalyticsConstants.Coinbase.BUY_ENTER_DASH
+            } else {
+                AnalyticsConstants.Coinbase.BUY_ENTER_FIAT
+            },
+            mapOf()
+        )
     }
 
     private suspend fun previewBuyOrder(dashAmount: Coin) {

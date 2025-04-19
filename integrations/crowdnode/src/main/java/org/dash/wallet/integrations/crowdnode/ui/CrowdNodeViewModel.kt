@@ -39,7 +39,6 @@ import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SystemActionsService
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BalanceUIState
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
@@ -131,7 +130,7 @@ class CrowdNodeViewModel @Inject constructor(
             (crowdNodeBalance.value?.balance?.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT) ?: true)
 
     init {
-        walletDataProvider.observeBalance()
+        walletDataProvider.observeSpendableBalance()
             .distinctUntilChanged()
             .onEach {
                 _dashBalance.postValue(it)
@@ -386,7 +385,6 @@ class CrowdNodeViewModel @Inject constructor(
         val accountAddress = accountAddress.value ?: return
         val amount = CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT
 
-        analytics.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING_SHARE_BUTTON, mapOf())
         val paymentRequestUri = BitcoinURI.convertToBitcoinURI(accountAddress, amount, "", "")
         systemActions.shareText(paymentRequestUri)
     }
@@ -411,7 +409,7 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.reset()
     }
 
-    fun getMasternodeAPY(): Double {
+    suspend fun getMasternodeAPY(): Double {
         val apy = blockchainStateProvider.getMasternodeAPY()
         return if (apy != 0.0) {
             apy
@@ -420,7 +418,7 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
-    fun getCrowdNodeAPY(): Double {
+    suspend fun getCrowdNodeAPY(): Double {
         val withoutFees = (100.0 - crowdNodeFee) / 100
         return withoutFees * getMasternodeAPY()
     }

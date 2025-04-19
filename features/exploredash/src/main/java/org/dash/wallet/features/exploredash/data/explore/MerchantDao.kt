@@ -34,11 +34,12 @@ interface MerchantDao : BaseDao<Merchant> {
         """
         SELECT *
         FROM merchant
-        WHERE (:merchantId = -1 OR merchantId = :merchantId)
+        WHERE (:merchantId = '' OR merchantId = :merchantId)
             AND (:source = '' OR source = :source COLLATE NOCASE)
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
+            AND redeemType <> 'url'
         ORDER BY
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
             CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
@@ -46,7 +47,7 @@ interface MerchantDao : BaseDao<Merchant> {
     """
     )
     suspend fun getByTerritory(
-        merchantId: Long,
+        merchantId: String,
         source: String,
         territoryFilter: String,
         types: List<String>,
@@ -68,6 +69,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
+            AND redeemType <> 'url'
         GROUP BY source, merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
@@ -97,6 +99,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
+            AND redeemType <> 'url'
     """
     )
     suspend fun getByCoordinatesResultCount(
@@ -121,6 +124,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
+            AND redeemType <> 'url'
         GROUP BY source, merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
@@ -153,6 +157,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
+            AND redeemType <> 'url'
     """
     )
     suspend fun searchByCoordinatesResultCount(
@@ -173,6 +178,7 @@ interface MerchantDao : BaseDao<Merchant> {
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
+            AND redeemType <> 'url'
         GROUP BY source, merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY 
@@ -203,6 +209,7 @@ interface MerchantDao : BaseDao<Merchant> {
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
+            AND redeemType <> 'url'
     """
     )
     suspend fun getByTerritoryResultCount(territoryFilter: String, types: List<String>, paymentMethod: String): Int
@@ -217,6 +224,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
+            AND redeemType <> 'url'
         GROUP BY source, merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
@@ -250,6 +258,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
+            AND redeemType <> 'url'
     """
     )
     suspend fun searchByTerritoryResultCount(
@@ -266,6 +275,7 @@ interface MerchantDao : BaseDao<Merchant> {
         FROM merchant
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
+            AND redeemType <> 'url'
         GROUP BY source, merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY name COLLATE NOCASE ASC
@@ -284,6 +294,7 @@ interface MerchantDao : BaseDao<Merchant> {
         FROM merchant
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
+            AND redeemType <> 'url'
     """
     )
     suspend fun getGroupedResultCount(types: List<String>, paymentMethod: String): Int
@@ -297,6 +308,7 @@ interface MerchantDao : BaseDao<Merchant> {
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
+            AND redeemType <> 'url'
         GROUP BY source, merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY name COLLATE NOCASE ASC
@@ -318,6 +330,7 @@ interface MerchantDao : BaseDao<Merchant> {
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
+            AND redeemType <> 'url'
     """
     )
     suspend fun searchGroupedResultCount(query: String, types: List<String>, paymentMethod: String): Int
@@ -326,7 +339,7 @@ interface MerchantDao : BaseDao<Merchant> {
         """
         SELECT * 
         FROM merchant
-        WHERE (:merchantId = -1 OR merchantId = :merchantId)
+        WHERE (:merchantId = '' OR merchantId = :merchantId)
             AND (:source = '' OR source = :source COLLATE NOCASE)
             AND (:excludeType = '' OR type != :excludeType)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
@@ -334,11 +347,12 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
+            AND redeemType <> 'url'
         LIMIT :limit
     """
     )
     fun observe(
-        merchantId: Long,
+        merchantId: String,
         source: String,
         excludeType: String,
         paymentMethod: String,
@@ -361,6 +375,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
+            AND redeemType <> 'url'
     """
     )
     fun observeSearchResults(
@@ -377,16 +392,17 @@ interface MerchantDao : BaseDao<Merchant> {
         """
         SELECT * 
         FROM merchant 
-        WHERE (:merchantId = -1 OR merchantId = :merchantId)
+        WHERE (:merchantId = '' OR merchantId = :merchantId)
             AND (:source = '' OR source = :source COLLATE NOCASE) 
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND (:excludeType = '' OR type != :excludeType)
+            AND redeemType <> 'url'
         LIMIT :limit
     """
     )
     fun observeByTerritory(
-        merchantId: Long,
+        merchantId: String,
         source: String,
         territoryFilter: String,
         excludeType: String,
@@ -403,6 +419,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND (:excludeType = '' OR type != :excludeType)
+            AND redeemType <> 'url'
     """
     )
     fun searchByTerritory(

@@ -37,7 +37,6 @@ import java.lang.System.currentTimeMillis
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlin.math.max
 
 interface ExploreRepository {
     suspend fun getRemoteTimestamp(): Long
@@ -197,7 +196,7 @@ class GCExploreDatabase @Inject constructor(
         configScope.launch {
             val prefs = exploreConfig.exploreDatabasePrefs.first()
             exploreConfig.saveExploreDatabasePrefs(
-                prefs.copy(localDbTimestamp = max(prefs.localDbTimestamp, updateTimestampCache))
+                prefs.copy(localDbTimestamp = updateTimestampCache)
             )
         }
     }

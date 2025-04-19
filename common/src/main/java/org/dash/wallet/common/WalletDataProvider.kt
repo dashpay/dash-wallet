@@ -51,6 +51,8 @@ interface WalletDataProvider {
         coinSelector: CoinSelector? = null
     ): Flow<Coin>
 
+    fun observeSpendableBalance(): Flow<Coin>
+
     fun canAffordIdentityCreation(): Boolean
 
     // Treat @withConfidence with care - it may produce a lot of events and affect performance.
@@ -74,4 +76,6 @@ interface WalletDataProvider {
     fun checkSendingConditions(address: Address?, amount: Coin)
 
     fun observeMostRecentTransaction(): Flow<Transaction>
+    fun observeMixedBalance(): Flow<Coin>
+    fun observeTotalBalance(): Flow<Coin>
 }

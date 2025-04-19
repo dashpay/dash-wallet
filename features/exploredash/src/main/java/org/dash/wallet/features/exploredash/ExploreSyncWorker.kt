@@ -81,12 +81,24 @@ class ExploreSyncWorker @AssistedInject constructor(
                 val checkTestDB = inputData.getBoolean(USE_TEST_DB_KEY, false)
                 val hasPreloaded = exploreRepository.preloadFromAssetsInto(updateFile, checkTestDB)
 
+                log.info(
+                    "local data timestamp: ${databasePrefs.localDbTimestamp} (${Date(databasePrefs.localDbTimestamp)})"
+                )
+
+                remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
+                log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
+
                 if (hasPreloaded) {
                     preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
                     log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
 
+                    val forceLoad = (
+                        databasePrefs.localDbTimestamp != remoteDataTimestamp &&
+                            databasePrefs.localDbTimestamp != preloadedDbTimestamp
+                        )
                     if (databasePrefs.localDbTimestamp == 0L ||
-                        databasePrefs.localDbTimestamp < preloadedDbTimestamp
+                        databasePrefs.localDbTimestamp < preloadedDbTimestamp ||
+                        forceLoad
                     ) {
                         // force data preloading for fresh installs
                         // and a newer preloaded DB
@@ -99,13 +111,6 @@ class ExploreSyncWorker @AssistedInject constructor(
                 if (!updateFile.delete()) {
                     log.error("unable to delete " + updateFile.absolutePath)
                 }
-
-                log.info(
-                    "local data timestamp: ${databasePrefs.localDbTimestamp} (${Date(databasePrefs.localDbTimestamp)})"
-                )
-
-                remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
-                log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
 
                 if (databasePrefs.localDbTimestamp >= remoteDataTimestamp) {
                     log.info("explore db is up to date, nothing to sync")
@@ -153,6 +158,7 @@ class ExploreSyncWorker @AssistedInject constructor(
             return@withContext Result.failure()
         }
 
+        databasePrefs = exploreConfig.exploreDatabasePrefs.first()
         exploreConfig.saveExploreDatabasePrefs(databasePrefs.copy(failedSyncAttempts = 0))
         return@withContext Result.success()
     }

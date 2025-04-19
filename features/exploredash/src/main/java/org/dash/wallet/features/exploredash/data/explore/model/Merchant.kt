@@ -46,9 +46,19 @@ data class Merchant(
     var addDate: String? = "",
     var updateDate: String? = "",
     var paymentMethod: String? = "",
-    var merchantId: Long? = null,
+    var merchantId: String? = null,
+    var redeemType: String? = "",
     @Ignore var minCardPurchase: Double? = null,
     @Ignore var maxCardPurchase: Double? = null,
-    @Ignore var savingsPercentage: Double? = null,
+    var savingsPercentage: Int? = 0, // in basis points 1 = 0.001%
     @Ignore var physicalAmount: Int = 0
-) : SearchResult()
+) : SearchResult() {
+
+    // 1% discount is 0.01
+    val savingsFraction: Double
+        get() = (savingsPercentage?.toDouble() ?: 0.0) / 10000
+
+    // 1% discount is 1.00
+    val savingsPercentageAsDouble: Double
+        get() = savingsFraction * 100
+}

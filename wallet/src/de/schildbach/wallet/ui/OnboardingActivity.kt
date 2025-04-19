@@ -28,11 +28,8 @@ import android.text.TextUtils
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.activity.viewModels
 import androidx.core.view.isVisible
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isVisible
-import androidx.lifecycle.Observer
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
@@ -47,7 +44,7 @@ import de.schildbach.wallet_test.databinding.ActivityOnboardingBinding
 import de.schildbach.wallet_test.databinding.ActivityOnboardingPermLockBinding
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.OnboardingState
-import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.getMainTask
 import org.slf4j.LoggerFactory
@@ -59,12 +56,19 @@ private const val RESTORE_PHRASE_REQUEST_CODE = 2
 private const val RESTORE_FILE_REQUEST_CODE = 3
 private const val UPGRADE_NONENCRYPTED_FLOW_TUTORIAL_REQUEST_CODE = 4
 
+public enum class OnboardingPath {
+    Create,
+    RestoreSeed,
+    RestoreFile
+}
+
 @AndroidEntryPoint
 class OnboardingActivity : RestoreFromFileActivity() {
 
     companion object {
         private const val EXTRA_INVITE = "extra_invite"
         private const val EXTRA_UPGRADE = "upgrade"
+        private const val EXTRA_ONBOARDING_PATH = "onboarding_path"
         private val log = LoggerFactory.getLogger(OnboardingActivity::class.java)
 
         @JvmStatic
@@ -106,8 +110,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     @Inject
     lateinit var walletApplication: WalletApplication
-    @Inject
-    lateinit var analytics: AnalyticsService
     @Inject
     lateinit var config: Configuration
     @Inject
@@ -260,6 +262,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
             )
         }
         binding.recoveryWallet.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Onboarding.RECOVERY)
             walletApplication.initEnvironmentIfNeeded()
             startActivityForResult(Intent(this, RestoreWalletFromSeedActivity::class.java), REQUEST_CODE_RESTORE_WALLET)
         }
@@ -267,6 +270,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         // remove this line after backup file recovery supports invites
         binding.restoreWallet.isVisible = !intent.hasExtra(EXTRA_INVITE) || BuildConfig.DEBUG
         binding.restoreWallet.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Onboarding.RESTORE_FROM_FILE)
             restoreWalletFromFile()
         }
     }
@@ -296,7 +300,12 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
         viewModel.finishCreateNewWalletAction.observe(this) {
             startActivityForResult(
-                SetPinActivity.createIntent(application, R.string.set_pin_create_new_wallet),
+                SetPinActivity.createIntent(
+                    application,
+                    R.string.set_pin_create_new_wallet,
+                    onboarding = true,
+                    onboardingPath = OnboardingPath.Create
+                ),
                 SET_PIN_REQUEST_CODE
             )
         }

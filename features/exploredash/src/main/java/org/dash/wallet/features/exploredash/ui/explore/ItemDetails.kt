@@ -43,6 +43,8 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.util.*
 
 class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
@@ -56,10 +58,12 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     private var onDialPhoneButtonClicked: (() -> Unit)? = null
     private var onOpenWebsiteButtonClicked: (() -> Unit)? = null
     private var onBuyGiftCardButtonClicked: (() -> Unit)? = null
-    private var onDashDirectLogOutClicked: (() -> Unit)? = null
+    private var onExploreLogOutClicked: (() -> Unit)? = null
 
     private var isLoggedIn = false
     private var isAtm = false
+
+    var log: Logger = LoggerFactory.getLogger(ItemDetails::class.java)
 
     init {
         orientation = VERTICAL
@@ -111,26 +115,26 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
         onBuyGiftCardButtonClicked = listener
     }
 
-    fun setOnDashDirectLogOutClicked(listener: () -> Unit) {
-        onDashDirectLogOutClicked = listener
+    fun setOnCTXSpendLogOutClicked(listener: () -> Unit) {
+        onExploreLogOutClicked = listener
     }
 
     @SuppressLint("SetTextI18n")
-    fun setDashDirectLogInUser(email: String?, userSignIn: Boolean) {
+    fun setCTXSpendLogInUser(email: String?, userSignIn: Boolean) {
         isLoggedIn = email?.isNotEmpty() == true && userSignIn
         refreshEmailVisibility()
         email?.let {
-            binding.loginDashDirectUser.text =
+            binding.loginExploreUser.text =
                 context.resources.getString(R.string.logged_in_as, email.maskEmail()) +
                 " " +
                 context.resources.getString(R.string.log_out)
 
-            binding.loginDashDirectUser.makeLinks(
+            binding.loginExploreUser.makeLinks(
                 Pair(
                     context.resources.getString(R.string.log_out),
                     OnClickListener {
-                        onDashDirectLogOutClicked?.invoke()
-                        binding.loginDashDirectUser.isGone = true
+                        onExploreLogOutClicked?.invoke()
+                        binding.loginExploreUser.isGone = true
                     }
                 ),
                 isUnderlineText = true
@@ -211,13 +215,15 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                 payBtnTxt.text = context.getText(R.string.explore_pay_with_dash)
                 payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Blue)
                 payBtn.setOnClickListener { onSendDashClicked?.invoke(true) }
-            } else {
-                // DashDirect allows payments via API, other sources require a deeplink
-                payBtn.isVisible = merchant.source?.lowercase() == ServiceName.DashDirect ||
-                    !merchant.deeplink.isNullOrBlank()
+                payBtn.isEnabled = merchant.active ?: true
+                temporaryUnavailableText.isVisible = merchant.active == false
+            } else if (merchant.source!!.lowercase() == ServiceName.CTXSpend.lowercase()) {
+                payBtn.isVisible = true
                 payBtnTxt.text = context.getText(R.string.explore_buy_gift_card)
                 payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Orange)
                 payBtn.setOnClickListener { onBuyGiftCardButtonClicked?.invoke() }
+                payBtn.isEnabled = merchant.active ?: true
+                temporaryUnavailableText.isVisible = merchant.active == false
             }
 
             showAllBtn.setOnClickListener { onShowAllLocationsClicked?.invoke() }
@@ -235,6 +241,18 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             }
 
             bindCommonDetails(merchant, isOnline)
+
+            if (merchant.savingsFraction != 0.0) {
+                binding.discountValue.isVisible = true
+                binding.discountStem.isVisible = true
+                binding.discountValue.text = root.context.getString(
+                    R.string.explore_pay_with_dash_save,
+                    merchant.savingsPercentageAsDouble
+                )
+            } else {
+                binding.discountValue.isVisible = false
+                binding.discountStem.isVisible = false
+            }
         }
     }
 
@@ -308,6 +326,6 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     }
 
     private fun refreshEmailVisibility() {
-        binding.loginDashDirectUser.isVisible = isLoggedIn && !isAtm
+        binding.loginExploreUser.isVisible = isLoggedIn && !isAtm
     }
 }

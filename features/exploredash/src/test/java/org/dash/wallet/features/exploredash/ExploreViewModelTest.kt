@@ -206,7 +206,7 @@ class ExploreViewModelTest {
                 plusCode = "",
                 addDate = "",
                 updateDate = "",
-                deeplink = "https://dashdirect.page.link/AMC",
+                deeplink = "https://dashspend.page.link/AMC",
                 paymentMethod = "gift card"
             ).apply {
                 id = 19630
@@ -225,7 +225,7 @@ class ExploreViewModelTest {
                 plusCode = "",
                 addDate = "",
                 updateDate = "",
-                deeplink = "https://dashdirect.page.link/Applebees",
+                deeplink = "https://dashspend.page.link/Applebees",
                 paymentMethod = "gift card"
             ).apply {
                 id = 20826

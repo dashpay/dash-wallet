@@ -39,9 +39,9 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import javax.inject.Inject
 
 @HiltViewModel
@@ -53,7 +53,7 @@ class TransactionResultViewModel @Inject constructor(
     private val dashPayProfileDao: DashPayProfileDao,
     private val topUpsDao: TopUpsDao,
     private val platformRepo: PlatformRepo,
-    private val analytics: AnalyticsService,
+    val analytics: AnalyticsService,
     val walletApplication: WalletApplication
 ) : ViewModel() {
     val dashFormat: MonetaryFormat = configuration.format.noCode()
@@ -79,7 +79,7 @@ class TransactionResultViewModel @Inject constructor(
 
     val merchantName = _transactionMetadata
         .filterNotNull()
-        .filter { it.service == ServiceName.DashDirect }
+        .filter { it.service == ServiceName.CTXSpend }
         .map { giftCardDao.getCardForTransaction(it.txId)?.merchantName }
         .filterNotNull()
         .asLiveData()

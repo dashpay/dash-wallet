@@ -17,10 +17,12 @@ android {
     }
 
     buildTypes {
-        all {
-            minifyEnabled true
+        configureEach {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             consumerProguardFiles 'proguard-rules.pro'
+        }
+        release {
+            minifyEnabled true
         }
     }
 

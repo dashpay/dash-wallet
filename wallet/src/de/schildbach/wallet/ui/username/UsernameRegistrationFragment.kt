@@ -29,7 +29,6 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.main.MainActivity
@@ -44,20 +43,11 @@ import org.dashj.platform.sdk.platform.Names
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registration) {
-
-    companion object {
-        const val CREATE_USER_NAME_ARGS = "CreateUsernameArgs"
-    }
     private val binding by viewBinding(FragmentUsernameRegistrationBinding::bind)
 
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
     private val requestUsernameViewModel: RequestUserNameViewModel by activityViewModels()
-    private lateinit var walletApplication: WalletApplication
 
-    private var reuseTransaction: Boolean = false
-    private var useInvite: Boolean = false
-
-    private var createUsernameArgs: CreateUsernameArgs? = null
     private val slideInAnimation by lazy { AnimationUtils.loadAnimation(requireContext(), R.anim.slide_in_bottom) }
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(requireContext(), R.anim.fade_out) }
     private lateinit var completeUsername: String
@@ -73,7 +63,6 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
         binding.processingIdentityDismissBtn.setOnClickListener { closeActivity() }
 
         initViewModel()
-        walletApplication = requireActivity().application as WalletApplication
     }
 
     @SuppressLint("ResourceType")
@@ -105,10 +94,6 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
                 }
             }
         }
-    }
-
-    private fun doneAndDismiss() {
-        dashPayViewModel.usernameDoneAndDismiss()
     }
 
     private fun showCompleteState() {

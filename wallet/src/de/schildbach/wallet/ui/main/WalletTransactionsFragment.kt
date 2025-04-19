@@ -40,6 +40,8 @@ import de.schildbach.wallet.ui.invite.InviteHandler
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
@@ -49,19 +51,20 @@ import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.GiftCardDetailsDialog
-import org.slf4j.LoggerFactory
+import org.dash.wallet.common.util.observe
+import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.GiftCardDetailsDialog
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
     companion object {
         private const val HEADER_ITEM_TAG = "header"
-        private val log = LoggerFactory.getLogger(WalletTransactionsFragment::class.java)
     }
 
     private val viewModel by activityViewModels<MainViewModel>()
@@ -85,8 +88,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     val fragment = if (rowView.txWrapper != null) {
                         viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
                         TransactionGroupDetailsFragment(rowView.txWrapper)
-                    } else if (rowView.service == ServiceName.DashDirect) {
-                        viewModel.logEvent(AnalyticsConstants.DashDirect.DETAILS_GIFT_CARD)
+                    } else if (rowView.service == ServiceName.CTXSpend) {
+                        viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
                         GiftCardDetailsDialog.newInstance(Sha256Hash.wrap(rowView.id))
                     } else {
                         viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
@@ -98,13 +101,25 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         }
 
-        adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                if (positionStart == 0) {
-                    binding.walletTransactionsList.scrollToPosition(0)
+        lifecycleScope.launch {
+            // these observers had exceptions after the view was destroyed
+            viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                val observer = object : RecyclerView.AdapterDataObserver() {
+                    override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                        if (positionStart == 0) {
+                            binding.walletTransactionsList.scrollToPosition(0)
+                        }
+                    }
+                }
+
+                adapter.registerAdapterDataObserver(observer)
+                try {
+                    awaitCancellation() // Keeps the block alive
+                } finally {
+                    adapter.unregisterAdapterDataObserver(observer)
                 }
             }
-        })
+        }
 
         binding.transactionFilterBtn.setOnClickListener {
             val dialogFragment = TransactionsFilterDialog(viewModel.transactionsDirection) { direction, _ ->
@@ -156,23 +171,21 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
-            if (viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-                binding.loading.isVisible = false
+            binding.loading.isVisible = false
 
-                if (transactionViews.isEmpty()) {
-                    showEmptyView()
-                } else {
-                    val groupedByDate = transactionViews.entries
-                        .sortedByDescending { it.key }
-                        .map {
-                            val outList = mutableListOf<HistoryRowView>()
-                            outList.add(HistoryRowView(null, it.key))
-                            outList.apply { addAll(it.value) }
-                        }.reduce { acc, list -> acc.apply { addAll(list) } }
+            if (transactionViews.isEmpty()) {
+                showEmptyView()
+            } else {
+                val groupedByDate = transactionViews.entries
+                    .sortedByDescending { it.key }
+                    .map {
+                        val outList = mutableListOf<HistoryRowView>()
+                        outList.add(HistoryRowView(null, it.key))
+                        outList.apply { addAll(it.value) }
+                    }.reduce { acc, list -> acc.apply { addAll(list) } }
 
-                    adapter.submitList(groupedByDate)
-                    showTransactionList()
-                }
+                adapter.submitList(groupedByDate)
+                showTransactionList()
             }
         }
 
@@ -230,7 +243,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun showEmptyView() {
-        binding.walletTransactionsEmpty.isVisible = true
+        binding.walletTransactionsEmpty.isVisible = viewModel.transactionsLoaded
         binding.walletTransactionsList.isVisible = false
     }
 

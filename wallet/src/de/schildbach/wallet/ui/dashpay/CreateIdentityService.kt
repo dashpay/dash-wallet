@@ -9,6 +9,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.dao.UsernameRequestDao
@@ -318,10 +319,12 @@ class CreateIdentityService : LifecycleService() {
             }
 
             if (blockchainIdentityData.creationState == CreationState.USERNAME_REGISTERING) {
-                if (blockchainIdentityData.creationStateErrorMessage?.contains("preorderDocument was not found with a salted domain hash") == true) {
+                val errorMessage = blockchainIdentityData.creationStateErrorMessage ?: ""
+                if (errorMessage.contains("preorderDocument was not found with a salted domain hash") ||
+                    errorMessage.contains("cannot find preorder document, though it should be somewhere")) {
                     blockchainIdentityData.creationState = CreationState.PREORDER_REGISTERING
                     platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
-                } else if (blockchainIdentityData.creationStateErrorMessage?.contains("missing domain document for") == true) {
+                } else if (errorMessage.contains("missing domain document for")) {
                     blockchainIdentityData.creationState = CreationState.PREORDER_REGISTERING
                     platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (retryWithNewUserName) {
@@ -374,26 +377,27 @@ class CreateIdentityService : LifecycleService() {
                     assetLockTransaction = blockchainIdentity.assetLockTransaction
                 }
             } else {
-                    val balanceInfo = platformRepo.getIdentityBalance()
-                    val balanceRequirement = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
-                        Constants.DASH_PAY_FEE_CONTESTED
+                // don't use platformRepo.getIdentityBalance() because platformRepo.blockchainIdentity is not initialized
+                val balanceInfo = blockchainIdentityData.identity?.let { platformRepo.getIdentityBalance(it.id) }
+                val balanceRequirement = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
+                    Constants.DASH_PAY_FEE_CONTESTED
+                } else {
+                    Constants.DASH_PAY_FEE
+                }
+
+                if (balanceInfo != null && balanceInfo.balance < balanceRequirement.value * 1000) {
+                    val topupValue = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
+                        Constants.DASH_PAY_FEE_CONTESTED_NAME
                     } else {
                         Constants.DASH_PAY_FEE
                     }
-
-                    if (balanceInfo.balance < balanceRequirement.value * 1000) {
-                        val topupValue = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
-                            Constants.DASH_PAY_FEE_CONTESTED_NAME
-                        } else {
-                            Constants.DASH_PAY_FEE
-                        }
-                        assetLockTransaction = topUpRepository.createTopupTransaction(
-                            blockchainIdentity,
-                            topupValue,
-                            encryptionKey,
-                            useCoinJoin
-                        )
-                    }
+                    assetLockTransaction = topUpRepository.createTopupTransaction(
+                        blockchainIdentity,
+                        topupValue,
+                        encryptionKey,
+                        useCoinJoin
+                    )
+                }
             }
         }
 
@@ -730,7 +734,7 @@ class CreateIdentityService : LifecycleService() {
 
 
             if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_CHECKED) {
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKED)
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_LINK_SAVING)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                 blockchainIdentityData.verificationLink?.let { verificationLink ->
@@ -746,7 +750,7 @@ class CreateIdentityService : LifecycleService() {
             }
 
             if (blockchainIdentityData.creationState <= CreationState.REQUESTED_NAME_LINK_SAVING) {
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_CHECKING)
+                platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.REQUESTED_NAME_LINK_SAVED)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                 // save the verification link
@@ -786,15 +790,6 @@ class CreateIdentityService : LifecycleService() {
         // managed by NotificationsLiveData
         val userAlert = UserAlert(INVITATION_NOTIFICATION_TEXT, INVITATION_NOTIFICATION_ICON)
         userAlertDao.insert(userAlert)
-    }
-
-    private fun handleRestoreIdentityAction(identity: ByteArray) {
-        workInProgress = true
-        serviceScope.launch(createIdentityExceptionHandler) {
-            restoreIdentity(identity)
-            workInProgress = false
-            stopSelf()
-        }
     }
 
     /**

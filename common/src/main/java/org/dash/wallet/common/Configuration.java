@@ -23,7 +23,6 @@ import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
-import android.content.res.Resources;
 import android.net.Uri;
 import android.text.format.DateUtils;
 
@@ -46,12 +45,10 @@ public class Configuration {
     public final int lastVersionCode;
 
     private final SharedPreferences prefs;
-    private final Resources res;
 
     public static final String PREFS_KEY_CONNECTIVITY_NOTIFICATION = "connectivity_notification";
     public static final String PREFS_KEY_TRUSTED_PEER = "trusted_peer";
     public static final String PREFS_KEY_TRUSTED_PEER_ONLY = "trusted_peer_only";
-    public static final String PREFS_KEY_BLOCK_EXPLORER = "block_explorer";
     public static final String PREFS_KEY_REMIND_BALANCE = "remind_balance";
     public static final String PREFS_KEY_REMIND_BALANCE_TIME = "remind_balance_time";
     private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
@@ -68,7 +65,6 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
     public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
     private static final String PREFS_KEY_LAST_BACKUP_SEED_TIME = "last_backup_seed_time";
-    private static final String PREFS_KEY_LAST_RESTORE = "last_restore";
     private static final String PREFS_KEY_LAST_ENCRYPT_KEYS = "last_encrypt_keys";
     private static final String PREFS_KEY_LAST_BLOCKCHAIN_RESET = "last_blockchain_reset";
 
@@ -79,7 +75,6 @@ public class Configuration {
     public static final String PREFS_PIN_LENGTH = "pin_length";
     private static final String PREFS_IMGUR_DELETE_HASH = "imgur_delete_hash";
     private static final String PREFS_UPLOAD_POLICY = "upload_policy_accepted_";
-    private static final String PREFS_DEV_MODE = "developer_mode";
     private static final String PREFS_INVITER = "inviter";
     private static final String PREFS_INVITER_CONTACT_REQUEST_SENT_INFO = "inviter_contact_request_sent_info";
     private static final String PREFS_ONBOARDING_STAGE = "onboarding_state";
@@ -105,10 +100,8 @@ public class Configuration {
 
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
-    public Configuration(final SharedPreferences prefs, final Resources res) {
+    public Configuration(final SharedPreferences prefs) {
         this.prefs = prefs;
-        this.res = res;
-
         this.lastVersionCode = prefs.getInt(PREFS_KEY_LAST_VERSION, 0);
     }
 
@@ -158,10 +151,6 @@ public class Configuration {
 
     public boolean getTrustedPeerOnly() {
         return prefs.getBoolean(PREFS_KEY_TRUSTED_PEER_ONLY, false);
-    }
-
-    public Uri getBlockExplorer(int defValueResValue) {
-        return Uri.parse(prefs.getString(PREFS_KEY_BLOCK_EXPLORER, res.getStringArray(defValueResValue)[0]));
     }
 
     public boolean remindBalance() {
@@ -231,14 +220,6 @@ public class Configuration {
 
     public boolean getRemindBackupSeed() {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true);
-    }
-
-    public void setLastRestoreTime() {
-        prefs.edit().putLong(PREFS_KEY_LAST_RESTORE, System.currentTimeMillis());
-    }
-
-    public long getLastRestoreTime() {
-        return prefs.getLong(PREFS_KEY_LAST_RESTORE, 0);
     }
 
     public boolean lastBackupSeedReminderMoreThan24hAgo() {
@@ -390,14 +371,6 @@ public class Configuration {
 
     public void setAcceptedUploadPolicy(String service, Boolean accepted) {
         prefs.edit().putBoolean(PREFS_UPLOAD_POLICY + service, accepted).apply();
-    }
-
-    public Boolean getDeveloperMode() {
-        return BuildConfig.DEBUG || prefs.getBoolean(PREFS_DEV_MODE, false);
-    }
-
-    public void setDeveloperMode(boolean activate) {
-        prefs.edit().putBoolean(PREFS_DEV_MODE, activate).apply();
     }
 
     public String getInviter() {

@@ -65,7 +65,7 @@ interface ExploreDataSource {
     suspend fun getAtmsResultsCount(query: String, types: List<String>, territory: String, bounds: GeoBounds): Int
 
     suspend fun observeMerchantLocations(
-        merchantId: Long,
+        merchantId: String,
         source: String,
         territory: String,
         paymentMethod: String,
@@ -93,7 +93,7 @@ open class MerchantAtmDataSource @Inject constructor(
             if (query.isNotBlank()) {
                 merchantDao.searchByTerritory(sanitizeQuery(query), territory, MerchantType.ONLINE, paymentMethod)
             } else {
-                merchantDao.observeByTerritory(-1, "", territory, MerchantType.ONLINE, paymentMethod, -1)
+                merchantDao.observeByTerritory("", "", territory, MerchantType.ONLINE, paymentMethod, -1)
             }
         } else {
             if (query.isNotBlank()) {
@@ -108,7 +108,7 @@ open class MerchantAtmDataSource @Inject constructor(
                 )
             } else {
                 merchantDao.observe(
-                    -1,
+                    "",
                     "",
                     MerchantType.ONLINE,
                     paymentMethod,
@@ -388,7 +388,7 @@ open class MerchantAtmDataSource @Inject constructor(
     }
 
     override suspend fun observeMerchantLocations(
-        merchantId: Long,
+        merchantId: String,
         source: String,
         territory: String,
         paymentMethod: String,

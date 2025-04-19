@@ -113,6 +113,17 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
         binding.title.text = merchant?.name
         binding.subtitle.text = getDistanceText(resources, merchant)
         binding.subtitle.isVisible = merchant?.type != MerchantType.ONLINE && binding.subtitle.text.isNotEmpty()
+        if (merchant != null) {
+            if (merchant.savingsFraction != 0.00) {
+                binding.discountValue.isVisible = true
+                binding.discountValue.text = binding.root.context.getString(
+                    R.string.explore_discount,
+                    merchant.savingsPercentageAsDouble
+                )
+            } else {
+                binding.discountValue.isVisible = false
+            }
+        }
 
         binding.logoImg.load(merchant?.logoLocation) {
             crossfade(200)

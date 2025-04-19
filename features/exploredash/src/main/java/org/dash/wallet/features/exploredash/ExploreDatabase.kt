@@ -47,7 +47,7 @@ import kotlin.coroutines.resumeWithException
         Atm::class,
         AtmFTS::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class)
@@ -124,44 +124,43 @@ abstract class ExploreDatabase : RoomDatabase() {
                             log.info("onOpenPrepackagedDatabase")
                         }
                     }
-                )
+                ).addMigrations(ExploreDatabaseMigrations.migration1To2)
 
-                val onOpenCallback =
-                    object : Callback() {
-                        override fun onOpen(db: SupportSQLiteDatabase) {
-                            log.info("opened database: ${db.path}")
-                            if (!dbUpdateFile.delete()) {
-                                log.error("unable to delete " + dbUpdateFile.absolutePath)
-                            }
+                val onOpenCallback = object : Callback() {
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        log.info("opened database: ${db.path}")
+                        if (!dbUpdateFile.delete()) {
+                            log.error("unable to delete " + dbUpdateFile.absolutePath)
+                        }
 
-                            try {
-                                if (hasExpectedData(db)) {
-                                    repository.finalizeUpdate()
-                                    log.info("successfully loaded new version of explore db")
-
-                                    if (coroutine.isActive) {
-                                        coroutine.resume(database!!)
-                                    }
-                                } else {
-                                    log.info("database update file was empty")
-
-                                    if (coroutine.isActive) {
-                                        coroutine.resumeWithException(SQLiteException("Database update file is empty"))
-                                    }
-                                }
-                            } catch (ex: Exception) {
-                                log.error("error reading merchant & atm count", ex)
+                        try {
+                            if (hasExpectedData(db)) {
+                                repository.finalizeUpdate()
+                                log.info("successfully loaded new version of explore db")
 
                                 if (coroutine.isActive) {
-                                    coroutine.resumeWithException(ex)
+                                    coroutine.resume(database!!)
                                 }
+                            } else {
+                                log.info("database update file was empty")
+
+                                if (coroutine.isActive) {
+                                    coroutine.resumeWithException(SQLiteException("Database update file is empty"))
+                                }
+                            }
+                        } catch (ex: Exception) {
+                            log.error("error reading merchant & atm count", ex)
+
+                            if (coroutine.isActive) {
+                                coroutine.resumeWithException(ex)
                             }
                         }
                     }
+                }
 
                 database = dbBuilder
                     .setJournalMode(JournalMode.TRUNCATE)
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(ExploreDatabaseMigrations.migration1To2)
                     .addCallback(onOpenCallback)
                     .build()
 

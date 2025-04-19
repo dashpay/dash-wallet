@@ -290,7 +290,6 @@
     <string name="about_review_and_rate">アプリのレビューを書いて評価する</string>
     <string name="about_contact_support">サポートへ連絡する</string>
     <string name="about_fork_disclaimer">これはビットコインウォレットからフォークしたオープンソースのアプリです</string>
-    <string name="about_copyright">Copyright © 2024 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPayウォレット%s</string>
     <string name="about_last_explore_device_sync">前回のExploreのデバイスの同期</string>

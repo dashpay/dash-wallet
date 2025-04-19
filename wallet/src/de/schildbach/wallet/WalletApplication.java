@@ -50,6 +50,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 import androidx.work.WorkManager;
 
+import com.google.api.client.util.Lists;
 import com.google.common.base.Stopwatch;
 import com.google.firebase.FirebaseApp;
 
@@ -61,24 +62,22 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.LinuxSecureRandom;
-import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.utils.Threading;
-import org.bitcoinj.core.VersionMessage;
-import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
-import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage;
+import org.conscrypt.Conscrypt;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
+import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
@@ -86,22 +85,24 @@ import org.dash.wallet.common.transactions.TransactionWrapperFactory;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants;
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants;
 import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
+import de.schildbach.wallet.data.CoinJoinConfig;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
+import de.schildbach.wallet.service.CoinJoinService;
 import de.schildbach.wallet.service.DashSystemService;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.transactions.MasternodeObserver;
+import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integrations.uphold.api.UpholdClient;
 import org.dash.wallet.integrations.uphold.data.UpholdConstants;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,12 +114,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -130,8 +131,6 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import dagger.hilt.android.HiltAndroidApp;
-import org.dash.wallet.common.data.entity.BlockchainState;
-import de.schildbach.wallet.database.dao.BlockchainStateDao;
 import de.schildbach.wallet.security.SecurityGuard;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
@@ -216,6 +215,10 @@ public class WalletApplication extends MultiDexApplication
     WalletFactory walletFactory;
     @Inject
     DashSystemService dashSystemService;
+    @Inject
+    WalletUIConfig walletUIConfig;
+    private WalletBalanceObserver walletBalanceObserver;
+    private CoinJoinService coinJoinService;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -234,7 +237,7 @@ public class WalletApplication extends MultiDexApplication
         FirebaseApp.initializeApp(this);
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
-        config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
+        config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
@@ -336,6 +339,12 @@ public class WalletApplication extends MultiDexApplication
         resetBlockchainSyncProgress();
         anrSupervisor = new AnrSupervisor();
         anrSupervisor.start();
+
+        // enable TLS 1.3 support on Android 9 and lower
+        // Android 10 and above support TLS 1.3 by default
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            Security.insertProviderAt(Conscrypt.newProvider(), 1);
+        }
     }
 
     private void syncExploreData() {
@@ -464,7 +473,7 @@ public class WalletApplication extends MultiDexApplication
         }
         initUphold();
         initCoinbase();
-        initDashDirect();
+        initDashSpend();
     }
 
     private void initUphold() {
@@ -490,8 +499,9 @@ public class WalletApplication extends MultiDexApplication
         CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
     }
 
-    private void initDashDirect() {
-        DashDirectConstants.CLIENT_ID = BuildConfig.DASHDIRECT_CLIENT_ID;
+    private void initDashSpend() {
+        // there is nothing to set for now. No client id or client secret.
+        // X-Client-Id will be set as "dcg_android"
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -580,6 +590,9 @@ public class WalletApplication extends MultiDexApplication
         // make sure there is at least one recent backup
         if (!getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists())
             backupWallet();
+
+        // setup WalletBalanceObserver
+        walletBalanceObserver = new WalletBalanceObserver(wallet, walletUIConfig);
     }
 
     private void deleteBlockchainFiles() {
@@ -934,8 +947,7 @@ public class WalletApplication extends MultiDexApplication
 
     @SuppressLint("NewApi")
     public static void scheduleStartBlockchainService(final Context context, Boolean cancelOnly) {
-        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
-                context.getResources());
+        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context));
         final long lastUsedAgo = config.getLastUsedAgo();
 
         // apply some backoff
@@ -1041,6 +1053,8 @@ public class WalletApplication extends MultiDexApplication
         // wallet must be null for the OnboardingActivity flow
         log.info("removing wallet from memory during wipe");
         wallet = null;
+        walletBalanceObserver.close();
+        walletBalanceObserver = null;
         if (afterWipeFunction != null)
             afterWipeFunction.invoke();
         afterWipeFunction = null;
@@ -1103,7 +1117,28 @@ public class WalletApplication extends MultiDexApplication
             return Coin.ZERO;
         }
 
-        return wallet.getBalance(Wallet.BalanceType.ESTIMATED);
+        //return wallet.getBalance(Wallet.BalanceType.ESTIMATED);
+       return  walletBalanceObserver.getTotalBalance().getValue();
+    }
+
+    @NonNull
+    @Override
+    public Flow<Coin> observeTotalBalance() {
+        if (wallet == null || walletBalanceObserver == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        return walletBalanceObserver.getTotalBalance();
+    }
+
+    @NonNull
+    @Override
+    public Flow<Coin> observeMixedBalance() {
+        if (wallet == null || walletBalanceObserver == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        return walletBalanceObserver.getMixedBalance();
     }
 
     @NonNull
@@ -1112,11 +1147,21 @@ public class WalletApplication extends MultiDexApplication
         @NonNull Wallet.BalanceType balanceType,
         @Nullable CoinSelector coinSelector
     ) {
-        if (wallet == null) {
+        if (wallet == null || walletBalanceObserver == null) {
             return FlowKt.emptyFlow();
         }
 
-        return new WalletBalanceObserver(wallet, balanceType, coinSelector).observe();
+        return walletBalanceObserver.observe(balanceType, coinSelector);
+    }
+
+    @NonNull
+    @Override
+    public Flow<Coin> observeSpendableBalance() {
+        if (wallet == null || walletBalanceObserver == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        return walletBalanceObserver.observeSpendable(coinJoinService);
     }
 
     @NonNull
@@ -1175,6 +1220,9 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Collection<Transaction> getTransactions(@NonNull TransactionFilter... filters) {
+        if (wallet == null) {
+            return Lists.newArrayList();
+        }
         Set<Transaction> transactions = wallet.getTransactions(true);
 
         if (filters.length == 0) {
@@ -1251,5 +1299,9 @@ public class WalletApplication extends MultiDexApplication
     @Override
     public boolean canAffordIdentityCreation() {
         return !getWalletBalance().isLessThan(Constants.DASH_PAY_FEE);
+    }
+
+    public void setCoinJoinService(CoinJoinService coinJoinService) {
+        this.coinJoinService = coinJoinService;
     }
 }

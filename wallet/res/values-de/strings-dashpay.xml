@@ -413,6 +413,7 @@ Benutzernamen</b></string>
     <string name="coinjoin_start">Mixen starten</string>
     <string name="coinjoin_stop">Mixen beenden</string>
     <string name="coinjoin_mixing">Mixing</string>
+    <string name="coinjoin_mixing_finishing">Mixing abschließen</string>
     <string name="coinjoin_paused">Mixing pausiert</string>
     <string name="coinjoin_not_started">Nicht gestartet</string>
     <string name="coinjoin_progress_balance">%1$s von %2$s</string>

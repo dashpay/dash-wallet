@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 13,
-    "identityHash": "2b894e7ad84a152d5b69703f4b3bc1a4",
+    "identityHash": "28fe15216c71ad3f3da45496df139505",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -22,10 +22,10 @@
           }
         ],
         "primaryKey": {
-          "autoGenerate": false,
           "columnNames": [
             "currencyCode"
-          ]
+          ],
+          "autoGenerate": false
         },
         "indices": [],
         "foreignKeys": []
@@ -84,10 +84,10 @@
           }
         ],
         "primaryKey": {
-          "autoGenerate": false,
           "columnNames": [
             "id"
-          ]
+          ],
+          "autoGenerate": false
         },
         "indices": [],
         "foreignKeys": []
@@ -158,10 +158,10 @@
           }
         ],
         "primaryKey": {
-          "autoGenerate": false,
           "columnNames": [
             "txId"
-          ]
+          ],
+          "autoGenerate": false
         },
         "indices": [],
         "foreignKeys": []
@@ -196,11 +196,11 @@
           }
         ],
         "primaryKey": {
-          "autoGenerate": false,
           "columnNames": [
             "address",
             "isInput"
-          ]
+          ],
+          "autoGenerate": false
         },
         "indices": [],
         "foreignKeys": []
@@ -241,23 +241,29 @@
           }
         ],
         "primaryKey": {
-          "autoGenerate": false,
           "columnNames": [
             "id"
-          ]
+          ],
+          "autoGenerate": false
         },
         "indices": [],
         "foreignKeys": []
       },
       {
         "tableName": "gift_cards",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`txId` BLOB NOT NULL, `merchantName` TEXT NOT NULL, `price` REAL NOT NULL, `number` TEXT, `pin` TEXT, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `note` TEXT, PRIMARY KEY(`txId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`txId` BLOB NOT NULL, `id` TEXT, `merchantName` TEXT NOT NULL, `price` REAL NOT NULL, `number` TEXT, `pin` TEXT, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `note` TEXT, PRIMARY KEY(`txId`))",
         "fields": [
           {
             "fieldPath": "txId",
             "columnName": "txId",
             "affinity": "BLOB",
             "notNull": true
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": false
           },
           {
             "fieldPath": "merchantName",
@@ -860,7 +866,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2b894e7ad84a152d5b69703f4b3bc1a4')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '28fe15216c71ad3f3da45496df139505')"
     ]
   }
 }

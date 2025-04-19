@@ -39,6 +39,7 @@ import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.util.Constants
@@ -237,11 +238,12 @@ class CrowdNodeApiAggregator @Inject constructor(
 
             signUpStatus.value = SignUpStatus.Finished
             log.info("CrowdNode sign up finished")
+            analyticsService.logEvent(AnalyticsConstants.CrowdNode.CREATE_ACCOUNT_SUCCESS, mapOf())
             refreshBalance(3)
 
             notifyIfNeeded(appContext.getString(R.string.crowdnode_account_ready), "crowdnode_ready")
         } catch (ex: Exception) {
-            log.error("CrowdNode error: $ex")
+            log.error("CrowdNode error", ex)
             analyticsService.logError(ex, "status: ${signUpStatus.value}")
 
             apiError.value = ex
@@ -270,7 +272,9 @@ class CrowdNodeApiAggregator @Inject constructor(
                 try {
                     val tx = blockchainApi.waitForDepositResponse(amount)
                     log.info("got deposit response: ${tx.txId}")
+                    analyticsService.logEvent(AnalyticsConstants.CrowdNode.PORTAL_DEPOSIT_SUCCESS, mapOf())
                 } catch (ex: Exception) {
+                    analyticsService.logEvent(AnalyticsConstants.CrowdNode.PORTAL_DEPOSIT_ERROR, mapOf())
                     handleError(ex, appContext.getString(R.string.crowdnode_deposit_error))
                     return@launch
                 }
@@ -282,6 +286,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         } catch (ex: LeftoverBalanceException) {
             throw ex
         } catch (ex: Exception) {
+            analyticsService.logEvent(AnalyticsConstants.CrowdNode.PORTAL_DEPOSIT_ERROR, mapOf())
             handleError(ex, appContext.getString(R.string.crowdnode_deposit_error))
             false
         }
@@ -296,30 +301,31 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         checkWithdrawalLimits(amount)
 
-        return try {
+        try {
             apiError.value = null
             val result = webApi.requestWithdrawal(accountAddress, amount)
 
             if (result.messageStatus.lowercase() == MESSAGE_RECEIVED_STATUS) {
                 log.info("Withdrawal request sent successfully")
+                analyticsService.logEvent(AnalyticsConstants.CrowdNode.PORTAL_WITHDRAW_SUCCESS, mapOf())
                 refreshBalance(retries = 3, afterWithdrawal = true)
                 val currentBlockHeight = blockchainStateProvider.getState()?.bestChainHeight ?: -1
                 config.set(CrowdNodeConfig.LAST_WITHDRAWAL_BLOCK, currentBlockHeight)
-                true
+                return true
             } else {
                 log.info("Withdrawal request not received, status: ${result.messageStatus}. Result: ${result.result}")
                 apiError.value = MessageStatusException(result.result ?: "")
-                false
             }
         } catch (ex: HttpException) {
             log.error("SendMessage error, code: ${ex.code()}, error: ${ex.response()?.errorBody()?.string()}")
             handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
-            false
         } catch (ex: UnknownHostException) {
             log.error("Withdrawal error: ${ex.message}")
             handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
-            false
         }
+
+        analyticsService.logEvent(AnalyticsConstants.CrowdNode.PORTAL_WITHDRAW_ERROR, mapOf())
+        return false
     }
 
     override suspend fun getWithdrawalLimit(period: WithdrawalLimitPeriod): Coin {
@@ -451,7 +457,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             .launchIn(responseScope)
     }
 
-    private suspend fun startTrackingValidated(accountAddress: Address, initialDelay: Duration) {
+    private fun startTrackingValidated(accountAddress: Address, initialDelay: Duration) {
         log.info("startTrackingValidated, account: ${accountAddress.toBase58()}")
         tickerJob = TickerFlow(period = 30.seconds, initialDelay = initialDelay)
             .cancellable()
@@ -479,7 +485,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             .launchIn(statusScope)
     }
 
-    private suspend fun startTrackingCreating(accountAddress: Address, initialDelay: Duration) {
+    private fun startTrackingCreating(accountAddress: Address, initialDelay: Duration) {
         log.info("startTrackingEmailStatus, account: ${accountAddress.toBase58()}")
         tickerJob = TickerFlow(period = 20.seconds, initialDelay = initialDelay)
             .cancellable()
@@ -710,7 +716,6 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
     private suspend fun checkMessageStatus(messageId: Int, address: Address): MessageStatus? {
         log.info("Checking message status, address: ${address.toBase58()}")
         val result = try {
@@ -869,10 +874,14 @@ class CrowdNodeApiAggregator @Inject constructor(
         if (lastFeeRequest == null || (lastFeeRequest + TimeUnit.DAYS.toMillis(1)) < System.currentTimeMillis()) {
             val feeInfo = webApi.getFees(accountAddress)
             log.info("crowdnode feeInfo: {}", feeInfo)
-            val fee = feeInfo.first().getNormal()?.fee
-            fee?.let {
-                config.set(CrowdNodeConfig.FEE_PERCENTAGE, fee)
-                config.set(CrowdNodeConfig.LAST_FEE_REQUEST, System.currentTimeMillis())
+            try {
+                val fee = feeInfo.first().getNormal()?.fee
+                fee?.let {
+                    config.set(CrowdNodeConfig.FEE_PERCENTAGE, fee)
+                    config.set(CrowdNodeConfig.LAST_FEE_REQUEST, System.currentTimeMillis())
+                }
+            } catch (e: NoSuchElementException) {
+                log.info("crowdNode fee error: cannot find Normal fees: {}", feeInfo)
             }
         }
     }

@@ -48,6 +48,7 @@ import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.AddressBookProvider
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
+import de.schildbach.wallet.service.extensions.registerCrowdNodeConfirmedAddressFilter
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.OnboardingActivity.Companion.createIntent
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
@@ -65,6 +66,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Block
@@ -101,7 +103,6 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.DefaultRiskAnalysis
 import org.bitcoinj.wallet.Wallet
-import org.bitcoinj.wallet.WalletEx
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.NetworkStatus
@@ -169,6 +170,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     private val onCreateCompleted = CompletableDeferred<Unit>()
+    private var checkMutex = Mutex(false)
 
     @Inject lateinit var  application: WalletApplication
 
@@ -215,7 +217,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var peerGroup: PeerGroup? = null
     private val handler = Handler()
     private val delayHandler = Handler()
-    private val metadataHandler = Handler()
     private var wakeLock: PowerManager.WakeLock? = null
     private var peerConnectivityListener: PeerConnectivityListener? = null
     private var nm: NotificationManager? = null
@@ -241,6 +242,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var syncPercentage = 0 // 0 to 100%
     private var mixingStatus = MixingStatus.NOT_STARTED
     private var mixingProgress = 0.0
+    private var balance = Coin.ZERO
+    private var mixedBalance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
 
     // Risk Analyser for Transactions that is PeerGroup Aware
@@ -254,10 +257,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS)
     private var apiConfirmationHandler: CrowdNodeAPIConfirmationHandler? = null
     private fun handleMetadata(tx: Transaction) {
-        metadataHandler.post {
-            transactionMetadataProvider.syncTransactionBlocking(
-                tx
-            )
+        serviceScope.launch {
+            transactionMetadataProvider.syncTransaction(tx)
         }
     }
 
@@ -379,9 +380,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
     private val sharedPrefsChangeListener =
-        SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences: SharedPreferences?, key: String? ->
+        SharedPreferences.OnSharedPreferenceChangeListener { _: SharedPreferences?, key: String? ->
             if (key == Configuration.PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS) {
-                registerCrowdNodeConfirmedAddressFilter()
+                apiConfirmationHandler = registerCrowdNodeConfirmedAddressFilter()
             }
         }
     private var resetMNListsOnPeerGroupStart = false
@@ -683,7 +684,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             serviceScope.launch {
                 // make sure that onCreate is finished
                 onCreateCompleted.await()
-                checkService()
+                checkMutex.lock()
+                try {
+                    checkService()
+                } finally {
+                    checkMutex.unlock()
+                }
             }
         }
 
@@ -708,7 +714,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         packageInfoProvider.packageInfo
                     )
                 }
-                org.bitcoinj.core.Context.propagate(wallet.context)
+                propagateContext()
                 dashSystemService.system.initDashSync(getDir("masternode", MODE_PRIVATE).absolutePath)
                 log.info("starting peergroup")
                 peerGroup = PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain)
@@ -1012,6 +1018,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     private fun propagateContext() {
+        if (application.wallet?.context != Constants.CONTEXT) {
+            log.warn("wallet context does not equal Constants.CONTEXT")
+        }
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
     }
 
@@ -1024,7 +1033,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundAndCatch()
+            startForegroundAndCatch(createNetworkSyncNotification())
         }
         val wallet = application.wallet
         serviceScope.launch {
@@ -1118,29 +1127,38 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             blockchainStateDao.observeState().observe(this@BlockchainServiceImpl) { blockchainState ->
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
-            registerCrowdNodeConfirmedAddressFilter()
+            apiConfirmationHandler = registerCrowdNodeConfirmedAddressFilter()
             coinJoinService.observeMixingState().observe(this@BlockchainServiceImpl) { mixingStatus ->
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
             coinJoinService.observeMixingProgress().observe(this@BlockchainServiceImpl) { mixingProgress ->
                 handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
             }
+
+            // we need the total wallet balance for the CoinJoin notification
+            application.observeTotalBalance().observe(this@BlockchainServiceImpl) {
+                balance = it
+                handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+            }
+
+            // we need the mixed balance for the CoinJoin notification
+            application.observeMixedBalance().observe(this@BlockchainServiceImpl) {
+                mixedBalance = it
+                handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+            }
+
             onCreateCompleted.complete(Unit) // Signal completion of onCreate
             log.info(".onCreate() finished")
         }
     }
 
     private fun createCoinJoinNotification(): Notification {
-        val mixedBalance = (application.wallet as WalletEx?)!!.coinJoinBalance
-        val totalBalance = application.wallet!!.balance
         val notificationIntent = createIntent(this)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0,
-            notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
         val decimalFormat = DecimalFormat("0.000")
         val statusStringId = when (mixingStatus) {
+            MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
             MixingStatus.MIXING -> R.string.coinjoin_mixing
+            MixingStatus.FINISHING -> R.string.coinjoin_mixing_finishing
             MixingStatus.PAUSED -> R.string.coinjoin_paused
             MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
             else -> R.string.error
@@ -1150,16 +1168,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             getString(statusStringId),
             mixingProgress,
             decimalFormat.format(mixedBalance.toBigDecimal()),
-            decimalFormat.format(totalBalance.toBigDecimal())
+            decimalFormat.format(balance.toBigDecimal())
         )
-        return NotificationCompat.Builder(
-            this,
+        return notificationService.buildNotification(
+            message,
+            getString(R.string.app_name),
+            null,
+            notificationIntent,
             Constants.NOTIFICATION_CHANNEL_ID_ONGOING
         )
-            .setSmallIcon(R.drawable.ic_dash_d_white)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(message)
-            .setContentIntent(pendingIntent).build()
     }
 
     private fun resetMNLists(requestFreshList: Boolean) {
@@ -1183,7 +1200,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 //Restart service as a Foreground Service if it's synchronizing the blockchain
                 val extras = intent.extras
                 if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
-                    startForegroundAndCatch()
+                    startForegroundAndCatch(createNetworkSyncNotification())
                 }
                 log.info(
                     "service start command: $intent" + if (intent.hasExtra(Intent.EXTRA_ALARM_COUNT)) " (alarm count: " + intent.getIntExtra(
@@ -1236,10 +1253,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         return START_NOT_STICKY
     }
 
-    private fun startForeground() {
+    private fun startForeground(notification: Notification) {
         //Shows ongoing notification promoting service to foreground service and
         //preventing it from being killed in Android 26 or later
-        val notification = createNetworkSyncNotification(null)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification,
@@ -1251,35 +1267,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         foregroundService = ForegroundService.BLOCKCHAIN_SYNC
     }
 
-    private fun startForegroundCoinJoin() {
-        // Shows ongoing notification promoting service to foreground service and
-        // preventing it from being killed in Android 26 or later
-        val notification = createCoinJoinNotification()
-        startForeground(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
-        foregroundService = ForegroundService.COINJOIN_MIXING
-    }
-
-    private fun startForegroundAndCatch() {
+    private fun startForegroundAndCatch(notification: Notification) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
-                startForeground()
+                startForeground(notification)
             } catch (e: ForegroundServiceStartNotAllowedException) {
                 log.info("failed to start in foreground", e)
             }
         } else {
-            startForeground()
-        }
-    }
-
-    private fun startForegroundCoinJoinAndCatch() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                startForegroundCoinJoin()
-            } catch (e: ForegroundServiceStartNotAllowedException) {
-                log.info("failed to start in foreground", e)
-            }
-        } else {
-            startForegroundCoinJoin()
+            startForeground(notification)
         }
     }
 
@@ -1300,6 +1296,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         serviceScope.launch {
             try {
                 onCreateCompleted.await() // wait until onCreate is finished
+                checkMutex.lock()
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
                 application.wallet!!.removeChangeEventListener(walletEventListener)
                 application.wallet!!.removeCoinsSentEventListener(walletEventListener)
@@ -1330,6 +1327,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     throw RuntimeException(x)
                 }
                 if (!deleteWalletFileOnShutdown) {
+                    propagateContext()
                     application.saveWallet()
                 }
                 if (wakeLock!!.isHeld) {
@@ -1353,6 +1351,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             } finally {
                 log.info("serviceJob cancelled after " + (System.currentTimeMillis() - serviceCreatedAt) / 1000 / 60 + " minutes")
                 serviceJob.cancel()
+                checkMutex.unlock()
                 cleanupDeferred?.complete(Unit)
             }
         }
@@ -1367,26 +1366,21 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     }
 
-    private fun createNetworkSyncNotification(blockchainState: BlockchainState?): Notification {
+    private fun createNetworkSyncNotification(blockchainState: BlockchainState? = null): Notification {
         val notificationIntent = createIntent(this)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0,
-            notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
         val message = if (blockchainState != null) BlockchainStateUtils.getSyncStateString(
             blockchainState,
             this
         ) else getString(
             R.string.blockchain_state_progress_downloading, "0"
         )
-        return NotificationCompat.Builder(
-            this,
+        return notificationService.buildNotification(
+            message ?: "",
+            getString(R.string.app_name),
+            null,
+            notificationIntent,
             Constants.NOTIFICATION_CHANNEL_ID_ONGOING
         )
-            .setSmallIcon(R.drawable.ic_dash_d_white)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(message)
-            .setContentIntent(pendingIntent).build()
     }
 
     private fun updateBlockchainStateImpediments() {
@@ -1407,7 +1401,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     override fun getRecentBlocks(maxBlocks: Int): List<StoredBlock> {
         val blocks: MutableList<StoredBlock> = ArrayList(maxBlocks)
         try {
-            var block = blockChain!!.chainHead
+            var block = blockChain?.chainHead
             while (block != null) {
                 blocks.add(block)
                 if (blocks.size >= maxBlocks) break
@@ -1441,7 +1435,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             //Handle Ongoing notification state
             val syncing =
                 blockchainState.bestChainDate!!.time < Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS //1 hour
-            if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver && mixingStatus != MixingStatus.MIXING) {
+            if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver && mixingStatus != MixingStatus.MIXING && mixingStatus != MixingStatus.FINISHING) {
                 //Remove ongoing notification if blockchain sync finished
                 stopForeground(true)
                 foregroundService = ForegroundService.NONE
@@ -1450,11 +1444,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 //Shows ongoing notification when synchronizing the blockchain
                 val notification = createNetworkSyncNotification(blockchainState)
                 nm!!.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
-            } else if (mixingStatus == MixingStatus.MIXING || mixingStatus == MixingStatus.PAUSED) {
+            } else if (mixingStatus == MixingStatus.MIXING || mixingStatus == MixingStatus.PAUSED || mixingStatus == MixingStatus.FINISHING) {
                 log.info("foreground service: {}", foregroundService)
                 if (foregroundService == ForegroundService.NONE) {
                     log.info("foreground service not active, create notification")
-                    startForegroundCoinJoinAndCatch()
+                    startForegroundAndCatch(createCoinJoinNotification())
                     foregroundService = ForegroundService.COINJOIN_MIXING
                 } else {
                     log.info("foreground service active, update notification")
@@ -1481,39 +1475,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             val intent = Intent(this, BlockchainServiceImpl::class.java)
             ContextCompat.startForegroundService(this, intent)
             // call startForeground just after startForegroundService.
-            startForegroundAndCatch()
+            startForegroundAndCatch(createNetworkSyncNotification())
         }
     }
 
     private val preBlocksDownloadListener = PreBlocksDownloadListener { peer ->
         log.info("onPreBlocksDownload using peer {}", peer)
         platformSyncService.preBlockDownload(peerGroup!!.preBlockDownloadFuture)
-    }
-
-    private fun registerCrowdNodeConfirmedAddressFilter() {
-        val apiAddressStr = config.crowdNodeAccountAddress
-        val primaryAddressStr = config.crowdNodePrimaryAddress
-        apiConfirmationHandler = if (apiAddressStr.isNotEmpty() && primaryAddressStr.isNotEmpty()) {
-            val apiAddress = Address.fromBase58(
-                Constants.NETWORK_PARAMETERS,
-                apiAddressStr
-            )
-            val primaryAddress = Address.fromBase58(
-                Constants.NETWORK_PARAMETERS,
-                primaryAddressStr
-            )
-            CrowdNodeAPIConfirmationHandler(
-                apiAddress,
-                primaryAddress,
-                crowdNodeBlockchainApi,
-                notificationService,
-                crowdNodeConfig,
-                resources,
-                Intent(this, StakingActivity::class.java)
-            )
-        } else {
-            null
-        }
     }
 
     private fun loadStream(filename: String): InputStream? {
