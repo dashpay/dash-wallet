@@ -48,6 +48,9 @@ interface TransactionMetadataChangeCacheDao {
     @Query("SELECT * FROM transaction_metadata_cache WHERE txid = :txId")
     suspend fun load(txId: Sha256Hash): TransactionMetadataCacheItem?
 
+    @Query("SELECT DISTINCT txId FROM transaction_metadata_cache")
+    suspend fun getAllTransactionIds(): List<Sha256Hash>
+
     @Query(
         """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, taxCategory) 
            VALUES (:txId, :cacheTimestamp, :taxCategory)"""
@@ -134,6 +137,22 @@ interface TransactionMetadataChangeCacheDao {
     @Query("SELECT COUNT(*) FROM transaction_metadata_cache")
     suspend fun count(): Int
 
+    @Query("SELECT COUNT(DISTINCT txId) FROM transaction_metadata_cache where cacheTimestamp < :beforeTimestamp")
+    suspend fun countTransactions(beforeTimestamp: Long): Int
+
     @Query("DELETE FROM transaction_metadata_cache")
     suspend fun clear()
+
+    @Query("SELECT MAX(cacheTimestamp) FROM transaction_metadata_cache")
+    suspend fun lastTransactionTime(): Long
+
+    @Query("""
+        SELECT * FROM transaction_metadata_cache 
+        WHERE txId IN (
+            SELECT txId FROM transaction_metadata 
+            WHERE timestamp < :maxTimestamp
+        )
+    """)
+    suspend fun getCachedItemsBefore(maxTimestamp: Long): List<TransactionMetadataCacheItem>
+
 }

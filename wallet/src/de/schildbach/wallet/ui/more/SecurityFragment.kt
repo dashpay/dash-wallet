@@ -165,7 +165,8 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                         )
                         startResetWalletDialog.show(requireActivity()) { confirmed ->
                             if (confirmed == true) {
-                                doReset()
+//                                doReset()
+                                checkUsernameThenReset()
                             }
                         }
                     }
@@ -190,6 +191,38 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                 if (it == true) {
                     doReset()
                 }
+            }
+        }
+    }
+
+    private fun checkUsernameThenReset() {
+        lifecycleScope.launch {
+            if (viewModel.hasIdentity && viewModel.hasPendingTxMetadataToSave()) {
+                when (AdaptiveDialog.create(
+                        R.drawable.ic_warning,
+                        getString(R.string.reset_wallet_metadata_title),
+                        getString(R.string.reset_wallet_metadata_message),
+                        getString(R.string.reset_wallet_metadata_button_without),
+                        getString(R.string.reset_wallet_metadata_button_with)
+                    ).showAsync(requireActivity()) == true
+                ) {
+                    true -> {
+                        //TransactionMetadataDialog.newInstance().show(requireActivity()) {
+                        //    lifecycleScope.launch {
+                        //        if (it == true) {
+                        viewModel.setSaveOnReset()
+                        //safeNavigate(SecurityFragmentDirections.securityToTransactionMetadata())
+                        doReset()
+                        //        } else {
+                        //            doReset()
+                        //        }
+                        //    }
+                    }
+                    false -> doReset()
+                    else -> {}
+                }
+            } else {
+                doReset()
             }
         }
     }

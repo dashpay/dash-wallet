@@ -65,6 +65,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -80,6 +81,7 @@ import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -137,7 +139,7 @@ class MainViewModel @Inject constructor(
     private val invitationsDao: InvitationsDao,
     userAlertDao: UserAlertDao,
     dashPayProfileDao: DashPayProfileDao,
-    dashPayConfig: DashPayConfig,
+    private val dashPayConfig: DashPayConfig,
     dashPayContactRequestDao: DashPayContactRequestDao,
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService,
@@ -224,7 +226,8 @@ class MainViewModel @Inject constructor(
             temporaryHide ?: autoHide ?: false
         }
         .asLiveData()
-
+    private val _remindMetadata = MutableStateFlow(false)
+    val remindMetadata = _remindMetadata.asStateFlow()
     val showTapToHideHint = walletUIConfig.observe(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT).asLiveData()
 
     private val _isNetworkUnavailable = MutableLiveData<Boolean>()
@@ -360,6 +363,7 @@ class MainViewModel @Inject constructor(
 
         walletData.observeMostRecentTransaction()
             .onEach(_mostRecentTransaction::postValue)
+            .onEach { metadataReminder() }
             .launchIn(viewModelScope)
 
         walletUIConfig
@@ -933,5 +937,25 @@ class MainViewModel @Inject constructor(
 
     fun isTestNet(): Boolean {
         return walletData.wallet?.params?.id != NetworkParameters.ID_MAINNET
+    }
+
+    fun metadataReminder() {
+        viewModelScope.launch {
+            if (hasIdentity && !dashPayConfig.isTransactionMetadataInfoShown()) {
+                // have there been 10 transactions since the last update?
+                val installedDate = dashPayConfig.getMetadataFeatureInstalled()
+                walletData.wallet?.let { wallet: Wallet ->
+                    var count = 0
+                    wallet.getTransactions(true).forEach { tx ->
+                        if (tx.updateTime.time > installedDate) {
+                            count++
+                        }
+                    }
+                    if (count >= 10) {
+                        _remindMetadata.value = true
+                    }
+                }
+            }
+        }
     }
 }
