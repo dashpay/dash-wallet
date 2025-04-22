@@ -39,15 +39,22 @@ import de.schildbach.wallet.ui.invite.InviteHandler
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
+import de.schildbach.wallet.ui.InviteHandlerViewModel
+import de.schildbach.wallet.ui.registerLockScreenDeactivated
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
 import de.schildbach.wallet.ui.transactions.TransactionRowView
+import de.schildbach.wallet.ui.unregisterLockScreenDeactivated
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -66,9 +73,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
     private val viewModel by activityViewModels<MainViewModel>()
     private val binding by viewBinding(WalletTransactionsFragmentBinding::bind)
+    private val inviteHandlerViewModel by activityViewModels<InviteHandlerViewModel>()
 
     val isHistoryEmpty: Boolean
         get() = (binding.walletTransactionsList.adapter?.itemCount ?: 0) == 0
+
+    private lateinit var header: HistoryHeaderAdapter
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -115,7 +125,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             dialogFragment.show(requireActivity())
         }
 
-        val header = HistoryHeaderAdapter(
+        header = HistoryHeaderAdapter(
             requireContext().getSharedPreferences(
                 HistoryHeaderAdapter.PREFS_FILE_NAME,
                 Context.MODE_PRIVATE
@@ -125,6 +135,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         header.setOnIdentityRetryClicked { retryIdentityCreation(header) }
         header.setOnIdentityClicked { openIdentityCreation() }
         header.setOnJoinDashPayClicked { onJoinDashPayClicked() }
+        header.setOnAcceptInviteCreateClicked { onAcceptInvite() }
+        header.setOnAcceptInviteHideClicked { onHideInvite() }
 
         binding.walletTransactionsList.setHasFixedSize(true)
         binding.walletTransactionsList.layoutManager = LinearLayoutManager(requireContext())
@@ -153,16 +165,27 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         })
 
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
+        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) {
+            header.isSynced = it
+            if (inviteHandlerViewModel.isUsingInvite) {
+                lifecycleScope.launch {
+                    processInvitation(inviteHandlerViewModel.invitation.value!!, isSynced = it, isLockScreenActive())
+                }
+            }
+            updateSyncState()
+        }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
+//        viewModel.syncStage.observe(viewLifecycleOwner) { syncStage ->
+//            header.isSynced = syncStage == PeerGroup.SyncStage.BLOCKS
+//        }
         viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
             val currentLifecycle = viewLifecycleOwner.lifecycle
             if (viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                 binding.loading.isVisible = false
 
-                if (transactionViews.isEmpty()) {
+                if (transactionViews.isEmpty() && header.isEmpty()) {
                     showEmptyView()
-                } else {
+                } else if (transactionViews.isNotEmpty()) {
                     val groupedByDate = transactionViews.entries
                         .sortedByDescending { it.key }
                         .map {
@@ -177,6 +200,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                             showTransactionList()
                         }
                     }
+                } else {
+                    showTransactionList()
                 }
             }
         }
@@ -188,13 +213,103 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         }
 
-        viewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) { canJoinDashPay ->
-            header.canJoinDashPay = canJoinDashPay
+        inviteHandlerViewModel.invitation.observe(viewLifecycleOwner) { invitation ->
+            val isSynced = viewModel.isBlockchainSynced.value == true
+            if (invitation != null && isSynced) {
+                processInvitation(invitation, viewModel.isBlockchainSynced.value == true, !isLockScreenActive())
+            }
+            header.invitation = invitation
+            header.isSynced = isSynced
+            if (invitation != null) {
+                showTransactionList()
+                header.canJoinDashPay = false
+            }
         }
+
+        viewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) { canJoinDashPay ->
+            header.canJoinDashPay = canJoinDashPay && header.invitation == null
+        }
+
+        val myListener = { onLockScreenDeactivated() }
+
+        registerLockScreenDeactivated(myListener)
 
         viewLifecycleOwner.observeOnDestroy {
             binding.walletTransactionsList.adapter = null
+            unregisterLockScreenDeactivated(myListener)
         }
+    }
+
+    private fun onLockScreenDeactivated() {
+        lifecycleScope.launch {
+            inviteHandlerViewModel.invitation.value?.let {
+                val isSynced = viewModel.isBlockchainSynced.value == true
+                processInvitation(
+                    it,
+                    isSynced,
+                    false
+                )
+                header.invitation = it
+                header.isSynced = isSynced
+            }
+        }
+    }
+
+    private suspend fun processInvitation(invitation: InvitationLinkData, isSynced: Boolean, isLockScreenActive: Boolean) {
+        if (isSynced && !isLockScreenActive) {
+            when (inviteHandlerViewModel.validateInvitation()) {
+                InvitationValidationState.INVALID -> {
+                    InviteHandler(
+                        requireActivity(),
+                        viewModel.analytics
+                    ).showInvalidInviteDialog(invitation.displayName)
+                    // remove invite
+                    inviteHandlerViewModel.clearInvitation()
+                }
+
+                InvitationValidationState.ALREADY_HAS_IDENTITY -> {
+                    // show dialog
+                    InviteHandler(requireActivity(), viewModel.analytics).showUsernameAlreadyDialog()
+                    // remove invite
+                    inviteHandlerViewModel.clearInvitation()
+                }
+
+                InvitationValidationState.VALID -> {
+
+                }
+
+                InvitationValidationState.ALREADY_CLAIMED -> {
+                    InviteHandler(requireActivity(), viewModel.analytics).showInviteAlreadyClaimedDialog(invitation)
+                    // remove invite
+                    inviteHandlerViewModel.clearInvitation()
+                }
+
+                InvitationValidationState.NONE -> {
+
+                }
+
+                InvitationValidationState.NOT_SYNCED -> {
+
+                }
+            }
+        }
+    }
+
+    private fun onHideInvite() {
+        lifecycleScope.launch {
+            inviteHandlerViewModel.clearInvitation()
+        }
+    }
+
+    private fun onAcceptInvite() {
+        val createUsernameActivityIntent = CreateUsernameActivity.createIntentFromInvite(
+            requireContext(),
+            inviteHandlerViewModel.invitation.value!!,
+            inviteHandlerViewModel.fromOnboarding
+        )
+        startActivity(createUsernameActivityIntent)
+//        val acceptInviteIntent = AcceptInviteActivity.createIntent(requireContext(), inviteHandlerViewModel.invite!!, false)
+//        startActivity(acceptInviteIntent)
     }
 
     private fun updateSyncState() {

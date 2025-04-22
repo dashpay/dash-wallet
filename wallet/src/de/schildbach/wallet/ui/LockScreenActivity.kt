@@ -35,6 +35,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
@@ -123,6 +124,7 @@ open class LockScreenActivity : SecureActivity() {
     protected var isLocked: Boolean = false
     private val shouldShowBackupReminder
         get() = configuration.remindBackupSeed && configuration.lastBackupSeedReminderMoreThan24hAgo()
+    private val lockScreenDeactivatedListeners = arrayListOf<() -> Unit>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -486,6 +488,7 @@ open class LockScreenActivity : SecureActivity() {
     override fun onDestroy() {
         super.onDestroy()
         temporaryLockCheckHandler.removeCallbacks(temporaryLockCheckRunnable)
+        lockScreenDeactivatedListeners.clear()
     }
 
     private fun showFingerprintKeyChangedDialog() {
@@ -518,7 +521,11 @@ open class LockScreenActivity : SecureActivity() {
 
     open fun onLockScreenActivated() { }
 
-    open fun onLockScreenDeactivated() { }
+    open fun onLockScreenDeactivated() {
+        lockScreenDeactivatedListeners.forEach {
+            it.invoke()
+        }
+    }
 
     private fun notifyAndDismissFragments(fragmentManager: FragmentManager) {
         fragmentManager.fragments
@@ -544,5 +551,25 @@ open class LockScreenActivity : SecureActivity() {
         currentFocus?.windowToken?.let { token ->
             inputManager?.hideSoftInputFromWindow(token, 0)
         }
+    }
+
+    fun registerLockScreenDeactivated(listener: () -> Unit) {
+        lockScreenDeactivatedListeners.add(listener)
+    }
+
+    fun unregisterLockScreenDeactivated(listener: () -> Unit) {
+        lockScreenDeactivatedListeners.remove(listener)
+    }
+}
+
+fun Fragment.registerLockScreenDeactivated(listener: () -> Unit) {
+    if (activity is LockScreenActivity) {
+        (activity as LockScreenActivity).registerLockScreenDeactivated(listener)
+    }
+}
+
+fun Fragment.unregisterLockScreenDeactivated(listener: () -> Unit) {
+    if (activity is LockScreenActivity) {
+        (activity as LockScreenActivity).unregisterLockScreenDeactivated(listener)
     }
 }

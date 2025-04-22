@@ -487,4 +487,6 @@
     <string name="request_username_invitation_only_noncontested_message">You can only create a non-contested username using this invitation</string>
     <string name="username_types_title">What are contested and non-contested usernames?</string>
     <string name="username_types_message">There are two types of usernames: contested and non-contested.\n\nNon-contested usernames have at least one number (2-9) or are longer than 20 characters and will be automatically approved.\n\nIf you want to create a contested username which is shorter and without numbers, you need to register with DashPay without an invitation, pay the required fee and wait for approval upon completion of the voting period.</string>
+    <string name="accept_invitation_hide">Hide</string>
+    <string name="accept_invitation_create">Create</string>
 </resources>
