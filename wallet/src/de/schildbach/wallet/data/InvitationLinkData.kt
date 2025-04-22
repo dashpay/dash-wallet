@@ -24,10 +24,20 @@ import kotlinx.parcelize.Parcelize
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bouncycastle.crypto.params.KeyParameter
 
+enum class InvitationValidationState {
+    VALID,
+    ALREADY_HAS_IDENTITY,
+    ALREADY_CLAIMED,
+    INVALID,
+    NONE,
+    NOT_SYNCED
+}
+
 @Parcelize
 data class InvitationLinkData(
     val link: Uri,
-    var isValid: Boolean?
+    var isValid: Boolean? = null,
+    var validationState: InvitationValidationState? = null
 ) : Parcelable {
 
     companion object {

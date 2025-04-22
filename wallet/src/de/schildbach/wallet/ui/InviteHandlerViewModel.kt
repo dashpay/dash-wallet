@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.content.Intent
+import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -25,9 +26,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.service.BlockchainStateDataProvider
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -58,22 +59,48 @@ class InviteHandlerViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(InviteHandlerViewModel::class.java)
     }
 
-    private val _inviteData = MutableLiveData<Resource<InvitationLinkData>>()
-    val inviteData: LiveData<Resource<InvitationLinkData>>
-        get() = _inviteData
-    val invite: InvitationLinkData?
-        get() = _inviteData.value?.data
-    val isUsingInvite: Boolean
-        get() = invite != null
+    // TODO: remove Resource
+//    private val _inviteData = MutableLiveData<Resource<InvitationLinkData>>()
+//    val inviteData: LiveData<Resource<InvitationLinkData>>
+//        get() = _inviteData
 
-    fun handleInvite(intent: Intent) {
-        _inviteData.value = Resource.loading()
+//    val invite: InvitationLinkData?
+//        get() = _inviteData.value?.data
+
+    private val _invitation = MutableStateFlow<InvitationLinkData?>(null)
+    val invitation: StateFlow<InvitationLinkData?> = _invitation.asStateFlow()
+
+    var fromOnboarding = false
+
+    val isUsingInvite: Boolean
+        get() = _invitation.value != null
+
+    init {
+        dashPayConfig.observe(DashPayConfig.INVITATION_LINK)
+            .onEach {
+                _invitation.value = if (!it.isNullOrEmpty()) {
+                    InvitationLinkData(it.toUri())
+                } else {
+                    null
+                }
+            }
+            .launchIn(viewModelScope)
+
+        dashPayConfig.observe(DashPayConfig.INVITATION_FROM_ONBOARDING)
+            .onEach {
+                fromOnboarding = it ?: false
+            }
+            .launchIn(viewModelScope)
+    }
+
+    fun handleInvite(intent: Intent, lamda: (InvitationLinkData) -> Unit) {
+        // _inviteData.value = Resource.loading()
         FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
             val link = it?.link
             if (link != null && InvitationLinkData.isValid(link)) {
                 log.info("received invite $link")
-                val invite = InvitationLinkData(link, false)
-                handleInvite(invite)
+                val invite = InvitationLinkData(link)
+                lamda.invoke(invite)
             } else {
                 log.info("invalid invite ignored")
             }

@@ -389,9 +389,9 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_INVITER_CONTACT_REQUEST_SENT_INFO, shown).apply();
     }
 
-    public boolean getOnboardingInviteProcessing() {
-        return getOnboardingInvite() != null && prefs.getBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, true);
-    }
+//    public boolean getOnboardingInviteProcessing() {
+//        return getOnboardingInvite() != null && prefs.getBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, true);
+//    }
 
     public void setOnboardingInviteProcessingDone() {
         prefs.edit().putBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, false).apply();
@@ -405,15 +405,15 @@ public class Configuration {
         prefs.edit().putInt(PREFS_ONBOARDING_STAGE, onboardingStage).apply();
     }
 
-    public Uri getOnboardingInvite() {
-        String invite = prefs.getString(PREFS_ONBOARDING_INVITE, null);
-        return invite != null ? Uri.parse(invite) : null;
-    }
-
-    public void setOnboardingInvite(final Uri onboardingInvite) {
-        prefs.edit().putBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, true).apply();
-        prefs.edit().putString(PREFS_ONBOARDING_INVITE, onboardingInvite.toString()).apply();
-    }
+//    public Uri getOnboardingInvite() {
+//        String invite = prefs.getString(PREFS_ONBOARDING_INVITE, null);
+//        return invite != null ? Uri.parse(invite) : null;
+//    }
+//
+//    public void setOnboardingInvite(final Uri onboardingInvite) {
+//        prefs.edit().putBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, true).apply();
+//        prefs.edit().putString(PREFS_ONBOARDING_INVITE, onboardingInvite.toString()).apply();
+//    }
 
     public String getOnboardingInviteUsername() {
         return prefs.getString(PREFS_ONBOARDING_INVITE_USERNAME, null);

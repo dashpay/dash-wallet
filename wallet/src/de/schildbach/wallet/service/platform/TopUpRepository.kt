@@ -56,6 +56,7 @@ import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendInviteWorker
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CoroutineScope
@@ -131,11 +132,19 @@ interface TopUpRepository {
     suspend fun checkInvites(encryptionKey: KeyParameter)
     suspend fun updateInvitations()
     fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long)
+    /**
+     * validates an invite
+     *
+     * @return Returns true if it is valid, false if the invite has been used.
+     *
+     * @throws Exception if the invite is invalid
+     */
     fun validateInvitation(invite: InvitationLinkData): Boolean
     fun close()
 
     fun getAssetLockTransaction(invite: InvitationLinkData): AssetLockTransaction
     fun isInvitationMixed(inviteAssetLockTx: AssetLockTransaction): Boolean
+    suspend fun clearInvitation()
 }
 
 class TopUpRepositoryImpl @Inject constructor(
@@ -145,7 +154,8 @@ class TopUpRepositoryImpl @Inject constructor(
     private val topUpsDao: TopUpsDao,
     private val dashPayProfileDao: DashPayProfileDao,
     private val invitationsDao: InvitationsDao,
-    private val coinJoinConfig: CoinJoinConfig
+    private val coinJoinConfig: CoinJoinConfig,
+    private val dashPayConfig: DashPayConfig
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
@@ -231,6 +241,11 @@ class TopUpRepositoryImpl @Inject constructor(
         }.all { value ->
             CoinJoin.isDenominatedAmount(value)
         }
+    }
+
+    override suspend fun clearInvitation() {
+        dashPayConfig.set(DashPayConfig.INVITATION_LINK, "")
+        dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, false)
     }
 
     //
@@ -626,7 +641,7 @@ class TopUpRepositoryImpl @Inject constructor(
 
     private fun getAssetLockTransaction(txId: String): ByteArray? {
         for (attempt in 0..10) {
-            val txByteArray = platform.client.getTransaction(txId.toString())
+            val txByteArray = platform.client.getTransaction(txId)
             if (txByteArray != null) {
                 return txByteArray
             }
@@ -647,7 +662,7 @@ class TopUpRepositoryImpl @Inject constructor(
     override fun validateInvitation(invite: InvitationLinkData): Boolean {
         val stopWatch = Stopwatch.createStarted()
         var tx = getAssetLockTransaction(invite.cftx)
-        log.info("validateInvitation: obtaining transaction info took $stopWatch")
+        log.info("validateInvitation: obtaining transaction info for invite took $stopWatch")
         // TODO: remove when iOS uses big endian
         if (tx == null) {
             tx = getAssetLockTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
