@@ -272,15 +272,15 @@ class MainViewModel @Inject constructor(
         addSource(isPlatformAvailable.asLiveData()) {
             value = combineLatestData()
         }
-        addSource(_isBlockchainSynced) {
-            value = combineLatestData()
-        }
+//        addSource(_isBlockchainSynced) {
+//            value = combineLatestData()
+//        }
         addSource(blockchainIdentity) {
             value = combineLatestData()
         }
-        addSource(_totalBalance) {
-            value = combineLatestData()
-        }
+//        addSource(_totalBalance) {
+//            value = combineLatestData()
+//        }
     }
 
     val isAbleToCreateIdentity: Boolean
@@ -914,16 +914,14 @@ class MainViewModel @Inject constructor(
             false
         } else {
             val isPlatformAvailable = isPlatformAvailable.value
-            val isSynced = _isBlockchainSynced.value ?: false
             val noIdentityCreatedOrInProgress =
                 (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
             log.info(
-                "platform available: {}; isSynced: {}: no identity creation is progress: {}",
+                "platform available: {}; no identity creation is progress: {}",
                 isPlatformAvailable,
-                isSynced,
                 noIdentityCreatedOrInProgress
             )
-            return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress
+            return /*isSynced &&*/ isPlatformAvailable && noIdentityCreatedOrInProgress
         }
     }
 
