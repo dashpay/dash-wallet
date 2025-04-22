@@ -239,7 +239,7 @@ class GiftCardDetailsViewModel @Inject constructor(
             try {
                 metadataProvider.updateGiftCardBarcode(
                     transactionId,
-                    giftCardNumber.replace(" ", ""),
+                    giftCardNumber.replace(" ", "").replace("-", ""),
                     BarcodeFormat.CODE_128 // Assuming CTX barcodes are all CODE_128
                 )
             } catch (ex: Exception) {
