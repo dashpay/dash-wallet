@@ -341,13 +341,9 @@
 
     <string name="skip">skip</string>
     <string name="get_started">Get Started</string>
-    <string name="welcome_screen_title_1_new_install">Welcome</string>
-    <string name="welcome_screen_title_1_upgrade">We Upgraded</string>
-    <string name="welcome_screen_subtitle_1">An intuitive and familiar experience across all your devices</string>
-    <string name="welcome_screen_title_2">Pay with Ease</string>
-    <string name="welcome_screen_subtitle_2">Pay and get paid instantly with easy to use payment flows</string>
-    <string name="welcome_screen_title_3">More Control</string>
-    <string name="welcome_screen_subtitle_3">Have complete control and customize your wallet based on your needs</string>
+    <string name="welcome_screen_title_1">Send and receive Dash via usernames</string>
+    <string name="welcome_screen_title_2">Spend Dash at thousands of stores</string>
+    <string name="welcome_screen_title_3">Safest way to store your Dash</string>
 
     <string-array name="history_filter">
         <item>All</item>

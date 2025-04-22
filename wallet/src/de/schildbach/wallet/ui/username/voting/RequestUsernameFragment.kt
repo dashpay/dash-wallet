@@ -17,7 +17,6 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.SetPinActivity
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
-import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
 import de.schildbach.wallet.ui.username.request.UsernameTypesDialog
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
@@ -280,7 +279,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 safeNavigate(RequestUsernameFragmentDirections.requestsToUsernameRegistrationFragment())
             }
         }
-        requestUserNameViewModel.invitationNextStep = { handleInvite() }
+        //requestUserNameViewModel.invitationNextStep = { handleInvite() }
         binding.nonContestedNameInfoButton.setOnClickListener {
             UsernameTypesDialog().show(requireActivity())
         }
@@ -404,12 +403,12 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
 //            dashPayViewModel.createUsernameArgs?.invite!!
 //        )
 
-        if (fromOnboarding) {
-            val goNextIntent = SetPinActivity.createIntent(requireActivity().application, R.string.set_pin_create_new_wallet, false, null, onboardingInvite = true)
-            startActivity(OnboardFromInviteActivity.createIntent(requireContext(), OnboardFromInviteActivity.Mode.STEP_2, goNextIntent))
-            requireActivity().finish()
-            return
-        } else {
+//        if (fromOnboarding) {
+//            val goNextIntent = SetPinActivity.createIntent(requireActivity().application, R.string.set_pin_create_new_wallet, false, null, onboardingInvite = true)
+//            startActivity(OnboardFromInviteActivity.createIntent(requireContext(), OnboardFromInviteActivity.Mode.STEP_2, goNextIntent))
+//            requireActivity().finish()
+//            return
+//        } else {
 //            dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
 //                if (it?.creationStateErrorMessage != null && !reuseTransaction) {
 //                    requireActivity().finish()
@@ -421,6 +420,6 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
 //            dashPayViewModel.createUsernameArgs?.invite?.let {
 //                requireActivity().startService(CreateIdentityService.createIntentFromInvite(requireContext(), username, it))
 //            }
-        }
+        //}
     }
 }

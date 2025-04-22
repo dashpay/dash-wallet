@@ -69,14 +69,14 @@ class OnboardingViewModel @Inject constructor(
                 walletApplication.setWallet(wallet)
                 configuration.armBackupSeedReminder()
             }
-            if (onboardingInvite != null) {
-                analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
-                startActivityAction.call(
-                    AcceptInviteActivity.createIntent(walletApplication, onboardingInvite!!, true)
-                )
-            } else {
-                finishCreateNewWalletAction.call(Unit)
-            }
+            analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
+//            if (onboardingInvite != null) {
+//                startActivityAction.call(
+//                    AcceptInviteActivity.createIntent(walletApplication, onboardingInvite!!, true)
+//                )
+//            } else {
+            finishCreateNewWalletAction.call(Unit)
+            //}
         }
     }
 

@@ -30,6 +30,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityAcceptInviteBinding
 import org.dash.wallet.common.data.OnboardingState
 
+@Deprecated("remove this completely")
 class AcceptInviteActivity : LockScreenActivity() {
 
     companion object {

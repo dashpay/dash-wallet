@@ -131,7 +131,7 @@ class RequestUserNameViewModel @Inject constructor(
     private val _isInviteMixed = MutableStateFlow(false)
     val isInviteMixed: StateFlow<Boolean>
         get() = _isInviteMixed
-    var invitationNextStep: (() -> Unit)? = null
+    //var invitationNextStep: (() -> Unit)? = null
     fun setCreateUsernameArgs(createUsernameArgs: CreateUsernameArgs?) {
         createUsernameArgs?.let {
             this.createUsernameArgs = it

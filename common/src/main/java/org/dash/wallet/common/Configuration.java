@@ -71,7 +71,7 @@ public class Configuration {
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     private static final String PREFS_ENABLE_FINGERPRINT = "enable_fingerprint";
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
-    public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
+    //public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
     public static final String PREFS_PIN_LENGTH = "pin_length";
     private static final String PREFS_IMGUR_DELETE_HASH = "imgur_delete_hash";
     private static final String PREFS_UPLOAD_POLICY = "upload_policy_accepted_";
@@ -333,13 +333,13 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, remind).apply();
     }
 
-    public boolean getV7TutorialCompleted() {
-        return prefs.getBoolean(PREFS_V7_REDESIGN_TUTORIAL_COMPLETED, false);
-    }
-
-    public void setV7TutorialCompleted() {
-        prefs.edit().putBoolean(PREFS_V7_REDESIGN_TUTORIAL_COMPLETED, true).apply();
-    }
+//    public boolean getV7TutorialCompleted() {
+//        return prefs.getBoolean(PREFS_V7_REDESIGN_TUTORIAL_COMPLETED, false);
+//    }
+//
+//    public void setV7TutorialCompleted() {
+//        prefs.edit().putBoolean(PREFS_V7_REDESIGN_TUTORIAL_COMPLETED, true).apply();
+//    }
 
     public boolean getEnableFingerprint() {
         return prefs.getBoolean(PREFS_ENABLE_FINGERPRINT, false);

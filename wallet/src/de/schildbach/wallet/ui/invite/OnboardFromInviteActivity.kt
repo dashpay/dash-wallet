@@ -27,6 +27,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardFromInviteBinding
 import org.dash.wallet.common.data.OnboardingState
 
+@Deprecated("DO NOT USE")
 class OnboardFromInviteActivity : AppCompatActivity() {
 
     companion object {
