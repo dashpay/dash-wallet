@@ -308,8 +308,6 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             inviteHandlerViewModel.fromOnboarding
         )
         startActivity(createUsernameActivityIntent)
-//        val acceptInviteIntent = AcceptInviteActivity.createIntent(requireContext(), inviteHandlerViewModel.invite!!, false)
-//        startActivity(acceptInviteIntent)
     }
 
     private fun updateSyncState() {
