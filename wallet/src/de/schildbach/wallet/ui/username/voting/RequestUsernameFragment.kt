@@ -5,7 +5,6 @@ import android.os.Handler
 import android.text.format.DateFormat
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.EditorInfo
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
@@ -15,7 +14,6 @@ import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.UsernameRequest
-import de.schildbach.wallet.ui.SetPinActivity
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.username.request.UsernameTypesDialog
 import de.schildbach.wallet_test.R

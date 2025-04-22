@@ -53,8 +53,7 @@ enum class CreateUsernameActions {
 data class CreateUsernameArgs(
     val actions: CreateUsernameActions? = null,
     val userName: String? = null,
-    val invite: InvitationLinkData? = null,
-    val fromOnboardng: Boolean = false,
+    val invite: InvitationLinkData? = null
 ) : Parcelable
 
 @AndroidEntryPoint

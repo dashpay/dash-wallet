@@ -262,12 +262,7 @@ class RequestUserNameViewModel @Inject constructor(
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
         val username = requestedUserName!!
         val isUsingInvite = isUsingInvite()
-        val fromOnboarding = createUsernameArgs?.fromOnboardng ?: false
         when {
-            fromOnboarding -> {
-                // postpone username creation till later
-                walletApplication.configuration.onboardingInviteUsername = requestedUserName
-            }
             isUsingInvite && reuseTransaction -> {
                 walletApplication.startService(
                     CreateIdentityService.createIntentFromInviteForNewUsername(

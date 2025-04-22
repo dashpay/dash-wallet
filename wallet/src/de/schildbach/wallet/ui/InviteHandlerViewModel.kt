@@ -103,27 +103,29 @@ class InviteHandlerViewModel @Inject constructor(
 
     suspend fun validateInvitation(): InvitationValidationState = withContext(Dispatchers.IO) {
         _invitation.value?.let { invite ->
+            var updatedInvitation = invite.copy()
             if (hasIdentity || inVotingPeriod) {
                 // we have an identity, don't check the validity
-                invite.validationState = InvitationValidationState.ALREADY_HAS_IDENTITY
+                updatedInvitation = updatedInvitation.validate(InvitationValidationState.ALREADY_HAS_IDENTITY)
             } else try {
                 if (blockchainStateProvider.getSyncStage() == SyncStage.BLOCKS) {
-                    invite.isValid = topUpRepository.validateInvitation(invite)
+                    updatedInvitation = updatedInvitation.copy(isValid = topUpRepository.validateInvitation(invite))
                 }
 
                 when {
-                    invite.isValid == null -> invite.validationState = InvitationValidationState.NOT_SYNCED
-                    invite.isValid!! ->  invite.validationState = InvitationValidationState.VALID
+                    updatedInvitation.isValid == null -> updatedInvitation = updatedInvitation.validate(InvitationValidationState.NOT_SYNCED)
+                    updatedInvitation.isValid!! ->  updatedInvitation = updatedInvitation.validate(InvitationValidationState.VALID)
                     else -> {
                         log.info("${invite.isValid} invite already claimed?")
-                        invite.validationState = InvitationValidationState.ALREADY_CLAIMED
+                         updatedInvitation = updatedInvitation.validate(InvitationValidationState.ALREADY_CLAIMED)
                     }
                 }
             } catch (e: Exception) {
                 log.info("error validating invite:", e)
-                invite.validationState = InvitationValidationState.INVALID
+                updatedInvitation = updatedInvitation.validate(InvitationValidationState.INVALID)
             }
-            invite.validationState
+            _invitation.value = updatedInvitation
+            updatedInvitation.validationState
         } ?: InvitationValidationState.NONE
     }
 }

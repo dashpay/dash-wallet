@@ -287,7 +287,7 @@ class HistoryHeaderAdapter(
     }
 
     private fun shouldShowAcceptInvitation(invitation: InvitationLinkData?, isSynced: Boolean): Boolean {
-        return invitation != null
+        return invitation != null && blockchainIdentityData?.creationInProgress == false
     }
 
     fun isEmpty(): Boolean {

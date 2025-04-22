@@ -63,7 +63,6 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.GiftCardDetailsDialog
-import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
@@ -175,9 +174,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             updateSyncState()
         }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
-//        viewModel.syncStage.observe(viewLifecycleOwner) { syncStage ->
-//            header.isSynced = syncStage == PeerGroup.SyncStage.BLOCKS
-//        }
+
         viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
             val currentLifecycle = viewLifecycleOwner.lifecycle
             if (viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
@@ -257,7 +254,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
     private suspend fun processInvitation(invitation: InvitationLinkData, isSynced: Boolean, isLockScreenActive: Boolean) {
         if (isSynced && !isLockScreenActive) {
-            when (inviteHandlerViewModel.validateInvitation()) {
+            val validationState = if (invitation.expired) {
+                inviteHandlerViewModel.validateInvitation()
+            } else {
+                invitation.validationState
+            }
+            when (validationState) {
                 InvitationValidationState.INVALID -> {
                     InviteHandler(
                         requireActivity(),
@@ -291,6 +293,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 InvitationValidationState.NOT_SYNCED -> {
 
                 }
+
+                else -> {}
             }
         }
     }

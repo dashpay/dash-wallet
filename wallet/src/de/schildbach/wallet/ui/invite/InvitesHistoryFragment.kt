@@ -28,8 +28,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentInvitesHistoryBinding
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 
@@ -78,10 +78,8 @@ class InvitesHistoryFragment :
             invitesAdapter.onFilter(it)
         }
 
-        createInviteViewModel.isAbleToCreateInviteLiveData.observe(requireActivity()) {
-            if (it != null) {
-                invitesAdapter.showCreateInvite(it)
-            }
+        createInviteViewModel.isAbleToCreateInviteFlow.observe(requireActivity()) {
+            invitesAdapter.showCreateInvite(it)
         }
     }
 
