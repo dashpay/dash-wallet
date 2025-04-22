@@ -89,10 +89,6 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         }
 
         requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
-//            if (it.usernameSubmittedSuccess) {
-//                requireActivity().finish()
-//            }
-
             if (it.usernameSubmittedError) {
                 showErrorDialog()
             }
@@ -192,17 +188,6 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                         binding.checkAvailable.setImageResource(getCheckMarkImage(true))
                     }
                 }
-                if (requestUserNameViewModel.isUsingInvite()) {
-//                    binding.charLengthRequirement.text = getString(
-//                        if (requestUserNameViewModel.isInviteForContestedNames()) {
-//                            R.string.request_username_length_requirement
-//                        } else {
-//                            R.string.request_username_length_requirement_noncontested
-//                        }
-//                    )
-
-                    //binding.inviteOnlyNoncontested.isVisible = requestUserNameViewModel.isInviteForContestedNames()
-                }
                 binding.requestUsernameButton.isEnabled = it.enoughBalance
 
                 if (it.usernameRequestSubmitting) {
@@ -269,17 +254,16 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 return@observe
             }
             if (it?.creationStateErrorMessage != null) {
-                //why are we closing, we should allow the user to chose a new name
-                //requireActivity().finish()
+                // why are we closing, we should allow the user to chose a new name
+                // requireActivity().finish()
             } else if ((it?.creationState?.ordinal ?: 0) > BlockchainIdentityData.CreationState.NONE.ordinal) {
                 // completeUsername = it.username ?: ""
                 // showCompleteState()
                 // for now, just go to the home screen
-                //requireActivity().finish()
+                // requireActivity().finish()
                 safeNavigate(RequestUsernameFragmentDirections.requestsToUsernameRegistrationFragment())
             }
         }
-        //requestUserNameViewModel.invitationNextStep = { handleInvite() }
         binding.nonContestedNameInfoButton.setOnClickListener {
             UsernameTypesDialog().show(requireActivity())
         }
@@ -352,7 +336,6 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             handler.removeCallbacks(checkUsernameNotExistRunnable)
         }
         checkUsernameNotExistRunnable = Runnable {
-            //dashPayViewModel.searchUsername(username)
             requestUserNameViewModel.checkUsername(username)
         }
         handler.postDelayed(checkUsernameNotExistRunnable, 600)
@@ -392,34 +375,5 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 checkViewConfirmDialog()
             }
         }
-    }
-
-    private fun handleInvite() {
-        // val username = binding.usernameInput.text.toString()
-        val fromOnboarding = dashPayViewModel.createUsernameArgs?.fromOnboardng ?: false
-//        requestUserNameViewModel.triggerIdentityCreationFromInvite(
-//            reuseTransaction,
-//            fromOnboarding,
-//            dashPayViewModel.createUsernameArgs?.invite!!
-//        )
-
-//        if (fromOnboarding) {
-//            val goNextIntent = SetPinActivity.createIntent(requireActivity().application, R.string.set_pin_create_new_wallet, false, null, onboardingInvite = true)
-//            startActivity(OnboardFromInviteActivity.createIntent(requireContext(), OnboardFromInviteActivity.Mode.STEP_2, goNextIntent))
-//            requireActivity().finish()
-//            return
-//        } else {
-//            dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
-//                if (it?.creationStateErrorMessage != null && !reuseTransaction) {
-//                    requireActivity().finish()
-//                } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
-//                    //completeUsername = it.username ?: ""
-//                    //showCompleteState()
-//                }
-//            }
-//            dashPayViewModel.createUsernameArgs?.invite?.let {
-//                requireActivity().startService(CreateIdentityService.createIntentFromInvite(requireContext(), username, it))
-//            }
-        //}
     }
 }

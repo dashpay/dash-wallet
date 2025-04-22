@@ -55,9 +55,7 @@ class OnboardingViewModel @Inject constructor(
     internal val finishCreateNewWalletAction = SingleLiveEvent<Unit>()
     internal val finishUnecryptedWalletUpgradeAction = SingleLiveEvent<Unit>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
-//    var onboardingInvite: InvitationLinkData? = null
-//    val isUsingInvite: Boolean
-//        get() = onboardingInvite != null
+
     fun createNewWallet(onboardingInvite: InvitationLinkData?) {
         analytics.logEvent(AnalyticsConstants.Onboarding.NEW_WALLET, mapOf())
         viewModelScope.launch {
@@ -69,13 +67,7 @@ class OnboardingViewModel @Inject constructor(
                 configuration.armBackupSeedReminder()
             }
             analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
-//            if (onboardingInvite != null) {
-//                startActivityAction.call(
-//                    AcceptInviteActivity.createIntent(walletApplication, onboardingInvite!!, true)
-//                )
-//            } else {
             finishCreateNewWalletAction.call(Unit)
-            //}
         }
     }
 

@@ -213,21 +213,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                         startService(CreateIdentityService.createIntentForRetry(this, false))
                     }
                 }
-//                if (config.isRestoringBackup && config.onboardingInviteProcessing) {
-//                    config.setOnboardingInviteProcessingDone()
-//                    InviteHandler(this, viewModel.analytics).showUsernameAlreadyDialog()
-//                    binding.restoringWalletCover.isVisible = false
-//                }
             }
         }
 
         viewModel.platformRepo.onIdentityResolved = { identity ->
-//            if (identity == null && config.isRestoringBackup && config.onboardingInviteProcessing) {
-//                lifecycleScope.launch {
-//                    //handleOnboardingInvite(false)
-//                    binding.restoringWalletCover.isVisible = false
-//                }
-//            }
+            // TODO: do we need this?
         }
         viewModel.showCreateUsernameEvent.observe(this) {
             lifecycleScope.launch {
@@ -253,14 +243,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             }
         }
 
-//        viewModel.isBlockchainSynced.observe(this) { isSynced ->
-//            // handleCreateFromInvite(isSynced, viewModel.restoringBackup)
-//        }
-//        viewModel.syncStage.observe(this) { syncStage ->
-////            if (viewModel.pendingInvite != null) {
-////                handleInvite(viewModel.pendingInvite!!, lockScreenDisplayed || isLocked, syncStage == SyncStage.BLOCKS)
-////            }
-//        }
         viewModel.seriousErrorLiveData.observe(this) {
             if (it != null) {
                 if (it.data != null && !viewModel.processingSeriousError) {

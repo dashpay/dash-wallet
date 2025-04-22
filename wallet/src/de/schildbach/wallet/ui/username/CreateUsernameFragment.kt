@@ -237,28 +237,18 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
             requireActivity().startService(CreateIdentityService.createIntentFromInviteForNewUsername(requireContext(), username))
             requireActivity().finish()
         } else {
-//            val fromOnboarding = createUsernameArgs?.fromOnboardng ?: false
-//            if (fromOnboarding) {
-//                walletApplication.configuration.onboardingInviteUsername = username
-//                //val goNextIntent = SetPinActivity.createIntent(requireActivity().application, R.string.set_pin_create_new_wallet, false, null, onboardingInvite = true)
-//                //startActivity(OnboardFromInviteActivity.createIntent(requireContext(), OnboardFromInviteActivity.Mode.STEP_2, goNextIntent))
-//                requireActivity().finish()
-//                return
-//            } else {
-                dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
-                    if (it?.creationStateErrorMessage != null && !reuseTransaction) {
-                        requireActivity().finish()
-                    } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
-                        completeUsername = it.username ?: ""
-                        showCompleteState()
-                    }
-                }
-                showProcessingState()
-                createUsernameArgs?.invite?.let {
-                    requireActivity().startService(CreateIdentityService.createIntentFromInvite(requireContext(), username, it))
+            dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+                if (it?.creationStateErrorMessage != null && !reuseTransaction) {
+                    requireActivity().finish()
+                } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
+                    completeUsername = it.username ?: ""
+                    showCompleteState()
                 }
             }
-        //}
+            createUsernameArgs?.invite?.let {
+                requireActivity().startService(CreateIdentityService.createIntentFromInvite(requireContext(), username, it))
+            }
+        }
         showProcessingState()
     }
 

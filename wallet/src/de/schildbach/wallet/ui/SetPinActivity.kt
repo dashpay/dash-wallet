@@ -553,11 +553,7 @@ class SetPinActivity : InteractionAwareActivity() {
             logSuccess(path)
         }
 
-        //if (onboardingInvite) {
-        //    startActivity(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_3, verifySeedActivityIntent))
-        //} else {
-            startActivity(verifySeedActivityIntent)
-        //}
+        startActivity(verifySeedActivityIntent)
         finishAffinity()
     }
 

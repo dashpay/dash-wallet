@@ -269,7 +269,6 @@ class MainViewModel @Inject constructor(
 
     // DashPay
     private val isPlatformAvailable = MutableStateFlow(false)
-    // var pendingInvite: InvitationLinkData? = null
 
     val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
         addSource(isPlatformAvailable.asLiveData()) {

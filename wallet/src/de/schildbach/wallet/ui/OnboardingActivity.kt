@@ -198,15 +198,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
             }
             updateView()
         }
-//        if (invite != null) {
-//            val inviteHandler = InviteHandler(this, viewModel.analytics)
-//            inviteHandlerViewModel.inviteData.observe(this) {
-//                inviteHandler.handle(it, false) {
-//                    //viewModel.onboardingInvite = invite
-//                }
-//            }
-//            inviteHandlerViewModel.handleInvite(invite)
-//        }
     }
 
     override fun onDestroy() {
@@ -226,13 +217,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
             lifecycleScope.launch {
                 inviteHandlerViewModel.setInvitationLink(invite, true)
             }
-//            val inviteHandler = InviteHandler(this, viewModel.analytics)
-//            inviteHandlerViewModel.inviteData.observe(this) {
-//                inviteHandler.handle(it, false) {
-//                    updateView()
-//                }
-//            }
-//            inviteHandlerViewModel.handleInvite(invite)
         }
     }
 

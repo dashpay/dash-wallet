@@ -45,7 +45,6 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
         binding.confirmBtn.setOnClickListener {
             requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_CONFIRM)
             // go to the next screen, if using an invite
-            //requestUserNameViewModel.invitationNextStep?.invoke()
             requestUserNameViewModel.submit()
             dismiss()
         }

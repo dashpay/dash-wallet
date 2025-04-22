@@ -10,11 +10,6 @@
     android:fitsSystemWindows="true"
     tools:context="de.schildbach.wallet.ui.OnboardingActivity">
 
-<!--    <FrameLayout-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="0dp"-->
-<!--        android:layout_weight="1" />-->
-
     <ImageView
         android:id="@+id/slogan"
         android:layout_width="match_parent"
