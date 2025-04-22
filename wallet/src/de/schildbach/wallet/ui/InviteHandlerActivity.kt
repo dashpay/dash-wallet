@@ -65,19 +65,12 @@ class InviteHandlerActivity : AppCompatActivity() {
         binding = ActivityTransparentBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        if (onboardingInProgress()) {
-            log.info("ignoring invite since onboarding is in progress")
-            inviteHandler.showInviteWhileOnboardingInProgressDialog()
-            return
-        }
-
-        initViewModel()
         handleInvite(intent)
     }
 
     private fun onboardingInProgress(): Boolean {
         OnboardingState.init(configuration)
-        return /*walletDataProvider.wallet != null &&*/ OnboardingState.isOnboarding()
+        return OnboardingState.isOnboarding()
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -97,7 +90,6 @@ class InviteHandlerActivity : AppCompatActivity() {
 
     private fun handleInvite(invite: InvitationLinkData) {
         val mainTask = inviteHandler.getMainTask()
-        // setResult(RESULT_OK)
         when {
             onboardingInProgress() -> {
                 lifecycleScope.launch {
@@ -121,47 +113,5 @@ class InviteHandlerActivity : AppCompatActivity() {
                 finish()
             }
         }
-    }
-
-    private fun initViewModel() {
-//        viewModel.blockchainIdentity.observe(this) {
-//            // TODO: check if needed
-//            // dummy observer, just to force viewModel.blockchainIdentityData to be loaded
-//        }
-//        viewModel.inviteData.observe(this) {
-//            when (it.status) {
-//                Status.LOADING -> {
-//                    inviteHandler.showInviteLoadingProgress()
-//                }
-//                Status.ERROR -> {
-//                    val displayName = it.data!!.displayName
-//                    inviteHandler.showInvalidInviteDialog(displayName)
-//                }
-//                Status.CANCELED -> {
-//                    inviteHandler.showUsernameAlreadyDialog()
-//                }
-//                Status.SUCCESS -> {
-//                    val invite = it.data!!
-//                    val mainTask = inviteHandler.getMainTask()
-//                    setResult(Activity.RESULT_OK)
-//                    when {
-//                        walletDataProvider.wallet != null -> {
-//                            log.info("the invite will be forwarded, starting MainActivity with invite: ${invite.link}")
-//                            val intent = MainActivity.createIntent(this, invite)
-//                            mainTask?.startActivity(applicationContext, intent, null)
-//                                ?: startActivity(intent)
-//                        }
-//                        else -> {
-//                            log.info("the invite will be forwarded, starting Onboarding with invite: ${invite.link}")
-//                            // configuration.onboardingInvite = invite.link
-//                            val intent = OnboardingActivity.createIntent(this, invite)
-//                            mainTask?.startActivity(applicationContext, intent, null)
-//                                ?: startActivity(intent)
-//                        }
-//                    }
-//                    finish()
-//                }
-//            }
-//        }
     }
 }
