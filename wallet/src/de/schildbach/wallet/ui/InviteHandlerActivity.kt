@@ -80,8 +80,10 @@ class InviteHandlerActivity : AppCompatActivity() {
 
     private fun handleInvite(intent: Intent?) {
         if (intent != null) {
-            viewModel.handleInvite(intent) { invite ->
-                handleInvite(invite)
+            lifecycleScope.launch {
+                viewModel.handleInvite(intent)?.let { invitation ->
+                    handleInvite(invitation)
+                }
             }
         } else {
             finish()

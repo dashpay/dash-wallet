@@ -8,19 +8,12 @@ import de.schildbach.wallet_test.R
 import org.dash.wallet.common.Configuration
 
 class WelcomePagerAdapter(
-    fragmentActivity: FragmentActivity,
-    //behavior: Int,
-    //val configuration: Configuration
+    fragmentActivity: FragmentActivity
 ) : FragmentStateAdapter(fragmentActivity) {
 
     override fun createFragment(position: Int): Fragment {
         return when (position) {
             0 -> {
-//                val title = if (configuration.wasUpgraded()) {
-//                    R.string.welcome_screen_title_1_upgrade
-//                } else {
-//                    R.string.welcome_screen_title_1_new_install
-//                }
                 WelcomeScreenFragment.newInstance(
                     R.string.welcome_screen_title_1,
                     R.drawable.welcome_image_1
