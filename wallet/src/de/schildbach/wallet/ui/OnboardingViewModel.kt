@@ -22,7 +22,6 @@ import android.content.Intent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication

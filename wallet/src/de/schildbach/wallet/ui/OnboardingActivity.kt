@@ -244,15 +244,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     // such that the wallet is not encrypted
     private fun unencryptedFlow() {
         log.info("the wallet is not encrypted -- the wallet will be upgraded")
-        //if (config.v7TutorialCompleted) {
-            upgradeUnencryptedWallet()
-//        } else {
-//            startActivityForResult(
-//                Intent(this, WelcomeActivity::class.java),
-//                UPGRADE_NONENCRYPTED_FLOW_TUTORIAL_REQUEST_CODE
-//            )
-//            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-//        }
+        upgradeUnencryptedWallet()
     }
 
     private fun upgradeUnencryptedWallet() {
@@ -271,15 +263,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun regularFlow() {
-        //if (config.v7TutorialCompleted) {
-            upgradeOrStartMainActivity()
-        //} else {
-//            startActivityForResult(
-//                Intent(this, WelcomeActivity::class.java),
-//                REGULAR_FLOW_TUTORIAL_REQUEST_CODE
-//            )
-//            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-        //}
+        upgradeOrStartMainActivity()
     }
 
     private fun upgradeOrStartMainActivity() {
@@ -302,10 +286,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         initView()
         initViewModel()
         showButtonsDelayed()
-//        if (!config.v7TutorialCompleted) {
-//            startActivity(Intent(this, WelcomeActivity::class.java))
-//            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
-//        }
     }
 
     private fun initView() {
