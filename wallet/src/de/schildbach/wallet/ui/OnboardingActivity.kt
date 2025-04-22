@@ -240,13 +240,15 @@ class OnboardingActivity : RestoreFromFileActivity() {
                     colors = ButtonStyles.white10WithWhiteText(),
                     R.string.onboarding_recover_wallet
                 )
-                ButtonLarge(
-                    onClick = { restoreWallet() },
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    colors = ButtonStyles.white10WithWhiteText(),
-                    R.string.onboarding_restore_wallet
-                )
+                if (BuildConfig.DEBUG) {
+                    ButtonLarge(
+                        onClick = { restoreWallet() },
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        colors = ButtonStyles.white10WithWhiteText(),
+                        R.string.onboarding_restore_wallet
+                    )
+                }
             }
         }
     }
