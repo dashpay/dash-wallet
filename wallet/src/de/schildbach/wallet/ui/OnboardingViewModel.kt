@@ -56,7 +56,7 @@ class OnboardingViewModel @Inject constructor(
     internal val finishUnecryptedWalletUpgradeAction = SingleLiveEvent<Unit>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
 
-    fun createNewWallet(onboardingInvite: InvitationLinkData?) {
+    fun createNewWallet() {
         analytics.logEvent(AnalyticsConstants.Onboarding.NEW_WALLET, mapOf())
         viewModelScope.launch {
             withContext(Dispatchers.IO) {

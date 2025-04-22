@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -15,7 +15,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
-        android:src="@drawable/ic_dash_logo_white" />
+        android:src="@drawable/ic_dash_logo_white"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toEndOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <TextView
         android:id="@+id/fatal_error_message"
@@ -27,14 +30,30 @@
         android:textSize="18sp"
         android:textStyle="bold"
         android:textColor="@android:color/white"
-        android:visibility="gone" />
+        android:visibility="gone"
+        app:layout_constraintStart_toEndOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/slogan"/>
+
+    <ImageView
+        android:id="@+id/welcome_image_background"
+        android:layout_width="match_parent"
+        android:layout_height="450dp"
+        android:layout_marginTop="@dimen/welcome_screenshot_vertical_margin"
+        android:layout_marginBottom="@dimen/welcome_screenshot_vertical_margin"
+        android:src="@drawable/white_circle_gradient"
+        android:scaleType="centerCrop"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/viewpager"
+        app:layout_constraintBottom_toBottomOf="@id/viewpager"/>
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewpager"
         android:layout_width="match_parent"
-        android:layout_height="450dp"
-        android:layout_marginBottom="@dimen/welcome_screen_title_margin_top"
-        android:layout_marginHorizontal="25dp"
+        android:layout_height="0dp"
+        android:layout_marginBottom="20dp"
+        android:layout_marginHorizontal="20dp"
         app:layout_constraintBottom_toTopOf="@id/page_indicator"
         app:layout_constraintTop_toTopOf="parent"
         tools:layout="@layout/fragment_welcome"/>
@@ -43,52 +62,60 @@
         android:id="@+id/page_indicator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
+        android:layout_marginBottom="0dp"
         android:layout_gravity="center_horizontal"
         app:dotsColor="@color/dash_white_0.50"
         app:dotsCornerRadius="8dp"
         app:dotsSize="7dp"
         app:dotsSpacing="12dp"
         app:dotsWidthFactor="2"
-        app:layout_constraintBottom_toTopOf="@id/buttons"
+        app:layout_constraintBottom_toTopOf="@id/compose_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:progressMode="true"
         app:selectedDotColor="@color/dash_white" />
 
-    <LinearLayout
-        android:id="@+id/buttons"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:visibility="gone"
-        tools:visibility="visible">
+<!--    <LinearLayout-->
+<!--        android:id="@+id/buttons"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:orientation="vertical"-->
+<!--        android:padding="20dp"-->
+<!--        android:visibility="gone"-->
+<!--        tools:visibility="visible">-->
 
-        <Button
-            android:id="@+id/create_new_wallet"
-            style="@style/Button.Primary.Large.White"
-            android:textColor="@color/dash_blue"
+<!--        <Button-->
+<!--            android:id="@+id/create_new_wallet"-->
+<!--            style="@style/Button.Primary.Large.White"-->
+<!--            android:textColor="@color/dash_blue"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="@string/onboarding_create_wallet" />-->
+
+<!--        <Button-->
+<!--            android:id="@+id/recovery_wallet"-->
+<!--            style="@style/Button.Tertiary.Large.White"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_marginTop="16dp"-->
+<!--            android:text="@string/onboarding_recover_wallet" />-->
+
+<!--        <Button-->
+<!--            android:id="@+id/restore_wallet"-->
+<!--            style="@style/Button.Tertiary.Large.White"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_marginTop="16dp"-->
+<!--            android:text="@string/onboarding_restore_wallet" />-->
+
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/compose_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/onboarding_create_wallet" />
+            app:layout_constraintStart_toEndOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
 
-        <Button
-            android:id="@+id/recovery_wallet"
-            style="@style/Button.Tertiary.Large.White"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/onboarding_recover_wallet" />
+<!--    </LinearLayout>-->
 
-        <Button
-            android:id="@+id/restore_wallet"
-            style="@style/Button.Tertiary.Large.White"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/onboarding_restore_wallet" />
-
-    </LinearLayout>
-
-</androidx.appcompat.widget.LinearLayoutCompat>
+</androidx.constraintlayout.widget.ConstraintLayout>

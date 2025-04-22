@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">Create a New Wallet</string>
-    <string name="onboarding_recover_wallet">Restore Wallet From Recovery Phrase</string>
-    <string name="onboarding_restore_wallet">Restore Wallet From File</string>
+    <string name="onboarding_create_wallet">Create new wallet</string>
+    <string name="onboarding_recover_wallet">Restore wallet</string>
+    <string name="onboarding_restore_wallet">Restore wallet from file</string>
     <string name="onboarding_load_wallet_error">Unable to load wallet!</string>
 
     <string name="set_pin_create_new_wallet">Create a New Wallet</string>

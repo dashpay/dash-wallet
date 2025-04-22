@@ -9,7 +9,7 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/Headline3.White"
+        style="@style/Headline4.White"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/welcome_screen_title_margin_top"
@@ -21,18 +21,6 @@
         tools:text="Send and receive Dash via usernames" />
 
     <ImageView
-        android:id="@+id/welcome_image_background"
-        android:layout_width="match_parent"
-        android:layout_height="260dp"
-        android:layout_marginTop="@dimen/welcome_screenshot_vertical_margin"
-        android:layout_marginBottom="@dimen/welcome_screenshot_vertical_margin"
-        android:src="@drawable/white_circle_gradient"
-        app:layout_constraintBottom_toTopOf="@id/title"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <ImageView
         android:id="@+id/welcome_image"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -41,7 +29,7 @@
         android:src="@drawable/welcome_image_1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toBottomOf="@id/welcome_image_background"
-        app:layout_constraintTop_toTopOf="@id/welcome_image_background" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -29,6 +29,24 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.view.isVisible
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import dagger.hilt.android.AndroidEntryPoint
@@ -48,6 +66,8 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.ButtonLarge
+import org.dash.wallet.common.ui.components.ButtonStyles
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.getMainTask
 import org.slf4j.LoggerFactory
@@ -130,7 +150,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
             val binding = ActivityOnboardingPermLockBinding.inflate(layoutInflater)
             setContentView(binding.root)
             getStatusBarHeightPx()
-            hideSlogan()
+            // hideSlogan()
             binding.closeApp.setOnClickListener {
                 finish()
             }
@@ -198,6 +218,37 @@ class OnboardingActivity : RestoreFromFileActivity() {
             }
             updateView()
         }
+
+        binding.composeContainer.setContent {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp, 10.dp, 20.dp, 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                ButtonLarge(
+                    onClick = { createNewWallet() },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    colors = ButtonStyles.whiteWithBlueText(),
+                    R.string.onboarding_create_wallet
+                )
+                ButtonLarge(
+                    onClick = { recoverWalletFromSeedPhrase() },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    colors = ButtonStyles.white10WithWhiteText(),
+                    R.string.onboarding_recover_wallet
+                )
+                ButtonLarge(
+                    onClick = { restoreWallet() },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    colors = ButtonStyles.white10WithWhiteText(),
+                    R.string.onboarding_restore_wallet
+                )
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -221,7 +272,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun updateView() {
-        binding.restoreWallet.isVisible = !inviteHandlerViewModel.isUsingInvite || BuildConfig.DEBUG
+        //binding.restoreWallet.isVisible = !inviteHandlerViewModel.isUsingInvite || BuildConfig.DEBUG
     }
 
     // This is due to a wallet being created in an invalid way
@@ -269,24 +320,39 @@ class OnboardingActivity : RestoreFromFileActivity() {
     private fun onboarding() {
         initView()
         initViewModel()
-        showButtonsDelayed()
+        //showButtonsDelayed()
+    }
+
+    private fun createNewWallet() {
+        viewModel.createNewWallet()
+    }
+
+    private fun recoverWalletFromSeedPhrase() {
+        viewModel.logEvent(AnalyticsConstants.Onboarding.RECOVERY)
+        walletApplication.initEnvironmentIfNeeded()
+        startActivityForResult(Intent(this, RestoreWalletFromSeedActivity::class.java), REQUEST_CODE_RESTORE_WALLET)
+    }
+
+    private fun restoreWallet() {
+        viewModel.logEvent(AnalyticsConstants.Onboarding.RESTORE_FROM_FILE)
+        restoreWalletFromFile()
     }
 
     private fun initView() {
-        binding.createNewWallet.setOnClickListener {
-            viewModel.createNewWallet(inviteHandlerViewModel.invitation.value)
-        }
-        binding.recoveryWallet.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Onboarding.RECOVERY)
-            walletApplication.initEnvironmentIfNeeded()
-            startActivityForResult(Intent(this, RestoreWalletFromSeedActivity::class.java), REQUEST_CODE_RESTORE_WALLET)
-        }
+//        binding.createNewWallet.setOnClickListener {
+//            viewModel.createNewWallet(inviteHandlerViewModel.invitation.value)
+//        }
+//        binding.recoveryWallet.setOnClickListener {
+//            viewModel.logEvent(AnalyticsConstants.Onboarding.RECOVERY)
+//            walletApplication.initEnvironmentIfNeeded()
+//            startActivityForResult(Intent(this, RestoreWalletFromSeedActivity::class.java), REQUEST_CODE_RESTORE_WALLET)
+//        }
         // hide restore wallet from file if an invite is being used
         // remove this line after backup file recovery supports invites
-        binding.restoreWallet.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Onboarding.RESTORE_FROM_FILE)
-            restoreWalletFromFile()
-        }
+//        binding.restoreWallet.setOnClickListener {
+//            viewModel.logEvent(AnalyticsConstants.Onboarding.RESTORE_FROM_FILE)
+//            restoreWalletFromFile()
+//        }
         viewModel.startActivityAction.observe(this) {
             startActivityForResult(it, SET_PIN_REQUEST_CODE)
         }
@@ -328,17 +394,17 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
     }
 
-    private fun showButtonsDelayed() {
-        binding.buttons.postDelayed({
-            hideSlogan()
-            binding.buttons.isVisible = true
-        }, 1000)
-    }
-
-    private fun hideSlogan() {
-        val sloganDrawable = (window.decorView.background as LayerDrawable).getDrawable(1)
-        sloganDrawable.mutate().alpha = 0
-    }
+//    private fun showButtonsDelayed() {
+//        binding.buttons.postDelayed({
+//            hideSlogan()
+//            binding.buttons.isVisible = true
+//        }, 1000)
+//    }
+//
+//    private fun hideSlogan() {
+//        val sloganDrawable = (window.decorView.background as LayerDrawable).getDrawable(1)
+//        sloganDrawable.mutate().alpha = 0
+//    }
 
     private fun getStatusBarHeightPx(): Int {
         var result = 0
