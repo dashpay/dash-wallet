@@ -18,17 +18,13 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import androidx.core.net.toUri
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -107,16 +103,15 @@ class InviteHandlerViewModel @Inject constructor(
 
     suspend fun validateInvitation(): InvitationValidationState = withContext(Dispatchers.IO) {
         _invitation.value?.let { invite ->
-            try {
+            if (hasIdentity || inVotingPeriod) {
+                // we have an identity, don't check the validity
+                invite.validationState = InvitationValidationState.ALREADY_HAS_IDENTITY
+            } else try {
                 if (blockchainStateProvider.getSyncStage() == SyncStage.BLOCKS) {
                     invite.isValid = topUpRepository.validateInvitation(invite)
                 }
 
                 when {
-                    hasIdentity -> {
-                        // we have an identity
-                        invite.validationState = InvitationValidationState.ALREADY_HAS_IDENTITY
-                    }
                     invite.isValid == null -> invite.validationState = InvitationValidationState.NOT_SYNCED
                     invite.isValid!! ->  invite.validationState = InvitationValidationState.VALID
                     else -> {
