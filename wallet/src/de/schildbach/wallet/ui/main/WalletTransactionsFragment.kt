@@ -213,7 +213,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         inviteHandlerViewModel.invitation.observe(viewLifecycleOwner) { invitation ->
             val isSynced = viewModel.isBlockchainSynced.value == true
             if (invitation != null && isSynced) {
-                processInvitation(invitation, viewModel.isBlockchainSynced.value == true, !isLockScreenActive())
+                processInvitation(invitation, viewModel.isBlockchainSynced.value == true, isLockScreenActive())
             }
             header.invitation = invitation
             header.isSynced = isSynced
@@ -240,62 +240,65 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun onLockScreenDeactivated() {
         lifecycleScope.launch {
             inviteHandlerViewModel.invitation.value?.let {
-                val isSynced = viewModel.isBlockchainSynced.value == true
+                // only process for the dialog
                 processInvitation(
                     it,
-                    isSynced,
+                    viewModel.isBlockchainSynced.value == true,
                     false
                 )
-                header.invitation = it
-                header.isSynced = isSynced
             }
         }
     }
 
     private suspend fun processInvitation(invitation: InvitationLinkData, isSynced: Boolean, isLockScreenActive: Boolean) {
-        if (isSynced && !isLockScreenActive) {
-            val validationState = if (invitation.expired) {
+        if (isSynced) {
+            if (invitation.expired) {
                 inviteHandlerViewModel.validateInvitation()
-            } else {
-                invitation.validationState
             }
-            when (validationState) {
-                InvitationValidationState.INVALID -> {
-                    InviteHandler(
-                        requireActivity(),
-                        viewModel.analytics
-                    ).showInvalidInviteDialog(invitation.displayName)
-                    // remove invite
-                    inviteHandlerViewModel.clearInvitation()
-                }
 
-                InvitationValidationState.ALREADY_HAS_IDENTITY -> {
-                    // show dialog
-                    InviteHandler(requireActivity(), viewModel.analytics).showUsernameAlreadyDialog()
-                    // remove invite
-                    inviteHandlerViewModel.clearInvitation()
-                }
-
-                InvitationValidationState.VALID -> {
-
-                }
-
-                InvitationValidationState.ALREADY_CLAIMED -> {
-                    InviteHandler(requireActivity(), viewModel.analytics).showInviteAlreadyClaimedDialog(invitation)
-                    // remove invite
-                    inviteHandlerViewModel.clearInvitation()
-                }
-
-                InvitationValidationState.NONE -> {
-
-                }
-
-                InvitationValidationState.NOT_SYNCED -> {
-
-                }
-
-                else -> {}
+            if (!isLockScreenActive) {
+                showInviteValidationDialog(invitation)
             }
+        }
+    }
+
+    private suspend fun showInviteValidationDialog(invitation: InvitationLinkData) {
+        when (invitation.validationState) {
+            InvitationValidationState.INVALID -> {
+                InviteHandler(
+                    requireActivity(),
+                    viewModel.analytics
+                ).showInvalidInviteDialog(invitation.displayName)
+                // remove invite
+                inviteHandlerViewModel.clearInvitation()
+            }
+
+            InvitationValidationState.ALREADY_HAS_IDENTITY -> {
+                // show dialog
+                InviteHandler(requireActivity(), viewModel.analytics).showUsernameAlreadyDialog()
+                // remove invite
+                inviteHandlerViewModel.clearInvitation()
+            }
+
+            InvitationValidationState.VALID -> {
+
+            }
+
+            InvitationValidationState.ALREADY_CLAIMED -> {
+                InviteHandler(requireActivity(), viewModel.analytics).showInviteAlreadyClaimedDialog(invitation)
+                // remove invite
+                inviteHandlerViewModel.clearInvitation()
+            }
+
+            InvitationValidationState.NONE -> {
+
+            }
+
+            InvitationValidationState.NOT_SYNCED -> {
+
+            }
+
+            else -> {}
         }
     }
 
@@ -426,7 +429,6 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 }
             } else if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
                 safeNavigate(WalletFragmentDirections.homeToSearchUser())
-                //startActivity(Intent(requireActivity(), SearchUserActivity::class.java))
                 // hide "Hello Card" after first click
                 viewModel.dismissUsernameCreatedCard()
             } else {

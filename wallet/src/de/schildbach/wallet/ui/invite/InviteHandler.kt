@@ -54,6 +54,8 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
             return activityManager.appTasks.lastOrNull()
         }
 
+        // TODO: this does not work well, app closes
+        // what is the backstack
         private fun handleDialogButtonClick(activity: FragmentActivity) {
             activity.setResult(Activity.RESULT_CANCELED)
             val walletApplication = WalletApplication.getInstance()
@@ -149,7 +151,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
     fun showInviteWhileOnboardingInProgressDialog() {
         AdaptiveDialog.create(
             R.drawable.ic_invalid_invite,
-            activity.getString(R.string.invitation_onboarding_has_began_error_title),
+            activity.getString(R.string.invitation_error_title),
             activity.getString(R.string.invitation_onboarding_has_began_error),
             activity.getString(R.string.okay)
         ).show(activity) {
@@ -160,11 +162,14 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
     fun showInviteWhileProcessingInviteInProgressDialog() {
         AdaptiveDialog.create(
             R.drawable.ic_invalid_invite,
-            activity.getString(R.string.invitation_onboarding_has_began_error_title),
+            activity.getString(R.string.invitation_error_title),
             activity.getString(R.string.invitation_accept_invite_has_began_error),
             activity.getString(R.string.okay)
         ).show(activity) {
-            handleMoveToFront(activity)
+            // TODO: this does not work well
+            handleDialogButtonClick(activity)
+            //handleMoveToFront(activity)
+            // activity.finish()
         }
     }
 

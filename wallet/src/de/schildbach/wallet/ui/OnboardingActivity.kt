@@ -249,7 +249,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         if (invite != null && inviteHandlerViewModel.invitation.value != null) {
             // TODO: wrong message
             log.info("handling invite: already processing invite")
-            InviteHandler(this, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
+            InviteHandler(this, viewModel.analytics).showInviteWhileOnboardingInProgressDialog()
         } else if (invite != null) {
             log.info("saving invite for later: ${invite.link}")
             lifecycleScope.launch {

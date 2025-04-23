@@ -92,6 +92,7 @@ class InviteHandlerActivity : AppCompatActivity() {
 
     private fun handleInvite(invite: InvitationLinkData) {
         val mainTask = inviteHandler.getMainTask()
+        log.info("mainTask: $mainTask")
         when {
             onboardingInProgress() -> {
                 lifecycleScope.launch {
