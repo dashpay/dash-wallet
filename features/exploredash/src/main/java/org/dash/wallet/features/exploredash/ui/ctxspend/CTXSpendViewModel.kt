@@ -38,9 +38,11 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.features.exploredash.data.ctxspend.model.DenominationType
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
@@ -59,7 +61,8 @@ class CTXSpendViewModel @Inject constructor(
     private val repository: CTXSpendRepositoryInt,
     private val transactionMetadata: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
-    networkState: NetworkStateInt
+    networkState: NetworkStateInt,
+    private val analytics: AnalyticsService
 ) : ViewModel() {
 
     companion object {
@@ -146,23 +149,28 @@ class CTXSpendViewModel @Inject constructor(
         // previously this API call would only be made if we didn't have the min and max card values,
         // but now we need to call this every time to get an updated savings percentage and to see if
         // the merchant is enabled
-        val response = getMerchant(merchant.merchantId!!)
+        val response = try {
+            getMerchant(merchant.merchantId!!)
+        } catch (ex: Exception) {
+            log.error("failed to get merchant ${merchant.merchantId}", ex)
+            null
+        }
 
-        if (response is ResponseResource.Success) {
-            try {
-                response.value?.let {
-                    merchant.savingsPercentage = it.savingsPercentage
-                    merchant.minCardPurchase = it.minimumCardPurchase
-                    merchant.maxCardPurchase = it.maximumCardPurchase
-                    merchant.active = it.enabled
-                }
-            } catch (e: Exception) {
-                log.warn("updated merchant details contains unexpected data:", e)
+        try {
+            response?.apply {
+                merchant.savingsPercentage = this.savingsPercentage
+                merchant.minCardPurchase = this.minimumCardPurchase
+                merchant.maxCardPurchase = this.maximumCardPurchase
+                merchant.active = this.enabled
+                merchant.fixedDenomination = this.denominationType == DenominationType.Fixed
+                merchant.denominations = this.denominations.map { it.toInt() }
             }
+        } catch (e: Exception) {
+            log.warn("updated merchant details contains unexpected data:", e)
         }
     }
 
-    private suspend fun getMerchant(merchantId: String): ResponseResource<GetMerchantResponse?>? {
+    private suspend fun getMerchant(merchantId: String): GetMerchantResponse? {
         repository.getCTXSpendEmail()?.let { email ->
             return repository.getMerchant(merchantId)
         }
@@ -218,11 +226,12 @@ class CTXSpendViewModel @Inject constructor(
         return try {
             walletDataProvider.checkSendingConditions(null, outputAmount)
             false
-        } catch (ex: LeftoverBalanceException) {
+        } catch (_: LeftoverBalanceException) {
             true
         }
     }
 
-    fun logEvent(event: String) {
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, mapOf())
     }
 }
