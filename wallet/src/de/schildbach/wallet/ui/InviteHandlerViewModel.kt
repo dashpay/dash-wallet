@@ -56,6 +56,9 @@ class InviteHandlerViewModel @Inject constructor(
     private val _invitation = MutableStateFlow<InvitationLinkData?>(null)
     val invitation: StateFlow<InvitationLinkData?> = _invitation.asStateFlow()
 
+//    private val _validationState = MutableStateFlow(InvitationValidationState.NONE)
+//    val validationState: StateFlow<InvitationValidationState?> = _validationState.asStateFlow()
+
     var fromOnboarding = false
 
     val isUsingInvite: Boolean
