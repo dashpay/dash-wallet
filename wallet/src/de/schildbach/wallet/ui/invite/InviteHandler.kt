@@ -56,6 +56,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
 
         // TODO: this does not work well, app closes
         // what is the backstack
+        @Deprecated("use handleMoveToFront instead")
         private fun handleDialogButtonClick(activity: FragmentActivity) {
             activity.setResult(Activity.RESULT_CANCELED)
             val walletApplication = WalletApplication.getInstance()
@@ -122,7 +123,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
             activity.getString(R.string.invitation_invalid_invite_message, displayName),
             activity.getString(R.string.okay)
         ).show(activity) {
-            handleDialogButtonClick(activity)
+            handleMoveToFront(activity)
         }
         analytics.logEvent(AnalyticsConstants.Invites.ERROR_INVALID, mapOf())
     }
@@ -134,7 +135,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
             activity.getString(R.string.invitation_username_already_found_message),
             activity.getString(R.string.button_ok)
         ).show(activity) {
-            handleDialogButtonClick(activity)
+            handleMoveToFront(activity)
         }
         analytics.logEvent(AnalyticsConstants.Invites.ERROR_USERNAME_TAKEN, mapOf())
     }
@@ -143,7 +144,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
         InviteAlreadyClaimedDialog
             .newInstance(activity, invite)
             .show(activity) {
-                handleDialogButtonClick(activity)
+                handleMoveToFront(activity)
             }
         analytics.logEvent(AnalyticsConstants.Invites.ERROR_ALREADY_CLAIMED, mapOf())
     }
@@ -166,10 +167,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
             activity.getString(R.string.invitation_accept_invite_has_began_error),
             activity.getString(R.string.okay)
         ).show(activity) {
-            // TODO: this does not work well
-            handleDialogButtonClick(activity)
-            //handleMoveToFront(activity)
-            // activity.finish()
+            handleMoveToFront(activity)
         }
     }
 
@@ -196,6 +194,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
     /**
      * handle non-recoverable errors from using an invite
      */
+    // TODO: this needs to be updated to Platform SDK > 1.x
     fun handleError(blockchainIdentityData: BlockchainIdentityBaseData): Boolean {
         // handle errors
         var exception: ConcensusException
