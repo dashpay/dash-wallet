@@ -19,12 +19,10 @@ package org.dash.wallet.common.ui.components
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-import org.dash.wallet.common.R
 
 object MyTheme {
     val ToastBackground = Color(0xff191c1f).copy(alpha = 0.9f)
@@ -44,5 +42,12 @@ object MyTheme {
         fontWeight = FontWeight(600),
         color = Color.White,
         textAlign = TextAlign.Center
+    )
+
+    val subtitleSemibold = TextStyle(
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+        fontFamily = FontFamily.Default,//FontFamily(Font(R.font.inter)),
+        fontWeight = FontWeight(600)
     )
 }
