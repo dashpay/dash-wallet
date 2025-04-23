@@ -75,39 +75,6 @@
         app:progressMode="true"
         app:selectedDotColor="@color/dash_white" />
 
-<!--    <LinearLayout-->
-<!--        android:id="@+id/buttons"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:orientation="vertical"-->
-<!--        android:padding="20dp"-->
-<!--        android:visibility="gone"-->
-<!--        tools:visibility="visible">-->
-
-<!--        <Button-->
-<!--            android:id="@+id/create_new_wallet"-->
-<!--            style="@style/Button.Primary.Large.White"-->
-<!--            android:textColor="@color/dash_blue"-->
-<!--            android:layout_width="match_parent"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:text="@string/onboarding_create_wallet" />-->
-
-<!--        <Button-->
-<!--            android:id="@+id/recovery_wallet"-->
-<!--            style="@style/Button.Tertiary.Large.White"-->
-<!--            android:layout_width="match_parent"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:layout_marginTop="16dp"-->
-<!--            android:text="@string/onboarding_recover_wallet" />-->
-
-<!--        <Button-->
-<!--            android:id="@+id/restore_wallet"-->
-<!--            style="@style/Button.Tertiary.Large.White"-->
-<!--            android:layout_width="match_parent"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:layout_marginTop="16dp"-->
-<!--            android:text="@string/onboarding_restore_wallet" />-->
-
         <androidx.compose.ui.platform.ComposeView
             android:id="@+id/compose_container"
             android:layout_width="match_parent"
@@ -115,7 +82,5 @@
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"/>
-
-<!--    </LinearLayout>-->
 
 </androidx.constraintlayout.widget.ConstraintLayout>
