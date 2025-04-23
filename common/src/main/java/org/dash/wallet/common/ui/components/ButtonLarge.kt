@@ -17,8 +17,13 @@
 package org.dash.wallet.common.ui.components
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
@@ -50,6 +55,7 @@ fun ButtonLarge(
         modifier = modifier
             .height(46.dp), // from Button.Primary.Large
         colors = colors,
+        contentPadding = PaddingValues(20.dp, 12.dp),
         shape = RoundedCornerShape(10.dp) // from PrimaryButtonTheme.Large
     ) {
         Text(
@@ -67,16 +73,37 @@ fun ButtonLarge(
 @Preview
 @Composable
 fun ButtonLargePreview() {
-    ButtonLarge(
-        onClick = {  },
+    Column(
         modifier = Modifier
-            .fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = colorResource(id = R.color.dash_white),
-            contentColor = colorResource(id = R.color.dash_blue),
-            disabledContainerColor = colorResource(id = R.color.disabled_button_bg),
-            disabledContentColor = colorResource(id = R.color.dash_blue)
-        ),
-        R.string.button_okay
-    )
+            .fillMaxWidth()
+            .background(colorResource(R.color.dash_blue))
+            .padding(20.dp, 10.dp, 20.dp, 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        ButtonLarge(
+            onClick = { },
+            modifier = Modifier
+                .fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colorResource(id = R.color.dash_white),
+                contentColor = colorResource(id = R.color.dash_blue),
+                disabledContainerColor = colorResource(id = R.color.disabled_button_bg),
+                disabledContentColor = colorResource(id = R.color.dash_blue)
+            ),
+            R.string.button_okay
+        )
+
+        ButtonLarge(
+            onClick = { },
+            modifier = Modifier
+                .fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colorResource(id = R.color.gray),
+                contentColor = colorResource(id = R.color.dash_black),
+                disabledContainerColor = colorResource(id = R.color.disabled_button_bg),
+                disabledContentColor = colorResource(id = R.color.dash_blue)
+            ),
+            R.string.network_unavailable_balance_not_accurate
+        )
+    }
 }
