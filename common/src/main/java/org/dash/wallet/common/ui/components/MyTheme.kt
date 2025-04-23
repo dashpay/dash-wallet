@@ -19,35 +19,55 @@ package org.dash.wallet.common.ui.components
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import org.dash.wallet.common.R
 
 object MyTheme {
     val ToastBackground = Color(0xff191c1f).copy(alpha = 0.9f)
+    val InterFont = FontFamily(Font(R.font.inter))
 
     val Body2Regular = TextStyle(
         fontSize = 14.sp,
         lineHeight = 20.sp,
-        fontFamily = FontFamily.Default, // FontFamily(Font(R.font.inter)) // crashes,
-        fontWeight = FontWeight(400),
-        color = Color.White
+        fontFamily = InterFont,
+        fontWeight = FontWeight(400)
     )
 
     val OverlineSemibold = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        fontFamily = FontFamily.Default, // FontFamily(Font(R.font.inter)) // crashes,
+        fontFamily = InterFont,
         fontWeight = FontWeight(600),
-        color = Color.White,
         textAlign = TextAlign.Center
     )
 
-    val subtitleSemibold = TextStyle(
+    val SubtitleSemibold = TextStyle(
         fontSize = 16.sp,
         lineHeight = 22.sp,
-        fontFamily = FontFamily.Default,//FontFamily(Font(R.font.inter)),
+        fontFamily = InterFont,
         fontWeight = FontWeight(600)
     )
+
+    val H6Bold = TextStyle(
+        fontSize = 20.sp,
+        lineHeight = 26.sp,
+        fontFamily = InterFont,
+        fontWeight = FontWeight(700)
+    )
+
+    object Colors {
+        val backgroundPrimary = Color(0xFFF5F6F7)
+        val textPrimary = Color(0xFF191C1F)
+        val backgroundSecondary = Color(0xFFFFFFFF)
+        val textSecondary = Color(0xFF6E757C)
+        val primary4 = Color(0x14191C1F)
+        val primary5 = Color(0x0D191C1F)
+        val primary40 = Color(0x66191C1F)
+        val dashBlue = Color(0xFF008DE4)
+        val dashBlue5 = Color(0x0D008DE4)
+    }
 }

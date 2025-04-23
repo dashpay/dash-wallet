@@ -19,7 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import org.dash.wallet.common.ui.components.Colors
+import org.dash.wallet.common.ui.components.MyTheme.Colors
 import de.schildbach.wallet.ui.compose_views.Shadows.softShadow
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants

@@ -24,12 +24,10 @@ import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
@@ -41,7 +39,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.databinding.FragmentExploreBinding
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog
-import java.util.*
+import java.util.Locale
 
 @AndroidEntryPoint
 class ExploreFragment : Fragment(R.layout.fragment_explore) {

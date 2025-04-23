@@ -19,6 +19,15 @@ package org.dash.wallet.features.exploredash.ui.ctxspend
 
 import android.os.Bundle
 import android.view.View
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -28,6 +37,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
@@ -42,6 +52,9 @@ import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.PurchaseGiftCard
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants.DEFAULT_DISCOUNT_AS_DOUBLE
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import java.util.Currency
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.dash.wallet.common.ui.components.MyTheme
 
 fun min(a: Coin, b: Coin?): Coin {
     return if (b == null || a < b) a else b
@@ -58,33 +71,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.titleBar.setNavigationOnClickListener { findNavController().popBackStack() }
-
-        if (savedInstanceState == null) {
-            val fragment =
-                EnterAmountFragment.newInstance(
-                    dashToFiat = false,
-                    showCurrencySelector = false,
-                    isMaxButtonVisible = false,
-                    isCurrencyOptionsPickerVisible = false,
-                    showAmountResultContainer = false,
-                    faitCurrencyCode = Constants.USD_CURRENCY
-                )
-
-            fragment.setViewDetails(getString(R.string.button_next))
-
-            childFragmentManager
-                .beginTransaction()
-                .setReorderingAllowed(true)
-                .add(R.id.enter_amount_fragment_placeholder, fragment)
-                .commitNow()
-            enterAmountFragment = fragment
-        }
+        
         setPaymentHeader()
-
-        enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
-            viewModel.giftCardPaymentValue = it.second
-            PurchaseGiftCardConfirmDialog().show(requireActivity())
-        }
 
         exploreViewModel.selectedItem.value?.let { merchant ->
             if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
@@ -98,10 +86,27 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 lifecycleScope.launch {
                     viewModel.updateMerchantDetails(merchant)
                     setMerchantEnabled()
+                    
+                    // Check if merchant has fixed denominations
+                    if (merchant.fixedDenomination) {
+                        setupMerchantDenominations()
+                    } else {
+                        setupEnterAmountFragment()
+                    }
+                    
                     setCardPurchaseLimits()
                     setDiscountHint()
                 }
             }
+        }
+
+        if (savedInstanceState == null && !viewModel.giftCardMerchant.fixedDenomination) {
+            setupEnterAmountFragment()
+        }
+
+        enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
+            viewModel.giftCardPaymentValue = it.second
+            PurchaseGiftCardConfirmDialog().show(requireActivity())
         }
 
         enterAmountViewModel.amount.observe(viewLifecycleOwner) { showCardPurchaseLimits() }
@@ -123,6 +128,38 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             enterAmountFragment?.handleNetworkState(isConnected)
         }
     }
+    
+    private fun setupEnterAmountFragment() {
+        val fragment = EnterAmountFragment.newInstance(
+            dashToFiat = false,
+            showCurrencySelector = false,
+            isMaxButtonVisible = false,
+            isCurrencyOptionsPickerVisible = false,
+            showAmountResultContainer = false,
+            faitCurrencyCode = Constants.USD_CURRENCY
+        )
+
+        fragment.setViewDetails(getString(R.string.button_next))
+
+        childFragmentManager
+            .beginTransaction()
+            .setReorderingAllowed(true)
+            .add(R.id.enter_amount_fragment_placeholder, fragment)
+            .commitNow()
+        enterAmountFragment = fragment
+        
+        binding.enterAmountFragmentPlaceholder.isVisible = true
+        binding.composeContainer.isVisible = false
+    }
+    
+    private fun setupMerchantDenominations() {
+        binding.enterAmountFragmentPlaceholder.isVisible = false
+        binding.composeContainer.isVisible = true
+
+        binding.composeContainer.setContent {
+            DenominationsBottomContainer()
+        }
+    }
 
     /** if the merchant is not active, then close this fragment */
     private fun setMerchantEnabled() {
@@ -139,6 +176,13 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     }
 
     private fun showCardPurchaseLimits() {
+        // For fixed denomination merchants, we don't need to show limits
+        if (viewModel.giftCardMerchant.fixedDenomination) {
+            binding.minValue.isVisible = false
+            binding.maxValue.isVisible = false
+            return
+        }
+        
         val purchaseAmount = enterAmountViewModel.amount.value
         purchaseAmount?.let {
             val balance = viewModel.balanceWithDiscount
@@ -173,24 +217,48 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         val savingsFraction = merchant.savingsFraction
 
         if (savingsFraction != DEFAULT_DISCOUNT_AS_DOUBLE) {
-            val purchaseAmount = enterAmountViewModel.amount.value
-            if (purchaseAmount != null && purchaseAmount != Coin.ZERO) {
-                val rate = enterAmountViewModel.selectedExchangeRate.value
-                val myRate = ExchangeRate(rate!!.fiat)
-                binding.discountValue.text =
-                    getString(
+            if (merchant.fixedDenomination && viewModel.selectedDenomination.value != null) {
+                // For fixed denomination merchants, use the selected denomination to show discount
+                val fiat = Fiat.valueOf(Constants.USD_CURRENCY, viewModel.selectedDenomination.value!!.toLong())
+                val selectedRate = viewModel.usdExchangeRate.value
+                if (selectedRate != null) {
+                    val myRate = ExchangeRate(selectedRate.fiat)
+                    val discountedAmount = viewModel.getDiscountedAmount(
+                        myRate.fiatToCoin(fiat),
+                        savingsFraction
+                    )
+                    
+                    binding.discountValue.text = getString(
                         R.string.purchase_gift_card_discount_hint,
-                        myRate.coinToFiat(purchaseAmount).toFormattedString(),
-                        viewModel.getDiscountedAmount(
-                            purchaseAmount,
-                            savingsFraction
-                        )?.toFormattedStringRoundUp() ?: "",
+                        fiat.toFormattedString(),
+                        discountedAmount?.toFormattedStringRoundUp() ?: "",
                         GenericUtils.formatPercent(savingsFraction)
                     )
-                binding.discountValue.setTextColor(resources.getColor(R.color.content_primary))
-                binding.discountValue.isVisible = true
+                    binding.discountValue.setTextColor(resources.getColor(R.color.content_primary))
+                    binding.discountValue.isVisible = true
+                } else {
+                    hideDiscountHint()
+                }
             } else {
-                hideDiscountHint()
+                val purchaseAmount = enterAmountViewModel.amount.value
+                if (purchaseAmount != null && purchaseAmount != Coin.ZERO) {
+                    val rate = enterAmountViewModel.selectedExchangeRate.value
+                    val myRate = ExchangeRate(rate!!.fiat)
+                    binding.discountValue.text =
+                        getString(
+                            R.string.purchase_gift_card_discount_hint,
+                            myRate.coinToFiat(purchaseAmount).toFormattedString(),
+                            viewModel.getDiscountedAmount(
+                                purchaseAmount,
+                                savingsFraction
+                            )?.toFormattedStringRoundUp() ?: "",
+                            GenericUtils.formatPercent(savingsFraction)
+                        )
+                    binding.discountValue.setTextColor(resources.getColor(R.color.content_primary))
+                    binding.discountValue.isVisible = true
+                } else {
+                    hideDiscountHint()
+                }
             }
         } else {
             hideDiscountHint()
@@ -233,5 +301,40 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         var balanceText = viewModel.dashFormat.format(balance).toString()
         exchangeRate?.let { balanceText += " ~ ${exchangeRate.coinToFiat(balance).toFormattedString()}" }
         binding.paymentHeaderView.setBalanceValue(balanceText)
+    }
+
+    @Composable
+    private fun DenominationsBottomContainer() {
+        Box(
+            modifier = Modifier.background(
+                color = MyTheme.Colors.backgroundSecondary,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                    topStart = 16.dp,
+                    topEnd = 16.dp,
+                    bottomStart = 0.dp,
+                    bottomEnd = 0.dp
+                )
+            )
+        ) {
+            val selectedDenomination = viewModel.selectedDenomination.collectAsStateWithLifecycle()
+            MerchantDenominations(
+                modifier = Modifier.padding(20.dp),
+                denominations = viewModel.giftCardMerchant.denominations,
+                currency = Currency.getInstance(Constants.USD_CURRENCY),
+                selectedDenomination = selectedDenomination.value,
+                onDenominationSelected = { denomination ->
+                    viewModel.selectDenomination(denomination)
+                    val fiat = Fiat.valueOf(Constants.USD_CURRENCY, denomination.toLong())
+                    viewModel.giftCardPaymentValue = fiat
+                },
+                onContinue = {
+                    viewModel.selectedDenomination.value?.let { denomination ->
+                        val fiat = Fiat.valueOf(Constants.USD_CURRENCY, denomination.toLong())
+                        viewModel.giftCardPaymentValue = fiat
+                        PurchaseGiftCardConfirmDialog().show(requireActivity())
+                    }
+                }
+            )
+        }
     }
 }

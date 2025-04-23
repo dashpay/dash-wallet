@@ -23,10 +23,14 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import org.bitcoinj.coinjoin.Denomination
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -87,6 +91,9 @@ class CTXSpendViewModel @Inject constructor(
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val usdExchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
+
+    private val _selectedDenomination = MutableStateFlow<Int?>(null)
+    val selectedDenomination: StateFlow<Int?> = _selectedDenomination.asStateFlow()
 
     val isNetworkAvailable = networkState.isConnected.asLiveData()
 
@@ -161,7 +168,7 @@ class CTXSpendViewModel @Inject constructor(
                 merchant.savingsPercentage = this.savingsPercentage
                 merchant.minCardPurchase = this.minimumCardPurchase
                 merchant.maxCardPurchase = this.maximumCardPurchase
-                merchant.active = this.enabled
+                merchant.active = this.enabled || this.denominationType == DenominationType.Fixed // TODO: re-enable fixed denoms
                 merchant.fixedDenomination = this.denominationType == DenominationType.Fixed
                 merchant.denominations = this.denominations.map { it.toInt() }
             }
@@ -229,6 +236,10 @@ class CTXSpendViewModel @Inject constructor(
         } catch (_: LeftoverBalanceException) {
             true
         }
+    }
+
+    fun selectDenomination(denomination: Int) {
+        _selectedDenomination.value = denomination
     }
 
     fun logEvent(eventName: String) {

@@ -94,10 +94,10 @@ dependencies {
 
     // Compose
     implementation(platform("androidx.compose:compose-bom:$composeBom"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    debugImplementation 'androidx.compose.ui:ui-tooling:1.0.0'
+    implementation "androidx.compose.ui:ui"
+    implementation "androidx.compose.ui:ui-tooling"
+    implementation "androidx.compose.material3:material3"
+    implementation "androidx.lifecycle:lifecycle-runtime-compose:$lifecycleVersion"
 
     // Maps & Location
     implementation 'com.google.android.gms:play-services-location:21.3.0'
