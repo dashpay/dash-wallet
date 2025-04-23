@@ -64,6 +64,7 @@ import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
 import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendLoginInfoDialog
 import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendTermsDialog
+import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
@@ -140,14 +141,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private var lastSyncProgress: Resource<Double> = Resource.success(100.0)
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        lifecycleScope.launch {
-            viewModel.setIsInfoShown(false)
-        }
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -176,6 +169,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.toolbarTitle.text = getToolbarTitle()
         binding.recenterMapBtn.setOnClickListener { viewModel.recenterMapCallback.call() }
+        
+        binding.infoButton.setOnClickListener {
+            ExploreDashInfoDialog().show(requireActivity())
+        }
 
         binding.manageGpsView.managePermissionsBtn.setOnClickListener {
             lifecycleScope.launch {
