@@ -86,12 +86,10 @@ import org.dash.wallet.common.transactions.TransactionWrapperFactory;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
-import org.dash.wallet.features.exploredash.utils.CTXSpendConstants;
 import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
-import de.schildbach.wallet.data.CoinJoinConfig;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.CoinJoinService;
 import de.schildbach.wallet.service.DashSystemService;
@@ -1131,6 +1129,12 @@ public class WalletApplication extends MultiDexApplication
 
     @NotNull
     @Override
+    public Address currentReceiveAddress() {
+        return wallet.freshReceiveAddress();
+    }
+
+    @NotNull
+    @Override
     public Address freshReceiveAddress() {
         return wallet.freshReceiveAddress();
     }
@@ -1141,8 +1145,7 @@ public class WalletApplication extends MultiDexApplication
             return Coin.ZERO;
         }
 
-        //return wallet.getBalance(Wallet.BalanceType.ESTIMATED);
-       return  walletBalanceObserver.getTotalBalance().getValue();
+        return  walletBalanceObserver.getTotalBalance().getValue();
     }
 
     @NonNull
@@ -1224,7 +1227,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<List<AuthenticationKeyUsage>> observeAuthenticationKeyUsage() {
-        if (wallet == null || !wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID)) {
+        if (wallet == null || authenticationGroupExtension == null) {
             return FlowKt.emptyFlow();
         }
         return new MasternodeObserver(authenticationGroupExtension).observeAuthenticationKeyUsage();
