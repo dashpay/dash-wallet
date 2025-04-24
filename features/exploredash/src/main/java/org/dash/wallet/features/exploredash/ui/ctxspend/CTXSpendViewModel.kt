@@ -95,6 +95,9 @@ class CTXSpendViewModel @Inject constructor(
     private val _selectedDenomination = MutableStateFlow<Int?>(null)
     val selectedDenomination: StateFlow<Int?> = _selectedDenomination.asStateFlow()
 
+    private val _isFixedDenomination = MutableStateFlow<Boolean?>(null)
+    val isFixedDenomination: StateFlow<Boolean?> = _isFixedDenomination.asStateFlow()
+
     val isNetworkAvailable = networkState.isConnected.asLiveData()
 
     lateinit var giftCardMerchant: Merchant
@@ -238,8 +241,17 @@ class CTXSpendViewModel @Inject constructor(
         }
     }
 
+    fun setIsFixedDenomination(isFixed: Boolean) {
+        _isFixedDenomination.value = isFixed
+    }
+
     fun selectDenomination(denomination: Int) {
         _selectedDenomination.value = denomination
+    }
+
+    fun resetSelectedDenomination() {
+        _selectedDenomination.value = null
+        giftCardPaymentValue = Fiat.valueOf(Constants.USD_CURRENCY, 0)
     }
 
     fun logEvent(eventName: String) {
