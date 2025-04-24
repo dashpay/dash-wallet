@@ -112,8 +112,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         if (item is Merchant) {
             lifecycleScope.launch {
-                ctxSpendViewModel.updateMerchantDetails(item)
                 viewModel.openMerchantDetails(item, true)
+                updateIsEnabled(item)
             }
         } else if (item is Atm) {
             viewModel.openAtmDetails(item)
@@ -122,8 +122,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private val merchantLocationsAdapter = MerchantsLocationsAdapter { merchant, _ ->
         lifecycleScope.launch {
-            ctxSpendViewModel.updateMerchantDetails(merchant)
             viewModel.openMerchantDetails(merchant)
+            updateIsEnabled(merchant)
         }
     }
 
@@ -550,7 +550,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
                         if (viewModel.selectedItem.value is Merchant) {
                             launch {
-                                ctxSpendViewModel.updateMerchantDetails(viewModel.selectedItem.value as Merchant)
+                                val merchant = viewModel.selectedItem.value as Merchant
+                                ctxSpendViewModel.updateMerchantDetails(merchant)
+                                updateIsEnabled(merchant)
                             }
                         }
                         transitToDetails()
@@ -864,6 +866,15 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             if (isMerchantTopic) {
                 viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
             }
+        }
+    }
+
+    private suspend fun updateIsEnabled(merchant: Merchant) {
+        val wasEnabled = merchant.active
+        ctxSpendViewModel.updateMerchantDetails(merchant)
+
+        if (merchant.active != wasEnabled) {
+            binding.itemDetails.bindItem(merchant)
         }
     }
 }
