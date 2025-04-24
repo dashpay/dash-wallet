@@ -430,14 +430,14 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     private suspend fun checkIdentity(paymentIntent: PaymentIntent): PaymentIntent {
-        var isDashUserOrNotMe = platformRepo.hasIdentity
+        var isDashUserOrNotMe = platformRepo.hasIdentity()
 
         // make sure that this payment intent is not to me
         if (paymentIntent.isIdentityPaymentRequest &&
             paymentIntent.payeeUsername != null &&
-            platformRepo.hasIdentity &&
-            platformRepo.blockchainIdentity.currentUsername != null &&
-            paymentIntent.payeeUsername == platformRepo.blockchainIdentity.currentUsername
+            platformRepo.hasIdentity() &&
+            platformRepo.hasUsername() &&
+            paymentIntent.payeeUsername == platformRepo.getUsername()
         ) {
             isDashUserOrNotMe = false
         }
