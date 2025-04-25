@@ -100,7 +100,7 @@ fun MerchantDenominations(
                 .padding(top = 20.dp),
             colors = ButtonStyles.blueWithWhiteText(),
             textId = R.string.button_continue,
-            enabled = selectedDenomination != null && canContinue
+            enabled = selectedDenomination != null && selectedDenomination != 0 && canContinue
         )
     }
 }

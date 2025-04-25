@@ -18,6 +18,7 @@
 package org.dash.wallet.features.exploredash.ui.ctxspend
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -95,6 +96,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
                     if (setMerchantEnabled()) {
                         viewModel.setIsFixedDenomination(merchant.fixedDenomination)
+                        setCardPurchaseLimits()
                     }
                 }
             }
@@ -120,7 +122,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         enterAmountViewModel.amount.observe(viewLifecycleOwner) {
             if (!viewModel.giftCardMerchant.fixedDenomination) {
-                setCardPurchaseLimits()
+                showCardPurchaseLimits()
                 viewModel.setGiftCardPaymentValue(it)
             }
         }
@@ -210,9 +212,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         
         val purchaseAmount = enterAmountViewModel.amount.value
         purchaseAmount?.let {
-            if (purchaseAmount.isLessThan(viewModel.minCardPurchaseCoin) ||
-                purchaseAmount.isGreaterThan(viewModel.maxCardPurchaseCoin)
-            ) {
+            if (!viewModel.withinLimits(purchaseAmount)) {
                 binding.minValue.text =
                     getString(R.string.purchase_gift_card_min, viewModel.minCardPurchaseFiat.toFormattedString())
                 binding.maxValue.text =
@@ -234,12 +234,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         val merchant = viewModel.giftCardMerchant
         val savingsFraction = merchant.savingsFraction
 
-        if (savingsFraction == DEFAULT_DISCOUNT_AS_DOUBLE) {
-            binding.discountValue.isVisible = false
-            return
-        }
-
-        if (viewModel.giftCardPaymentValue.value.isZero) {
+        if (savingsFraction == DEFAULT_DISCOUNT_AS_DOUBLE ||
+            viewModel.giftCardPaymentValue.value.isZero
+        ) {
             binding.discountValue.isVisible = false
             return
         }
@@ -255,6 +252,11 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         if (exceedsBalance()) {
             showBalanceError(true)
+            return
+        }
+
+        if (!viewModel.withinLimits(viewModel.giftCardPaymentValue.value)) {
+            binding.discountValue.isVisible = false
             return
         }
 

@@ -193,6 +193,24 @@ class CTXSpendViewModel @Inject constructor(
         updatePurchaseLimits()
     }
 
+    fun withinLimits(purchaseAmount: Coin): Boolean {
+        if (giftCardMerchant.fixedDenomination) {
+            return true
+        }
+
+        return !purchaseAmount.isLessThan(minCardPurchaseCoin) &&
+                !purchaseAmount.isGreaterThan(maxCardPurchaseCoin)
+    }
+
+    fun withinLimits(purchaseAmount: Fiat): Boolean {
+        if (giftCardMerchant.fixedDenomination) {
+            return true
+        }
+
+        return !purchaseAmount.isLessThan(minCardPurchaseFiat) &&
+                !purchaseAmount.isGreaterThan(maxCardPurchaseFiat)
+    }
+
     private fun updatePurchaseLimits() {
         _exchangeRate.value?.let {
             val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
