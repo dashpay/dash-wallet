@@ -34,6 +34,7 @@ fun MerchantDenominations(
     denominations: List<Int>, 
     currency: Currency,
     selectedDenomination: Int? = null,
+    canContinue: Boolean = true,
     onDenominationSelected: (Int) -> Unit = {},
     onContinue: () -> Unit = {}
 ) {
@@ -99,7 +100,7 @@ fun MerchantDenominations(
                 .padding(top = 20.dp),
             colors = ButtonStyles.blueWithWhiteText(),
             textId = R.string.button_continue,
-            enabled = selectedDenomination != null
+            enabled = selectedDenomination != null && canContinue
         )
     }
 }
