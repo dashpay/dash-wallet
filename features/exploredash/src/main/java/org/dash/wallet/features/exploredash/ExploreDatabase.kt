@@ -47,7 +47,7 @@ import kotlin.coroutines.resumeWithException
         Atm::class,
         AtmFTS::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class)
