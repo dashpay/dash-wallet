@@ -215,11 +215,15 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                 payBtnTxt.text = context.getText(R.string.explore_pay_with_dash)
                 payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Blue)
                 payBtn.setOnClickListener { onSendDashClicked?.invoke(true) }
+                payBtn.isEnabled = merchant.active ?: true
+                temporaryUnavailableText.isVisible = merchant.active == false
             } else if (merchant.source!!.lowercase() == ServiceName.CTXSpend.lowercase()) {
                 payBtn.isVisible = true
                 payBtnTxt.text = context.getText(R.string.explore_buy_gift_card)
                 payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Orange)
                 payBtn.setOnClickListener { onBuyGiftCardButtonClicked?.invoke() }
+                payBtn.isEnabled = merchant.active ?: true
+                temporaryUnavailableText.isVisible = merchant.active == false
             }
 
             showAllBtn.setOnClickListener { onShowAllLocationsClicked?.invoke() }

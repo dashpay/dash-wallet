@@ -35,6 +35,7 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.TransactionResultViewModel
+import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.WalletUtils
@@ -222,7 +223,12 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private fun viewOnExplorer(tx: Transaction) {
-        WalletUtils.viewOnBlockExplorer(this, tx.purpose, tx.txId.toString())
+        ComposeBottomSheet(R.style.PrimaryBackground) { dialog ->
+            BlockExplorerSelectionView(viewModel.analytics) { explorer ->
+                WalletUtils.viewOnBlockExplorer(this, tx.purpose, tx.txId.toString(), explorer)
+                dialog.dismiss()
+            }
+        }.show(this)
     }
 
     private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {

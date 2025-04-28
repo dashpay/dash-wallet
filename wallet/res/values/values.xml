@@ -25,10 +25,10 @@
 	</string-array>
 	<string-array name="preferences_block_explorer_values">
 		<item>https://insight.dash.org/insight/</item>
-		<item>http://explorer.dash.org/chain/Dash/</item>
+		<item>https://blockchair.com/dash/</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_labels">
-		<item>Dash Insight Block Explorer</item>
-		<item>Dash Block Explorer (Official)</item>
+		<item>Insight</item>
+		<item>Blockchair</item>
 	</string-array>
 </resources>

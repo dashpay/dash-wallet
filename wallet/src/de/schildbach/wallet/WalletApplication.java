@@ -50,6 +50,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 import androidx.work.WorkManager;
 
+import com.google.api.client.util.Lists;
 import com.google.common.base.Stopwatch;
 import com.google.firebase.FirebaseApp;
 
@@ -236,7 +237,7 @@ public class WalletApplication extends MultiDexApplication
         FirebaseApp.initializeApp(this);
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
-        config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
+        config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
@@ -499,7 +500,8 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void initDashSpend() {
-        CTXSpendConstants.CLIENT_ID = BuildConfig.CTXSPEND_CLIENT_ID;
+        // there is nothing to set for now. No client id or client secret.
+        // X-Client-Id will be set as "dcg_android"
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -945,8 +947,7 @@ public class WalletApplication extends MultiDexApplication
 
     @SuppressLint("NewApi")
     public static void scheduleStartBlockchainService(final Context context, Boolean cancelOnly) {
-        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
-                context.getResources());
+        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context));
         final long lastUsedAgo = config.getLastUsedAgo();
 
         // apply some backoff
@@ -1219,6 +1220,9 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Collection<Transaction> getTransactions(@NonNull TransactionFilter... filters) {
+        if (wallet == null) {
+            return Lists.newArrayList();
+        }
         Set<Transaction> transactions = wallet.getTransactions(true);
 
         if (filters.length == 0) {

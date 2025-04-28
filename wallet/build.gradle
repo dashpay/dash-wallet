@@ -97,9 +97,8 @@ dependencies {
     implementation "io.coil-kt:coil:$coilVersion"
     implementation(platform("androidx.compose:compose-bom:2024.03.00"))
     implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.ui:ui-tooling")
     implementation("androidx.compose.material3:material3")
-    debugImplementation 'androidx.compose.ui:ui-tooling:1.0.0'
     implementation("androidx.activity:activity-compose:1.7.2")
 
     // Navigation
@@ -212,8 +211,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 34
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11020001
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.2.0-rc1"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11020102
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.2.1"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -227,8 +226,6 @@ android {
 
         buildConfigField("String", "COINBASE_CLIENT_ID", "\"COINBASE_CLIENT_ID\"")
         buildConfigField("String", "COINBASE_CLIENT_SECRET", "\"COINBASE_CLIENT_SECRET\"")
-
-        buildConfigField("String", "CTXSPEND_CLIENT_ID", "\"CTXSPEND_CLIENT_ID\"")
 
         def supportEmail = localProps.getProperty("SUPPORT_EMAIL")
         if (supportEmail != null) {
@@ -303,9 +300,6 @@ android {
             def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET", "\"COINBASE_CLIENT_SECRET\"")
             buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
             buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
-
-            def ctxSpendClientId = props.getProperty("CTXSPEND_CLIENT_ID", "\"CTXSPEND_CLIENT_ID\"")
-            buildConfigField("String", "CTXSPEND_CLIENT_ID", ctxSpendClientId)
         }
         prod {
             applicationId = "hashengineering.darkcoin.wallet"
@@ -385,11 +379,18 @@ android {
 
     packagingOptions {
         jniLibs {
-            excludes += ['lib/x86_64/freebsd/libscrypt.so', 'lib/x86_64/linux/libscrypt.so']
+            excludes += [
+                // android libscrypt.so is in dashj-x11-android
+                'lib/x86_64/freebsd/libscrypt.so',
+                'lib/x86_64/linux/libscrypt.so',
+                'lib/x86_64/darwin/libscrypt.dylib',
+                // 32-bit Platform SDK is not supported
+                'lib/x86/libsdklib.so',
+                'lib/armeabi-v7a/libsdklib.so'
+            ]
         }
         resources {
             excludes += [
-                    'lib/x86_64/darwin/libscrypt.dylib',
                     'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml',
                     'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml',
                     'org/bitcoinj/crypto/mnemonic/wordlist/english.txt',

@@ -65,6 +65,7 @@
     <string name="explore_back_to_nearest">Назад к ближайшим точкам</string>
     <string name="explore_select_location">Выбрать точку</string>
     <string name="explore_pay_with_dash">Оплатить с помощью Dash</string>
+    <string name="explore_pay_with_dash_save">Сохранить %.2f%%</string>
     <string name="explore_buy_gift_card">Купить подарочную карту</string>
     <string name="explore_buy_dash">Купить Dash</string>
     <string name="explore_sell_dash">Продать Dash</string>
@@ -213,7 +214,9 @@
     <string name="enter_verification_code">Введите код подтверждения</string>
     <string name="verification_check_email">Проверьте почту и введите код подтверждения</string>
     <string name="buy_gift_card">Приобрести подарочную карту через аккаунт DashSpend</string>
+    <string name="dashspend_create_account">Создайте аккаунт или войдите в существующий</string>
     <string name="create_new_account">Создать новый аккаунт</string>
+    <string name="login">Войти</string>
     <string name="password">Пароль</string>
     <string name="logged_in_as">Вы вошли в систему как %s</string>
     <string name="log_out">Выйти</string>
@@ -228,9 +231,16 @@
     <string name="gift_card_unknown_error">По какой-то причине мы не смогли купить подарочную карту. Пожалуйста, свяжитесь с техподдержкой с txid %s.</string>
     <string name="gift_card_rejected">Перевод был отклонён. Пожалуйста, свяжитесь с CTX и назовите номер подарочной карты %s, платежа %s и транзакции %s.</string>
     <string name="gift_card_redeem_url_not_supported">Вы перевели оплату магазину, который предоставлял ссылку для погашения карты, но эта функция больше не поддерживается. Пожалуйста, свяжитесь с CTX и назовите номер подарочной карты %s, платежа %s и транзакции %s.</string>
+    <string name="dashspend_terms_conditions">Принять условия использования</string>
     <string name="accept_terms_conditions">Я принимаю положения и условия DashSpend</string>
     <string name="tap_link_to_proceed">Нажмите на ссылку ниже, чтобы создать аккаунт DashSpend</string>
     <string name="accept_to_proceed">Чтобы создать аккаунт DashSpend, необходимо принять условия и положения DashSpend</string>
+    <string name="view_terms_conditions">Условия использования</string>
+    <string name="barcode_placeholder">Как только ваш код будет сгенерирован, он отобразится здесь.</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">Создать учетную запись</string>
+    <string name="log_in_to_ctxspend_account">Войти в ваш аккаунт</string>
     <string name="log_in_to_ctxspend_account_desc">На вашу почту будет отправлен одноразовый пароль.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Приобрести подарочную карту через аккаунт DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Создать аккаунт DashSpend или войти в уже существующий</string>

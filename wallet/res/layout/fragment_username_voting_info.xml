@@ -114,7 +114,7 @@
                 android:id="@+id/blocked_title"
                 style="@style/Subtitle2"
                 android:layout_width="0dp"
-                android:layout_height="43dp"
+                android:layout_height="wrap_content"
                 android:layout_marginStart="20dp"
                 android:text="@string/usernames_blocked_title"
                 app:layout_constraintBottom_toBottomOf="@id/blocked_icon"
@@ -136,79 +136,36 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/request_not_approved_btn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="20dp"
-            android:layout_marginTop="10dp"
-            android:background="?attr/selectableItemBackground"
-            android:clickable="true"
-            android:visibility="gone"
-            android:focusable="true">
-
-            <ImageView
-                android:id="@+id/request_not_approved_icon"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:srcCompat ="@drawable/ic_face_sad"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <TextView
-                android:id="@+id/request_not_approved_title"
-                style="@style/Subtitle2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="63dp"
-                android:layout_marginTop="14dp"
-                android:text="@string/case_your_request_is_not_approved"
-                app:layout_constraintBottom_toBottomOf="@id/request_not_approved_icon"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@id/request_not_approved_icon"
-                app:layout_constraintTop_toTopOf="@id/request_not_approved_icon"
-                />
-
-            <TextView
-                android:id="@+id/request_not_approved_subtitle"
-                style="@style/Caption.Secondary"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="@string/pay_now"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="@+id/request_not_approved_title"
-                app:layout_constraintTop_toBottomOf="@+id/request_not_approved_title" />
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/passphrase_btn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="20dp"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="15dp"
             android:background="?attr/selectableItemBackground"
             android:clickable="true"
             android:focusable="true">
 
             <ImageView
                 android:id="@+id/passphrase_icon"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:srcCompat ="@drawable/ic_passphrase"
-                app:layout_constraintEnd_toStartOf="@id/passphrase_title"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginStart="15dp"
+                app:srcCompat="@drawable/ic_passphrase"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/passphrase_title" />
+                app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/passphrase_title"
                 style="@style/Subtitle2"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="63dp"
+                android:layout_marginStart="20dp"
                 android:text="@string/keep_your_passphrase_safe"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintBottom_toBottomOf="@id/passphrase_icon"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/passphrase_icon"
+                app:layout_constraintTop_toTopOf="@id/passphrase_icon" />
 
             <TextView
                 android:id="@+id/passphrase_subtitle"
@@ -217,12 +174,12 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="@string/in_case_lose_your_passphrase"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="@+id/passphrase_title"
                 app:layout_constraintTop_toBottomOf="@+id/passphrase_title" />
         </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </LinearLayout>
+  </LinearLayout>
 
     <TextView
         android:id="@+id/username_voting_info_continue_btn"

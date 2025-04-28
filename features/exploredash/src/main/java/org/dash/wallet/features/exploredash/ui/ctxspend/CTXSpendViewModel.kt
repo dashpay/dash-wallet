@@ -23,6 +23,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -38,9 +41,10 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.features.exploredash.data.ctxspend.model.DenominationType
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
@@ -59,7 +63,8 @@ class CTXSpendViewModel @Inject constructor(
     private val repository: CTXSpendRepositoryInt,
     private val transactionMetadata: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
-    networkState: NetworkStateInt
+    networkState: NetworkStateInt,
+    private val analytics: AnalyticsService
 ) : ViewModel() {
 
     companion object {
@@ -85,10 +90,15 @@ class CTXSpendViewModel @Inject constructor(
     val usdExchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
 
+    private val _isFixedDenomination = MutableStateFlow<Boolean?>(null)
+    val isFixedDenomination: StateFlow<Boolean?> = _isFixedDenomination.asStateFlow()
+
+    private val _giftCardPaymentValue = MutableStateFlow<Fiat>(Fiat.valueOf(Constants.USD_CURRENCY, 0))
+    val giftCardPaymentValue: StateFlow<Fiat> = _giftCardPaymentValue.asStateFlow()
+
     val isNetworkAvailable = networkState.isConnected.asLiveData()
 
     lateinit var giftCardMerchant: Merchant
-    lateinit var giftCardPaymentValue: Fiat
 
     var minCardPurchaseCoin: Coin = Coin.ZERO
     var minCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
@@ -112,7 +122,7 @@ class CTXSpendViewModel @Inject constructor(
 
     suspend fun purchaseGiftCard(): GiftCardResponse {
         giftCardMerchant.merchantId?.let {
-            val amountValue = giftCardPaymentValue
+            val amountValue = giftCardPaymentValue.value
 
             val response = repository.purchaseGiftCard(
                 merchantId = it,
@@ -143,26 +153,32 @@ class CTXSpendViewModel @Inject constructor(
     }
 
     suspend fun updateMerchantDetails(merchant: Merchant) {
-        if (merchant.minCardPurchase != null && merchant.maxCardPurchase != null) {
-            return
+        // previously this API call would only be made if we didn't have the min and max card values,
+        // but now we need to call this every time to get an updated savings percentage and to see if
+        // the merchant is enabled
+        val response = try {
+            getMerchant(merchant.merchantId!!)
+        } catch (ex: Exception) {
+            log.error("failed to get merchant ${merchant.merchantId}", ex)
+            null
         }
 
-        val response = getMerchant(merchant.merchantId!!)
-
-        if (response is ResponseResource.Success) {
-            try {
-                response.value?.let {
-                    merchant.savingsPercentage = it.savingsPercentage
-                    merchant.minCardPurchase = it.minimumCardPurchase
-                    merchant.maxCardPurchase = it.maximumCardPurchase
-                }
-            } catch (e: Exception) {
-                log.warn("updated merchant details contains unexpected data:", e)
+        try {
+            response?.apply {
+                merchant.savingsPercentage = this.savingsPercentage
+                merchant.minCardPurchase = this.minimumCardPurchase
+                merchant.maxCardPurchase = this.maximumCardPurchase
+                // TODO: re-enable fixed denoms
+                merchant.active = this.enabled || this.denominationType == DenominationType.Fixed
+                merchant.fixedDenomination = this.denominationType == DenominationType.Fixed
+                merchant.denominations = this.denominations.map { it.toInt() }
             }
+        } catch (e: Exception) {
+            log.warn("updated merchant details contains unexpected data:", e)
         }
     }
 
-    private suspend fun getMerchant(merchantId: String): ResponseResource<GetMerchantResponse?>? {
+    private suspend fun getMerchant(merchantId: String): GetMerchantResponse? {
         repository.getCTXSpendEmail()?.let { email ->
             return repository.getMerchant(merchantId)
         }
@@ -177,18 +193,29 @@ class CTXSpendViewModel @Inject constructor(
         updatePurchaseLimits()
     }
 
+    fun withinLimits(purchaseAmount: Coin): Boolean {
+        if (giftCardMerchant.fixedDenomination) {
+            return true
+        }
+
+        return !purchaseAmount.isLessThan(minCardPurchaseCoin) &&
+            !purchaseAmount.isGreaterThan(maxCardPurchaseCoin)
+    }
+
+    fun withinLimits(purchaseAmount: Fiat): Boolean {
+        if (giftCardMerchant.fixedDenomination) {
+            return true
+        }
+
+        return !purchaseAmount.isLessThan(minCardPurchaseFiat) &&
+            !purchaseAmount.isGreaterThan(maxCardPurchaseFiat)
+    }
+
     private fun updatePurchaseLimits() {
         _exchangeRate.value?.let {
             val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
             minCardPurchaseCoin = myRate.fiatToCoin(minCardPurchaseFiat)
             maxCardPurchaseCoin = myRate.fiatToCoin(maxCardPurchaseFiat)
-        }
-    }
-
-    fun getDiscountedAmount(fullAmount: Coin, savingsFraction: Double): Fiat? {
-        return _exchangeRate.value?.let {
-            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
-            return myRate.coinToFiat(fullAmount).discountBy(savingsFraction)
         }
     }
 
@@ -204,7 +231,7 @@ class CTXSpendViewModel @Inject constructor(
         val giftCard = GiftCard(
             txId = txId,
             merchantName = giftCardMerchant.name ?: "",
-            price = giftCardPaymentValue.toBigDecimal().toDouble(),
+            price = giftCardPaymentValue.value.toBigDecimal().toDouble(),
             merchantUrl = giftCardMerchant.website,
             note = giftCardId
         )
@@ -218,11 +245,31 @@ class CTXSpendViewModel @Inject constructor(
         return try {
             walletDataProvider.checkSendingConditions(null, outputAmount)
             false
-        } catch (ex: LeftoverBalanceException) {
+        } catch (_: LeftoverBalanceException) {
             true
         }
     }
 
-    fun logEvent(event: String) {
+    fun setIsFixedDenomination(isFixed: Boolean) {
+        _isFixedDenomination.value = isFixed
+    }
+
+    fun setGiftCardPaymentValue(fiat: Fiat) {
+        _giftCardPaymentValue.value = fiat
+    }
+
+    fun setGiftCardPaymentValue(coin: Coin) {
+        _exchangeRate.value?.let {
+            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
+            _giftCardPaymentValue.value = myRate.coinToFiat(coin)
+        }
+    }
+
+    fun resetSelectedDenomination() {
+        _giftCardPaymentValue.value = Fiat.valueOf(Constants.USD_CURRENCY, 0)
+    }
+
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, mapOf())
     }
 }

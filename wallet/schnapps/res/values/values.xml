@@ -17,11 +17,11 @@
 		<item>mtDASH, 2 decimal places</item>
 		<item>µtDASH, no decimal places</item>
 	</string-array>
+
 	<string-array name="preferences_block_explorer_values">
 		<item>https://insight.ouzo.networks.dash.org:3002/insight</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_labels">
-		<item>Insight Devnet Block Explorer</item>
+		<item>Insight</item>
 	</string-array>
-
 </resources>

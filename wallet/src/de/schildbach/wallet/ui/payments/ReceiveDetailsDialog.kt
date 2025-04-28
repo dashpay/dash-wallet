@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.payments
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
+import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogReceiveDetailsBinding
@@ -55,6 +56,7 @@ class ReceiveDetailsDialog : OffsetDialogFragment(R.layout.dialog_receive_detail
     override val backgroundStyle = R.style.PrimaryBackground
     private val binding by viewBinding(DialogReceiveDetailsBinding::bind)
     @Inject lateinit var configuration: Configuration
+    private val viewModel by viewModels<PaymentsViewModel>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -73,6 +75,9 @@ class ReceiveDetailsDialog : OffsetDialogFragment(R.layout.dialog_receive_detail
                 binding.amount.fiatValue.text = fiatAmount.toFormattedString()
             } else {
                 binding.amount.fiatValue.isVisible = false
+            }
+            viewModel.dashPayProfile.observe(viewLifecycleOwner) {
+                binding.receiveInfo.setProfile(it?.username, it?.displayName, it?.avatarUrl, it?.avatarHash)
             }
         }
     }
