@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
 
 import android.graphics.Bitmap
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.zxing.BarcodeFormat
