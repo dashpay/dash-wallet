@@ -169,7 +169,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.toolbarTitle.text = getToolbarTitle()
         binding.recenterMapBtn.setOnClickListener { viewModel.recenterMapCallback.call() }
-        
+
         binding.infoButton.setOnClickListener {
             ExploreDashInfoDialog().show(requireActivity())
         }
