@@ -60,7 +60,6 @@ open class ExploreConfig @Inject constructor(
 ) {
     companion object {
         const val PREFERENCES_NAME = "explore"
-        const val EXPLORE_DB_PREFIX = "explore-database"
 
         val LOCAL_DB_TIMESTAMP = longPreferencesKey("local_db_timestamp")
         val LAST_SYNC_TIMESTAMP = longPreferencesKey("last_sync_timestamp")

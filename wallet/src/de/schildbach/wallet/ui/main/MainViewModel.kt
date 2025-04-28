@@ -75,7 +75,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
-import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -101,7 +100,6 @@ import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.batchAndFilterUpdates
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -140,8 +138,7 @@ class MainViewModel @Inject constructor(
     dashPayConfig: DashPayConfig,
     dashPayContactRequestDao: DashPayContactRequestDao,
     private val coinJoinConfig: CoinJoinConfig,
-    private val coinJoinService: CoinJoinService,
-    private val crowdNodeApi: CrowdNodeApi
+    private val coinJoinService: CoinJoinService
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     companion object {
         private const val BATCHING_PERIOD = 500L
@@ -231,12 +228,8 @@ class MainViewModel @Inject constructor(
     val isNetworkUnavailable: LiveData<Boolean>
         get() = _isNetworkUnavailable
 
-    private val _stakingAPY = MutableLiveData<Double>()
-
     val isPassphraseVerified: Boolean
         get() = !config.remindBackupSeed
-    val stakingAPY: LiveData<Double>
-        get() = _stakingAPY
 
     val currencyChangeDetected = SingleLiveEvent<Pair<String, String>>()
 
@@ -457,14 +450,6 @@ class MainViewModel @Inject constructor(
 
     fun processDirectTransaction(tx: Transaction) {
         walletData.processDirectTransaction(tx)
-    }
-
-    fun getLastStakingAPY() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val withoutFees = (100.0 - crowdNodeApi.getFee()) / 100
-            log.info("fees: without $withoutFees")
-            _stakingAPY.postValue(withoutFees * blockchainStateProvider.getLastMasternodeAPY())
-        }
     }
 
     suspend fun getCoinJoinMode(): CoinJoinMode {
@@ -754,14 +739,9 @@ class MainViewModel @Inject constructor(
         this@MainViewModel.txByHash = txByHash
     }
 
-    private suspend fun updateSyncStatus(state: BlockchainState) {
+    private fun updateSyncStatus(state: BlockchainState) {
         if (_isBlockchainSynced.value != state.isSynced()) {
             _isBlockchainSynced.postValue(state.isSynced())
-
-            if (state.isSynced()) {
-                val withoutFees = (100.0 - crowdNodeApi.getFee()) / 100
-                _stakingAPY.postValue(withoutFees * blockchainStateProvider.getMasternodeAPY())
-            }
         }
 
         _isBlockchainSyncFailed.postValue(state.syncFailed())
@@ -949,9 +929,5 @@ class MainViewModel @Inject constructor(
     fun addCoinJoinToWallet() {
         val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
         (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
-    }
-
-    fun isTestNet(): Boolean {
-        return walletData.wallet?.params?.id != NetworkParameters.ID_MAINNET
     }
 }
