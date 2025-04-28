@@ -6,6 +6,7 @@ plugins {
     id 'dagger.hilt.android.plugin'
     id 'kotlin-parcelize'
     id 'org.jlleitschuh.gradle.ktlint'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
@@ -38,6 +39,7 @@ android {
     }
     buildFeatures {
         viewBinding true
+        compose = true
     }
     testOptions {
         unitTests.returnDefaultValues = true
@@ -89,6 +91,13 @@ dependencies {
     implementation "io.coil-kt:coil:$coilVersion"
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
+
+    // Compose
+    implementation(platform("androidx.compose:compose-bom:$composeBom"))
+    implementation "androidx.compose.ui:ui"
+    implementation "androidx.compose.ui:ui-tooling"
+    implementation "androidx.compose.material3:material3"
+    implementation "androidx.lifecycle:lifecycle-runtime-compose:$lifecycleVersion"
 
     // Maps & Location
     implementation 'com.google.android.gms:play-services-location:21.3.0'

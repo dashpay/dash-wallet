@@ -68,7 +68,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         super.onViewCreated(view, savedInstanceState)
 
         val merchant = viewModel.giftCardMerchant
-        val paymentValue = viewModel.giftCardPaymentValue
+        val paymentValue = viewModel.giftCardPaymentValue.value
         val savingsFraction = merchant.savingsFraction
         binding.merchantName.text = merchant.name
         merchant.logoLocation?.let { logoLocation ->
