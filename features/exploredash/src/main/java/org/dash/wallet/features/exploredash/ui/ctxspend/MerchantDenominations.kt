@@ -23,25 +23,27 @@ import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.ui.components.ButtonLarge
 import org.dash.wallet.common.ui.components.ButtonStyles
 import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.features.exploredash.R
 import java.text.NumberFormat
 import java.util.Currency
-import org.dash.wallet.features.exploredash.R
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MerchantDenominations(
     modifier: Modifier = Modifier,
-    denominations: List<Int>, 
+    denominations: List<Int>,
     currency: Currency,
     selectedDenomination: Int? = null,
     canContinue: Boolean = true,
     onDenominationSelected: (Int) -> Unit = {},
     onContinue: () -> Unit = {}
 ) {
-    val numberFormat = remember { NumberFormat.getCurrencyInstance().apply {
-        this.currency = currency
-        minimumFractionDigits = 0
-    } }
+    val numberFormat = remember {
+        NumberFormat.getCurrencyInstance().apply {
+            this.currency = currency
+            minimumFractionDigits = 0
+        }
+    }
 
     Column(modifier = modifier) {
         Text(
@@ -110,7 +112,7 @@ fun MerchantDenominations(
 fun MerchantDenominationsPreview() {
     val denominations = listOf(5, 10, 15, 20, 50, 75, 100, 200)
     val currency = Currency.getInstance("USD")
-    
+
     MerchantDenominations(
         modifier = Modifier.padding(20.dp).width(300.dp),
         denominations = denominations,

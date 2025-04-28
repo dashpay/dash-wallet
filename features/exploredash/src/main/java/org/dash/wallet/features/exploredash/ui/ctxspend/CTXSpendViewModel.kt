@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import org.bitcoinj.coinjoin.Denomination
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -169,7 +168,8 @@ class CTXSpendViewModel @Inject constructor(
                 merchant.savingsPercentage = this.savingsPercentage
                 merchant.minCardPurchase = this.minimumCardPurchase
                 merchant.maxCardPurchase = this.maximumCardPurchase
-                merchant.active = this.enabled || this.denominationType == DenominationType.Fixed // TODO: re-enable fixed denoms
+                // TODO: re-enable fixed denoms
+                merchant.active = this.enabled || this.denominationType == DenominationType.Fixed
                 merchant.fixedDenomination = this.denominationType == DenominationType.Fixed
                 merchant.denominations = this.denominations.map { it.toInt() }
             }
@@ -199,7 +199,7 @@ class CTXSpendViewModel @Inject constructor(
         }
 
         return !purchaseAmount.isLessThan(minCardPurchaseCoin) &&
-                !purchaseAmount.isGreaterThan(maxCardPurchaseCoin)
+            !purchaseAmount.isGreaterThan(maxCardPurchaseCoin)
     }
 
     fun withinLimits(purchaseAmount: Fiat): Boolean {
@@ -208,7 +208,7 @@ class CTXSpendViewModel @Inject constructor(
         }
 
         return !purchaseAmount.isLessThan(minCardPurchaseFiat) &&
-                !purchaseAmount.isGreaterThan(maxCardPurchaseFiat)
+            !purchaseAmount.isGreaterThan(maxCardPurchaseFiat)
     }
 
     private fun updatePurchaseLimits() {
