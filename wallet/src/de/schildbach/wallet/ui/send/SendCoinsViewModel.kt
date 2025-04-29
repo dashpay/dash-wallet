@@ -35,6 +35,7 @@ import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -43,8 +44,11 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
@@ -103,7 +107,9 @@ class SendCoinsViewModel @Inject constructor(
     var currentAmount: Coin = Coin.ZERO
         set(value) {
             field = value
-            executeDryrun(value)
+            viewModelScope.launch(Dispatchers.IO) {
+                executeDryrun(value)
+            }
         }
 
     var dryrunSendRequest: SendRequest? = null
@@ -175,12 +181,16 @@ class SendCoinsViewModel @Inject constructor(
         }
 
         log.info("got {}", paymentIntent)
-        val finalIntent = checkIdentity(paymentIntent)
+        val finalIntent = withContext(Dispatchers.IO) {
+            checkIdentity(paymentIntent)
+        }
 
         log.info("proceeding with {}", finalIntent)
         super.initPaymentIntent(finalIntent)
         _state.value = State.INPUT
-        executeDryrun(currentAmount)
+        withContext(Dispatchers.IO) {
+            executeDryrun(currentAmount)
+        }
     }
 
     fun everythingPlausible(): Boolean {
@@ -378,7 +388,7 @@ class SendCoinsViewModel @Inject constructor(
         dryRunException = null
 
         if (state.value != State.INPUT || amount == Coin.ZERO) {
-            _dryRunSuccessful.value = false
+            _dryRunSuccessful.postValue(false)
             return
         }
 
@@ -386,6 +396,7 @@ class SendCoinsViewModel @Inject constructor(
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(amount, dummyAddress)
 
         try {
+            Context.propagate(wallet.context)
             // check regular payment
             var sendRequest = createSendRequest(
                 basePaymentIntent.mayEditAmount(),
@@ -406,14 +417,14 @@ class SendCoinsViewModel @Inject constructor(
             }
 
             dryrunSendRequest = sendRequest
-            _dryRunSuccessful.value = true
+            _dryRunSuccessful.postValue(true)
         } catch (ex: Exception) {
             dryRunException = if (ex is InsufficientMoneyException && _coinJoinActive.value && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
                  InsufficientCoinJoinMoneyException(ex)
             } else {
                 ex
             }
-            _dryRunSuccessful.value = false
+            _dryRunSuccessful.postValue(false)
         }
     }
 
