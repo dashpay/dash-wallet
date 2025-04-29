@@ -366,7 +366,7 @@ class CoinJoinMixingService @Inject constructor(
                     }
                 }
             }
-            updateProgress()
+            updateProgressFromCache()
             updateIsMixing()
         } finally {
             updateMutex.unlock()
@@ -695,12 +695,25 @@ class CoinJoinMixingService @Inject constructor(
 
     override suspend fun getMixingProgress(): Double {
         val wallet = walletDataProvider.wallet as? WalletEx
-        return wallet?.let { it.coinJoin.mixingProgress * 100.0 } ?: 0.0
+        val watch = Stopwatch.createStarted()
+        val process =  wallet?.let { it.coinJoin.mixingProgress * 100.0 } ?: 0.0
+        log.info("timing: getMixingProgress: $watch")
+        return process
+    }
+
+    private suspend fun updateProgressFromCache() {
+        val progress = config.getMixingProgress()
+        if (progress == null) {
+            updateProgress()
+        } else {
+            _progressFlow.emit(progress)
+        }
     }
 
     private suspend fun updateProgress() {
         val progress = getMixingProgress()
         _progressFlow.emit(progress)
+        config.setMixingProgress(progress)
     }
 
     private fun updateActiveSessions(change: Int) {
