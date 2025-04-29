@@ -37,6 +37,13 @@ object MyTheme {
         fontWeight = FontWeight(400)
     )
 
+    val CaptionMedium = TextStyle(
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        fontFamily = InterFont,
+        fontWeight = FontWeight(500)
+    )
+
     val OverlineSemibold = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -50,6 +57,13 @@ object MyTheme {
         lineHeight = 22.sp,
         fontFamily = InterFont,
         fontWeight = FontWeight(600)
+    )
+
+    val H5Bold = TextStyle(
+        fontSize = 24.sp,
+        lineHeight = 30.sp,
+        fontFamily = InterFont,
+        fontWeight = FontWeight(700)
     )
 
     val H6Bold = TextStyle(
