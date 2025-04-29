@@ -356,8 +356,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     val authExtension =
                         wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
                     val cftx = authExtension.getAssetLockTransaction(tx)
-                    val blockChainHeadTime = blockChain!!.chainHead.header.time.time
-                    topUpRepository.handleSentAssetLockTransaction(cftx, blockChainHeadTime)
+                    topUpRepository.handleSentAssetLockTransaction(cftx, tx.updateTime.time)
 
                     // TODO: if we detect a username creation that we haven't processed, should we?
                 }

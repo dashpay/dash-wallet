@@ -115,6 +115,7 @@ interface TopUpRepository {
     // invitation related methods
     suspend fun createInviteFundingTransaction(
         blockchainIdentity: BlockchainIdentity,
+        fundingAddress: Address,
         keyParameter: KeyParameter?,
         topupAmount: Coin
     ): AssetLockTransaction
@@ -424,6 +425,7 @@ class TopUpRepositoryImpl @Inject constructor(
 
     override suspend fun createInviteFundingTransaction(
         blockchainIdentity: BlockchainIdentity,
+        fundingAddress: Address,
         keyParameter: KeyParameter?,
         topupAmount: Coin
     ): AssetLockTransaction {
@@ -433,10 +435,7 @@ class TopUpRepositoryImpl @Inject constructor(
         log.info("createInviteFundingTransactionAsync prop context")
         val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
         val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
-        val fundingAddress = Address.fromKey(
-            Constants.NETWORK_PARAMETERS,
-            authExtension.currentKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING)
-        )
+
         val cftx = blockchainIdentity.createInviteFundingTransaction(
             topupAmount,
             keyParameter,
@@ -446,7 +445,8 @@ class TopUpRepositoryImpl @Inject constructor(
         )
         val invitation = Invitation(
             fundingAddress.toBase58(),
-            cftx.identityId.toStringBase58(), cftx.txId,
+            cftx.identityId.toStringBase58(),
+            cftx.txId,
             System.currentTimeMillis()
         )
         // update database
@@ -557,6 +557,8 @@ class TopUpRepositoryImpl @Inject constructor(
                         fundingAddress.toBase58(),
                         assetLockTx.identityId.toStringBase58(),
                         assetLockTx.txId,
+                        assetLockTx.updateTime.time,
+                        "",
                         assetLockTx.updateTime.time
                     )
                     updateInvitation(invitation)
