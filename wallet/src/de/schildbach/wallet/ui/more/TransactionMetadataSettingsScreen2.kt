@@ -33,8 +33,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import de.schildbach.wallet.ui.dashpay.utils.TransactionMetadataSettings
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.ButtonLarge
 import org.dash.wallet.common.ui.components.ButtonStyles
 import org.dash.wallet.common.ui.components.DashCheckbox
@@ -44,27 +48,20 @@ import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
-fun TransactionMetadataScreen(
+fun TransactionMetadataSettingsScreen(
     onBackClick: () -> Unit,
     onInfoButtonClick: () -> Unit,
-    onSaveToNetwork: () -> Unit
+    onSaveToNetwork: () -> Unit,
+    viewModel: TransactionMetadataSettingsInt
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     val backgroundColor = MyTheme.Colors.backgroundPrimary
     val primaryTextColor = MyTheme.Colors.textPrimary
     val secondaryTextColor = MyTheme.Colors.textSecondary
     val scrollState = rememberScrollState()
 
-    // State for checkboxes
-    var pastTransactionsChecked by remember { mutableStateOf(true) }
-    var futureTransactionsChecked by remember { mutableStateOf(false) }
-    var paymentCategoriesChecked by remember { mutableStateOf(true) }
-    var taxCategoriesChecked by remember { mutableStateOf(true) }
-    var fiatPricesChecked by remember { mutableStateOf(true) }
-    var privateMemoChecked by remember { mutableStateOf(true) }
-    var giftCardsDataChecked by remember { mutableStateOf(true) }
-
-    // State for radio buttons
-    var selectedFrequency by remember { mutableStateOf(0) } // 0 = After 10 transactions, 1 = Once a week, 2 = After every transaction
+    val filterState by viewModel.filterState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -84,8 +81,9 @@ fun TransactionMetadataScreen(
                         )
                     }
                 },
+                // TODO: Why is this bar white
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = Color.Unspecified
                 )
             )
         },
@@ -148,33 +146,46 @@ fun TransactionMetadataScreen(
             CardSection {
                 // Past transactions checkbox
                 DashCheckbox(
-                    checked = pastTransactionsChecked,
-                    onCheckedChange = { pastTransactionsChecked = it },
+                    checked = filterState.savePastTxToNetwork,
+                    onCheckedChange = {
+                        coroutineScope.launch {
+                            viewModel.savePreferences(filterState.copy(savePastTxToNetwork = it))
+                        }
+                    },
                     title = stringResource(R.string.transaction_metadata_past_title),
                     subtitle = stringResource(R.string.transaction_metadata_past_subtitle, Date(System.currentTimeMillis()))
                 )
                 // Future transactions checkbox
                 DashCheckbox(
-                    checked = futureTransactionsChecked,
-                    onCheckedChange = { futureTransactionsChecked = it },
+                    checked = filterState.saveToNetwork,
+                    onCheckedChange = {
+                        coroutineScope.launch {
+                            viewModel.savePreferences(filterState.copy(saveToNetwork = it))
+                        }
+                    },
                     title = stringResource(R.string.transaction_metadata_future_title),
                     subtitle = stringResource(R.string.transaction_metadata_future_subtitle, Date(System.currentTimeMillis()))
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            if (filterState.saveToNetwork) {
+                Spacer(modifier = Modifier.height(20.dp))
 
-            // SECTION 2: How often to save?
-            SectionTitle(R.string.transaction_metadata_save_frequency)
-            CardSection {
-                // Radio buttons for frequency
-                stringArrayResource(R.array.transaction_metadata_save_frequency).forEachIndexed { index, s ->
-                    DashRadioButton(
-                        selected = selectedFrequency == index,
-                        onClick = { selectedFrequency = index },
-                        text = s
-                    )
-                }
+                // SECTION 2: How often to save?
+                SectionTitle(R.string.transaction_metadata_save_frequency)
+                CardSection {
+                    // Radio buttons for frequency
+                    stringArrayResource(R.array.transaction_metadata_save_frequency).forEachIndexed { index, s ->
+                        DashRadioButton(
+                            selected = index == filterState.saveFrequency.ordinal,
+                            onClick = {
+                                coroutineScope.launch {
+                                    viewModel.savePreferences(filterState.copy(saveFrequency = TxMetadataSaveFrequency.entries[index]))
+                                }
+                            },
+                            text = s
+                        )
+                    }
 
 //                DashRadioButton(
 //                    selected = selectedFrequency == 1,
@@ -186,39 +197,60 @@ fun TransactionMetadataScreen(
 //                    onClick = { selectedFrequency = 2 },
 //                    text = "After every transaction"
 //                )
-            }
+                }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-            // SECTION 3: What to save?
-            SectionTitle(R.string.transaction_metadata_what_to_save)
-            CardSection {
-                // Checkboxes for data types
-                DashCheckbox(
-                    checked = paymentCategoriesChecked,
-                    onCheckedChange = { paymentCategoriesChecked = it },
-                    title = "Payment categories"
-                )
-                DashCheckbox(
-                    checked = taxCategoriesChecked,
-                    onCheckedChange = { taxCategoriesChecked = it },
-                    title = "Tax categories"
-                )
-                DashCheckbox(
-                    checked = fiatPricesChecked,
-                    onCheckedChange = { fiatPricesChecked = it },
-                    title = "Fiat prices"
-                )
-                DashCheckbox(
-                    checked = privateMemoChecked,
-                    onCheckedChange = { privateMemoChecked = it },
-                    title = "Private memos"
-                )
-                DashCheckbox(
-                    checked = giftCardsDataChecked,
-                    onCheckedChange = { giftCardsDataChecked = it },
-                    title = "Gift cards data"
-                )
+                // SECTION 3: What to save?
+                SectionTitle(R.string.transaction_metadata_what_to_save)
+                CardSection {
+                    // Checkboxes for data types
+                    DashCheckbox(
+                        checked = filterState.savePaymentCategory,
+                        onCheckedChange = {
+                            coroutineScope.launch {
+                                viewModel.savePreferences(filterState.copy(savePaymentCategory = it))
+                            }
+                        },
+                        title = stringResource(R.string.transaction_metadata_payment_category)
+                    )
+                    DashCheckbox(
+                        checked = filterState.saveTaxCategory,
+                        onCheckedChange = {
+                            coroutineScope.launch {
+                                viewModel.savePreferences(filterState.copy(saveTaxCategory = it))
+                            }
+                        },
+                        title = stringResource(R.string.transaction_metadata_tax_category)
+                    )
+                    DashCheckbox(
+                        checked = filterState.saveExchangeRates,
+                        onCheckedChange = {
+                            coroutineScope.launch {
+                                viewModel.savePreferences(filterState.copy(saveExchangeRates = it))
+                            }
+                        },
+                        title = stringResource(R.string.transaction_metadata_fiat_prices)
+                    )
+                    DashCheckbox(
+                        checked = filterState.savePrivateMemos,
+                        onCheckedChange = {
+                            coroutineScope.launch {
+                                viewModel.savePreferences(filterState.copy(savePrivateMemos = it))
+                            }
+                        },
+                        title = stringResource(R.string.private_memo)
+                    )
+                    DashCheckbox(
+                        checked = filterState.saveGiftcardInfo,
+                        onCheckedChange = {
+                            coroutineScope.launch {
+                                viewModel.savePreferences(filterState.copy(saveGiftcardInfo = it))
+                            }
+                        },
+                        title = stringResource(R.string.transaction_metadata_gift_card_data)
+                    )
+                }
             }
         }
     }
@@ -261,9 +293,6 @@ fun CardSection(content: @Composable ColumnScope.() -> Unit) {
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp
         )
     ) {
         Column(
@@ -274,110 +303,14 @@ fun CardSection(content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
-//@Composable
-//fun CheckboxRow(
-//    checked: Boolean,
-//    onCheckedChange: (Boolean) -> Unit,
-//    title: String,
-//    subtitle: String? = null
-//) {
-//    Row(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .padding(vertical = 8.dp, horizontal = 10.dp),
-//        verticalAlignment = Alignment.CenterVertically
-//    ) {
-//        Column(
-//            modifier = Modifier.weight(1f)
-//        ) {
-//            Text(
-//                text = title,
-//                fontSize = 13.sp,
-//                fontWeight = FontWeight.Medium,
-//                color = Color(0xFF191C1F)
-//            )
-//            if (subtitle != null) {
-//                Text(
-//                    text = subtitle,
-//                    fontSize = 12.sp,
-//                    color = Color(0xFF75808A)
-//                )
-//            }
-//        }
-//
-//        Box(
-//            modifier = Modifier
-//                .size(22.dp)
-//                .background(
-//                    color = if (checked) Color(0xFF008DE4) else Color.White,
-//                    shape = RoundedCornerShape(6.dp)
-//                ),
-//            contentAlignment = Alignment.Center
-//        ) {
-//            if (checked) {
-//                // Checkmark
-//                Text(
-//                    text = "✓",
-//                    color = Color.White,
-//                    fontSize = 16.sp
-//                )
-//            }
-//        }
-//    }
-//}
-
-//@Composable
-//fun RadioButtonRow(
-//    selected: Boolean,
-//    onClick: () -> Unit,
-//    text: String
-//) {
-//    Row(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .padding(vertical = 8.dp, horizontal = 10.dp),
-//        verticalAlignment = Alignment.CenterVertically
-//    ) {
-//        Text(
-//            text = text,
-//            fontSize = 13.sp,
-//            fontWeight = FontWeight.Medium,
-//            color = Color(0xFF191C1F),
-//            modifier = Modifier.weight(1f)
-//        )
-//
-//        Box(
-//            modifier = Modifier
-//                .size(22.dp)
-//                .padding(1.dp)
-//                .background(
-//                    color = Color.White,
-//                    shape = CircleShape
-//                )
-//                .padding(1.dp)
-//                .border(
-//                    width = 1.5.dp,
-//                    color = if (selected) Color(0xFF008DE4) else Color(0xB0B6BC).copy(alpha = 0.5f),
-//                    shape = CircleShape
-//                ),
-//            contentAlignment = Alignment.Center
-//        ) {
-//            if (selected) {
-//                Box(
-//                    modifier = Modifier
-//                        .size(12.dp)
-//                        .background(
-//                            color = Color(0xFF008DE4),
-//                            shape = CircleShape
-//                        )
-//                )
-//            }
-//        }
-//    }
-//}
-
 @Preview(showBackground = true)
 @Composable
 fun TransactionMetadataScreenPreview() {
-    TransactionMetadataScreen({}, {}, {})
+    val viewModel = object: TransactionMetadataSettingsInt {
+        override val filterState: StateFlow<TransactionMetadataSettings>
+            = MutableStateFlow(TransactionMetadataSettings(savePastTxToNetwork = true, saveToNetwork = true))
+
+        override suspend fun savePreferences(settings: TransactionMetadataSettings) { }
+    }
+    TransactionMetadataSettingsScreen({}, {}, {}, viewModel)
 }

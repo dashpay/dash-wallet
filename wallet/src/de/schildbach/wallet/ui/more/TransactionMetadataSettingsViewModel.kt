@@ -55,30 +55,37 @@ enum class TxMetadataSaveFrequency {
     }
 }
 
+interface TransactionMetadataSettingsInt {
+    val filterState: StateFlow<TransactionMetadataSettings>
+    suspend fun savePreferences(settings: TransactionMetadataSettings)
+}
+
 @ExperimentalCoroutinesApi
 @HiltViewModel
 class TransactionMetadataSettingsViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
     walletUIConfig: WalletUIConfig,
     exchangeRates: ExchangeRatesRepository
-) : ViewModel() {
+) : ViewModel(), TransactionMetadataSettingsInt {
     companion object {
         val CURRENT_DATA_COST = Coin.valueOf(25000) //0.00025000
     }
     private val _filterState = MutableStateFlow(TransactionMetadataSettings())
-    val filterState: StateFlow<TransactionMetadataSettings> = _filterState.asStateFlow()
+    override val filterState: StateFlow<TransactionMetadataSettings> = _filterState.asStateFlow()
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
     private var _selectedExchangeRate = MutableStateFlow<ExchangeRate?>(null)
     val selectedExchangeRate = _selectedExchangeRate.asStateFlow()
     private var selectedCurrency: String = Constants.USD_CURRENCY
+    private val savePastTxToNetwork = MutableStateFlow(false)
 
     init {
-        dashPayConfig.observeTransactionMetadataSettings()
-            .onEach {
-                _filterState.value = it
-            }
-            .launchIn(viewModelWorkerScope)
+        savePastTxToNetwork
+            .flatMapLatest {
+                dashPayConfig.observeTransactionMetadataSettings()
+            }.onEach {
+                _filterState.value = it.copy(savePastTxToNetwork = savePastTxToNetwork.value)
+            }.launchIn(viewModelWorkerScope)
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
@@ -97,7 +104,10 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
 
     suspend fun setTransactionMetadataInfoShown() = dashPayConfig.setTransactionMetadataInfoShown()
 
-    suspend fun savePreferences(settings: TransactionMetadataSettings) = dashPayConfig.setTransactionMetadataSettings(settings)
+    override suspend fun savePreferences(settings: TransactionMetadataSettings) {
+        savePastTxToNetwork.value = settings.savePastTxToNetwork
+        dashPayConfig.setTransactionMetadataSettings(settings)
+    }
 
     val saveToNetwork = dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_TO_NETWORK)
 
@@ -116,5 +126,12 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
         }
 
         return ""
+    }
+
+    /** save using current filter */
+    fun saveToNetwork() {
+        if (savePastTxToNetwork.value) {
+            // TODO: save here
+        }
     }
 }

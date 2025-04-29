@@ -35,6 +35,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 data class TransactionMetadataSettings(
+    /** not saved to the data store */
+    val savePastTxToNetwork: Boolean = false,
+    /** save future transactions */
     val saveToNetwork: Boolean = false,
     val saveFrequency: TxMetadataSaveFrequency = TxMetadataSaveFrequency.defaultOption,
     val savePaymentCategory: Boolean = false,
@@ -89,6 +92,7 @@ open class DashPayConfig @Inject constructor(
         // transaction metadata settings
         val TRANSACTION_METADATA_FEATURE_INSTALLED = longPreferencesKey("transaction_metadata_feature_installed")
         val TRANSACTION_METADATA_INFO_SHOWN = booleanPreferencesKey("transaction_metadata_info_shown")
+        // val TRANSACTION_METADATA_SAVE_PREVIOUS = booleanPreferencesKey("transaction_metadata_save_previous")
         val TRANSACTION_METADATA_SAVE_TO_NETWORK = booleanPreferencesKey("transaction_metadata_save_to_network")
         val TRANSACTION_METADATA_SAVE_FREQUENCY = stringPreferencesKey("transaction_metadata_save_frequency")
         val TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY = booleanPreferencesKey("transaction_metadata_save_payment_category")

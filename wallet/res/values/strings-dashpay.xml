@@ -496,4 +496,5 @@
     <string name="transaction_metadata_future_title">Future</string>
     <string name="transaction_metadata_past_subtitle">Save all transactions made up to %s</string>
     <string name="transaction_metadata_future_subtitle">Automatically save all transactions you make after %s</string>
+    <string name="transaction_metadata_gift_card_data">Gift card data</string>
 </resources>
