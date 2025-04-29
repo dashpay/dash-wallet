@@ -214,10 +214,6 @@ class MainViewModel @Inject constructor(
     private var minContactCreatedDate: LocalDate = LocalDate.now()
     private lateinit var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory
     private lateinit var coinJoinWrapperFactory: CoinJoinTxWrapperFactory
-    private val _mostRecentTransaction = MutableLiveData<Transaction>()
-    val mostRecentTransaction: LiveData<Transaction>
-        get() = _mostRecentTransaction
-
     private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
     val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
         .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
@@ -357,10 +353,6 @@ class MainViewModel @Inject constructor(
 
         walletData.observeMixedBalance()
             .onEach(_mixedBalance::postValue)
-            .launchIn(viewModelScope)
-
-        walletData.observeMostRecentTransaction()
-            .onEach(_mostRecentTransaction::postValue)
             .launchIn(viewModelScope)
 
         walletUIConfig
@@ -954,4 +946,6 @@ class MainViewModel @Inject constructor(
     fun isTestNet(): Boolean {
         return walletData.wallet?.params?.id != NetworkParameters.ID_MAINNET
     }
+
+    fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction()
 }
