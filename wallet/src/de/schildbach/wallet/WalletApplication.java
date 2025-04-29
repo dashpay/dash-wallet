@@ -1141,7 +1141,7 @@ public class WalletApplication extends MultiDexApplication
 
     @NotNull
     public Coin getWalletBalance() {
-        if (wallet == null) {
+        if (wallet == null || walletBalanceObserver == null) {
             return Coin.ZERO;
         }
 
