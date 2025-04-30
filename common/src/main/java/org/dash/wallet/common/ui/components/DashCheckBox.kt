@@ -34,6 +34,8 @@ fun DashCheckbox(
     trailingHelpText: String? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val textPrimary = MyTheme.Colors.textPrimary
+    val textSecondary = MyTheme.Colors.textSecondary
 
     Row(
         modifier = modifier
@@ -67,7 +69,7 @@ fun DashCheckbox(
                     Icon(
                         painter = painterResource(id = it),
                         contentDescription = null,
-                        tint = Color.Unspecified
+                        tint = Color.Unspecified,
                     )
                 }
             }
@@ -81,19 +83,16 @@ fun DashCheckbox(
                     title?.let {
                         Text(
                             text = it,
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF191C1F)
+                            color = if (enabled) textPrimary else textSecondary,
+                            style = MyTheme.CaptionMedium
                         )
                     }
                     subtitle?.let {
                         Text(
                             text = it,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = Color(0xFF75808A)
+                            color = MyTheme.Colors.darkGray,
+                            style = MyTheme.OverlineCaptionMedium,
+                            textAlign = TextAlign.Start
                         )
                     }
                 }
@@ -113,20 +112,16 @@ fun DashCheckbox(
                     trailingText?.let {
                         Text(
                             text = it,
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = Color(0xFF191C1F),
+                            color = textPrimary,
+                            style = MyTheme.CaptionMedium,
                             textAlign = TextAlign.End
                         )
                     }
                     trailingHelpText?.let {
                         Text(
                             text = it,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = Color(0xFF75808A),
+                            color = MyTheme.Colors.darkGray,
+                            style = MyTheme.OverlineCaptionMedium,
                             textAlign = TextAlign.End
                         )
                     }
@@ -140,7 +135,7 @@ fun DashCheckbox(
                     .clip(RoundedCornerShape(6.dp))
                     .border(
                         width = 1.5.dp,
-                        color = if (checked) MyTheme.Colors.dashBlue else Color(0x80B0B6BC),
+                        color = if (checked) MyTheme.Colors.dashBlue else MyTheme.Colors.darkerGray50,
                         shape = RoundedCornerShape(6.dp)
                     )
                     .background(

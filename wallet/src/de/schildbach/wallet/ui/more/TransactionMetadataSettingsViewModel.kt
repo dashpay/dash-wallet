@@ -70,7 +70,7 @@ enum class TxMetadataSaveFrequency {
 interface TransactionMetadataSettingsPreviewViewModel {
     val filterState: StateFlow<TransactionMetadataSettings>
     val hasPastTransactionsToSave: StateFlow<Boolean>
-    suspend fun savePreferences(settings: TransactionMetadataSettings)
+    fun updatePreferences(settings: TransactionMetadataSettings)
     val lastSaveWorkId: StateFlow<String?>
     val lastSaveDate: StateFlow<Long>
     val futureSaveDate: StateFlow<Long>
@@ -94,12 +94,13 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     }
     private val _filterState = MutableStateFlow(TransactionMetadataSettings())
     override val filterState: StateFlow<TransactionMetadataSettings> = _filterState.asStateFlow()
+    private var originalState: TransactionMetadataSettings? = null
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
     private var _selectedExchangeRate = MutableStateFlow<ExchangeRate?>(null)
     val selectedExchangeRate = _selectedExchangeRate.asStateFlow()
     private var selectedCurrency: String = Constants.USD_CURRENCY
-    private val savePastTxToNetwork = MutableStateFlow(false)
+    //private val savePastTxToNetwork = MutableStateFlow(false)
     private val _lastSaveWorkId = MutableStateFlow<String?>(null)
     override val lastSaveWorkId = _lastSaveWorkId.asStateFlow()
     private val _lastSaveDate = MutableStateFlow<Long>(-1)
@@ -112,11 +113,12 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     private val publishOperation = PublishTransactionMetadataOperation(walletApplication)
 
     init {
-        savePastTxToNetwork
-            .flatMapLatest {
-                dashPayConfig.observeTransactionMetadataSettings()
-            }.onEach {
-                _filterState.value = it.copy(savePastTxToNetwork = savePastTxToNetwork.value)
+        dashPayConfig.observeTransactionMetadataSettings()
+            .onEach {
+                _filterState.value = it
+                if (originalState == null) {
+                    originalState = it
+                }
             }.launchIn(viewModelWorkerScope)
 
         dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE)
@@ -162,9 +164,16 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
 
     suspend fun setTransactionMetadataInfoShown() = dashPayConfig.setTransactionMetadataInfoShown()
 
-    override suspend fun savePreferences(settings: TransactionMetadataSettings) {
-        savePastTxToNetwork.value = settings.savePastTxToNetwork
+    suspend fun savePreferences(settings: TransactionMetadataSettings) {
+        //savePastTxToNetwork.value = settings.savePastTxToNetwork
+        log.info("save settings: {}", settings)
         dashPayConfig.setTransactionMetadataSettings(settings)
+    }
+
+    override fun updatePreferences(settings: TransactionMetadataSettings) {
+        val modified = _filterState.value == originalState
+
+        _filterState.value = settings.copy(modified = modified)
     }
 
     val saveToNetwork = dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_TO_NETWORK)
@@ -188,7 +197,6 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
 
     private suspend fun getNextWorkId(): String {
         val newId = UUID.randomUUID().toString()
-        //_lastSaveWorkId.value = newId
         dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID, newId)
         log.info("last save work id: {}", dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID))
         log.info("last save work id should be: {}", newId)
@@ -196,12 +204,17 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     }
 
     /** save using current filter */
-    fun saveToNetwork() {
+    fun saveToNetwork(forceSave: Boolean) {
         viewModelWorkerScope.launch {
-            if (dashPayConfig.isSavingToNetwork()) {
-                // dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER,)
+            val previousSettings = dashPayConfig.getTransactionMetadataSettings()
+            val settings = filterState.value
+            savePreferences(settings)
+            if (settings.saveToNetwork) {
+                if (!previousSettings.saveToNetwork) {
+                    dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER, System.currentTimeMillis())
+                }
             }
-            if (savePastTxToNetwork.value) {
+            if (forceSave && settings.savePastTxToNetwork) {
                 // TODO: save here
                 publishOperation.create(
                     getNextWorkId()

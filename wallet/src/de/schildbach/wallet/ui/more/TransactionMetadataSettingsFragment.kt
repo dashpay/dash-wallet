@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -31,8 +32,10 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
 import org.dash.wallet.common.util.safeNavigate
+import java.util.Date
 
 @AndroidEntryPoint
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -57,12 +60,35 @@ class TransactionMetadataSettingsFragment : Fragment(R.layout.fragment_transacti
                     ))
                 },
                 onSaveToNetwork = {
-                    // save to network
-                    viewModel.saveToNetwork()
-                    findNavController().popBackStack()
+                    saveToNetwork()
                 }, viewModel
                 )
             }
+        }
+    }
+
+    private fun saveToNetwork() {
+        // ask the user
+        if (viewModel.hasPastTransactionsToSave.value) {
+            AdaptiveDialog.create(
+                null,
+                getString(R.string.transaction_metadata_save_new_tx_title),
+                getString(R.string.transaction_metadata_you_have_n_tx, 1, Date()),
+                getString(R.string.transaction_metadata_save_transactions),
+                getString(R.string.transaction_metadata_continue_without_saving)
+            ).show(requireActivity()) { saveTxs ->
+                if (saveTxs == true) {
+                    viewModel.saveToNetwork(true)
+                    findNavController().popBackStack()
+                } else {
+                    viewModel.saveToNetwork(false)
+                    findNavController().popBackStack()
+                }
+            }
+        } else {
+            // save to network
+            viewModel.saveToNetwork(true)
+            findNavController().popBackStack()
         }
     }
 

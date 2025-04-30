@@ -52,6 +52,13 @@ object MyTheme {
         textAlign = TextAlign.Center
     )
 
+    val OverlineCaptionMedium = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = InterFont,
+        fontWeight = FontWeight(400)
+    )
+
     val SubtitleSemibold = TextStyle(
         fontSize = 16.sp,
         lineHeight = 22.sp,
@@ -83,5 +90,7 @@ object MyTheme {
         val primary40 = Color(0x66191C1F)
         val dashBlue = Color(0xFF008DE4)
         val dashBlue5 = Color(0x0D008DE4)
+        val darkGray = Color(0xFF75808A)
+        val darkerGray50 = Color(0x80B0B6BC)
     }
 }

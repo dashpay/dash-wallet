@@ -42,6 +42,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.checkerframework.checker.units.qual.s
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.ui.components.ButtonLarge
 import org.dash.wallet.common.ui.components.ButtonStyles
@@ -51,6 +52,7 @@ import org.dash.wallet.common.ui.components.MyTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
@@ -115,7 +117,12 @@ fun TransactionMetadataSettingsScreen(
                         .padding(20.dp, 0.dp)
                         .fillMaxWidth(),
                     colors = ButtonStyles.blueWithWhiteText(),
-                    textId = R.string.transaction_metadata_save_to_network
+                    textId = if (filterState.modified && !filterState.saveToNetwork) {
+                        R.string.transaction_metadata_save_to_network
+                    } else {
+                        R.string.save_changes
+                    },
+                    enabled = filterState.modified || (filterState.saveToNetwork && futureSaveDate == 0L)
                 )
             }
         }
@@ -150,9 +157,7 @@ fun TransactionMetadataSettingsScreen(
                 DashCheckbox(
                     checked = filterState.savePastTxToNetwork,
                     onCheckedChange = {
-                        coroutineScope.launch {
-                            viewModel.savePreferences(filterState.copy(savePastTxToNetwork = it))
-                        }
+                        viewModel.updatePreferences(filterState.copy(savePastTxToNetwork = it))
                     },
                     title = stringResource(R.string.transaction_metadata_past_title),
                     subtitle = if (BaseWorker.extractProgress(publishLiveData.data?.progress) != -1) {
@@ -168,9 +173,7 @@ fun TransactionMetadataSettingsScreen(
                 DashCheckbox(
                     checked = filterState.saveToNetwork,
                     onCheckedChange = {
-                        coroutineScope.launch {
-                            viewModel.savePreferences(filterState.copy(saveToNetwork = it))
-                        }
+                        viewModel.updatePreferences(filterState.copy(saveToNetwork = it))
                     },
                     title = stringResource(R.string.transaction_metadata_future_title),
                     subtitle = stringResource(R.string.transaction_metadata_future_subtitle, dateFormat.format(Date(futureSaveDate)))
@@ -188,24 +191,11 @@ fun TransactionMetadataSettingsScreen(
                         DashRadioButton(
                             selected = index == filterState.saveFrequency.ordinal,
                             onClick = {
-                                coroutineScope.launch {
-                                    viewModel.savePreferences(filterState.copy(saveFrequency = TxMetadataSaveFrequency.entries[index]))
-                                }
+                                viewModel.updatePreferences(filterState.copy(saveFrequency = TxMetadataSaveFrequency.entries[index]))
                             },
                             text = s
                         )
                     }
-
-//                DashRadioButton(
-//                    selected = selectedFrequency == 1,
-//                    onClick = { selectedFrequency = 1 },
-//                    text = "Once a week"
-//                )
-//                DashRadioButton(
-//                    selected = selectedFrequency == 2,
-//                    onClick = { selectedFrequency = 2 },
-//                    text = "After every transaction"
-//                )
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -217,45 +207,35 @@ fun TransactionMetadataSettingsScreen(
                     DashCheckbox(
                         checked = filterState.savePaymentCategory,
                         onCheckedChange = {
-                            coroutineScope.launch {
-                                viewModel.savePreferences(filterState.copy(savePaymentCategory = it))
-                            }
+                            viewModel.updatePreferences(filterState.copy(savePaymentCategory = it))
                         },
                         title = stringResource(R.string.transaction_metadata_payment_category)
                     )
                     DashCheckbox(
                         checked = filterState.saveTaxCategory,
                         onCheckedChange = {
-                            coroutineScope.launch {
-                                viewModel.savePreferences(filterState.copy(saveTaxCategory = it))
-                            }
+                            viewModel.updatePreferences(filterState.copy(saveTaxCategory = it))
                         },
                         title = stringResource(R.string.transaction_metadata_tax_category)
                     )
                     DashCheckbox(
                         checked = filterState.saveExchangeRates,
                         onCheckedChange = {
-                            coroutineScope.launch {
-                                viewModel.savePreferences(filterState.copy(saveExchangeRates = it))
-                            }
+                            viewModel.updatePreferences(filterState.copy(saveExchangeRates = it))
                         },
                         title = stringResource(R.string.transaction_metadata_fiat_prices)
                     )
                     DashCheckbox(
                         checked = filterState.savePrivateMemos,
                         onCheckedChange = {
-                            coroutineScope.launch {
-                                viewModel.savePreferences(filterState.copy(savePrivateMemos = it))
-                            }
+                            viewModel.updatePreferences(filterState.copy(savePrivateMemos = it))
                         },
                         title = stringResource(R.string.private_memo)
                     )
                     DashCheckbox(
                         checked = filterState.saveGiftcardInfo,
                         onCheckedChange = {
-                            coroutineScope.launch {
-                                viewModel.savePreferences(filterState.copy(saveGiftcardInfo = it))
-                            }
+                            viewModel.updatePreferences(filterState.copy(saveGiftcardInfo = it))
                         },
                         title = stringResource(R.string.transaction_metadata_gift_card_data)
                     )
@@ -317,13 +297,12 @@ fun CardSection(content: @Composable ColumnScope.() -> Unit) {
 fun TransactionMetadataScreenPreview() {
     val viewModel = object: TransactionMetadataSettingsPreviewViewModel {
         override val filterState: StateFlow<TransactionMetadataSettings>
-            = MutableStateFlow(TransactionMetadataSettings(savePastTxToNetwork = true, saveToNetwork = true))
-
-        override suspend fun savePreferences(settings: TransactionMetadataSettings) { }
-
+            = MutableStateFlow(TransactionMetadataSettings(savePastTxToNetwork = true, saveToNetwork = true, modified = true))
         override val hasPastTransactionsToSave: StateFlow<Boolean> = MutableStateFlow(true)
-
         override val lastSaveWorkId = MutableStateFlow(UUID.randomUUID().toString())
+        override val lastSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2))
+        override val futureSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis())
+        override fun updatePreferences(settings: TransactionMetadataSettings) {}
         override fun publishOperationLiveData(workId: String) = liveData {
             emit(Resource.canceled<WorkInfo>())
         }

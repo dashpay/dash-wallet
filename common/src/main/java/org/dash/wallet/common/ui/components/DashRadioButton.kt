@@ -60,7 +60,7 @@ fun DashRadioButton(
                 enabled = enabled,
                 role = Role.RadioButton
             )
-            .padding(8.dp, 10.dp),
+            .padding(0.dp, 10.dp),
         color = Color.Transparent
     ) {
         Row(
@@ -164,7 +164,7 @@ private fun TextContent(
             Text(
                 text = helpText,
                 color = secondaryTextColor,
-                style = MyTheme.OverlineSemibold
+                style = MyTheme.OverlineCaptionMedium
             )
         }
     }
