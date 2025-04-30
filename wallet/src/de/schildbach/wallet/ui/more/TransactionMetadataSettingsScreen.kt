@@ -26,25 +26,31 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.asFlow
+import androidx.lifecycle.liveData
+import androidx.work.WorkInfo
+import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.utils.TransactionMetadataSettings
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.ui.components.ButtonLarge
 import org.dash.wallet.common.ui.components.ButtonStyles
 import org.dash.wallet.common.ui.components.DashCheckbox
 import org.dash.wallet.common.ui.components.DashRadioButton
 import org.dash.wallet.common.ui.components.MyTheme
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
@@ -52,7 +58,7 @@ fun TransactionMetadataSettingsScreen(
     onBackClick: () -> Unit,
     onInfoButtonClick: () -> Unit,
     onSaveToNetwork: () -> Unit,
-    viewModel: TransactionMetadataSettingsInt
+    viewModel: TransactionMetadataSettingsPreviewViewModel
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -60,8 +66,14 @@ fun TransactionMetadataSettingsScreen(
     val primaryTextColor = MyTheme.Colors.textPrimary
     val secondaryTextColor = MyTheme.Colors.textSecondary
     val scrollState = rememberScrollState()
+    val dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM)
 
     val filterState by viewModel.filterState.collectAsState()
+    val lastSaveWorkId by viewModel.lastSaveWorkId.collectAsState()
+    val lastSaveDate by viewModel.lastSaveDate.collectAsState()
+    val futureSaveDate by viewModel.futureSaveDate.collectAsState()
+    val hasPastTransactionsToSave by viewModel.hasPastTransactionsToSave.collectAsState()
+    val publishLiveData by viewModel.publishOperationLiveData(lastSaveWorkId ?: "").asFlow().collectAsState(Resource.canceled<WorkInfo>())
 
     Scaffold(
         topBar = {
@@ -98,22 +110,12 @@ fun TransactionMetadataSettingsScreen(
             ) {
                 Spacer(modifier = Modifier.height(20.dp))
                 ButtonLarge(
-                    onClick = { /* Save action */ },
+                    onClick = { onSaveToNetwork() },
                     modifier = Modifier
                         .padding(20.dp, 0.dp)
                         .fillMaxWidth(),
                     colors = ButtonStyles.blueWithWhiteText(),
                     textId = R.string.transaction_metadata_save_to_network
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                // Home indicator
-                Box(
-                    modifier = Modifier
-                        .padding(bottom = 8.dp)
-                        .width(134.dp)
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(primaryTextColor.copy(alpha = 0.3f))
                 )
             }
         }
@@ -153,7 +155,14 @@ fun TransactionMetadataSettingsScreen(
                         }
                     },
                     title = stringResource(R.string.transaction_metadata_past_title),
-                    subtitle = stringResource(R.string.transaction_metadata_past_subtitle, Date(System.currentTimeMillis()))
+                    subtitle = if (BaseWorker.extractProgress(publishLiveData.data?.progress) != -1) {
+                        stringResource(R.string.transaction_metadata_past_syncing, dateFormat.format(Date(lastSaveDate)))
+                    } else if (hasPastTransactionsToSave) {
+                        stringResource(R.string.transaction_metadata_past_subtitle, dateFormat.format(Date(System.currentTimeMillis())))
+                    } else {
+                        stringResource(R.string.transaction_metadata_past_already_saved, dateFormat.format(Date(lastSaveDate)))
+                    },
+                    enabled = hasPastTransactionsToSave
                 )
                 // Future transactions checkbox
                 DashCheckbox(
@@ -164,7 +173,7 @@ fun TransactionMetadataSettingsScreen(
                         }
                     },
                     title = stringResource(R.string.transaction_metadata_future_title),
-                    subtitle = stringResource(R.string.transaction_metadata_future_subtitle, Date(System.currentTimeMillis()))
+                    subtitle = stringResource(R.string.transaction_metadata_future_subtitle, dateFormat.format(Date(futureSaveDate)))
                 )
             }
 
@@ -306,11 +315,18 @@ fun CardSection(content: @Composable ColumnScope.() -> Unit) {
 @Preview(showBackground = true)
 @Composable
 fun TransactionMetadataScreenPreview() {
-    val viewModel = object: TransactionMetadataSettingsInt {
+    val viewModel = object: TransactionMetadataSettingsPreviewViewModel {
         override val filterState: StateFlow<TransactionMetadataSettings>
             = MutableStateFlow(TransactionMetadataSettings(savePastTxToNetwork = true, saveToNetwork = true))
 
         override suspend fun savePreferences(settings: TransactionMetadataSettings) { }
+
+        override val hasPastTransactionsToSave: StateFlow<Boolean> = MutableStateFlow(true)
+
+        override val lastSaveWorkId = MutableStateFlow(UUID.randomUUID().toString())
+        override fun publishOperationLiveData(workId: String) = liveData {
+            emit(Resource.canceled<WorkInfo>())
+        }
     }
     TransactionMetadataSettingsScreen({}, {}, {}, viewModel)
 }

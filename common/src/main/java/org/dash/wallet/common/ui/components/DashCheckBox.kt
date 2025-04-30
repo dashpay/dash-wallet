@@ -203,6 +203,16 @@ fun CheckboxSample() {
             enabled = true
         )
 
+        // Example 1: Simple checkbox with leading text
+        DashCheckbox(
+            checked = isChecked,
+            onCheckedChange = { isChecked2 = it },
+            title = "Accept terms and conditions (Disabled)",
+            subtitle = "Required for account creation (1 line)",
+            leadingIcon = R.drawable.ic_dash_pay,
+            enabled = false
+        )
+
         // Example 1: Simple checkbox with long leading text
         DashCheckbox(
             checked = isChecked,

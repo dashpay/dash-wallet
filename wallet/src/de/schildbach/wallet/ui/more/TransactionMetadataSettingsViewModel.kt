@@ -17,11 +17,17 @@
 
 package de.schildbach.wallet.ui.more
 
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkInfo
 import com.google.common.collect.Comparators.max
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.dao.TransactionMetadataDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.rates.ExchangeRatesRepository
+import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOperation
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.TransactionMetadataSettings
 import kotlinx.coroutines.CoroutineScope
@@ -35,14 +41,20 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toFormattedString
+import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.util.Currency
+import java.util.Date
+import java.util.UUID
 import javax.inject.Inject
 
 enum class TxMetadataSaveFrequency {
@@ -55,20 +67,30 @@ enum class TxMetadataSaveFrequency {
     }
 }
 
-interface TransactionMetadataSettingsInt {
+interface TransactionMetadataSettingsPreviewViewModel {
     val filterState: StateFlow<TransactionMetadataSettings>
+    val hasPastTransactionsToSave: StateFlow<Boolean>
     suspend fun savePreferences(settings: TransactionMetadataSettings)
+    val lastSaveWorkId: StateFlow<String?>
+    val lastSaveDate: StateFlow<Long>
+    val futureSaveDate: StateFlow<Long>
+    fun publishOperationLiveData(workId: String): LiveData<Resource<WorkInfo>>
 }
 
 @ExperimentalCoroutinesApi
 @HiltViewModel
 class TransactionMetadataSettingsViewModel @Inject constructor(
+    private val walletApplication: WalletApplication,
     private val dashPayConfig: DashPayConfig,
+    private val blockchainIdentityConfig: BlockchainIdentityConfig,
     walletUIConfig: WalletUIConfig,
-    exchangeRates: ExchangeRatesRepository
-) : ViewModel(), TransactionMetadataSettingsInt {
+    exchangeRates: ExchangeRatesRepository,
+    private val analyticsService: AnalyticsService,
+    private val transactionMetadataDao: TransactionMetadataDao
+) : ViewModel(), TransactionMetadataSettingsPreviewViewModel {
     companion object {
         val CURRENT_DATA_COST = Coin.valueOf(25000) //0.00025000
+        private val log = LoggerFactory.getLogger(TransactionMetadataSettingsViewModel::class.java)
     }
     private val _filterState = MutableStateFlow(TransactionMetadataSettings())
     override val filterState: StateFlow<TransactionMetadataSettings> = _filterState.asStateFlow()
@@ -78,6 +100,16 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     val selectedExchangeRate = _selectedExchangeRate.asStateFlow()
     private var selectedCurrency: String = Constants.USD_CURRENCY
     private val savePastTxToNetwork = MutableStateFlow(false)
+    private val _lastSaveWorkId = MutableStateFlow<String?>(null)
+    override val lastSaveWorkId = _lastSaveWorkId.asStateFlow()
+    private val _lastSaveDate = MutableStateFlow<Long>(-1)
+    override val lastSaveDate = _lastSaveDate.asStateFlow()
+    private val _futureSaveDate = MutableStateFlow<Long>(-1)
+    override val futureSaveDate = _lastSaveDate.asStateFlow()
+    private val _hasPastTransactionsToSave = MutableStateFlow<Boolean>(false)
+    override val hasPastTransactionsToSave = _hasPastTransactionsToSave.asStateFlow()
+
+    private val publishOperation = PublishTransactionMetadataOperation(walletApplication)
 
     init {
         savePastTxToNetwork
@@ -87,12 +119,38 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
                 _filterState.value = it.copy(savePastTxToNetwork = savePastTxToNetwork.value)
             }.launchIn(viewModelWorkerScope)
 
+        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE)
+            .onEach {
+                _lastSaveDate.value = it ?: 0
+                log.info("last save date: {}", it?.let { Date(_lastSaveDate.value) })
+            }
+            .launchIn(viewModelScope)
+
+        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER)
+            .onEach {
+                _futureSaveDate.value = it ?: System.currentTimeMillis()
+                log.info("future save date: {}", it?.let { Date(_lastSaveDate.value) })
+            }
+            .launchIn(viewModelScope)
+
+        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID)
+            .onEach {
+                _lastSaveWorkId.value = it
+                log.info("last save work id: {}", dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID))
+            }
+            .launchIn(viewModelScope)
+
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .onEach { selectedCurrency = it }
             .flatMapLatest(exchangeRates::observeExchangeRate)
             .onEach { _selectedExchangeRate.value = it }
             .launchIn(viewModelScope)
+
+        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE)
+            .flatMapLatest { transactionMetadataDao.observeByTimestampRange(it ?: 0, System.currentTimeMillis()) }
+            .onEach { _hasPastTransactionsToSave.value = it.isNotEmpty() }
+            .launchIn(viewModelWorkerScope)
     }
 
     suspend fun saveDataToNetwork(saveToNetwork: Boolean) {
@@ -128,10 +186,39 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
         return ""
     }
 
+    private suspend fun getNextWorkId(): String {
+        val newId = UUID.randomUUID().toString()
+        //_lastSaveWorkId.value = newId
+        dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID, newId)
+        log.info("last save work id: {}", dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID))
+        log.info("last save work id should be: {}", newId)
+        return newId
+    }
+
     /** save using current filter */
     fun saveToNetwork() {
-        if (savePastTxToNetwork.value) {
-            // TODO: save here
+        viewModelWorkerScope.launch {
+            if (dashPayConfig.isSavingToNetwork()) {
+                // dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER,)
+            }
+            if (savePastTxToNetwork.value) {
+                // TODO: save here
+                publishOperation.create(
+                    getNextWorkId()
+                ).enqueue()
+            }
         }
+    }
+
+    override fun publishOperationLiveData(workId: String) = PublishTransactionMetadataOperation.operationStatus(
+        walletApplication,
+        workId,
+        analyticsService
+    )
+
+    fun hasPastTransactionsToSave(): Boolean {
+        // TODO: optimize this
+
+        return false
     }
 }

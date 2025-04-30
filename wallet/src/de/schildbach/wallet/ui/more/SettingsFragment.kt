@@ -39,10 +39,15 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
+import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOperation
+import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataWorker
+import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentSettingsBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.SystemActionsService
@@ -53,6 +58,8 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
+import java.text.SimpleDateFormat
+import java.util.Date
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -62,13 +69,17 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
     }
     private val binding by viewBinding(FragmentSettingsBinding::bind)
     private val viewModel: SettingsViewModel by viewModels()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val transactionMetadataSettingsViewModel: TransactionMetadataSettingsViewModel by viewModels()
     @Inject
     lateinit var systemActions: SystemActionsService
     @Inject
     lateinit var walletUIConfig: WalletUIConfig
     @Inject
     lateinit var walletApplication: WalletApplication
+    private val dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         enterTransition = MaterialFadeThrough()
@@ -193,6 +204,12 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         viewModel.blockchainIdentity.observe(viewLifecycleOwner) {
             binding.transactionMetadata.isVisible = it?.creationComplete ?: false
         }
+        transactionMetadataSettingsViewModel.lastSaveWorkId.filterNotNull().observe(viewLifecycleOwner) { workId ->
+            transactionMetadataSettingsViewModel.publishOperationLiveData(workId).observe(viewLifecycleOwner) {
+                val progress = it.data?.progress?.let { data -> BaseWorker.extractProgress(data) } ?: 0
+                setTransactionMetadataText(progress != 100 && progress != -1, progress)
+            }
+        }
         binding.transactionMetadata.setOnClickListener {
             lifecycleScope.launch {
                 if (viewModel.isTransactionMetadataInfoShown()) {
@@ -220,16 +237,37 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         )
     }
 
-    private fun setTransactionMetadataText() {
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun setTransactionMetadataText(isSaving: Boolean, saveProgress: Int) {
         lifecycleScope.launch {
-            binding.transactionMetadataSubtitle.isGone = !viewModel.isSavingTransactionMetadata()
+            if (isSaving) {
+                binding.transactionMetadataSubtitle.text = getString(R.string.transaction_metadata_saving_to_network, saveProgress)
+                binding.transactionMetadataSubtitle.isGone = false
+            } else {
+                val lastSavedDate = transactionMetadataSettingsViewModel.lastSaveDate.value
+                if (lastSavedDate != -0L) {
+                    binding.transactionMetadataSubtitle.text =
+                        getString(
+                            R.string.transaction_metadata_last_saved_date,
+                            dateFormat.format(
+                                Date(lastSavedDate)
+                            )
+                        )
+                    binding.transactionMetadataSubtitle.isGone = false
+                } else if (viewModel.isSavingTransactionMetadata()) {
+                    binding.transactionMetadataSubtitle.text = getString(R.string.transaction_metadata_data_being_saved)
+                    binding.transactionMetadataSubtitle.isGone = !viewModel.isSavingTransactionMetadata()
+                } else {
+                    binding.transactionMetadataSubtitle.isGone = true
+                }
+            }
         }
     }
 
     override fun onResume() {
         super.onResume()
         setBatteryOptimizationText()
-        setTransactionMetadataText()
+        //setTransactionMetadataText()
     }
 
     private fun resetBlockchain() {

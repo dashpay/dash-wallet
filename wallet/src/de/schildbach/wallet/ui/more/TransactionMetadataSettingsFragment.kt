@@ -47,18 +47,19 @@ class TransactionMetadataSettingsFragment : Fragment(R.layout.fragment_transacti
     ): View {
         return ComposeView(requireContext()).apply {
             setContent {
-                TransactionMetadataSettingsScreen({
+                TransactionMetadataSettingsScreen(onBackClick = {
                     findNavController().popBackStack()
-                }, {
-                    // save to network
-                    viewModel.saveToNetwork()
-                    findNavController().popBackStack()
-                }, {
+                }, onInfoButtonClick = {
                     // info button
                     safeNavigate(TransactionMetadataSettingsFragmentDirections.toInfoDialog(
                         firstTime = false,
                         useNavigation = true
                     ))
+                },
+                onSaveToNetwork = {
+                    // save to network
+                    viewModel.saveToNetwork()
+                    findNavController().popBackStack()
                 }, viewModel
                 )
             }
