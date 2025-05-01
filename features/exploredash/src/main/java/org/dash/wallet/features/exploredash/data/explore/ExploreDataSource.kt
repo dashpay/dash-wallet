@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.data.explore
 import androidx.paging.PagingSource
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.explore.model.*
+import org.dash.wallet.features.exploredash.ui.explore.DenomOption
 import javax.inject.Inject
 
 interface ExploreDataSource {
@@ -27,6 +28,7 @@ interface ExploreDataSource {
         query: String,
         territory: String,
         paymentMethod: String,
+        denomType: DenomOption,
         bounds: GeoBounds
     ): Flow<List<Merchant>>
 
@@ -35,6 +37,7 @@ interface ExploreDataSource {
         territory: String,
         type: String,
         paymentMethod: String,
+        denomType: DenomOption,
         bounds: GeoBounds,
         sortByDistance: Boolean,
         userLat: Double,
@@ -47,6 +50,7 @@ interface ExploreDataSource {
         territory: String,
         type: String,
         paymentMethod: String,
+        denomType: DenomOption,
         bounds: GeoBounds
     ): Int
 
@@ -69,6 +73,7 @@ interface ExploreDataSource {
         source: String,
         territory: String,
         paymentMethod: String,
+        denomType: DenomOption,
         bounds: GeoBounds,
         limit: Int
     ): Flow<List<Merchant>>
@@ -87,13 +92,22 @@ open class MerchantAtmDataSource @Inject constructor(
         query: String,
         territory: String,
         paymentMethod: String,
+        denomType: DenomOption,
         bounds: GeoBounds
     ): Flow<List<Merchant>> {
+        val denominationType = if (denomType == DenomOption.Both) {
+            ""
+        } else if (denomType == DenomOption.Fixed) {
+            "fixed"
+        } else {
+            "min-max"
+        }
+
         return if (territory.isNotBlank()) {
             if (query.isNotBlank()) {
-                merchantDao.searchByTerritory(sanitizeQuery(query), territory, MerchantType.ONLINE, paymentMethod)
+                merchantDao.searchByTerritory(sanitizeQuery(query), territory, MerchantType.ONLINE, paymentMethod, denominationType)
             } else {
-                merchantDao.observeByTerritory("", "", territory, MerchantType.ONLINE, paymentMethod, -1)
+                merchantDao.observeByTerritory("", "", territory, MerchantType.ONLINE, paymentMethod, denominationType, -1)
             }
         } else {
             if (query.isNotBlank()) {
@@ -101,6 +115,7 @@ open class MerchantAtmDataSource @Inject constructor(
                     sanitizeQuery(query),
                     MerchantType.ONLINE,
                     paymentMethod,
+                    denominationType,
                     bounds.northLat,
                     bounds.eastLng,
                     bounds.southLat,
@@ -112,6 +127,7 @@ open class MerchantAtmDataSource @Inject constructor(
                     "",
                     MerchantType.ONLINE,
                     paymentMethod,
+                    denominationType,
                     bounds.northLat,
                     bounds.eastLng,
                     bounds.southLat,
@@ -127,12 +143,21 @@ open class MerchantAtmDataSource @Inject constructor(
         territory: String,
         type: String,
         paymentMethod: String,
+        denomType: DenomOption,
         bounds: GeoBounds,
         sortByDistance: Boolean,
         userLat: Double,
         userLng: Double,
         onlineFirst: Boolean
     ): PagingSource<Int, MerchantInfo> {
+        val denominationType = if (denomType == DenomOption.Both) {
+            ""
+        } else if (denomType == DenomOption.Fixed) {
+            "fixed"
+        } else {
+            "min-max"
+        }
+
         return when {
             type == MerchantType.ONLINE -> {
                 // For Online merchants, need to get everything that can be used online
@@ -140,9 +165,9 @@ open class MerchantAtmDataSource @Inject constructor(
                 val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    merchantDao.pagingSearchGrouped(sanitizeQuery(query), types, paymentMethod, userLat, userLng)
+                    merchantDao.pagingSearchGrouped(sanitizeQuery(query), types, paymentMethod, denominationType, userLat, userLng)
                 } else {
-                    merchantDao.pagingGetGrouped(types, paymentMethod, userLat, userLng)
+                    merchantDao.pagingGetGrouped(types, paymentMethod, denominationType, userLat, userLng)
                 }
             }
             type == MerchantType.PHYSICAL && territory.isBlank() && bounds != GeoBounds.noBounds -> {
@@ -155,6 +180,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         sanitizeQuery(query),
                         types,
                         paymentMethod,
+                        denominationType,
                         bounds.northLat,
                         bounds.eastLng,
                         bounds.southLat,
@@ -167,6 +193,7 @@ open class MerchantAtmDataSource @Inject constructor(
                     merchantDao.pagingGetByCoordinates(
                         types,
                         paymentMethod,
+                        denominationType,
                         bounds.northLat,
                         bounds.eastLng,
                         bounds.southLat,
@@ -180,12 +207,11 @@ open class MerchantAtmDataSource @Inject constructor(
             else -> {
                 // If location services are disabled or user picked a territory
                 // or filter is All, we search everything and filter by territory
-                val types =
-                    if (type == MerchantType.PHYSICAL) {
-                        listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
-                    } else {
-                        listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
-                    }
+                val types = if (type == MerchantType.PHYSICAL) {
+                    listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
+                } else {
+                    listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
+                }
 
                 val onlineOrder = if (onlineFirst) 0 else 2
                 val physicalOrder = if (onlineFirst) 2 else 1
@@ -196,6 +222,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         territory,
                         types,
                         paymentMethod,
+                        denominationType,
                         sortByDistance,
                         userLat,
                         userLng,
@@ -207,6 +234,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         territory,
                         types,
                         paymentMethod,
+                        denominationType,
                         sortByDistance,
                         userLat,
                         userLng,
@@ -223,16 +251,25 @@ open class MerchantAtmDataSource @Inject constructor(
         territory: String,
         type: String,
         paymentMethod: String,
+        denomType: DenomOption,
         bounds: GeoBounds
     ): Int {
+        val denominationType = if (denomType == DenomOption.Both) {
+            ""
+        } else if (denomType == DenomOption.Fixed) {
+            "fixed"
+        } else {
+            "min-max"
+        }
+
         return when {
             type == MerchantType.ONLINE -> {
                 val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    merchantDao.searchGroupedResultCount(sanitizeQuery(query), types, paymentMethod)
+                    merchantDao.searchGroupedResultCount(sanitizeQuery(query), types, paymentMethod, denominationType)
                 } else {
-                    merchantDao.getGroupedResultCount(types, paymentMethod)
+                    merchantDao.getGroupedResultCount(types, paymentMethod, denominationType)
                 }
             }
             type == MerchantType.PHYSICAL && territory.isBlank() && bounds != GeoBounds.noBounds -> {
@@ -243,6 +280,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         sanitizeQuery(query),
                         types,
                         paymentMethod,
+                        denominationType,
                         bounds.northLat,
                         bounds.eastLng,
                         bounds.southLat,
@@ -252,6 +290,7 @@ open class MerchantAtmDataSource @Inject constructor(
                     merchantDao.getByCoordinatesResultCount(
                         types,
                         paymentMethod,
+                        denominationType,
                         bounds.northLat,
                         bounds.eastLng,
                         bounds.southLat,
@@ -263,9 +302,9 @@ open class MerchantAtmDataSource @Inject constructor(
                 val types = listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    merchantDao.searchByTerritoryResultCount(sanitizeQuery(query), territory, types, paymentMethod)
+                    merchantDao.searchByTerritoryResultCount(sanitizeQuery(query), territory, types, paymentMethod, denominationType)
                 } else {
-                    merchantDao.getByTerritoryResultCount(territory, types, paymentMethod)
+                    merchantDao.getByTerritoryResultCount(territory, types, paymentMethod, denominationType)
                 }
             }
         }
@@ -392,15 +431,25 @@ open class MerchantAtmDataSource @Inject constructor(
         source: String,
         territory: String,
         paymentMethod: String,
+        denomType: DenomOption,
         bounds: GeoBounds,
         limit: Int
     ): Flow<List<Merchant>> {
+        val denominationType = if (denomType == DenomOption.Both) {
+            ""
+        } else if (denomType == DenomOption.Fixed) {
+            "fixed"
+        } else {
+            "min-max"
+        }
+
         return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
             merchantDao.observe(
                 merchantId,
                 source,
                 MerchantType.ONLINE,
                 paymentMethod,
+                denominationType,
                 bounds.northLat,
                 bounds.eastLng,
                 bounds.southLat,
@@ -408,7 +457,7 @@ open class MerchantAtmDataSource @Inject constructor(
                 limit
             )
         } else {
-            merchantDao.observeByTerritory(merchantId, source, territory, MerchantType.ONLINE, paymentMethod, limit)
+            merchantDao.observeByTerritory(merchantId, source, territory, MerchantType.ONLINE, paymentMethod, denominationType, limit)
         }
     }
 

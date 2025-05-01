@@ -41,6 +41,7 @@ import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import java.util.*
 import javax.inject.Inject
+import kotlin.String
 import kotlin.math.max
 import kotlin.math.min
 
@@ -70,16 +71,22 @@ enum class SortOption {
     Discount
 }
 
+enum class DenomOption {
+    Fixed,
+    Flexible,
+    Both
+}
+
 data class FilterOptions(
     val query: String,
     val territory: String,
     val payment: String,
-    val denominationType: String,
+    val denominationType: DenomOption,
     val sortByDistance: Boolean,
     val radius: Int // Can be miles or kilometers, see isMetric
 ) {
     companion object {
-        val DEFAULT = FilterOptions("", "", "", "", true, DEFAULT_RADIUS_OPTION)
+        val DEFAULT = FilterOptions("", "", "", DenomOption.Both, true, DEFAULT_RADIUS_OPTION)
     }
 }
 
@@ -344,20 +351,20 @@ class ExploreViewModel @Inject constructor(
         _appliedFilters.update { current -> current.copy(query = query) }
     }
 
-    fun setSelectedRadiusOption(selectedRadius: Int) {
-        _appliedFilters.update { current -> current.copy(radius = selectedRadius) }
-    }
-
-    fun setSelectedTerritory(territory: String) {
-        _appliedFilters.update { current -> current.copy(territory = territory) }
-    }
-
-    fun setPaymentMethod(paymentMethod: String) {
-        _appliedFilters.update { current -> current.copy(payment = paymentMethod) }
-    }
-
-    fun setSortByDistance(sortByDistance: Boolean) {
-        _appliedFilters.update { current -> current.copy(sortByDistance = sortByDistance) }
+    fun setFilters(
+        paymentFilter: String,
+        selectedTerritory: String,
+        selectedRadiusOption: Int,
+        sortByDistance: Boolean,
+        denomOption: DenomOption
+    ) {
+        _appliedFilters.update { current -> current.copy(
+            territory = selectedTerritory,
+            payment = paymentFilter,
+            denominationType = denomOption,
+            sortByDistance = sortByDistance,
+            radius = selectedRadiusOption
+        ) }
     }
 
     suspend fun getTerritoriesWithPOIs(): List<String> {
@@ -430,6 +437,7 @@ class ExploreViewModel @Inject constructor(
                     source,
                     _appliedFilters.value.territory,
                     "",
+                    DenomOption.Both,
                     radiusBounds,
                     limit
                 )
@@ -498,7 +506,7 @@ class ExploreViewModel @Inject constructor(
         bounds: GeoBounds
     ): Flow<List<SearchResult>> {
         return if (exploreTopic == ExploreTopic.Merchants) {
-            exploreData.observePhysicalMerchants(filters.query, filters.territory, filters.payment, bounds)
+            exploreData.observePhysicalMerchants(filters.query, filters.territory, filters.payment, filters.denominationType, bounds)
         } else {
             val types = getAtmTypes(filterMode)
             exploreData.observePhysicalAtms(filters.query, filters.territory, types, bounds)
@@ -530,6 +538,7 @@ class ExploreViewModel @Inject constructor(
                     filters.territory,
                     type,
                     filters.payment,
+                    filters.denominationType,
                     bounds,
                     byDistance,
                     userLat ?: 0.0,
@@ -573,6 +582,7 @@ class ExploreViewModel @Inject constructor(
                     _appliedFilters.value.territory,
                     type,
                     _appliedFilters.value.payment,
+                    _appliedFilters.value.denominationType,
                     radiusBounds ?: GeoBounds.noBounds
                 )
             } else {

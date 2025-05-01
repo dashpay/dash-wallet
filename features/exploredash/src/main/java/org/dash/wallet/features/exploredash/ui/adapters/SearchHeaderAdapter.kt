@@ -105,16 +105,15 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
     }
 
     override fun onBindViewHolder(viewHolder: RecyclerView.ViewHolder, position: Int) {
-        val options =
-            binding.root.resources
-                .getStringArray(
-                    if (topic == ExploreTopic.Merchants) {
-                        R.array.merchants_filter_options
-                    } else {
-                        R.array.atms_filter_options
-                    }
-                )
-                .map { SegmentedOption(it) }
+        val options = binding.root.resources
+            .getStringArray(
+                if (topic == ExploreTopic.Merchants) {
+                    R.array.merchants_filter_options
+                } else {
+                    R.array.atms_filter_options
+                }
+            )
+            .map { SegmentedOption(it) }
         binding.filterOptions.provideOptions(options)
         binding.filterOptions.setSelectedIndex(currentFilterOption)
         binding.filterOptions.setOnOptionPickedListener { _, index ->
@@ -163,21 +162,20 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
     }
 
     fun setFilterMode(mode: FilterMode) {
-        val index =
-            if (topic == ExploreTopic.Merchants) {
-                when (mode) {
-                    FilterMode.Online -> 0
-                    FilterMode.Nearby -> 1
-                    else -> 2
-                }
-            } else {
-                when (mode) {
-                    FilterMode.Buy -> 1
-                    FilterMode.Sell -> 2
-                    FilterMode.BuySell -> 3
-                    else -> 0
-                }
+        val index = if (topic == ExploreTopic.Merchants) {
+            when (mode) {
+                FilterMode.Online -> 0
+                FilterMode.Nearby -> 1
+                else -> 2
             }
+        } else {
+            when (mode) {
+                FilterMode.Buy -> 1
+                FilterMode.Sell -> 2
+                FilterMode.BuySell -> 3
+                else -> 0
+            }
+        }
 
         currentFilterOption = index
 

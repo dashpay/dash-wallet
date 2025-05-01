@@ -34,6 +34,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
 import org.dash.wallet.features.exploredash.databinding.DialogFiltersBinding
+import org.dash.wallet.features.exploredash.ui.explore.DenomOption
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.explore.FilterMode
@@ -130,6 +131,8 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
                 viewModel.appliedFilters.value.payment == PaymentMethod.GIFT_CARD
         giftCardPaymentOn = isGiftCardOn
         binding.giftCardOption.isChecked = isGiftCardOn
+        binding.giftCardTypesLabel.isVisible = isGiftCardOn
+        binding.giftCardTypes.isVisible = isGiftCardOn
         binding.giftCardOption.setOnCheckedChangeListener { _, isChecked ->
             if (!isChecked && !binding.dashOption.isChecked) {
                 binding.dashOption.isChecked = true
@@ -140,6 +143,9 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             binding.giftCardTypes.isVisible = isChecked
             checkResetButton()
         }
+
+        binding.fixedDenomOption.isChecked = viewModel.appliedFilters.value.denominationType != DenomOption.Flexible
+        binding.flexibleAmountOption.isChecked = viewModel.appliedFilters.value.denominationType != DenomOption.Fixed
 
         binding.fixedDenomOption.setOnCheckedChangeListener { _, isChecked ->
             if (!isChecked && !binding.flexibleAmountOption.isChecked) {
@@ -247,12 +253,11 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
                 val territories = territoriesJob?.await() ?: listOf()
                 val allTerritories = listOf(firstOption) + territories.map { IconifiedViewItem(it) }
 
-                val currentIndex =
-                    if (selectedTerritory.isEmpty()) {
-                        0
-                    } else {
-                        territories.indexOf(selectedTerritory) + 1
-                    }
+                val currentIndex = if (selectedTerritory.isEmpty()) {
+                    0
+                } else {
+                    territories.indexOf(selectedTerritory) + 1
+                }
 
                 val dialogTitle = getString(R.string.explore_location)
                 OptionPickerDialog(
@@ -294,23 +299,25 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     }
 
     private fun applyFilters() {
-        viewModel.setSelectedTerritory(selectedTerritory)
-        viewModel.setSelectedRadiusOption(selectedRadiusOption)
-        viewModel.setSortByDistance(sortByDistance)
+        var paymentFilter = ""
 
-        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
-            var paymentFilter = ""
-
-            if (!dashPaymentOn || !giftCardPaymentOn) {
-                paymentFilter = if (dashPaymentOn) {
-                    PaymentMethod.DASH
-                } else {
-                    PaymentMethod.GIFT_CARD
-                }
+        if (!dashPaymentOn || !giftCardPaymentOn) {
+            paymentFilter = if (dashPaymentOn) {
+                PaymentMethod.DASH
+            } else {
+                PaymentMethod.GIFT_CARD
             }
-
-            viewModel.setPaymentMethod(paymentFilter)
         }
+
+        val denomOption = if (binding.fixedDenomOption.isChecked && binding.flexibleAmountOption.isChecked) {
+            DenomOption.Both
+        } else if (binding.fixedDenomOption.isChecked) {
+            DenomOption.Fixed
+        } else {
+            DenomOption.Flexible
+        }
+
+        viewModel.setFilters(paymentFilter, selectedTerritory, selectedRadiusOption, sortByDistance, denomOption)
         viewModel.trackFilterEvents(dashPaymentOn, giftCardPaymentOn)
     }
 
