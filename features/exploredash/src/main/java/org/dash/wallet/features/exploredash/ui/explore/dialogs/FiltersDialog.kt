@@ -108,7 +108,8 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     }
 
     private fun setupPaymentMethods() {
-        val isDashOn = viewModel.paymentMethodFilter.isEmpty() || viewModel.paymentMethodFilter == PaymentMethod.DASH
+        val isDashOn = viewModel.appliedFilters.value.payment.isEmpty() ||
+                viewModel.appliedFilters.value.payment == PaymentMethod.DASH
         dashPaymentOn = isDashOn
         binding.dashOption.isChecked = isDashOn
         binding.dashOption.setOnCheckedChangeListener { _, isChecked ->
@@ -121,8 +122,8 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             checkResetButton()
         }
 
-        val isGiftCardOn =
-            viewModel.paymentMethodFilter.isEmpty() || viewModel.paymentMethodFilter == PaymentMethod.GIFT_CARD
+        val isGiftCardOn = viewModel.appliedFilters.value.payment.isEmpty() ||
+                viewModel.appliedFilters.value.payment == PaymentMethod.GIFT_CARD
         giftCardPaymentOn = isGiftCardOn
         binding.giftCardOption.isChecked = isGiftCardOn
         binding.giftCardOption.setOnCheckedChangeListener { _, isChecked ->
@@ -136,7 +137,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     }
 
     private fun setupSortByOptions() {
-        sortByDistance = viewModel.sortByDistance
+        sortByDistance = viewModel.appliedFilters.value.sortByDistance
 
         if (viewModel.isLocationEnabled.value == true) {
             binding.sortByLabel.isVisible = true
@@ -146,11 +147,10 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
                 binding.root.resources.getStringArray(R.array.sort_by_options_names).map { IconifiedViewItem(it) }
 
             val initialIndex = if (sortByDistance) 1 else 0
-            val adapter =
-                RadioGroupAdapter(initialIndex, isCheckMark = true) { _, optionIndex ->
-                    sortByDistance = optionIndex == 1
-                    checkResetButton()
-                }
+            val adapter = RadioGroupAdapter(initialIndex, isCheckMark = true) { _, optionIndex ->
+                sortByDistance = optionIndex == 1
+                checkResetButton()
+            }
             binding.sortByFilter.setupRadioGroup(adapter)
             adapter.submitList(optionNames)
             sortByOptionsAdapter = adapter
@@ -164,30 +164,26 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         binding.radiusLabel.isVisible = true
         binding.radiusCard.isVisible = true
 
-        selectedRadiusOption = viewModel.selectedRadiusOption.value ?: ExploreViewModel.DEFAULT_RADIUS_OPTION
+        selectedRadiusOption = viewModel.appliedFilters.value.radius
 
         if (viewModel.isLocationEnabled.value == true) {
             binding.radiusFilter.isVisible = true
             binding.manageGpsView.root.isVisible = false
             binding.locationExplainerTxt.isVisible = false
 
-            val optionNames =
-                binding.root.resources
-                    .getStringArray(
-                        if (viewModel.isMetric) {
-                            R.array.radius_filter_options_kilometers
-                        } else {
-                            R.array.radius_filter_options_miles
-                        }
-                    )
-                    .map { IconifiedViewItem(it, "") }
+            val optionNames = binding.root.resources.getStringArray(
+                if (viewModel.isMetric) {
+                    R.array.radius_filter_options_kilometers
+                } else {
+                    R.array.radius_filter_options_miles
+                }
+            ).map { IconifiedViewItem(it, "") }
 
             val radiusOption = selectedRadiusOption
-            val adapter =
-                RadioGroupAdapter(radiusOptions.indexOf(radiusOption), isCheckMark = true) { _, optionIndex ->
-                    selectedRadiusOption = radiusOptions[optionIndex]
-                    checkResetButton()
-                }
+            val adapter = RadioGroupAdapter(radiusOptions.indexOf(radiusOption), isCheckMark = true) { _, optionIndex ->
+                selectedRadiusOption = radiusOptions[optionIndex]
+                checkResetButton()
+            }
             binding.radiusFilter.setupRadioGroup(adapter)
             adapter.submitList(optionNames)
             radiusOptionsAdapter = adapter
@@ -202,31 +198,28 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         binding.locationLabel.isVisible = true
         binding.locationBtn.isVisible = true
 
-        binding.locationName.text =
-            territory.ifEmpty {
-                if (viewModel.isLocationEnabled.value == true) {
-                    getString(R.string.explore_current_location)
-                } else {
-                    getString(R.string.explore_all_states)
-                }
+        binding.locationName.text = territory.ifEmpty {
+            if (viewModel.isLocationEnabled.value == true) {
+                getString(R.string.explore_current_location)
+            } else {
+                getString(R.string.explore_all_states)
             }
+        }
 
         selectedTerritory = territory
         checkResetButton()
     }
 
     private fun setupTerritoryFilter() {
-        viewModel.selectedTerritory.value?.let { setTerritoryName(it) }
-
+        setTerritoryName(viewModel.appliedFilters.value.territory)
         lifecycleScope.launch { territoriesJob = async { viewModel.getTerritoriesWithPOIs().sorted() } }
 
         binding.locationBtn.setOnClickListener {
-            val firstOption =
-                if (viewModel.isLocationEnabled.value == true) {
-                    IconifiedViewItem(getString(R.string.explore_current_location), "", R.drawable.ic_current_location)
-                } else {
-                    IconifiedViewItem(getString(R.string.explore_all_states))
-                }
+            val firstOption = if (viewModel.isLocationEnabled.value == true) {
+                IconifiedViewItem(getString(R.string.explore_current_location), "", R.drawable.ic_current_location)
+            } else {
+                IconifiedViewItem(getString(R.string.explore_all_states))
+            }
 
             lifecycleScope.launch {
                 val territories = territoriesJob?.await() ?: listOf()
@@ -257,14 +250,13 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         binding.locationSettingsLabel.isVisible = true
         binding.locationSettingsBtn.isVisible = true
 
-        binding.locationStatus.text =
-            getString(
-                if (isLocationPermissionGranted) {
-                    R.string.explore_location_allowed
-                } else {
-                    R.string.explore_location_denied
-                }
-            )
+        binding.locationStatus.text = getString(
+            if (isLocationPermissionGranted) {
+                R.string.explore_location_allowed
+            } else {
+                R.string.explore_location_denied
+            }
+        )
 
         binding.locationSettingsBtn.setOnClickListener {
             lifecycleScope.launch {
@@ -282,21 +274,20 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     private fun applyFilters() {
         viewModel.setSelectedTerritory(selectedTerritory)
         viewModel.setSelectedRadiusOption(selectedRadiusOption)
-        viewModel.sortByDistance = sortByDistance
+        viewModel.setSortByDistance(sortByDistance)
 
         if (viewModel.exploreTopic == ExploreTopic.Merchants) {
             var paymentFilter = ""
 
             if (!dashPaymentOn || !giftCardPaymentOn) {
-                paymentFilter =
-                    if (dashPaymentOn) {
-                        PaymentMethod.DASH
-                    } else {
-                        PaymentMethod.GIFT_CARD
-                    }
+                paymentFilter = if (dashPaymentOn) {
+                    PaymentMethod.DASH
+                } else {
+                    PaymentMethod.GIFT_CARD
+                }
             }
 
-            viewModel.paymentMethodFilter = paymentFilter
+            viewModel.setPaymentMethod(paymentFilter)
         }
         viewModel.trackFilterEvents(dashPaymentOn, giftCardPaymentOn)
     }

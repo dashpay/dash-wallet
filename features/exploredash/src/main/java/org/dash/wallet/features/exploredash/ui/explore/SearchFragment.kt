@@ -42,6 +42,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
@@ -450,11 +451,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 filters.territory.isNotEmpty()
         }
 
-        viewModel.selectedTerritory.observe(viewLifecycleOwner) {
-            val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-            bottomSheet.isDraggable = isBottomSheetDraggable()
-            bottomSheet.state = setBottomSheetState()
-        }
+        viewModel.appliedFilters
+            .distinctUntilChangedBy { it.territory }
+            .observe(viewLifecycleOwner) {
+                val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
+                bottomSheet.isDraggable = isBottomSheetDraggable()
+                bottomSheet.state = setBottomSheetState()
+            }
 
         viewLifecycleOwner.observeOnDestroy {
             binding.searchResults.adapter = null
@@ -638,7 +641,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         binding.searchResults.adapter = ConcatAdapter(searchHeaderAdapter, searchResultsAdapter)
-        searchHeaderAdapter.searchText = viewModel.searchQuery
+        searchHeaderAdapter.searchText = viewModel.appliedFilters.value.query
 
         val layoutParams = binding.searchResults.layoutParams as ConstraintLayout.LayoutParams
         layoutParams.topMargin = resources.getDimensionPixelOffset(R.dimen.search_results_margin_top)
@@ -735,17 +738,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             return ""
         }
 
-        val searchLocation =
-            if (viewModel.selectedTerritory.value?.isNotEmpty() == true) {
-                viewModel.selectedTerritory.value
-            } else {
-                val radiusOption = viewModel.selectedRadiusOption.value ?: ExploreViewModel.DEFAULT_RADIUS_OPTION
-                resources.getQuantityString(
-                    if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
-                    radiusOption,
-                    radiusOption
-                )
-            }
+        val searchLocation = viewModel.appliedFilters.value.territory.ifEmpty {
+            val radiusOption = viewModel.appliedFilters.value.radius
+            resources.getQuantityString(
+                if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
+                radiusOption,
+                radiusOption
+            )
+        }
 
         val resultSize = viewModel.pagingSearchResultsCount.value ?: 0
         val quantityStr =
@@ -812,8 +812,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         return viewModel.selectedItem.value == null &&
             viewModel.isLocationEnabled.value == true &&
             (
-                isPhysicalSearch || viewModel.paymentMethodFilter.isNotEmpty() ||
-                    viewModel.selectedTerritory.value?.isNotEmpty() == true
+                isPhysicalSearch || viewModel.appliedFilters.value.payment.isNotEmpty() ||
+                    viewModel.appliedFilters.value.territory.isNotEmpty()
                 )
     }
 
@@ -834,8 +834,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun isBottomSheetDraggable(): Boolean {
         val screenState = viewModel.screenState.value
         val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
-        val nearbySearch =
-            viewModel.selectedTerritory.value.isNullOrEmpty() && viewModel.isLocationEnabled.value == true
+        val nearbySearch = viewModel.appliedFilters.value.territory.isEmpty() && viewModel.isLocationEnabled.value == true
 
         return !isDetails && nearbySearch
     }
@@ -844,8 +843,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun setBottomSheetState(forceExpand: Boolean = false): Int {
         val screenState = viewModel.screenState.value
         val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
-        val nearbySearch =
-            viewModel.selectedTerritory.value.isNullOrEmpty() && viewModel.isLocationEnabled.value == true
+        val nearbySearch = viewModel.appliedFilters.value.territory.isEmpty() && viewModel.isLocationEnabled.value == true
 
         return when {
             forceExpand -> BottomSheetBehavior.STATE_EXPANDED
