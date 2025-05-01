@@ -429,7 +429,7 @@ interface MerchantDao : BaseDao<Merchant> {
         paymentMethod: String
     ): Flow<List<Merchant>>
 
-    @Query("SELECT DISTINCT territory FROM merchant")
+    @Query("SELECT DISTINCT territory FROM merchant WHERE territory IS NOT NULL")
     suspend fun getTerritories(): List<String>
 
     @Query("DELETE FROM merchant")
