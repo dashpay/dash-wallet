@@ -489,6 +489,7 @@
     <string name="reset_wallet_metadata_message">Resetting your wallet without saving data to the network will result in the loss of some transaction metadata.</string>
     <string name="reset_wallet_metadata_button_without">Reset wallet without saving</string>
     <string name="reset_wallet_metadata_button_with">Save data and reset wallet</string>
+    <string name="reset_wallet_metadata_button_saving">Saving</string>
     <string name="transaction_metadata_save_to_network">Save to network</string>
     <string name="transaction_metadata_save_frequency">How often to save?</string>
     <string name="transaction_metadata_what_to_save">What to save?</string>

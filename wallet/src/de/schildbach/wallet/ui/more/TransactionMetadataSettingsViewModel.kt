@@ -135,12 +135,12 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID)
-            .onEach {
-                _lastSaveWorkId.value = it
-                log.info("last save work id: {}", dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID))
-            }
-            .launchIn(viewModelScope)
+//        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID)
+//            .onEach {
+//                _lastSaveWorkId.value = it
+//                log.info("last save work id: {}", dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID))
+//            }
+//            .launchIn(viewModelScope)
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
@@ -198,12 +198,17 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     private suspend fun getNextWorkId(): String {
         val newId = UUID.randomUUID().toString()
         dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID, newId)
+        _lastSaveWorkId.value = newId
         log.info("last save work id: {}", dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID))
         log.info("last save work id should be: {}", newId)
         return newId
     }
 
-    /** save using current filter */
+    suspend fun loadLastWorkId() {
+        _lastSaveWorkId.value = dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID)
+    }
+
+    /** save using current settings */
     fun saveToNetwork(forceSave: Boolean) {
         viewModelWorkerScope.launch {
             val previousSettings = dashPayConfig.getTransactionMetadataSettings()
@@ -214,13 +219,22 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
                     dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER, System.currentTimeMillis())
                 }
             }
-            if (forceSave && settings.savePastTxToNetwork) {
+            if (forceSave || settings.savePastTxToNetwork) {
                 // TODO: save here
                 publishOperation.create(
                     getNextWorkId()
                 ).enqueue()
             }
         }
+    }
+
+    /** save using current settings */
+    suspend fun saveToNetworkNow(): String {
+        val nextId = getNextWorkId()
+        publishOperation.create(
+            nextId
+        ).enqueue()
+        return nextId
     }
 
     override fun publishOperationLiveData(workId: String) = PublishTransactionMetadataOperation.operationStatus(

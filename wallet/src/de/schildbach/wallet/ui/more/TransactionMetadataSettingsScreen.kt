@@ -46,9 +46,11 @@ import org.checkerframework.checker.units.qual.s
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.ui.components.ButtonLarge
 import org.dash.wallet.common.ui.components.ButtonStyles
+import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashCheckbox
 import org.dash.wallet.common.ui.components.DashRadioButton
 import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.Style
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.UUID
@@ -111,18 +113,19 @@ fun TransactionMetadataSettingsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(20.dp))
-                ButtonLarge(
+                DashButton(
                     onClick = { onSaveToNetwork() },
                     modifier = Modifier
                         .padding(20.dp, 0.dp)
                         .fillMaxWidth(),
-                    colors = ButtonStyles.blueWithWhiteText(),
-                    textId = if (filterState.modified && !filterState.saveToNetwork) {
+                    style = Style.FilledBlue,
+                    //colors = ButtonStyles.blueWithWhiteText(),
+                    text = stringResource(if (filterState.modified && !filterState.saveToNetwork) {
                         R.string.transaction_metadata_save_to_network
                     } else {
                         R.string.save_changes
-                    },
-                    enabled = filterState.modified || (filterState.saveToNetwork && futureSaveDate == 0L)
+                    }),
+                    isEnabled = filterState.modified || (filterState.saveToNetwork && futureSaveDate == 0L)
                 )
             }
         }

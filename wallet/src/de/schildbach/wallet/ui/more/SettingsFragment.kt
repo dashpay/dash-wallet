@@ -204,6 +204,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         viewModel.blockchainIdentity.observe(viewLifecycleOwner) {
             binding.transactionMetadata.isVisible = it?.creationComplete ?: false
         }
+        lifecycleScope.launch {
+            transactionMetadataSettingsViewModel.loadLastWorkId()
+        }
         transactionMetadataSettingsViewModel.lastSaveWorkId.filterNotNull().observe(viewLifecycleOwner) { workId ->
             transactionMetadataSettingsViewModel.publishOperationLiveData(workId).observe(viewLifecycleOwner) {
                 val progress = it.data?.progress?.let { data -> BaseWorker.extractProgress(data) } ?: 0

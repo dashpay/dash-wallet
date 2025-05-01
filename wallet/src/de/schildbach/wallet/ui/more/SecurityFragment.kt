@@ -134,13 +134,16 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
     }
 
     // TODO: tests
+//    private fun resetWallet() {
+//        SaveMetadataAndResetDialogFragment().show(requireFragmentManager(), "none")
+//    }
     private fun resetWallet() {
         val walletBalance = viewModel.balance
         val fiatBalanceStr = viewModel.getBalanceInLocalFormat()
 
         if (walletBalance.isGreaterThan(Coin.ZERO) && viewModel.needPassphraseBackUp) {
             val resetWalletDialog = ExtraActionDialog.create(
-                R.drawable.ic_warning,
+                R.drawable.ic_warning_yellow_circle,
                 getString(R.string.launch_reset_wallet_title),
                 getString(R.string.launch_reset_wallet_message),
                 getString(R.string.button_cancel),
@@ -152,7 +155,7 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                 onResult = {
                     if (it == true) {
                         val startResetWalletDialog = AdaptiveDialog.create(
-                            R.drawable.ic_warning,
+                            R.drawable.ic_warning_yellow_circle,
                             getString(
                                 R.string.start_reset_wallet_title,
                                 fiatBalanceStr.ifEmpty {
@@ -181,7 +184,7 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
             )
         } else {
             val resetWalletDialog = AdaptiveDialog.create(
-                null,
+                R.drawable.ic_warning_yellow_circle,
                 getString(R.string.reset_wallet_title),
                 getString(R.string.reset_wallet_message),
                 getString(R.string.button_cancel),
@@ -189,7 +192,8 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
             )
             resetWalletDialog.show(requireActivity()) {
                 if (it == true) {
-                    doReset()
+                    // doReset()
+                    checkUsernameThenReset()
                 }
             }
         }
@@ -198,38 +202,48 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
     private fun checkUsernameThenReset() {
         lifecycleScope.launch {
             if (viewModel.hasIdentity && viewModel.hasPendingTxMetadataToSave()) {
-                when (AdaptiveDialog.create(
-                        R.drawable.ic_warning,
-                        getString(R.string.reset_wallet_metadata_title),
-                        getString(R.string.reset_wallet_metadata_message),
-                        getString(R.string.reset_wallet_metadata_button_without),
-                        getString(R.string.reset_wallet_metadata_button_with)
-                    ).showAsync(requireActivity()) == true
-                ) {
-                    true -> {
-                        //TransactionMetadataDialog.newInstance().show(requireActivity()) {
-                        //    lifecycleScope.launch {
-                        //        if (it == true) {
-                        viewModel.setSaveOnReset()
-                        //safeNavigate(SecurityFragmentDirections.securityToTransactionMetadata())
-                        doReset()
-                        //        } else {
-                        //            doReset()
-                        //        }
-                        //    }
+                SaveMetadataAndResetDialogFragment().show(requireActivity()) { result ->
+                    when (result) {
+                        null -> { }
+                        true, false -> {
+                            // TODO: Disable Reset Wallet for now
+                            // doReset()
+                        }
                     }
-                    false -> doReset()
-                    else -> {}
                 }
+
+//                ExtraActionDialog.create(
+//                        R.drawable.ic_info_blue,
+//                        getString(R.string.reset_wallet_metadata_title),
+//                        getString(R.string.reset_wallet_metadata_message),
+//                        getString(R.string.reset_wallet_metadata_button_without),
+//                        getString(R.string.reset_wallet_metadata_button_with)
+//                    ).showAsync(requireActivity(),
+//                        onResult = { result ->
+//                            when (result) {
+//                                true -> {
+//                                    lifecycleScope.launch {
+//                                        viewModel.setSaveOnReset()
+//                                        doReset()
+//                                    }
+//                                }
+//                                else -> doReset()
+//                            }
+//                        },
+//                        onExtraMessageAction = {
+//
+//                        }
+//                )
             } else {
-                doReset()
+                // TODO: Disable Reset Wallet for now
+                // doReset()
             }
         }
     }
 
     private fun doReset() {
         viewModel.logEvent(AnalyticsConstants.Security.RESET_WALLET)
-        val dialog = AdaptiveDialog.progress(getString(R.string.perm_lock_wipe_wallet))
+        val dialog = AdaptiveDialog.progress(getString(R.string.reset_wallet_text))
         dialog.show(requireActivity())
         (requireActivity() as AbstractBindServiceActivity).doUnbindService()
         viewModel.triggerWipe() {

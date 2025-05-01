@@ -92,5 +92,7 @@ object MyTheme {
         val dashBlue5 = Color(0x0D008DE4)
         val darkGray = Color(0xFF75808A)
         val darkerGray50 = Color(0x80B0B6BC)
+        val red = Color(0xFFEA3943)
+        val red5 = Color(0x0DEA3943)
     }
 }

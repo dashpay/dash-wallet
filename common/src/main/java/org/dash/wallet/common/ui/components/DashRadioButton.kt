@@ -198,7 +198,7 @@ fun RadioButtonPreview() {
 
         // Radio button with text on the right (no help text)
         DashRadioButton(
-            text = "Option 2",
+            text = "Option 3",
             selected = selectedOption == 2,
             onClick = { selectedOption = 2 }
         )
