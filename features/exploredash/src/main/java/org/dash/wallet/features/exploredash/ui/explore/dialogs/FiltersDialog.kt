@@ -72,8 +72,12 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.paymentMethods.isVisible = false
-        binding.paymentMethodsLabel.isVisible = false
+        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+            setupPaymentMethods()
+        } else {
+            binding.paymentMethods.isVisible = false
+            binding.paymentMethodsLabel.isVisible = false
+        }
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
             if (viewModel.filterMode.value != FilterMode.Online) {
@@ -132,6 +136,24 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             }
 
             giftCardPaymentOn = isChecked
+            binding.giftCardTypesLabel.isVisible = isChecked
+            binding.giftCardTypes.isVisible = isChecked
+            checkResetButton()
+        }
+
+        binding.fixedDenomOption.setOnCheckedChangeListener { _, isChecked ->
+            if (!isChecked && !binding.flexibleAmountOption.isChecked) {
+                binding.flexibleAmountOption.isChecked = true
+            }
+
+            checkResetButton()
+        }
+
+        binding.flexibleAmountOption.setOnCheckedChangeListener { _, isChecked ->
+            if (!isChecked && !binding.fixedDenomOption.isChecked) {
+                binding.fixedDenomOption.isChecked = true
+            }
+
             checkResetButton()
         }
     }
@@ -147,11 +169,11 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
                 binding.root.resources.getStringArray(R.array.sort_by_options_names).map { IconifiedViewItem(it) }
 
             val initialIndex = if (sortByDistance) 1 else 0
-            val adapter = RadioGroupAdapter(initialIndex, isCheckMark = true) { _, optionIndex ->
+            val adapter = RadioGroupAdapter(initialIndex) { _, optionIndex ->
                 sortByDistance = optionIndex == 1
                 checkResetButton()
             }
-            binding.sortByFilter.setupRadioGroup(adapter)
+            binding.sortByFilter.setupRadioGroup(adapter, useDecorator = false)
             adapter.submitList(optionNames)
             sortByOptionsAdapter = adapter
         } else {
@@ -180,11 +202,11 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             ).map { IconifiedViewItem(it, "") }
 
             val radiusOption = selectedRadiusOption
-            val adapter = RadioGroupAdapter(radiusOptions.indexOf(radiusOption), isCheckMark = true) { _, optionIndex ->
+            val adapter = RadioGroupAdapter(radiusOptions.indexOf(radiusOption)) { _, optionIndex ->
                 selectedRadiusOption = radiusOptions[optionIndex]
                 checkResetButton()
             }
-            binding.radiusFilter.setupRadioGroup(adapter)
+            binding.radiusFilter.setupRadioGroup(adapter, useDecorator = false)
             adapter.submitList(optionNames)
             radiusOptionsAdapter = adapter
         } else {
@@ -299,6 +321,10 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             isEnabled = true
         }
 
+        if (!binding.flexibleAmountOption.isChecked || !binding.fixedDenomOption.isChecked) {
+            isEnabled = true
+        }
+
         if (selectedTerritory.isNotEmpty()) {
             isEnabled = true
         }
@@ -319,6 +345,9 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         binding.dashOption.isChecked = true
         giftCardPaymentOn = true
         binding.giftCardOption.isChecked = true
+
+        binding.flexibleAmountOption.isChecked = true
+        binding.fixedDenomOption.isChecked = true
 
         selectedTerritory = ""
         binding.locationName.text =

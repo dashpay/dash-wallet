@@ -88,6 +88,9 @@
     <string name="explore_filtered_by">Filtered by:</string>
     <string name="explore_pay_gift_card">Pay with gift card</string>
     <string name="explore_sort_by">Sort by</string>
+    <string name="gift_card_types">Gift card types</string>
+    <string name="flexible_amount_option">Flexible amounts</string>
+    <string name="fixed_denom_option">Fixed denominated amounts</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>

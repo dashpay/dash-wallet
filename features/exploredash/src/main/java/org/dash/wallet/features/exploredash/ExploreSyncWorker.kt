@@ -112,31 +112,31 @@ class ExploreSyncWorker @AssistedInject constructor(
                     log.error("unable to delete " + updateFile.absolutePath)
                 }
 
-                if (databasePrefs.localDbTimestamp >= remoteDataTimestamp) {
-                    log.info("explore db is up to date, nothing to sync")
-                    syncStatus.setSyncProgress(100.0)
-                    databasePrefs = databasePrefs.copy(failedSyncAttempts = 0)
-
-                    if (databasePrefs.lastSyncTimestamp <= 0) {
-                        // Some devices might have this as 0 due to the bug. Need to update
-                        // manually
-                        // TODO: this can be removed after some time
-                        databasePrefs = databasePrefs.copy(lastSyncTimestamp = remoteDataTimestamp)
-                    }
-
-                    exploreConfig.saveExploreDatabasePrefs(databasePrefs)
-
-                    return@withContext Result.success()
-                }
-                syncStatus.setSyncProgress(10.0)
-
-                exploreRepository.download()
-
-                syncStatus.setSyncProgress(80.0)
-
-                ExploreDatabase.updateDatabase(appContext, exploreRepository)
+//                if (databasePrefs.localDbTimestamp >= remoteDataTimestamp) {
+//                    log.info("explore db is up to date, nothing to sync")
+//                    syncStatus.setSyncProgress(100.0)
+//                    databasePrefs = databasePrefs.copy(failedSyncAttempts = 0)
+//
+//                    if (databasePrefs.lastSyncTimestamp <= 0) {
+//                        // Some devices might have this as 0 due to the bug. Need to update
+//                        // manually
+//                        // TODO: this can be removed after some time
+//                        databasePrefs = databasePrefs.copy(lastSyncTimestamp = remoteDataTimestamp)
+//                    }
+//
+//                    exploreConfig.saveExploreDatabasePrefs(databasePrefs)
+//
+//                    return@withContext Result.success()
+//                }
+//                syncStatus.setSyncProgress(10.0)
+//
+//                exploreRepository.download()
+//
+//                syncStatus.setSyncProgress(80.0)
+//
+//                ExploreDatabase.updateDatabase(appContext, exploreRepository)
             }
-
+//
             log.info("sync explore db finished, took $timeInMillis ms")
 
             syncStatus.setSyncProgress(100.0)

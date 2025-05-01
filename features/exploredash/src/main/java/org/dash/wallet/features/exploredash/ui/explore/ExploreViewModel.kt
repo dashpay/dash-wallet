@@ -64,6 +64,12 @@ enum class ScreenState {
     Details
 }
 
+enum class SortOption {
+    Name,
+    Distance,
+    Discount
+}
+
 data class FilterOptions(
     val query: String,
     val territory: String,
