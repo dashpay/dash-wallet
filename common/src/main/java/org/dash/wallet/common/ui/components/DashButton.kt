@@ -51,19 +51,20 @@ fun DashButton(
     onClick: () -> Unit
 ) {
     val backgroundColor = when {
-        !isEnabled -> Color.Black.copy(alpha = 0.2f)
+        !isEnabled -> Color(0xFF191C1F).copy(alpha = 0.05f)
         style == Style.Filled -> DashBlue
         style == Style.FilledBlue -> DashBlue
         style == Style.FilledRed -> MyTheme.Colors.red
         style == Style.TintedBlue -> Color(0x0D008DE4)
         style == Style.TintedGray -> Color(0x1AB0B6BC)
+        style == Style.TintedRed -> MyTheme.Colors.red5
         style == Style.FilledWhiteBlue -> Color(0xFFFFFFFF)
         style == Style.TintedWhite -> Color(0x1AFFFFFF)
         else -> Color.Transparent
     }
 
     val contentColor = when {
-        !isEnabled -> Color.Black.copy(alpha = 0.6f)
+        !isEnabled -> Color(0xFF191C1F).copy(alpha = 0.40f)
         style == Style.Filled -> Color.White
         style == Style.FilledBlue -> Color.White
         style == Style.FilledRed -> Color.White
@@ -71,6 +72,7 @@ fun DashButton(
         style == Style.PlainBlue -> DashBlue
         style == Style.PlainBlack -> Color(0xFF191C1F)
         style == Style.PlainRed -> Color(0xFFEA3943)
+        style == Style.TintedRed -> Color(0xFFEA3943)
         style == Style.TintedGray -> Color(0xFF191C1F)
         style == Style.StrokeGray -> Color(0xFF191C1F)
         style == Style.FilledWhiteBlue -> DashBlue
@@ -164,6 +166,7 @@ enum class Style {
     StrokeGray,
     FilledWhiteBlue,
     TintedWhite,
+    TintedRed,
     PlainRed,
     FilledRed
 }
@@ -200,6 +203,12 @@ fun DashButtonPreview() {
         DashButton(
             text = "Continue",
             onClick = { }
+        )
+
+        DashButton(
+            text = "Continue",
+            onClick = { },
+            isEnabled = false
         )
 
         DashButton(

@@ -210,7 +210,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:layout_marginStart="20dp"
-                android:text="@string/transaction_metadata_tax_category"
+                android:text="@string/transaction_metadata_private_memos"
                 app:layout_constraintBottom_toBottomOf="@id/memos_icon"
                 app:layout_constraintStart_toEndOf="@id/memos_icon"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -226,6 +226,44 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" >
+
+            <ImageView
+                android:id="@+id/giftcard_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:layout_marginStart="8dp"
+                android:src="@drawable/ic_file"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                />
+
+            <TextView
+                android:id="@+id/giftcard_title"
+                style="@style/Subtitle2.Bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:layout_marginStart="20dp"
+                android:text="@string/transaction_metadata_gift_card_info"
+                app:layout_constraintBottom_toBottomOf="@id/giftcard_icon"
+                app:layout_constraintStart_toEndOf="@id/giftcard_icon"
+                app:layout_constraintTop_toTopOf="parent" />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:maxLines="2"
+                style="@style/Caption"
+                android:text="@string/transaction_metadata_gift_card_info_description"
+                app:layout_constraintTop_toBottomOf="@id/giftcard_title"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="@id/giftcard_title"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </LinearLayout>
 

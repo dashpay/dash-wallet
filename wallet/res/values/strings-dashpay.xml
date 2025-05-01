@@ -476,8 +476,11 @@
     <string name="transaction_metadata_save_data">Save data</string>
     <string name="transaction_metadata_tax_category">Tax Categories</string>
     <string name="transaction_metadata_fiat_prices">Fiat Prices</string>
+    <string name="transaction_metadata_private_memos">Private Memos</string>
+    <string name="transaction_metadata_gift_card_info">Gift Card data</string>
     <string name="transaction_metadata_private_memo_description">Short memos that describe the purpose of the transaction</string>
     <string name="transaction_metadata_tax_category_description">Indicates if a transaction is a transfer, income or expense</string>
+    <string name="transaction_metadata_gift_card_info_description">Includes card number, pin code and other information</string>
     <string name="transaction_metadata_costs_title">Costs associated with saving data to the network</string>
     <string name="transaction_metadata_costs_description">As part of creating a username, you receive credits that are used for various activities on the network; saving transaction metadata on the network will consume these credits faster.  Once all credits are used, you can purchase more.\n\nIt costs approximately %s per upload of data to the network so it is recommended to upload multiple transactions at a time.</string>
     <string-array name="transaction_metadata_save_frequency">

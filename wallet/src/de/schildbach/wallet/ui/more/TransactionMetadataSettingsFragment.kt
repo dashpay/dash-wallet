@@ -33,17 +33,14 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
 import org.dash.wallet.common.util.safeNavigate
 import java.util.Date
 
 @AndroidEntryPoint
 @OptIn(ExperimentalCoroutinesApi::class)
 class TransactionMetadataSettingsFragment : Fragment(R.layout.fragment_transaction_metadata_settings) {
-    //private val binding by viewBinding(FragmentTransactionMetadataSettingsBinding::bind)
     private val viewModel: TransactionMetadataSettingsViewModel by viewModels()
     private val args by navArgs<TransactionMetadataSettingsFragmentArgs>()
-    private lateinit var saveFrequencyOptionsAdapter: RadioGroupAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -87,7 +84,7 @@ class TransactionMetadataSettingsFragment : Fragment(R.layout.fragment_transacti
             }
         } else {
             // save to network
-            viewModel.saveToNetwork(true)
+            viewModel.saveToNetwork(false)
             findNavController().popBackStack()
         }
     }

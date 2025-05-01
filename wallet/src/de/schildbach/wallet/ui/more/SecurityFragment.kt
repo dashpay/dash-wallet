@@ -133,10 +133,6 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
         }
     }
 
-    // TODO: tests
-//    private fun resetWallet() {
-//        SaveMetadataAndResetDialogFragment().show(requireFragmentManager(), "none")
-//    }
     private fun resetWallet() {
         val walletBalance = viewModel.balance
         val fiatBalanceStr = viewModel.getBalanceInLocalFormat()
@@ -147,9 +143,11 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                 getString(R.string.launch_reset_wallet_title),
                 getString(R.string.launch_reset_wallet_message),
                 getString(R.string.button_cancel),
-                getString(R.string.continue_reset),
+                getString(R.string.reset_wallet_button),
                 getString(R.string.launch_reset_wallet_extra_message)
-            )
+            ).apply {
+                requireArguments().putInt(AdaptiveDialog.POS_BUTTON_COLOR_ARG, R.style.PrimaryButtonTheme_Large_Red)
+            }
             resetWalletDialog.show(
                 requireActivity(),
                 onResult = {
@@ -164,11 +162,10 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                             ),
                             getString(R.string.launch_reset_wallet_message),
                             getString(R.string.button_cancel),
-                            getString(R.string.reset_wallet_text)
+                            getString(R.string.reset_wallet_button)
                         )
                         startResetWalletDialog.show(requireActivity()) { confirmed ->
                             if (confirmed == true) {
-//                                doReset()
                                 checkUsernameThenReset()
                             }
                         }
@@ -188,11 +185,12 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                 getString(R.string.reset_wallet_title),
                 getString(R.string.reset_wallet_message),
                 getString(R.string.button_cancel),
-                getString(R.string.positive_reset_text)
-            )
+                getString(R.string.reset_wallet_button)
+            ).apply {
+                requireArguments().putInt(AdaptiveDialog.POS_BUTTON_COLOR_ARG, R.style.PrimaryButtonTheme_Large_Red)
+            }
             resetWalletDialog.show(requireActivity()) {
                 if (it == true) {
-                    // doReset()
                     checkUsernameThenReset()
                 }
             }
@@ -211,29 +209,6 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                         }
                     }
                 }
-
-//                ExtraActionDialog.create(
-//                        R.drawable.ic_info_blue,
-//                        getString(R.string.reset_wallet_metadata_title),
-//                        getString(R.string.reset_wallet_metadata_message),
-//                        getString(R.string.reset_wallet_metadata_button_without),
-//                        getString(R.string.reset_wallet_metadata_button_with)
-//                    ).showAsync(requireActivity(),
-//                        onResult = { result ->
-//                            when (result) {
-//                                true -> {
-//                                    lifecycleScope.launch {
-//                                        viewModel.setSaveOnReset()
-//                                        doReset()
-//                                    }
-//                                }
-//                                else -> doReset()
-//                            }
-//                        },
-//                        onExtraMessageAction = {
-//
-//                        }
-//                )
             } else {
                 // TODO: Disable Reset Wallet for now
                 // doReset()

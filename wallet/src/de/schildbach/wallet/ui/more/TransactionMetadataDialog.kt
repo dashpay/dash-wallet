@@ -51,7 +51,7 @@ class TransactionMetadataDialog : OffsetDialogFragment(R.layout.dialog_transacti
         binding.transactionMetadataCost.setOnClickListener {
             dialogSafeNavigate(TransactionMetadataDialogDirections.toCostDialog())
         }
-        binding.saveDataButton.isVisible = args.firstTime || !args.useNavigation
+        binding.saveDataButton.isVisible = args.firstTime //|| args.useNavigation
         binding.saveDataButton.setOnClickListener {
             if (args.useNavigation) {
                 dialogSafeNavigate(TransactionMetadataDialogDirections.toSettingsFragment(true))
@@ -60,7 +60,7 @@ class TransactionMetadataDialog : OffsetDialogFragment(R.layout.dialog_transacti
             }
             dismiss()
         }
-        binding.maybeLaterButton.isVisible = args.firstTime || !args.useNavigation
+        binding.maybeLaterButton.isVisible = args.firstTime //|| args.useNavigation
         binding.maybeLaterButton.setOnClickListener {
             if (args.useNavigation) {
                 findNavController().popBackStack()

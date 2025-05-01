@@ -64,42 +64,6 @@ import org.dash.wallet.common.util.observe
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-//@AndroidEntryPoint
-//@OptIn(ExperimentalCoroutinesApi::class)
-//class SaveMetadataAndResetDialogFragment : DialogFragment() {
-//    val viewModel: TransactionMetadataSettingsViewModel by viewModels()
-//    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-//        return Dialog(requireContext()).apply {
-//            setContentView(ComposeView(context).apply {
-//                setContent {
-//                    //MaterialTheme {
-//                        ResetWalletDialog(
-//                            {},
-//                            {},
-//                            {
-//                                viewModel.saveToNetwork(true)
-//                                viewModel.lastSaveWorkId.filterNotNull().observe(viewLifecycleOwner) {
-//                                    viewModel.publishOperationLiveData(it).observe(viewLifecycleOwner) { workInfo ->
-//                                        if (workInfo.status == Status.SUCCESS) {
-//                                            dismiss()
-//                                        }
-//                                    }
-//                                }
-//                            },
-//                            {
-//                                TransactionMetadataDialog.newInstance()
-//                                    .show(requireActivity())
-//                            },
-//                            viewModel
-//                        )
-//                    //}
-//                }
-//            })
-//            dialog?.setCancelable(false)
-//            dialog?.setCanceledOnTouchOutside(false)
-//        }
-//    }
-
 @AndroidEntryPoint
 @OptIn(ExperimentalCoroutinesApi::class)
 class SaveMetadataAndResetDialogFragment : DialogFragment() {
@@ -157,7 +121,6 @@ class SaveMetadataAndResetDialogFragment : DialogFragment() {
                             dismiss()
                         }
                     }
-
                     Status.ERROR -> {
                         // show error dialog with retry button
                     }
@@ -184,7 +147,6 @@ fun ResetWalletDialog(
     viewModel: TransactionMetadataSettingsPreviewViewModel
 ) {
     val lastSaveWorkId by viewModel.lastSaveWorkId.collectAsState()
-    val publishLiveData by viewModel.publishOperationLiveData(lastSaveWorkId ?: "").asFlow().collectAsState(Resource.canceled<WorkInfo>())
 
     ModalDialog(
         showDialog = true,
@@ -204,8 +166,8 @@ fun ResetWalletDialog(
         ),
         buttons = listOf(
             ButtonData(stringResource(R.string.reset_wallet_metadata_button_without), { onResetWithoutSaving() }, false, Style.TintedGray, lastSaveWorkId == null),
-            if (lastSaveWorkId != null/* && BaseWorker.extractProgress(publishLiveData.data?.progress) != -1*/) {
-                ButtonData(stringResource(R.string.reset_wallet_metadata_button_saving), {  }, false, Style.FilledRed, true, progress = true)
+            if (lastSaveWorkId != null) {
+                ButtonData(stringResource(R.string.reset_wallet_metadata_button_saving), {  }, false, Style.PlainRed, true, progress = true)
             } else {
                 ButtonData(stringResource(R.string.reset_wallet_metadata_button_with), { onSaveAndReset() }, false, Style.TintedGray)
             }
@@ -248,6 +210,4 @@ fun ExampleScreen() {
             viewModel
         )
     }
-
-    // Rest of your screen content
 }
