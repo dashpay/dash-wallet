@@ -21,26 +21,24 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.safeNavigate
+import java.text.SimpleDateFormat
 import java.util.Date
 
 @AndroidEntryPoint
 @OptIn(ExperimentalCoroutinesApi::class)
 class TransactionMetadataSettingsFragment : Fragment(R.layout.fragment_transaction_metadata_settings) {
     private val viewModel: TransactionMetadataSettingsViewModel by viewModels()
-    private val args by navArgs<TransactionMetadataSettingsFragmentArgs>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -66,18 +64,25 @@ class TransactionMetadataSettingsFragment : Fragment(R.layout.fragment_transacti
 
     private fun saveToNetwork() {
         // ask the user
-        if (viewModel.hasPastTransactionsToSave.value) {
+        val hasTxs = viewModel.hasPastTransactionsToSave.value
+        val settings = viewModel.filterState.value
+        val notSaving = !(settings.saveToNetwork && settings.savePastTxToNetwork)
+        if (hasTxs && notSaving) {
             AdaptiveDialog.create(
                 null,
                 getString(R.string.transaction_metadata_save_new_tx_title),
-                getString(R.string.transaction_metadata_you_have_n_tx, 1, Date()),
+                getString(
+                    R.string.transaction_metadata_you_have_n_tx,
+                    1, // TODO: placeholder for actual tx count
+                    SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM).format(Date())
+                ),
                 getString(R.string.transaction_metadata_save_transactions),
                 getString(R.string.transaction_metadata_continue_without_saving)
             ).show(requireActivity()) { saveTxs ->
-                if (saveTxs == true) {
+                if (saveTxs == false) {
                     viewModel.saveToNetwork(true)
                     findNavController().popBackStack()
-                } else {
+                } else if (saveTxs == true) {
                     viewModel.saveToNetwork(false)
                     findNavController().popBackStack()
                 }
@@ -91,72 +96,9 @@ class TransactionMetadataSettingsFragment : Fragment(R.layout.fragment_transacti
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-//        binding.toolbar.title = getString(R.string.transaction_metadata_title)
-//        binding.toolbar.setNavigationOnClickListener {
-//            findNavController().popBackStack()
-//        }
-//        setupSaveFrequencyOptions()
-//
-//        binding.quickVoteButton.setOnClickListener {
-//            safeNavigate(TransactionMetadataSettingsFragmentDirections.toInfoDialog(false, true))
-//        }
-//        binding.saveDataSwitch.setOnClickListener {
-//            lifecycleScope.launch {
-//                viewModel.saveDataToNetwork(binding.saveDataSwitch.isChecked)
-//            }
-//        }
-//        viewModel.saveToNetwork.filterNotNull().observe(viewLifecycleOwner) { checked ->
-//            binding.saveDataSwitch.isChecked = checked
-//            binding.settingsContainer.isVisible = checked
-//        }
-//        viewModel.filterState.observe(viewLifecycleOwner) {
-//            binding.paymentCategoriesCheck.isChecked = it.savePaymentCategory
-//            binding.taxCategoriesCheck.isChecked = it.saveTaxCategory
-//            binding.fiatPricesCheck.isChecked = it.saveExchangeRates
-//            binding.privateMemosCheck.isChecked = it.savePrivateMemos
-//            saveFrequencyOptionsAdapter.selectedIndex = TxMetadataSaveFrequency.entries.indexOf(viewModel.filterState.value.saveFrequency)
-//        }
-//
-//        binding.paymentCategoriesCheck.setOnClickListener {
-//            savePreferences(viewModel.filterState.value.copy(savePaymentCategory = binding.paymentCategoriesCheck.isChecked))
-//        }
-//        binding.taxCategoriesCheck.setOnClickListener {
-//            savePreferences(viewModel.filterState.value.copy(saveTaxCategory = binding.taxCategoriesCheck.isChecked))
-//        }
-//        binding.fiatPricesCheck.setOnClickListener {
-//            savePreferences(viewModel.filterState.value.copy(saveExchangeRates = binding.fiatPricesCheck.isChecked))
-//        }
-//        binding.privateMemosCheck.setOnClickListener {
-//            savePreferences(viewModel.filterState.value.copy(savePrivateMemos = binding.privateMemosCheck.isChecked))
-//        }
 
-        if (args.turnOnSaveData) {
-            lifecycleScope.launch {
-                viewModel.saveDataToNetwork(true)
-            }
+        lifecycleScope.launch {
+            viewModel.loadLastWorkId()
         }
     }
-
-//    private fun setupSaveFrequencyOptions() {
-//        val sortByOptionNames = binding.root.resources.getStringArray(R.array.transaction_metadata_save_frequency)
-//            .mapIndexed { _, it ->
-//                IconifiedViewItem(it, iconSelectMode = IconSelectMode.None)
-//            }
-//
-//        val saveFrequency = viewModel.filterState.value.saveFrequency
-//        val initialIndex = TxMetadataSaveFrequency.entries.indexOf(saveFrequency)
-//        val adapter = RadioGroupAdapter(initialIndex) { _, _ ->
-//            savePreferences(viewModel.filterState.value.copy(saveFrequency = TxMetadataSaveFrequency.entries[saveFrequencyOptionsAdapter.selectedIndex]))
-//        }
-//        // TODO: we can customize the appearance with a new extension fun instead of this:
-//        binding.sortByFilter.setupRadioGroup(adapter, false)
-//        adapter.submitList(sortByOptionNames)
-//        saveFrequencyOptionsAdapter = adapter
-//    }
-
-//    private fun savePreferences(settings: TransactionMetadataSettings) {
-//        lifecycleScope.launch {
-//            viewModel.savePreferences(settings)
-//        }
-//    }
 }

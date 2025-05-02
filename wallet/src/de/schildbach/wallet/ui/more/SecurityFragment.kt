@@ -163,7 +163,9 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                             getString(R.string.launch_reset_wallet_message),
                             getString(R.string.button_cancel),
                             getString(R.string.reset_wallet_button)
-                        )
+                        ).apply {
+                            requireArguments().putInt(AdaptiveDialog.POS_BUTTON_COLOR_ARG, R.style.PrimaryButtonTheme_Large_Red)
+                        }
                         startResetWalletDialog.show(requireActivity()) { confirmed ->
                             if (confirmed == true) {
                                 checkUsernameThenReset()

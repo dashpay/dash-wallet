@@ -51,23 +51,14 @@ class TransactionMetadataDialog : OffsetDialogFragment(R.layout.dialog_transacti
         binding.transactionMetadataCost.setOnClickListener {
             dialogSafeNavigate(TransactionMetadataDialogDirections.toCostDialog())
         }
-        binding.saveDataButton.isVisible = args.firstTime //|| args.useNavigation
+        binding.saveDataButton.isVisible = args.firstTime
         binding.saveDataButton.setOnClickListener {
             if (args.useNavigation) {
-                dialogSafeNavigate(TransactionMetadataDialogDirections.toSettingsFragment(true))
+                dialogSafeNavigate(TransactionMetadataDialogDirections.toSettingsFragment())
             } else {
                 onButtonClickListener?.invoke(true)
             }
             dismiss()
-        }
-        binding.maybeLaterButton.isVisible = args.firstTime //|| args.useNavigation
-        binding.maybeLaterButton.setOnClickListener {
-            if (args.useNavigation) {
-                findNavController().popBackStack()
-            } else {
-                onButtonClickListener?.invoke(false)
-                dismiss()
-            }
         }
         lifecycleScope.launch {
             viewModel.setTransactionMetadataInfoShown()

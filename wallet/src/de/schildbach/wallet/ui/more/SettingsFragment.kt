@@ -216,7 +216,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         binding.transactionMetadata.setOnClickListener {
             lifecycleScope.launch {
                 if (viewModel.isTransactionMetadataInfoShown()) {
-                    safeNavigate(SettingsFragmentDirections.settingsToTransactionMetadata(false))
+                    safeNavigate(SettingsFragmentDirections.settingsToTransactionMetadata())
                 } else {
                     findNavController().navigate(
                         R.id.transaction_metadata_info_dialog,

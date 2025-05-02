@@ -64,8 +64,6 @@ fun TransactionMetadataSettingsScreen(
     onSaveToNetwork: () -> Unit,
     viewModel: TransactionMetadataSettingsPreviewViewModel
 ) {
-    val coroutineScope = rememberCoroutineScope()
-
     val backgroundColor = MyTheme.Colors.backgroundPrimary
     val primaryTextColor = MyTheme.Colors.textPrimary
     val secondaryTextColor = MyTheme.Colors.textSecondary
@@ -119,13 +117,12 @@ fun TransactionMetadataSettingsScreen(
                         .padding(20.dp, 0.dp)
                         .fillMaxWidth(),
                     style = Style.FilledBlue,
-                    //colors = ButtonStyles.blueWithWhiteText(),
                     text = stringResource(if (filterState.modified && !filterState.saveToNetwork) {
                         R.string.transaction_metadata_save_to_network
                     } else {
                         R.string.save_changes
                     }),
-                    isEnabled = filterState.modified || (filterState.saveToNetwork && futureSaveDate == 0L)
+                    isEnabled = filterState.modified
                 )
             }
         }

@@ -46,6 +46,7 @@ data class TransactionMetadataSettings(
     val savePrivateMemos: Boolean = false,
     val saveGiftcardInfo: Boolean = true,
     val saveAfterTimestamp: Long = System.currentTimeMillis(),
+    /* not saved to the data store */
     val modified: Boolean = false
 ) {
     fun shouldSavePaymentCategory() = saveToNetwork && savePaymentCategory
@@ -53,6 +54,18 @@ data class TransactionMetadataSettings(
     fun shouldSaveExchangeRates() = saveToNetwork && saveExchangeRates
     fun shouldSavePrivateMemos() = saveToNetwork && savePrivateMemos
     fun shouldSaveGiftcardInfo() = saveToNetwork && saveGiftcardInfo
+
+    /** determine if relavant changes have been made */
+    fun isEqual(other: TransactionMetadataSettings?): Boolean {
+        return other != null && other.savePastTxToNetwork == this.savePastTxToNetwork &&
+            other.saveToNetwork == this.saveToNetwork &&
+            other.saveFrequency == this.saveFrequency &&
+            other.savePaymentCategory == this.savePaymentCategory &&
+            other.saveExchangeRates == this.saveExchangeRates &&
+            other.saveTaxCategory == this.saveTaxCategory &&
+            other.savePrivateMemos == this.savePrivateMemos &&
+            other.saveGiftcardInfo == this.saveGiftcardInfo
+    }
 }
 
 @Singleton

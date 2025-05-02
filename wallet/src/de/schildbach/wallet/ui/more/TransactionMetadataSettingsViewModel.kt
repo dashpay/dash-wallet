@@ -164,16 +164,15 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
 
     suspend fun setTransactionMetadataInfoShown() = dashPayConfig.setTransactionMetadataInfoShown()
 
-    suspend fun savePreferences(settings: TransactionMetadataSettings) {
-        //savePastTxToNetwork.value = settings.savePastTxToNetwork
+    private suspend fun savePreferences(settings: TransactionMetadataSettings) {
         log.info("save settings: {}", settings)
         dashPayConfig.setTransactionMetadataSettings(settings)
     }
 
     override fun updatePreferences(settings: TransactionMetadataSettings) {
-        val modified = _filterState.value == originalState
-
+        val modified = !settings.isEqual(originalState)
         _filterState.value = settings.copy(modified = modified)
+        log.info("modified $modified\n  ${_filterState.value}\n  $originalState")
     }
 
     val saveToNetwork = dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_TO_NETWORK)
