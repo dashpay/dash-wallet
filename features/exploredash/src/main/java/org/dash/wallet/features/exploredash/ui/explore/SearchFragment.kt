@@ -175,6 +175,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             ExploreDashInfoDialog().show(requireActivity())
         }
 
+        binding.infoButton.setOnClickListener {
+            ExploreDashInfoDialog().show(requireActivity())
+        }
+
         binding.manageGpsView.managePermissionsBtn.setOnClickListener {
             lifecycleScope.launch {
                 runLocationFlow(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestSettings)
