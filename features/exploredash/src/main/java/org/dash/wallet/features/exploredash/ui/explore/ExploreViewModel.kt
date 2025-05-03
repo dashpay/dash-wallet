@@ -65,12 +65,6 @@ enum class ScreenState {
     Details
 }
 
-enum class SortOption {
-    Name,
-    Distance,
-    Discount
-}
-
 enum class DenomOption {
     Fixed,
     Flexible,
@@ -82,11 +76,11 @@ data class FilterOptions(
     val territory: String,
     val payment: String,
     val denominationType: DenomOption,
-    val sortByDistance: Boolean,
+    val sortOption: SortOption,
     val radius: Int // Can be miles or kilometers, see isMetric
 ) {
     companion object {
-        val DEFAULT = FilterOptions("", "", "", DenomOption.Both, true, DEFAULT_RADIUS_OPTION)
+        val DEFAULT = FilterOptions("", "", "", DenomOption.Both, SortOption.Name, DEFAULT_RADIUS_OPTION)
     }
 }
 
@@ -107,7 +101,7 @@ class ExploreViewModel @Inject constructor(
         const val MIN_ZOOM_LEVEL = 8f
         const val DEFAULT_RADIUS_OPTION = 20
         const val MAX_MARKERS = 100
-        const val DEFAULT_SORT_BY_DISTANCE = true
+        val DEFAULT_SORT_OPTION = SortOption.Name
     }
 
     private val workerJob = SupervisorJob()
@@ -355,14 +349,14 @@ class ExploreViewModel @Inject constructor(
         paymentFilter: String,
         selectedTerritory: String,
         selectedRadiusOption: Int,
-        sortByDistance: Boolean,
+        sortOption: SortOption,
         denomOption: DenomOption
     ) {
         _appliedFilters.update { current -> current.copy(
             territory = selectedTerritory,
             payment = paymentFilter,
             denominationType = denomOption,
-            sortByDistance = sortByDistance,
+            sortOption = sortOption,
             radius = selectedRadiusOption
         ) }
     }
@@ -520,11 +514,17 @@ class ExploreViewModel @Inject constructor(
     ): Flow<PagingData<SearchResult>> {
         val userLat = currentUserLocation.value?.latitude
         val userLng = currentUserLocation.value?.longitude
-        val byDistance = _filterMode.value != FilterMode.Online &&
+        val canSortByDistance = _filterMode.value != FilterMode.Online &&
             _isLocationEnabled.value == true &&
             userLat != null &&
-            userLng != null &&
-            filters.sortByDistance
+            userLng != null
+        val sortOption = if (filters.sortOption != SortOption.Distance) {
+            filters.sortOption
+        } else if (canSortByDistance) {
+            SortOption.Distance
+        } else {
+            SortOption.Name
+        }
         val onlineFirst = _isLocationEnabled.value != true
 
         val pagerConfig = PagingConfig(pageSize = PAGE_SIZE, enablePlaceholders = false, maxSize = MAX_ITEMS_IN_MEMORY)
@@ -540,7 +540,7 @@ class ExploreViewModel @Inject constructor(
                     filters.payment,
                     filters.denominationType,
                     bounds,
-                    byDistance,
+                    sortOption,
                     userLat ?: 0.0,
                     userLng ?: 0.0,
                     onlineFirst
@@ -562,7 +562,7 @@ class ExploreViewModel @Inject constructor(
                     filters.territory,
                     types,
                     bounds,
-                    byDistance,
+                    canSortByDistance && filters.sortOption == SortOption.Distance,
                     userLat ?: 0.0,
                     userLng ?: 0.0
                 )
@@ -707,19 +707,19 @@ class ExploreViewModel @Inject constructor(
             }
         }
 
-        if (_appliedFilters.value.sortByDistance == DEFAULT_SORT_BY_DISTANCE) {
-            if (exploreTopic == ExploreTopic.Merchants) {
-                logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE)
-            } else {
-                logEvent(AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_DISTANCE)
+        logEvent(if (exploreTopic == ExploreTopic.Merchants) {
+            when (_appliedFilters.value.sortOption) {
+                SortOption.Name -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_NAME
+                SortOption.Distance -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE
+                SortOption.Discount -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE
             }
         } else {
-            if (exploreTopic == ExploreTopic.Merchants) {
-                logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_NAME)
-            } else {
-                logEvent(AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_NAME)
+            when (_appliedFilters.value.sortOption) {
+                SortOption.Name -> AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_NAME
+                SortOption.Distance -> AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_DISTANCE
+                SortOption.Discount -> ""
             }
-        }
+        })
 
         if (_appliedFilters.value.territory.isEmpty()) {
             if (exploreTopic == ExploreTopic.Merchants) {

@@ -39,7 +39,7 @@ interface ExploreDataSource {
         paymentMethod: String,
         denomType: DenomOption,
         bounds: GeoBounds,
-        sortByDistance: Boolean,
+        sortOption: SortOption,
         userLat: Double,
         userLng: Double,
         onlineFirst: Boolean
@@ -145,7 +145,7 @@ open class MerchantAtmDataSource @Inject constructor(
         paymentMethod: String,
         denomType: DenomOption,
         bounds: GeoBounds,
-        sortByDistance: Boolean,
+        sortOption: SortOption,
         userLat: Double,
         userLng: Double,
         onlineFirst: Boolean
@@ -163,11 +163,12 @@ open class MerchantAtmDataSource @Inject constructor(
                 // For Online merchants, need to get everything that can be used online
                 // and group by merchant ID to avoid duplicates
                 val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
+                val sortByDiscount = sortOption == SortOption.Discount
 
                 if (query.isNotBlank()) {
-                    merchantDao.pagingSearchGrouped(sanitizeQuery(query), types, paymentMethod, denominationType, userLat, userLng)
+                    merchantDao.pagingSearchGrouped(sanitizeQuery(query), types, paymentMethod, denominationType, sortByDiscount, userLat, userLng)
                 } else {
-                    merchantDao.pagingGetGrouped(types, paymentMethod, denominationType, userLat, userLng)
+                    merchantDao.pagingGetGrouped(types, paymentMethod, denominationType, sortByDiscount, userLat, userLng)
                 }
             }
             type == MerchantType.PHYSICAL && territory.isBlank() && bounds != GeoBounds.noBounds -> {
@@ -185,7 +186,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         bounds.eastLng,
                         bounds.southLat,
                         bounds.westLng,
-                        sortByDistance,
+                        sortOption.ordinal,
                         userLat,
                         userLng
                     )
@@ -198,7 +199,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         bounds.eastLng,
                         bounds.southLat,
                         bounds.westLng,
-                        sortByDistance,
+                        sortOption.ordinal,
                         userLat,
                         userLng
                     )
@@ -223,7 +224,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         types,
                         paymentMethod,
                         denominationType,
-                        sortByDistance,
+                        sortOption.ordinal,
                         userLat,
                         userLng,
                         onlineOrder,
@@ -235,7 +236,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         types,
                         paymentMethod,
                         denominationType,
-                        sortByDistance,
+                        sortOption.ordinal,
                         userLat,
                         userLng,
                         onlineOrder,

@@ -114,6 +114,7 @@
     <string-array name="sort_by_options_names">
         <item>이름</item>
         <item>거리</item>
+        <item>Discount</item>
     </string-array>
 
     <plurals name="radius_miles">

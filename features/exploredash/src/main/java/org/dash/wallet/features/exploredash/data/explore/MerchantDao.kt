@@ -42,8 +42,9 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
             AND redeemType <> 'url'
         ORDER BY
-            CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
-            CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
+            CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
+            CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
+            CASE WHEN :sortOption = 2 THEN savingsPercentage END DESC
         LIMIT :limit
     """
     )
@@ -54,7 +55,7 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
-        sortByDistance: Boolean,
+        sortOption: Int,
         anchorLat: Double,
         anchorLng: Double,
         limit: Int
@@ -76,8 +77,9 @@ interface MerchantDao : BaseDao<Merchant> {
         GROUP BY source, merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
-            CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
-            CASE WHEN :sortByDistance = 0 THEN name END COLLATE NOCASE ASC
+            CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
+            CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
+            CASE WHEN :sortOption = 2 THEN savingsPercentage END DESC
     """
     )
     fun pagingGetByCoordinates(
@@ -88,7 +90,7 @@ interface MerchantDao : BaseDao<Merchant> {
         eastLng: Double,
         southLat: Double,
         westLng: Double,
-        sortByDistance: Boolean,
+        sortOption: Int,
         anchorLat: Double,
         anchorLng: Double
     ): PagingSource<Int, MerchantInfo>
@@ -135,8 +137,9 @@ interface MerchantDao : BaseDao<Merchant> {
         GROUP BY source, merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
-            CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
-            CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
+            CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
+            CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
+            CASE WHEN :sortOption = 2 THEN savingsPercentage END DESC
     """
     )
     fun pagingSearchByCoordinates(
@@ -148,7 +151,7 @@ interface MerchantDao : BaseDao<Merchant> {
         eastLng: Double,
         southLat: Double,
         westLng: Double,
-        sortByDistance: Boolean,
+        sortOption: Int,
         anchorLat: Double,
         anchorLng: Double
     ): PagingSource<Int, MerchantInfo>
@@ -198,8 +201,9 @@ interface MerchantDao : BaseDao<Merchant> {
                 WHEN "both"     THEN 1
                 WHEN "physical" THEN :physicalOrder
             END,
-            CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
-            CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
+            CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
+            CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
+            CASE WHEN :sortOption = 2 THEN savingsPercentage END DESC
     """
     )
     fun pagingGetByTerritory(
@@ -207,7 +211,7 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
-        sortByDistance: Boolean,
+        sortOption: Int,
         anchorLat: Double,
         anchorLng: Double,
         onlineOrder: Int,
@@ -252,8 +256,9 @@ interface MerchantDao : BaseDao<Merchant> {
                 WHEN "both"     THEN 1
                 WHEN "physical" THEN :physicalOrder
             END,
-            CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
-            CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
+            CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
+            CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
+            CASE WHEN :sortOption = 2 THEN savingsPercentage END DESC
     """
     )
     fun pagingSearchByTerritory(
@@ -262,7 +267,7 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
-        sortByDistance: Boolean,
+        sortOption: Int,
         anchorLat: Double,
         anchorLng: Double,
         onlineOrder: Int,
@@ -301,13 +306,16 @@ interface MerchantDao : BaseDao<Merchant> {
             AND redeemType <> 'url'
         GROUP BY source, merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
-        ORDER BY name COLLATE NOCASE ASC
+        ORDER BY
+            CASE WHEN :sortByDiscount = 0 THEN name END COLLATE NOCASE ASC,
+            CASE WHEN :sortByDiscount = 1 THEN savingsPercentage END DESC
     """
     )
     fun pagingGetGrouped(
         types: List<String>,
         paymentMethod: String,
         denomType: String,
+        sortByDiscount: Boolean,
         anchorLat: Double,
         anchorLng: Double
     ): PagingSource<Int, MerchantInfo>
@@ -337,7 +345,9 @@ interface MerchantDao : BaseDao<Merchant> {
             AND redeemType <> 'url'
         GROUP BY source, merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
-        ORDER BY name COLLATE NOCASE ASC
+        ORDER BY
+            CASE WHEN :sortByDiscount = 0 THEN merchant.name END COLLATE NOCASE ASC,
+            CASE WHEN :sortByDiscount = 1 THEN savingsPercentage END DESC
     """
     )
     fun pagingSearchGrouped(
@@ -345,6 +355,7 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
+        sortByDiscount: Boolean,
         anchorLat: Double,
         anchorLng: Double
     ): PagingSource<Int, MerchantInfo>
