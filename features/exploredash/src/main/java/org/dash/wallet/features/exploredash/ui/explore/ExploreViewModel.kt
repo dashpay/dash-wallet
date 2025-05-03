@@ -261,7 +261,6 @@ class ExploreViewModel @Inject constructor(
                 }
         }
 
-
     fun init(exploreTopic: ExploreTopic) {
         if (this.exploreTopic != exploreTopic) {
             clearSearchResults()
@@ -271,10 +270,10 @@ class ExploreViewModel @Inject constructor(
 
         this.pagingFilterJob?.cancel(CancellationException())
         this.pagingFilterJob = pagingSearchFlow
-                .distinctUntilChanged()
-                .onEach(_pagingSearchResults::postValue)
-                .onEach { countPagedResults() }
-                .launchIn(viewModelWorkerScope)
+            .distinctUntilChanged()
+            .onEach(_pagingSearchResults::postValue)
+            .onEach { countPagedResults() }
+            .launchIn(viewModelWorkerScope)
 
         _isLocationEnabled.observeForever { locationEnabled ->
             this.boundedFilterJob?.cancel(CancellationException())
@@ -352,13 +351,15 @@ class ExploreViewModel @Inject constructor(
         sortOption: SortOption,
         denomOption: DenomOption
     ) {
-        _appliedFilters.update { current -> current.copy(
-            territory = selectedTerritory,
-            payment = paymentFilter,
-            denominationType = denomOption,
-            sortOption = sortOption,
-            radius = selectedRadiusOption
-        ) }
+        _appliedFilters.update { current ->
+            current.copy(
+                territory = selectedTerritory,
+                payment = paymentFilter,
+                denominationType = denomOption,
+                sortOption = sortOption,
+                radius = selectedRadiusOption
+            )
+        }
     }
 
     suspend fun getTerritoriesWithPOIs(): List<String> {
@@ -418,13 +419,13 @@ class ExploreViewModel @Inject constructor(
         this.allMerchantLocationsJob = _searchBounds
             .filterNotNull()
             .flatMapLatest { bounds ->
-                val radiusBounds =
-                    if (_isLocationEnabled.value == true) {
-                        locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
-                    } else {
-                        GeoBounds.noBounds
-                    }
-                val limitResults = _isLocationEnabled.value != true || _appliedFilters.value.territory.isNotEmpty() == true
+                val radiusBounds = if (_isLocationEnabled.value == true) {
+                    locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
+                } else {
+                    GeoBounds.noBounds
+                }
+                val limitResults = _isLocationEnabled.value != true ||
+                    _appliedFilters.value.territory.isNotEmpty() == true
                 val limit = if (limitResults) 100 else -1
                 exploreData.observeMerchantLocations(
                     merchantId!!,
@@ -500,7 +501,13 @@ class ExploreViewModel @Inject constructor(
         bounds: GeoBounds
     ): Flow<List<SearchResult>> {
         return if (exploreTopic == ExploreTopic.Merchants) {
-            exploreData.observePhysicalMerchants(filters.query, filters.territory, filters.payment, filters.denominationType, bounds)
+            exploreData.observePhysicalMerchants(
+                filters.query,
+                filters.territory,
+                filters.payment,
+                filters.denominationType,
+                bounds
+            )
         } else {
             val types = getAtmTypes(filterMode)
             exploreData.observePhysicalAtms(filters.query, filters.territory, types, bounds)
@@ -574,7 +581,13 @@ class ExploreViewModel @Inject constructor(
         val bounds = radiusBounds
 
         viewModelWorkerScope.launch {
-            val radiusBounds = bounds?.let { locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius) }
+            val radiusBounds = bounds?.let {
+                locationProvider.getRadiusBounds(
+                    bounds.centerLat,
+                    bounds.centerLng,
+                    radius
+                )
+            }
             val result = if (exploreTopic == ExploreTopic.Merchants) {
                 val type = getMerchantType(filterMode.value ?: FilterMode.Online)
                 exploreData.getMerchantsResultCount(
@@ -707,19 +720,21 @@ class ExploreViewModel @Inject constructor(
             }
         }
 
-        logEvent(if (exploreTopic == ExploreTopic.Merchants) {
-            when (_appliedFilters.value.sortOption) {
-                SortOption.Name -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_NAME
-                SortOption.Distance -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE
-                SortOption.Discount -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE
+        logEvent(
+            if (exploreTopic == ExploreTopic.Merchants) {
+                when (_appliedFilters.value.sortOption) {
+                    SortOption.Name -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_NAME
+                    SortOption.Distance -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE
+                    SortOption.Discount -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE
+                }
+            } else {
+                when (_appliedFilters.value.sortOption) {
+                    SortOption.Name -> AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_NAME
+                    SortOption.Distance -> AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_DISTANCE
+                    SortOption.Discount -> ""
+                }
             }
-        } else {
-            when (_appliedFilters.value.sortOption) {
-                SortOption.Name -> AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_NAME
-                SortOption.Distance -> AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_DISTANCE
-                SortOption.Discount -> ""
-            }
-        })
+        )
 
         if (_appliedFilters.value.territory.isEmpty()) {
             if (exploreTopic == ExploreTopic.Merchants) {

@@ -105,9 +105,23 @@ open class MerchantAtmDataSource @Inject constructor(
 
         return if (territory.isNotBlank()) {
             if (query.isNotBlank()) {
-                merchantDao.searchByTerritory(sanitizeQuery(query), territory, MerchantType.ONLINE, paymentMethod, denominationType)
+                merchantDao.searchByTerritory(
+                    sanitizeQuery(query),
+                    territory,
+                    MerchantType.ONLINE,
+                    paymentMethod,
+                    denominationType
+                )
             } else {
-                merchantDao.observeByTerritory("", "", territory, MerchantType.ONLINE, paymentMethod, denominationType, -1)
+                merchantDao.observeByTerritory(
+                    "",
+                    "",
+                    territory,
+                    MerchantType.ONLINE,
+                    paymentMethod,
+                    denominationType,
+                    -1
+                )
             }
         } else {
             if (query.isNotBlank()) {
@@ -166,9 +180,24 @@ open class MerchantAtmDataSource @Inject constructor(
                 val sortByDiscount = sortOption == SortOption.Discount
 
                 if (query.isNotBlank()) {
-                    merchantDao.pagingSearchGrouped(sanitizeQuery(query), types, paymentMethod, denominationType, sortByDiscount, userLat, userLng)
+                    merchantDao.pagingSearchGrouped(
+                        sanitizeQuery(query),
+                        types,
+                        paymentMethod,
+                        denominationType,
+                        sortByDiscount,
+                        userLat,
+                        userLng
+                    )
                 } else {
-                    merchantDao.pagingGetGrouped(types, paymentMethod, denominationType, sortByDiscount, userLat, userLng)
+                    merchantDao.pagingGetGrouped(
+                        types,
+                        paymentMethod,
+                        denominationType,
+                        sortByDiscount,
+                        userLat,
+                        userLng
+                    )
                 }
             }
             type == MerchantType.PHYSICAL && territory.isBlank() && bounds != GeoBounds.noBounds -> {
@@ -303,7 +332,13 @@ open class MerchantAtmDataSource @Inject constructor(
                 val types = listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    merchantDao.searchByTerritoryResultCount(sanitizeQuery(query), territory, types, paymentMethod, denominationType)
+                    merchantDao.searchByTerritoryResultCount(
+                        sanitizeQuery(query),
+                        territory,
+                        types,
+                        paymentMethod,
+                        denominationType
+                    )
                 } else {
                     merchantDao.getByTerritoryResultCount(territory, types, paymentMethod, denominationType)
                 }
@@ -458,7 +493,15 @@ open class MerchantAtmDataSource @Inject constructor(
                 limit
             )
         } else {
-            merchantDao.observeByTerritory(merchantId, source, territory, MerchantType.ONLINE, paymentMethod, denominationType, limit)
+            merchantDao.observeByTerritory(
+                merchantId,
+                source,
+                territory,
+                MerchantType.ONLINE,
+                paymentMethod,
+                denominationType,
+                limit
+            )
         }
     }
 

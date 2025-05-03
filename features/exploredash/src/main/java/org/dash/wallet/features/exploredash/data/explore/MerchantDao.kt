@@ -372,7 +372,12 @@ interface MerchantDao : BaseDao<Merchant> {
             AND redeemType <> 'url'
     """
     )
-    suspend fun searchGroupedResultCount(query: String, types: List<String>, paymentMethod: String, denomType: String): Int
+    suspend fun searchGroupedResultCount(
+        query: String,
+        types: List<String>,
+        paymentMethod: String,
+        denomType: String
+    ): Int
 
     @Query(
         """

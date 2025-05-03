@@ -115,7 +115,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
 
     private fun setupPaymentMethods() {
         val isDashOn = viewModel.appliedFilters.value.payment.isEmpty() ||
-                viewModel.appliedFilters.value.payment == PaymentMethod.DASH
+            viewModel.appliedFilters.value.payment == PaymentMethod.DASH
         dashPaymentOn = isDashOn
         binding.dashOption.isChecked = isDashOn
         binding.dashOption.setOnCheckedChangeListener { _, isChecked ->
@@ -129,7 +129,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         }
 
         val isGiftCardOn = viewModel.appliedFilters.value.payment.isEmpty() ||
-                viewModel.appliedFilters.value.payment == PaymentMethod.GIFT_CARD
+            viewModel.appliedFilters.value.payment == PaymentMethod.GIFT_CARD
         giftCardPaymentOn = isGiftCardOn
         binding.giftCardOption.isChecked = isGiftCardOn
         binding.giftCardTypesLabel.isVisible = isGiftCardOn

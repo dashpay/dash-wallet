@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.ui.ctxspend
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box

@@ -170,7 +170,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.toolbarTitle.text = getToolbarTitle()
         binding.recenterMapBtn.setOnClickListener { viewModel.recenterMapCallback.call() }
-        
+
         binding.infoButton.setOnClickListener {
             ExploreDashInfoDialog().show(requireActivity())
         }
@@ -837,7 +837,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun isBottomSheetDraggable(): Boolean {
         val screenState = viewModel.screenState.value
         val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
-        val nearbySearch = viewModel.appliedFilters.value.territory.isEmpty() && viewModel.isLocationEnabled.value == true
+        val nearbySearch = viewModel.appliedFilters.value.territory.isEmpty() &&
+            viewModel.isLocationEnabled.value == true
 
         return !isDetails && nearbySearch
     }
@@ -846,7 +847,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun setBottomSheetState(forceExpand: Boolean = false): Int {
         val screenState = viewModel.screenState.value
         val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
-        val nearbySearch = viewModel.appliedFilters.value.territory.isEmpty() && viewModel.isLocationEnabled.value == true
+        val nearbySearch = viewModel.appliedFilters.value.territory.isEmpty() &&
+            viewModel.isLocationEnabled.value == true
 
         return when {
             forceExpand -> BottomSheetBehavior.STATE_EXPANDED

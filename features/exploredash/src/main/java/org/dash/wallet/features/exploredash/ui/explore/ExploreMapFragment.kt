@@ -153,7 +153,7 @@ class ExploreMapFragment : SupportMapFragment() {
                         map.animateCamera(radiusBounds)
                     }
                 }
-        }
+            }
     }
 
     private fun showSelectedMarker(state: ScreenState) {
