@@ -280,6 +280,13 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 inviteHandlerViewModel.clearInvitation()
             }
 
+            InvitationValidationState.ALREADY_HAS_REQUESTED_USERNAME -> {
+                // show dialog
+                InviteHandler(requireActivity(), viewModel.analytics).showContestedUsernameAlreadyDialog()
+                // remove invite
+                inviteHandlerViewModel.clearInvitation()
+            }
+
             InvitationValidationState.VALID -> {
 
             }

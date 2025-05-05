@@ -32,6 +32,8 @@ enum class InvitationValidationState {
     VALID,
     /** this user already has an identity */
     ALREADY_HAS_IDENTITY,
+    /** this user already has an identity and is requesting a username */
+    ALREADY_HAS_REQUESTED_USERNAME,
     /** this invitation has already been claimed */
     ALREADY_CLAIMED,
     /** this invitation is not valid (malformed) */

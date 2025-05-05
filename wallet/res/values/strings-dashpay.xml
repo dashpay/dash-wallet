@@ -52,6 +52,8 @@
     <string name="invitation_invalid_invite_message">Your invitation from %s is not valid</string>
     <string name="invitation_username_already_found_title">Username already found</string>
     <string name="invitation_username_already_found_message">You cannot claim this invite since you already have a Dash username</string>
+    <string name="invitation_username_already_found_voting_title">Username already requested</string>
+    <string name="invitation_username_already_found_voting_message">You cannot claim this invite since you have already requested a Dash username</string>
     <string name="invitation_onboarding_has_began_error_title">Onboarding Error</string>
     <string name="invitation_error_title">Invitation Error</string>
     <string name="invitation_onboarding_has_began_error">Onboarding is in process, please claim your invite after you have created your wallet.</string>

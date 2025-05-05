@@ -109,7 +109,13 @@ class InviteHandlerViewModel @Inject constructor(
             var updatedInvitation = invite.copy()
             if (hasIdentity || inVotingPeriod) {
                 // we have an identity, don't check the validity
-                updatedInvitation = updatedInvitation.validate(InvitationValidationState.ALREADY_HAS_IDENTITY)
+                updatedInvitation = updatedInvitation.validate(
+                    if (inVotingPeriod) {
+                        InvitationValidationState.ALREADY_HAS_REQUESTED_USERNAME
+                    } else {
+                        InvitationValidationState.ALREADY_HAS_IDENTITY
+                    }
+                )
             } else try {
                 if (blockchainStateProvider.getSyncStage() == SyncStage.BLOCKS) {
                     updatedInvitation = updatedInvitation.copy(isValid = topUpRepository.validateInvitation(invite))

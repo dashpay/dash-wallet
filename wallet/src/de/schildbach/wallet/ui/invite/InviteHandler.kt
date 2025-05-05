@@ -140,6 +140,19 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
         analytics.logEvent(AnalyticsConstants.Invites.ERROR_USERNAME_TAKEN, mapOf())
     }
 
+    fun showContestedUsernameAlreadyDialog() {
+        AdaptiveDialog.create(
+            R.drawable.ic_invalid_invite,
+            activity.getString(R.string.invitation_username_already_found_voting_title),
+            activity.getString(R.string.invitation_username_already_found_voting_message),
+            activity.getString(R.string.button_ok)
+        ).show(activity) {
+            // TODO: this closes the current activity and then the link is reactivated, inf loop
+            handleMoveToFront(activity)
+        }
+        analytics.logEvent(AnalyticsConstants.Invites.ERROR_USERNAME_TAKEN, mapOf())
+    }
+
     fun showInviteAlreadyClaimedDialog(invite: InvitationLinkData) {
         InviteAlreadyClaimedDialog
             .newInstance(activity, invite)
