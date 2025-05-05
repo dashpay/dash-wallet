@@ -101,7 +101,7 @@ class InviteHandlerActivity : AppCompatActivity() {
                 }
             }
             walletDataProvider.wallet != null -> {
-                log.info("the invite will be forwarded, starting MainActivity with invite: ${invite.link}")
+                log.info("the invite will be forwarded, starting MainActivity with invite: ${invite.link}, mainTask: {}", mainTask != null)
                 val intent = MainActivity.createIntent(this, invite)
                 mainTask?.startActivity(applicationContext, intent, null)
                     ?: startActivity(intent)
