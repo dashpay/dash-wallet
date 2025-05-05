@@ -1346,6 +1346,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }
                     //Clear the blockchain identity
                     application.clearDatabases(false)
+                    resetBlockchainState()
                 }
                 closeStream(mnlistinfoBootStrapStream)
                 closeStream(qrinfoBootStrapStream)
@@ -1357,6 +1358,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
         log.info("service was up for " + (System.currentTimeMillis() - serviceCreatedAt) / 1000 / 60 + " minutes")
+    }
+
+    private fun resetBlockchainState() {
+        syncPercentage = 0
     }
 
     override fun onTrimMemory(level: Int) {
