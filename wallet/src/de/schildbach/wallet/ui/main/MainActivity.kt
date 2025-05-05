@@ -109,6 +109,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
         fun createIntent(context: Context, invite: InvitationLinkData): Intent {
             return Intent(context, MainActivity::class.java).apply {
+                putExtra(EXTRA_NAVIGATION_DESTINATION, R.id.walletFragment)
                 putExtra(EXTRA_INVITE, invite)
                 addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
