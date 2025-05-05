@@ -74,11 +74,13 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
             activity.finish()
         }
 
+        // TODO: this function maybe completely useless
         private fun handleMoveToFront(activity: FragmentActivity) {
             activity.setResult(Activity.RESULT_CANCELED)
-            val mainTask = getMainTask(activity)
-            mainTask?.moveToFront()
-            activity.finish()
+//            val mainTask = getMainTask(activity)
+//            log.info("invite: found main task: {}; {}", mainTask != null, mainTask?.taskInfo?.taskDescription)
+//            mainTask?.moveToFront()
+//            activity.finish()
         }
     }
 
