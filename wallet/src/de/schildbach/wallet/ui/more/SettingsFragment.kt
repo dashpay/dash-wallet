@@ -201,6 +201,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                 }
             }
         }
+        binding.transactionMetadata.isVisible = false // don't show by default
         viewModel.blockchainIdentity.observe(viewLifecycleOwner) {
             binding.transactionMetadata.isVisible = it?.creationComplete ?: false
         }
