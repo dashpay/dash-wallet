@@ -40,10 +40,10 @@ data class TransactionMetadataSettings(
     /** save future transactions */
     val saveToNetwork: Boolean = false,
     val saveFrequency: TxMetadataSaveFrequency = TxMetadataSaveFrequency.defaultOption,
-    val savePaymentCategory: Boolean = false,
-    val saveTaxCategory: Boolean = false,
-    val saveExchangeRates: Boolean = false,
-    val savePrivateMemos: Boolean = false,
+    val savePaymentCategory: Boolean = true,
+    val saveTaxCategory: Boolean = true,
+    val saveExchangeRates: Boolean = true,
+    val savePrivateMemos: Boolean = true,
     val saveGiftcardInfo: Boolean = true,
     val saveAfterTimestamp: Long = System.currentTimeMillis(),
     /* not saved to the data store */

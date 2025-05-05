@@ -63,7 +63,7 @@ enum class TxMetadataSaveFrequency {
     afterEveryTransaction;
 
     companion object {
-        val defaultOption = oncePerWeek
+        val defaultOption = afterTenTransactions
     }
 }
 
