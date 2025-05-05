@@ -269,6 +269,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
     }
 
     private fun processUsername(username: String) {
+        binding.requestUsernameButton.isEnabled = false
         if (username.isNotEmpty()) {
             val usernameIsValid = requestUserNameViewModel.checkUsernameValid(username)
 
