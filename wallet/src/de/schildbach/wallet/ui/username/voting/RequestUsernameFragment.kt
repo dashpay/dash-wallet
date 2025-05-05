@@ -73,6 +73,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             binding.usernameInput.text?.clear()
         }
 
+        binding.requestUsernameButton.isEnabled = false
         binding.requestUsernameButton.setOnClickListener {
             onContinue()
         }
